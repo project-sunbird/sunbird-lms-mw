@@ -212,3 +212,18 @@ insert into role (id,name,status) values ('r_103','ORG_MODERATOR',1);
 insert into role (id,name,status) values ('r_104','CONTENT_CREATOR',1);
 insert into role (id,name,status) values ('r_105','CONTENT_REVIEWER',1);
 insert into role (id,name,status) values ('r_106','ORG_MEMBER',1);
+
+
+CREATE TABLE IF NOT EXISTS sunbird.master_action(id text, name text, PRIMARY KEY (id));
+CREATE INDEX inx_ma_name ON sunbird.master_action(name); 
+
+CREATE TABLE IF NOT EXISTS sunbird.url_action(id text, url text,name text, PRIMARY KEY (id));
+CREATE INDEX inx_ua_name ON sunbird.url_action(name);
+CREATE INDEX inx_ua_url ON sunbird.url_action(url);
+
+CREATE TABLE IF NOT EXISTS sunbird.action_group(id text, actionId list<text>,groupName text, PRIMARY KEY (id));
+CREATE INDEX inx_uacg_groupName ON sunbird.action_group(groupName);
+
+CREATE TABLE IF NOT EXISTS sunbird.user_action_role(id text, actionGroupId list<text>,roleId text, PRIMARY KEY (id));
+CREATE INDEX inx_uactr_roleId ON sunbird.user_action_role(roleId);
+

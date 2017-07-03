@@ -1,0 +1,214 @@
+CREATE KEYSPACE IF NOT EXISTS sunbird WITH replication = {'class':'SimpleStrategy','replication_factor':1};
+
+//to change cluster name
+//UPDATE system.local SET cluster_name = 'sunbird' where key='local';
+//ALTER USER cassandra WITH PASSWORD 'password';
+USE sunbird;
+
+/*
+creation of id= one way hash of (userId##courseId) here courseId is identifier of course mgmt table
+toc url we have to generate through json of content id from ekStep 
+here status is (default(0),inProgress(1),completed(2))
+progress is no of content completed
+*/
+CREATE TABLE IF NOT EXISTS sunbird.course_enrollment(id text, courseId text, courseName text,userId text,enrolledDate text,
+description text,tocUrl text,status int,active boolean,delta text,grade text,progress int,lastReadContentId text,
+lastReadContentStatus int,addedBy text,courseLogoUrl text,dateTime timestamp,contentId text PRIMARY KEY (id));
+
+CREATE INDEX inx_ce_userId ON sunbird.course_enrollment (userId);
+CREATE INDEX inx_ce_courseId ON sunbird.course_enrollment (courseId);
+CREATE INDEX inx_ce_course_name ON sunbird.course_enrollment (courseName);
+CREATE INDEX inx_ce_status ON sunbird.course_enrollment (status);
+
+/*
+creation of id = one way hash of (userId##contentId##courseId) 
+status is (default(0),inProgress(1),completed(2))
+*/
+CREATE TABLE IF NOT EXISTS sunbird.content_consumption(id text, contentId text, courseId text, userId text,viewPosition text,viewCount int,lastAccessTime text,
+contentVersion text,completedCount int,status int,result text,score text,grade text,lastUpdatedTime text,lastCompletedTime text,dateTime timestamp,PRIMARY KEY (id));
+
+CREATE INDEX inx_cc_userId ON sunbird.content_consumption (userId);
+CREATE INDEX inx_cc_contentId ON sunbird.content_consumption (contentId);
+CREATE INDEX inx_cc_status ON sunbird.content_consumption (status);
+CREATE INDEX inx_cc_courseId ON sunbird.content_consumption (courseId);
+
+/*
+creation of id = using timestamp and env 
+ id and courseId both are same
+content id is from ekstep 
+status DRAFT("draft"), LIVE("live"), RETIRED("retired")
+contentType (pdf,video,word doc etc)
+tutor   map<id,name>
+*/      
+CREATE TABLE IF NOT EXISTS sunbird.course_management(id text, courseId text, contentId text, courseName text,courseType text,
+facultyId text,facultyName text,organisationId text,organisationName text,enrollementStartDate text,enrollementEndDate text,
+courseDuration text,description text,status text,addedBy text,addedByName text,publishedBy text,publishedByName text,createdDate text,
+publishedDate text,updatedDate text,updatedBy text,updatedByName text,contentType text,createdfor list<text>,noOfLectures int,tocUrl text,
+tutor map<text,text>,courseLogoUrl text,courseRating text,userCount int,PRIMARY KEY (id));
+
+CREATE INDEX inx_cm_facultyId ON sunbird.course_management (facultyId);
+CREATE INDEX inx_cm_organisationId ON sunbird.course_management (organisationId);
+CREATE INDEX inx_cm_courseId ON sunbird.course_management (courseId);
+CREATE INDEX inx_cm_course_name ON sunbird.course_management (courseName);
+CREATE INDEX inx_cm_status ON sunbird.course_management (status);
+CREATE INDEX inx_cm_contentId ON sunbird.course_management (contentId);
+
+/*
+creation of id = one way hash of userName
+here id and userId both are same
+ currently username and email is same
+email and username is unique
+*/
+CREATE TABLE IF NOT EXISTS  sunbird.user(id text,userId text,userName text, email text,phone text,aadhaarNo text,createdDate text,updatedDate text,updatedBy text,
+lastLoginTime text,status int,firstName text,lastName text,password text,avatar text,gender text,language text,state text,city text,zipcode text,PRIMARY KEY (id));
+
+CREATE INDEX inx_u_email ON sunbird.user (email);
+CREATE INDEX inx_u_phone ON sunbird.user (phone);
+CREATE INDEX inx_u_status ON sunbird.user (status);
+CREATE INDEX inx_u_userId ON sunbird.user (userId);
+CREATE INDEX inx_u_userName ON sunbird.user (userName);
+
+//user_auth
+//id is auth token
+CREATE TABLE IF NOT EXISTS sunbird.user_auth(id text, userId text,createdDate text,updatedDate text,source text,PRIMARY KEY (id));
+CREATE INDEX inx_ua_userId ON sunbird.user_auth (userId);
+CREATE INDEX inx_ua_source ON sunbird.user_auth (source);
+
+//organisation
+CREATE TABLE IF NOT EXISTS sunbird.organisation(id text, orgName text, description text,communityId text,createdBy text,createdByName text,createdDate text,
+updatedDate text,updatedBy text,status int,relation text,parentOrgId text,orgType text,state text,city text,zipcode text,orgCode text,dateTime timestamp,PRIMARY KEY (id));
+
+CREATE INDEX inx_org_orgName ON sunbird.organisation (orgName);
+CREATE INDEX inx_org_status ON sunbird.organisation (status);
+//page_management
+//id=  using timestamp and env 
+CREATE TABLE sunbird.page_management(id text, name text, appMap text,portalMap text,createdDate text,createdBy text,
+updatedDate text,updatedBy text,organisationId text,PRIMARY KEY (id));
+
+CREATE INDEX inx_pm_pageName ON sunbird.page_management (name);
+CREATE INDEX inx_vm_organisationId ON sunbird.page_management (organisationId);
+
+//page_section
+//id=  using timestamp and env 
+CREATE TABLE IF NOT EXISTS sunbird.page_section(id text, name text, sectionDataType text,description text,display text,
+searchQuery text,createdDate text,createdBy text,updatedDate text,updatedBy text,imgUrl text,alt text,status int,PRIMARY KEY (id));
+CREATE INDEX inx_ps_sectionDataType ON sunbird.page_section (sectionDataType);
+CREATE INDEX inx_ps_sectionName ON sunbird.page_section (name);
+
+//Assessment Eval
+//id=  using timestamp and env 
+CREATE TABLE IF NOT EXISTS sunbird.assessment_eval(id text, contentId text, courseId text, userId text,assessmentItemId text,
+createdDate text,result text,score text,attemptId text,attemptedCount int,PRIMARY KEY (id));
+
+CREATE INDEX inx_ae_userId ON sunbird.assessment_eval (userId);
+CREATE INDEX inx_ae_contentId ON sunbird.assessment_eval (contentId);
+CREATE INDEX inx_ae_assessmentItemId ON sunbird.assessment_eval (assessmentItemId);
+CREATE INDEX inx_ae_courseId ON sunbird.assessment_eval (courseId);
+
+//Assessment item 
+//id= using timestamp and userId
+CREATE TABLE IF NOT EXISTS sunbird.assessment_item(id text, contentId text, courseId text, userId text,assessmentItemId text,
+assessmentType text,attemptedDate text,createdDate text,timeTaken int,result text,score text,maxScore text,answers text,
+evaluationStatus boolean,processingStatus boolean,attemptId text,PRIMARY KEY (id));
+
+CREATE INDEX inx_ai_userId ON sunbird.assessment_item (userId);
+CREATE INDEX inx_ai_contentId ON sunbird.assessment_item (contentId);
+CREATE INDEX inx_ai_assessmentItemId ON sunbird.assessment_item (assessmentItemId);
+CREATE INDEX inx_ai_courseId ON sunbird.assessment_item (courseId);
+CREATE INDEX inx_ai_processingStatus ON sunbird.assessment_item (processingStatus);
+
+alter table sunbird.course_management add  courselogourl text;
+alter table sunbird.course_management add  tocUrl text;
+alter table sunbird.course_management add  courseRating text;
+alter table sunbird.course_management add  userCount int;
+ALTER TABLE course_management DROP noOfLectures;
+ALTER TABLE course_management ADD noOfLectures int;
+ALTER TABLE sunbird.course_enrollment ADD contentId text;
+ALTER TABLE sunbird.assessment_item DROP evaluationStatus;
+ALTER TABLE sunbird.assessment_item DROP processingStatus;
+ALTER TABLE sunbird.assessment_item ADD evaluationStatus boolean;
+ALTER TABLE sunbird.assessment_item ADD processingStatus boolean;
+ALTER TABLE sunbird.assessment_eval DROP assessmentItemId;
+ALTER TABLE sunbird.assessment_eval DROP maxScore;
+ALTER TABLE sunbird.page_management ADD organisationId text;
+ALTER TABLE sunbird.page_management DROP appMap;
+ALTER TABLE sunbird.page_management DROP portalMap;
+ALTER TABLE sunbird.page_management ADD appMap text;
+ALTER TABLE sunbird.page_management ADD portalMap text;
+ALTER TABLE sunbird.organisation ADD orgCode text;
+
+#2017-06-30 changes for user and organisation
+ALTER TABLE sunbird.user DROP zipcode;
+ALTER TABLE sunbird.user DROP city;
+ALTER TABLE sunbird.user DROP state;
+ALTER TABLE sunbird.user DROP language;
+ALTER TABLE sunbird.user ADD thumbnail text;
+ ALTER TABLE sunbird.user ADD dob text;
+ ALTER TABLE sunbird.user ADD regOrgId text;
+ ALTER TABLE sunbird.user ADD subject list<text>;
+ ALTER TABLE sunbird.user ADD language list<text>;
+ 
+ CREATE TABLE IF NOT EXISTS sunbird.user_external_identity(id text, userId text, externalId text,source text,isVerified boolean,PRIMARY KEY (id));
+CREATE INDEX inx_uei_userid ON sunbird.user_external_identity (userId);
+CREATE INDEX inx_uei_externalId ON sunbird.user_external_identity (externalId);
+CREATE INDEX inx_uei_source ON sunbird.user_external_identity (source);
+
+CREATE TABLE IF NOT EXISTS sunbird.address(id text, userId text, country text,state text,city text,zipCode text,addType text,createdDate text,createdBy text,updatedDate text,updatedBy text, PRIMARY KEY (id));
+CREATE INDEX inx_add_userid ON sunbird.address (userId);
+CREATE INDEX inx_add_addType ON sunbird.address (addType);
+
+CREATE TABLE IF NOT EXISTS sunbird.user_education(id text, userId text, courseName text,duration int,yearOfPassing int,percentage double,grade text,name text,boardOrUniversity text,addressId text,createdDate text,createdBy text,updatedDate text,updatedBy text, PRIMARY KEY (id));
+CREATE INDEX inx_ueu_userid ON sunbird.user_education (userId);
+
+CREATE TABLE IF NOT EXISTS sunbird.user_job_profile(id text, userId text, jobName text,role text,joiningDate text,endDate text,orgName text,orgId text,subject list<text>,addressId text,boardName text,isVerified boolean,isRejected boolean,verifiedDate text,verifiedBy text,createdDate text,createdBy text,updatedDate text,updatedBy text, PRIMARY KEY (id));
+CREATE INDEX inx_ujp_userid ON sunbird.user_job_profile (userId); 
+
+CREATE TABLE IF NOT EXISTS sunbird.user_org(id text, userId text, role text,orgId text,orgJoinDate text,orgLeftDate text,isApproved boolean,isRejected boolean,approvedBy text,approvalDate text,updatedDate text,updatedBy text, PRIMARY KEY (id));
+CREATE INDEX inx_uorg_userid ON sunbird.user_org(userId); 
+CREATE INDEX inx_uorg_orgId ON sunbird.user_org(orgId);
+ 
+CREATE TABLE IF NOT EXISTS sunbird.subject(id text, name text, PRIMARY KEY (id));
+CREATE INDEX inx_sb_name ON sunbird.subject(name); 
+
+CREATE TABLE IF NOT EXISTS sunbird.role(id text, name text, PRIMARY KEY (id));
+CREATE INDEX inx_role_name ON sunbird.role(name);
+
+ALTER TABLE sunbird.organisation DROP city;
+ALTER TABLE sunbird.organisation DROP state;
+ALTER TABLE sunbird.organisation DROP zipcode;
+ALTER TABLE sunbird.organisation DROP relation;
+ALTER TABLE sunbird.organisation DROP createdbyname;
+
+ALTER TABLE sunbird.organisation ADD imgUrl text;
+ALTER TABLE sunbird.organisation ADD thumbnail text;
+ALTER TABLE sunbird.organisation ADD channel text;
+ALTER TABLE sunbird.organisation ADD preferredLanguage text;
+ALTER TABLE sunbird.organisation ADD homeUrl text;
+ALTER TABLE sunbird.organisation ADD isRootOrg boolean;
+ALTER TABLE sunbird.organisation ADD addId text;
+ALTER TABLE sunbird.organisation ADD noOfmembers int;
+ALTER TABLE sunbird.organisation ADD orgCode text;
+ALTER TABLE sunbird.organisation ADD isApproved boolean;
+ALTER TABLE sunbird.organisation ADD approvedBy text;
+ALTER TABLE sunbird.organisation ADD approvedDate text;
+
+CREATE INDEX inx_org_channel ON sunbird.organisation(channel);
+CREATE INDEX inx_org_orgType ON sunbird.organisation(orgType);
+CREATE INDEX inx_org_orgCode ON sunbird.organisation(orgCode); 
+
+CREATE TABLE IF NOT EXISTS sunbird.org_type(id text, name text, PRIMARY KEY (id));
+CREATE INDEX inx_ot_name ON sunbird.org_type(name);  
+
+CREATE TABLE IF NOT EXISTS sunbird.org_mapping(id text, orgIdOne text,relation text,orgIdTwo text, PRIMARY KEY (id));
+CREATE INDEX inx_om_orgIdOne ON sunbird.org_mapping(orgIdOne);  
+CREATE INDEX inx_om_orgIdTwo ON sunbird.org_mapping(orgIdTwo);    
+
+CREATE TABLE IF NOT EXISTS sunbird.role(id text, name text,status int, PRIMARY KEY (id));
+CREATE INDEX inx_ro_master_name ON sunbird.role(name);  
+
+insert into role (id,name,status) values ('r_101','ADMIN',1);
+insert into role (id,name,status) values ('r_102','ORG_ADMIN',1);
+insert into role (id,name,status) values ('r_103','ORG_MODERATOR',1);
+insert into role (id,name,status) values ('r_104','CONTENT_CREATOR',1);
+insert into role (id,name,status) values ('r_105','CONTENT_REVIEWER',1);
+insert into role (id,name,status) values ('r_106','ORG_MEMBER',1);

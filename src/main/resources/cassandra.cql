@@ -227,3 +227,33 @@ CREATE INDEX inx_uacg_groupName ON sunbird.action_group(groupName);
 CREATE TABLE IF NOT EXISTS sunbird.user_action_role(id text, actionGroupId list<text>,roleId text, PRIMARY KEY (id));
 CREATE INDEX inx_uactr_roleId ON sunbird.user_action_role(roleId);
 
+insert into sunbird.url_action(id,url,name) values ('1','','suspendOrg');
+insert into sunbird.url_action(id,url,name) values ('2','','suspendUser');
+insert into sunbird.url_action(id,url,name) values ('3','','createOrg');
+insert into sunbird.url_action(id,url,name) values ('4','','updateOrg');
+insert into sunbird.url_action(id,url,name) values ('5','','updateUser');
+insert into sunbird.url_action(id,url,name) values ('6','','addMember');
+insert into sunbird.url_action(id,url,name) values ('7','','removeOrg');
+insert into sunbird.url_action(id,url,name) values ('8','','createUser');
+
+insert into sunbird.url_action(id,url,name) values ('9','','removeMember');
+insert into sunbird.url_action(id,url,name) values ('10','','suspendMember');
+insert into sunbird.url_action(id,url,name) values ('11','','createCourse');
+insert into sunbird.url_action(id,url,name) values ('12','','updateCourse');
+insert into sunbird.url_action(id,url,name) values ('13','','createContent');
+insert into sunbird.url_action(id,url,name) values ('14','','updateContent');
+insert into sunbird.url_action(id,url,name) values ('15','','publishCourse');
+insert into sunbird.url_action(id,url,name) values ('16','','publishContent');
+
+insert into sunbird.url_action(id,url,name) values ('17','','flagCourse');
+insert into sunbird.url_action(id,url,name) values ('18','','flagContent');
+insert into sunbird.url_action(id,url,name) values ('19','','getProfile');
+insert into sunbird.url_action(id,url,name) values ('20','','updateProfile');
+insert into sunbird.url_action(id,url,name) values ('21','','readCourse');
+insert into sunbird.url_action(id,url,name) values ('22','','readContent');
+insert into sunbird.url_action(id,url,name) values ('23','','rateCourse');
+insert into sunbird.url_action(id,url,name) values ('24','','rateContent');
+insert into sunbird.url_action(id,url,name) values ('25','','searchCourse');
+insert into sunbird.url_action(id,url,name) values ('26','','searchContent');
+
+insert into sunbird.action_group(id,actionId,groupName) values ('ag_12',['1','2'],'SYSTEM_ADMINISTRATION');

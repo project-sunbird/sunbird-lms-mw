@@ -206,6 +206,19 @@ CREATE INDEX inx_om_orgIdTwo ON sunbird.org_mapping(orgIdTwo);
 CREATE TABLE IF NOT EXISTS sunbird.role(id text, name text,status int, PRIMARY KEY (id));
 CREATE INDEX inx_ro_master_name ON sunbird.role(name);  
 
+insert into role (id,name,status) values ('r_101','ADMIN',1);
+insert into role (id,name,status) values ('r_102','ORG_ADMIN',1);
+insert into role (id,name,status) values ('r_103','ORG_MODERATOR',1);
+insert into role (id,name,status) values ('r_104','CONTENT_CREATOR',1);
+insert into role (id,name,status) values ('r_105','CONTENT_REVIEWER',1);
+insert into role (id,name,status) values ('r_106','ORG_MEMBER',1);
+
+
+ALTER TABLE sunbird.user ADD rootOrgId text;
+ALTER TABLE sunbird.address ADD addressLine1 text;
+ALTER TABLE sunbird.address ADD addressLine2 text;
+ALTER TABLE sunbird.user_education ADD degree text;
+
 insert into role (id,name,status) values ('r_101','SYSTEM_ADMINISTRATION',1);
 insert into role (id,name,status) values ('r_102','ORG_MANAGEMENT',1);
 insert into role (id,name,status) values ('r_103','MEMBERSHIP_MANAGEMENT',1);
@@ -269,8 +282,6 @@ insert into sunbird.action_group(id,actionId,groupName) values ('ag_17',['19','2
 ALTER TABLE sunbird.user ADD loginId text;
 ALTER TABLE sunbird.user ADD provider text;
 ALTER TABLE sunbird.user_external_identity ADD idType text;
-
-
 insert into user_action_role(id,actiongroupid,roleid) values ('uar_1',['ag_17'],'r_107');
  insert into user_action_role(id,actiongroupid,roleid) values ('uar_2',['ag_13'],'r_102');
 insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_14'],'r_103');

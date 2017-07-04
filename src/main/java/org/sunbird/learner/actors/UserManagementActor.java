@@ -262,6 +262,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
         Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
         Map<String , Object> req = actorMessage.getRequest();
+        Map<String,Object> requestMap = null;
         Map<String , Object> userMap=(Map<String, Object>) req.get(JsonKey.USER);
 		if(userMap.containsKey(JsonKey.USERNAME) && null != userMap.get(JsonKey.USERNAME)){
 			ProjectCommonException exception = new ProjectCommonException(ResponseCode.userNameCanntBeUpdated.getErrorCode(), ResponseCode.userNameCanntBeUpdated.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
@@ -311,7 +312,10 @@ public class UserManagementActor extends UntypedAbstractActor {
         userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
         userMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
         userMap.put(JsonKey.ID,userMap.get(JsonKey.USER_ID));
-        Response result = cassandraOperation.updateRecord(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),userMap);
+        requestMap = new HashMap<>();
+        requestMap.putAll(userMap);
+        removeUnwanted(requestMap);
+        Response result = cassandraOperation.updateRecord(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),requestMap);
             if(userMap.containsKey(JsonKey.ADDRESS)){
             	List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.ADDRESS);
             	for(int i = 0 ; i < reqList.size() ;i++ ){
@@ -330,12 +334,13 @@ public class UserManagementActor extends UntypedAbstractActor {
             		Response addrResponse = null;
             		if(reqMap.containsKey(JsonKey.ADDRESS)){
             			Map<String,Object> address = (Map<String,Object>)reqMap.get(JsonKey.ADDRESS);
-            			if(address.containsKey(JsonKey.ID)){
+            			if(!address.containsKey(JsonKey.ID)){
             				addrId = ProjectUtil.getUniqueIdFromTimestamp(i+1);
             				address.put(JsonKey.ID, addrId);
             				address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
                 			address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
             			}else{
+            				addrId = (String) address.get(JsonKey.ID);
             				address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
             				address.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
             			}
@@ -364,12 +369,13 @@ public class UserManagementActor extends UntypedAbstractActor {
             		Response addrResponse = null;
             		if(reqMap.containsKey(JsonKey.ADDRESS)){
             			Map<String,Object> address = (Map<String,Object>)reqMap.get(JsonKey.ADDRESS);
-            			if(address.containsKey(JsonKey.ID)){
+            			if(!address.containsKey(JsonKey.ID)){
             				addrId = ProjectUtil.getUniqueIdFromTimestamp(i+1);
             				address.put(JsonKey.ID, addrId);
             				address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
                 			address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
             			}else{
+            				addrId = (String) address.get(JsonKey.ID);
             				address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
             				address.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
             			}

@@ -212,3 +212,9 @@ insert into role (id,name,status) values ('r_103','ORG_MODERATOR',1);
 insert into role (id,name,status) values ('r_104','CONTENT_CREATOR',1);
 insert into role (id,name,status) values ('r_105','CONTENT_REVIEWER',1);
 insert into role (id,name,status) values ('r_106','ORG_MEMBER',1);
+
+
+ALTER TABLE sunbird.user ADD rootOrgId text;
+ALTER TABLE sunbird.address ADD addressLine1 text;
+ALTER TABLE sunbird.address ADD addressLine2 text;
+ALTER TABLE sunbird.user_education ADD degree text;

@@ -37,7 +37,7 @@ public class AssessmentItemActorTest {
     }
 
 
-    @Test()
+   // @Test()
     public void onReceiveTest() {
 
         TestKit probe = new TestKit(system);
@@ -67,7 +67,7 @@ public class AssessmentItemActorTest {
         probe.expectMsgClass(Response.class);
     }
 
-    @Test()
+   // @Test()
     public void onReceiveTestWithoutUserIds() {
 
         TestKit probe = new TestKit(system);

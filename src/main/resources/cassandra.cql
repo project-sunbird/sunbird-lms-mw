@@ -269,3 +269,11 @@ insert into sunbird.action_group(id,actionId,groupName) values ('ag_17',['19','2
 ALTER TABLE sunbird.user ADD loginId text;
 ALTER TABLE sunbird.user ADD provider text;
 ALTER TABLE sunbird.user_external_identity ADD idType text;
+
+
+insert into user_action_role(id,actiongroupid,roleid) values ('uar_1',['ag_17'],'r_107');
+ insert into user_action_role(id,actiongroupid,roleid) values ('uar_2',['ag_13'],'r_102');
+insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_14'],'r_103');
+ insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_15'],'r_104');
+ insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_16'],'r_105');
+ insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_12'],'r_101');

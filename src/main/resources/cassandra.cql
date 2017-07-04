@@ -206,12 +206,13 @@ CREATE INDEX inx_om_orgIdTwo ON sunbird.org_mapping(orgIdTwo);
 CREATE TABLE IF NOT EXISTS sunbird.role(id text, name text,status int, PRIMARY KEY (id));
 CREATE INDEX inx_ro_master_name ON sunbird.role(name);  
 
-insert into role (id,name,status) values ('r_101','ADMIN',1);
-insert into role (id,name,status) values ('r_102','ORG_ADMIN',1);
-insert into role (id,name,status) values ('r_103','ORG_MODERATOR',1);
-insert into role (id,name,status) values ('r_104','CONTENT_CREATOR',1);
-insert into role (id,name,status) values ('r_105','CONTENT_REVIEWER',1);
-insert into role (id,name,status) values ('r_106','ORG_MEMBER',1);
+insert into role (id,name,status) values ('r_101','SYSTEM_ADMINISTRATION',1);
+insert into role (id,name,status) values ('r_102','ORG_MANAGEMENT',1);
+insert into role (id,name,status) values ('r_103','MEMBERSHIP_MANAGEMENT',1);
+insert into role (id,name,status) values ('r_104','CONTENT_CREATION',1);
+insert into role (id,name,status) values ('r_105','CONTENT_REVIEW',1);
+insert into role (id,name,status) values ('r_106','CONTENT_CURATION',1);
+insert into role (id,name,status) values ('r_107','PUBLIC',1);
 
 
 CREATE TABLE IF NOT EXISTS sunbird.master_action(id text, name text, PRIMARY KEY (id));
@@ -257,3 +258,14 @@ insert into sunbird.url_action(id,url,name) values ('25','','searchCourse');
 insert into sunbird.url_action(id,url,name) values ('26','','searchContent');
 
 insert into sunbird.action_group(id,actionId,groupName) values ('ag_12',['1','2'],'SYSTEM_ADMINISTRATION');
+insert into sunbird.action_group(id,actionId,groupName) values ('ag_13',['3','4','7','8','5'],'ORG_MANAGEMENT');	
+insert into sunbird.action_group(id,actionId,groupName) values ('ag_14',['6','9','10'],'MEMBERSHIP_MANAGEMENT');	
+
+insert into sunbird.action_group(id,actionId,groupName) values ('ag_15',['11','12','13','14'],'CONTENT_CREATION');
+insert into sunbird.action_group(id,actionId,groupName) values ('ag_16',['15','16'],'CONTENT_REVIEW');	
+insert into sunbird.action_group(id,actionId,groupName) values ('ag_17',['17','18','10'],'CONTENT_CURATION');		
+insert into sunbird.action_group(id,actionId,groupName) values ('ag_17',['19','20','21','22','23','24','25','26'],'PUBLIC');
+
+ALTER TABLE sunbird.user ADD loginId text;
+ALTER TABLE sunbird.user ADD provider text;
+ALTER TABLE sunbird.user_external_identity ADD idType text;

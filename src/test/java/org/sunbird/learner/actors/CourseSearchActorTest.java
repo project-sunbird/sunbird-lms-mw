@@ -50,7 +50,7 @@ public class CourseSearchActorTest {
         Response res = probe.expectMsgClass(Response.class);
 
     }
-    //@Test
+    @Test
     public void searchCourseOnReceiveTest() {
 
         TestKit probe = new TestKit(system);

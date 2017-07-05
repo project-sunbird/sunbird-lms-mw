@@ -147,6 +147,8 @@ ALTER TABLE sunbird.user ADD thumbnail text;
  ALTER TABLE sunbird.user ADD regOrgId text;
  ALTER TABLE sunbird.user ADD subject list<text>;
  ALTER TABLE sunbird.user ADD language list<text>;
+ ALTER TABLE sunbird.user ADD grade list<text>;
+
  
  CREATE TABLE IF NOT EXISTS sunbird.user_external_identity(id text, userId text, externalId text,source text,isVerified boolean,PRIMARY KEY (id));
 CREATE INDEX inx_uei_userid ON sunbird.user_external_identity (userId);

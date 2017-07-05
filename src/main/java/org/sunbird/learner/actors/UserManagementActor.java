@@ -226,7 +226,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 	        Response resultFrEmail = cassandraOperation.getRecordsByProperty(dbInfo.getKeySpace(),dbInfo.getTableName(),JsonKey.EMAIL,email);
 	        if(((List<Map<String,Object>>)resultFrEmail.get(JsonKey.RESPONSE)).size() != 0){
 	        	Map<String,Object> dbusrMap = ((List<Map<String,Object>>)resultFrEmail.get(JsonKey.RESPONSE)).get(0);
-	        	String usrId = (String) dbusrMap.get(JsonKey.ID);
+	        	String usrId = (String) dbusrMap.get(JsonKey.USER_ID);
 	        	if(!(usrId.equals(userMap.get(JsonKey.ID)))){
 	        		ProjectCommonException exception = new ProjectCommonException(ResponseCode.emailAlreadyExistError.getErrorCode(), ResponseCode.emailAlreadyExistError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
 		            sender().tell(exception, self());

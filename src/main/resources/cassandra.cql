@@ -214,3 +214,79 @@ insert into role (id,name,status) values ('r_103','ORG_MODERATOR',1);
 insert into role (id,name,status) values ('r_104','CONTENT_CREATOR',1);
 insert into role (id,name,status) values ('r_105','CONTENT_REVIEWER',1);
 insert into role (id,name,status) values ('r_106','ORG_MEMBER',1);
+
+
+ALTER TABLE sunbird.user ADD rootOrgId text;
+ALTER TABLE sunbird.address ADD addressLine1 text;
+ALTER TABLE sunbird.address ADD addressLine2 text;
+ALTER TABLE sunbird.user_education ADD degree text;
+
+insert into role (id,name,status) values ('r_101','SYSTEM_ADMINISTRATION',1);
+insert into role (id,name,status) values ('r_102','ORG_MANAGEMENT',1);
+insert into role (id,name,status) values ('r_103','MEMBERSHIP_MANAGEMENT',1);
+insert into role (id,name,status) values ('r_104','CONTENT_CREATION',1);
+insert into role (id,name,status) values ('r_105','CONTENT_REVIEW',1);
+insert into role (id,name,status) values ('r_106','CONTENT_CURATION',1);
+insert into role (id,name,status) values ('r_107','PUBLIC',1);
+
+
+CREATE TABLE IF NOT EXISTS sunbird.master_action(id text, name text, PRIMARY KEY (id));
+CREATE INDEX inx_ma_name ON sunbird.master_action(name); 
+
+CREATE TABLE IF NOT EXISTS sunbird.url_action(id text, url text,name text, PRIMARY KEY (id));
+CREATE INDEX inx_ua_name ON sunbird.url_action(name);
+CREATE INDEX inx_ua_url ON sunbird.url_action(url);
+
+CREATE TABLE IF NOT EXISTS sunbird.action_group(id text, actionId list<text>,groupName text, PRIMARY KEY (id));
+CREATE INDEX inx_uacg_groupName ON sunbird.action_group(groupName);
+
+CREATE TABLE IF NOT EXISTS sunbird.user_action_role(id text, actionGroupId list<text>,roleId text, PRIMARY KEY (id));
+CREATE INDEX inx_uactr_roleId ON sunbird.user_action_role(roleId);
+
+insert into sunbird.url_action(id,url,name) values ('1','','suspendOrg');
+insert into sunbird.url_action(id,url,name) values ('2','','suspendUser');
+insert into sunbird.url_action(id,url,name) values ('3','','createOrg');
+insert into sunbird.url_action(id,url,name) values ('4','','updateOrg');
+insert into sunbird.url_action(id,url,name) values ('5','','updateUser');
+insert into sunbird.url_action(id,url,name) values ('6','','addMember');
+insert into sunbird.url_action(id,url,name) values ('7','','removeOrg');
+insert into sunbird.url_action(id,url,name) values ('8','','createUser');
+
+insert into sunbird.url_action(id,url,name) values ('9','','removeMember');
+insert into sunbird.url_action(id,url,name) values ('10','','suspendMember');
+insert into sunbird.url_action(id,url,name) values ('11','','createCourse');
+insert into sunbird.url_action(id,url,name) values ('12','','updateCourse');
+insert into sunbird.url_action(id,url,name) values ('13','','createContent');
+insert into sunbird.url_action(id,url,name) values ('14','','updateContent');
+insert into sunbird.url_action(id,url,name) values ('15','','publishCourse');
+insert into sunbird.url_action(id,url,name) values ('16','','publishContent');
+
+insert into sunbird.url_action(id,url,name) values ('17','','flagCourse');
+insert into sunbird.url_action(id,url,name) values ('18','','flagContent');
+insert into sunbird.url_action(id,url,name) values ('19','','getProfile');
+insert into sunbird.url_action(id,url,name) values ('20','','updateProfile');
+insert into sunbird.url_action(id,url,name) values ('21','','readCourse');
+insert into sunbird.url_action(id,url,name) values ('22','','readContent');
+insert into sunbird.url_action(id,url,name) values ('23','','rateCourse');
+insert into sunbird.url_action(id,url,name) values ('24','','rateContent');
+insert into sunbird.url_action(id,url,name) values ('25','','searchCourse');
+insert into sunbird.url_action(id,url,name) values ('26','','searchContent');
+
+insert into sunbird.action_group(id,actionId,groupName) values ('ag_12',['1','2'],'SYSTEM_ADMINISTRATION');
+insert into sunbird.action_group(id,actionId,groupName) values ('ag_13',['3','4','7','8','5'],'ORG_MANAGEMENT');	
+insert into sunbird.action_group(id,actionId,groupName) values ('ag_14',['6','9','10'],'MEMBERSHIP_MANAGEMENT');	
+
+insert into sunbird.action_group(id,actionId,groupName) values ('ag_15',['11','12','13','14'],'CONTENT_CREATION');
+insert into sunbird.action_group(id,actionId,groupName) values ('ag_16',['15','16'],'CONTENT_REVIEW');	
+insert into sunbird.action_group(id,actionId,groupName) values ('ag_17',['17','18','10'],'CONTENT_CURATION');		
+insert into sunbird.action_group(id,actionId,groupName) values ('ag_17',['19','20','21','22','23','24','25','26'],'PUBLIC');
+
+ALTER TABLE sunbird.user ADD loginId text;
+ALTER TABLE sunbird.user ADD provider text;
+ALTER TABLE sunbird.user_external_identity ADD idType text;
+insert into user_action_role(id,actiongroupid,roleid) values ('uar_1',['ag_17'],'r_107');
+ insert into user_action_role(id,actiongroupid,roleid) values ('uar_2',['ag_13'],'r_102');
+insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_14'],'r_103');
+ insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_15'],'r_104');
+ insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_16'],'r_105');
+ insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_12'],'r_101');

@@ -238,6 +238,9 @@ public class PageManagementActor extends UntypedAbstractActor {
 				for(Map<String,Object> sec : subSectionList){
 					Map<String, Object> subSectionData = DataCacheHandler.sectionMap.get((String)sec.get(JsonKey.ID));
 					Map<String, Object> subSectionMap = null;
+					
+					subSectionMap = new HashMap<>();
+					subSectionMap.putAll(subSectionData);
 					/**
 					 * based on section data type fetch the information 
 					 * if data type is course then course data will be fetched from NTP ES server
@@ -253,9 +256,9 @@ public class PageManagementActor extends UntypedAbstractActor {
 						subSectionMap.putAll(subSectionData);
 						getCourseData(subSectionMap);
 					}
+					//getContentData(subSectionMap);
+					
 					subSectionMap.put(JsonKey.POSITION, sec.get(JsonKey.POSITION));
-					//String str = (String) subSectionMap.get(JsonKey.SECTION_DISPLAY);
-					//Map<String,Object> secArr = mapper.readValue(str, HashMap.class);
 					removeUnwantedData(subSectionMap,"getPageData");
 					
 					if(null != subSectionData && subSectionData.size()>0){
@@ -386,7 +389,6 @@ public class PageManagementActor extends UntypedAbstractActor {
 		try {
 			response = HttpUtil.sendPostRequest(PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTNET_SEARCH_URL),
 					(String) section.get(JsonKey.SEARCH_QUERY), headers);
-			System.out.println("In get ContentData : "+response.isEmpty());
 			jObject = new JSONObject(response);
 			data = jObject.getJSONObject(JsonKey.RESULT);
 			JSONArray contentArray = data.getJSONArray(JsonKey.CONTENT);
@@ -424,6 +426,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 		section.put(JsonKey.CONTENTS, response);
 
 	}
+	
 	private Map<String, Object> getPageSetting(Map<String, Object> pageDO) {
 
 		Map<String, Object> responseMap = new HashMap<>();

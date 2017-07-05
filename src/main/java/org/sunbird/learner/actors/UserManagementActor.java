@@ -3,6 +3,8 @@
  */
 package org.sunbird.learner.actors;
 
+import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -82,13 +84,58 @@ public class UserManagementActor extends UntypedAbstractActor {
     @SuppressWarnings("unchecked")
 	private void getUserProfile(Request actorMessage) {
         Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+        Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
+        Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
+        Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
+        Response response = null;
+        List<Map<String,Object>> list = null;
 		Map<String , Object> userMap=(Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
-        Response response = cassandraOperation.getRecordById(userDbInfo.getKeySpace(),userDbInfo.getTableName(),(String)userMap.get(JsonKey.USER_ID));
-        List<Map<String,Object>> list = (List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE);
+        response = cassandraOperation.getRecordById(userDbInfo.getKeySpace(),userDbInfo.getTableName(),(String)userMap.get(JsonKey.USER_ID));
+        list = (List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE);
+        
         if(!(list.isEmpty())) {
             Map<String, Object> map = list.get(0);
+            Response addrResponse = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
+            list = (List<Map<String,Object>>)addrResponse.getResult().get(JsonKey.RESPONSE);
+            if(list.size() > 0){
+            	map.put(JsonKey.ADDRESS, list);
+            }
+            
+            Response eduResponse = cassandraOperation.getRecordsByProperty(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
+            list = (List<Map<String,Object>>)eduResponse.getResult().get(JsonKey.RESPONSE);
+            if(list.size() > 0){
+            	for(Map<String,Object> eduMap : list){
+            		String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
+            		if(!ProjectUtil.isStringNullOREmpty(addressId)){
+            			Response addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
+            			List<Map<String,Object>> addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
+                        if(!(addrList.isEmpty())){
+                        	eduMap.put(JsonKey.ADDRESS, addrList.get(0));
+                        }
+            		}
+            	}
+            	map.put(JsonKey.EDUCATION, list);
+            }
+            
+            Response jobProfileResponse = cassandraOperation.getRecordsByProperty(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
+            list = (List<Map<String,Object>>)jobProfileResponse.getResult().get(JsonKey.RESPONSE);
+            if(list.size() > 0){
+            	for(Map<String,Object> eduMap : list){
+            		String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
+            		if(!ProjectUtil.isStringNullOREmpty(addressId)){
+            			Response addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
+            			List<Map<String,Object>> addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
+                        if(!(addrList.isEmpty())){
+                        	eduMap.put(JsonKey.ADDRESS, addrList.get(0));
+                        }
+            		}
+            	}
+            	map.put(JsonKey.JOB_PROFILE, list);
+            }
+            
             Util.removeAttributes(map, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY, JsonKey.ID));
         }
+        //response.put(key, vo);
         sender().tell(response, self());
 	}
 
@@ -210,9 +257,13 @@ public class UserManagementActor extends UntypedAbstractActor {
      */
 	@SuppressWarnings("unchecked")
 	private void updateUser(Request actorMessage) {
-		 Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-	        Map<String , Object> req = actorMessage.getRequest();
-	        Map<String , Object> userMap=(Map<String, Object>) req.get(JsonKey.USER);
+		Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+		Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
+        Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
+        Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
+        Map<String , Object> req = actorMessage.getRequest();
+        Map<String,Object> requestMap = null;
+        Map<String , Object> userMap=(Map<String, Object>) req.get(JsonKey.USER);
 		if(userMap.containsKey(JsonKey.USERNAME) && null != userMap.get(JsonKey.USERNAME)){
 			ProjectCommonException exception = new ProjectCommonException(ResponseCode.userNameCanntBeUpdated.getErrorCode(), ResponseCode.userNameCanntBeUpdated.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
             sender().tell(exception, self());
@@ -223,7 +274,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 		
 		if(null != userMap.get(JsonKey.EMAIL)){
         	String email = (String)userMap.get(JsonKey.EMAIL);
-	        Response resultFrEmail = cassandraOperation.getRecordsByProperty(dbInfo.getKeySpace(),dbInfo.getTableName(),JsonKey.EMAIL,email);
+	        Response resultFrEmail = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.EMAIL,email);
 	        if(((List<Map<String,Object>>)resultFrEmail.get(JsonKey.RESPONSE)).size() != 0){
 	        	Map<String,Object> dbusrMap = ((List<Map<String,Object>>)resultFrEmail.get(JsonKey.RESPONSE)).get(0);
 	        	String usrId = (String) dbusrMap.get(JsonKey.USER_ID);
@@ -261,7 +312,86 @@ public class UserManagementActor extends UntypedAbstractActor {
         userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
         userMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
         userMap.put(JsonKey.ID,userMap.get(JsonKey.USER_ID));
-        Response result = cassandraOperation.updateRecord(dbInfo.getKeySpace(),dbInfo.getTableName(),userMap);
+        requestMap = new HashMap<>();
+        requestMap.putAll(userMap);
+        removeUnwanted(requestMap);
+        Response result = cassandraOperation.updateRecord(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),requestMap);
+            if(userMap.containsKey(JsonKey.ADDRESS)){
+            	List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.ADDRESS);
+            	for(int i = 0 ; i < reqList.size() ;i++ ){
+            		Map<String,Object> reqMap = reqList.get(i);
+            		reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+            		reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+            		reqMap.remove(JsonKey.USER_ID);
+            		cassandraOperation.upsertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),reqMap);
+            	}
+            }
+            if(userMap.containsKey(JsonKey.EDUCATION)){
+            	List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.EDUCATION);
+            	for(int i = 0 ; i < reqList.size() ;i++ ){
+            		Map<String,Object> reqMap = reqList.get(i);
+            		String addrId = null;
+            		Response addrResponse = null;
+            		if(reqMap.containsKey(JsonKey.ADDRESS)){
+            			Map<String,Object> address = (Map<String,Object>)reqMap.get(JsonKey.ADDRESS);
+            			if(!address.containsKey(JsonKey.ID)){
+            				addrId = ProjectUtil.getUniqueIdFromTimestamp(i+1);
+            				address.put(JsonKey.ID, addrId);
+            				address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+                			address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
+            			}else{
+            				addrId = (String) address.get(JsonKey.ID);
+            				address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+            				address.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+            			}
+            			
+            			addrResponse = cassandraOperation.upsertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
+            		}
+            		if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
+            			reqMap.put(JsonKey.ADDRESS_ID, addrId);
+            			reqMap.remove(JsonKey.ADDRESS);
+            		}
+	            	reqMap.put(JsonKey.YEAR_OF_PASSING, ((BigInteger)reqMap.get(JsonKey.YEAR_OF_PASSING)).intValue());
+	            	reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+	            	reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+	            	if(null != reqMap.get(JsonKey.PERCENTAGE)){
+	            		reqMap.put(JsonKey.PERCENTAGE, Double.parseDouble(String.valueOf(reqMap.get(JsonKey.PERCENTAGE))));
+	            	}
+	            	reqMap.remove(JsonKey.USER_ID);
+	            	cassandraOperation.upsertRecord(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(),reqMap);
+            	}
+            }
+            if(userMap.containsKey(JsonKey.JOB_PROFILE)){
+            	List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.JOB_PROFILE);
+            	for(int i = 0 ; i < reqList.size() ;i++ ){
+            		Map<String,Object> reqMap = reqList.get(i);
+            		String addrId = null;
+            		Response addrResponse = null;
+            		if(reqMap.containsKey(JsonKey.ADDRESS)){
+            			Map<String,Object> address = (Map<String,Object>)reqMap.get(JsonKey.ADDRESS);
+            			if(!address.containsKey(JsonKey.ID)){
+            				addrId = ProjectUtil.getUniqueIdFromTimestamp(i+1);
+            				address.put(JsonKey.ID, addrId);
+            				address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+                			address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
+            			}else{
+            				addrId = (String) address.get(JsonKey.ID);
+            				address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+            				address.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+            			}
+            			addrResponse = cassandraOperation.upsertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
+            		}
+            		if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
+            			reqMap.put(JsonKey.ADDRESS_ID, addrId);
+            			reqMap.remove(JsonKey.ADDRESS);
+            		}
+            		reqMap.remove(JsonKey.USER_ID);
+            		reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+            		reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+            		reqMap.remove(JsonKey.USER_ID);
+            		cassandraOperation.upsertRecord(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(),reqMap);
+            	}
+            }
         sender().tell(result, self());
 	}
 
@@ -271,14 +401,18 @@ public class UserManagementActor extends UntypedAbstractActor {
      */
 	@SuppressWarnings("unchecked")
 	private void createUser(Request actorMessage){
-        Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+        Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+        Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
+        Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
+        Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
         Map<String , Object> req = actorMessage.getRequest();
+        Map<String,Object> requestMap = null;
         Map<String , Object> userMap=(Map<String, Object>) req.get(JsonKey.USER);
         
 	        boolean isSSOEnabled = Boolean.valueOf(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
 		        if(null != userMap.get(JsonKey.EMAIL)){
 		        	String email = (String)userMap.get(JsonKey.EMAIL);
-			        Response resultFrEmail = cassandraOperation.getRecordsByProperty(dbInfo.getKeySpace(),dbInfo.getTableName(),JsonKey.EMAIL,email);
+			        Response resultFrEmail = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.EMAIL,email);
 			        if(((List<Map<String,Object>>)resultFrEmail.get(JsonKey.RESPONSE)).size() != 0){
 			        	ProjectCommonException exception = new ProjectCommonException(ResponseCode.emailAlreadyExistError.getErrorCode(), ResponseCode.emailAlreadyExistError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
 			            sender().tell(exception, self());
@@ -287,7 +421,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 		        }
 		        if(null != userMap.get(JsonKey.USERNAME)){
 		        	 String userName = (String)userMap.get(JsonKey.USERNAME);
-		        	 Response resultFrUserName = cassandraOperation.getRecordsByProperty(dbInfo.getKeySpace(),dbInfo.getTableName(),JsonKey.USERNAME,userName);
+		        	 Response resultFrUserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.USERNAME,userName);
 		        	 if(((List<Map<String,Object>>)resultFrUserName.get(JsonKey.RESPONSE)).size() != 0){
 		             	ProjectCommonException exception = new ProjectCommonException(ResponseCode.userNameAlreadyExistError.getErrorCode(), ResponseCode.userNameAlreadyExistError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
 		                 sender().tell(exception, self());
@@ -319,13 +453,87 @@ public class UserManagementActor extends UntypedAbstractActor {
             userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
             userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
             userMap.put(JsonKey.PASSWORD,OneWayHashing.encryptVal((String)userMap.get(JsonKey.PASSWORD)));
-            //userMap.put(JsonKey.ID,OneWayHashing.encryptVal((String)userMap.get(JsonKey.USERNAME)));
-           // userMap.put(JsonKey.USER_ID,OneWayHashing.encryptVal((String)userMap.get(JsonKey.USERNAME)));
-            Response response = cassandraOperation.insertRecord(dbInfo.getKeySpace(),dbInfo.getTableName(),userMap);
+            requestMap = new HashMap<>();
+            requestMap.putAll(userMap);
+            removeUnwanted(requestMap);
+            Response response = cassandraOperation.insertRecord(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),requestMap);
+            if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
+	            if(userMap.containsKey(JsonKey.ADDRESS)){
+	            	List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.ADDRESS);
+	            	for(int i = 0 ; i < reqList.size() ;i++ ){
+	            		Map<String,Object> reqMap = reqList.get(i);
+	            		reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i+1));
+	            		reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+	            		reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
+	            		reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+	            		cassandraOperation.insertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),reqMap);
+	            	}
+	            }
+	            if(userMap.containsKey(JsonKey.EDUCATION)){
+	            	List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.EDUCATION);
+	            	for(int i = 0 ; i < reqList.size() ;i++ ){
+	            		Map<String,Object> reqMap = reqList.get(i);
+	            		reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i+1));
+	            		String addrId = null;
+	            		Response addrResponse = null;
+	            		if(reqMap.containsKey(JsonKey.ADDRESS)){
+	            			Map<String,Object> address = (Map<String,Object>)reqMap.get(JsonKey.ADDRESS);
+	            			addrId = ProjectUtil.getUniqueIdFromTimestamp(i+1);
+	            			address.put(JsonKey.ID, addrId);
+	            			address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+	            			address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
+	            			addrResponse = cassandraOperation.insertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
+	            		}
+	            		if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
+	            			reqMap.put(JsonKey.ADDRESS_ID, addrId);
+	            			reqMap.remove(JsonKey.ADDRESS);
+	            		}
+		            	reqMap.put(JsonKey.YEAR_OF_PASSING, ((BigInteger)reqMap.get(JsonKey.YEAR_OF_PASSING)).intValue());
+		            	if(null != reqMap.get(JsonKey.PERCENTAGE)){
+		            		reqMap.put(JsonKey.PERCENTAGE, Double.parseDouble(String.valueOf(reqMap.get(JsonKey.PERCENTAGE))));
+		            	}
+		            	reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+		            	reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
+		            	reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+		            	cassandraOperation.insertRecord(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(),reqMap);
+	            	}
+	            }
+	            if(userMap.containsKey(JsonKey.JOB_PROFILE)){
+	            	List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.JOB_PROFILE);
+	            	for(int i = 0 ; i < reqList.size() ;i++ ){
+	            		Map<String,Object> reqMap = reqList.get(i);
+	            		reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i+1));
+	            		String addrId = null;
+	            		Response addrResponse = null;
+	            		if(reqMap.containsKey(JsonKey.ADDRESS)){
+	            			Map<String,Object> address = (Map<String,Object>)reqMap.get(JsonKey.ADDRESS);
+	            			addrId = ProjectUtil.getUniqueIdFromTimestamp(i+1);
+	            			address.put(JsonKey.ID, addrId);
+	            			address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+	            			address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
+	            			addrResponse = cassandraOperation.insertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
+	            		}
+	            		if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
+	            			reqMap.put(JsonKey.ADDRESS_ID, addrId);
+	            			reqMap.remove(JsonKey.ADDRESS);
+	            		}
+	            		reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+	            		reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
+	            		reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+	            		cassandraOperation.insertRecord(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(),reqMap);
+	            	}
+	            }
+            }
             sender().tell(response, self());
     }
 
-    /**
+    private void removeUnwanted(Map<String, Object> reqMap) {
+    	reqMap.remove(JsonKey.ADDRESS);
+    	reqMap.remove(JsonKey.EDUCATION);
+    	reqMap.remove(JsonKey.JOB_PROFILE);
+	}
+
+	/**
      * Utility method to provide the unique authtoken .
      * @param userAuthMap
      * @param resultMap

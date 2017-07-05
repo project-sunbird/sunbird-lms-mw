@@ -29,7 +29,6 @@ public class RecommendorActor extends UntypedAbstractActor {
     private LogHelper logger = LogHelper.getInstance(RecommendorActor.class.getName());
     private CassandraOperation cassandraOperation = new CassandraOperationImpl();
 
-
     /**
      * @param message
      * @throws Throwable
@@ -40,22 +39,8 @@ public class RecommendorActor extends UntypedAbstractActor {
             logger.info("RecommendorActor  onReceive called");
             Request request = (Request) message;
             if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_RECOMMENDED_COURSES.getValue())) {
-                Response response = new Response();
                 logger.info("RecommendorActor  -- GET Recommended courses");
-                String type = (String) request.getRequest().get(JsonKey.RECOMMEND_TYPE);
-                if (JsonKey.COURSE.equalsIgnoreCase(type)) {
-                    Map<String, List<Map<String, Object>>> esresponse = getRecommendedCourses(request);
-                    response.put(JsonKey.RESPONSE, esresponse);
-                    sender().tell(response, self());
-                } else if (JsonKey.CONTENT.equalsIgnoreCase(type)) {
-                    Object ekStepResponse = getRecommendedContents(request);
-                    response.put(JsonKey.RESPONSE, ekStepResponse);
-                    sender().tell(response, self());
-                } else {
-                    logger.info("UNSUPPORTED OPERATION");
-                    ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
-                    sender().tell(exception, self());
-                }
+                    getRecommendedContents(request);
             } else {
                 logger.info("UNSUPPORTED OPERATION");
                 ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -74,13 +59,19 @@ public class RecommendorActor extends UntypedAbstractActor {
      * @param request
      * @return
      */
-    private Object getRecommendedContents(Request request) {
+    private void getRecommendedContents(Request request) {
 
+        Response response = new Response();
         Map<String, Object> req = request.getRequest();
-        Map<String, List<Map<String, Object>>> response = null;
         String userId = (String) req.get(JsonKey.REQUESTED_BY);
         //get language , grade , subject on basis of UserId
         Map<String, Object> map = getUserInfo(userId);
+        if(null == map){
+            logger.info("USER ID DOES NOT EXIST");
+            ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidUserCredentials.getErrorCode(), ResponseCode.invalidUserCredentials.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;
+        }
         Map<String, Object> searchQueryMap = new HashMap<String, Object>();
         Map<String, Object> filterMap = new HashMap<String, Object>();
 
@@ -88,8 +79,8 @@ public class RecommendorActor extends UntypedAbstractActor {
             if (map.get(JsonKey.LANGUAGE) != null) {
                 filterMap.put(JsonKey.LANGUAGE, map.get(JsonKey.LANGUAGE));
             }
-            if (map.get(JsonKey.GRADE_LEVEL) != null) {
-                filterMap.put(JsonKey.GRADE_LEVEL, map.get(JsonKey.GRADE_LEVEL));
+            if (map.get(JsonKey.GRADE) != null) {
+                filterMap.put(JsonKey.GRADE_LEVEL, map.get(JsonKey.GRADE));
             }
             if (map.get(JsonKey.SUBJECT) != null) {
                 filterMap.put(JsonKey.SUBJECT, map.get(JsonKey.SUBJECT));
@@ -121,42 +112,15 @@ public class RecommendorActor extends UntypedAbstractActor {
             Map<String, Object> query = new HashMap<String, Object>();
             query.put(JsonKey.SEARCH_QUERY, json);
             Util.getContentData(query);
-            return shuffleList(Arrays.stream((Object[])query.get(JsonKey.CONTENTS)).collect(Collectors.toList()));
+            response.put(JsonKey.RESPONSE ,shuffleList(Arrays.stream((Object[])query.get(JsonKey.CONTENTS)).collect(Collectors.toList())));
+            sender().tell(response , self());
+            return;
         } catch (JsonProcessingException e) {
-            logger.error(e);
+            logger.error(e.getMessage() , e);
+            ProjectCommonException exception = new ProjectCommonException(ResponseCode.internalError.getErrorCode(), ResponseCode.internalError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;
         }
-        return null;
-    }
-
-    private Map<String, List<Map<String, Object>>> getRecommendedCourses(Request request) {
-
-        Map<String, Object> req = request.getRequest();
-        Map<String, List<Map<String, Object>>> response = null;
-        String userId = (String) req.get(JsonKey.REQUESTED_BY);
-        //get language , grade , subject on basis of UserId
-        Map<String, Object> map = getUserInfo(userId);
-        Map<String, Object> searchQueryMap = new HashMap<String, Object>();
-        Map<String, Object> filterMap = new HashMap<String, Object>();
-
-        if (map != null) {
-            if (map.get(JsonKey.LANGUAGE) != null) {
-                filterMap.put(JsonKey.LANGUAGE, map.get(JsonKey.LANGUAGE));
-            }
-            if (map.get(JsonKey.GRADE_LEVEL) != null) {
-                filterMap.put(JsonKey.GRADE, map.get(JsonKey.GRADE));
-            }
-            if (map.get(JsonKey.SUBJECT) != null) {
-                filterMap.put(JsonKey.SUBJECT, map.get(JsonKey.SUBJECT));
-            }
-        }
-
-        searchQueryMap.put(JsonKey.FILTERS, filterMap);
-        searchQueryMap.put(JsonKey.LIMIT , 20);
-        SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
-        response = ElasticSearchUtil.complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.course.getTypeName());
-        response.put(JsonKey.RESPONSE , shuffleList((List)response.get(JsonKey.RESPONSE)));
-        return response;
     }
 
     private Map<String, Object> getUserInfo(String userId) {
@@ -164,30 +128,34 @@ public class RecommendorActor extends UntypedAbstractActor {
         Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
         Map<String, Object> map = new HashMap<String, Object>();
 
+        List<String> languages = new ArrayList<String>();
+        List<String> subjects = new ArrayList<String>();
+        List<String> grades = new ArrayList<String>();
+
         Response response = cassandraOperation.getRecordById(userdbInfo.getKeySpace(), userdbInfo.getTableName(), userId);
         if (response.getResult() != null) {
             if (response.getResult().get(JsonKey.RESPONSE) != null) {
                 List<Map<String, Object>> userDBO = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
                 if (userDBO != null && userDBO.size() > 0) {
                     //TODO: get the subject,grade , language from userDBO(database object) and create the response ...
+                    Map<String, Object> userInfo = (Map<String, Object>)userDBO.get(0);
+                    if(userInfo.get(JsonKey.SUBJECT)!= null){
+                        subjects = (List<String>)userInfo.get(JsonKey.SUBJECT);
+                        map.put(JsonKey.SUBJECT, subjects);
+                    }
+                    if(userInfo.get(JsonKey.LANGUAGE)!= null){
+                        languages = (List<String>)userInfo.get(JsonKey.LANGUAGE);
+                        map.put(JsonKey.LANGUAGE , languages);
+                    }
+                    if(userInfo.get(JsonKey.GRADE)!= null){
+                        grades = (List<String>)userInfo.get(JsonKey.GRADE);
+                        map.put(JsonKey.GRADE , grades);
+                    }
+                }else{
+                    return null;
                 }
             }
         }
-
-        List<String> languages = new ArrayList<String>();
-        languages.add("English");
-        map.put(JsonKey.LANGUAGE, languages);
-
-        //TODO: subbject is not available in ES need discussion
-        List<String> subjects = new ArrayList<String>();
-        subjects.add("Physics");
-        subjects.add("Math");
-        //map.put(JsonKey.SUBJECT, subjects);
-
-
-        List<String> grades = new ArrayList<String>();
-        grades.add("Grade 1");
-        map.put(JsonKey.GRADE_LEVEL, grades);
 
         return map;
 

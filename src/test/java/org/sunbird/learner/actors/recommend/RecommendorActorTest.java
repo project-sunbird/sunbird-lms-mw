@@ -33,25 +33,6 @@ public class RecommendorActorTest {
     }
 
     @Test()
-    public void getRecommendedCourses() {
-
-        TestKit probe = new TestKit(system);
-        ActorRef subject = system.actorOf(props);
-
-        Request reqObj = new Request();
-        reqObj.setRequest_id("1");
-        reqObj.setOperation(ActorOperations.GET_RECOMMENDED_COURSES.getValue());
-        HashMap<String, Object> innerMap = new HashMap<>();
-        innerMap.put(JsonKey.REQUESTED_BY, "USR");
-        innerMap.put(JsonKey.RECOMMEND_TYPE, JsonKey.COURSE);
-        reqObj.setRequest(innerMap);
-
-        subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(duration("1000 second"),Response.class);
-
-    }
-
-    @Test()
     public void getRecommendedContents() {
 
         TestKit probe = new TestKit(system);
@@ -62,30 +43,10 @@ public class RecommendorActorTest {
         reqObj.setOperation(ActorOperations.GET_RECOMMENDED_COURSES.getValue());
         HashMap<String, Object> innerMap = new HashMap<>();
         innerMap.put(JsonKey.REQUESTED_BY, "USR");
-        innerMap.put(JsonKey.RECOMMEND_TYPE, JsonKey.CONTENT);
         reqObj.setRequest(innerMap);
 
         subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(duration("1000 second"),Response.class);
-
-    }
-
-    @Test()
-    public void getRecommendedCoursesWithInvelidRecommendType() {
-
-        TestKit probe = new TestKit(system);
-        ActorRef subject = system.actorOf(props);
-
-        Request reqObj = new Request();
-        reqObj.setRequest_id("1");
-        reqObj.setOperation(ActorOperations.GET_RECOMMENDED_COURSES.getValue());
-        HashMap<String, Object> innerMap = new HashMap<>();
-        innerMap.put(JsonKey.REQUESTED_BY, "USR");
-        innerMap.put(JsonKey.RECOMMEND_TYPE, "INVALID_RECOMMEND_TYPE");
-        reqObj.setRequest(innerMap);
-
-        subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(ProjectCommonException.class);
+        probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
 
     }
 

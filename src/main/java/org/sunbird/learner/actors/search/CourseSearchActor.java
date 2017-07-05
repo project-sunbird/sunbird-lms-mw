@@ -2,10 +2,14 @@ package org.sunbird.learner.actors.search;
 
 import akka.actor.UntypedAbstractActor;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -34,13 +38,24 @@ public class CourseSearchActor extends UntypedAbstractActor {
 	            	Map<String , Object> req = actorMessage.getRequest();
                     @SuppressWarnings("unchecked")
 					Map<String , Object> searchQueryMap=(Map<String, Object>) req.get(JsonKey.SEARCH);
-                    SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
-                    logger.info("CourseSearchActor  ES call init");
-                    Map<String, List<Map<String, Object>>> result = ElasticSearchUtil.complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.course.getTypeName());
-                    logger.info("CourseSearchActor   call end");
-                    Response response = new Response();
-                    response.put(JsonKey.RESPONSE, result.get(JsonKey.RESPONSE));
-                    sender().tell(response, self());
+					Map<String, Object> ekStepSearchQuery = new HashMap<String, Object>();
+					ekStepSearchQuery.put(JsonKey.REQUEST, searchQueryMap);
+
+					String json = null;
+					try {
+						json = new ObjectMapper().writeValueAsString(ekStepSearchQuery);
+						Map<String, Object> query = new HashMap<String, Object>();
+						query.put(JsonKey.SEARCH_QUERY, json);
+						Util.getContentData(query);
+						Object  ekStepResponse = query.get(JsonKey.CONTENTS);
+						Response response = new Response();
+						response.put(JsonKey.RESPONSE, ekStepResponse);
+						sender().tell(response, self());
+					} catch (JsonProcessingException e) {
+						ProjectCommonException projectCommonException = new ProjectCommonException(ResponseCode.internalError.getErrorCode(), ResponseCode.internalError.getErrorMessage(), ResponseCode.internalError.getResponseCode());
+						sender().tell(projectCommonException , self());
+
+					}
 	            } else if(actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_COURSE_BY_ID.getValue())){
 	            	Map<String , Object> req = actorMessage.getRequest();
 					String courseId=(String) req.get(JsonKey.ID);

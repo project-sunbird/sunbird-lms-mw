@@ -264,13 +264,6 @@ public class UserManagementActor extends UntypedAbstractActor {
         Map<String , Object> req = actorMessage.getRequest();
         Map<String,Object> requestMap = null;
         Map<String , Object> userMap=(Map<String, Object>) req.get(JsonKey.USER);
-		if(userMap.containsKey(JsonKey.USERNAME) && null != userMap.get(JsonKey.USERNAME)){
-			ProjectCommonException exception = new ProjectCommonException(ResponseCode.userNameCanntBeUpdated.getErrorCode(), ResponseCode.userNameCanntBeUpdated.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
-            sender().tell(exception, self());
-            return;
-		}else if(userMap.containsKey(JsonKey.USERNAME) && null == userMap.get(JsonKey.USERNAME)){
-			userMap.remove(JsonKey.USERNAME);
-		}
 		
 		if(null != userMap.get(JsonKey.EMAIL)){
         	String email = (String)userMap.get(JsonKey.EMAIL);
@@ -285,26 +278,21 @@ public class UserManagementActor extends UntypedAbstractActor {
 	        	}
 	        }
         }
-		
-       if(userMap.containsKey(JsonKey.STATUS)){
-    	   ProjectCommonException exception = new ProjectCommonException(ResponseCode.statusCanntBeUpdated.getErrorCode(), ResponseCode.statusCanntBeUpdated.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
-    	   sender().tell(exception, self());
-    	   return;
-       }
-       
+		//not allowing user to update the status
+		userMap.remove(JsonKey.STATUS);
        boolean isSSOEnabled = Boolean.valueOf(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
        if(isSSOEnabled){
 	    	try{
 		    	SSOManager ssoManager = new KeyCloakServiceImpl();
 		    	String userId = ssoManager.updateUser(userMap);
-		    	if(!(!ProjectUtil.isStringNullOREmpty(userId) && userId.equalsIgnoreCase((String) JsonKey.SUCCESS))){
+		    	if(!(!ProjectUtil.isStringNullOREmpty(userId) && userId.equalsIgnoreCase(JsonKey.SUCCESS))){
 		    		ProjectCommonException exception = new ProjectCommonException(ResponseCode.userUpdationUnSuccessfull.getErrorCode(), ResponseCode.userUpdationUnSuccessfull.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
 		    		sender().tell(exception, self());
 		    		return;
 		    	}
 	    	}catch(Exception e){
 	    		logger.error(e.getMessage(), e);
-	    		ProjectCommonException exception = new ProjectCommonException(e.getMessage(), e.getMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+	    		ProjectCommonException exception = new ProjectCommonException(ResponseCode.userUpdationUnSuccessfull.getErrorCode(), ResponseCode.userUpdationUnSuccessfull.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
 	    		sender().tell(exception, self());
 	    		return;
 	    	}

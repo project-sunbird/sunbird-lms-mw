@@ -26,9 +26,11 @@ public class Util {
     private static final String KEY_SPACE_NAME = "sunbird";
     private static Properties prop = new Properties();
     private static Map<String, String> headers = new HashMap<String, String>();
+    private static Map<String , Object> orgStatusTransition = new HashMap<String , Object>();
 
     static {
         loadPropertiesFile();
+        initializeOrgStatusTransition();
 
         //setting db info (keyspace , table) into static map
         dbInfoMap.put(JsonKey.LEARNER_COURSE_DB, getDbInfoObject("sunbird","course_enrollment"));
@@ -50,6 +52,21 @@ public class Util {
         headers.put("content-type", "application/json");
         headers.put("accept", "application/json");
         headers.put("user-id", "mahesh");
+    }
+
+    private static void initializeOrgStatusTransition() {
+        orgStatusTransition.put(JsonKey.ACTIVE , Arrays.asList(JsonKey.INACTIVE, JsonKey.BLOCKED, JsonKey.RETIRED));
+        orgStatusTransition.put(JsonKey.INACTIVE , Arrays.asList(JsonKey.ACTIVE));
+        orgStatusTransition.put(JsonKey.BLOCKED ,Arrays.asList(JsonKey.ACTIVE , JsonKey.RETIRED));
+        orgStatusTransition.put(JsonKey.RETIRED ,Arrays.asList());
+    }
+
+    public static boolean checkOrgStatusTransition(String currentState , String nextState){
+        List list = (List)orgStatusTransition.get(currentState);
+        if(null == list){
+            return false;
+        }
+        return list.contains(nextState);
     }
 
     public static void checkCassandraDbConnections() {
@@ -359,4 +376,6 @@ public class Util {
             logger.error(e.getMessage(), e);
         }
     }
+
+
 }

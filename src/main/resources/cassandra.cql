@@ -290,3 +290,53 @@ insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_14'],
  insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_15'],'r_104');
  insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_16'],'r_105');
  insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_12'],'r_101');
+ 
+ 
+ CREATE TABLE IF NOT EXISTS sunbird.role_group(id text, name text, PRIMARY KEY (id));
+ insert into role_group (id,name) values ('SYSTEM_ADMINISTRATION','SYSTEM_ADMINISTRATION');
+ insert into role_group (id,name) values ('ORG_MANAGEMENT','ORG_MANAGEMENT');
+ insert into role_group (id,name) values ('MEMBERSHIP_MANAGEMENT','MEMBERSHIP_MANAGEMENT');
+ insert into role_group (id,name) values ('CONTENT_CREATION','CONTENT_CREATION');
+ insert into role_group (id,name) values ('CONTENT_CURATION','CONTENT_CURATION');
+ insert into role_group (id,name) values ('CONTENT_REVIEW','CONTENT_REVIEW');
+drop table role;
+CREATE TABLE IF NOT EXISTS sunbird.role(id text, name text,roleGroupId List<text>,status int, PRIMARY KEY (id));
+CREATE INDEX inx_ro_master_name ON sunbird.role(name);
+ insert into role (id,name,rolegroupid,status) values ('ADMIN','ADMIN',['SYSTEM_ADMINISTRATION','ORG_MANAGEMENT'],1);
+ insert into role (id,name,rolegroupid,status) values ('ORG_ADMIN','ORG_ADMIN',['ORG_MANAGEMENT','MEMBERSHIP_MANAGEMENT'],1);
+ insert into role (id,name,rolegroupid,status) values ('ORG_MODERATOR','ORG_MODERATOR',['MEMBERSHIP_MANAGEMENT'],1);
+ insert into role (id,name,rolegroupid,status) values ('CONTENT_CREATOR','CONTENT_CREATOR',['CONTENT_CREATION'],1);
+ insert into role (id,name,rolegroupid,status) values ('CONTENT_REVIEWER','CONTENT_REVIEWER',['CONTENT_CREATION','CONTENT_CURATION','CONTENT_REVIEW'],1);
+ drop table url_action;
+ CREATE TABLE IF NOT EXISTS sunbird.url_action(id text, url list<text>,name text, PRIMARY KEY (id));
+ CREATE INDEX inx_ua_name ON sunbird.url_action(name);
+CREATE INDEX inx_ua_url ON sunbird.url_action(url);
+
+insert into url_action (id,name) values ('suspendOrg','suspendOrg');
+ insert into url_action (id,name) values ('suspendUser','suspendUser');
+ insert into url_action (id,name) values ('createOrg','createOrg');
+ insert into url_action (id,name) values ('updateOrg','updateOrg');
+ insert into url_action (id,name) values ('removeOrg','removeOrg');
+ insert into url_action (id,name) values ('createUser','createUser');
+ insert into url_action (id,name) values ('updateUser','updateUser');
+ insert into url_action (id,name) values ('ORG_MANAGEMENT','ORG_MANAGEMENT');
+ insert into url_action (id,name) values ('createOrg','createOrg');
+ insert into url_action (id,name) values ('addMember','addMember');
+ insert into url_action (id,name) values ('removeMember','removeMember');
+ insert into url_action (id,name) values ('suspendMember','suspendMember');
+ insert into url_action (id,name) values ('createCourse','createCourse');
+ insert into url_action (id,name) values ('updateCourse','updateCourse');
+ insert into url_action (id,name) values ('createContent','createContent');
+ insert into url_action (id,name) values ('updateContent','updateContent');
+ insert into url_action (id,name) values ('flagCourse','flagCourse');
+ insert into url_action (id,name) values ('flagContent','flagContent');
+ insert into url_action (id,name) values ('publishCourse','publishCourse');
+ insert into url_action (id,name) values ('publishContent','publishContent');
+ ALTER table role_group add url_action_ids list<text>;
+ 
+ update role_group set url_action_ids=['addMember','removeMember','suspendMember'] where id='MEMBERSHIP_MANAGEMENT';
+ update role_group set url_action_ids=['createCourse','updateCourse','createContent','updateContent'] where id='CONTENT_CREATION';
+ update role_group set url_action_ids=['suspendOrg','suspendUser'] where id='SYSTEM_ADMINISTRATION';
+ update role_group set url_action_ids=['publishCourse','publishContent'] where id='CONTENT_REVIEW';
+ update role_group set url_action_ids=['createOrg','updateOrg','removeOrg','createUser','updateUser'] where id='ORG_MANAGEMENT';
+ update role_group set url_action_ids=['flagCourse','flagContent'] where id='CONTENT_CURATION';

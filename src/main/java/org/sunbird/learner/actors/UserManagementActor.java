@@ -4,7 +4,6 @@
 package org.sunbird.learner.actors;
 
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -64,6 +63,8 @@ public class UserManagementActor extends UntypedAbstractActor {
             	changePassword(actorMessage);
             }else if(actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_PROFILE.getValue())){
             	getUserProfile(actorMessage);
+            }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_ROLES.getValue())){
+              getRoles(actorMessage);
             }else {
                 logger.info("UNSUPPORTED OPERATION");
                 ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -546,5 +547,68 @@ public class UserManagementActor extends UntypedAbstractActor {
             cassandraOperation.insertRecord(userAuthDbInfo.getKeySpace(),userAuthDbInfo.getTableName(),userAuthMap);
         }
     }
+    
+    /**
+     *This method will provide the complete role structure..
+     * @param actorMessage Request
+     */
+    @SuppressWarnings("unchecked")
+    private void getRoles(Request actorMessage) {
+        Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+        Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
+        Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
+        Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
+        Response response = null;
+        List<Map<String,Object>> list = null;
+        Map<String , Object> userMap=(Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
+        response = cassandraOperation.getRecordById(userDbInfo.getKeySpace(),userDbInfo.getTableName(),(String)userMap.get(JsonKey.USER_ID));
+        list = (List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE);
+        
+        if(!(list.isEmpty())) {
+            Map<String, Object> map = list.get(0);
+            Response addrResponse = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
+            list = (List<Map<String,Object>>)addrResponse.getResult().get(JsonKey.RESPONSE);
+            if(list.size() > 0){
+                map.put(JsonKey.ADDRESS, list);
+            }
+            
+            Response eduResponse = cassandraOperation.getRecordsByProperty(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
+            list = (List<Map<String,Object>>)eduResponse.getResult().get(JsonKey.RESPONSE);
+            if(list.size() > 0){
+                for(Map<String,Object> eduMap : list){
+                    String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
+                    if(!ProjectUtil.isStringNullOREmpty(addressId)){
+                        Response addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
+                        List<Map<String,Object>> addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
+                        if(!(addrList.isEmpty())){
+                            eduMap.put(JsonKey.ADDRESS, addrList.get(0));
+                        }
+                    }
+                }
+                map.put(JsonKey.EDUCATION, list);
+            }
+            
+            Response jobProfileResponse = cassandraOperation.getRecordsByProperty(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
+            list = (List<Map<String,Object>>)jobProfileResponse.getResult().get(JsonKey.RESPONSE);
+            if(list.size() > 0){
+                for(Map<String,Object> eduMap : list){
+                    String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
+                    if(!ProjectUtil.isStringNullOREmpty(addressId)){
+                        Response addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
+                        List<Map<String,Object>> addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
+                        if(!(addrList.isEmpty())){
+                            eduMap.put(JsonKey.ADDRESS, addrList.get(0));
+                        }
+                    }
+                }
+                map.put(JsonKey.JOB_PROFILE, list);
+            }
+            
+            Util.removeAttributes(map, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY, JsonKey.ID));
+        }
+        //response.put(key, vo);
+        sender().tell(response, self());
+    }
+
 
 }

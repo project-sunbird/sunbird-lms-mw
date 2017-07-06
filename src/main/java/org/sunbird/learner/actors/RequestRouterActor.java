@@ -109,6 +109,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.LOGOUT.getValue(), userManagementRouter);
         routerMap.put(ActorOperations.CHANGE_PASSWORD.getValue(), userManagementRouter);
         routerMap.put(ActorOperations.GET_PROFILE.getValue(), userManagementRouter);
+        routerMap.put(ActorOperations.GET_ROLES.getValue(), userManagementRouter);
         
         routerMap.put(ActorOperations.CREATE_PAGE.getValue(), pageManagementRouter);
         routerMap.put(ActorOperations.UPDATE_PAGE.getValue(), pageManagementRouter);

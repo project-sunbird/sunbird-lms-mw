@@ -117,13 +117,12 @@ CREATE INDEX inx_ai_assessmentItemId ON sunbird.assessment_item (assessmentItemI
 CREATE INDEX inx_ai_courseId ON sunbird.assessment_item (courseId);
 CREATE INDEX inx_ai_processingStatus ON sunbird.assessment_item (processingStatus);
 
-alter table sunbird.course_management add  courselogourl text;
-alter table sunbird.course_management add  tocUrl text;
-alter table sunbird.course_management add  courseRating text;
-alter table sunbird.course_management add  userCount int;
-ALTER TABLE course_management DROP noOfLectures;
-ALTER TABLE course_management ADD noOfLectures int;
-ALTER TABLE sunbird.course_enrollment ADD contentId text;
+ALTER TABLE sunbird.course_management add  courselogourl text;
+ALTER TABLE sunbird.course_management add  tocUrl text;
+ALTER TABLE sunbird.course_management add  courseRating text;
+ALTER TABLE sunbird.course_management add  userCount int;
+ALTER TABLE sunbird.course_management DROP noOfLectures;
+ALTER TABLE sunbird.course_management ADD noOfLectures int;
 ALTER TABLE sunbird.assessment_item DROP evaluationStatus;
 ALTER TABLE sunbird.assessment_item DROP processingStatus;
 ALTER TABLE sunbird.assessment_item ADD evaluationStatus boolean;
@@ -137,7 +136,7 @@ ALTER TABLE sunbird.page_management ADD appMap text;
 ALTER TABLE sunbird.page_management ADD portalMap text;
 ALTER TABLE sunbird.organisation ADD orgCode text;
 
-#2017-06-30 changes for user and organisation
+//2017-06-30 changes for user and organisation
 ALTER TABLE sunbird.user DROP zipcode;
 ALTER TABLE sunbird.user DROP city;
 ALTER TABLE sunbird.user DROP state;
@@ -222,13 +221,13 @@ ALTER TABLE sunbird.address ADD addressLine1 text;
 ALTER TABLE sunbird.address ADD addressLine2 text;
 ALTER TABLE sunbird.user_education ADD degree text;
 
-insert into role (id,name,status) values ('r_101','SYSTEM_ADMINISTRATION',1);
-insert into role (id,name,status) values ('r_102','ORG_MANAGEMENT',1);
-insert into role (id,name,status) values ('r_103','MEMBERSHIP_MANAGEMENT',1);
-insert into role (id,name,status) values ('r_104','CONTENT_CREATION',1);
-insert into role (id,name,status) values ('r_105','CONTENT_REVIEW',1);
-insert into role (id,name,status) values ('r_106','CONTENT_CURATION',1);
-insert into role (id,name,status) values ('r_107','PUBLIC',1);
+insert into sunbird.role (id,name,status) values ('r_101','SYSTEM_ADMINISTRATION',1);
+insert into sunbird.role (id,name,status) values ('r_102','ORG_MANAGEMENT',1);
+insert into sunbird.role (id,name,status) values ('r_103','MEMBERSHIP_MANAGEMENT',1);
+insert into sunbird.role (id,name,status) values ('r_104','CONTENT_CREATION',1);
+insert into sunbird.role (id,name,status) values ('r_105','CONTENT_REVIEW',1);
+insert into sunbird.role (id,name,status) values ('r_106','CONTENT_CURATION',1);
+insert into sunbird.role (id,name,status) values ('r_107','PUBLIC',1);
 
 
 CREATE TABLE IF NOT EXISTS sunbird.master_action(id text, name text, PRIMARY KEY (id));
@@ -285,8 +284,9 @@ insert into sunbird.action_group(id,actionId,groupName) values ('ag_17',['19','2
 ALTER TABLE sunbird.user ADD loginId text;
 ALTER TABLE sunbird.user ADD provider text;
 ALTER TABLE sunbird.user_external_identity ADD idType text;
+
 insert into user_action_role(id,actiongroupid,roleid) values ('uar_1',['ag_17'],'r_107');
- insert into user_action_role(id,actiongroupid,roleid) values ('uar_2',['ag_13'],'r_102');
+insert into user_action_role(id,actiongroupid,roleid) values ('uar_2',['ag_13'],'r_102');
 insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_14'],'r_103');
  insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_15'],'r_104');
  insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_16'],'r_105');
@@ -295,3 +295,54 @@ insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_14'],
 ALTER TABLE sunbird.organisation DROP addId;
 ALTER TABLE sunbird.organisation ADD addressId text;
 ALTER TABLE sunbird.user ADD roles List<text>;
+ 
+ 
+ CREATE TABLE IF NOT EXISTS sunbird.role_group(id text, name text, PRIMARY KEY (id));
+ insert into sunbird.role_group (id,name) values ('SYSTEM_ADMINISTRATION','SYSTEM_ADMINISTRATION');
+ insert into sunbird.role_group (id,name) values ('ORG_MANAGEMENT','ORG_MANAGEMENT');
+ insert into sunbird.role_group (id,name) values ('MEMBERSHIP_MANAGEMENT','MEMBERSHIP_MANAGEMENT');
+ insert into sunbird.role_group (id,name) values ('CONTENT_CREATION','CONTENT_CREATION');
+ insert into sunbird.role_group (id,name) values ('CONTENT_CURATION','CONTENT_CURATION');
+ insert into sunbird.role_group (id,name) values ('CONTENT_REVIEW','CONTENT_REVIEW');
+ drop table sunbird.role;
+CREATE TABLE IF NOT EXISTS sunbird.role(id text, name text,roleGroupId List<text>,status int, PRIMARY KEY (id));
+CREATE INDEX inx_ro_master_name ON sunbird.role(name);
+ insert into sunbird.role (id,name,rolegroupid,status) values ('ADMIN','ADMIN',['SYSTEM_ADMINISTRATION','ORG_MANAGEMENT'],1);
+ insert into sunbird.role (id,name,rolegroupid,status) values ('ORG_ADMIN','ORG_ADMIN',['ORG_MANAGEMENT','MEMBERSHIP_MANAGEMENT'],1);
+ insert into sunbird.role (id,name,rolegroupid,status) values ('ORG_MODERATOR','ORG_MODERATOR',['MEMBERSHIP_MANAGEMENT'],1);
+ insert into sunbird.role (id,name,rolegroupid,status) values ('CONTENT_CREATOR','CONTENT_CREATOR',['CONTENT_CREATION'],1);
+ insert into sunbird.role (id,name,rolegroupid,status) values ('CONTENT_REVIEWER','CONTENT_REVIEWER',['CONTENT_CREATION','CONTENT_CURATION','CONTENT_REVIEW'],1);
+ drop table sunbird.url_action;
+ CREATE TABLE IF NOT EXISTS sunbird.url_action(id text, url list<text>,name text, PRIMARY KEY (id));
+ CREATE INDEX inx_ua_name ON sunbird.url_action(name);
+CREATE INDEX inx_ua_url ON sunbird.url_action(url);
+
+insert into sunbird.url_action (id,name) values ('suspendOrg','suspendOrg');
+ insert into sunbird.url_action (id,name) values ('suspendUser','suspendUser');
+ insert into sunbird.url_action (id,name) values ('createOrg','createOrg');
+ insert into sunbird.url_action (id,name) values ('updateOrg','updateOrg');
+ insert into sunbirdurl_action (id,name) values ('removeOrg','removeOrg');
+ insert into sunbird.url_action (id,name) values ('createUser','createUser');
+ insert into sunbird.url_action (id,name) values ('updateUser','updateUser');
+ insert into sunbird.url_action (id,name) values ('ORG_MANAGEMENT','ORG_MANAGEMENT');
+ insert into sunbird.url_action (id,name) values ('createOrg','createOrg');
+ insert into sunbird.url_action (id,name) values ('addMember','addMember');
+ insert into sunbird.url_action (id,name) values ('removeMember','removeMember');
+ insert into sunbird.url_action (id,name) values ('suspendMember','suspendMember');
+ insert into sunbird.url_action (id,name) values ('createCourse','createCourse');
+ insert into sunbird.url_action (id,name) values ('updateCourse','updateCourse');
+ insert into sunbird.url_action (id,name) values ('createContent','createContent');
+ insert into sunbird.url_action (id,name) values ('updateContent','updateContent');
+ insert into sunbird.url_action (id,name) values ('flagCourse','flagCourse');
+ insert into sunbird.url_action (id,name) values ('flagContent','flagContent');
+ insert into sunbird.url_action (id,name) values ('publishCourse','publishCourse');
+ insert into sunbird.url_action (id,name) values ('publishContent','publishContent');
+ ALTER table sunbird.role_group add url_action_ids list<text>;
+ 
+ update sunbird.role_group set url_action_ids=['addMember','removeMember','suspendMember'] where id='MEMBERSHIP_MANAGEMENT';
+ update sunbird.role_group set url_action_ids=['createCourse','updateCourse','createContent','updateContent'] where id='CONTENT_CREATION';
+ update sunbird.role_group set url_action_ids=['suspendOrg','suspendUser'] where id='SYSTEM_ADMINISTRATION';
+ update sunbird.role_group set url_action_ids=['publishCourse','publishContent'] where id='CONTENT_REVIEW';
+ update sunbird.role_group set url_action_ids=['createOrg','updateOrg','removeOrg','createUser','updateUser'] where id='ORG_MANAGEMENT';
+ update sunbird.role_group set url_action_ids=['flagCourse','flagContent'] where id='CONTENT_CURATION';
+>>>>>>> 0793be958d545da33f3cee7f8f2352325e6b6c74

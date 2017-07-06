@@ -23,7 +23,8 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
-
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import akka.actor.UntypedAbstractActor;
@@ -144,6 +145,15 @@ public class PageManagementActor extends UntypedAbstractActor {
 		Response response = cassandraOperation.updateRecord(sectionDbInfo.getKeySpace(), sectionDbInfo.getTableName(),
 				sectionMap);
 		sender().tell(response, self());
+		//update DataCacheHandler section map with updated page section data
+		new Thread()
+		{
+		    public void run() {
+		    	if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
+					DataCacheHandler.sectionMap.put((String)sectionMap.get(JsonKey.ID), sectionMap);
+				}
+		    }
+		}.start();
 	}
 
 	private void createPageSection(Request actorMessage) {
@@ -173,6 +183,15 @@ public class PageManagementActor extends UntypedAbstractActor {
 		Response response = cassandraOperation.insertRecord(sectionDbInfo.getKeySpace(), sectionDbInfo.getTableName(),
 				sectionMap);
 		sender().tell(response, self());
+		//update DataCacheHandler section map with new page section data
+		new Thread()
+		{
+		    public void run() {
+		    	if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
+					DataCacheHandler.sectionMap.put((String)sectionMap.get(JsonKey.ID), sectionMap);
+				}
+		    }
+		}.start();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -217,8 +236,11 @@ public class PageManagementActor extends UntypedAbstractActor {
 			}
 		}
 		ObjectMapper mapper = new ObjectMapper();
-		try{
-			Object[] arr = mapper.readValue(sectionQuery, Object[].class);
+		Map<String, Object> responseMap = new HashMap<>();
+		
+      try {
+            Object[] arr = mapper.readValue(sectionQuery, Object[].class);
+      
 			for(Object obj : arr){
 				Map<String,Object>  sectionMap = (Map<String, Object>) obj ;
 				Map<String, Object> sectionData = DataCacheHandler.sectionMap.get((String)sectionMap.get(JsonKey.ID));
@@ -228,14 +250,19 @@ public class PageManagementActor extends UntypedAbstractActor {
 				removeUnwantedData(sectionData,"getPageData");
 				sectionList.add(sectionData);
 			}
-		}catch(Exception e){
-			logger.error(e);
-		}
-		Map<String, Object> responseMap = new HashMap<>();
-		responseMap.put(JsonKey.NAME, pageMap.get(JsonKey.NAME));
-		responseMap.put(JsonKey.ID, pageMap.get(JsonKey.ID));
-		responseMap.put(JsonKey.SECTIONS, sectionList);
-
+			
+	        responseMap.put(JsonKey.NAME, pageMap.get(JsonKey.NAME));
+	        responseMap.put(JsonKey.ID, pageMap.get(JsonKey.ID));
+	        responseMap.put(JsonKey.SECTIONS, sectionList);
+      } catch (JsonParseException e) {
+        logger.error(e);
+      } catch (JsonMappingException e) {
+        logger.error(e);
+      } catch (IOException e) {
+        logger.error(e);
+      }catch (Exception e) {
+        logger.error(e);
+      }
 		Response pageResponse = new Response();
 		pageResponse.put(JsonKey.RESPONSE, responseMap);
 		sender().tell(pageResponse, self());
@@ -302,6 +329,15 @@ public class PageManagementActor extends UntypedAbstractActor {
 		Response response = cassandraOperation.updateRecord(pageDbInfo.getKeySpace(), pageDbInfo.getTableName(),
 				pageMap);
 		sender().tell(response, self());
+		//update DataCacheHandler page map with updated page data
+		new Thread()
+		{
+		    public void run() {
+		    	if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
+					DataCacheHandler.pageMap.put((String)pageMap.get(JsonKey.PAGE_NAME), pageMap);
+				}
+		    }
+		}.start();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -330,6 +366,15 @@ public class PageManagementActor extends UntypedAbstractActor {
 		Response response = cassandraOperation.insertRecord(pageDbInfo.getKeySpace(), pageDbInfo.getTableName(),
 				pageMap);
 		sender().tell(response, self());
+		//update DataCacheHandler page map with new page data
+		new Thread()
+		{
+		    public void run() {
+		    	if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
+					DataCacheHandler.pageMap.put((String)pageMap.get(JsonKey.PAGE_NAME), pageMap);
+				}
+		    }
+		}.start();
 	}
 
 

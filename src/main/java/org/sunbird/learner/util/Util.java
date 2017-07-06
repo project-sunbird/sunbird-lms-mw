@@ -47,6 +47,8 @@ public class Util {
         dbInfoMap.put(JsonKey.ADDRESS_DB, getDbInfoObject("sunbird","address"));
         dbInfoMap.put(JsonKey.EDUCATION_DB, getDbInfoObject("sunbird","user_education"));
         dbInfoMap.put(JsonKey.JOB_PROFILE_DB, getDbInfoObject("sunbird","user_job_profile"));
+        dbInfoMap.put(JsonKey.USR_ORG_DB, getDbInfoObject("sunbird","user_org"));
+        dbInfoMap.put(JsonKey.USR_EXT_ID_DB, getDbInfoObject("sunbird","user_external_identity"));
 
         // EkStep HttpClient headers init
         headers.put("content-type", "application/json");

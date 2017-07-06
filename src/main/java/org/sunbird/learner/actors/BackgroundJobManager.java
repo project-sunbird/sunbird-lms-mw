@@ -4,6 +4,7 @@
 package org.sunbird.learner.actors;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +62,10 @@ public class BackgroundJobManager extends UntypedAbstractActor{
             }else if(requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_USER_COUNT.getValue())){
                 updateUserCount(actorMessage);
 
-            }else {
+            }else if(requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue())){
+              updateUserInfoToEs(actorMessage);
+
+          }else {
             	LOGGER.info("UNSUPPORTED OPERATION");
                 ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
                 sender().tell(exception, self());
@@ -73,7 +77,86 @@ public class BackgroundJobManager extends UntypedAbstractActor{
 	
 	}
 	
-   /**
+   private void updateUserInfoToEs(Response actorMessage) {
+     String userId = (String) actorMessage.get(JsonKey.ID);
+     getUserProfile(userId);
+  }
+
+  @SuppressWarnings("unchecked")
+  private void getUserProfile(String userId) {
+    Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
+    Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
+    Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
+    Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
+    Response response = null;
+    List<Map<String,Object>> list = null;
+    response = cassandraOperation.getRecordById(userDbInfo.getKeySpace(),userDbInfo.getTableName(),userId);
+    list = (List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE);
+    
+    if(!(list.isEmpty())) {
+        Map<String, Object> map = list.get(0);
+        Response addrResponse = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
+        list = (List<Map<String,Object>>)addrResponse.getResult().get(JsonKey.RESPONSE);
+        if(list.size() > 0){
+            map.put(JsonKey.ADDRESS, list);
+        }
+        
+        Response eduResponse = cassandraOperation.getRecordsByProperty(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(), JsonKey.USER_ID, userId);
+        list = (List<Map<String,Object>>)eduResponse.getResult().get(JsonKey.RESPONSE);
+        if(list.size() > 0){
+            for(Map<String,Object> eduMap : list){
+                String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
+                if(!ProjectUtil.isStringNullOREmpty(addressId)){
+                    Response addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
+                    List<Map<String,Object>> addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
+                    if(!(addrList.isEmpty())){
+                        eduMap.put(JsonKey.ADDRESS, addrList.get(0));
+                    }
+                }
+            }
+            map.put(JsonKey.EDUCATION, list);
+        }
+        
+        Response jobProfileResponse = cassandraOperation.getRecordsByProperty(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(), JsonKey.USER_ID, userId);
+        list = (List<Map<String,Object>>)jobProfileResponse.getResult().get(JsonKey.RESPONSE);
+        if(list.size() > 0){
+            for(Map<String,Object> eduMap : list){
+                String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
+                if(!ProjectUtil.isStringNullOREmpty(addressId)){
+                    Response addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
+                    List<Map<String,Object>> addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
+                    if(!(addrList.isEmpty())){
+                        eduMap.put(JsonKey.ADDRESS, addrList.get(0));
+                    }
+                }
+            }
+            map.put(JsonKey.JOB_PROFILE, list);
+        }
+        
+        Response usrOrgResponse = cassandraOperation.getRecordsByProperty(usrOrgDb.getKeySpace(),usrOrgDb.getTableName(), JsonKey.USER_ID, userId);
+        list = (List<Map<String,Object>>)usrOrgResponse.getResult().get(JsonKey.RESPONSE);
+        if(list.size() > 0){
+            for(Map<String,Object> eduMap : list){
+                String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
+                if(!ProjectUtil.isStringNullOREmpty(addressId)){
+                    Response addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
+                    List<Map<String,Object>> addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
+                    if(!(addrList.isEmpty())){
+                        eduMap.put(JsonKey.ADDRESS, addrList.get(0));
+                    }
+                }
+            }
+            map.put(JsonKey.ORGANISATION, list);
+        }
+        Util.removeAttributes(map, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY, JsonKey.ID));
+    }
+
+    cacheDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(),
+        userId,response.getResult() );
+  }
+
+  /**
     * Method to update the user count .
     * @param actorMessage
     */
@@ -129,7 +212,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
 					Map<String,Object> finalResponseMap = (Map<String,Object>)map.get(JsonKey.RESULT);
 					finalResponseMap.putAll(content);
 					finalResponseMap.put(JsonKey.OBJECT_TYPE, ProjectUtil.EsType.course.getTypeName());
-					cacheCourseData(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.course.getTypeName(),
+					cacheDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.course.getTypeName(),
 							(String) map.get(JsonKey.ID), finalResponseMap);
 				}
 			}
@@ -222,7 +305,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
 	 * @param data Map<String,Object>
 	 * @return boolean
 	 */
-	private boolean cacheCourseData(String index, String type, String identifier, Map<String,Object> data) {
+	private boolean cacheDataToElastic(String index, String type, String identifier, Map<String,Object> data) {
 		String response = ElasticSearchUtil.createData(index, type, identifier, data);
 		if(!ProjectUtil.isStringNullOREmpty(response)) {
 			return true;

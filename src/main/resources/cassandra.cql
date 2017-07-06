@@ -165,7 +165,8 @@ CREATE INDEX inx_ueu_userid ON sunbird.user_education (userId);
 CREATE TABLE IF NOT EXISTS sunbird.user_job_profile(id text, userId text, jobName text,role text,joiningDate text,endDate text,orgName text,orgId text,subject list<text>,addressId text,boardName text,isVerified boolean,isRejected boolean,verifiedDate text,verifiedBy text,createdDate text,createdBy text,updatedDate text,updatedBy text, PRIMARY KEY (id));
 CREATE INDEX inx_ujp_userid ON sunbird.user_job_profile (userId); 
 
-CREATE TABLE IF NOT EXISTS sunbird.user_org(id text, userId text, role text,orgId text,orgJoinDate text,orgLeftDate text,isApproved boolean,isRejected boolean,approvedBy text,approvalDate text,updatedDate text,updatedBy text, PRIMARY KEY (id));
+CREATE TABLE IF NOT EXISTS sunbird.user_org(id text, userId text, role text,orgId text,orgJoinDate text,orgLeftDate text,isApproved boolean,
+isRejected boolean,approvedBy text,approvalDate text,updatedDate text,updatedBy text, PRIMARY KEY (id));
 CREATE INDEX inx_uorg_userid ON sunbird.user_org(userId); 
 CREATE INDEX inx_uorg_orgId ON sunbird.user_org(orgId);
  
@@ -290,3 +291,7 @@ insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_14'],
  insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_15'],'r_104');
  insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_16'],'r_105');
  insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_12'],'r_101');
+ 
+ALTER TABLE sunbird.organisation DROP addId;
+ALTER TABLE sunbird.organisation ADD addressId text;
+ALTER TABLE sunbird.user ADD roles List<text>;

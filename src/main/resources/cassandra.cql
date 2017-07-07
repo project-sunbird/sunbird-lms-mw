@@ -193,6 +193,7 @@ ALTER TABLE sunbird.organisation ADD orgCode text;
 ALTER TABLE sunbird.organisation ADD isApproved boolean;
 ALTER TABLE sunbird.organisation ADD approvedBy text;
 ALTER TABLE sunbird.organisation ADD approvedDate text;
+ALTER TABLE sunbird.organisation ADD isRejected boolean;
 
 CREATE INDEX inx_org_channel ON sunbird.organisation(channel);
 CREATE INDEX inx_org_orgType ON sunbird.organisation(orgType);
@@ -345,4 +346,10 @@ insert into sunbird.url_action (id,name) values ('suspendOrg','suspendOrg');
  update sunbird.role_group set url_action_ids=['publishCourse','publishContent'] where id='CONTENT_REVIEW';
  update sunbird.role_group set url_action_ids=['createOrg','updateOrg','removeOrg','createUser','updateUser'] where id='ORG_MANAGEMENT';
  update sunbird.role_group set url_action_ids=['flagCourse','flagContent'] where id='CONTENT_CURATION';
->>>>>>> 0793be958d545da33f3cee7f8f2352325e6b6c74
+
+drop index inx_uorg_orgid;
+ALTER TABLE sunbird.user_org DROP orgid;
+ALTER TABLE sunbird.user_org ADD organisationid text;
+ALTER TABLE sunbird.user_org ADD addedby text;
+ALTER TABLE sunbird.user_org ADD addedbyname text;
+CREATE INDEX inx_uorg_orgid ON sunbird.user_org (organisationid);

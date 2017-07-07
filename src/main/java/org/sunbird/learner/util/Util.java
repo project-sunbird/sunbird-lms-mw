@@ -56,6 +56,7 @@ public class Util {
         dbInfoMap.put(JsonKey.ACTION_GROUP, getDbInfoObject("sunbird","action_group"));
         dbInfoMap.put(JsonKey.USER_ACTION_ROLE, getDbInfoObject("sunbird","user_action_role"));
         dbInfoMap.put(JsonKey.JOB_PROFILE_DB, getDbInfoObject("sunbird","role_group"));
+        dbInfoMap.put(JsonKey.USER_ORG_DB , getDbInfoObject("sunbird" , "user_org"));
         // EkStep HttpClient headers init
         headers.put("content-type", "application/json");
         headers.put("accept", "application/json");
@@ -383,6 +384,14 @@ public class Util {
         } catch (JSONException e) {
             logger.error(e.getMessage(), e);
         }
+    }
+
+    public static boolean isNull(Object obj){
+        return null == obj ? true:false;
+    }
+
+    public static boolean isNotNull(Object obj){
+        return null != obj? true:false;
     }
 
 

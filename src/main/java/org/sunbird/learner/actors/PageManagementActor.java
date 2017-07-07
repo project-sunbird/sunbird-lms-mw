@@ -11,7 +11,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -22,10 +21,8 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
-
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -148,6 +145,15 @@ public class PageManagementActor extends UntypedAbstractActor {
 		Response response = cassandraOperation.updateRecord(sectionDbInfo.getKeySpace(), sectionDbInfo.getTableName(),
 				sectionMap);
 		sender().tell(response, self());
+		//update DataCacheHandler section map with updated page section data
+		new Thread()
+		{
+		    public void run() {
+		    	if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
+					DataCacheHandler.sectionMap.put((String)sectionMap.get(JsonKey.ID), sectionMap);
+				}
+		    }
+		}.start();
 	}
 
 	private void createPageSection(Request actorMessage) {
@@ -177,15 +183,24 @@ public class PageManagementActor extends UntypedAbstractActor {
 		Response response = cassandraOperation.insertRecord(sectionDbInfo.getKeySpace(), sectionDbInfo.getTableName(),
 				sectionMap);
 		sender().tell(response, self());
+		//update DataCacheHandler section map with new page section data
+		new Thread()
+		{
+		    public void run() {
+		    	if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
+					DataCacheHandler.sectionMap.put((String)sectionMap.get(JsonKey.ID), sectionMap);
+				}
+		    }
+		}.start();
 	}
 
 	@SuppressWarnings("unchecked")
 	private void getPageData(Request actorMessage) {
 		String sectionQuery = null;
+		List<Map<String,Object>> sectionList = new ArrayList<>();
 		Response response = null;
 		Map<String, Object> req = actorMessage.getRequest();
 		String pageName = (String) req.get(JsonKey.ID);
-		//String userId = (String) req.get(JsonKey.USER_ID);
 		String source = (String) req.get(JsonKey.SOURCE);
 		String orgCode = (String) req.get(JsonKey.ORG_CODE);
 		List<Map<String, Object>> result = null;
@@ -203,11 +218,6 @@ public class PageManagementActor extends UntypedAbstractActor {
 			orgId = (String) map.get(JsonKey.ID);
 		}
 		
-		/**
-		 * based on source fetch the list of section from page object to display on page
-		 * if source is web then portal map contains the list of section id to display
-		 * if source is app then app map contains the information
-		 */
 		Map<String, Object> pageMap = DataCacheHandler.pageMap.get(orgId+":"+pageName);
 		/**
 		 * if requested page for this organisation is not found,
@@ -226,64 +236,33 @@ public class PageManagementActor extends UntypedAbstractActor {
 			}
 		}
 		ObjectMapper mapper = new ObjectMapper();
-		List<Map<String, Object>> sections = new ArrayList<Map<String, Object>>();
-		try {
-			Object[] arr = mapper.readValue(sectionQuery, Object[].class);
+		Map<String, Object> responseMap = new HashMap<>();
+		
+      try {
+            Object[] arr = mapper.readValue(sectionQuery, Object[].class);
+      
 			for(Object obj : arr){
-				Map<String,Object>  secMap = (Map<String, Object>) obj ;
-				Map<String,Object>  section = new HashMap<>();
-				section.putAll(secMap);
-				List<Map<String,Object>>  subSectionList = (List<Map<String, Object>>) secMap.get(JsonKey.SUB_SECTIONS);
-				List<Map<String, Object>> innerSectionList = new ArrayList<>();
-				for(Map<String,Object> sec : subSectionList){
-					Map<String, Object> subSectionData = DataCacheHandler.sectionMap.get((String)sec.get(JsonKey.ID));
-					Map<String, Object> subSectionMap = null;
-					
-					subSectionMap = new HashMap<>();
-					subSectionMap.putAll(subSectionData);
-					/**
-					 * based on section data type fetch the information 
-					 * if data type is course then course data will be fetched from NTP ES server
-					 * if data type is content then content data will be fethced from EkStep server
-					 */
-					if (((String) subSectionData.get(JsonKey.SECTION_DATA_TYPE))
-							.equals(ProjectUtil.SectionDataType.content.getTypeName())) {
-						subSectionMap = new HashMap<>();
-						subSectionMap.putAll(subSectionData);
-						getContentData(subSectionMap);
-					} else {
-						subSectionMap = new HashMap<>();
-						subSectionMap.putAll(subSectionData);
-						getCourseData(subSectionMap);
-					}
-					//getContentData(subSectionMap);
-					
-					subSectionMap.put(JsonKey.POSITION, sec.get(JsonKey.POSITION));
-					removeUnwantedData(subSectionMap,"getPageData");
-					
-					if(null != subSectionData && subSectionData.size()>0){
-						innerSectionList.add(subSectionMap);
-					}
-				}
-				section.put(JsonKey.SUB_SECTIONS, innerSectionList);
-				sections.add(section);
+				Map<String,Object>  sectionMap = (Map<String, Object>) obj ;
+				Map<String, Object> sectionData = DataCacheHandler.sectionMap.get((String)sectionMap.get(JsonKey.ID));
+				getContentData(sectionData);
+				sectionData.put(JsonKey.GROUP, sectionMap.get(JsonKey.GROUP));
+				sectionData.put(JsonKey.INDEX, sectionMap.get(JsonKey.INDEX));
+				removeUnwantedData(sectionData,"getPageData");
+				sectionList.add(sectionData);
 			}
 			
-		} catch (JsonParseException e) {
-			logger.error(e.getMessage(), e);
-		} catch (JsonMappingException e) {
-			logger.error(e.getMessage(), e);
-		} catch (IOException e) {
-			logger.error(e.getMessage(), e);
-		} catch (Exception e){
-			logger.error(e.getMessage(), e);
-		}
-	
-		Map<String, Object> responseMap = new HashMap<>();
-		responseMap.put(JsonKey.NAME, pageMap.get(JsonKey.NAME));
-		responseMap.put(JsonKey.ID, pageMap.get(JsonKey.ID));
-		responseMap.put(JsonKey.SECTIONS, sections);
-
+	        responseMap.put(JsonKey.NAME, pageMap.get(JsonKey.NAME));
+	        responseMap.put(JsonKey.ID, pageMap.get(JsonKey.ID));
+	        responseMap.put(JsonKey.SECTIONS, sectionList);
+      } catch (JsonParseException e) {
+        logger.error(e);
+      } catch (JsonMappingException e) {
+        logger.error(e);
+      } catch (IOException e) {
+        logger.error(e);
+      }catch (Exception e) {
+        logger.error(e);
+      }
 		Response pageResponse = new Response();
 		pageResponse.put(JsonKey.RESPONSE, responseMap);
 		sender().tell(pageResponse, self());
@@ -350,6 +329,15 @@ public class PageManagementActor extends UntypedAbstractActor {
 		Response response = cassandraOperation.updateRecord(pageDbInfo.getKeySpace(), pageDbInfo.getTableName(),
 				pageMap);
 		sender().tell(response, self());
+		//update DataCacheHandler page map with updated page data
+		new Thread()
+		{
+		    public void run() {
+		    	if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
+					DataCacheHandler.pageMap.put((String)pageMap.get(JsonKey.PAGE_NAME), pageMap);
+				}
+		    }
+		}.start();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -378,6 +366,15 @@ public class PageManagementActor extends UntypedAbstractActor {
 		Response response = cassandraOperation.insertRecord(pageDbInfo.getKeySpace(), pageDbInfo.getTableName(),
 				pageMap);
 		sender().tell(response, self());
+		//update DataCacheHandler page map with new page data
+		new Thread()
+		{
+		    public void run() {
+		    	if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
+					DataCacheHandler.pageMap.put((String)pageMap.get(JsonKey.PAGE_NAME), pageMap);
+				}
+		    }
+		}.start();
 	}
 
 
@@ -400,33 +397,6 @@ public class PageManagementActor extends UntypedAbstractActor {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
-	private void getCourseData(Map<String, Object> section) {
-		ObjectMapper mapper = new ObjectMapper();
-		HashMap<String, Object> result = null;
-		Map<String, List<Map<String, Object>>> response = null;
-		String searchQuery = (String) section.get(JsonKey.SEARCH_QUERY);
-		
-		try {
-			JSONObject object = new JSONObject(searchQuery);
-			JSONObject reqObj = object.getJSONObject(JsonKey.REQUEST);
-			result = mapper.readValue(reqObj.toString(), HashMap.class);
-		} catch (JsonParseException e) {
-			logger.error(e.getMessage(), e);
-		} catch (JsonMappingException e) {
-			logger.error(e.getMessage(), e);
-		} catch (IOException e) {
-			logger.error(e.getMessage(), e);
-		} catch (JSONException e) {
-			logger.error(e.getMessage(), e);
-		}
-		SearchDTO searchDto = Util.createSearchDto(result);
-		response = ElasticSearchUtil.complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(),
-				ProjectUtil.EsType.course.getTypeName());
-		section.put(JsonKey.CONTENTS, response);
-
-	}
-	
 	private Map<String, Object> getPageSetting(Map<String, Object> pageDO) {
 
 		Map<String, Object> responseMap = new HashMap<>();
@@ -434,10 +404,10 @@ public class PageManagementActor extends UntypedAbstractActor {
 		responseMap.put(JsonKey.ID, pageDO.get(JsonKey.ID));
 		
 		if (pageDO.containsKey(JsonKey.APP_MAP) && null != pageDO.get(JsonKey.APP_MAP)) {
-			responseMap.put(JsonKey.APP_SECTIONS, parseSectionQuery((String)pageDO.get(JsonKey.APP_MAP),pageDO));
+			responseMap.put(JsonKey.APP_SECTIONS, parsePage(pageDO,(String)JsonKey.APP_MAP));
 		}
 		if (pageDO.containsKey(JsonKey.PORTAL_MAP) && null != pageDO.get(JsonKey.PORTAL_MAP)) {
-			responseMap.put(JsonKey.PORTAL_SECTIONS, parseSectionQuery((String)pageDO.get(JsonKey.PORTAL_MAP),pageDO));
+			responseMap.put(JsonKey.PORTAL_SECTIONS, parsePage(pageDO,(String)JsonKey.PORTAL_MAP));
 		}
 		return responseMap;
 	}
@@ -454,37 +424,28 @@ public class PageManagementActor extends UntypedAbstractActor {
 
 	
 	@SuppressWarnings("unchecked")
-	private List<Map<String, Object>> parseSectionQuery(String sectionDetails, Map<String, Object> pageDO) {
+	private List<Map<String, Object>> parsePage(Map<String, Object> pageDO, String mapType) {
+		List<Map<String,Object>> sections = new ArrayList<>();
+		String sectionQuery = (String) pageDO.get(mapType);
 		ObjectMapper mapper = new ObjectMapper();
-		List<Map<String, Object>> sections = new ArrayList<Map<String, Object>>();
-		try {
-			Object[] arr = mapper.readValue(sectionDetails, Object[].class);
+		try{
+			Object[] arr = mapper.readValue(sectionQuery, Object[].class);
 			for(Object obj : arr){
-				Map<String,Object>  map = (Map<String, Object>) obj ;
-				List<Map<String, Object>> subSectionList = new ArrayList<Map<String, Object>>();
-				List<Map<String,Object>>  sectionMapList = (List<Map<String, Object>>) map.get(JsonKey.SUB_SECTIONS);
-				for(Map<String,Object> sect : sectionMapList){
-					Response sectionResponse = cassandraOperation.getRecordById(pageSectionDbInfo.getKeySpace(),
-							pageSectionDbInfo.getTableName(), (String)sect.get(JsonKey.ID));
+				Map<String,Object>  sectionMap = (Map<String, Object>) obj ;
+				Response sectionResponse = cassandraOperation.getRecordById(pageSectionDbInfo.getKeySpace(),
+						pageSectionDbInfo.getTableName(), (String)sectionMap.get(JsonKey.ID));
 
-					List<Map<String, Object>> sectionResult = (List<Map<String, Object>>) sectionResponse.getResult()
-							.get(JsonKey.RESPONSE);
-					if(null != sectionResult && sectionResult.size()>0){
-						sectionResult.get(0).put(JsonKey.POSITION, sect.get(JsonKey.POSITION));
-						removeUnwantedData(sectionResult.get(0), "getPageData");
-						subSectionList.add(sectionResult.get(0));
-					}
+				List<Map<String, Object>> sectionResult = (List<Map<String, Object>>) sectionResponse.getResult()
+						.get(JsonKey.RESPONSE);
+				if(null != sectionResult && sectionResult.size()>0){
+					sectionResult.get(0).put(JsonKey.GROUP, sectionMap.get(JsonKey.GROUP));
+					sectionResult.get(0).put(JsonKey.INDEX, sectionMap.get(JsonKey.INDEX));
+					removeUnwantedData(sectionResult.get(0),"");
+					sections.add(sectionResult.get(0));
 				}
-				map.put(JsonKey.SUB_SECTIONS, subSectionList);
-				sections.add(map);
 			}
-			
-		} catch (JsonParseException e) {
-			logger.error(e.getMessage(), e);
-		} catch (JsonMappingException e) {
-			logger.error(e.getMessage(), e);
-		} catch (IOException e) {
-			logger.error(e.getMessage(), e);
+		}catch(Exception e){
+			logger.error(e);
 		}
 		return sections;
 	}

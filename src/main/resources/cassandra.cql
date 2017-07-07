@@ -164,7 +164,8 @@ CREATE INDEX inx_ueu_userid ON sunbird.user_education (userId);
 CREATE TABLE IF NOT EXISTS sunbird.user_job_profile(id text, userId text, jobName text,role text,joiningDate text,endDate text,orgName text,orgId text,subject list<text>,addressId text,boardName text,isVerified boolean,isRejected boolean,verifiedDate text,verifiedBy text,createdDate text,createdBy text,updatedDate text,updatedBy text, PRIMARY KEY (id));
 CREATE INDEX inx_ujp_userid ON sunbird.user_job_profile (userId); 
 
-CREATE TABLE IF NOT EXISTS sunbird.user_org(id text, userId text, role text,orgId text,orgJoinDate text,orgLeftDate text,isApproved boolean,isRejected boolean,approvedBy text,approvalDate text,updatedDate text,updatedBy text, PRIMARY KEY (id));
+CREATE TABLE IF NOT EXISTS sunbird.user_org(id text, userId text, role text,orgId text,orgJoinDate text,orgLeftDate text,isApproved boolean,
+isRejected boolean,approvedBy text,approvalDate text,updatedDate text,updatedBy text, PRIMARY KEY (id));
 CREATE INDEX inx_uorg_userid ON sunbird.user_org(userId); 
 CREATE INDEX inx_uorg_orgId ON sunbird.user_org(orgId);
  
@@ -283,12 +284,17 @@ insert into sunbird.action_group(id,actionId,groupName) values ('ag_17',['19','2
 ALTER TABLE sunbird.user ADD loginId text;
 ALTER TABLE sunbird.user ADD provider text;
 ALTER TABLE sunbird.user_external_identity ADD idType text;
-insert into sunbird.user_action_role(id,actiongroupid,roleid) values ('uar_1',['ag_17'],'r_107');
- insert into sunbird.user_action_role(id,actiongroupid,roleid) values ('uar_2',['ag_13'],'r_102');
-insert into sunbird.user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_14'],'r_103');
- insert into sunbird.user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_15'],'r_104');
- insert into sunbird.user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_16'],'r_105');
- insert into sunbird.user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_12'],'r_101');
+
+insert into user_action_role(id,actiongroupid,roleid) values ('uar_1',['ag_17'],'r_107');
+insert into user_action_role(id,actiongroupid,roleid) values ('uar_2',['ag_13'],'r_102');
+insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_14'],'r_103');
+ insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_15'],'r_104');
+ insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_16'],'r_105');
+ insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_12'],'r_101');
+ 
+ALTER TABLE sunbird.organisation DROP addId;
+ALTER TABLE sunbird.organisation ADD addressId text;
+ALTER TABLE sunbird.user ADD roles List<text>;
  
  
  CREATE TABLE IF NOT EXISTS sunbird.role_group(id text, name text, PRIMARY KEY (id));
@@ -339,3 +345,4 @@ insert into sunbird.url_action (id,name) values ('suspendOrg','suspendOrg');
  update sunbird.role_group set url_action_ids=['publishCourse','publishContent'] where id='CONTENT_REVIEW';
  update sunbird.role_group set url_action_ids=['createOrg','updateOrg','removeOrg','createUser','updateUser'] where id='ORG_MANAGEMENT';
  update sunbird.role_group set url_action_ids=['flagCourse','flagContent'] where id='CONTENT_CURATION';
+>>>>>>> 0793be958d545da33f3cee7f8f2352325e6b6c74

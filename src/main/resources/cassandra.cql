@@ -117,10 +117,6 @@ CREATE INDEX inx_ai_assessmentItemId ON sunbird.assessment_item (assessmentItemI
 CREATE INDEX inx_ai_courseId ON sunbird.assessment_item (courseId);
 CREATE INDEX inx_ai_processingStatus ON sunbird.assessment_item (processingStatus);
 
-ALTER TABLE sunbird.course_management add  courselogourl text;
-ALTER TABLE sunbird.course_management add  tocUrl text;
-ALTER TABLE sunbird.course_management add  courseRating text;
-ALTER TABLE sunbird.course_management add  userCount int;
 ALTER TABLE sunbird.course_management DROP noOfLectures;
 ALTER TABLE sunbird.course_management ADD noOfLectures int;
 ALTER TABLE sunbird.assessment_item DROP evaluationStatus;
@@ -285,12 +281,12 @@ ALTER TABLE sunbird.user ADD loginId text;
 ALTER TABLE sunbird.user ADD provider text;
 ALTER TABLE sunbird.user_external_identity ADD idType text;
 
-insert into user_action_role(id,actiongroupid,roleid) values ('uar_1',['ag_17'],'r_107');
-insert into user_action_role(id,actiongroupid,roleid) values ('uar_2',['ag_13'],'r_102');
-insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_14'],'r_103');
- insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_15'],'r_104');
- insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_16'],'r_105');
- insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_12'],'r_101');
+insert into sunbird.user_action_role(id,actiongroupid,roleid) values ('uar_1',['ag_17'],'r_107');
+insert into  sunbird.user_action_role(id,actiongroupid,roleid) values ('uar_2',['ag_13'],'r_102');
+insert into  sunbird.user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_14'],'r_103');
+ insert into sunbird.user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_15'],'r_104');
+ insert into sunbird.user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_16'],'r_105');
+ insert into sunbird.user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_12'],'r_101');
  
 ALTER TABLE sunbird.organisation DROP addId;
 ALTER TABLE sunbird.organisation ADD addressId text;

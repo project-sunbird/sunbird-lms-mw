@@ -8,7 +8,6 @@ import akka.pattern.Patterns;
 import akka.util.Timeout;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -260,7 +259,7 @@ public class UserManagementActor extends UntypedAbstractActor {
             	List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.ADDRESS);
             	for(int i = 0 ; i < reqList.size() ;i++ ){
             		Map<String,Object> reqMap = reqList.get(i);
-            		reqMap.remove(JsonKey.USER_ID);
+            		//reqMap.remove(JsonKey.USER_ID);
             		if(!reqMap.containsKey(JsonKey.ID)){
             		  reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
             		  reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
@@ -338,12 +337,12 @@ public class UserManagementActor extends UntypedAbstractActor {
           reqMap.put(JsonKey.ADDRESS_ID, addrId);
           reqMap.remove(JsonKey.ADDRESS);
       }
-      reqMap.remove(JsonKey.USER_ID);
       if(reqMap.containsKey(JsonKey.ID)){
         reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
         reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
       }else{
         reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+        reqMap.put(JsonKey.USER_ID,userMap.get(JsonKey.ID));
       }
       try{
        cassandraOperation.upsertRecord(usrOrgDb.getKeySpace(),usrOrgDb.getTableName(),reqMap);
@@ -378,7 +377,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 			reqMap.put(JsonKey.ADDRESS_ID, addrId);
 			reqMap.remove(JsonKey.ADDRESS);
 		}
-		reqMap.remove(JsonKey.USER_ID);
+		
 		if(reqMap.containsKey(JsonKey.ID)){
 		  reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
 	      reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
@@ -386,6 +385,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 		  reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
 		  reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
 		  reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
+		  reqMap.put(JsonKey.USER_ID,userMap.get(JsonKey.ID));
 		}
 		try{
 		 cassandraOperation.upsertRecord(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(),reqMap);
@@ -427,7 +427,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     	if(null != reqMap.get(JsonKey.PERCENTAGE)){
     		reqMap.put(JsonKey.PERCENTAGE, Double.parseDouble(String.valueOf(reqMap.get(JsonKey.PERCENTAGE))));
     	}
-    	reqMap.remove(JsonKey.USER_ID);
     	if(reqMap.containsKey(JsonKey.ID)){
     	  reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     	  reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
@@ -435,6 +434,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     	  reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
     	  reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     	  reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
+    	  reqMap.put(JsonKey.USER_ID,userMap.get(JsonKey.ID));
     	}
     	try{
     	  cassandraOperation.upsertRecord(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(),reqMap);
@@ -826,7 +826,7 @@ public class UserManagementActor extends UntypedAbstractActor {
      *This method will provide the complete role structure..
      * @param actorMessage Request
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private void getRoles(Request actorMessage) {
         Util.DbInfo roleDbInfo = Util.dbInfoMap.get(JsonKey.ROLE);
         Util.DbInfo roleGroupDbInfo = Util.dbInfoMap.get(JsonKey.ROLE_GROUP);
@@ -877,6 +877,7 @@ public class UserManagementActor extends UntypedAbstractActor {
      * @param actionName String
      * @return Map<String,Object>
      */
+  @SuppressWarnings("rawtypes")
   private Map<String, Object> getRoleAction(List<Map<String, Object>> urlActionListMap,
       String actionName) {
     Map<String, Object> response = new HashMap<>();
@@ -900,7 +901,8 @@ public class UserManagementActor extends UntypedAbstractActor {
   * @param roleName String
   * @return  Map< String, Object>
   */
- private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlActionListMap,
+ @SuppressWarnings("rawtypes")
+private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlActionListMap,
       String roleName) {
     Map<String, Object> response = new HashMap<>();
     if (urlActionListMap != null && urlActionListMap.size() > 0) {

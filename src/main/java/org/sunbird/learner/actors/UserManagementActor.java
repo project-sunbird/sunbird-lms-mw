@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.Constants;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -88,60 +89,17 @@ public class UserManagementActor extends UntypedAbstractActor {
      */
     @SuppressWarnings("unchecked")
 	private void getUserProfile(Request actorMessage) {
-        Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-        Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-        Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
-        Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
-        Response response = null;
-        List<Map<String,Object>> list = null;
-		Map<String , Object> userMap=(Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
-        response = cassandraOperation.getRecordById(userDbInfo.getKeySpace(),userDbInfo.getTableName(),(String)userMap.get(JsonKey.USER_ID));
-        list = (List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE);
-        
-        if(!(list.isEmpty())) {
-            Map<String, Object> map = list.get(0);
-            Response addrResponse = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
-            list = (List<Map<String,Object>>)addrResponse.getResult().get(JsonKey.RESPONSE);
-            if(list.size() > 0){
-            	map.put(JsonKey.ADDRESS, list);
-            }
-            
-            Response eduResponse = cassandraOperation.getRecordsByProperty(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
-            list = (List<Map<String,Object>>)eduResponse.getResult().get(JsonKey.RESPONSE);
-            if(list.size() > 0){
-            	for(Map<String,Object> eduMap : list){
-            		String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
-            		if(!ProjectUtil.isStringNullOREmpty(addressId)){
-            			Response addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
-            			List<Map<String,Object>> addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
-                        if(!(addrList.isEmpty())){
-                        	eduMap.put(JsonKey.ADDRESS, addrList.get(0));
-                        }
-            		}
-            	}
-            	map.put(JsonKey.EDUCATION, list);
-            }
-            
-            Response jobProfileResponse = cassandraOperation.getRecordsByProperty(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
-            list = (List<Map<String,Object>>)jobProfileResponse.getResult().get(JsonKey.RESPONSE);
-            if(list.size() > 0){
-            	for(Map<String,Object> eduMap : list){
-            		String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
-            		if(!ProjectUtil.isStringNullOREmpty(addressId)){
-            			Response addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
-            			List<Map<String,Object>> addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
-                        if(!(addrList.isEmpty())){
-                        	eduMap.put(JsonKey.ADDRESS, addrList.get(0));
-                        }
-            		}
-            	}
-            	map.put(JsonKey.JOB_PROFILE, list);
-            }
-            
-            Util.removeAttributes(map, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY, JsonKey.ID));
-        }
-        sender().tell(response, self());
-	}
+      Map<String , Object> userMap=(Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
+      Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(), (String)userMap.get(JsonKey.USER_ID));
+      Response response = new Response();
+      if(result !=null) {
+      response.put(JsonKey.RESPONSE, result);
+      } else {
+           result = new HashMap<String, Object>();
+           response.put(JsonKey.RESPONSE, result);    
+      }
+      sender().tell(response, self());
+    }
 
     /**
      * Method to change the user password .
@@ -285,6 +243,11 @@ public class UserManagementActor extends UntypedAbstractActor {
         
         requestMap = new HashMap<>();
         requestMap.putAll(userMap);
+        if(!userMap.containsKey(JsonKey.ROLES)){
+          List<String> roles = new ArrayList<>();
+          roles.add(JsonKey.PUBLIC);
+          userMap.put(JsonKey.ROLES, roles);
+        }
         removeUnwanted(requestMap);
         Response result = null;
         try{

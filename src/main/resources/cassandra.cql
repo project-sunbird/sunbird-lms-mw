@@ -321,7 +321,7 @@ insert into sunbird.url_action (id,name) values ('suspendOrg','suspendOrg');
  insert into sunbird.url_action (id,name) values ('suspendUser','suspendUser');
  insert into sunbird.url_action (id,name) values ('createOrg','createOrg');
  insert into sunbird.url_action (id,name) values ('updateOrg','updateOrg');
- insert into sunbirdurl_action (id,name) values ('removeOrg','removeOrg');
+ insert into sunbird.url_action (id,name) values ('removeOrg','removeOrg');
  insert into sunbird.url_action (id,name) values ('createUser','createUser');
  insert into sunbird.url_action (id,name) values ('updateUser','updateUser');
  insert into sunbird.url_action (id,name) values ('ORG_MANAGEMENT','ORG_MANAGEMENT');
@@ -345,4 +345,3 @@ insert into sunbird.url_action (id,name) values ('suspendOrg','suspendOrg');
  update sunbird.role_group set url_action_ids=['publishCourse','publishContent'] where id='CONTENT_REVIEW';
  update sunbird.role_group set url_action_ids=['createOrg','updateOrg','removeOrg','createUser','updateUser'] where id='ORG_MANAGEMENT';
  update sunbird.role_group set url_action_ids=['flagCourse','flagContent'] where id='CONTENT_CURATION';
->>>>>>> 0793be958d545da33f3cee7f8f2352325e6b6c74

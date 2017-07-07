@@ -334,7 +334,11 @@ public class PageManagementActor extends UntypedAbstractActor {
 		{
 		    public void run() {
 		    	if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
-					DataCacheHandler.pageMap.put((String)pageMap.get(JsonKey.PAGE_NAME), pageMap);
+		    	  String orgId = "NA";
+                  if(pageMap.containsKey(JsonKey.ORGANISATION_ID)){
+                    orgId = (String)pageMap.get(JsonKey.ORGANISATION_ID);
+                  }
+                    DataCacheHandler.pageMap.put(orgId+":"+(String)pageMap.get(JsonKey.PAGE_NAME), pageMap);
 				}
 		    }
 		}.start();
@@ -371,7 +375,11 @@ public class PageManagementActor extends UntypedAbstractActor {
 		{
 		    public void run() {
 		    	if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
-					DataCacheHandler.pageMap.put((String)pageMap.get(JsonKey.PAGE_NAME), pageMap);
+		    	  String orgId = "NA";
+		    	  if(pageMap.containsKey(JsonKey.ORGANISATION_ID)){
+		    	    orgId = (String)pageMap.get(JsonKey.ORGANISATION_ID);
+		    	  }
+					DataCacheHandler.pageMap.put(orgId+":"+(String)pageMap.get(JsonKey.PAGE_NAME), pageMap);
 				}
 		    }
 		}.start();

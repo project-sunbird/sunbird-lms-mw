@@ -345,3 +345,10 @@ insert into sunbird.url_action (id,name) values ('suspendOrg','suspendOrg');
  update sunbird.role_group set url_action_ids=['publishCourse','publishContent'] where id='CONTENT_REVIEW';
  update sunbird.role_group set url_action_ids=['createOrg','updateOrg','removeOrg','createUser','updateUser'] where id='ORG_MANAGEMENT';
  update sunbird.role_group set url_action_ids=['flagCourse','flagContent'] where id='CONTENT_CURATION';
+ 
+ update sunbird.url_action set url=['/v1/course/publish'] where id='publishContent';
+update sunbird.url_action set url=['/v1/user/create'] where id='addMember';
+ update sunbird.url_action set url=['v1/course/create'] where id='createCourse';
+update sunbird.url_action set url=['/v1/user/create'] where id='createUser';
+ update sunbird.url_action set url=['/v1/course/publish'] where id='publishCourse';
+update sunbird.url_action set url=['/v1/organisation/update'] where id='updateOrg';

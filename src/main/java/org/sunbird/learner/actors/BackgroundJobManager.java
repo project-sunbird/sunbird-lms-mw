@@ -151,9 +151,12 @@ public class BackgroundJobManager extends UntypedAbstractActor{
         }
         Util.removeAttributes(map, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY, JsonKey.ID));
     }
-
-    cacheDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(),
-        userId,response.getResult() );
+    if(((List<Map<String,String>>)response.getResult().get(JsonKey.RESPONSE)).size()>0){
+      Map<String,Object> map = ((List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE)).get(0);
+      cacheDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(),
+          userId,map);
+    }
+    
   }
 
   /**

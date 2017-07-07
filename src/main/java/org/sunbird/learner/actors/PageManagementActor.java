@@ -6,23 +6,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LogHelper;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.DataCacheHandler;
+import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
+
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -37,12 +34,11 @@ import akka.actor.UntypedAbstractActor;
 public class PageManagementActor extends UntypedAbstractActor {
 	private LogHelper logger = LogHelper.getInstance(PageManagementActor.class.getName());
 
-	private static Map<String, String> headers = new HashMap<String, String>();
-	static {
-		headers.put("content-type", "application/json");
-		headers.put("accept", "application/json");
-		headers.put("user-id", "mahesh");
-	}
+//	private static Map<String, String> headers = new HashMap<String, String>();
+//	static {
+//		headers.put("content-type", "application/json");
+//		headers.put("accept", "application/json");
+//	}
 	private CassandraOperation cassandraOperation = new CassandraOperationImpl();
 	Util.DbInfo pageDbInfo = Util.dbInfoMap.get(JsonKey.PAGE_MGMT_DB);
 	Util.DbInfo sectionDbInfo = Util.dbInfoMap.get(JsonKey.SECTION_MGMT_DB);
@@ -385,24 +381,10 @@ public class PageManagementActor extends UntypedAbstractActor {
 		}.start();
 	}
 
-
 	private void getContentData(Map<String, Object> section) {
-		String response = "";
-		JSONObject data;
-		JSONObject jObject;
-		ObjectMapper mapper = new ObjectMapper();
-		try {
-			response = HttpUtil.sendPostRequest(PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTNET_SEARCH_URL),
-					(String) section.get(JsonKey.SEARCH_QUERY), headers);
-			jObject = new JSONObject(response);
-			data = jObject.getJSONObject(JsonKey.RESULT);
-			JSONArray contentArray = data.getJSONArray(JsonKey.CONTENT);
-			section.put(JsonKey.CONTENTS, mapper.readValue(contentArray.toString(), Object[].class));
-		} catch (IOException e) {
-			logger.error(e.getMessage(), e);
-		} catch (JSONException e) {
-			logger.error(e.getMessage(), e);
-		}
+		Object[] result = EkStepRequestUtil.searchContent((String) section.get(JsonKey.SEARCH_QUERY));
+		if (null != result)
+			section.put(JsonKey.CONTENTS, result);
 	}
 
 	private Map<String, Object> getPageSetting(Map<String, Object> pageDO) {

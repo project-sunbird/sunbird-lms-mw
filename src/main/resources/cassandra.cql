@@ -13,7 +13,7 @@ progress is no of content completed
 */
 CREATE TABLE IF NOT EXISTS sunbird.course_enrollment(id text, courseId text, courseName text,userId text,enrolledDate text,
 description text,tocUrl text,status int,active boolean,delta text,grade text,progress int,lastReadContentId text,
-lastReadContentStatus int,addedBy text,courseLogoUrl text,dateTime timestamp,contentId text PRIMARY KEY (id));
+lastReadContentStatus int,addedBy text,courseLogoUrl text,dateTime timestamp,contentId text, PRIMARY KEY (id));
 
 CREATE INDEX inx_ce_userId ON sunbird.course_enrollment (userId);
 CREATE INDEX inx_ce_courseId ON sunbird.course_enrollment (courseId);
@@ -348,3 +348,20 @@ update sunbird.url_action set url=['/v1/user/create'] where id='addMember';
 update sunbird.url_action set url=['/v1/user/create'] where id='createUser';
  update sunbird.url_action set url=['/v1/course/publish'] where id='publishCourse';
 update sunbird.url_action set url=['/v1/organisation/update'] where id='updateOrg';
+
+
+/*
+creation of id= one way hash of (userId##courseId) here courseId is identifier of EkStep course
+toc url is generated from ekStep 
+here status is (default(0),inProgress(1),completed(2))
+progress is no of content completed
+*/
+CREATE TABLE IF NOT EXISTS sunbird.user_courses(id text, courseId text, courseName text, userId text, batchId text, enrolledDate text,
+description text,tocUrl text,status int,active boolean,delta text,grade text,progress int,lastReadContentId text,
+lastReadContentStatus int,addedBy text,courseLogoUrl text, dateTime timestamp, contentId text, PRIMARY KEY (id));
+
+CREATE INDEX inx_ucs_userId ON sunbird.user_courses (userId);
+CREATE INDEX inx_ucs_courseId ON sunbird.user_courses (courseId);
+CREATE INDEX inx_ucs_batchId ON sunbird.user_courses (batchId);
+CREATE INDEX inx_ucs_course_name ON sunbird.user_courses (courseName);
+CREATE INDEX inx_ucs_status ON sunbird.user_courses (status);

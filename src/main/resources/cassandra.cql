@@ -13,7 +13,7 @@ progress is no of content completed
 */
 CREATE TABLE IF NOT EXISTS sunbird.course_enrollment(id text, courseId text, courseName text,userId text,enrolledDate text,
 description text,tocUrl text,status int,active boolean,delta text,grade text,progress int,lastReadContentId text,
-lastReadContentStatus int,addedBy text,courseLogoUrl text,dateTime timestamp,contentId text, PRIMARY KEY (id));
+lastReadContentStatus int,addedBy text,courseLogoUrl text,dateTime timestamp,contentId text,PRIMARY KEY (id));
 
 CREATE INDEX inx_ce_userId ON sunbird.course_enrollment (userId);
 CREATE INDEX inx_ce_courseId ON sunbird.course_enrollment (courseId);
@@ -189,7 +189,7 @@ ALTER TABLE sunbird.organisation ADD orgCode text;
 ALTER TABLE sunbird.organisation ADD isApproved boolean;
 ALTER TABLE sunbird.organisation ADD approvedBy text;
 ALTER TABLE sunbird.organisation ADD approvedDate text;
-ALTER TABLE sunbird.organisation ADD isRejected boolean;
+//ALTER TABLE sunbird.organisation ADD isRejected boolean;
 
 CREATE INDEX inx_org_channel ON sunbird.organisation(channel);
 CREATE INDEX inx_org_orgType ON sunbird.organisation(orgType);
@@ -379,3 +379,12 @@ ALTER TABLE sunbird.user_external_identity ADD provider text;
 ALTER TABLE sunbird.user_external_identity ADD externalIdValue text;
 DROP INDEX inx_uei_source;
 CREATE INDEX inx_uei_provider ON sunbird.user_external_identity (provider);
+
+//changes 7 July 2017 updated organization table
+ALTER TABLE sunbird.organisation ADD rootOrgID text;
+ALTER TABLE sunbird.org_mapping ADD rootOrgID text;
+CREATE TABLE IF NOT EXISTS sunbird.org_type(id text, name text, PRIMARY KEY (id));
+DROP INDEX sunbird.inx_org_status;
+ALTER TABLE sunbird.organisation DROP status ;
+ALTER TABLE sunbird.organisation ADD status text;
+CREATE INDEX inx_org_status ON sunbird.organisation (status);

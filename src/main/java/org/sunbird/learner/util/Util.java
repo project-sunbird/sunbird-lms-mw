@@ -50,6 +50,8 @@ public class Util {
         dbInfoMap.put(JsonKey.USR_ORG_DB, getDbInfoObject("sunbird","user_org"));
         dbInfoMap.put(JsonKey.USR_EXT_ID_DB, getDbInfoObject("sunbird","user_external_identity"));
 
+        dbInfoMap.put(JsonKey.ORG_MAP_DB, getDbInfoObject("sunbird","org_mapping"));
+        dbInfoMap.put(JsonKey.ORG_TYPE_DB, getDbInfoObject("sunbird","org_type"));
         dbInfoMap.put(JsonKey.ROLE, getDbInfoObject("sunbird","role"));
         dbInfoMap.put(JsonKey.MASTER_ACTION, getDbInfoObject("sunbird","master_action"));
         dbInfoMap.put(JsonKey.URL_ACTION, getDbInfoObject("sunbird","url_action"));
@@ -68,6 +70,7 @@ public class Util {
         orgStatusTransition.put(JsonKey.RETIRED ,Arrays.asList());
     }
 
+    @SuppressWarnings("rawtypes")
     public static boolean checkOrgStatusTransition(String currentState , String nextState){
         List list = (List)orgStatusTransition.get(currentState);
         if(null == list){
@@ -77,10 +80,10 @@ public class Util {
     }
 
     public static void checkCassandraDbConnections() {
-    	if (readConfigFromEnv()) {
-    		logger.info("db connection is created from System env variable.");
-    		return ;
-    	}   
+        if (readConfigFromEnv()) {
+            logger.info("db connection is created from System env variable.");
+            return ;
+        }   
         String[] ipList=prop.getProperty(JsonKey.DB_IP).split(",");
         String[] portList=prop.getProperty(JsonKey.DB_PORT).split(",");
         String[] keyspaceList=prop.getProperty(JsonKey.DB_KEYSPACE).split(",");
@@ -114,36 +117,36 @@ public class Util {
      * This method will read the configuration from System variable.
      * @return boolean
      */
-	public static boolean readConfigFromEnv() {
-		boolean response = false;
-		String ips = System.getenv(JsonKey.SUNBIRD_CASSANDRA_IP);
-		if (ProjectUtil.isStringNullOREmpty(ips)) {
-			logger.info("Configuration value is not coming form System variable.");
-			return response;
-		}
-		String[] ipList = ips.split(",");
-		String[] portList = System.getenv(JsonKey.SUNBIRD_CASSANDRA_PORT).split(",");
-		String userName = System.getenv(JsonKey.SUNBIRD_CASSANDRA_USER_NAME);
-		String password = System.getenv(JsonKey.SUNBIRD_CASSANDRA_PASSWORD);
-		for (int i = 0; i < ipList.length; i++) {
-			String ip = ipList[i];
-			String port = portList[i];
-			try {
-				boolean result = CassandraConnectionManager.createConnection(ip, port, userName, password, KEY_SPACE_NAME);
-				if (result) {
-					logger.info("CONNECTION CREATED SUCCESSFULLY FOR IP: " + ip + " : KEYSPACE :" + KEY_SPACE_NAME);
-				} else {
-					logger.info("CONNECTION CREATION FAILED FOR IP: " + ip + " : KEYSPACE :" + KEY_SPACE_NAME);
-				}
-				response = true;
-			} catch (ProjectCommonException ex) {
-				logger.error(ex);
-				throw new ProjectCommonException(ResponseCode.invaidConfiguration.getErrorCode(),
-						ResponseCode.invaidConfiguration.getErrorCode(), ResponseCode.SERVER_ERROR.hashCode());
-			}
-		}
-		return response;
-	}
+    public static boolean readConfigFromEnv() {
+        boolean response = false;
+        String ips = System.getenv(JsonKey.SUNBIRD_CASSANDRA_IP);
+        if (ProjectUtil.isStringNullOREmpty(ips)) {
+            logger.info("Configuration value is not coming form System variable.");
+            return response;
+        }
+        String[] ipList = ips.split(",");
+        String[] portList = System.getenv(JsonKey.SUNBIRD_CASSANDRA_PORT).split(",");
+        String userName = System.getenv(JsonKey.SUNBIRD_CASSANDRA_USER_NAME);
+        String password = System.getenv(JsonKey.SUNBIRD_CASSANDRA_PASSWORD);
+        for (int i = 0; i < ipList.length; i++) {
+            String ip = ipList[i];
+            String port = portList[i];
+            try {
+                boolean result = CassandraConnectionManager.createConnection(ip, port, userName, password, KEY_SPACE_NAME);
+                if (result) {
+                    logger.info("CONNECTION CREATED SUCCESSFULLY FOR IP: " + ip + " : KEYSPACE :" + KEY_SPACE_NAME);
+                } else {
+                    logger.info("CONNECTION CREATION FAILED FOR IP: " + ip + " : KEYSPACE :" + KEY_SPACE_NAME);
+                }
+                response = true;
+            } catch (ProjectCommonException ex) {
+                logger.error(ex);
+                throw new ProjectCommonException(ResponseCode.invaidConfiguration.getErrorCode(),
+                        ResponseCode.invaidConfiguration.getErrorCode(), ResponseCode.SERVER_ERROR.hashCode());
+            }
+        }
+        return response;
+    }
     
     
     private static void loadPropertiesFile() {
@@ -169,8 +172,8 @@ public class Util {
     }
     
     public static String getProperty(String key){
-	      return prop.getProperty(key);
-	   }
+          return prop.getProperty(key);
+       }
 
     /**
      * 
@@ -312,47 +315,47 @@ public class Util {
     }
     
     @SuppressWarnings("unchecked")
-	public static SearchDTO createSearchDto(Map<String , Object> searchQueryMap){
-    	SearchDTO search = new SearchDTO();
-    	if(searchQueryMap.containsKey(JsonKey.QUERY)){
-    	 search.setQuery((String) searchQueryMap.get(JsonKey.QUERY));
-    	}
-    	if(searchQueryMap.containsKey(JsonKey.FACETS)){
-    	 search.setFacets((List<String>) searchQueryMap.get(JsonKey.FACETS));
-    	}
-    	if(searchQueryMap.containsKey(JsonKey.FIELDS)){
-    		search.setFields((List<String>) searchQueryMap.get(JsonKey.FIELDS));
-    	}
-    	if(searchQueryMap.containsKey(JsonKey.FILTERS)){
-    		search.getAdditionalProperties().put(JsonKey.FILTERS,searchQueryMap.get(JsonKey.FILTERS));
-    	}
-    	if(searchQueryMap.containsKey(JsonKey.EXISTS)){
-    		search.getAdditionalProperties().put(JsonKey.EXISTS, searchQueryMap.get(JsonKey.EXISTS));
-    	}
-    	if(searchQueryMap.containsKey(JsonKey.NOT_EXISTS)){
-    		search.getAdditionalProperties().put(JsonKey.NOT_EXISTS, searchQueryMap.get(JsonKey.NOT_EXISTS));
-    	}
-    	if(searchQueryMap.containsKey(JsonKey.SORT_BY)){
-    		search.getSortBy().putAll((Map<? extends String, ? extends String>) searchQueryMap.get(JsonKey.SORT_BY));
-    	}
-    	if(searchQueryMap.containsKey(JsonKey.OFFSET)){
-    		if((searchQueryMap.get(JsonKey.OFFSET)) instanceof Integer ){
-    			search.setOffset((int)searchQueryMap.get(JsonKey.OFFSET));
-    		}else{
-    			search.setOffset(((BigInteger) searchQueryMap.get(JsonKey.OFFSET)).intValue());
-    		}
-    	}
-    	if(searchQueryMap.containsKey(JsonKey.LIMIT)){
-    		if((searchQueryMap.get(JsonKey.LIMIT)) instanceof Integer ){
-    			search.setLimit((int)searchQueryMap.get(JsonKey.LIMIT));
-    		}else{
-    		    search.setLimit(((BigInteger) searchQueryMap.get(JsonKey.LIMIT)).intValue());
-    		}
-    	}
-    	if(searchQueryMap.containsKey(JsonKey.GROUP_QUERY)){
-    	    search.getGroupQuery().addAll((Collection<? extends Map<String, Object>>) searchQueryMap.get(JsonKey.GROUP_QUERY));
+    public static SearchDTO createSearchDto(Map<String , Object> searchQueryMap){
+        SearchDTO search = new SearchDTO();
+        if(searchQueryMap.containsKey(JsonKey.QUERY)){
+         search.setQuery((String) searchQueryMap.get(JsonKey.QUERY));
         }
-		return search;
+        if(searchQueryMap.containsKey(JsonKey.FACETS)){
+         search.setFacets((List<String>) searchQueryMap.get(JsonKey.FACETS));
+        }
+        if(searchQueryMap.containsKey(JsonKey.FIELDS)){
+            search.setFields((List<String>) searchQueryMap.get(JsonKey.FIELDS));
+        }
+        if(searchQueryMap.containsKey(JsonKey.FILTERS)){
+            search.getAdditionalProperties().put(JsonKey.FILTERS,searchQueryMap.get(JsonKey.FILTERS));
+        }
+        if(searchQueryMap.containsKey(JsonKey.EXISTS)){
+            search.getAdditionalProperties().put(JsonKey.EXISTS, searchQueryMap.get(JsonKey.EXISTS));
+        }
+        if(searchQueryMap.containsKey(JsonKey.NOT_EXISTS)){
+            search.getAdditionalProperties().put(JsonKey.NOT_EXISTS, searchQueryMap.get(JsonKey.NOT_EXISTS));
+        }
+        if(searchQueryMap.containsKey(JsonKey.SORT_BY)){
+            search.getSortBy().putAll((Map<? extends String, ? extends String>) searchQueryMap.get(JsonKey.SORT_BY));
+        }
+        if(searchQueryMap.containsKey(JsonKey.OFFSET)){
+            if((searchQueryMap.get(JsonKey.OFFSET)) instanceof Integer ){
+                search.setOffset((int)searchQueryMap.get(JsonKey.OFFSET));
+            }else{
+                search.setOffset(((BigInteger) searchQueryMap.get(JsonKey.OFFSET)).intValue());
+            }
+        }
+        if(searchQueryMap.containsKey(JsonKey.LIMIT)){
+            if((searchQueryMap.get(JsonKey.LIMIT)) instanceof Integer ){
+                search.setLimit((int)searchQueryMap.get(JsonKey.LIMIT));
+            }else{
+                search.setLimit(((BigInteger) searchQueryMap.get(JsonKey.LIMIT)).intValue());
+            }
+        }
+        if(searchQueryMap.containsKey(JsonKey.GROUP_QUERY)){
+            search.getGroupQuery().addAll((Collection<? extends Map<String, Object>>) searchQueryMap.get(JsonKey.GROUP_QUERY));
+        }
+        return search;
     }
 
     public static void getContentData(Map<String, Object> section) {

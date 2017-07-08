@@ -67,8 +67,145 @@ public class OrganisationManagementActorTest {
         TestKit probe = new TestKit(system);
         ActorRef subject = system.actorOf(props);
 
-        subject.tell(new String("Invelid Type"), probe.getRef());
+        subject.tell(new String("Invalid Type"), probe.getRef());
         probe.expectMsgClass(ProjectCommonException.class);
     }
+    
+    @Test
+    public void createOrg(){
+      TestKit probe = new TestKit(system);
+      ActorRef subject = system.actorOf(props);
 
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.CREATE_ORG.getValue());
+      HashMap<String, Object> innerMap = new HashMap<>();
+      Map<String , Object> orgMap = new HashMap<String , Object>();
+      orgMap.put(JsonKey.ORGANISATION_NAME , "CBSE");
+      orgMap.put(JsonKey.DESCRIPTION, "Central Board of Secondary Education");
+      orgMap.put("orgCode", "CBSE");
+      orgMap.put("isRootOrg", true);
+      innerMap.put(JsonKey.ORGANISATION , orgMap);
+
+      reqObj.setRequest(innerMap);
+      subject.tell(reqObj, probe.getRef());
+      probe.expectMsgClass(Response.class);
+    }
+    
+    @Test
+    public void createOrg1(){
+      TestKit probe = new TestKit(system);
+      ActorRef subject = system.actorOf(props);
+
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.CREATE_ORG.getValue());
+      HashMap<String, Object> innerMap = new HashMap<>();
+      Map<String , Object> orgMap = new HashMap<String , Object>();
+      orgMap.put(JsonKey.ORGANISATION_NAME , "AP Board");
+      orgMap.put(JsonKey.DESCRIPTION, "AndhraPradesh Board");
+      orgMap.put("parentOrgId", "");
+      orgMap.put("orgType", "Training");
+      orgMap.put("imgUrl", "https://testimgUrl");
+      orgMap.put("channel", "Ekstep");
+      orgMap.put("preferredLanguage", "English");
+      orgMap.put("homeUrl", "https:testUrl");
+      orgMap.put("orgCode", "AP");
+      orgMap.put("isRootOrg", false);
+      Map<String,Object> address = new HashMap<String,Object>();
+      address.put("city", "Hyderabad");
+      address.put("state", "Andra Pradesh");
+      address.put("country", "India");
+      address.put("zipCode", "466899");
+      orgMap.put("address", address);
+      innerMap.put(JsonKey.ORGANISATION , orgMap);
+
+      reqObj.setRequest(innerMap);
+      subject.tell(reqObj, probe.getRef());
+      probe.expectMsgClass(ProjectCommonException.class);
+    }
+    
+    @Test
+    public void createOrg2(){
+      TestKit probe = new TestKit(system);
+      ActorRef subject = system.actorOf(props);
+
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.CREATE_ORG.getValue());
+      HashMap<String, Object> innerMap = new HashMap<>();
+      Map<String , Object> orgMap = new HashMap<String , Object>();
+      orgMap.put(JsonKey.ORGANISATION_NAME , "Tamil Nadu ");
+      orgMap.put(JsonKey.DESCRIPTION, "Tamil Nadu Board");
+      orgMap.put("parentOrgId", "CBSE");
+      orgMap.put("orgType", "Training");
+      orgMap.put("imgUrl", "https://testimgUrl");
+      orgMap.put("channel", "Ekstep");
+      orgMap.put("preferredLanguage", "Tamil");
+      orgMap.put("homeUrl", "https:testUrl");
+      orgMap.put("orgCode", "TN");
+      orgMap.put("isRootOrg", false);
+      Map<String,Object> address = new HashMap<String,Object>();
+      address.put("city", "Chennai");
+      address.put("state", "Tamil Nadu");
+      address.put("country", "India");
+      address.put("zipCode", "466879");
+      orgMap.put("address", address);
+      innerMap.put(JsonKey.ORGANISATION , orgMap);
+
+      reqObj.setRequest(innerMap);
+      subject.tell(reqObj, probe.getRef());
+      probe.expectMsgClass(ProjectCommonException.class);
+    }
+    
+    public void testApproveOrg(){
+      TestKit probe = new TestKit(system);
+      
+      ActorRef subject = system.actorOf(props);
+
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.APPROVE_ORG.getValue());
+      HashMap<String, Object> innerMap = new HashMap<>();
+      Map<String , Object> orgMap = new HashMap<String , Object>();
+      orgMap.put(JsonKey.ORGANISATION_ID , "");
+      orgMap.put(JsonKey.IS_APPROVED, true);
+      innerMap.put(JsonKey.ORGANISATION , orgMap);
+      reqObj.setRequest(innerMap);
+      subject.tell(reqObj, probe.getRef());
+      probe.expectMsgClass(ProjectCommonException.class);
+    }
+    
+    public void testUpdateStatus(){
+      TestKit probe = new TestKit(system);
+      
+      ActorRef subject = system.actorOf(props);
+
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.APPROVE_ORG.getValue());
+      HashMap<String, Object> innerMap = new HashMap<>();
+      Map<String , Object> orgMap = new HashMap<String , Object>();
+      orgMap.put(JsonKey.ORGANISATION_ID , "");
+      orgMap.put(JsonKey.IS_APPROVED, true);
+      innerMap.put(JsonKey.ORGANISATION , orgMap);
+      reqObj.setRequest(innerMap);
+      subject.tell(reqObj, probe.getRef());
+      probe.expectMsgClass(ProjectCommonException.class);
+    }
+    
+    public void testUpdateOrg(){
+      TestKit probe = new TestKit(system);
+      
+      ActorRef subject = system.actorOf(props);
+
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.UPDATE_ORG.getValue());
+      HashMap<String, Object> innerMap = new HashMap<>();
+      Map<String , Object> orgMap = new HashMap<String , Object>();
+      orgMap.put(JsonKey.ORGANISATION_ID , "");
+      orgMap.put(JsonKey.IS_APPROVED, true);
+      orgMap.put("orgType", "Training");
+      orgMap.put("status", "blocked");
+      innerMap.put(JsonKey.ORGANISATION , orgMap);
+      reqObj.setRequest(innerMap);
+      subject.tell(reqObj, probe.getRef());
+      probe.expectMsgClass(ProjectCommonException.class);
+    }
+   
 }

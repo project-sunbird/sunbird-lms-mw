@@ -75,14 +75,14 @@ public class RequestRouterActor extends UntypedAbstractActor {
         courseManagementRouter = getContext().actorOf(FromConfig.getInstance().props(Props.create(CourseManagementActor.class)),
                 COURSE_MANAGEMENT_ROUTER);
         pageManagementRouter = getContext().actorOf(FromConfig.getInstance().props(Props.create(PageManagementActor.class)),
-        		PAGE_MANAGEMENT_ROUTER);
+                PAGE_MANAGEMENT_ROUTER);
         organisationManagementRouter = getContext().actorOf(FromConfig.getInstance().props(Props.create(OrganisationManagementActor.class)),
-        		ORGANISATION_MANAGEMENT_ROUTER);
+                ORGANISATION_MANAGEMENT_ROUTER);
         backgroundJobManager = getContext().actorOf(FromConfig.getInstance().props(Props.create(BackgroundJobManager.class)),BkJOB);
         courseSearchActorRouter = getContext().actorOf(FromConfig.getInstance().props(Props.create(CourseSearchActor.class)),
-        		COURSE_SEARCH_ACTOR_ROUTER);
+                COURSE_SEARCH_ACTOR_ROUTER);
         assessmentItemActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(AssessmentItemActor.class)),
-        		ASSESSMENT_ITEM_ACTOR_ROUTER);
+                ASSESSMENT_ITEM_ACTOR_ROUTER);
         recommendorActorRouter=getContext().actorOf(FromConfig.getInstance().props(Props.create(RecommendorActor.class)),
                 RECOMMENDOR_ACTOR_ROUTER);
         ec = getContext().dispatcher();
@@ -121,6 +121,10 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.GET_SECTION.getValue(), pageManagementRouter);
         routerMap.put(ActorOperations.GET_ALL_SECTION.getValue(), pageManagementRouter);
         
+        routerMap.put(ActorOperations.CREATE_ORG.getValue(), organisationManagementRouter);
+        routerMap.put(ActorOperations.APPROVE_ORG.getValue(), organisationManagementRouter);
+        routerMap.put(ActorOperations.UPDATE_ORG.getValue(), organisationManagementRouter);
+        routerMap.put(ActorOperations.UPDATE_ORG_STATUS.getValue(), organisationManagementRouter);
         routerMap.put(ActorOperations.GET_ORG_DETAILS.getValue(), organisationManagementRouter);
         
         routerMap.put(ActorOperations.SEARCH_COURSE.getValue(), courseSearchActorRouter);

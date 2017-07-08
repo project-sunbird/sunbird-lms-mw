@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.Constants;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -89,60 +90,17 @@ public class UserManagementActor extends UntypedAbstractActor {
      */
     @SuppressWarnings("unchecked")
 	private void getUserProfile(Request actorMessage) {
-        Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-        Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-        Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
-        Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
-        Response response = null;
-        List<Map<String,Object>> list = null;
-		Map<String , Object> userMap=(Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
-        response = cassandraOperation.getRecordById(userDbInfo.getKeySpace(),userDbInfo.getTableName(),(String)userMap.get(JsonKey.USER_ID));
-        list = (List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE);
-        
-        if(!(list.isEmpty())) {
-            Map<String, Object> map = list.get(0);
-            Response addrResponse = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
-            list = (List<Map<String,Object>>)addrResponse.getResult().get(JsonKey.RESPONSE);
-            if(list.size() > 0){
-            	map.put(JsonKey.ADDRESS, list);
-            }
-            
-            Response eduResponse = cassandraOperation.getRecordsByProperty(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
-            list = (List<Map<String,Object>>)eduResponse.getResult().get(JsonKey.RESPONSE);
-            if(list.size() > 0){
-            	for(Map<String,Object> eduMap : list){
-            		String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
-            		if(!ProjectUtil.isStringNullOREmpty(addressId)){
-            			Response addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
-            			List<Map<String,Object>> addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
-                        if(!(addrList.isEmpty())){
-                        	eduMap.put(JsonKey.ADDRESS, addrList.get(0));
-                        }
-            		}
-            	}
-            	map.put(JsonKey.EDUCATION, list);
-            }
-            
-            Response jobProfileResponse = cassandraOperation.getRecordsByProperty(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
-            list = (List<Map<String,Object>>)jobProfileResponse.getResult().get(JsonKey.RESPONSE);
-            if(list.size() > 0){
-            	for(Map<String,Object> eduMap : list){
-            		String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
-            		if(!ProjectUtil.isStringNullOREmpty(addressId)){
-            			Response addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
-            			List<Map<String,Object>> addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
-                        if(!(addrList.isEmpty())){
-                        	eduMap.put(JsonKey.ADDRESS, addrList.get(0));
-                        }
-            		}
-            	}
-            	map.put(JsonKey.JOB_PROFILE, list);
-            }
-            
-            Util.removeAttributes(map, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY, JsonKey.ID));
-        }
-        sender().tell(response, self());
-	}
+      Map<String , Object> userMap=(Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
+      Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(), (String)userMap.get(JsonKey.USER_ID));
+      Response response = new Response();
+      if(result !=null) {
+      response.put(JsonKey.RESPONSE, result);
+      } else {
+           result = new HashMap<String, Object>();
+           response.put(JsonKey.RESPONSE, result);
+      }
+      sender().tell(response, self());
+    }
 
     /**
      * Method to change the user password .
@@ -286,6 +244,11 @@ public class UserManagementActor extends UntypedAbstractActor {
         
         requestMap = new HashMap<>();
         requestMap.putAll(userMap);
+        if(!userMap.containsKey(JsonKey.ROLES)){
+          List<String> roles = new ArrayList<>();
+          roles.add(JsonKey.PUBLIC);
+          userMap.put(JsonKey.ROLES, roles);
+        }
         removeUnwanted(requestMap);
         Response result = null;
         try{
@@ -866,61 +829,93 @@ public class UserManagementActor extends UntypedAbstractActor {
      */
     @SuppressWarnings("unchecked")
     private void getRoles(Request actorMessage) {
-        Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-        Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-        Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
-        Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
-        Response response = null;
+        Util.DbInfo roleDbInfo = Util.dbInfoMap.get(JsonKey.ROLE);
+        Util.DbInfo roleGroupDbInfo = Util.dbInfoMap.get(JsonKey.ROLE_GROUP);
+        Util.DbInfo urlActionDbInfo = Util.dbInfoMap.get(JsonKey.URL_ACTION);
+        Response mergeResponse = new Response();
+        List<Map<String,Object>> resposnemap = new ArrayList<>();
         List<Map<String,Object>> list = null;
-        Map<String , Object> userMap=(Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
-        response = cassandraOperation.getRecordById(userDbInfo.getKeySpace(),userDbInfo.getTableName(),(String)userMap.get(JsonKey.USER_ID));
+        Response response  = cassandraOperation.getAllRecords(roleDbInfo.getKeySpace(), roleDbInfo.getTableName());
+        Response rolegroup = cassandraOperation.getAllRecords(roleGroupDbInfo.getKeySpace(), roleGroupDbInfo.getTableName());
+        Response urlAction = cassandraOperation.getAllRecords(urlActionDbInfo.getKeySpace(), urlActionDbInfo.getTableName());
+        List<Map<String,Object>> urlActionListMap  = (List<Map<String,Object>>) urlAction.getResult().get(JsonKey.RESPONSE);
+        List<Map<String,Object>> roleGroupMap  = (List<Map<String,Object>>) rolegroup.getResult().get(JsonKey.RESPONSE);
         list = (List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE);
-        
-        if(!(list.isEmpty())) {
-            Map<String, Object> map = list.get(0);
-            Response addrResponse = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
-            list = (List<Map<String,Object>>)addrResponse.getResult().get(JsonKey.RESPONSE);
-            if(list.size() > 0){
-                map.put(JsonKey.ADDRESS, list);
-            }
-            
-            Response eduResponse = cassandraOperation.getRecordsByProperty(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
-            list = (List<Map<String,Object>>)eduResponse.getResult().get(JsonKey.RESPONSE);
-            if(list.size() > 0){
-                for(Map<String,Object> eduMap : list){
-                    String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
-                    if(!ProjectUtil.isStringNullOREmpty(addressId)){
-                        Response addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
-                        List<Map<String,Object>> addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
-                        if(!(addrList.isEmpty())){
-                            eduMap.put(JsonKey.ADDRESS, addrList.get(0));
-                        }
-                    }
-                }
-                map.put(JsonKey.EDUCATION, list);
-            }
-            
-            Response jobProfileResponse = cassandraOperation.getRecordsByProperty(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
-            list = (List<Map<String,Object>>)jobProfileResponse.getResult().get(JsonKey.RESPONSE);
-            if(list.size() > 0){
-                for(Map<String,Object> eduMap : list){
-                    String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
-                    if(!ProjectUtil.isStringNullOREmpty(addressId)){
-                        Response addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
-                        List<Map<String,Object>> addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
-                        if(!(addrList.isEmpty())){
-                            eduMap.put(JsonKey.ADDRESS, addrList.get(0));
-                        }
-                    }
-                }
-                map.put(JsonKey.JOB_PROFILE, list);
-            }
-            
-            Util.removeAttributes(map, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY, JsonKey.ID));
+        if (list != null && list.size()>0) {
+          //This map will have all the master roles
+          for (Map<String,Object> map: list) {
+            Map<String,Object> roleResponseMap = new HashMap<>();
+            roleResponseMap.put(JsonKey.ID, map.get(JsonKey.ID));
+            roleResponseMap.put(JsonKey.NAME, map.get(JsonKey.NAME));
+             List<String> roleGroup = (List) map.get(JsonKey.ROLE_GROUP_ID);
+             List<Map<String,Object>> actionGroupListMap = new ArrayList<>();
+             roleResponseMap.put(JsonKey.ACTION_GROUPS, actionGroupListMap);
+             Map<String,Object> subRoleResponseMap = new HashMap<>();
+             for (String val : roleGroup) {
+               Map<String,Object> subRoleMap =  getSubRoleListMap(roleGroupMap, val);
+               List<String> subRole  =(List) subRoleMap.get(JsonKey.URL_ACTION_ID);
+               List<Map<String,Object>> roleUrlResponList = new ArrayList<>();
+               subRoleResponseMap.put(JsonKey.ID, subRoleMap.get(JsonKey.ID));
+               subRoleResponseMap.put(JsonKey.NAME, subRoleMap.get(JsonKey.NAME));
+               for (String rolemap : subRole) {
+                 roleUrlResponList.add(getRoleAction(urlActionListMap, rolemap));
+               }
+               subRoleResponseMap.put(JsonKey.ACTIONS, roleUrlResponList);
+             }
+             actionGroupListMap.add(subRoleResponseMap);
+             resposnemap.add(roleResponseMap);
+          }
         }
-        //response.put(key, vo);
-        sender().tell(response, self());
+        mergeResponse.getResult().put(JsonKey.ROLES, resposnemap);
+       sender().tell(mergeResponse, self());
     }
+
+
+    /**
+     * This method will find the action from role action mapping it will return
+     * action id, action name and list of urls.
+     * @param urlActionListMap List<Map<String,Object>>
+     * @param actionName String
+     * @return Map<String,Object>
+     */
+  private Map<String, Object> getRoleAction(List<Map<String, Object>> urlActionListMap,
+      String actionName) {
+    Map<String, Object> response = new HashMap<>();
+    if (urlActionListMap != null && urlActionListMap.size() > 0) {
+      for (Map<String, Object> map : urlActionListMap) {
+        if (map.get(JsonKey.ID).equals(actionName)) {
+          response.put(JsonKey.ID, map.get(JsonKey.ID));
+          response.put(JsonKey.NAME, map.get(JsonKey.NAME));
+          response.put(JsonKey.URLS, (List) (map.get(JsonKey.URL) != null ? map.get(JsonKey.URL)
+              : new ArrayList<String>()));
+          return response;
+        }
+      }
+    }
+    return response;
+  }
+
+ /**
+  * This method will provide sub role mapping details.
+  * @param urlActionListMap List<Map<String, Object>>
+  * @param roleName String
+  * @return  Map< String, Object>
+  */
+ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlActionListMap,
+      String roleName) {
+    Map<String, Object> response = new HashMap<>();
+    if (urlActionListMap != null && urlActionListMap.size() > 0) {
+      for (Map<String, Object> map : urlActionListMap) {
+        if (map.get(JsonKey.ID).equals(roleName)) {
+          response.put(JsonKey.ID, map.get(JsonKey.ID));
+          response.put(JsonKey.NAME, map.get(JsonKey.NAME));
+          response.put(JsonKey.URL_ACTION_ID, (List) (map.get(JsonKey.URL_ACTION_ID) !=null ?map.get(JsonKey.URL_ACTION_ID):new ArrayList<>()));
+          return response;
+        }
+      }
+    }
+    return response;
+  }
 
 	/**
 	 * Method to join the user with organisation ...

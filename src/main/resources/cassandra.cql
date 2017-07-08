@@ -117,10 +117,6 @@ CREATE INDEX inx_ai_assessmentItemId ON sunbird.assessment_item (assessmentItemI
 CREATE INDEX inx_ai_courseId ON sunbird.assessment_item (courseId);
 CREATE INDEX inx_ai_processingStatus ON sunbird.assessment_item (processingStatus);
 
-ALTER TABLE sunbird.course_management add  courselogourl text;
-ALTER TABLE sunbird.course_management add  tocUrl text;
-ALTER TABLE sunbird.course_management add  courseRating text;
-ALTER TABLE sunbird.course_management add  userCount int;
 ALTER TABLE sunbird.course_management DROP noOfLectures;
 ALTER TABLE sunbird.course_management ADD noOfLectures int;
 ALTER TABLE sunbird.assessment_item DROP evaluationStatus;
@@ -286,12 +282,12 @@ ALTER TABLE sunbird.user ADD loginId text;
 ALTER TABLE sunbird.user ADD provider text;
 ALTER TABLE sunbird.user_external_identity ADD idType text;
 
-insert into user_action_role(id,actiongroupid,roleid) values ('uar_1',['ag_17'],'r_107');
-insert into user_action_role(id,actiongroupid,roleid) values ('uar_2',['ag_13'],'r_102');
-insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_14'],'r_103');
- insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_15'],'r_104');
- insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_16'],'r_105');
- insert into user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_12'],'r_101');
+insert into sunbird.user_action_role(id,actiongroupid,roleid) values ('uar_1',['ag_17'],'r_107');
+insert into  sunbird.user_action_role(id,actiongroupid,roleid) values ('uar_2',['ag_13'],'r_102');
+insert into  sunbird.user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_14'],'r_103');
+ insert into sunbird.user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_15'],'r_104');
+ insert into sunbird.user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_16'],'r_105');
+ insert into sunbird.user_action_role(id,actiongroupid,roleid) values ('uar_3',['ag_12'],'r_101');
  
 ALTER TABLE sunbird.organisation DROP addId;
 ALTER TABLE sunbird.organisation ADD addressId text;
@@ -322,7 +318,7 @@ insert into sunbird.url_action (id,name) values ('suspendOrg','suspendOrg');
  insert into sunbird.url_action (id,name) values ('suspendUser','suspendUser');
  insert into sunbird.url_action (id,name) values ('createOrg','createOrg');
  insert into sunbird.url_action (id,name) values ('updateOrg','updateOrg');
- insert into sunbirdurl_action (id,name) values ('removeOrg','removeOrg');
+ insert into sunbird.url_action (id,name) values ('removeOrg','removeOrg');
  insert into sunbird.url_action (id,name) values ('createUser','createUser');
  insert into sunbird.url_action (id,name) values ('updateUser','updateUser');
  insert into sunbird.url_action (id,name) values ('ORG_MANAGEMENT','ORG_MANAGEMENT');
@@ -346,6 +342,13 @@ insert into sunbird.url_action (id,name) values ('suspendOrg','suspendOrg');
  update sunbird.role_group set url_action_ids=['publishCourse','publishContent'] where id='CONTENT_REVIEW';
  update sunbird.role_group set url_action_ids=['createOrg','updateOrg','removeOrg','createUser','updateUser'] where id='ORG_MANAGEMENT';
  update sunbird.role_group set url_action_ids=['flagCourse','flagContent'] where id='CONTENT_CURATION';
+
+ update sunbird.url_action set url=['/v1/course/publish'] where id='publishContent';
+update sunbird.url_action set url=['/v1/user/create'] where id='addMember';
+ update sunbird.url_action set url=['v1/course/create'] where id='createCourse';
+update sunbird.url_action set url=['/v1/user/create'] where id='createUser';
+ update sunbird.url_action set url=['/v1/course/publish'] where id='publishCourse';
+update sunbird.url_action set url=['/v1/organisation/update'] where id='updateOrg';
 
 drop index inx_uorg_orgid;
 ALTER TABLE sunbird.user_org DROP orgid;

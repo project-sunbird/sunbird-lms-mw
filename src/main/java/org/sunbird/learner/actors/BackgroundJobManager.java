@@ -124,7 +124,6 @@ public class BackgroundJobManager extends UntypedAbstractActor{
           if(null == list )
           list=new ArrayList<Map<String,Object>>();
         }
-        if(list.size() > 0){
             for(Map<String,Object> eduMap : list){
                 String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
                 if(!ProjectUtil.isStringNullOREmpty(addressId)){
@@ -144,7 +143,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
                 }
             }
             map.put(JsonKey.EDUCATION, list);
-        }
+
         Response jobProfileResponse = null;
         list = null;
         try{
@@ -156,7 +155,6 @@ public class BackgroundJobManager extends UntypedAbstractActor{
           if(null == list )
           list=new ArrayList<Map<String,Object>>();
         }
-        if(list.size() > 0){
             for(Map<String,Object> eduMap : list){
                 String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
                 if(!ProjectUtil.isStringNullOREmpty(addressId)){
@@ -175,7 +173,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
                 }
             }
             map.put(JsonKey.JOB_PROFILE, list);
-        }
+
         Response usrOrgResponse = null;
         list = null;
         try{
@@ -187,7 +185,6 @@ public class BackgroundJobManager extends UntypedAbstractActor{
           if(null == list )
           list=new ArrayList<Map<String,Object>>();
         }
-        if(list.size() > 0){
             for(Map<String,Object> eduMap : list){
                 String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
                 if(!ProjectUtil.isStringNullOREmpty(addressId)){
@@ -206,8 +203,8 @@ public class BackgroundJobManager extends UntypedAbstractActor{
                 }
             }
             map.put(JsonKey.ORGANISATION, list);
-        }
-        Util.removeAttributes(map, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY, JsonKey.ID));
+
+       Util.removeAttributes(map, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY, JsonKey.ID));
     }
     if(((List<Map<String,String>>)response.getResult().get(JsonKey.RESPONSE)).size()>0){
       Map<String,Object> map = ((List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE)).get(0);

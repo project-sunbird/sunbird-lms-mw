@@ -97,7 +97,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       response.put(JsonKey.RESPONSE, result);
       } else {
            result = new HashMap<String, Object>();
-           response.put(JsonKey.RESPONSE, result);
+           response.put(JsonKey.RESPONSE, result);    
       }
       sender().tell(response, self());
     }
@@ -261,7 +261,7 @@ public class UserManagementActor extends UntypedAbstractActor {
             	List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.ADDRESS);
             	for(int i = 0 ; i < reqList.size() ;i++ ){
             		Map<String,Object> reqMap = reqList.get(i);
-            		reqMap.remove(JsonKey.USER_ID);
+            		//reqMap.remove(JsonKey.USER_ID);
             		if(!reqMap.containsKey(JsonKey.ID)){
             		  reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
             		  reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
@@ -339,12 +339,12 @@ public class UserManagementActor extends UntypedAbstractActor {
           reqMap.put(JsonKey.ADDRESS_ID, addrId);
           reqMap.remove(JsonKey.ADDRESS);
       }
-      reqMap.remove(JsonKey.USER_ID);
       if(reqMap.containsKey(JsonKey.ID)){
         reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
         reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
       }else{
         reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+        reqMap.put(JsonKey.USER_ID,userMap.get(JsonKey.ID));
       }
       try{
        cassandraOperation.upsertRecord(usrOrgDb.getKeySpace(),usrOrgDb.getTableName(),reqMap);
@@ -379,7 +379,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 			reqMap.put(JsonKey.ADDRESS_ID, addrId);
 			reqMap.remove(JsonKey.ADDRESS);
 		}
-		reqMap.remove(JsonKey.USER_ID);
+
 		if(reqMap.containsKey(JsonKey.ID)){
 		  reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
 	      reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
@@ -387,6 +387,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 		  reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
 		  reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
 		  reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
+		  reqMap.put(JsonKey.USER_ID,userMap.get(JsonKey.ID));
 		}
 		try{
 		 cassandraOperation.upsertRecord(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(),reqMap);
@@ -428,7 +429,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     	if(null != reqMap.get(JsonKey.PERCENTAGE)){
     		reqMap.put(JsonKey.PERCENTAGE, Double.parseDouble(String.valueOf(reqMap.get(JsonKey.PERCENTAGE))));
     	}
-    	reqMap.remove(JsonKey.USER_ID);
     	if(reqMap.containsKey(JsonKey.ID)){
     	  reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     	  reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
@@ -436,6 +436,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     	  reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
     	  reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     	  reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
+    	  reqMap.put(JsonKey.USER_ID,userMap.get(JsonKey.ID));
     	}
     	try{
     	  cassandraOperation.upsertRecord(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(),reqMap);
@@ -827,7 +828,7 @@ public class UserManagementActor extends UntypedAbstractActor {
      *This method will provide the complete role structure..
      * @param actorMessage Request
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private void getRoles(Request actorMessage) {
         Util.DbInfo roleDbInfo = Util.dbInfoMap.get(JsonKey.ROLE);
         Util.DbInfo roleGroupDbInfo = Util.dbInfoMap.get(JsonKey.ROLE_GROUP);
@@ -842,7 +843,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         List<Map<String,Object>> roleGroupMap  = (List<Map<String,Object>>) rolegroup.getResult().get(JsonKey.RESPONSE);
         list = (List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE);
         if (list != null && list.size()>0) {
-          //This map will have all the master roles
+          //This map will have all the master roles 
           for (Map<String,Object> map: list) {
             Map<String,Object> roleResponseMap = new HashMap<>();
             roleResponseMap.put(JsonKey.ID, map.get(JsonKey.ID));
@@ -869,15 +870,16 @@ public class UserManagementActor extends UntypedAbstractActor {
         mergeResponse.getResult().put(JsonKey.ROLES, resposnemap);
        sender().tell(mergeResponse, self());
     }
-
-
+    
+    
     /**
-     * This method will find the action from role action mapping it will return
+     * This method will find the action from role action mapping it will return 
      * action id, action name and list of urls.
      * @param urlActionListMap List<Map<String,Object>>
      * @param actionName String
      * @return Map<String,Object>
      */
+  @SuppressWarnings("rawtypes")
   private Map<String, Object> getRoleAction(List<Map<String, Object>> urlActionListMap,
       String actionName) {
     Map<String, Object> response = new HashMap<>();
@@ -894,14 +896,15 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
     return response;
   }
-
+  
  /**
-  * This method will provide sub role mapping details.
+  * This method will provide sub role mapping details. 
   * @param urlActionListMap List<Map<String, Object>>
   * @param roleName String
   * @return  Map< String, Object>
   */
- private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlActionListMap,
+ @SuppressWarnings("rawtypes")
+private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlActionListMap,
       String roleName) {
     Map<String, Object> response = new HashMap<>();
     if (urlActionListMap != null && urlActionListMap.size() > 0) {

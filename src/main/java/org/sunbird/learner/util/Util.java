@@ -33,7 +33,7 @@ public class Util {
         initializeOrgStatusTransition();
 
         //setting db info (keyspace , table) into static map
-        dbInfoMap.put(JsonKey.LEARNER_COURSE_DB, getDbInfoObject("sunbird","course_enrollment"));
+        dbInfoMap.put(JsonKey.LEARNER_COURSE_DB, getDbInfoObject("sunbird","user_courses"));
         dbInfoMap.put(JsonKey.LEARNER_CONTENT_DB, getDbInfoObject("sunbird","content_consumption"));
         dbInfoMap.put(JsonKey.COURSE_MANAGEMENT_DB, getDbInfoObject("sunbird","course_management"));
         dbInfoMap.put(JsonKey.USER_DB, getDbInfoObject("sunbird","user"));
@@ -61,7 +61,6 @@ public class Util {
         // EkStep HttpClient headers init
         headers.put("content-type", "application/json");
         headers.put("accept", "application/json");
-        headers.put("user-id", "mahesh");
     }
 
     private static void initializeOrgStatusTransition() {

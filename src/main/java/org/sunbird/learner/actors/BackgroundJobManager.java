@@ -102,17 +102,18 @@ public class BackgroundJobManager extends UntypedAbstractActor{
     if(!(list.isEmpty())) {
         Map<String, Object> map = list.get(0);
         Response addrResponse = null;
+        list = null;
         try{
           addrResponse = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
           list = (List<Map<String,Object>>)addrResponse.getResult().get(JsonKey.RESPONSE);
         }catch(Exception e){
           LOGGER.error(e);
         }finally{
+          if(null == list )
           list=new ArrayList<Map<String,Object>>();
         }
-        if(list.size() > 0){
-            map.put(JsonKey.ADDRESS, list);
-        }
+        map.put(JsonKey.ADDRESS, list);
+        list = null;
         Response eduResponse = null;
         try{
           eduResponse = cassandraOperation.getRecordsByProperty(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(), JsonKey.USER_ID, userId);
@@ -120,6 +121,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
         }catch(Exception e){
           LOGGER.error(e);
         }finally{
+          if(null == list )
           list=new ArrayList<Map<String,Object>>();
         }
         if(list.size() > 0){
@@ -135,22 +137,23 @@ public class BackgroundJobManager extends UntypedAbstractActor{
                   }catch(Exception e){
                       LOGGER.error(e);
                     }finally{
+                      if(null == addrList )
                       addrList=new ArrayList<Map<String,Object>>();
                     }
-                    if(!(addrList.isEmpty())){
                         eduMap.put(JsonKey.ADDRESS, addrList.get(0));
-                    }
                 }
             }
             map.put(JsonKey.EDUCATION, list);
         }
         Response jobProfileResponse = null;
+        list = null;
         try{
           jobProfileResponse = cassandraOperation.getRecordsByProperty(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(), JsonKey.USER_ID, userId);
           list = (List<Map<String,Object>>)jobProfileResponse.getResult().get(JsonKey.RESPONSE);
         }catch(Exception e){
           LOGGER.error(e);
         }finally{
+          if(null == list )
           list=new ArrayList<Map<String,Object>>();
         }
         if(list.size() > 0){
@@ -165,22 +168,23 @@ public class BackgroundJobManager extends UntypedAbstractActor{
                   }catch(Exception e){
                     LOGGER.error(e);
                   }finally{
+                    if(null == addrList )
                     addrList=new ArrayList<Map<String,Object>>();
                   }
-                    if(!(addrList.isEmpty())){
                         eduMap.put(JsonKey.ADDRESS, addrList.get(0));
-                    }
                 }
             }
             map.put(JsonKey.JOB_PROFILE, list);
         }
         Response usrOrgResponse = null;
+        list = null;
         try{
           usrOrgResponse = cassandraOperation.getRecordsByProperty(usrOrgDb.getKeySpace(),usrOrgDb.getTableName(), JsonKey.USER_ID, userId);
           list = (List<Map<String,Object>>)usrOrgResponse.getResult().get(JsonKey.RESPONSE);
         }catch(Exception e){
           LOGGER.error(e);
         }finally{
+          if(null == list )
           list=new ArrayList<Map<String,Object>>();
         }
         if(list.size() > 0){
@@ -195,11 +199,10 @@ public class BackgroundJobManager extends UntypedAbstractActor{
                   }catch(Exception e){
                     LOGGER.error(e);
                   }finally{
+                    if(null == addrList )
                     addrList=new ArrayList<Map<String,Object>>();
                   }
-                    if(!(addrList.isEmpty())){
                         eduMap.put(JsonKey.ADDRESS, addrList.get(0));
-                    }
                 }
             }
             map.put(JsonKey.ORGANISATION, list);

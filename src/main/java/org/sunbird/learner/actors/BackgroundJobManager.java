@@ -131,7 +131,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
                   Response addrResponseMap = null;
                   List<Map<String,Object>> addrList = null;
                   try{
-                    addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
+                    addrResponseMap = cassandraOperation.getRecordById(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), addressId);
                     addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
                   }catch(Exception e){
                       LOGGER.error(e);
@@ -161,7 +161,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
                   Response addrResponseMap = null;
                   List<Map<String,Object>> addrList = null;
                   try{
-                    addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
+                    addrResponseMap = cassandraOperation.getRecordById(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), addressId);
                     addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
                   }catch(Exception e){
                     LOGGER.error(e);
@@ -191,7 +191,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
                   Response addrResponseMap = null;
                   List<Map<String,Object>> addrList = null;
                   try{
-                    addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
+                    addrResponseMap = cassandraOperation.getRecordById(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), addressId);
                     addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
                   }catch(Exception e){
                     LOGGER.error(e);

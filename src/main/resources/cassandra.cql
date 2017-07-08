@@ -373,3 +373,9 @@ CREATE INDEX inx_ucs_courseId ON sunbird.user_courses (courseId);
 CREATE INDEX inx_ucs_batchId ON sunbird.user_courses (batchId);
 CREATE INDEX inx_ucs_course_name ON sunbird.user_courses (courseName);
 CREATE INDEX inx_ucs_status ON sunbird.user_courses (status);
+
+ALTER TABLE sunbird.user_external_identity DROP source;
+ALTER TABLE sunbird.user_external_identity ADD provider text;
+ALTER TABLE sunbird.user_external_identity ADD externalIdValue text;
+DROP INDEX inx_uei_source;
+CREATE INDEX inx_uei_provider ON sunbird.user_external_identity (provider);

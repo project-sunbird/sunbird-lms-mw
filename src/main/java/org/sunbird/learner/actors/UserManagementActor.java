@@ -549,9 +549,12 @@ public class UserManagementActor extends UntypedAbstractActor {
 		    	userMap.put(JsonKey.USER_ID,OneWayHashing.encryptVal((String)userMap.get(JsonKey.USERNAME)));
 		    	userMap.put(JsonKey.ID,OneWayHashing.encryptVal((String)userMap.get(JsonKey.USERNAME)));
 		    }
+		    userMap.put(JsonKey.LOGIN_ID, ((String)userMap.get(JsonKey.USERNAME)+"@"+(String)userMap.get(JsonKey.PROVIDER)));
             userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
             userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
-            userMap.put(JsonKey.PASSWORD,OneWayHashing.encryptVal((String)userMap.get(JsonKey.PASSWORD)));
+            if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PASSWORD))){
+              userMap.put(JsonKey.PASSWORD,OneWayHashing.encryptVal((String)userMap.get(JsonKey.PASSWORD)));
+            }
             if(!userMap.containsKey(JsonKey.ROLES)){
               List<String> roles = new ArrayList<>();
               roles.add(JsonKey.PUBLIC);
@@ -567,6 +570,7 @@ public class UserManagementActor extends UntypedAbstractActor {
               sender().tell(exception, self());
               return;
             }
+            response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
             if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
 	            if(userMap.containsKey(JsonKey.ADDRESS)){
 	            	List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.ADDRESS);
@@ -705,7 +709,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       Map<String,Object> reqMap = new HashMap<>();
       String operation = "";
       reqMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
-      /*update table for userName,phone,email,Aadhar No
+      /* update table for userName,phone,email,Aadhar No
        * for each of these parameter insert a record into db
        * for username update isVerified as true
        * and for others param this will be false
@@ -713,14 +717,14 @@ public class UserManagementActor extends UntypedAbstractActor {
        */
       
       map.put(JsonKey.USER_ID, requestMap.get(JsonKey.ID));
-      //map.put(JsonKey.SOURCE, "");
       map.put(JsonKey.IS_VERIFIED, false);
       if(requestMap.containsKey(JsonKey.USERNAME) && !(ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.USERNAME)))){
         map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
         map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.USERNAME));
+        map.put(JsonKey.EXTERNAL_ID_VALUE, JsonKey.USERNAME);
         map.put(JsonKey.IS_VERIFIED, true);
         
-        reqMap.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.USERNAME));
+        reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.USERNAME));
         String id = checkFrRecordInDb(reqMap,usrExtIdDb);
         if(null != id){
           operation = JsonKey.UPDATE;
@@ -731,9 +735,13 @@ public class UserManagementActor extends UntypedAbstractActor {
       }
       if(requestMap.containsKey(JsonKey.PHONE) && !(ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.PHONE)))){
         map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-        map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.PHONE));
+        map.put(JsonKey.EXTERNAL_ID, JsonKey.PHONE);
+        map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.PHONE));
         
-        reqMap.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.PHONE));
+        if(!ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.PHONE_NUMBER_VERIFIED)) && (boolean)requestMap.get(JsonKey.PHONE_NUMBER_VERIFIED)){
+          map.put(JsonKey.IS_VERIFIED, true);
+        }
+        reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.PHONE));
         String id = checkFrRecordInDb(reqMap,usrExtIdDb);
         if(null != id){
           operation = JsonKey.UPDATE;
@@ -744,8 +752,12 @@ public class UserManagementActor extends UntypedAbstractActor {
       }
       if(requestMap.containsKey(JsonKey.EMAIL) && !(ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.EMAIL)))){
         map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-        map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EMAIL));
+        map.put(JsonKey.EXTERNAL_ID, JsonKey.EMAIL);
+        map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.EMAIL));
         
+        if(!ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.EMAIL_VERIFIED)) && (boolean)requestMap.get(JsonKey.EMAIL_VERIFIED)){
+          map.put(JsonKey.IS_VERIFIED, true);
+        }
         reqMap.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EMAIL));
         String id = checkFrRecordInDb(reqMap,usrExtIdDb);
         if(null != id){
@@ -757,9 +769,10 @@ public class UserManagementActor extends UntypedAbstractActor {
       }
       if(requestMap.containsKey(JsonKey.AADHAAR_NO) && !(ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.AADHAAR_NO)))){
         map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-        map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.AADHAAR_NO));
+        map.put(JsonKey.EXTERNAL_ID, JsonKey.AADHAAR_NO);
+        map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.AADHAAR_NO));
         
-        reqMap.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.AADHAAR_NO));
+        reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.AADHAAR_NO));
         String id = checkFrRecordInDb(reqMap,usrExtIdDb);
         if(null != id){
           operation = JsonKey.UPDATE;

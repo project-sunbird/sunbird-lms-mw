@@ -259,7 +259,6 @@ public class UserManagementActor extends UntypedAbstractActor {
             	List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.ADDRESS);
             	for(int i = 0 ; i < reqList.size() ;i++ ){
             		Map<String,Object> reqMap = reqList.get(i);
-            		//reqMap.remove(JsonKey.USER_ID);
             		if(!reqMap.containsKey(JsonKey.ID)){
             		  reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
             		  reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
@@ -683,6 +682,7 @@ public class UserManagementActor extends UntypedAbstractActor {
                       }
                   }
               }
+	            //update the user external identity data
 	            updateUserExtId(requestMap,usrExtIdDb);
             }
             
@@ -702,14 +702,19 @@ public class UserManagementActor extends UntypedAbstractActor {
       Map<String,Object> map = new HashMap<>();
       Map<String,Object> reqMap = new HashMap<>();
       String operation = "";
-      reqMap.put(JsonKey.USER_ID, map.get(JsonKey.USER_ID));
+      reqMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
+      /*update table for userName,phone,email,Aadhar No
+       * for each of these parameter insert a record into db
+       * for username update isVerified as true
+       * and for others param this will be false
+       * once verified will update this flag to true
+       */
       
-      
-      map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
       map.put(JsonKey.USER_ID, requestMap.get(JsonKey.ID));
       //map.put(JsonKey.SOURCE, "");
       map.put(JsonKey.IS_VERIFIED, false);
-      if(requestMap.containsKey(JsonKey.USERNAME) && (ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.USERNAME)))){
+      if(requestMap.containsKey(JsonKey.USERNAME) && !(ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.USERNAME)))){
+        map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
         map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.USERNAME));
         map.put(JsonKey.IS_VERIFIED, true);
         
@@ -722,7 +727,8 @@ public class UserManagementActor extends UntypedAbstractActor {
         }
         updateUserExtIdentity(map,usrExtIdDb,operation);
       }
-      if(requestMap.containsKey(JsonKey.PHONE) && (ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.PHONE)))){
+      if(requestMap.containsKey(JsonKey.PHONE) && !(ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.PHONE)))){
+        map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
         map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.PHONE));
         
         reqMap.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.PHONE));
@@ -734,7 +740,8 @@ public class UserManagementActor extends UntypedAbstractActor {
         }
         updateUserExtIdentity(map,usrExtIdDb,operation);
       }
-      if(requestMap.containsKey(JsonKey.EMAIL) && (ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.EMAIL)))){
+      if(requestMap.containsKey(JsonKey.EMAIL) && !(ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.EMAIL)))){
+        map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
         map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EMAIL));
         
         reqMap.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EMAIL));
@@ -746,7 +753,8 @@ public class UserManagementActor extends UntypedAbstractActor {
         }
         updateUserExtIdentity(map,usrExtIdDb,operation);
       }
-      if(requestMap.containsKey(JsonKey.AADHAAR_NO) && (ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.AADHAAR_NO)))){
+      if(requestMap.containsKey(JsonKey.AADHAAR_NO) && !(ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.AADHAAR_NO)))){
+        map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
         map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.AADHAAR_NO));
         
         reqMap.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.AADHAAR_NO));

@@ -4,11 +4,11 @@
 package org.sunbird.learner.actors;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.cassandra.CassandraOperation;
@@ -36,6 +36,7 @@ import akka.actor.UntypedAbstractActor;
  * Example when ever course is published then this job will
  * collect course related data from EKStep and update with Sunbird.
  * @author Manzarul
+ * @author Amit Kumar
  */
 public class BackgroundJobManager extends UntypedAbstractActor{
 	private static final LogHelper LOGGER = LogHelper.getInstance(BackgroundJobManager.class.getName());
@@ -91,25 +92,51 @@ public class BackgroundJobManager extends UntypedAbstractActor{
     Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
     Response response = null;
     List<Map<String,Object>> list = null;
-    response = cassandraOperation.getRecordById(userDbInfo.getKeySpace(),userDbInfo.getTableName(),userId);
-    list = (List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE);
+    try{
+      response = cassandraOperation.getRecordById(userDbInfo.getKeySpace(),userDbInfo.getTableName(),userId);
+      list = (List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE);
+    }catch(Exception e){
+      LOGGER.error(e);
+    }
     
     if(!(list.isEmpty())) {
         Map<String, Object> map = list.get(0);
-        Response addrResponse = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
-        list = (List<Map<String,Object>>)addrResponse.getResult().get(JsonKey.RESPONSE);
+        Response addrResponse = null;
+        try{
+          addrResponse = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
+          list = (List<Map<String,Object>>)addrResponse.getResult().get(JsonKey.RESPONSE);
+        }catch(Exception e){
+          LOGGER.error(e);
+        }finally{
+          list=new ArrayList<Map<String,Object>>();
+        }
         if(list.size() > 0){
             map.put(JsonKey.ADDRESS, list);
         }
-        
-        Response eduResponse = cassandraOperation.getRecordsByProperty(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(), JsonKey.USER_ID, userId);
-        list = (List<Map<String,Object>>)eduResponse.getResult().get(JsonKey.RESPONSE);
+        Response eduResponse = null;
+        try{
+          eduResponse = cassandraOperation.getRecordsByProperty(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(), JsonKey.USER_ID, userId);
+          list = (List<Map<String,Object>>)eduResponse.getResult().get(JsonKey.RESPONSE);
+        }catch(Exception e){
+          LOGGER.error(e);
+        }finally{
+          list=new ArrayList<Map<String,Object>>();
+        }
         if(list.size() > 0){
             for(Map<String,Object> eduMap : list){
                 String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
                 if(!ProjectUtil.isStringNullOREmpty(addressId)){
-                    Response addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
-                    List<Map<String,Object>> addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
+                  
+                  Response addrResponseMap = null;
+                  List<Map<String,Object>> addrList = null;
+                  try{
+                    addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
+                    addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
+                  }catch(Exception e){
+                      LOGGER.error(e);
+                    }finally{
+                      addrList=new ArrayList<Map<String,Object>>();
+                    }
                     if(!(addrList.isEmpty())){
                         eduMap.put(JsonKey.ADDRESS, addrList.get(0));
                     }
@@ -117,15 +144,29 @@ public class BackgroundJobManager extends UntypedAbstractActor{
             }
             map.put(JsonKey.EDUCATION, list);
         }
-        
-        Response jobProfileResponse = cassandraOperation.getRecordsByProperty(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(), JsonKey.USER_ID, userId);
-        list = (List<Map<String,Object>>)jobProfileResponse.getResult().get(JsonKey.RESPONSE);
+        Response jobProfileResponse = null;
+        try{
+          jobProfileResponse = cassandraOperation.getRecordsByProperty(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(), JsonKey.USER_ID, userId);
+          list = (List<Map<String,Object>>)jobProfileResponse.getResult().get(JsonKey.RESPONSE);
+        }catch(Exception e){
+          LOGGER.error(e);
+        }finally{
+          list=new ArrayList<Map<String,Object>>();
+        }
         if(list.size() > 0){
             for(Map<String,Object> eduMap : list){
                 String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
                 if(!ProjectUtil.isStringNullOREmpty(addressId)){
-                    Response addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
-                    List<Map<String,Object>> addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
+                  Response addrResponseMap = null;
+                  List<Map<String,Object>> addrList = null;
+                  try{
+                    addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
+                    addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
+                  }catch(Exception e){
+                    LOGGER.error(e);
+                  }finally{
+                    addrList=new ArrayList<Map<String,Object>>();
+                  }
                     if(!(addrList.isEmpty())){
                         eduMap.put(JsonKey.ADDRESS, addrList.get(0));
                     }
@@ -133,15 +174,29 @@ public class BackgroundJobManager extends UntypedAbstractActor{
             }
             map.put(JsonKey.JOB_PROFILE, list);
         }
-        
-        Response usrOrgResponse = cassandraOperation.getRecordsByProperty(usrOrgDb.getKeySpace(),usrOrgDb.getTableName(), JsonKey.USER_ID, userId);
-        list = (List<Map<String,Object>>)usrOrgResponse.getResult().get(JsonKey.RESPONSE);
+        Response usrOrgResponse = null;
+        try{
+          usrOrgResponse = cassandraOperation.getRecordsByProperty(usrOrgDb.getKeySpace(),usrOrgDb.getTableName(), JsonKey.USER_ID, userId);
+          list = (List<Map<String,Object>>)usrOrgResponse.getResult().get(JsonKey.RESPONSE);
+        }catch(Exception e){
+          LOGGER.error(e);
+        }finally{
+          list=new ArrayList<Map<String,Object>>();
+        }
         if(list.size() > 0){
             for(Map<String,Object> eduMap : list){
                 String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
                 if(!ProjectUtil.isStringNullOREmpty(addressId)){
-                    Response addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
-                    List<Map<String,Object>> addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
+                  Response addrResponseMap = null;
+                  List<Map<String,Object>> addrList = null;
+                  try{
+                    addrResponseMap = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
+                    addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
+                  }catch(Exception e){
+                    LOGGER.error(e);
+                  }finally{
+                    addrList=new ArrayList<Map<String,Object>>();
+                  }
                     if(!(addrList.isEmpty())){
                         eduMap.put(JsonKey.ADDRESS, addrList.get(0));
                     }

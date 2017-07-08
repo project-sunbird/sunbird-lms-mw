@@ -315,7 +315,6 @@ public class Util {
     @SuppressWarnings("unchecked")
 	public static SearchDTO createSearchDto(Map<String , Object> searchQueryMap){
     	SearchDTO search = new SearchDTO();
-    	//Map<Object, Object> map = null;
     	if(searchQueryMap.containsKey(JsonKey.QUERY)){
     	 search.setQuery((String) searchQueryMap.get(JsonKey.QUERY));
     	}
@@ -329,21 +328,12 @@ public class Util {
     		search.getAdditionalProperties().put(JsonKey.FILTERS,searchQueryMap.get(JsonKey.FILTERS));
     	}
     	if(searchQueryMap.containsKey(JsonKey.EXISTS)){
-    		/*map = new HashMap<>();
-    		for(String str : (List<String>)searchQueryMap.get(JsonKey.EXISTS) ){
-    			map.put(str, 0);
-    		}*/
     		search.getAdditionalProperties().put(JsonKey.EXISTS, searchQueryMap.get(JsonKey.EXISTS));
     	}
     	if(searchQueryMap.containsKey(JsonKey.NOT_EXISTS)){
-    		/*map = new HashMap<>();
-    		for(String str : (List<String>)searchQueryMap.get(JsonKey.NOT_EXISTS) ){
-    			map.put(str, 0);
-    		}*/
     		search.getAdditionalProperties().put(JsonKey.NOT_EXISTS, searchQueryMap.get(JsonKey.NOT_EXISTS));
     	}
     	if(searchQueryMap.containsKey(JsonKey.SORT_BY)){
-    		//search.getSortBy().put(JsonKey.SORT_BY, searchQueryMap.get(JsonKey.SORT_BY));
     		search.getSortBy().putAll((Map<? extends String, ? extends String>) searchQueryMap.get(JsonKey.SORT_BY));
     	}
     	if(searchQueryMap.containsKey(JsonKey.OFFSET)){

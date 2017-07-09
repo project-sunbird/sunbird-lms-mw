@@ -588,106 +588,14 @@ public class UserManagementActor extends UntypedAbstractActor {
 	            	}
 	            }
 	            if(userMap.containsKey(JsonKey.EDUCATION)){
-	            	List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.EDUCATION);
-	            	for(int i = 0 ; i < reqList.size() ;i++ ){
-	            		Map<String,Object> reqMap = reqList.get(i);
-	            		reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i+1));
-	            		String addrId = null;
-	            		Response addrResponse = null;
-	            		if(reqMap.containsKey(JsonKey.ADDRESS)){
-	            			Map<String,Object> address = (Map<String,Object>)reqMap.get(JsonKey.ADDRESS);
-	            			addrId = ProjectUtil.getUniqueIdFromTimestamp(i+1);
-	            			address.put(JsonKey.ID, addrId);
-	            			address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-	            			address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
-	            			try{
-	            			  addrResponse = cassandraOperation.insertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
-	            			}catch(Exception e){
-	                          logger.error(e);
-	                        }
-	            		}
-	            		if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
-	            			reqMap.put(JsonKey.ADDRESS_ID, addrId);
-	            			reqMap.remove(JsonKey.ADDRESS);
-	            		}
-		            	reqMap.put(JsonKey.YEAR_OF_PASSING, ((BigInteger)reqMap.get(JsonKey.YEAR_OF_PASSING)).intValue());
-		            	if(null != reqMap.get(JsonKey.PERCENTAGE)){
-		            		reqMap.put(JsonKey.PERCENTAGE, Double.parseDouble(String.valueOf(reqMap.get(JsonKey.PERCENTAGE))));
-		            	}
-		            	reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-		            	reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
-		            	reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-		            	try{
-		            	  cassandraOperation.insertRecord(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(),reqMap);
-		            	}catch(Exception e){
-                          logger.error(e);
-                        }
-	            	}
+	              insertEducationDetails(userMap,addrDbInfo,eduDbInfo);
 	            }
 	            if(userMap.containsKey(JsonKey.JOB_PROFILE)){
-	            	List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.JOB_PROFILE);
-	            	for(int i = 0 ; i < reqList.size() ;i++ ){
-	            		Map<String,Object> reqMap = reqList.get(i);
-	            		reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i+1));
-	            		String addrId = null;
-	            		Response addrResponse = null;
-	            		if(reqMap.containsKey(JsonKey.ADDRESS)){
-	            			Map<String,Object> address = (Map<String,Object>)reqMap.get(JsonKey.ADDRESS);
-	            			addrId = ProjectUtil.getUniqueIdFromTimestamp(i+1);
-	            			address.put(JsonKey.ID, addrId);
-	            			address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-	            			address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
-	            			try{
-	            			  addrResponse = cassandraOperation.insertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
-	            			}catch(Exception e){
-	                          logger.error(e);
-	                        }
-	            		}
-	            		if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
-	            			reqMap.put(JsonKey.ADDRESS_ID, addrId);
-	            			reqMap.remove(JsonKey.ADDRESS);
-	            		}
-	            		reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-	            		reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
-	            		reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-	            		try{
-	            		  cassandraOperation.insertRecord(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(),reqMap);
-	            		}catch(Exception e){
-                          logger.error(e);
-                        }
-	            	}
+	              insertJobProfileDetails(userMap,addrDbInfo,jobProDbInfo);
 	            }
 	            if(userMap.containsKey(JsonKey.ORGANISATION)){
-                  List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.ORGANISATION);
-                  for(int i = 0 ; i < reqList.size() ;i++ ){
-                      Map<String,Object> reqMap = reqList.get(i);
-                      reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i+1));
-                      String addrId = null;
-                      Response addrResponse = null;
-                      if(reqMap.containsKey(JsonKey.ADDRESS)){
-                          Map<String,Object> address = (Map<String,Object>)reqMap.get(JsonKey.ADDRESS);
-                          addrId = ProjectUtil.getUniqueIdFromTimestamp(i+1);
-                          address.put(JsonKey.ID, addrId);
-                          address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-                          address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
-                          try{
-                            addrResponse = cassandraOperation.insertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
-                          }catch(Exception e){
-                            logger.error(e);
-                          }
-                      }
-                      if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
-                          reqMap.put(JsonKey.ADDRESS_ID, addrId);
-                          reqMap.remove(JsonKey.ADDRESS);
-                      }
-                      reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-                      try{
-                        cassandraOperation.insertRecord(usrOrgDb.getKeySpace(),usrOrgDb.getTableName(),reqMap);
-                      }catch(Exception e){
-                        logger.error(e);
-                      }
-                  }
-              }
+	              insertOrganisationDetails(userMap,addrDbInfo,usrOrgDb);
+	            }
 	            //update the user external identity data
 	            updateUserExtId(requestMap,usrExtIdDb);
             }
@@ -704,10 +612,125 @@ public class UserManagementActor extends UntypedAbstractActor {
             }
     }
 
+    @SuppressWarnings("unchecked")
+    private void insertOrganisationDetails(Map<String, Object> userMap, DbInfo addrDbInfo, DbInfo usrOrgDb) {
+
+      List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.ORGANISATION);
+      for(int i = 0 ; i < reqList.size() ;i++ ){
+          Map<String,Object> reqMap = reqList.get(i);
+          reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i+1));
+          String addrId = null;
+          Response addrResponse = null;
+          if(reqMap.containsKey(JsonKey.ADDRESS)){
+              Map<String,Object> address = (Map<String,Object>)reqMap.get(JsonKey.ADDRESS);
+              addrId = ProjectUtil.getUniqueIdFromTimestamp(i+1);
+              address.put(JsonKey.ID, addrId);
+              address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+              address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
+              try{
+                addrResponse = cassandraOperation.insertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
+              }catch(Exception e){
+                logger.error(e);
+              }
+          }
+          if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
+              reqMap.put(JsonKey.ADDRESS_ID, addrId);
+              reqMap.remove(JsonKey.ADDRESS);
+          }
+          reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+          try{
+            cassandraOperation.insertRecord(usrOrgDb.getKeySpace(),usrOrgDb.getTableName(),reqMap);
+          }catch(Exception e){
+            logger.error(e);
+          }
+      }
+  
+    
+  }
+
+    @SuppressWarnings("unchecked")
+    private void insertJobProfileDetails(Map<String, Object> userMap, DbInfo addrDbInfo, DbInfo jobProDbInfo) {
+
+      List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.JOB_PROFILE);
+      for(int i = 0 ; i < reqList.size() ;i++ ){
+          Map<String,Object> reqMap = reqList.get(i);
+          reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i+1));
+          String addrId = null;
+          Response addrResponse = null;
+          if(reqMap.containsKey(JsonKey.ADDRESS)){
+              Map<String,Object> address = (Map<String,Object>)reqMap.get(JsonKey.ADDRESS);
+              addrId = ProjectUtil.getUniqueIdFromTimestamp(i+1);
+              address.put(JsonKey.ID, addrId);
+              address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+              address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
+              try{
+                addrResponse = cassandraOperation.insertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
+              }catch(Exception e){
+                logger.error(e);
+              }
+          }
+          if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
+              reqMap.put(JsonKey.ADDRESS_ID, addrId);
+              reqMap.remove(JsonKey.ADDRESS);
+          }
+          reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+          reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
+          reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+          try{
+            cassandraOperation.insertRecord(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(),reqMap);
+          }catch(Exception e){
+            logger.error(e);
+          }
+      }
+  
+    
+  }
+
+    @SuppressWarnings("unchecked")
+    private void insertEducationDetails(Map<String, Object> userMap, DbInfo addrDbInfo, DbInfo eduDbInfo) {
+
+      List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.EDUCATION);
+      for(int i = 0 ; i < reqList.size() ;i++ ){
+          Map<String,Object> reqMap = reqList.get(i);
+          reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i+1));
+          String addrId = null;
+          Response addrResponse = null;
+          if(reqMap.containsKey(JsonKey.ADDRESS)){
+              Map<String,Object> address = (Map<String,Object>)reqMap.get(JsonKey.ADDRESS);
+              addrId = ProjectUtil.getUniqueIdFromTimestamp(i+1);
+              address.put(JsonKey.ID, addrId);
+              address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+              address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
+              try{
+                addrResponse = cassandraOperation.insertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
+              }catch(Exception e){
+                logger.error(e);
+              }
+          }
+          if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
+              reqMap.put(JsonKey.ADDRESS_ID, addrId);
+              reqMap.remove(JsonKey.ADDRESS);
+          }
+          reqMap.put(JsonKey.YEAR_OF_PASSING, ((BigInteger)reqMap.get(JsonKey.YEAR_OF_PASSING)).intValue());
+          if(null != reqMap.get(JsonKey.PERCENTAGE)){
+              reqMap.put(JsonKey.PERCENTAGE, Double.parseDouble(String.valueOf(reqMap.get(JsonKey.PERCENTAGE))));
+          }
+          reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+          reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
+          reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+          try{
+            cassandraOperation.insertRecord(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(),reqMap);
+          }catch(Exception e){
+            logger.error(e);
+          }
+      }
+  
+    
+  }
+
     private void updateUserExtId(Map<String, Object> requestMap, DbInfo usrExtIdDb) {
       Map<String,Object> map = new HashMap<>();
       Map<String,Object> reqMap = new HashMap<>();
-      String operation = "";
       reqMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
       /* update table for userName,phone,email,Aadhar No
        * for each of these parameter insert a record into db
@@ -725,13 +748,8 @@ public class UserManagementActor extends UntypedAbstractActor {
         map.put(JsonKey.IS_VERIFIED, true);
         
         reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.USERNAME));
-        String id = checkFrRecordInDb(reqMap,usrExtIdDb);
-        if(null != id){
-          operation = JsonKey.UPDATE;
-        }else{
-          operation = JsonKey.INSERT;
-        }
-        updateUserExtIdentity(map,usrExtIdDb,operation);
+        
+        updateUserExtIdentity(map,usrExtIdDb);
       }
       if(requestMap.containsKey(JsonKey.PHONE) && !(ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.PHONE)))){
         map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
@@ -742,13 +760,8 @@ public class UserManagementActor extends UntypedAbstractActor {
           map.put(JsonKey.IS_VERIFIED, true);
         }
         reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.PHONE));
-        String id = checkFrRecordInDb(reqMap,usrExtIdDb);
-        if(null != id){
-          operation = JsonKey.UPDATE;
-        }else{
-          operation = JsonKey.INSERT;
-        }
-        updateUserExtIdentity(map,usrExtIdDb,operation);
+        
+        updateUserExtIdentity(map,usrExtIdDb);
       }
       if(requestMap.containsKey(JsonKey.EMAIL) && !(ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.EMAIL)))){
         map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
@@ -759,13 +772,8 @@ public class UserManagementActor extends UntypedAbstractActor {
           map.put(JsonKey.IS_VERIFIED, true);
         }
         reqMap.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EMAIL));
-        String id = checkFrRecordInDb(reqMap,usrExtIdDb);
-        if(null != id){
-          operation = JsonKey.UPDATE;
-        }else{
-          operation = JsonKey.INSERT;
-        }
-        updateUserExtIdentity(map,usrExtIdDb,operation);
+        
+        updateUserExtIdentity(map,usrExtIdDb);
       }
       if(requestMap.containsKey(JsonKey.AADHAAR_NO) && !(ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.AADHAAR_NO)))){
         map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
@@ -773,45 +781,19 @@ public class UserManagementActor extends UntypedAbstractActor {
         map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.AADHAAR_NO));
         
         reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.AADHAAR_NO));
-        String id = checkFrRecordInDb(reqMap,usrExtIdDb);
-        if(null != id){
-          operation = JsonKey.UPDATE;
-        }else{
-          operation = JsonKey.INSERT;
-        }
-        updateUserExtIdentity(map,usrExtIdDb,operation);
+        
+        updateUserExtIdentity(map,usrExtIdDb);
       }
   }
 
-    private String checkFrRecordInDb(Map<String, Object> map, DbInfo usrExtIdDb) {
-      String id = null;
+    private void updateUserExtIdentity(Map<String, Object> map, DbInfo usrExtIdDb) {
       try{
-        Response response = cassandraOperation.getRecordsByProperties(usrExtIdDb.getKeySpace(),usrExtIdDb.getTableName(), map);
-        @SuppressWarnings("unchecked")
-        List<Map<String,Object>> list = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
-        if(list.size() > 0){
-          Map<String,Object> usrMap = list.get(0);
-          id = (String) usrMap.get(JsonKey.ID);
-        }
-      }catch(Exception e){
-        logger.error(e);
-      }
-      return id;
-    }
-
-    private void updateUserExtIdentity(Map<String, Object> map, DbInfo usrExtIdDb,String operation) {
-      try{
-        if(operation.equalsIgnoreCase(JsonKey.INSERT)){
           cassandraOperation.insertRecord(usrExtIdDb.getKeySpace(),usrExtIdDb.getTableName(),map);
-        }else{
-          cassandraOperation.updateRecord(usrExtIdDb.getKeySpace(),usrExtIdDb.getTableName(),map);
-        }
       }catch(Exception e){
         logger.error(e);
       }
       
     }
-
     
     private void removeUnwanted(Map<String, Object> reqMap) {
     	reqMap.remove(JsonKey.ADDRESS);

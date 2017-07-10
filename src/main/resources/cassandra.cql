@@ -388,3 +388,5 @@ DROP INDEX sunbird.inx_org_status;
 ALTER TABLE sunbird.organisation DROP status ;
 ALTER TABLE sunbird.organisation ADD status text;
 CREATE INDEX inx_org_status ON sunbird.organisation (status);
+
+CREATE INDEX inx_u_loginId ON sunbird.user(loginId);

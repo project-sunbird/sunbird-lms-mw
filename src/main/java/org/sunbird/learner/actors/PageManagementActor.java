@@ -201,8 +201,10 @@ public class PageManagementActor extends UntypedAbstractActor {
 		String orgCode = (String) req.get(JsonKey.ORG_CODE);
 		List<Map<String, Object>> result = null;
 		try{
+		  if(!ProjectUtil.isStringNullOREmpty(orgCode)){
 			response = cassandraOperation.getRecordsByProperty(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), JsonKey.ORG_CODE, orgCode);
 			result = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
+		  }
 		}catch(Exception e){
 			logger.error(e.getMessage(), e);
 		}

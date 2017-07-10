@@ -477,7 +477,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 
 	@SuppressWarnings("unchecked")
 	private void checkForEmailAndUserNameUniqueness(Map<String, Object> userMap, DbInfo usrDbInfo) {
-   		String email = (String)userMap.get(JsonKey.EMAIL);
+   		/*String email = (String)userMap.get(JsonKey.EMAIL);
         Response resultFrEmail = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.EMAIL,email);
         if(((List<Map<String,Object>>)resultFrEmail.get(JsonKey.RESPONSE)).size() != 0){
         	Map<String,Object> dbusrMap = ((List<Map<String,Object>>)resultFrEmail.get(JsonKey.RESPONSE)).get(0);
@@ -487,7 +487,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 	            sender().tell(exception, self());
 	            return;
         	}
-        }
+        }*/
         if(null != userMap.get(JsonKey.USERNAME)){
 	        String userName = (String)userMap.get(JsonKey.USERNAME);
 	        Response resultFruserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.USERNAME,userName);
@@ -538,7 +538,13 @@ public class UserManagementActor extends UntypedAbstractActor {
         Map<String , Object> userMap=(Map<String, Object>) req.get(JsonKey.USER);
         
 	        boolean isSSOEnabled = Boolean.valueOf(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
-		        if(null != userMap.get(JsonKey.EMAIL)){
+	        
+	        if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PROVIDER))){
+              userMap.put(JsonKey.LOGIN_ID, ((String)userMap.get(JsonKey.USERNAME)+"@"+(String)userMap.get(JsonKey.PROVIDER)));
+            }else{
+              userMap.put(JsonKey.LOGIN_ID,userMap.get(JsonKey.USERNAME));
+            }
+		        /*if(null != userMap.get(JsonKey.EMAIL)){
 		        	String email = (String)userMap.get(JsonKey.EMAIL);
 			        Response resultFrEmail = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.EMAIL,email);
 			        if(((List<Map<String,Object>>)resultFrEmail.get(JsonKey.RESPONSE)).size() != 0){
@@ -546,12 +552,12 @@ public class UserManagementActor extends UntypedAbstractActor {
 			            sender().tell(exception, self());
 			            return;
 			        }
-		        }
-		        if(null != userMap.get(JsonKey.USERNAME)){
-		        	 String userName = (String)userMap.get(JsonKey.USERNAME);
-		        	 Response resultFrUserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.USERNAME,userName);
+		        }*/
+		        if(null != userMap.get(JsonKey.LOGIN_ID)){
+		        	 String loginId = (String)userMap.get(JsonKey.LOGIN_ID);
+		        	 Response resultFrUserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.LOGIN_ID,loginId);
 		        	 if(((List<Map<String,Object>>)resultFrUserName.get(JsonKey.RESPONSE)).size() != 0){
-		             	ProjectCommonException exception = new ProjectCommonException(ResponseCode.userNameAlreadyExistError.getErrorCode(), ResponseCode.userNameAlreadyExistError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+		             	ProjectCommonException exception = new ProjectCommonException(ResponseCode.userAlreadyExist.getErrorCode(), ResponseCode.userAlreadyExist.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
 		                 sender().tell(exception, self());
 		                 return;
 		             }
@@ -578,11 +584,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 		    	userMap.put(JsonKey.USER_ID,OneWayHashing.encryptVal((String)userMap.get(JsonKey.USERNAME)));
 		    	userMap.put(JsonKey.ID,OneWayHashing.encryptVal((String)userMap.get(JsonKey.USERNAME)));
 		    }
-		    if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PROVIDER))){
-		      userMap.put(JsonKey.LOGIN_ID, ((String)userMap.get(JsonKey.USERNAME)+"@"+(String)userMap.get(JsonKey.PROVIDER)));
-		    }else{
-		      userMap.put(JsonKey.LOGIN_ID,userMap.get(JsonKey.USERNAME));
-		    }
+		    
             userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
             userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
             if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PASSWORD))){
@@ -833,6 +835,8 @@ public class UserManagementActor extends UntypedAbstractActor {
     	reqMap.remove(JsonKey.EDUCATION);
     	reqMap.remove(JsonKey.JOB_PROFILE);
     	reqMap.remove(JsonKey.ORGANISATION);
+    	reqMap.remove(JsonKey.EMAIL_VERIFIED);
+    	reqMap.remove(JsonKey.PHONE_NUMBER_VERIFIED);
 	}
 
 	/**

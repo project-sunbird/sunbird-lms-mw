@@ -36,18 +36,18 @@ public class SearchHandlerActor extends UntypedAbstractActor {
 	            if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.COMPOSITE_SEARCH.getValue())) {
 	              Map<String , Object> searchQueryMap = actorMessage.getRequest();
 	              Object objectType = searchQueryMap.get(JsonKey.OBJECT_TYPE);
-	              String [] types ;
+	              String [] types =  null;
 	              if(objectType != null && objectType instanceof List) {
  	                  List<String> list =(List)objectType;
  	                  types = list.toArray(new String[list.size()]);
 	               }
 	              SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
-                  Map<String, Object> result = null; //ElasticSearchUtil.(searchDto, ProjectUtil.EsIndex.sunbird, types);
+                  Map<String, List<Map<String, Object>>> result = ElasticSearchUtil.complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.name(), types);
                   Response response = new Response();
                   if(result !=null) {
                   response.put(JsonKey.RESPONSE, result);
                   } else {
-                       result = new HashMap<String, Object>();
+                       result = new HashMap<String, List<Map<String, Object>>>();
                        response.put(JsonKey.RESPONSE, result);    
                   }
                   sender().tell(response, self());

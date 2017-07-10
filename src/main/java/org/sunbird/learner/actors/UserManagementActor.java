@@ -71,8 +71,8 @@ public class UserManagementActor extends UntypedAbstractActor {
 				joinUserOrganisation(actorMessage);
 			}else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.APPROVE_USER_ORGANISATION.getValue())){
 				approveUserOrg(actorMessage);
-			}else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.VERIFY_USER_EXISTENCE.getValue())){
-              verifyUser(actorMessage);
+			}else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue())){
+			  getUserDetailsByLoginId(actorMessage);
             }else {
                 logger.info("UNSUPPORTED OPERATION");
                 ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -87,19 +87,29 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
 
     @SuppressWarnings("unchecked")
-    private void verifyUser(Request actorMessage) {
+    private void getUserDetailsByLoginId(Request actorMessage) {
       Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-      Response response = new Response();
       Map<String , Object> userMap=(Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
       if(null != userMap.get(JsonKey.LOGIN_ID)){
         String loginId = (String)userMap.get(JsonKey.LOGIN_ID);
-        Response resultFrEmail = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.LOGIN_ID,loginId);
-        if(!((List<Map<String,Object>>)resultFrEmail.get(JsonKey.RESPONSE)).isEmpty()){
-          response.put(JsonKey.RESPONSE, JsonKey.USER_FOUND);
+        Response resultFrLoginId = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.LOGIN_ID,loginId);
+        if(!((List<Map<String,Object>>)resultFrLoginId.get(JsonKey.RESPONSE)).isEmpty()){
+          Map<String,Object> map = ((List<Map<String,Object>>)resultFrLoginId.get(JsonKey.RESPONSE)).get(0);
+          Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(), (String)map.get(JsonKey.USER_ID));
+          Response response = new Response();
+          if(result !=null) {
+          response.put(JsonKey.RESPONSE, result);
+          } else {
+               result = new HashMap<String, Object>();
+               response.put(JsonKey.RESPONSE, result);    
+          }
+          sender().tell(response, self());
+          return;
         }else{
-          response.put(JsonKey.RESPONSE, JsonKey.USER_NOT_FOUND);
+          ProjectCommonException exception = new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(), ResponseCode.userNotFound.getErrorMessage(), ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+          sender().tell(exception, self());
+          return;
         }
-        sender().tell(response, self());
       }
     }
 

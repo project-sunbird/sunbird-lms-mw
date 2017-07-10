@@ -19,6 +19,7 @@ import org.sunbird.learner.util.Util;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.TestActorRef;
+import static akka.testkit.JavaTestKit.duration;
 
 /**
  * @author arvind
@@ -47,7 +48,7 @@ public class CourseEnrollmentActorTest {
         Request reqObj = new Request();
         reqObj.setRequest_id("1");
         reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
-        reqObj.put(JsonKey.COURSE_ID, "course");
+        reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
         reqObj.put(JsonKey.USER_ID, "USR");
         HashMap<String, Object> innerMap = new HashMap<>();
         innerMap.put(JsonKey.COURSE, reqObj.getRequest());
@@ -56,12 +57,12 @@ public class CourseEnrollmentActorTest {
         reqObj.setRequest(innerMap);
         try {
             subject.tell(reqObj, probe.getRef());
-            probe.expectMsgClass(Response.class);
+            probe.expectMsgClass(duration("10 second"),Response.class);
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }finally{
         	CassandraOperation op = new CassandraOperationImpl();
-        	op.deleteRecord(courseEnrollmentdbInfo.getKeySpace(), courseEnrollmentdbInfo.getTableName(), OneWayHashing.encryptVal("USR"+ JsonKey.PRIMARY_KEY_DELIMETER+"course"));
+        	op.deleteRecord(courseEnrollmentdbInfo.getKeySpace(), courseEnrollmentdbInfo.getTableName(), OneWayHashing.encryptVal("USR"+ JsonKey.PRIMARY_KEY_DELIMETER+"do_212282810555342848180"));
         }
     }
 

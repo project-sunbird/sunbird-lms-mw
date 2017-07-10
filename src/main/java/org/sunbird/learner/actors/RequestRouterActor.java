@@ -143,6 +143,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     @Override
     public void onReceive(Object message) throws Exception {
         if (message instanceof Request) {
+        	System.out.println("Received actor message....");
             logger.debug("Actor selector onReceive called");
             Request actorMessage = (Request) message;
             org.sunbird.common.request.ExecutionContext.setRequestId(actorMessage.getRequestId());

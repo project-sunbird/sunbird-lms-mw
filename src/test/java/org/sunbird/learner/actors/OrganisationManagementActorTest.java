@@ -31,8 +31,8 @@ public class OrganisationManagementActorTest {
         Util.checkCassandraDbConnections();
     }
 
-    //@Test
-    public void testGetOrg(){
+    @Test
+    public void testGetOrg() {
 
         TestKit probe = new TestKit(system);
         ActorRef subject = system.actorOf(props);
@@ -40,9 +40,9 @@ public class OrganisationManagementActorTest {
         Request reqObj = new Request();
         reqObj.setOperation(ActorOperations.GET_ORG_DETAILS.getValue());
         HashMap<String, Object> innerMap = new HashMap<>();
-        Map<String , Object> orgMap = new HashMap<String , Object>();
-        orgMap.put(JsonKey.ORGANISATION_ID , "CBSE");
-        innerMap.put(JsonKey.ORGANISATION , orgMap);
+        Map<String, Object> orgMap = new HashMap<String, Object>();
+        orgMap.put(JsonKey.ORGANISATION_ID, "CBSE");
+        innerMap.put(JsonKey.ORGANISATION, orgMap);
 
         reqObj.setRequest(innerMap);
         subject.tell(reqObj, probe.getRef());

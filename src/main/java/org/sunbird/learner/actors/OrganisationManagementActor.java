@@ -38,7 +38,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   private static final String PARENT_OF = "parentOf";
   private static final String ORG_TYPE = "orgType";
   private static final String CHILD_OF = "childOf";
-  private static final String ADDRESS_ID = "addId";
   private static final String ROOT_ORG = "rootOrg";
   private static final String APPROVED_BY = "approvedBy";
   private static final String APPROVED_DATE = "approvedDate";
@@ -127,7 +126,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           addressReq.put(JsonKey.CREATED_BY, updatedBy);
         }
         upsertAddress(addressReq);
-        req.put(ADDRESS_ID, addressId);
+        req.put(JsonKey.ADDRESS_ID, addressId);
       }
 
       Response result =

@@ -4,9 +4,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import java.util.concurrent.TimeUnit;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -16,8 +17,10 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.Util;
-
+import scala.concurrent.duration.Duration;
 import akka.actor.UntypedAbstractActor;
+import akka.pattern.Patterns;
+import akka.util.Timeout;
 
 /**
  * This actor will handle organisation related operation .
@@ -74,21 +77,22 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
    */
   @SuppressWarnings("unchecked")
   private void createOrg(Request actorMessage) {
+    Map<String, Object> req =
+        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+    Map<String, Object> addressReq = null;
+    if (null != actorMessage.getRequest().get(JsonKey.ADDRESS)) {
+      addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
+    }
+    String relation = (String) req.get(JsonKey.RELATION);
+    req.remove(JsonKey.RELATION);
     try {
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-
-      Map<String, Object> req =
-          (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
       String parentOrg = (String) req.get(JsonKey.PARENT_ORG_ID);
       Boolean isValidParent = false;
       if (!ProjectUtil.isStringNullOREmpty(parentOrg) && isValidParent(parentOrg)) {
         validateRootOrg(req);
         validateChannelIdForRootOrg(req);
         isValidParent = true;
-      }
-      Map<String, Object> addressReq = null;
-      if (null != actorMessage.getRequest().get(JsonKey.ADDRESS)) {
-        addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
       }
       String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
       if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
@@ -116,7 +120,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
       // create org_map if parentOrgId is present in request
       if (isValidParent) {
-        upsertOrgMap(uniqueId, parentOrg, (String) req.get(JsonKey.ROOT_ORG_ID), actorMessage.getEnv());
+        upsertOrgMap(uniqueId, parentOrg, (String) req.get(JsonKey.ROOT_ORG_ID), actorMessage.getEnv(),relation);
       }
       // create record in org_type if present in request
       String orgType = (String) req.get(JsonKey.ORG_TYPE);
@@ -126,12 +130,19 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
       result.getResult().put(JsonKey.ORGANISATION_ID, uniqueId);
       sender().tell(result, self());
-      return;
+      //return;
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
       return;
     }
-
+    Response orgResponse =  new Response();
+    Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+    if(null != addressReq){
+      req.put(JsonKey.ADDRESS, addressReq);
+    }
+    orgResponse.put(JsonKey.ORGANISATION, req);
+    orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
+    Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
   }
 
   /**
@@ -274,10 +285,16 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
    */
   @SuppressWarnings("unchecked")
   private void updateOrgData(Request actorMessage) throws ProjectCommonException {
+    Map<String, Object> req =
+        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+    Map<String, Object> addressReq = null;
+    if (null != actorMessage.getRequest().get(JsonKey.ADDRESS)) {
+      addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
+    }
+    String relation = (String) req.get(JsonKey.RELATION);
+    req.remove(JsonKey.RELATION);
     try {
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-      Map<String, Object> req =
-          (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
       String parentOrg = (String) req.get(JsonKey.PARENT_ORG_ID);
       Boolean isValidParent = false;
       logger.info(parentOrg);
@@ -286,10 +303,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         validateRootOrg(req);
         validateChannelIdForRootOrg(req);
         isValidParent = true;
-      }
-      Map<String, Object> addressReq = null;
-      if (null != actorMessage.getRequest().get(JsonKey.ADDRESS)) {
-        addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
       }
       Map<String, Object> orgDBO;
       Map<String, Object> updateOrgDBO = new HashMap<String, Object>();
@@ -342,7 +355,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
       if (isValidParent) {
         upsertOrgMap((String) orgDBO.get(JsonKey.ID), parentOrg, (String) req.get(JsonKey.ROOT_ORG_ID),
-            actorMessage.getEnv());
+            actorMessage.getEnv(),relation);
       }
 
       // create record in org_type if present in request
@@ -355,12 +368,19 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           orgDbInfo.getTableName(), updateOrgDBO);
       response.getResult().put(JsonKey.ORGANISATION_ID, orgDBO.get(JsonKey.ID));
       sender().tell(response, self());
-      return;
+     // return;
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
       return;
     }
-
+    Response orgResponse =  new Response();
+    Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+    if(null != addressReq){
+      req.put(JsonKey.ADDRESS, addressReq);
+    }
+    orgResponse.put(JsonKey.ORGANISATION, req);
+    orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
+    Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
   }
 
   /**
@@ -370,7 +390,22 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
    */
   @SuppressWarnings("unchecked")
   private void getOrgDetails(Request actorMessage) {
-    try {
+    
+    
+    Map<String, Object> req =
+        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+    Map<String, Object> orgDBO;
+    String orgId = (String) req.get(JsonKey.ORGANISATION_ID);
+    Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName(), orgId);
+    Response response = new Response();
+    if(result !=null) {
+    response.put(JsonKey.RESPONSE, result);
+    } else {
+         result = new HashMap<String, Object>();
+         response.put(JsonKey.RESPONSE, result);    
+    }
+    sender().tell(response, self());
+    /*try {
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
       Map<String, Object> req =
@@ -404,7 +439,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
       return;
-    }
+    }*/
   }
 
   /**
@@ -567,14 +602,15 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
    * @param parentOrgId
    * @param rootOrgId
    * @param env
+   * @param relation 
    */
-  public void upsertOrgMap(String orgId, String parentOrgId, String rootOrgId, int env) {
+  public void upsertOrgMap(String orgId, String parentOrgId, String rootOrgId, int env, String relation) {
     Util.DbInfo orgMapDbInfo = Util.dbInfoMap.get(JsonKey.ORG_MAP_DB);
     String orgMapId = ProjectUtil.getUniqueIdFromTimestamp(env);
     Map<String, Object> orgMap = new HashMap<>();
     orgMap.put(JsonKey.ID, orgMapId);
     orgMap.put(JsonKey.ORG_ID_ONE, parentOrgId);
-    orgMap.put(JsonKey.RELATION, JsonKey.PARENT_OF);
+    orgMap.put(JsonKey.RELATION, relation);
     orgMap.put(JsonKey.ORG_ID_TWO, orgId);
     orgMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
     cassandraOperation.insertRecord(orgMapDbInfo.getKeySpace(), orgMapDbInfo.getTableName(),

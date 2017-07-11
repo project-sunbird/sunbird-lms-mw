@@ -294,6 +294,7 @@ public class UserManagementActor extends UntypedAbstractActor {
             		  reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
             		  reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
                       reqMap.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
+                      reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
             		}else{
             		  reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
                       reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));

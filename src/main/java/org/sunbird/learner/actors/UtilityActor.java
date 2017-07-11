@@ -97,11 +97,12 @@ public class UtilityActor extends UntypedAbstractActor {
             Map<String , Object> course = null;
             if(null != courseList && courseList.size()>0){
               course = courseList.get(0);
-              Integer courseProgress = (int) course.get(JsonKey.COURSE_PROGRESS);
-              courseProgress = courseProgress+(Integer)value.get("progress");
 
-              course.put(JsonKey.ACTIVE , activeStatus(course.get(JsonKey.ACTIVE)));
-              course.put(JsonKey.DATE_TIME , new Timestamp(new Date().getTime()));
+              Integer courseProgress = 0;
+              if(ProjectUtil.isNotNull(course.get(JsonKey.COURSE_PROGRESS))) {
+                  courseProgress = (Integer) course.get(JsonKey.COURSE_PROGRESS);
+              }
+              courseProgress = courseProgress+(Integer)value.get("progress");
 
               course.put(JsonKey.COURSE_PROGRESS , courseProgress);
               course.put(JsonKey.LAST_READ_CONTENTID ,((Map<String,Object>)value.get("content")).get(JsonKey.CONTENT_ID));
@@ -129,16 +130,16 @@ public class UtilityActor extends UntypedAbstractActor {
     }
 
     private Map<String , Object> getLatestContent(Map<String , Object> current , Map<String , Object> next){
-        if(current.get(JsonKey.LAST_UPDATED_TIME) == null && next.get(JsonKey.LAST_UPDATED_TIME) == null){
+        if(current.get(JsonKey.LAST_ACCESS_TIME) == null && next.get(JsonKey.LAST_ACCESS_TIME) == null){
             return next;
-        }else if(current.get(JsonKey.LAST_UPDATED_TIME) == null){
+        }else if(current.get(JsonKey.LAST_ACCESS_TIME) == null){
             return next;
-        }else if(next.get(JsonKey.LAST_UPDATED_TIME) == null){
+        }else if(next.get(JsonKey.LAST_ACCESS_TIME) == null){
             return current;
         }
         try {
-            Date currentUpdatedTime = sdf.parse((String)current.get(JsonKey.LAST_UPDATED_TIME));
-            Date nextUpdatedTime = sdf.parse((String)next.get(JsonKey.LAST_UPDATED_TIME));
+            Date currentUpdatedTime = sdf.parse((String)current.get(JsonKey.LAST_ACCESS_TIME));
+            Date nextUpdatedTime = sdf.parse((String)next.get(JsonKey.LAST_ACCESS_TIME));
             if(currentUpdatedTime.after(nextUpdatedTime)){
                 return current ;
             }else{

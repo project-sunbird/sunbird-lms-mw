@@ -3,16 +3,9 @@
  */
 package org.sunbird.learner.actors;
 
-import java.math.BigInteger;
-import java.sql.Timestamp;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import akka.actor.ActorRef;
 import akka.actor.Props;
+import akka.actor.UntypedAbstractActor;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -26,8 +19,16 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.ActorRef;
-import akka.actor.UntypedAbstractActor;
+import java.math.BigInteger;
+import java.sql.Timestamp;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 
 /**
  * This actor to handle learner's state update operation .
@@ -119,8 +120,21 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
             int currentStatus = (int)result.get(JsonKey.STATUS);
             int requestedStatus = ((BigInteger) req.get(JsonKey.STATUS)).intValue();
 
-            Date lastUpdatedTime = parseDate(result.get(JsonKey.LAST_UPDATED_TIME), sdf);
-            Date requestedUpdatedTime = parseDate(req.get(JsonKey.LAST_UPDATED_TIME), sdf);
+            Integer currentProgressStatus =0;
+            if(isNotNull(result.get(JsonKey.CONTENT_PROGRESS))) {
+                currentProgressStatus = (Integer) result.get(JsonKey.CONTENT_PROGRESS);
+            }
+            if(isNotNull(req.get(JsonKey.CONTENT_PROGRESS))) {
+                Integer requestedProgressStatus = ((BigInteger) req.get(JsonKey.CONTENT_PROGRESS)).intValue();
+               if (requestedProgressStatus>currentProgressStatus){
+                   req.put(JsonKey.CONTENT_PROGRESS , requestedProgressStatus);
+               }else{
+                   req.put(JsonKey.CONTENT_PROGRESS , currentProgressStatus);
+               }
+            }else{
+                req.put(JsonKey.CONTENT_PROGRESS , currentProgressStatus);
+            }
+
             Date accessTime = parseDate(result.get(JsonKey.LAST_ACCESS_TIME), sdf);
             Date requestAccessTime = parseDate(req.get(JsonKey.LAST_ACCESS_TIME), sdf);
 
@@ -140,7 +154,6 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
                 viewCount = 0;
             }
 
-
             if (requestedStatus >= currentStatus) {
                 req.put(JsonKey.STATUS,requestedStatus);
                 if (requestedStatus == 2) {
@@ -151,13 +164,13 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
                 }
                 req.put(JsonKey.VIEW_COUNT, viewCount + 1);
                 req.put(JsonKey.LAST_ACCESS_TIME, compareTime(accessTime, requestAccessTime));
-                req.put(JsonKey.LAST_UPDATED_TIME, compareTime(lastUpdatedTime, requestedUpdatedTime));
+                req.put(JsonKey.LAST_UPDATED_TIME, ProjectUtil.getFormattedDate());
 
             } else {
                 req.put(JsonKey.STATUS, currentStatus);
                 req.put(JsonKey.VIEW_COUNT, viewCount + 1);
                 req.put(JsonKey.LAST_ACCESS_TIME, compareTime(accessTime, requestAccessTime));
-                req.put(JsonKey.LAST_UPDATED_TIME, compareTime(lastUpdatedTime, requestedUpdatedTime));
+                req.put(JsonKey.LAST_UPDATED_TIME, ProjectUtil.getFormattedDate());
             }
 
         } else {
@@ -168,21 +181,25 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
             }else {
                 req.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
             }
+
+            int progressStatus = 0;
+            if(isNotNull(req.get(JsonKey.CONTENT_PROGRESS))){
+                progressStatus = ((BigInteger) req.get(JsonKey.CONTENT_PROGRESS)).intValue();
+            }
+            req.put(JsonKey.CONTENT_PROGRESS , progressStatus);
+
             req.put(JsonKey.VIEW_COUNT, 0);
             req.put(JsonKey.COMPLETED_COUNT, 0);
-            Date requestedUpdatedTime = parseDate(req.get(JsonKey.LAST_UPDATED_TIME), sdf);
             Date requestAccessTime = parseDate(req.get(JsonKey.LAST_ACCESS_TIME), sdf);
 
-            if (requestedUpdatedTime != null) {
-                req.put(JsonKey.LAST_UPDATED_TIME, (String)req.get(JsonKey.LAST_UPDATED_TIME));
-            } else {
-                req.put(JsonKey.LAST_UPDATED_TIME, ProjectUtil.getFormattedDate());
-            }
+            req.put(JsonKey.LAST_UPDATED_TIME, ProjectUtil.getFormattedDate());
+
             if (requestAccessTime != null) {
                 req.put(JsonKey.LAST_ACCESS_TIME, (String)req.get(JsonKey.LAST_ACCESS_TIME));
             } else {
                 req.put(JsonKey.LAST_ACCESS_TIME, ProjectUtil.getFormattedDate());
             }
+
         }
     }
 

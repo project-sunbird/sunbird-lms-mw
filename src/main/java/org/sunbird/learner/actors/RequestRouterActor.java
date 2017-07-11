@@ -12,6 +12,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.assessment.AssessmentItemActor;
 import org.sunbird.learner.actors.recommend.RecommendorActor;
 import org.sunbird.learner.actors.search.CourseSearchActor;
+import org.sunbird.learner.actors.search.SearchHandlerActor;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
@@ -42,6 +43,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     public static ActorRef backgroundJobManager;
     private ActorRef courseSearchActorRouter;
     private ActorRef assessmentItemActor;
+    private ActorRef searchHandlerActor; 
     private ExecutionContext ec;
     Map<String, ActorRef> routerMap = new HashMap<>();
     private static final int WAIT_TIME_VALUE = 5;
@@ -56,7 +58,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private static final String COURSE_SEARCH_ACTOR_ROUTER = "courseSearchActorRouter";
     private static final String ASSESSMENT_ITEM_ACTOR_ROUTER = "assessmentItemActor";
     private static final String RECOMMENDOR_ACTOR_ROUTER = "recommendorActorRouter";
-
+    private static final String SEARCH_HANDLER_ACTOR_ROUTER = "searchHandlerActor";
     /**
      * constructor to initialize router actor with child actor pool
      */
@@ -85,6 +87,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
                 ASSESSMENT_ITEM_ACTOR_ROUTER);
         recommendorActorRouter=getContext().actorOf(FromConfig.getInstance().props(Props.create(RecommendorActor.class)),
                 RECOMMENDOR_ACTOR_ROUTER);
+        searchHandlerActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(SearchHandlerActor.class)),
+            SEARCH_HANDLER_ACTOR_ROUTER);
         ec = getContext().dispatcher();
         initializeRouterMap();
     }
@@ -110,7 +114,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.CHANGE_PASSWORD.getValue(), userManagementRouter);
         routerMap.put(ActorOperations.GET_PROFILE.getValue(), userManagementRouter);
         routerMap.put(ActorOperations.GET_ROLES.getValue(), userManagementRouter);
-        routerMap.put(ActorOperations.VERIFY_USER_EXISTENCE.getValue(), userManagementRouter);
+        routerMap.put(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue(), userManagementRouter);
         
         routerMap.put(ActorOperations.CREATE_PAGE.getValue(), pageManagementRouter);
         routerMap.put(ActorOperations.UPDATE_PAGE.getValue(), pageManagementRouter);
@@ -136,7 +140,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.GET_RECOMMENDED_COURSES.getValue(), recommendorActorRouter);
         routerMap.put(ActorOperations.APPROVE_USER_ORGANISATION.getValue() , userManagementRouter);
         routerMap.put(ActorOperations.JOIN_USER_ORGANISATION.getValue(), userManagementRouter);
-        routerMap.put(ActorOperations.COMPOSITE_SEARCH.getValue(), courseSearchActorRouter);
+        routerMap.put(ActorOperations.COMPOSITE_SEARCH.getValue(), searchHandlerActor);
     }
 
 

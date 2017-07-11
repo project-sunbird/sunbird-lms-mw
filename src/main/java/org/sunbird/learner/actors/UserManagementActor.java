@@ -71,8 +71,8 @@ public class UserManagementActor extends UntypedAbstractActor {
 				joinUserOrganisation(actorMessage);
 			}else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.APPROVE_USER_ORGANISATION.getValue())){
 				approveUserOrg(actorMessage);
-			}else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.VERIFY_USER_EXISTENCE.getValue())){
-              verifyUser(actorMessage);
+			}else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue())){
+			  getUserDetailsByLoginId(actorMessage);
             }else {
                 logger.info("UNSUPPORTED OPERATION");
                 ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -87,19 +87,29 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
 
     @SuppressWarnings("unchecked")
-    private void verifyUser(Request actorMessage) {
+    private void getUserDetailsByLoginId(Request actorMessage) {
       Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-      Response response = new Response();
       Map<String , Object> userMap=(Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
       if(null != userMap.get(JsonKey.LOGIN_ID)){
         String loginId = (String)userMap.get(JsonKey.LOGIN_ID);
-        Response resultFrEmail = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.LOGIN_ID,loginId);
-        if(!((List<Map<String,Object>>)resultFrEmail.get(JsonKey.RESPONSE)).isEmpty()){
-          response.put(JsonKey.RESPONSE, JsonKey.USER_FOUND);
+        Response resultFrLoginId = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.LOGIN_ID,loginId);
+        if(!((List<Map<String,Object>>)resultFrLoginId.get(JsonKey.RESPONSE)).isEmpty()){
+          Map<String,Object> map = ((List<Map<String,Object>>)resultFrLoginId.get(JsonKey.RESPONSE)).get(0);
+          Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(), (String)map.get(JsonKey.USER_ID));
+          Response response = new Response();
+          if(result !=null) {
+          response.put(JsonKey.RESPONSE, result);
+          } else {
+               result = new HashMap<String, Object>();
+               response.put(JsonKey.RESPONSE, result);    
+          }
+          sender().tell(response, self());
+          return;
         }else{
-          response.put(JsonKey.RESPONSE, JsonKey.USER_NOT_FOUND);
+          ProjectCommonException exception = new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(), ResponseCode.userNotFound.getErrorMessage(), ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+          sender().tell(exception, self());
+          return;
         }
-        sender().tell(response, self());
       }
     }
 
@@ -467,7 +477,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 
 	@SuppressWarnings("unchecked")
 	private void checkForEmailAndUserNameUniqueness(Map<String, Object> userMap, DbInfo usrDbInfo) {
-   		String email = (String)userMap.get(JsonKey.EMAIL);
+   		/*String email = (String)userMap.get(JsonKey.EMAIL);
         Response resultFrEmail = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.EMAIL,email);
         if(((List<Map<String,Object>>)resultFrEmail.get(JsonKey.RESPONSE)).size() != 0){
         	Map<String,Object> dbusrMap = ((List<Map<String,Object>>)resultFrEmail.get(JsonKey.RESPONSE)).get(0);
@@ -477,7 +487,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 	            sender().tell(exception, self());
 	            return;
         	}
-        }
+        }*/
         if(null != userMap.get(JsonKey.USERNAME)){
 	        String userName = (String)userMap.get(JsonKey.USERNAME);
 	        Response resultFruserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.USERNAME,userName);
@@ -528,7 +538,13 @@ public class UserManagementActor extends UntypedAbstractActor {
         Map<String , Object> userMap=(Map<String, Object>) req.get(JsonKey.USER);
         
 	        boolean isSSOEnabled = Boolean.valueOf(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
-		        if(null != userMap.get(JsonKey.EMAIL)){
+	        
+	        if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PROVIDER))){
+              userMap.put(JsonKey.LOGIN_ID, ((String)userMap.get(JsonKey.USERNAME)+"@"+(String)userMap.get(JsonKey.PROVIDER)));
+            }else{
+              userMap.put(JsonKey.LOGIN_ID,userMap.get(JsonKey.USERNAME));
+            }
+		        /*if(null != userMap.get(JsonKey.EMAIL)){
 		        	String email = (String)userMap.get(JsonKey.EMAIL);
 			        Response resultFrEmail = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.EMAIL,email);
 			        if(((List<Map<String,Object>>)resultFrEmail.get(JsonKey.RESPONSE)).size() != 0){
@@ -536,20 +552,19 @@ public class UserManagementActor extends UntypedAbstractActor {
 			            sender().tell(exception, self());
 			            return;
 			        }
-		        }
-		        if(null != userMap.get(JsonKey.USERNAME)){
-		        	 String userName = (String)userMap.get(JsonKey.USERNAME);
-		        	 Response resultFrUserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.USERNAME,userName);
+		        }*/
+		        if(null != userMap.get(JsonKey.LOGIN_ID)){
+		        	 String loginId = (String)userMap.get(JsonKey.LOGIN_ID);
+		        	 Response resultFrUserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.LOGIN_ID,loginId);
 		        	 if(((List<Map<String,Object>>)resultFrUserName.get(JsonKey.RESPONSE)).size() != 0){
-		             	ProjectCommonException exception = new ProjectCommonException(ResponseCode.userNameAlreadyExistError.getErrorCode(), ResponseCode.userNameAlreadyExistError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+		             	ProjectCommonException exception = new ProjectCommonException(ResponseCode.userAlreadyExist.getErrorCode(), ResponseCode.userAlreadyExist.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
 		                 sender().tell(exception, self());
 		                 return;
 		             }
 		        }
-		        
+		        SSOManager ssoManager = new KeyCloakServiceImpl();
 		    if(isSSOEnabled){
 		    	try{
-			    	SSOManager ssoManager = new KeyCloakServiceImpl();
 			    	String userId = ssoManager.createUser(userMap);
 			    	if(!ProjectUtil.isStringNullOREmpty(userId)){
 				    	userMap.put(JsonKey.USER_ID,userId);
@@ -568,11 +583,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 		    	userMap.put(JsonKey.USER_ID,OneWayHashing.encryptVal((String)userMap.get(JsonKey.USERNAME)));
 		    	userMap.put(JsonKey.ID,OneWayHashing.encryptVal((String)userMap.get(JsonKey.USERNAME)));
 		    }
-		    if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PROVIDER))){
-		      userMap.put(JsonKey.LOGIN_ID, ((String)userMap.get(JsonKey.USERNAME)+"@"+(String)userMap.get(JsonKey.PROVIDER)));
-		    }else{
-		      userMap.put(JsonKey.LOGIN_ID,userMap.get(JsonKey.USERNAME));
-		    }
+		    
             userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
             userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
             if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PASSWORD))){
@@ -592,6 +603,10 @@ public class UserManagementActor extends UntypedAbstractActor {
             }catch(ProjectCommonException exception){
               sender().tell(exception, self());
               return;
+            }finally{
+              if(null == response && isSSOEnabled){
+                ssoManager.removeUser(userMap);
+              }
             }
             response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
             if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
@@ -823,6 +838,8 @@ public class UserManagementActor extends UntypedAbstractActor {
     	reqMap.remove(JsonKey.EDUCATION);
     	reqMap.remove(JsonKey.JOB_PROFILE);
     	reqMap.remove(JsonKey.ORGANISATION);
+    	reqMap.remove(JsonKey.EMAIL_VERIFIED);
+    	reqMap.remove(JsonKey.PHONE_NUMBER_VERIFIED);
 	}
 
 	/**

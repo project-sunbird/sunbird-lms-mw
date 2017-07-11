@@ -1,6 +1,7 @@
 package org.sunbird.learner.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -120,12 +121,14 @@ public class Util {
     public static boolean readConfigFromEnv() {
         boolean response = false;
         String ips = System.getenv(JsonKey.SUNBIRD_CASSANDRA_IP);
-        if (ProjectUtil.isStringNullOREmpty(ips)) {
+        String envPort = System.getenv(JsonKey.SUNBIRD_CASSANDRA_PORT);
+        
+        if (ProjectUtil.isStringNullOREmpty(ips) || ProjectUtil.isStringNullOREmpty(envPort) ) {
             logger.info("Configuration value is not coming form System variable.");
             return response;
         }
         String[] ipList = ips.split(",");
-        String[] portList = System.getenv(JsonKey.SUNBIRD_CASSANDRA_PORT).split(",");
+        String[] portList = envPort.split(",");
         String userName = System.getenv(JsonKey.SUNBIRD_CASSANDRA_USER_NAME);
         String password = System.getenv(JsonKey.SUNBIRD_CASSANDRA_PASSWORD);
         for (int i = 0; i < ipList.length; i++) {

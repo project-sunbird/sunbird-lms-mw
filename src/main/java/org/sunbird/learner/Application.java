@@ -1,7 +1,5 @@
 package org.sunbird.learner;
 
-import java.io.File;
-
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LogHelper;
 import org.sunbird.common.models.util.ProjectUtil;
@@ -31,24 +29,24 @@ public class Application {
    /**
     * This method will do the basic setup for actors.
     */
-    private static void startRemoteCreationSystem(){
-    	String filePath = System.getenv(JsonKey.SUNBIRD_ACTOR_FILE_PATH);
-    	Config con = null;
-    	File file = null;
-    	if(!ProjectUtil.isStringNullOREmpty(filePath)){
-    	   file = new File(System.getenv("sunbird_file_path"));
-    	}
-    	if( file !=null && file.exists()){
-    	 con = ConfigFactory.parseFile(file).getConfig(ACTOR_CONFIG_NAME);
-    	} else {
-    	  con	= ConfigFactory.load().getConfig(ACTOR_CONFIG_NAME);
-    	}
-    	 system = ActorSystem.create(ACTOR_SYSTEM_NAME, con);
-        ActorRef learnerActorSelectorRef = system.actorOf(Props.create(RequestRouterActor.class),
-                RequestRouterActor.class.getSimpleName());
-        logger.info("ACTORS STARTED " + learnerActorSelectorRef);
-        checkCassandraConnection();
+  private static void startRemoteCreationSystem() {
+    Config con = null;
+    String host = System.getenv(JsonKey.SUNBIRD_ACTOR_SERVICE_IP);
+    String port = System.getenv(JsonKey.SUNBIRD_ACTOR_SERVICE_PORT);
+    if (!ProjectUtil.isStringNullOREmpty(host) && !ProjectUtil.isStringNullOREmpty(port)) {
+      con = ConfigFactory
+          .parseString(
+              "akka.remote.netty.tcp.hostname=" + host + ",akka.remote.netty.tcp.port=" + port + "")
+          .withFallback(ConfigFactory.load().getConfig(ACTOR_CONFIG_NAME));
+    } else {
+      con = ConfigFactory.load().getConfig(ACTOR_CONFIG_NAME);
     }
+    system = ActorSystem.create(ACTOR_SYSTEM_NAME, con);
+    ActorRef learnerActorSelectorRef = system.actorOf(Props.create(RequestRouterActor.class),
+        RequestRouterActor.class.getSimpleName());
+    logger.info("ACTORS STARTED " + learnerActorSelectorRef);
+    checkCassandraConnection();
+  }
 
     private static void checkCassandraConnection() {
         Util.checkCassandraDbConnections();

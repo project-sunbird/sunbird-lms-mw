@@ -31,7 +31,7 @@ public class OrganisationManagementActorTest {
         Util.checkCassandraDbConnections();
     }
 
-    @Test
+    //@Test
     public void testGetOrg() {
 
         TestKit probe = new TestKit(system);

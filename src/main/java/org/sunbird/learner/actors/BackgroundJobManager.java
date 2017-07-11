@@ -66,7 +66,10 @@ public class BackgroundJobManager extends UntypedAbstractActor{
             }else if(requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue())){
               updateUserInfoToEs(actorMessage);
 
-          }else {
+          }else if(requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue())){
+            updateOrgInfoToEs(actorMessage);
+
+        }else {
             	LOGGER.info("UNSUPPORTED OPERATION");
                 ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
                 sender().tell(exception, self());
@@ -78,7 +81,13 @@ public class BackgroundJobManager extends UntypedAbstractActor{
 	
 	}
 	
-   private void updateUserInfoToEs(Response actorMessage) {
+   private void updateOrgInfoToEs(Response actorMessage) {
+     Map<String,Object> orgMap = (Map<String, Object>) actorMessage.get(JsonKey.ORGANISATION);
+     cacheDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName(),
+         (String)orgMap.get(JsonKey.ID),orgMap);
+  }
+
+  private void updateUserInfoToEs(Response actorMessage) {
      String userId = (String) actorMessage.get(JsonKey.ID);
      getUserProfile(userId);
   }

@@ -562,10 +562,9 @@ public class UserManagementActor extends UntypedAbstractActor {
 		                 return;
 		             }
 		        }
-		        
+		        SSOManager ssoManager = new KeyCloakServiceImpl();
 		    if(isSSOEnabled){
 		    	try{
-			    	SSOManager ssoManager = new KeyCloakServiceImpl();
 			    	String userId = ssoManager.createUser(userMap);
 			    	if(!ProjectUtil.isStringNullOREmpty(userId)){
 				    	userMap.put(JsonKey.USER_ID,userId);
@@ -604,6 +603,10 @@ public class UserManagementActor extends UntypedAbstractActor {
             }catch(ProjectCommonException exception){
               sender().tell(exception, self());
               return;
+            }finally{
+              if(null == response && isSSOEnabled){
+                ssoManager.removeUser(userMap);
+              }
             }
             response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
             if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){

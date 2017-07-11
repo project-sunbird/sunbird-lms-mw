@@ -101,7 +101,7 @@ public class RecommendorActor extends UntypedAbstractActor {
         filterMap.put(JsonKey.CONTENT_TYPE , contentTypes);
 
         searchQueryMap.put(JsonKey.FILTERS, filterMap);
-        searchQueryMap.put(JsonKey.LIMIT , 20);
+        searchQueryMap.put(JsonKey.LIMIT , 10);
 
         Map<String, Object> ekStepSearchQuery = new HashMap<String, Object>();
         ekStepSearchQuery.put(JsonKey.REQUEST, searchQueryMap);

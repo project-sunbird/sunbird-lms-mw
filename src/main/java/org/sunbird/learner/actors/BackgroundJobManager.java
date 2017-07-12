@@ -89,6 +89,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
 
   private void updateUserInfoToEs(Response actorMessage) {
      String userId = (String) actorMessage.get(JsonKey.ID);
+     LOGGER.info("calling get profile to save user data==" + userId);
      getUserProfile(userId);
   }
 
@@ -104,6 +105,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
     try{
       response = cassandraOperation.getRecordById(userDbInfo.getKeySpace(),userDbInfo.getTableName(),userId);
       list = (List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE);
+      LOGGER.info("collecting user data to save user data==" + userId);
     }catch(Exception e){
       LOGGER.error(e);
     }
@@ -216,9 +218,12 @@ public class BackgroundJobManager extends UntypedAbstractActor{
        Util.removeAttributes(map, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY, JsonKey.ID));
     }
     if(((List<Map<String,String>>)response.getResult().get(JsonKey.RESPONSE)).size()>0){
+      LOGGER.info("saving user to es==" + userId);
       Map<String,Object> map = ((List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE)).get(0);
       cacheDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(),
           userId,map);
+    }else {
+      LOGGER.info("user data not found to save to ES==" + userId);
     }
     
   }
@@ -375,6 +380,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
 	private boolean cacheDataToElastic(String index, String type, String identifier, Map<String,Object> data) {
 		String response = ElasticSearchUtil.createData(index, type, identifier, data);
 		if(!ProjectUtil.isStringNullOREmpty(response)) {
+		  LOGGER.info("User Data is saved successfully ES==" );
 			return true;
 		}
 		LOGGER.info("unbale to save the data inside ES with identifier " + identifier);

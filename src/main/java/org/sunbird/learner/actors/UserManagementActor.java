@@ -667,7 +667,10 @@ public class UserManagementActor extends UntypedAbstractActor {
                     Response UsrResponse = new Response();
                     UsrResponse.getResult().put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
                     UsrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));
+                     logger.info("making a call to save user data to ES");
                     Patterns.ask(RequestRouterActor.backgroundJobManager, UsrResponse, timeout);
+            }else {
+              logger.info("no call for ES to save user");
             }
     }
 

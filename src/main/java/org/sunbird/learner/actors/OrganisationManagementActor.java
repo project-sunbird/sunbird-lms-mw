@@ -35,29 +35,34 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   @Override
   public void onReceive(Object message) throws Throwable {
     if (message instanceof Request) {
-      logger.info("OrganisationManagementActor  onReceive called");
-      Request actorMessage = (Request) message;
-      if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_ORG.getValue())) {
-        createOrg(actorMessage);
-      } else if (actorMessage.getOperation()
-          .equalsIgnoreCase(ActorOperations.UPDATE_ORG_STATUS.getValue())) {
-        updateOrgStatus(actorMessage);
-      } else if (actorMessage.getOperation()
-          .equalsIgnoreCase(ActorOperations.UPDATE_ORG.getValue())) {
-        updateOrgData(actorMessage);
-      } else if (actorMessage.getOperation()
-          .equalsIgnoreCase(ActorOperations.APPROVE_ORG.getValue())) {
-        approveOrg(actorMessage);
-      } else if (actorMessage.getOperation()
-          .equalsIgnoreCase(ActorOperations.GET_ORG_DETAILS.getValue())) {
-        getOrgDetails(actorMessage);
-      } else {
-        logger.info("UNSUPPORTED OPERATION");
-        ProjectCommonException exception =
-            new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
-                ResponseCode.invalidOperationName.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-        sender().tell(exception, self());
+      try {
+        logger.info("OrganisationManagementActor  onReceive called");
+        Request actorMessage = (Request) message;
+        if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_ORG.getValue())) {
+          createOrg(actorMessage);
+        } else if (actorMessage.getOperation()
+                .equalsIgnoreCase(ActorOperations.UPDATE_ORG_STATUS.getValue())) {
+          updateOrgStatus(actorMessage);
+        } else if (actorMessage.getOperation()
+                .equalsIgnoreCase(ActorOperations.UPDATE_ORG.getValue())) {
+          updateOrgData(actorMessage);
+        } else if (actorMessage.getOperation()
+                .equalsIgnoreCase(ActorOperations.APPROVE_ORG.getValue())) {
+          approveOrg(actorMessage);
+        } else if (actorMessage.getOperation()
+                .equalsIgnoreCase(ActorOperations.GET_ORG_DETAILS.getValue())) {
+          getOrgDetails(actorMessage);
+        } else {
+          logger.info("UNSUPPORTED OPERATION");
+          ProjectCommonException exception =
+                  new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
+                          ResponseCode.invalidOperationName.getErrorMessage(),
+                          ResponseCode.CLIENT_ERROR.getResponseCode());
+          sender().tell(exception, self());
+        }
+      }catch(Exception ex){
+        logger.error(ex);
+        sender().tell(ex, self());
       }
     } else {
       // Throw exception as message body
@@ -101,6 +106,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
       req.put(JsonKey.ID, uniqueId);
       req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+      req.put(JsonKey.STATUS , ProjectUtil.OrgStatus.ACTIVE.name());
 
       // update address if present in request
       if (null != addressReq && addressReq.size() > 0) {

@@ -1,10 +1,3 @@
-//to export data from csv to cassandra table run below command(for page_section and page_management table) 
-// change the path of csv file
-//COPY sunbird.page_management(id, appmap,createdby ,createddate ,name ,organisationid ,portalmap ,updatedby ,updateddate ) FROM '/tmp/cql/pageMgmt.csv';
-
-//COPY sunbird.page_section(id, alt,createdby ,createdby ,createddate ,description ,display ,imgurl ,name,searchquery , sectiondatatype ,status , updatedby ,updateddate) FROM '/tmp/cql/pageSection.csv';
-
-
 CREATE KEYSPACE IF NOT EXISTS sunbird WITH replication = {'class':'SimpleStrategy','replication_factor':1};
 
 //to change cluster name
@@ -409,3 +402,9 @@ ALTER TABLE sunbird.user_education ADD isDeleted boolean;
 ALTER TABLE sunbird.address ADD isDeleted boolean;
 ALTER TABLE sunbird.user_org ADD isDeleted boolean;
 ALTER TABLE sunbird.user ADD profileSummary text;
+
+//to export data from csv to cassandra table run below command(for page_section and page_management table) 
+// change the path of csv file
+//COPY sunbird.page_management(id, appmap,createdby ,createddate ,name ,organisationid ,portalmap ,updatedby ,updateddate ) FROM '/tmp/cql/pageMgmt.csv';
+
+//COPY sunbird.page_section(id, alt,createdby ,createdby ,createddate ,description ,display ,imgurl ,name,searchquery , sectiondatatype ,status , updatedby ,updateddate) FROM '/tmp/cql/pageSection.csv';

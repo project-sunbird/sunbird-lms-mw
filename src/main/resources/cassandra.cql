@@ -395,3 +395,10 @@ CREATE INDEX inx_u_loginId ON sunbird.user(loginId);
 ALTER TABLE sunbird.user_job_profile ADD isCurrentJob boolean;
 ALTER TABLE sunbird.content_consumption ADD progress int;
 ALTER TABLE sunbird.content_consumption DROP viewPosition;
+
+//changes on 12th july 2017
+ALTER TABLE sunbird.user_job_profile ADD isDeleted boolean;
+ALTER TABLE sunbird.user_education ADD isDeleted boolean;
+ALTER TABLE sunbird.address ADD isDeleted boolean;
+ALTER TABLE sunbird.user_org ADD isDeleted boolean;
+ALTER TABLE sunbird.user ADD profileSummary text;

@@ -290,26 +290,37 @@ public class UserManagementActor extends UntypedAbstractActor {
             	List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.ADDRESS);
             	for(int i = 0 ; i < reqList.size() ;i++ ){
             		Map<String,Object> reqMap = reqList.get(i);
-            		if(!reqMap.containsKey(JsonKey.ID)){
-            		  reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-            		  reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-                      reqMap.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
-                      reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-            		}else{
-            		  reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-                      reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+            		if(reqMap.containsKey(JsonKey.IS_DELETED) && null != reqMap.get(JsonKey.IS_DELETED) && ((boolean)reqMap.get(JsonKey.IS_DELETED)) 
+            		    && !ProjectUtil.isStringNullOREmpty((String)reqMap.get(JsonKey.ID))){
+            		    deleteRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),(String)reqMap.get(JsonKey.ID));
+            		    continue;
             		}
-            		try{
-            		  cassandraOperation.upsertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),reqMap);
-            		}catch(Exception ex){
-                      logger.error(ex);
-                    }
+            		  if(!reqMap.containsKey(JsonKey.ID)){
+                        reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+                        reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+                        reqMap.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
+                        reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+                      }else{
+                        reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+                        reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+                      }
+                      try{
+                        cassandraOperation.upsertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),reqMap);
+                      }catch(Exception ex){
+                        logger.error(ex);
+                      }
+            		
             	}
             }
             if(userMap.containsKey(JsonKey.EDUCATION)){
             	List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.EDUCATION);
             	for(int i = 0 ; i < reqList.size() ;i++ ){
             		Map<String,Object> reqMap = reqList.get(i);
+            		if(reqMap.containsKey(JsonKey.IS_DELETED) && null != reqMap.get(JsonKey.IS_DELETED) && ((boolean)reqMap.get(JsonKey.IS_DELETED)) 
+            		    && !ProjectUtil.isStringNullOREmpty((String)reqMap.get(JsonKey.ID))){
+                        deleteRecord(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(),(String)reqMap.get(JsonKey.ID));
+                        continue;
+                    }
             		processEducationInfo(reqMap,userMap,req,addrDbInfo,eduDbInfo);
             	}
             }
@@ -317,6 +328,11 @@ public class UserManagementActor extends UntypedAbstractActor {
             	List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.JOB_PROFILE);
             	for(int i = 0 ; i < reqList.size() ;i++ ){
             		Map<String,Object> reqMap = reqList.get(i);
+            		if(reqMap.containsKey(JsonKey.IS_DELETED) && null != reqMap.get(JsonKey.IS_DELETED) && ((boolean)reqMap.get(JsonKey.IS_DELETED)) 
+            		    && !ProjectUtil.isStringNullOREmpty((String)reqMap.get(JsonKey.ID))){
+                        deleteRecord(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(),(String)reqMap.get(JsonKey.ID));
+                        continue;
+                    }
             		processJobProfileInfo(reqMap,userMap,req,addrDbInfo,jobProDbInfo);
             	}
             }
@@ -324,6 +340,11 @@ public class UserManagementActor extends UntypedAbstractActor {
               List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.ORGANISATION);
               for(int i = 0 ; i < reqList.size() ;i++ ){
                   Map<String,Object> reqMap = reqList.get(i);
+                  if(reqMap.containsKey(JsonKey.IS_DELETED) && null != reqMap.get(JsonKey.IS_DELETED) && ((boolean)reqMap.get(JsonKey.IS_DELETED)) 
+                      && !ProjectUtil.isStringNullOREmpty((String)reqMap.get(JsonKey.ID))){
+                      deleteRecord(usrOrgDb.getKeySpace(),usrOrgDb.getTableName(),(String)reqMap.get(JsonKey.ID));
+                      continue;
+                  }
                   processOrganisationInfo(reqMap,userMap,req,addrDbInfo,usrOrgDb);
               }
               
@@ -341,7 +362,15 @@ public class UserManagementActor extends UntypedAbstractActor {
 	}
 
 
-	private void processOrganisationInfo(Map<String, Object> reqMap, Map<String, Object> userMap,
+	private void deleteRecord(String keyspaceName, String tableName, String id) {
+	  try{
+	    cassandraOperation.deleteRecord(keyspaceName, tableName, id);
+	  }catch(Exception ex){
+	    logger.error(ex);
+	  }
+    }
+
+  private void processOrganisationInfo(Map<String, Object> reqMap, Map<String, Object> userMap,
         Map<String, Object> req, DbInfo addrDbInfo, DbInfo usrOrgDb) {
 	  String addrId = null;
       Response addrResponse = null;
@@ -545,15 +574,6 @@ public class UserManagementActor extends UntypedAbstractActor {
             }else{
               userMap.put(JsonKey.LOGIN_ID,userMap.get(JsonKey.USERNAME));
             }
-		        /*if(null != userMap.get(JsonKey.EMAIL)){
-		        	String email = (String)userMap.get(JsonKey.EMAIL);
-			        Response resultFrEmail = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.EMAIL,email);
-			        if(((List<Map<String,Object>>)resultFrEmail.get(JsonKey.RESPONSE)).size() != 0){
-			        	ProjectCommonException exception = new ProjectCommonException(ResponseCode.emailAlreadyExistError.getErrorCode(), ResponseCode.emailAlreadyExistError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
-			            sender().tell(exception, self());
-			            return;
-			        }
-		        }*/
 		        if(null != userMap.get(JsonKey.LOGIN_ID)){
 		        	 String loginId = (String)userMap.get(JsonKey.LOGIN_ID);
 		        	 Response resultFrUserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.LOGIN_ID,loginId);

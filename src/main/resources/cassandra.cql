@@ -1,3 +1,10 @@
+//to export data from csv to cassandra table run below command(for page_section and page_management table) 
+// change the path of csv file
+//COPY sunbird.page_management(id, appmap,createdby ,createddate ,name ,organisationid ,portalmap ,updatedby ,updateddate ) FROM '/tmp/cql/pageMgmt.csv';
+
+//COPY sunbird.page_section(id, alt,createdby ,createdby ,createddate ,description ,display ,imgurl ,name,searchquery , sectiondatatype ,status , updatedby ,updateddate) FROM '/tmp/cql/pageSection.csv';
+
+
 CREATE KEYSPACE IF NOT EXISTS sunbird WITH replication = {'class':'SimpleStrategy','replication_factor':1};
 
 //to change cluster name
@@ -395,3 +402,10 @@ CREATE INDEX inx_u_loginId ON sunbird.user(loginId);
 ALTER TABLE sunbird.user_job_profile ADD isCurrentJob boolean;
 ALTER TABLE sunbird.content_consumption ADD progress int;
 ALTER TABLE sunbird.content_consumption DROP viewPosition;
+
+//changes on 12th july 2017
+ALTER TABLE sunbird.user_job_profile ADD isDeleted boolean;
+ALTER TABLE sunbird.user_education ADD isDeleted boolean;
+ALTER TABLE sunbird.address ADD isDeleted boolean;
+ALTER TABLE sunbird.user_org ADD isDeleted boolean;
+ALTER TABLE sunbird.user ADD profileSummary text;

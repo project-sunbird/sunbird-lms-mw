@@ -56,40 +56,45 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
 	@Override
     public void onReceive(Object message) throws Throwable {
         if (message instanceof Request) {
-            logger.debug("LearnerStateUpdateActor onReceive called");
-            Request actorMessage = (Request) message;
-            Response response = new Response();
-            if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ADD_CONTENT.getValue())) {
-                Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
-                String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
-                List<Map<String, Object>> contentList = (List<Map<String, Object>>) actorMessage.getRequest().get(JsonKey.CONTENTS);
-                // map to hold the status of requested state of contents
-                Map<String , Integer> contentStatusHolder = new HashMap<String , Integer>();
+            try {
+                logger.debug("LearnerStateUpdateActor onReceive called");
+                Request actorMessage = (Request) message;
+                Response response = new Response();
+                if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ADD_CONTENT.getValue())) {
+                    Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
+                    String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
+                    List<Map<String, Object>> contentList = (List<Map<String, Object>>) actorMessage.getRequest().get(JsonKey.CONTENTS);
+                    // map to hold the status of requested state of contents
+                    Map<String, Integer> contentStatusHolder = new HashMap<String, Integer>();
 
-                if (!(contentList.isEmpty())) {
-                    for (Map<String, Object> map : contentList) {
-                        preOperation(map, userId , contentStatusHolder);
-                        map.put(JsonKey.USER_ID, userId);
-                        map.put(JsonKey.DATE_TIME,new Timestamp(new Date().getTime()));
-                        if(null == map.get(JsonKey.COURSE_ID)){
-                            map.put(JsonKey.COURSE_ID , JsonKey.NOT_AVAILABLE);
-                        }
-                        try {
-                            cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), map);
-                            response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.SUCCESS);
-                        } catch (Exception ex) {
-                            response.getResult().put((String) map.get(JsonKey.CONTENT_ID), ex.getMessage());
+                    if (!(contentList.isEmpty())) {
+                        for (Map<String, Object> map : contentList) {
+                            preOperation(map, userId, contentStatusHolder);
+                            map.put(JsonKey.USER_ID, userId);
+                            map.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
+                            if (null == map.get(JsonKey.COURSE_ID)) {
+                                map.put(JsonKey.COURSE_ID, JsonKey.NOT_AVAILABLE);
+                            }
+                            try {
+                                cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), map);
+                                response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.SUCCESS);
+                            } catch (Exception ex) {
+                                response.getResult().put((String) map.get(JsonKey.CONTENT_ID), ex.getMessage());
+                            }
                         }
                     }
+                    sender().tell(response, self());
+                    //call to update the corresponding course
+                    actorMessage.getRequest().put(this.CONTENT_STATE_INFO, contentStatusHolder);
+                    utilityActorRef.tell(actorMessage, ActorRef.noSender());
+                } else {
+                    logger.info("UNSUPPORTED OPERATION");
+                    ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+                    sender().tell(exception, ActorRef.noSender());
                 }
-                sender().tell(response, self());
-                //call to update the corresponding course
-                actorMessage.getRequest().put(this.CONTENT_STATE_INFO , contentStatusHolder);
-                utilityActorRef.tell(actorMessage , ActorRef.noSender());
-            } else {
-                logger.info("UNSUPPORTED OPERATION");
-                ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
-                sender().tell(exception, ActorRef.noSender());
+            }catch(Exception ex){
+                logger.error(ex);
+                sender().tell(ex, ActorRef.noSender());
             }
         } else {
             logger.info("UNSUPPORTED MESSAGE");

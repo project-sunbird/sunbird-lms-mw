@@ -48,43 +48,49 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
 	@Override
     public void onReceive(Object message) throws Throwable {
         if (message instanceof Request) {
-            logger.info("CourseEnrollmentActor  onReceive called");
-            Request actorMessage = (Request) message;
-            if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ENROLL_COURSE.getValue())) {
-                    Util.DbInfo courseEnrollmentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
-                    Map<String , Object> req = actorMessage.getRequest();
-                    String addedBy = (String) req.get(JsonKey.REQUESTED_BY);
-                    Map<String , Object> courseMap=(Map<String, Object>) req.get(JsonKey.COURSE);
-                    
-                    String courseId = (String)courseMap.get(JsonKey.COURSE_ID);
-                    Map<String, Object> ekStepContent = getCourseObjectFromEkStep(courseId);
-                    if (null == ekStepContent || ekStepContent.size() == 0) {
-                    	logger.info("Course Id not found in EkStep");
-                    	ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidCourseId.getErrorCode(), ResponseCode.invalidCourseId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
-                        sender().tell(exception, self());
-                    } else {
-                        courseMap.put(JsonKey.COURSE_LOGO_URL, ekStepContent.get(JsonKey.APP_ICON));
-                    	courseMap.put(JsonKey.CONTENT_ID, courseId);
-                    	courseMap.put(JsonKey.COURSE_NAME, ekStepContent.get(JsonKey.NAME));
-                    	courseMap.put(JsonKey.DESCRIPTION, ekStepContent.get(JsonKey.DESCRIPTION));
-                    	courseMap.put(JsonKey.BATCH_ID, "1");
-                        courseMap.put(JsonKey.ADDED_BY , addedBy);
-                        courseMap.put(JsonKey.COURSE_ENROLL_DATE ,ProjectUtil.getFormattedDate());
-                        courseMap.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
-                        courseMap.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
-                        courseMap.put(JsonKey.DATE_TIME , new Timestamp(new Date().getTime()));
-                        courseMap.put(JsonKey.ID ,generateandAppendPrimaryKey(courseMap));
-                        courseMap.put(JsonKey.COURSE_PROGRESS , 0);
-                        Response result = cassandraOperation.insertRecord(courseEnrollmentdbInfo.getKeySpace(),courseEnrollmentdbInfo.getTableName(),courseMap);
-                        sender().tell(result, self());
-                        //update user count in course mgmt table - this should be replaced with a batch job updating the learner count on EkStep content object
-                        //updateCoursemanagement(ActorOperations.UPDATE_USER_COUNT.getValue(), courseMap.get(JsonKey.COURSE_ID), ActorOperations.UPDATE_USER_COUNT.getValue());
-                    }
-            } else {
-                logger.info("UNSUPPORTED OPERATION");
-                ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
-                sender().tell(exception, self());
-            }
+           try {
+               logger.info("CourseEnrollmentActor  onReceive called");
+               Request actorMessage = (Request) message;
+               if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ENROLL_COURSE.getValue())) {
+                   Util.DbInfo courseEnrollmentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
+                   Map<String, Object> req = actorMessage.getRequest();
+                   String addedBy = (String) req.get(JsonKey.REQUESTED_BY);
+                   Map<String, Object> courseMap = (Map<String, Object>) req.get(JsonKey.COURSE);
+
+                   String courseId = (String) courseMap.get(JsonKey.COURSE_ID);
+                   Map<String, Object> ekStepContent = getCourseObjectFromEkStep(courseId);
+                   if (null == ekStepContent || ekStepContent.size() == 0) {
+                       logger.info("Course Id not found in EkStep");
+                       ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidCourseId.getErrorCode(), ResponseCode.invalidCourseId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+                       sender().tell(exception, self());
+                   } else {
+                       courseMap.put(JsonKey.COURSE_LOGO_URL, ekStepContent.get(JsonKey.APP_ICON));
+                       courseMap.put(JsonKey.CONTENT_ID, courseId);
+                       courseMap.put(JsonKey.COURSE_NAME, ekStepContent.get(JsonKey.NAME));
+                       courseMap.put(JsonKey.DESCRIPTION, ekStepContent.get(JsonKey.DESCRIPTION));
+                       courseMap.put(JsonKey.BATCH_ID, "1");
+                       courseMap.put(JsonKey.ADDED_BY, addedBy);
+                       courseMap.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
+                       courseMap.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
+                       courseMap.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
+                       courseMap.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
+                       courseMap.put(JsonKey.ID, generateandAppendPrimaryKey(courseMap));
+                       courseMap.put(JsonKey.COURSE_PROGRESS, 0);
+                       Response result = cassandraOperation.insertRecord(courseEnrollmentdbInfo.getKeySpace(), courseEnrollmentdbInfo.getTableName(), courseMap);
+                       sender().tell(result, self());
+                       //update user count in course mgmt table - this should be replaced with a batch job updating the learner count on EkStep content object
+                       //updateCoursemanagement(ActorOperations.UPDATE_USER_COUNT.getValue(), courseMap.get(JsonKey.COURSE_ID), ActorOperations.UPDATE_USER_COUNT.getValue());
+                   }
+               } else {
+                   logger.info("UNSUPPORTED OPERATION");
+                   ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+                   sender().tell(exception, self());
+               }
+           }catch (Exception ex){
+               logger.error(ex);
+               ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+               sender().tell(ex, self());
+           }
         } else {
             // Throw exception as message body
             logger.info("UNSUPPORTED MESSAGE");

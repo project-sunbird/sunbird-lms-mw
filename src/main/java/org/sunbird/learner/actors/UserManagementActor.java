@@ -6,20 +6,13 @@ package org.sunbird.learner.actors;
 import akka.actor.UntypedAbstractActor;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
-import java.math.BigInteger;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.Constants;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LogHelper;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -28,8 +21,13 @@ import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
 import scala.concurrent.duration.Duration;
-import static org.sunbird.learner.util.Util.isNull;
+
+import java.math.BigInteger;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+
 import static org.sunbird.learner.util.Util.isNotNull;
+import static org.sunbird.learner.util.Util.isNull;
 
 /**
  * This actor will handle course enrollment operation .
@@ -51,32 +49,39 @@ public class UserManagementActor extends UntypedAbstractActor {
     @Override
     public void onReceive(Object message) throws Throwable {
         if (message instanceof Request) {
-            logger.info("UserManagementActor  onReceive called");
-            Request actorMessage = (Request) message;
-            if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_USER.getValue())) {
-            	createUser(actorMessage);
-            }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_USER.getValue())) {
-            	updateUser(actorMessage);
-            }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.LOGIN.getValue())) {
-            	login(actorMessage);
-            }else if(actorMessage.getOperation().equalsIgnoreCase(ActorOperations.LOGOUT.getValue())){
-            	logout(actorMessage);
-            }else if(actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CHANGE_PASSWORD.getValue())){
-            	changePassword(actorMessage);
-            }else if(actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_PROFILE.getValue())){
-            	getUserProfile(actorMessage);
-            }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_ROLES.getValue())){
-              getRoles(actorMessage);
-            }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.JOIN_USER_ORGANISATION.getValue())){
-				joinUserOrganisation(actorMessage);
-			}else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.APPROVE_USER_ORGANISATION.getValue())){
-				approveUserOrg(actorMessage);
-			}else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue())){
-			  getUserDetailsByLoginId(actorMessage);
-            }else {
-                logger.info("UNSUPPORTED OPERATION");
-                ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
-                sender().tell(exception, self());
+            try {
+                logger.info("UserManagementActor  onReceive called");
+                Request actorMessage = (Request) message;
+                if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_USER.getValue())) {
+                    createUser(actorMessage);
+                } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_USER.getValue())) {
+                    updateUser(actorMessage);
+                } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.LOGIN.getValue())) {
+                    login(actorMessage);
+                } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.LOGOUT.getValue())) {
+                    logout(actorMessage);
+                } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CHANGE_PASSWORD.getValue())) {
+                    changePassword(actorMessage);
+                } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_PROFILE.getValue())) {
+                    getUserProfile(actorMessage);
+                } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_ROLES.getValue())) {
+                    getRoles(actorMessage);
+                } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.JOIN_USER_ORGANISATION.getValue())) {
+                    joinUserOrganisation(actorMessage);
+                } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.APPROVE_USER_ORGANISATION.getValue())) {
+                    approveUserOrg(actorMessage);
+                } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue())) {
+                    getUserDetailsByLoginId(actorMessage);
+                } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.REJECT_USER_ORGANISATION.getValue())) {
+                    rejectUserOrg(actorMessage);
+                } else {
+                    logger.info("UNSUPPORTED OPERATION");
+                    ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+                    sender().tell(exception, self());
+                }
+            }catch(Exception ex){
+                logger.error(ex);
+                sender().tell(ex, self());
             }
         } else {
             // Throw exception as message body
@@ -1052,88 +1057,162 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
 
 	}
 
-	/**
-	 * Method to approve the user organisation .
-	 * @param actorMessage
-	 */
-	private void approveUserOrg(Request actorMessage){
+    /**
+     * Method to approve the user organisation .
+     * @param actorMessage
+     */
+    private void approveUserOrg(Request actorMessage){
 
-		Response response = new Response();
-		Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+        Response response = new Response();
+        Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
 
-		Map<String , Object> updateUserOrgDBO = new HashMap<String , Object>();
-		Map<String , Object> req = actorMessage.getRequest();
-		String updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
+        Map<String , Object> updateUserOrgDBO = new HashMap<String , Object>();
+        Map<String , Object> req = actorMessage.getRequest();
+        String updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
 
-		Map<String , Object> usrOrgData = (Map<String , Object>)req.get(JsonKey.USER_ORG);
-		if(isNull(usrOrgData)){
-			//create exception here and sender.tell the exception and return
-			ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
-			return;
-		}
+        Map<String , Object> usrOrgData = (Map<String , Object>)req.get(JsonKey.USER_ORG);
+        if(isNull(usrOrgData)){
+            //create exception here and sender.tell the exception and return
+            ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;
+        }
 
-		String orgId = null;
-		String userId = null;
-		Boolean isApproved = null;
-		if(isNotNull(usrOrgData.get(JsonKey.ORGANISATION_ID))){
-			orgId = (String)usrOrgData.get(JsonKey.ORGANISATION_ID);
-		}
+        String orgId = null;
+        String userId = null;
+        String role = null;
+        if(isNotNull(usrOrgData.get(JsonKey.ORGANISATION_ID))){
+            orgId = (String)usrOrgData.get(JsonKey.ORGANISATION_ID);
+        }
 
-		if(isNotNull(usrOrgData.get(JsonKey.USER_ID))){
-			userId = (String)usrOrgData.get(JsonKey.USER_ID);
-		}
-		if(isNotNull(usrOrgData.get(JsonKey.IS_APPROVED))){
-			isApproved = (Boolean)usrOrgData.get(JsonKey.IS_APPROVED);
-		}
+        if(isNotNull(usrOrgData.get(JsonKey.USER_ID))){
+            userId = (String)usrOrgData.get(JsonKey.USER_ID);
+        }
+        if(isNotNull(usrOrgData.get(JsonKey.ROLE))){
+            role = (String)usrOrgData.get(JsonKey.ROLE);
+        }
 
-		if(isNull(orgId)||isNull(userId)||isNull(isApproved)){
-			//creeate exception here invalid request data and tell the exception , ther return
-			ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
-			return;
-		}
 
-		// check user already exist for the org or not
-		Map<String , Object> requestData = new HashMap<String , Object>();
-		requestData.put(JsonKey.USER_ID , userId);
-		requestData.put(JsonKey.ORGANISATION_ID , orgId);
+        if(isNull(orgId)||isNull(userId)||isNull(role)){
+            //creeate exception here invalid request data and tell the exception , ther return
+            ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;
+        }
 
-		Response result = cassandraOperation.getRecordsByProperties(userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName() , requestData);
+        // check user already exist for the org or not
+        Map<String , Object> requestData = new HashMap<String , Object>();
+        requestData.put(JsonKey.USER_ID , userId);
+        requestData.put(JsonKey.ORGANISATION_ID , orgId);
 
-		List<Map<String , Object>> list =(List<Map<String , Object>>)result.get(JsonKey.RESPONSE);
-		if(list.size()==0){
-			// user already enrolled for the organisation
-			logger.info("User does not belong to org");
-			ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOrgId.getErrorCode(), ResponseCode.invalidOrgId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
-			return;
-		}
+        Response result = cassandraOperation.getRecordsByProperties(userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName() , requestData);
 
-		Map<String , Object> userOrgDBO = list.get(0);
+        List<Map<String , Object>> list =(List<Map<String , Object>>)result.get(JsonKey.RESPONSE);
+        if(list.size()==0){
+            // user already enrolled for the organisation
+            logger.info("User does not belong to org");
+            ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOrgId.getErrorCode(), ResponseCode.invalidOrgId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;
+        }
 
-		if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
-			String updatedByName = getUserNamebyUserId(updatedBy);
-			updateUserOrgDBO.put(JsonKey.UPDATED_BY, updatedBy);
-			updateUserOrgDBO.put(JsonKey.APPROVED_BY , updatedByName);
-		}
-		updateUserOrgDBO.put(JsonKey.ID , (String)userOrgDBO.get(JsonKey.ID));
-		updateUserOrgDBO.put(JsonKey.APPROOVE_DATE , ProjectUtil.getFormattedDate());
-		updateUserOrgDBO.put(JsonKey.UPDATED_DATE , ProjectUtil.getFormattedDate());
+        Map<String , Object> userOrgDBO = list.get(0);
 
-		if(isApproved){
-			updateUserOrgDBO.put(JsonKey.IS_APPROVED , true);
-			updateUserOrgDBO.put(JsonKey.IS_REJECTED , false);
-		}else{
-			updateUserOrgDBO.put(JsonKey.IS_APPROVED , false);
-			updateUserOrgDBO.put(JsonKey.IS_REJECTED , true);
-		}
+        if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
+            String updatedByName = getUserNamebyUserId(updatedBy);
+            updateUserOrgDBO.put(JsonKey.UPDATED_BY, updatedBy);
+            updateUserOrgDBO.put(JsonKey.APPROVED_BY , updatedByName);
+        }
+        updateUserOrgDBO.put(JsonKey.ID , (String)userOrgDBO.get(JsonKey.ID));
+        updateUserOrgDBO.put(JsonKey.APPROOVE_DATE , ProjectUtil.getFormattedDate());
+        updateUserOrgDBO.put(JsonKey.UPDATED_DATE , ProjectUtil.getFormattedDate());
 
-		response = cassandraOperation.updateRecord(userOrgDbInfo.getKeySpace() , userOrgDbInfo.getTableName() , updateUserOrgDBO);
-		sender().tell(response , self());
-		return;
 
-	}
+        updateUserOrgDBO.put(JsonKey.IS_APPROVED, true);
+        updateUserOrgDBO.put(JsonKey.IS_REJECTED, false);
+        updateUserOrgDBO.put(JsonKey.ROLE , role);
+
+
+        response = cassandraOperation.updateRecord(userOrgDbInfo.getKeySpace() , userOrgDbInfo.getTableName() , updateUserOrgDBO);
+        sender().tell(response , self());
+        return;
+
+    }
+
+    /**
+     * Method to reject the user organisation .
+     * @param actorMessage
+     */
+    private void rejectUserOrg(Request actorMessage){
+
+        Response response = new Response();
+        Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+
+        Map<String , Object> updateUserOrgDBO = new HashMap<String , Object>();
+        Map<String , Object> req = actorMessage.getRequest();
+        String updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
+
+        Map<String , Object> usrOrgData = (Map<String , Object>)req.get(JsonKey.USER_ORG);
+        if(isNull(usrOrgData)){
+            //create exception here and sender.tell the exception and return
+            ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;
+        }
+
+        String orgId = null;
+        String userId = null;
+
+        if(isNotNull(usrOrgData.get(JsonKey.ORGANISATION_ID))){
+            orgId = (String)usrOrgData.get(JsonKey.ORGANISATION_ID);
+        }
+
+        if(isNotNull(usrOrgData.get(JsonKey.USER_ID))){
+            userId = (String)usrOrgData.get(JsonKey.USER_ID);
+        }
+
+        if(isNull(orgId)||isNull(userId)){
+            //creeate exception here invalid request data and tell the exception , ther return
+            ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;
+        }
+
+        // check user already exist for the org or not
+        Map<String , Object> requestData = new HashMap<String , Object>();
+        requestData.put(JsonKey.USER_ID , userId);
+        requestData.put(JsonKey.ORGANISATION_ID , orgId);
+
+        Response result = cassandraOperation.getRecordsByProperties(userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName() , requestData);
+
+        List<Map<String , Object>> list =(List<Map<String , Object>>)result.get(JsonKey.RESPONSE);
+        if(list.size()==0){
+            // user already enrolled for the organisation
+            logger.info("User does not belong to org");
+            ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOrgId.getErrorCode(), ResponseCode.invalidOrgId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;
+        }
+
+        Map<String , Object> userOrgDBO = list.get(0);
+
+        if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
+            String updatedByName = getUserNamebyUserId(updatedBy);
+            updateUserOrgDBO.put(JsonKey.UPDATED_BY, updatedBy);
+            updateUserOrgDBO.put(JsonKey.APPROVED_BY , updatedByName);
+        }
+        updateUserOrgDBO.put(JsonKey.ID , (String)userOrgDBO.get(JsonKey.ID));
+        updateUserOrgDBO.put(JsonKey.APPROOVE_DATE , ProjectUtil.getFormattedDate());
+        updateUserOrgDBO.put(JsonKey.UPDATED_DATE , ProjectUtil.getFormattedDate());
+
+        updateUserOrgDBO.put(JsonKey.IS_APPROVED, false);
+        updateUserOrgDBO.put(JsonKey.IS_REJECTED, true);
+
+        response = cassandraOperation.updateRecord(userOrgDbInfo.getKeySpace() , userOrgDbInfo.getTableName() , updateUserOrgDBO);
+        sender().tell(response , self());
+        return;
+
+    }
 
 	/**
 	 * This method will provide user name based on user id if user not found

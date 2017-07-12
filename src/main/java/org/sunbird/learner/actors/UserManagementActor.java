@@ -557,12 +557,14 @@ public class UserManagementActor extends UntypedAbstractActor {
      */
 	@SuppressWarnings("unchecked")
 	private void createUser(Request actorMessage){
+	    logger.info("create user method started..");
         Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
         Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
         Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
         Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
         Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
         Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
+        logger.info("collected all the DB setup..");
         Map<String , Object> req = actorMessage.getRequest();
         Map<String,Object> requestMap = null;
         Map<String , Object> userMap=(Map<String, Object>) req.get(JsonKey.USER);
@@ -646,24 +648,30 @@ public class UserManagementActor extends UntypedAbstractActor {
 	                    }
 	            	}
 	            }
+	            logger.info("User insertation on DB started--.....");
 	            if(userMap.containsKey(JsonKey.EDUCATION)){
 	              insertEducationDetails(userMap,addrDbInfo,eduDbInfo);
+	              logger.info("User insertation for Education done--.....");
 	            }
 	            if(userMap.containsKey(JsonKey.JOB_PROFILE)){
 	              insertJobProfileDetails(userMap,addrDbInfo,jobProDbInfo);
+	              logger.info("User insertation for Job profile done--.....");
 	            }
 	            if(userMap.containsKey(JsonKey.ORGANISATION)){
 	              insertOrganisationDetails(userMap,addrDbInfo,usrOrgDb);
 	            }
 	            //update the user external identity data
+	            logger.info("User insertation for extrenal identity started--.....");
 	            updateUserExtId(requestMap,usrExtIdDb);
+	            logger.info("User insertation for extrenal identity completed--.....");
             }
             
-            
+            logger.info("User created successfully....."); 
             sender().tell(response, self());
             
             Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
             if (((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+              logger.info("method call going to satrt for ES--.....");
                     Response UsrResponse = new Response();
                     UsrResponse.getResult().put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
                     UsrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));

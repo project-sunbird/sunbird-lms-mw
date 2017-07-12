@@ -57,6 +57,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
         	
             Response actorMessage = (Response) message;
             String requestedOperation = (String) actorMessage.get(JsonKey.OPERATION);
+            LOGGER.debug("Operation name is coming as ==" + requestedOperation);
             if (requestedOperation.equalsIgnoreCase(ActorOperations.PUBLISH_COURSE.getValue())) {
             	manageBackgroundJob(((Response) actorMessage).getResult());
 
@@ -95,6 +96,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
 
   @SuppressWarnings("unchecked")
   private void getUserProfile(String userId) {
+    LOGGER.debug("get user profile method call started ==" + userId);
     Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
@@ -115,8 +117,10 @@ public class BackgroundJobManager extends UntypedAbstractActor{
         Response addrResponse = null;
         list = null;
         try{
+          LOGGER.debug("collecting user address operation ==" + userId);
           addrResponse = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
           list = (List<Map<String,Object>>)addrResponse.getResult().get(JsonKey.RESPONSE);
+          LOGGER.debug("collecting user address operation completed ==" + userId);
         }catch(Exception e){
           LOGGER.error(e);
         }finally{
@@ -127,8 +131,10 @@ public class BackgroundJobManager extends UntypedAbstractActor{
         list = null;
         Response eduResponse = null;
         try{
+          LOGGER.debug("collecting user education operation  ==" + userId);
           eduResponse = cassandraOperation.getRecordsByProperty(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(), JsonKey.USER_ID, userId);
           list = (List<Map<String,Object>>)eduResponse.getResult().get(JsonKey.RESPONSE);
+          LOGGER.debug("collecting user education operation  ==" + userId);
         }catch(Exception e){
           LOGGER.error(e);
         }finally{
@@ -158,8 +164,10 @@ public class BackgroundJobManager extends UntypedAbstractActor{
         Response jobProfileResponse = null;
         list = null;
         try{
+          LOGGER.debug("collecting user jobprofile   ==" + userId);
           jobProfileResponse = cassandraOperation.getRecordsByProperty(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(), JsonKey.USER_ID, userId);
           list = (List<Map<String,Object>>)jobProfileResponse.getResult().get(JsonKey.RESPONSE);
+          LOGGER.debug("collecting user jobprofile collection completed  ==" + userId);
         }catch(Exception e){
           LOGGER.error(e);
         }finally{
@@ -188,8 +196,10 @@ public class BackgroundJobManager extends UntypedAbstractActor{
         Response usrOrgResponse = null;
         list = null;
         try{
+          LOGGER.debug("collecting user Org response ==" + userId);
           usrOrgResponse = cassandraOperation.getRecordsByProperty(usrOrgDb.getKeySpace(),usrOrgDb.getTableName(), JsonKey.USER_ID, userId);
           list = (List<Map<String,Object>>)usrOrgResponse.getResult().get(JsonKey.RESPONSE);
+          LOGGER.debug("collecting user Org response completed ==" + userId);
         }catch(Exception e){
           LOGGER.error(e);
         }finally{
@@ -216,12 +226,15 @@ public class BackgroundJobManager extends UntypedAbstractActor{
             map.put(JsonKey.ORGANISATION, list);
 
        Util.removeAttributes(map, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY, JsonKey.ID));
+    }else {
+      LOGGER.debug("User data not found to save to ES ==" + userId);
     }
     if(((List<Map<String,String>>)response.getResult().get(JsonKey.RESPONSE)).size()>0){
-      LOGGER.info("saving user to es==" + userId);
+      LOGGER.info("saving statretd user to es==" + userId);
       Map<String,Object> map = ((List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE)).get(0);
       cacheDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(),
           userId,map);
+      LOGGER.info("saving completed user to es==" + userId);
     }else {
       LOGGER.info("user data not found to save to ES==" + userId);
     }

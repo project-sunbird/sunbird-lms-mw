@@ -24,7 +24,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.Util;
-
+import scala.util.parsing.json.JSON;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -69,7 +69,10 @@ public class BackgroundJobManager extends UntypedAbstractActor{
           }else if(requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue())){
             updateOrgInfoToEs(actorMessage);
 
-        }else {
+        }else if(requestedOperation.equalsIgnoreCase(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue())){
+          insertOrgInfoToEs(actorMessage);
+
+      }else {
             	LOGGER.info("UNSUPPORTED OPERATION");
                 ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
                 sender().tell(exception, self());
@@ -81,10 +84,27 @@ public class BackgroundJobManager extends UntypedAbstractActor{
 	
 	}
 	
-   private void updateOrgInfoToEs(Response actorMessage) {
+   private void insertOrgInfoToEs(Response actorMessage) {
      Map<String,Object> orgMap = (Map<String, Object>) actorMessage.get(JsonKey.ORGANISATION);
-     cacheDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName(),
+     insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName(),
          (String)orgMap.get(JsonKey.ID),orgMap);
+  }
+
+  private void updateOrgInfoToEs(Response actorMessage) {
+     Map<String,Object> orgMap = (Map<String, Object>) actorMessage.get(JsonKey.ORGANISATION);
+     updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName(),
+         (String)orgMap.get(JsonKey.ID),orgMap);
+  }
+
+  private boolean updateDataToElastic(String indexName, String typeName, String identifier,
+      Map<String, Object> data) {
+    boolean response = ElasticSearchUtil.updateData(indexName,typeName,identifier,data);
+    if(response) {
+        return true;
+    }
+    LOGGER.info("unbale to save the data inside ES with identifier " + identifier);
+    return false;
+    
   }
 
   private void updateUserInfoToEs(Response actorMessage) {
@@ -217,7 +237,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
     }
     if(((List<Map<String,String>>)response.getResult().get(JsonKey.RESPONSE)).size()>0){
       Map<String,Object> map = ((List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE)).get(0);
-      cacheDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(),
+      insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(),
           userId,map);
     }
     
@@ -279,7 +299,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
 					Map<String,Object> finalResponseMap = (Map<String,Object>)map.get(JsonKey.RESULT);
 					finalResponseMap.putAll(content);
 					finalResponseMap.put(JsonKey.OBJECT_TYPE, ProjectUtil.EsType.course.getTypeName());
-					cacheDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.course.getTypeName(),
+					insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.course.getTypeName(),
 							(String) map.get(JsonKey.ID), finalResponseMap);
 				}
 			}
@@ -372,7 +392,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
 	 * @param data Map<String,Object>
 	 * @return boolean
 	 */
-	private boolean cacheDataToElastic(String index, String type, String identifier, Map<String,Object> data) {
+	private boolean insertDataToElastic(String index, String type, String identifier, Map<String,Object> data) {
 		String response = ElasticSearchUtil.createData(index, type, identifier, data);
 		if(!ProjectUtil.isStringNullOREmpty(response)) {
 			return true;

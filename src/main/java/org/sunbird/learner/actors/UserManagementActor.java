@@ -101,6 +101,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         if(!((List<Map<String,Object>>)resultFrLoginId.get(JsonKey.RESPONSE)).isEmpty()){
           Map<String,Object> map = ((List<Map<String,Object>>)resultFrLoginId.get(JsonKey.RESPONSE)).get(0);
           Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(), (String)map.get(JsonKey.USER_ID));
+            fetchRootAndRegisterOrganisation(result);
           Response response = new Response();
           if(result !=null) {
           response.put(JsonKey.RESPONSE, result);
@@ -118,6 +119,26 @@ public class UserManagementActor extends UntypedAbstractActor {
       }
     }
 
+    private void fetchRootAndRegisterOrganisation(Map<String, Object> result) {
+        try {
+            if (isNotNull(result.get(JsonKey.ROOT_ORG_ID))) {
+
+                String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
+                Map<String, Object> esResult = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName(), rootOrgId);
+                result.put(JsonKey.ROOT_ORG, esResult);
+
+            }
+            if (isNotNull(result.get(JsonKey.REGISTERED_ORG_ID))) {
+
+                String regOrgId = (String) result.get(JsonKey.REGISTERED_ORG_ID);
+                Map<String, Object> esResult = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName(), regOrgId);
+                result.put(JsonKey.REGISTERED_ORG, esResult);
+            }
+        } catch (Exception ex) {
+            logger.error(ex);
+        }
+    }
+
     /**
      * Method to get the user profile .
      * @param actorMessage Request
@@ -126,6 +147,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 	private void getUserProfile(Request actorMessage) {
       Map<String , Object> userMap=(Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
       Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(), (String)userMap.get(JsonKey.USER_ID));
+        fetchRootAndRegisterOrganisation(result);
       Response response = new Response();
       if(result !=null) {
       response.put(JsonKey.RESPONSE, result);

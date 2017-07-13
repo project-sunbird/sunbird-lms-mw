@@ -13,6 +13,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
@@ -58,6 +59,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
         if (message instanceof Request) {
             try {
                 logger.debug("LearnerStateUpdateActor onReceive called");
+                ProjectLogger.log("LearnerStateUpdateActor onReceive called");
                 Request actorMessage = (Request) message;
                 Response response = new Response();
                 if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ADD_CONTENT.getValue())) {
@@ -89,6 +91,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
                     utilityActorRef.tell(actorMessage, ActorRef.noSender());
                 } else {
                     logger.info("UNSUPPORTED OPERATION");
+                ProjectLogger.log("UNSUPPORTED OPERATION");
                     ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
                     sender().tell(exception, ActorRef.noSender());
                 }
@@ -98,6 +101,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
             }
         } else {
             logger.info("UNSUPPORTED MESSAGE");
+            ProjectLogger.log("UNSUPPORTED MESSAGE");
             ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
             sender().tell(exception, ActorRef.noSender());
         }

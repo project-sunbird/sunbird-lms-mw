@@ -12,6 +12,8 @@ import org.sunbird.common.Constants;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
@@ -51,6 +53,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         if (message instanceof Request) {
             try {
                 logger.info("UserManagementActor  onReceive called");
+                ProjectLogger.log("UserManagementActor  onReceive called");
                 Request actorMessage = (Request) message;
                 if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_USER.getValue())) {
                     createUser(actorMessage);
@@ -76,16 +79,19 @@ public class UserManagementActor extends UntypedAbstractActor {
                     rejectUserOrg(actorMessage);
                 } else {
                     logger.info("UNSUPPORTED OPERATION");
+                    ProjectLogger.log("UNSUPPORTED OPERATION");
                     ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
                     sender().tell(exception, self());
                 }
             }catch(Exception ex){
                 logger.error(ex);
+                ProjectLogger.log(ex.getMessage(), ex);
                 sender().tell(ex, self());
             }
         } else {
             // Throw exception as message body
             logger.info("UNSUPPORTED MESSAGE");
+            ProjectLogger.log("UNSUPPORTED MESSAGE");
             ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
             sender().tell(exception, self());
         }
@@ -313,6 +319,7 @@ public class UserManagementActor extends UntypedAbstractActor {
                         cassandraOperation.upsertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),reqMap);
                       }catch(Exception ex){
                         logger.error(ex);
+                        ProjectLogger.log(ex.getMessage(), ex);
                       }
             		
             	}
@@ -372,6 +379,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 	    cassandraOperation.deleteRecord(keyspaceName, tableName, id);
 	  }catch(Exception ex){
 	    logger.error(ex);
+	    ProjectLogger.log(ex.getMessage(), ex);
 	  }
     }
 
@@ -396,6 +404,7 @@ public class UserManagementActor extends UntypedAbstractActor {
             addrResponse = cassandraOperation.upsertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
           }catch(Exception ex){
             logger.error(ex);
+            ProjectLogger.log(ex.getMessage(), ex);
           }
       }
       if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
@@ -413,6 +422,7 @@ public class UserManagementActor extends UntypedAbstractActor {
        cassandraOperation.upsertRecord(usrOrgDb.getKeySpace(),usrOrgDb.getTableName(),reqMap);
       }catch(Exception ex){
         logger.error(ex);
+         ProjectLogger.log(ex.getMessage(), ex);
       }
     }
 
@@ -436,6 +446,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 			 addrResponse = cassandraOperation.upsertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
 			}catch(Exception ex){
               logger.error(ex);
+              ProjectLogger.log(ex.getMessage(), ex);
             }
 		}
 		if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
@@ -456,6 +467,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 		 cassandraOperation.upsertRecord(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(),reqMap);
 		}catch(Exception ex){
           logger.error(ex);
+          ProjectLogger.log(ex.getMessage(), ex);
         }
 	}
 
@@ -481,6 +493,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 			  addrResponse = cassandraOperation.upsertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
 			}catch(Exception ex){
               logger.error(ex);
+              ProjectLogger.log(ex.getMessage(), ex);;
             }
 		}
 		if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
@@ -505,6 +518,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     	  cassandraOperation.upsertRecord(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(),reqMap);
     	}catch(Exception ex){
           logger.error(ex);
+          ProjectLogger.log(ex.getMessage(), ex);
         }
 	
 		
@@ -549,6 +563,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 	    	}
     	}catch(Exception e){
     		logger.error(e.getMessage(), e);
+    		ProjectLogger.log(e.getMessage(), e);
     		ProjectCommonException exception = new ProjectCommonException(ResponseCode.userUpdationUnSuccessfull.getErrorCode(), ResponseCode.userUpdationUnSuccessfull.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
     		sender().tell(exception, self());
     		return;
@@ -581,6 +596,15 @@ public class UserManagementActor extends UntypedAbstractActor {
             }else{
               userMap.put(JsonKey.LOGIN_ID,userMap.get(JsonKey.USERNAME));
             }
+		        /*if(null != userMap.get(JsonKey.EMAIL)){
+		        	String email = (String)userMap.get(JsonKey.EMAIL);
+			        Response resultFrEmail = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.EMAIL,email);
+			        if(((List<Map<String,Object>>)resultFrEmail.get(JsonKey.RESPONSE)).size() != 0){
+			        	ProjectCommonException exception = new ProjectCommonException(ResponseCode.emailAlreadyExistError.getErrorCode(), ResponseCode.emailAlreadyExistError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+			            sender().tell(exception, self());
+			            return;
+			        }
+		        }*/
 		        if(null != userMap.get(JsonKey.LOGIN_ID)){
 		        	 String loginId = (String)userMap.get(JsonKey.LOGIN_ID);
 		        	 Response resultFrUserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.LOGIN_ID,loginId);
@@ -604,6 +628,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 			    	}
 		    	}catch(Exception exception){
 		    		logger.error(exception.getMessage(), exception);
+		    		ProjectLogger.log(exception.getMessage(), exception);
 		    		sender().tell(exception, self());
 		    		return;
 		    	}
@@ -650,6 +675,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 	            		  cassandraOperation.insertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),reqMap);
 	            		}catch(Exception e){
 	                      logger.error(e);
+	                      ProjectLogger.log(e.getMessage(), e);
 	                    }
 	            	}
 	            }
@@ -706,6 +732,7 @@ public class UserManagementActor extends UntypedAbstractActor {
                 addrResponse = cassandraOperation.insertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
               }catch(Exception e){
                 logger.error(e);
+                ProjectLogger.log(e.getMessage(), e);
               }
           }
           if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
@@ -717,6 +744,7 @@ public class UserManagementActor extends UntypedAbstractActor {
             cassandraOperation.insertRecord(usrOrgDb.getKeySpace(),usrOrgDb.getTableName(),reqMap);
           }catch(Exception e){
             logger.error(e);
+            ProjectLogger.log(e.getMessage(), e);
           }
       }
   
@@ -742,6 +770,7 @@ public class UserManagementActor extends UntypedAbstractActor {
                 addrResponse = cassandraOperation.insertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
               }catch(Exception e){
                 logger.error(e);
+                ProjectLogger.log(e.getMessage(), e);
               }
           }
           if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
@@ -755,6 +784,7 @@ public class UserManagementActor extends UntypedAbstractActor {
             cassandraOperation.insertRecord(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(),reqMap);
           }catch(Exception e){
             logger.error(e);
+            ProjectLogger.log(e.getMessage(), e);
           }
       }
   
@@ -780,6 +810,7 @@ public class UserManagementActor extends UntypedAbstractActor {
                 addrResponse = cassandraOperation.insertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
               }catch(Exception e){
                 logger.error(e);
+                ProjectLogger.log(e.getMessage(), e);
               }
           }
           if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
@@ -797,6 +828,7 @@ public class UserManagementActor extends UntypedAbstractActor {
             cassandraOperation.insertRecord(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(),reqMap);
           }catch(Exception e){
             logger.error(e);
+            ProjectLogger.log(e.getMessage(), e);
           }
       }
   
@@ -866,6 +898,7 @@ public class UserManagementActor extends UntypedAbstractActor {
           cassandraOperation.insertRecord(usrExtIdDb.getKeySpace(),usrExtIdDb.getTableName(),map);
       }catch(Exception e){
         logger.error(e);
+        ProjectLogger.log(e.getMessage(), e);
       }
       
     }
@@ -1005,6 +1038,7 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
 	 * Method to join the user with organisation ...
 	 * @param actorMessage
 	 */
+	@SuppressWarnings({"rawtypes", "unchecked"})
 	private void joinUserOrganisation(Request actorMessage){
 
 		Response response = new Response();
@@ -1050,6 +1084,7 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
 		if(orgList.size()==0){
 			// user already enrolled for the organisation
 			logger.info("Org does not exist");
+			ProjectLogger.log("Org does not exist");
 			ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOrgId.getErrorCode(), ResponseCode.invalidOrgId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
 			sender().tell(exception, self());
 			return;
@@ -1092,6 +1127,7 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
      * Method to approve the user organisation .
      * @param actorMessage
      */
+	@SuppressWarnings("unchecked")
     private void approveUserOrg(Request actorMessage){
 
         Response response = new Response();
@@ -1142,6 +1178,7 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
         if(list.size()==0){
             // user already enrolled for the organisation
             logger.info("User does not belong to org");
+			ProjectLogger.log("User does not belong to org");
             ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOrgId.getErrorCode(), ResponseCode.invalidOrgId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
             sender().tell(exception, self());
             return;

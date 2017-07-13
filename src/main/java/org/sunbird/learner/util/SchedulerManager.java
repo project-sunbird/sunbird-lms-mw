@@ -7,6 +7,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.ProjectLogger;
 
 
 /**
@@ -27,6 +28,7 @@ public class SchedulerManager {
 	     */
 	    public static void schedule() {
 	    logger.info("started scheduler job.");	
+	    ProjectLogger.log("started scheduler job.");	
 		service.scheduleWithFixedDelay(new DataCacheHandler(), 0, PAGE_DATA_TTL, TimeUnit.HOURS);
 	    }
 

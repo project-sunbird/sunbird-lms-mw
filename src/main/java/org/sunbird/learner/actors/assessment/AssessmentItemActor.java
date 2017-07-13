@@ -13,6 +13,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -36,6 +37,7 @@ public class AssessmentItemActor extends UntypedAbstractActor {
 		if (message instanceof Request) {
 			try {
 				logger.info("AssessmentItemActor onReceive called");
+			    ProjectLogger.log("AssessmentItemActor onReceive called");
 				Request actorMessage = (Request) message;
 				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_ASSESSMENT.getValue())) {
 					getAssessment(actorMessage);
@@ -43,6 +45,7 @@ public class AssessmentItemActor extends UntypedAbstractActor {
 					saveAssessment(actorMessage);
 				} else {
 					logger.info("UNSUPPORTED OPERATION");
+			        ProjectLogger.log("UNSUPPORTED OPERATION");
 					ProjectCommonException exception = new ProjectCommonException(
 							ResponseCode.invalidOperationName.getErrorCode(),
 							ResponseCode.invalidOperationName.getErrorMessage(),
@@ -51,11 +54,13 @@ public class AssessmentItemActor extends UntypedAbstractActor {
 				}
 			}catch(Exception ex){
 				logger.error(ex);
+				ProjectLogger.log(ex.getMessage(), ex);
 				sender().tell(ex , self());
 			}
 		} else {
 			// Throw exception as message body
 			logger.info("UNSUPPORTED MESSAGE");
+		    ProjectLogger.log("UNSUPPORTED MESSAGE");
 			ProjectCommonException exception = new ProjectCommonException(
 					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
 					ResponseCode.CLIENT_ERROR.getResponseCode());

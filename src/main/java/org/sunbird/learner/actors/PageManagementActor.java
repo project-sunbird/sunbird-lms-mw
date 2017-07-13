@@ -1,11 +1,18 @@
 package org.sunbird.learner.actors;
 
+import akka.actor.UntypedAbstractActor;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.util.JSONPObject;
+import com.google.gson.JsonParser;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import java.util.Map.Entry;
+import java.util.Set;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -20,12 +27,6 @@ import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import akka.actor.UntypedAbstractActor;
-
 /**
  * This actor will handle page management operation .
  *
@@ -34,11 +35,6 @@ import akka.actor.UntypedAbstractActor;
 public class PageManagementActor extends UntypedAbstractActor {
 	private LogHelper logger = LogHelper.getInstance(PageManagementActor.class.getName());
 
-//	private static Map<String, String> headers = new HashMap<String, String>();
-//	static {
-//		headers.put("content-type", "application/json");
-//		headers.put("accept", "application/json");
-//	}
 	private CassandraOperation cassandraOperation = new CassandraOperationImpl();
 	Util.DbInfo pageDbInfo = Util.dbInfoMap.get(JsonKey.PAGE_MGMT_DB);
 	Util.DbInfo sectionDbInfo = Util.dbInfoMap.get(JsonKey.SECTION_MGMT_DB);
@@ -200,10 +196,11 @@ public class PageManagementActor extends UntypedAbstractActor {
 		String sectionQuery = null;
 		List<Map<String,Object>> sectionList = new ArrayList<>();
 		Response response = null;
-		Map<String, Object> req = actorMessage.getRequest();
-		String pageName = (String) req.get(JsonKey.ID);
+		Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.PAGE);
+		String pageName = (String) req.get(JsonKey.PAGE_NAME);
 		String source = (String) req.get(JsonKey.SOURCE);
 		String orgCode = (String) req.get(JsonKey.ORG_CODE);
+		Map<String,Object> reqFilters = (Map<String, Object>) req.get(JsonKey.FILTERS);
 		List<Map<String, Object>> result = null;
 		try{
 		  if(!ProjectUtil.isStringNullOREmpty(orgCode)){
@@ -247,7 +244,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 			for(Object obj : arr){
 				Map<String,Object>  sectionMap = (Map<String, Object>) obj ;
 				Map<String, Object> sectionData = DataCacheHandler.sectionMap.get((String)sectionMap.get(JsonKey.ID));
-				getContentData(sectionData);
+				getContentData(sectionData,reqFilters);
 				sectionData.put(JsonKey.GROUP, sectionMap.get(JsonKey.GROUP));
 				sectionData.put(JsonKey.INDEX, sectionMap.get(JsonKey.INDEX));
 				removeUnwantedData(sectionData,"getPageData");
@@ -388,13 +385,63 @@ public class PageManagementActor extends UntypedAbstractActor {
 		}.start();
 	}
 
-	private void getContentData(Map<String, Object> section) {
+	@SuppressWarnings("unchecked")
+  private void getContentData(Map<String, Object> section,Map<String, Object> reqFilters) {
+      ObjectMapper mapper = new ObjectMapper();
+      Map<String, Object> map = new HashMap<>();
+      try {
+        map = mapper.readValue((String)section.get(JsonKey.SEARCH_QUERY), HashMap.class);
+      } catch (IOException e) {
+        logger.error(e);
+      }
+      Map<String, Object> filters = (Map<String, Object>) ((Map<String, Object>)map.get(JsonKey.REQUEST)).get(JsonKey.FILTERS);
+	    applyFilters(filters,reqFilters);
 		Object[] result = EkStepRequestUtil.searchContent((String) section.get(JsonKey.SEARCH_QUERY));
 		if (null != result)
 			section.put(JsonKey.CONTENTS, result);
 	}
 
-	private Map<String, Object> getPageSetting(Map<String, Object> pageDO) {
+  @SuppressWarnings("unchecked")
+  private void applyFilters(Map<String, Object> filters,Map<String, Object> reqFilters) {
+    if(null != reqFilters){
+	  Set<Entry<String, Object>> entrySet = reqFilters.entrySet();
+	  
+	  for(Entry<String, Object> entry : entrySet){
+	    String key = entry.getKey();
+      if (filters.containsKey(key)) {
+        Object obj = entry.getValue();
+        if (obj instanceof List) {
+          if (filters.get(key) instanceof List) {
+            ((List<Object>) filters.get(key)).addAll((List<Object>) obj);
+          } else if (filters.get(key) instanceof Map) {
+            filters.put(key, obj);
+          } else {
+            ((List<Object>) obj).add((String) filters.get(key));
+            filters.put(key, obj);
+          }
+        } else if (obj instanceof Map) {
+          filters.put(key, obj);
+        } else {
+          if (filters.get(key) instanceof List) {
+            ((List<Object>) filters.get(key)).add(obj);
+          } else if (filters.get(key) instanceof Map) {
+            filters.put(key, obj);
+          } else {
+            List<Object> list = new ArrayList<>();
+            list.add(filters.get(key));
+            list.add(obj);
+            filters.put(key, list);
+          }
+        }
+
+      }else{
+	      filters.put(key, entry.getValue());
+	    }
+	  }
+    }
+    }
+
+  private Map<String, Object> getPageSetting(Map<String, Object> pageDO) {
 
 		Map<String, Object> responseMap = new HashMap<>();
 		responseMap.put(JsonKey.NAME, pageDO.get(JsonKey.NAME));

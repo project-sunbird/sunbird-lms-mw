@@ -59,6 +59,7 @@ public class Util {
         dbInfoMap.put(JsonKey.ACTION_GROUP, getDbInfoObject("sunbird","action_group"));
         dbInfoMap.put(JsonKey.USER_ACTION_ROLE, getDbInfoObject("sunbird","user_action_role"));
         dbInfoMap.put(JsonKey.ROLE_GROUP, getDbInfoObject("sunbird","role_group"));
+        dbInfoMap.put(JsonKey.USER_ORG_DB , getDbInfoObject("sunbird" , "user_org"));
         // EkStep HttpClient headers init
         headers.put("content-type", "application/json");
         headers.put("accept", "application/json");

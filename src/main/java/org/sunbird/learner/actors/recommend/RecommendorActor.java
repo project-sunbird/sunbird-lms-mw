@@ -36,15 +36,20 @@ public class RecommendorActor extends UntypedAbstractActor {
     @Override
     public void onReceive(Object message) throws Throwable {
         if (message instanceof Request) {
-            logger.info("RecommendorActor  onReceive called");
-            Request request = (Request) message;
-            if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_RECOMMENDED_COURSES.getValue())) {
-                logger.info("RecommendorActor  -- GET Recommended courses");
+            try {
+                logger.info("RecommendorActor  onReceive called");
+                Request request = (Request) message;
+                if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_RECOMMENDED_COURSES.getValue())) {
+                    logger.info("RecommendorActor  -- GET Recommended courses");
                     getRecommendedContents(request);
-            } else {
-                logger.info("UNSUPPORTED OPERATION");
-                ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
-                sender().tell(exception, self());
+                } else {
+                    logger.info("UNSUPPORTED OPERATION");
+                    ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+                    sender().tell(exception, self());
+                }
+            }catch(Exception ex) {
+                logger.error(ex);
+                sender().tell(ex , self());
             }
         } else {
             // Throw exception as message body

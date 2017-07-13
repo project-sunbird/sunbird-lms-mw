@@ -34,19 +34,24 @@ public class AssessmentItemActor extends UntypedAbstractActor {
 	@Override
 	public void onReceive(Object message) throws Throwable {
 		if (message instanceof Request) {
-			logger.info("AssessmentItemActor onReceive called");
-			Request actorMessage = (Request) message;
-			if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_ASSESSMENT.getValue())) {
-				getAssessment(actorMessage);
-			}else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.SAVE_ASSESSMENT.getValue())) {
-				saveAssessment(actorMessage);
-			} else {
-				logger.info("UNSUPPORTED OPERATION");
-				ProjectCommonException exception = new ProjectCommonException(
-						ResponseCode.invalidOperationName.getErrorCode(),
-						ResponseCode.invalidOperationName.getErrorMessage(),
-						ResponseCode.CLIENT_ERROR.getResponseCode());
-				sender().tell(exception, self());
+			try {
+				logger.info("AssessmentItemActor onReceive called");
+				Request actorMessage = (Request) message;
+				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_ASSESSMENT.getValue())) {
+					getAssessment(actorMessage);
+				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.SAVE_ASSESSMENT.getValue())) {
+					saveAssessment(actorMessage);
+				} else {
+					logger.info("UNSUPPORTED OPERATION");
+					ProjectCommonException exception = new ProjectCommonException(
+							ResponseCode.invalidOperationName.getErrorCode(),
+							ResponseCode.invalidOperationName.getErrorMessage(),
+							ResponseCode.CLIENT_ERROR.getResponseCode());
+					sender().tell(exception, self());
+				}
+			}catch(Exception ex){
+				logger.error(ex);
+				sender().tell(ex , self());
 			}
 		} else {
 			// Throw exception as message body

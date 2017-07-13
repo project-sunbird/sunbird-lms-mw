@@ -38,32 +38,37 @@ public class LearnerStateActor extends UntypedAbstractActor {
     @Override
     public void onReceive(Object message) throws Exception {
         if (message instanceof Request) {
-            logger.debug("LearnerStateActor onReceive called");
-            Request actorMessage = (Request) message;
-            if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_COURSE.getValue())) {
-                String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
+            try {
+                logger.debug("LearnerStateActor onReceive called");
+                Request actorMessage = (Request) message;
+                if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_COURSE.getValue())) {
+                    String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
 
                     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
                     Response result = cassandraOperation.getRecordsByProperty(dbInfo.getKeySpace(), dbInfo.getTableName(), JsonKey.USER_ID, userId);
                     removeUnwantedProperties(result);
                     sender().tell(result, self());
 
-            } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_CONTENT.getValue())) {
-                String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
-                Response res = new Response();
-                if (actorMessage.getRequest().get(JsonKey.COURSE) != null) {
-                    res = getContentByCourse(userId, actorMessage.getRequest());
-                } else if (actorMessage.getRequest().get(JsonKey.CONTENT_IDS) != null) {
-                    res = getContentByContents(userId, actorMessage.getRequest());
-                } else if (actorMessage.getRequest().get(JsonKey.COURSE_IDS) != null) {
-                    res = getContentByCourses(userId, actorMessage.getRequest());
+                } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_CONTENT.getValue())) {
+                    String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
+                    Response res = new Response();
+                    if (actorMessage.getRequest().get(JsonKey.COURSE) != null) {
+                        res = getContentByCourse(userId, actorMessage.getRequest());
+                    } else if (actorMessage.getRequest().get(JsonKey.CONTENT_IDS) != null) {
+                        res = getContentByContents(userId, actorMessage.getRequest());
+                    } else if (actorMessage.getRequest().get(JsonKey.COURSE_IDS) != null) {
+                        res = getContentByCourses(userId, actorMessage.getRequest());
+                    }
+                    removeUnwantedProperties(res);
+                    sender().tell(res, self());
+                } else {
+                    logger.info("UNSUPPORTED OPERATION");
+                    ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+                    sender().tell(exception, ActorRef.noSender());
                 }
-                removeUnwantedProperties(res);
-                sender().tell(res, self());
-            } else {
-                logger.info("UNSUPPORTED OPERATION");
-                ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
-                sender().tell(exception, ActorRef.noSender());
+            }catch(Exception ex){
+                logger.error(ex);
+                sender().tell(ex, ActorRef.noSender());
             }
 
         } else {

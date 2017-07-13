@@ -32,12 +32,13 @@ public class CourseSearchActor extends UntypedAbstractActor {
 	@Override
 	public void onReceive(Object message) throws Throwable {
 		 if (message instanceof Request) {
-	            logger.info("CourseSearchActor  onReceive called");
-	            Request actorMessage = (Request) message;
-	            if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.SEARCH_COURSE.getValue())) {
-	            	Map<String , Object> req = actorMessage.getRequest();
-                    @SuppressWarnings("unchecked")
-					Map<String , Object> searchQueryMap=(Map<String, Object>) req.get(JsonKey.SEARCH);
+		 	try {
+				logger.info("CourseSearchActor  onReceive called");
+				Request actorMessage = (Request) message;
+				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.SEARCH_COURSE.getValue())) {
+					Map<String, Object> req = actorMessage.getRequest();
+					@SuppressWarnings("unchecked")
+					Map<String, Object> searchQueryMap = (Map<String, Object>) req.get(JsonKey.SEARCH);
 					Map<String, Object> ekStepSearchQuery = new HashMap<String, Object>();
 					ekStepSearchQuery.put(JsonKey.REQUEST, searchQueryMap);
 
@@ -47,32 +48,36 @@ public class CourseSearchActor extends UntypedAbstractActor {
 						Map<String, Object> query = new HashMap<String, Object>();
 						query.put(JsonKey.SEARCH_QUERY, json);
 						Util.getContentData(query);
-						Object  ekStepResponse = query.get(JsonKey.CONTENTS);
+						Object ekStepResponse = query.get(JsonKey.CONTENTS);
 						Response response = new Response();
 						response.put(JsonKey.RESPONSE, ekStepResponse);
 						sender().tell(response, self());
 					} catch (JsonProcessingException e) {
 						ProjectCommonException projectCommonException = new ProjectCommonException(ResponseCode.internalError.getErrorCode(), ResponseCode.internalError.getErrorMessage(), ResponseCode.internalError.getResponseCode());
-						sender().tell(projectCommonException , self());
+						sender().tell(projectCommonException, self());
 
 					}
-	            } else if(actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_COURSE_BY_ID.getValue())){
-	            	Map<String , Object> req = actorMessage.getRequest();
-					String courseId=(String) req.get(JsonKey.ID);
-                    Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.course.getTypeName(), courseId);
-                    Response response = new Response();
-                    if(result !=null) {
-                    response.put(JsonKey.RESPONSE, result);
-                    } else {
-                    	 result = new HashMap<String, Object>();
-                    	 response.put(JsonKey.RESPONSE, result);	
-                    }
-                    sender().tell(response, self());
-	            }else {
-	                logger.info("UNSUPPORTED OPERATION");
-	                ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
-	                sender().tell(exception, self());
-	            }
+				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_COURSE_BY_ID.getValue())) {
+					Map<String, Object> req = actorMessage.getRequest();
+					String courseId = (String) req.get(JsonKey.ID);
+					Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.course.getTypeName(), courseId);
+					Response response = new Response();
+					if (result != null) {
+						response.put(JsonKey.RESPONSE, result);
+					} else {
+						result = new HashMap<String, Object>();
+						response.put(JsonKey.RESPONSE, result);
+					}
+					sender().tell(response, self());
+				} else {
+					logger.info("UNSUPPORTED OPERATION");
+					ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+					sender().tell(exception, self());
+				}
+			}catch (Exception ex){
+		 		logger.error(ex);
+		 		sender().tell(ex , self());
+			}
 	        } else {
 	            // Throw exception as message body
 	            logger.info("UNSUPPORTED MESSAGE");

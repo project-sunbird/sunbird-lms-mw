@@ -47,33 +47,38 @@ public class PageManagementActor extends UntypedAbstractActor {
 	@Override
 	public void onReceive(Object message) throws Throwable {
 		if (message instanceof Request) {
-			logger.info("PageManagementActor onReceive called");
-			Request actorMessage = (Request) message;
-			if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_PAGE.getValue())) {
-				createPage(actorMessage);
-			} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_PAGE.getValue())) {
-				updatePage(actorMessage);
-			} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_PAGE_SETTING.getValue())) {
-				getPageSetting(actorMessage);
-			} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_PAGE_SETTINGS.getValue())) {
-				getPageSettings(actorMessage);
-			} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_PAGE_DATA.getValue())) {
-				getPageData(actorMessage);
-			} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_SECTION.getValue())) {
-				createPageSection(actorMessage);
-			} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_SECTION.getValue())) {
-				updatePageSection(actorMessage);
-			} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_SECTION.getValue())) {
-				getSection(actorMessage);
-			} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_ALL_SECTION.getValue())) {
-				getAllSections(actorMessage);
-			} else {
-				logger.info("UNSUPPORTED OPERATION");
-				ProjectCommonException exception = new ProjectCommonException(
-						ResponseCode.invalidOperationName.getErrorCode(),
-						ResponseCode.invalidOperationName.getErrorMessage(),
-						ResponseCode.CLIENT_ERROR.getResponseCode());
-				sender().tell(exception, self());
+			try {
+				logger.info("PageManagementActor onReceive called");
+				Request actorMessage = (Request) message;
+				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_PAGE.getValue())) {
+					createPage(actorMessage);
+				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_PAGE.getValue())) {
+					updatePage(actorMessage);
+				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_PAGE_SETTING.getValue())) {
+					getPageSetting(actorMessage);
+				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_PAGE_SETTINGS.getValue())) {
+					getPageSettings(actorMessage);
+				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_PAGE_DATA.getValue())) {
+					getPageData(actorMessage);
+				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_SECTION.getValue())) {
+					createPageSection(actorMessage);
+				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_SECTION.getValue())) {
+					updatePageSection(actorMessage);
+				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_SECTION.getValue())) {
+					getSection(actorMessage);
+				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_ALL_SECTION.getValue())) {
+					getAllSections(actorMessage);
+				} else {
+					logger.info("UNSUPPORTED OPERATION");
+					ProjectCommonException exception = new ProjectCommonException(
+							ResponseCode.invalidOperationName.getErrorCode(),
+							ResponseCode.invalidOperationName.getErrorMessage(),
+							ResponseCode.CLIENT_ERROR.getResponseCode());
+					sender().tell(exception, self());
+				}
+			}catch(Exception ex){
+				logger.error(ex);
+				sender().tell(ex, self());
 			}
 		} else {
 			// Throw exception as message body

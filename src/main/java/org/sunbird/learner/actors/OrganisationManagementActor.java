@@ -35,29 +35,34 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   @Override
   public void onReceive(Object message) throws Throwable {
     if (message instanceof Request) {
-      logger.info("OrganisationManagementActor  onReceive called");
-      Request actorMessage = (Request) message;
-      if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_ORG.getValue())) {
-        createOrg(actorMessage);
-      } else if (actorMessage.getOperation()
-          .equalsIgnoreCase(ActorOperations.UPDATE_ORG_STATUS.getValue())) {
-        updateOrgStatus(actorMessage);
-      } else if (actorMessage.getOperation()
-          .equalsIgnoreCase(ActorOperations.UPDATE_ORG.getValue())) {
-        updateOrgData(actorMessage);
-      } else if (actorMessage.getOperation()
-          .equalsIgnoreCase(ActorOperations.APPROVE_ORG.getValue())) {
-        approveOrg(actorMessage);
-      } else if (actorMessage.getOperation()
-          .equalsIgnoreCase(ActorOperations.GET_ORG_DETAILS.getValue())) {
-        getOrgDetails(actorMessage);
-      } else {
-        logger.info("UNSUPPORTED OPERATION");
-        ProjectCommonException exception =
-            new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
-                ResponseCode.invalidOperationName.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-        sender().tell(exception, self());
+      try {
+        logger.info("OrganisationManagementActor  onReceive called");
+        Request actorMessage = (Request) message;
+        if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_ORG.getValue())) {
+          createOrg(actorMessage);
+        } else if (actorMessage.getOperation()
+                .equalsIgnoreCase(ActorOperations.UPDATE_ORG_STATUS.getValue())) {
+          updateOrgStatus(actorMessage);
+        } else if (actorMessage.getOperation()
+                .equalsIgnoreCase(ActorOperations.UPDATE_ORG.getValue())) {
+          updateOrgData(actorMessage);
+        } else if (actorMessage.getOperation()
+                .equalsIgnoreCase(ActorOperations.APPROVE_ORG.getValue())) {
+          approveOrg(actorMessage);
+        } else if (actorMessage.getOperation()
+                .equalsIgnoreCase(ActorOperations.GET_ORG_DETAILS.getValue())) {
+          getOrgDetails(actorMessage);
+        } else {
+          logger.info("UNSUPPORTED OPERATION");
+          ProjectCommonException exception =
+                  new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
+                          ResponseCode.invalidOperationName.getErrorMessage(),
+                          ResponseCode.CLIENT_ERROR.getResponseCode());
+          sender().tell(exception, self());
+        }
+      }catch(Exception ex){
+        logger.error(ex);
+        sender().tell(ex, self());
       }
     } else {
       // Throw exception as message body
@@ -77,15 +82,16 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
    */
   @SuppressWarnings("unchecked")
   private void createOrg(Request actorMessage) {
-    Map<String, Object> req =
-        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
-    Map<String, Object> addressReq = null;
-    if (null != actorMessage.getRequest().get(JsonKey.ADDRESS)) {
-      addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
-    }
-    String relation = (String) req.get(JsonKey.RELATION);
-    req.remove(JsonKey.RELATION);
+   
     try {
+      Map<String, Object> req =
+          (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+      Map<String, Object> addressReq = null;
+      if (null != actorMessage.getRequest().get(JsonKey.ADDRESS)) {
+        addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
+      }
+      String relation = (String) req.get(JsonKey.RELATION);
+      req.remove(JsonKey.RELATION);
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
       String parentOrg = (String) req.get(JsonKey.PARENT_ORG_ID);
       Boolean isValidParent = false;
@@ -101,6 +107,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
       req.put(JsonKey.ID, uniqueId);
       req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+      req.put(JsonKey.STATUS , ProjectUtil.OrgStatus.ACTIVE.name());
 
       // update address if present in request
       if (null != addressReq && addressReq.size() > 0) {
@@ -130,19 +137,20 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
       result.getResult().put(JsonKey.ORGANISATION_ID, uniqueId);
       sender().tell(result, self());
-      //return;
+
+
+      Response orgResponse =  new Response();
+      Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+      if(null != addressReq){
+        req.put(JsonKey.ADDRESS, addressReq);
+      }
+      orgResponse.put(JsonKey.ORGANISATION, req);
+      orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
+      Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
       return;
     }
-    Response orgResponse =  new Response();
-    Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
-    if(null != addressReq){
-      req.put(JsonKey.ADDRESS, addressReq);
-    }
-    orgResponse.put(JsonKey.ORGANISATION, req);
-    orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-    Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
   }
 
   /**
@@ -285,15 +293,16 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
    */
   @SuppressWarnings("unchecked")
   private void updateOrgData(Request actorMessage) throws ProjectCommonException {
-    Map<String, Object> req =
-        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
-    Map<String, Object> addressReq = null;
-    if (null != actorMessage.getRequest().get(JsonKey.ADDRESS)) {
-      addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
-    }
-    String relation = (String) req.get(JsonKey.RELATION);
-    req.remove(JsonKey.RELATION);
+   
     try {
+      Map<String, Object> req =
+          (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+      Map<String, Object> addressReq = null;
+      if (null != actorMessage.getRequest().get(JsonKey.ADDRESS)) {
+        addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
+      }
+      String relation = (String) req.get(JsonKey.RELATION);
+      req.remove(JsonKey.RELATION);
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
       String parentOrg = (String) req.get(JsonKey.PARENT_ORG_ID);
       Boolean isValidParent = false;
@@ -368,19 +377,19 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           orgDbInfo.getTableName(), updateOrgDBO);
       response.getResult().put(JsonKey.ORGANISATION_ID, orgDBO.get(JsonKey.ID));
       sender().tell(response, self());
-     // return;
+      
+      Response orgResponse =  new Response();
+      Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+      if(null != addressReq){
+        updateOrgDBO.put(JsonKey.ADDRESS, addressReq);
+      }
+      orgResponse.put(JsonKey.ORGANISATION, updateOrgDBO);
+      orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
+      Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
       return;
     }
-    Response orgResponse =  new Response();
-    Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
-    if(null != addressReq){
-      req.put(JsonKey.ADDRESS, addressReq);
-    }
-    orgResponse.put(JsonKey.ORGANISATION, req);
-    orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-    Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
   }
 
   /**
@@ -405,41 +414,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
          response.put(JsonKey.RESPONSE, result);    
     }
     sender().tell(response, self());
-    /*try {
-      Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-
-      Map<String, Object> req =
-          (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
-      Map<String, Object> orgDBO;
-      String orgId = (String) req.get(JsonKey.ORGANISATION_ID);
-      Response result = cassandraOperation.getRecordById(orgDbInfo.getKeySpace(),
-          orgDbInfo.getTableName(), orgId);
-      List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-      if (!(list.isEmpty())) {
-        orgDBO = (Map<String, Object>) list.get(0);
-      } else {
-        logger.info("Invalid Org Id");
-        ProjectCommonException exception =
-            new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-                ResponseCode.invalidRequestData.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-        sender().tell(exception, self());
-        return;
-      }
-
-      if (orgDBO.get(JsonKey.ADDRESS_ID.toLowerCase()) != null) {
-        String addressId = (String) orgDBO.get(JsonKey.ADDRESS_ID.toLowerCase());
-        Map<String, Object> address = getAddress(addressId);
-        orgDBO.put(JsonKey.ADDRESS, address);
-      }
-      orgDBO.put(JsonKey.RELATIONS, getRelations(orgId));
-      Response response = new Response();
-      response.getResult().putAll(orgDBO);
-      sender().tell(response, self());
-    } catch (ProjectCommonException e) {
-      sender().tell(e, self());
-      return;
-    }*/
   }
 
   /**

@@ -46,26 +46,31 @@ public class CourseManagementActor extends UntypedAbstractActor {
     @Override
     public void onReceive(Object message) throws Throwable {
         if (message instanceof Request) {
-            logger.info("CourseManagementActor  onReceive called");
-            dbInfo=Util.dbInfoMap.get(JsonKey.COURSE_MANAGEMENT_DB);
-            Request actorMessage = (Request) message;
-            String requestedOperation = actorMessage.getOperation();
-            if (requestedOperation.equalsIgnoreCase(ActorOperations.CREATE_COURSE.getValue())) {
+            try {
+                logger.info("CourseManagementActor  onReceive called");
+                dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_MANAGEMENT_DB);
+                Request actorMessage = (Request) message;
+                String requestedOperation = actorMessage.getOperation();
+                if (requestedOperation.equalsIgnoreCase(ActorOperations.CREATE_COURSE.getValue())) {
                     createCourse(actorMessage);
 
-            }else if(requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_COURSE.getValue())){
-                updateCourse(actorMessage);
+                } else if (requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_COURSE.getValue())) {
+                    updateCourse(actorMessage);
 
-            }else if(requestedOperation.equalsIgnoreCase(ActorOperations.PUBLISH_COURSE.getValue())){
-                publishCourse(actorMessage);
+                } else if (requestedOperation.equalsIgnoreCase(ActorOperations.PUBLISH_COURSE.getValue())) {
+                    publishCourse(actorMessage);
 
-            }else if(requestedOperation.equalsIgnoreCase(ActorOperations.DELETE_COURSE.getValue())){
-                deleteCourse(actorMessage);
+                } else if (requestedOperation.equalsIgnoreCase(ActorOperations.DELETE_COURSE.getValue())) {
+                    deleteCourse(actorMessage);
 
-            }else {
-                logger.info("UNSUPPORTED OPERATION");
-                ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
-                sender().tell(exception, self());
+                } else {
+                    logger.info("UNSUPPORTED OPERATION");
+                    ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+                    sender().tell(exception, self());
+                }
+            }catch(Exception ex){
+                logger.error(ex);
+                sender().tell(ex, self());
             }
         } else {
             // Throw exception as message body

@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.cassandra.CassandraOperation;
@@ -20,6 +21,8 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -52,11 +55,13 @@ public class BackgroundJobManager extends UntypedAbstractActor{
 		
         if (message instanceof Response) {
         	LOGGER.info("BackgroundJobManager  onReceive called");
+        	ProjectLogger.log("BackgroundJobManager  onReceive called");
         	if(dbInfo==null)
             dbInfo=Util.dbInfoMap.get(JsonKey.COURSE_MANAGEMENT_DB);
         	
             Response actorMessage = (Response) message;
             String requestedOperation = (String) actorMessage.get(JsonKey.OPERATION);
+            LOGGER.debug("Operation name is coming as ==" + requestedOperation);
             if (requestedOperation.equalsIgnoreCase(ActorOperations.PUBLISH_COURSE.getValue())) {
             	manageBackgroundJob(((Response) actorMessage).getResult());
 
@@ -74,11 +79,13 @@ public class BackgroundJobManager extends UntypedAbstractActor{
 
       }else {
             	LOGGER.info("UNSUPPORTED OPERATION");
+            	ProjectLogger.log("UNSUPPORTED OPERATION");
                 ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
                 sender().tell(exception, self());
             }
         } else {
         	LOGGER.info("UNSUPPORTED MESSAGE FOR BACKGROUND JOB MANAGER");
+        	ProjectLogger.log("UNSUPPORTED MESSAGE FOR BACKGROUND JOB MANAGER");
         }
     	
 	
@@ -103,17 +110,20 @@ public class BackgroundJobManager extends UntypedAbstractActor{
         return true;
     }
     LOGGER.info("unbale to save the data inside ES with identifier " + identifier);
+    ProjectLogger.log("unbale to save the data inside ES with identifier " + identifier , LoggerEnum.INFO.name());
     return false;
     
   }
 
   private void updateUserInfoToEs(Response actorMessage) {
      String userId = (String) actorMessage.get(JsonKey.ID);
+     LOGGER.info("calling get profile to save user data==" + userId);
      getUserProfile(userId);
   }
 
   @SuppressWarnings("unchecked")
   private void getUserProfile(String userId) {
+    LOGGER.debug("get user profile method call started ==" + userId);
     Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
@@ -124,8 +134,10 @@ public class BackgroundJobManager extends UntypedAbstractActor{
     try{
       response = cassandraOperation.getRecordById(userDbInfo.getKeySpace(),userDbInfo.getTableName(),userId);
       list = (List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE);
+      LOGGER.info("collecting user data to save user data==" + userId);
     }catch(Exception e){
       LOGGER.error(e);
+      ProjectLogger.log(e.getMessage(), e);
     }
     
     if(!(list.isEmpty())) {
@@ -133,10 +145,13 @@ public class BackgroundJobManager extends UntypedAbstractActor{
         Response addrResponse = null;
         list = null;
         try{
+          LOGGER.debug("collecting user address operation ==" + userId);
           addrResponse = cassandraOperation.getRecordsByProperty(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
           list = (List<Map<String,Object>>)addrResponse.getResult().get(JsonKey.RESPONSE);
+          LOGGER.debug("collecting user address operation completed ==" + userId);
         }catch(Exception e){
           LOGGER.error(e);
+          ProjectLogger.log(e.getMessage(), e);
         }finally{
           if(null == list )
           list=new ArrayList<Map<String,Object>>();
@@ -145,10 +160,13 @@ public class BackgroundJobManager extends UntypedAbstractActor{
         list = null;
         Response eduResponse = null;
         try{
+          LOGGER.debug("collecting user education operation  ==" + userId);
           eduResponse = cassandraOperation.getRecordsByProperty(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(), JsonKey.USER_ID, userId);
           list = (List<Map<String,Object>>)eduResponse.getResult().get(JsonKey.RESPONSE);
+          LOGGER.debug("collecting user education operation  ==" + userId);
         }catch(Exception e){
           LOGGER.error(e);
+          ProjectLogger.log(e.getMessage(), e);
         }finally{
           if(null == list )
           list=new ArrayList<Map<String,Object>>();
@@ -164,6 +182,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
                     addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
                   }catch(Exception e){
                       LOGGER.error(e);
+                      ProjectLogger.log(e.getMessage(), e);
                     }finally{
                       if(null == addrList )
                       addrList=new ArrayList<Map<String,Object>>();
@@ -176,10 +195,13 @@ public class BackgroundJobManager extends UntypedAbstractActor{
         Response jobProfileResponse = null;
         list = null;
         try{
+          LOGGER.debug("collecting user jobprofile   ==" + userId);
           jobProfileResponse = cassandraOperation.getRecordsByProperty(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(), JsonKey.USER_ID, userId);
           list = (List<Map<String,Object>>)jobProfileResponse.getResult().get(JsonKey.RESPONSE);
+          LOGGER.debug("collecting user jobprofile collection completed  ==" + userId);
         }catch(Exception e){
           LOGGER.error(e);
+          ProjectLogger.log(e.getMessage(), e);
         }finally{
           if(null == list )
           list=new ArrayList<Map<String,Object>>();
@@ -194,6 +216,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
                     addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
                   }catch(Exception e){
                     LOGGER.error(e);
+                    ProjectLogger.log(e.getMessage(),e);
                   }finally{
                     if(null == addrList )
                     addrList=new ArrayList<Map<String,Object>>();
@@ -206,10 +229,13 @@ public class BackgroundJobManager extends UntypedAbstractActor{
         Response usrOrgResponse = null;
         list = null;
         try{
+          LOGGER.debug("collecting user Org response ==" + userId);
           usrOrgResponse = cassandraOperation.getRecordsByProperty(usrOrgDb.getKeySpace(),usrOrgDb.getTableName(), JsonKey.USER_ID, userId);
           list = (List<Map<String,Object>>)usrOrgResponse.getResult().get(JsonKey.RESPONSE);
+          LOGGER.debug("collecting user Org response completed ==" + userId);
         }catch(Exception e){
           LOGGER.error(e);
+          ProjectLogger.log(e.getMessage(), e);
         }finally{
           if(null == list )
           list=new ArrayList<Map<String,Object>>();
@@ -224,6 +250,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
                     addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
                   }catch(Exception e){
                     LOGGER.error(e);
+                    ProjectLogger.log(e.getMessage(), e);
                   }finally{
                     if(null == addrList )
                     addrList=new ArrayList<Map<String,Object>>();
@@ -234,11 +261,17 @@ public class BackgroundJobManager extends UntypedAbstractActor{
             map.put(JsonKey.ORGANISATION, list);
 
        Util.removeAttributes(map, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY, JsonKey.ID));
+    }else {
+      LOGGER.debug("User data not found to save to ES ==" + userId);
     }
     if(((List<Map<String,String>>)response.getResult().get(JsonKey.RESPONSE)).size()>0){
+      LOGGER.info("saving statretd user to es==" + userId);
       Map<String,Object> map = ((List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE)).get(0);
       insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(),
           userId,map);
+      LOGGER.info("saving completed user to es==" + userId);
+    }else {
+      LOGGER.info("user data not found to save to ES==" + userId);
     }
     
   }
@@ -265,8 +298,10 @@ public class BackgroundJobManager extends UntypedAbstractActor{
 		Response resposne = cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(),updateRequestMap);
 		if(resposne.get(JsonKey.RESPONSE).equals(JsonKey.SUCCESS)){
 			LOGGER.info("USER COUNT UPDATED SUCCESSFULLY IN COURSE MGMT TABLE");
+			ProjectLogger.log("USER COUNT UPDATED SUCCESSFULLY IN COURSE MGMT TABLE");
 		}else{
 			LOGGER.info("USER COUNT NOT UPDATED SUCCESSFULLY IN COURSE MGMT TABLE");
+		    ProjectLogger.log("USER COUNT NOT UPDATED SUCCESSFULLY IN COURSE MGMT TABLE");
 		}
 		
 	}
@@ -317,6 +352,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
 			responseData = HttpUtil.sendGetRequest(PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTNET_URL) + contnetId, headerMap);
 		} catch (IOException e) {
 			LOGGER.error(e);
+			ProjectLogger.log(e.getMessage(), e);
 		}
 		return responseData;
 	}
@@ -341,6 +377,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
 			  map.put(JsonKey.TOC_URL, contentMap.get(JsonKey.TOC_URL));
 			}catch(Exception e){
 				LOGGER.error(e);
+				ProjectLogger.log(e.getMessage(), e);
 			}
 			map.put(JsonKey.COUNT, contentMap.get(JsonKey.LEAF_NODE_COUNT));
 			/*List<Map<String,Object>> children = (List<Map<String, Object>>) contentMap.get(JsonKey.CHILDREN);
@@ -353,12 +390,16 @@ public class BackgroundJobManager extends UntypedAbstractActor{
 			
 		} catch (JSONException e) {
 			LOGGER.error(e);
+			ProjectLogger.log(e.getMessage(), e);
 		} catch (JsonParseException e) {
 			LOGGER.error(e);
+			ProjectLogger.log(e.getMessage(), e);
 		} catch (JsonMappingException e) {
 			LOGGER.error(e);
+		    ProjectLogger.log(e.getMessage(), e);
 		} catch (IOException e) {
 			LOGGER.error(e);
+		    ProjectLogger.log(e.getMessage(), e);
 		} 
 		return map;
 	}
@@ -378,6 +419,7 @@ public class BackgroundJobManager extends UntypedAbstractActor{
 		Response resposne = cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(),
 				updateRequestMap);
 		LOGGER.info(resposne.toString());
+		ProjectLogger.log(resposne.toString());
 		if (!(resposne.get(JsonKey.RESPONSE) instanceof ProjectCommonException)) {
 			return true;
 		}
@@ -395,9 +437,11 @@ public class BackgroundJobManager extends UntypedAbstractActor{
 	private boolean insertDataToElastic(String index, String type, String identifier, Map<String,Object> data) {
 		String response = ElasticSearchUtil.createData(index, type, identifier, data);
 		if(!ProjectUtil.isStringNullOREmpty(response)) {
+		  LOGGER.info("User Data is saved successfully ES==" );
 			return true;
 		}
 		LOGGER.info("unbale to save the data inside ES with identifier " + identifier);
+		ProjectLogger.log("unbale to save the data inside ES with identifier " + identifier);
 		return false;
 	}
 	

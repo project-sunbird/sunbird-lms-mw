@@ -3,6 +3,7 @@ package org.sunbird.learner.actors;
 
 import akka.actor.ActorRef;
 import akka.actor.UntypedAbstractActor;
+
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -10,6 +11,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.Util;
@@ -40,6 +42,7 @@ public class LearnerStateActor extends UntypedAbstractActor {
         if (message instanceof Request) {
             try {
                 logger.debug("LearnerStateActor onReceive called");
+                ProjectLogger.log("LearnerStateActor onReceive called");
                 Request actorMessage = (Request) message;
                 if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_COURSE.getValue())) {
                     String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
@@ -63,6 +66,7 @@ public class LearnerStateActor extends UntypedAbstractActor {
                     sender().tell(res, self());
                 } else {
                     logger.info("UNSUPPORTED OPERATION");
+                ProjectLogger.log("UNSUPPORTED OPERATION");
                     ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
                     sender().tell(exception, ActorRef.noSender());
                 }
@@ -73,6 +77,7 @@ public class LearnerStateActor extends UntypedAbstractActor {
 
         } else {
             logger.info("UNSUPPORTED MESSAGE");
+            ProjectLogger.log("UNSUPPORTED MESSAGE");
             ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
             sender().tell(exception, ActorRef.noSender());
         }

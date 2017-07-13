@@ -10,6 +10,7 @@ import org.json.JSONObject;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,8 +39,10 @@ public class EkStepRequestUtil {
 			result = mapper.readValue(contentArray.toString(), Object[].class);
 		} catch (IOException e) {
 			logger.error(e.getMessage(), e);
+			ProjectLogger.log(e.getMessage(), e);
 		} catch (JSONException e) {
 			logger.error(e.getMessage(), e);
+		    ProjectLogger.log(e.getMessage(), e);
 		}
 		return result;
 	}

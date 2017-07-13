@@ -20,6 +20,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -45,6 +46,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 		if (message instanceof Request) {
 			try {
 				logger.info("PageManagementActor onReceive called");
+		    ProjectLogger.log("PageManagementActor onReceive called");
 				Request actorMessage = (Request) message;
 				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_PAGE.getValue())) {
 					createPage(actorMessage);
@@ -66,6 +68,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 					getAllSections(actorMessage);
 				} else {
 					logger.info("UNSUPPORTED OPERATION");
+			        ProjectLogger.log("UNSUPPORTED OPERATION");
 					ProjectCommonException exception = new ProjectCommonException(
 							ResponseCode.invalidOperationName.getErrorCode(),
 							ResponseCode.invalidOperationName.getErrorMessage(),
@@ -74,11 +77,13 @@ public class PageManagementActor extends UntypedAbstractActor {
 				}
 			}catch(Exception ex){
 				logger.error(ex);
+				ProjectLogger.log(ex.getMessage(), ex);
 				sender().tell(ex, self());
 			}
 		} else {
 			// Throw exception as message body
 			logger.info("UNSUPPORTED MESSAGE");
+		    ProjectLogger.log("UNSUPPORTED MESSAGE");
 			ProjectCommonException exception = new ProjectCommonException(
 					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
 					ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -128,6 +133,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 				sectionMap.put(JsonKey.SEARCH_QUERY, mapper.writeValueAsString(sectionMap.get(JsonKey.SEARCH_QUERY)));
 			} catch (IOException e) {
 				logger.error(e.getMessage(), e);
+			    ProjectLogger.log(e.getMessage(), e);
 			}
 		}
 		if (null != sectionMap.get(JsonKey.SECTION_DISPLAY)) {
@@ -136,6 +142,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 				sectionMap.put(JsonKey.SECTION_DISPLAY, mapper.writeValueAsString(sectionMap.get(JsonKey.SECTION_DISPLAY)));
 			} catch (IOException e) {
 				logger.error(e.getMessage(), e);
+			    ProjectLogger.log(e.getMessage(), e);
 			}
 		}
 		sectionMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
@@ -164,6 +171,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 				sectionMap.put(JsonKey.SEARCH_QUERY, mapper.writeValueAsString(sectionMap.get(JsonKey.SEARCH_QUERY)));
 			} catch (IOException e) {
 				logger.error(e.getMessage(), e);
+			    ProjectLogger.log(e.getMessage(), e);
 			}
 		}
 		if (null != sectionMap.get(JsonKey.SECTION_DISPLAY)) {
@@ -172,6 +180,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 				sectionMap.put(JsonKey.SECTION_DISPLAY,mapper.writeValueAsString(sectionMap.get(JsonKey.SECTION_DISPLAY)));
 			} catch (IOException e) {
 				logger.error(e.getMessage(), e);
+			    ProjectLogger.log(e.getMessage(), e);
 			}
 		}
 		sectionMap.put(JsonKey.ID, uniqueId);
@@ -209,6 +218,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 		  }
 		}catch(Exception e){
 			logger.error(e.getMessage(), e);
+		    ProjectLogger.log(e.getMessage(), e);
 		}
 		
 		Map<String, Object> map = null;
@@ -256,12 +266,16 @@ public class PageManagementActor extends UntypedAbstractActor {
 	        responseMap.put(JsonKey.SECTIONS, sectionList);
       } catch (JsonParseException e) {
         logger.error(e);
+        ProjectLogger.log(e.getMessage(), e);
       } catch (JsonMappingException e) {
         logger.error(e);
+        ProjectLogger.log(e.getMessage(), e);
       } catch (IOException e) {
         logger.error(e);
+        ProjectLogger.log(e.getMessage(), e);
       }catch (Exception e) {
         logger.error(e);
+        ProjectLogger.log(e.getMessage(), e);
       }
 		Response pageResponse = new Response();
 		pageResponse.put(JsonKey.RESPONSE, responseMap);
@@ -316,6 +330,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 				pageMap.put(JsonKey.PORTAL_MAP, mapper.writeValueAsString(pageMap.get(JsonKey.PORTAL_MAP)));
 			} catch (IOException e) {
 				logger.error(e.getMessage(), e);
+				ProjectLogger.log(e.getMessage(), e);
 			}
 		}
 		if (null != pageMap.get(JsonKey.APP_MAP)) {
@@ -324,6 +339,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 				pageMap.put(JsonKey.APP_MAP, mapper.writeValueAsString(pageMap.get(JsonKey.APP_MAP)));
 			} catch (IOException e) {
 				logger.error(e.getMessage(), e);
+				ProjectLogger.log(e.getMessage(), e);
 			}
 		}
 		Response response = cassandraOperation.updateRecord(pageDbInfo.getKeySpace(), pageDbInfo.getTableName(),
@@ -357,6 +373,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 				pageMap.put(JsonKey.PORTAL_MAP, mapper.writeValueAsString(pageMap.get(JsonKey.PORTAL_MAP)));
 			} catch (IOException e) {
 				logger.error(e.getMessage(), e);
+				ProjectLogger.log(e.getMessage(), e);
 			}
 		}
 		if (null != pageMap.get(JsonKey.APP_MAP)) {
@@ -365,6 +382,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 				pageMap.put(JsonKey.APP_MAP, mapper.writeValueAsString(pageMap.get(JsonKey.APP_MAP)));
 			} catch (IOException e) {
 				logger.error(e.getMessage(), e);
+			    ProjectLogger.log(e.getMessage(), e);
 			}
 		}
 		Response response = cassandraOperation.insertRecord(pageDbInfo.getKeySpace(), pageDbInfo.getTableName(),
@@ -490,6 +508,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 			}
 		}catch(Exception e){
 			logger.error(e);
+		   ProjectLogger.log(e.getMessage(), e);
 		}
 		return sections;
 	}

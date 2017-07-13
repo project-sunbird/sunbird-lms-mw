@@ -11,6 +11,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -38,22 +39,27 @@ public class RecommendorActor extends UntypedAbstractActor {
         if (message instanceof Request) {
             try {
                 logger.info("RecommendorActor  onReceive called");
+                ProjectLogger.log("RecommendorActor  onReceive called");
                 Request request = (Request) message;
                 if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_RECOMMENDED_COURSES.getValue())) {
                     logger.info("RecommendorActor  -- GET Recommended courses");
+                    ProjectLogger.log("RecommendorActor  -- GET Recommended courses");
                     getRecommendedContents(request);
                 } else {
                     logger.info("UNSUPPORTED OPERATION");
+                    ProjectLogger.log("UNSUPPORTED OPERATION");
                     ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
                     sender().tell(exception, self());
                 }
             }catch(Exception ex) {
                 logger.error(ex);
+                ProjectLogger.log(ex.getMessage(), ex);
                 sender().tell(ex , self());
             }
         } else {
             // Throw exception as message body
             logger.info("UNSUPPORTED MESSAGE");
+            ProjectLogger.log("UNSUPPORTED MESSAGE");
             ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
             sender().tell(exception, self());
         }
@@ -73,6 +79,7 @@ public class RecommendorActor extends UntypedAbstractActor {
         Map<String, Object> map = getUserInfo(userId);
         if(null == map){
             logger.info("USER ID DOES NOT EXIST");
+            ProjectLogger.log("USER ID DOES NOT EXIST");
             ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidUserCredentials.getErrorCode(), ResponseCode.invalidUserCredentials.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
             sender().tell(exception, self());
             return;
@@ -122,12 +129,14 @@ public class RecommendorActor extends UntypedAbstractActor {
             return;
         } catch (JsonProcessingException e) {
             logger.error(e.getMessage() , e);
+            ProjectLogger.log(e.getMessage() , e);
             ProjectCommonException exception = new ProjectCommonException(ResponseCode.internalError.getErrorCode(), ResponseCode.internalError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
             sender().tell(exception, self());
             return;
         }
     }
 
+    @SuppressWarnings("unchecked")
     private Map<String, Object> getUserInfo(String userId) {
 
         Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);

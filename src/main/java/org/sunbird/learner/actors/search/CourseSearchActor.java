@@ -16,6 +16,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -34,6 +35,7 @@ public class CourseSearchActor extends UntypedAbstractActor {
 		 if (message instanceof Request) {
 		 	try {
 				logger.info("CourseSearchActor  onReceive called");
+		        ProjectLogger.log("CourseSearchActor  onReceive called");
 				Request actorMessage = (Request) message;
 				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.SEARCH_COURSE.getValue())) {
 					Map<String, Object> req = actorMessage.getRequest();
@@ -71,6 +73,7 @@ public class CourseSearchActor extends UntypedAbstractActor {
 					sender().tell(response, self());
 				} else {
 					logger.info("UNSUPPORTED OPERATION");
+	                ProjectLogger.log("UNSUPPORTED OPERATION");
 					ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
 					sender().tell(exception, self());
 				}
@@ -81,6 +84,7 @@ public class CourseSearchActor extends UntypedAbstractActor {
 	        } else {
 	            // Throw exception as message body
 	            logger.info("UNSUPPORTED MESSAGE");
+	            ProjectLogger.log("UNSUPPORTED MESSAGE");
 	            ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
 	            sender().tell(exception, self());
 	        }		

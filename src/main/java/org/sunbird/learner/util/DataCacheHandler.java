@@ -12,6 +12,7 @@ import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.ProjectLogger;
 
 /**
  * This class will handle the data cache.
@@ -31,6 +32,7 @@ public class DataCacheHandler implements Runnable{
 	@Override
 	public void run() {
 		logger.info("Data cache started..");
+		ProjectLogger.log("Data cache started..");
 		cache(pageMap,"page_management");
 		cache(sectionMap,"page_section");
 	}
@@ -52,6 +54,7 @@ public class DataCacheHandler implements Runnable{
 			}
 		}catch(Exception e){
 			logger.error(e.getMessage(), e);
+			ProjectLogger.log(e.getMessage(), e);
 		}
 	}
 

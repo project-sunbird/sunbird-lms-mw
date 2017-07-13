@@ -6,6 +6,7 @@ import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.util.Util;
@@ -111,6 +112,7 @@ public class UtilityActor extends UntypedAbstractActor {
                   cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), course);
               }catch(Exception ex){
                   logger.error(ex);
+                  ProjectLogger.log(ex.getMessage(), ex);
               }
             }
             
@@ -147,6 +149,7 @@ public class UtilityActor extends UntypedAbstractActor {
             }
         } catch (ParseException e) {
             logger.error(e);
+            ProjectLogger.log(e.getMessage(), e);
         }
         return null;
     }

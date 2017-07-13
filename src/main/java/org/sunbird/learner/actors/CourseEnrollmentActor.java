@@ -15,6 +15,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
@@ -50,6 +51,7 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
         if (message instanceof Request) {
            try {
                logger.info("CourseEnrollmentActor  onReceive called");
+               ProjectLogger.log("CourseEnrollmentActor  onReceive called");
                Request actorMessage = (Request) message;
                if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ENROLL_COURSE.getValue())) {
                    Util.DbInfo courseEnrollmentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
@@ -61,6 +63,7 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
                    Map<String, Object> ekStepContent = getCourseObjectFromEkStep(courseId);
                    if (null == ekStepContent || ekStepContent.size() == 0) {
                        logger.info("Course Id not found in EkStep");
+                    	ProjectLogger.log("Course Id not found in EkStep");
                        ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidCourseId.getErrorCode(), ResponseCode.invalidCourseId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
                        sender().tell(exception, self());
                    } else {
@@ -83,6 +86,7 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
                    }
                } else {
                    logger.info("UNSUPPORTED OPERATION");
+                   ProjectLogger.log("UNSUPPORTED OPERATION");
                    ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
                    sender().tell(exception, self());
                }
@@ -94,6 +98,7 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
         } else {
             // Throw exception as message body
             logger.info("UNSUPPORTED MESSAGE");
+            ProjectLogger.log("UNSUPPORTED MESSAGE");
             ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
             sender().tell(exception, self());
         }
@@ -112,6 +117,7 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
         		}
     		} catch (Exception e) {
     			logger.error(e.getMessage(), e);
+    		    ProjectLogger.log(e.getMessage(), e);
     		}
     	}
     	return null;

@@ -414,41 +414,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
          response.put(JsonKey.RESPONSE, result);    
     }
     sender().tell(response, self());
-    /*try {
-      Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-
-      Map<String, Object> req =
-          (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
-      Map<String, Object> orgDBO;
-      String orgId = (String) req.get(JsonKey.ORGANISATION_ID);
-      Response result = cassandraOperation.getRecordById(orgDbInfo.getKeySpace(),
-          orgDbInfo.getTableName(), orgId);
-      List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-      if (!(list.isEmpty())) {
-        orgDBO = (Map<String, Object>) list.get(0);
-      } else {
-        logger.info("Invalid Org Id");
-        ProjectCommonException exception =
-            new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-                ResponseCode.invalidRequestData.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-        sender().tell(exception, self());
-        return;
-      }
-
-      if (orgDBO.get(JsonKey.ADDRESS_ID.toLowerCase()) != null) {
-        String addressId = (String) orgDBO.get(JsonKey.ADDRESS_ID.toLowerCase());
-        Map<String, Object> address = getAddress(addressId);
-        orgDBO.put(JsonKey.ADDRESS, address);
-      }
-      orgDBO.put(JsonKey.RELATIONS, getRelations(orgId));
-      Response response = new Response();
-      response.getResult().putAll(orgDBO);
-      sender().tell(response, self());
-    } catch (ProjectCommonException e) {
-      sender().tell(e, self());
-      return;
-    }*/
   }
 
   /**

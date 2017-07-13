@@ -38,7 +38,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     if (message instanceof Request) {
       try {
         logger.info("OrganisationManagementActor  onReceive called");
-      ProjectLogger.log("OrganisationManagementActor  onReceive called");
+        ProjectLogger.log("OrganisationManagementActor  onReceive called");
         Request actorMessage = (Request) message;
         if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_ORG.getValue())) {
           createOrg(actorMessage);
@@ -56,7 +56,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           getOrgDetails(actorMessage);
         } else {
           logger.info("UNSUPPORTED OPERATION");
-        ProjectLogger.log("UNSUPPORTED OPERATION");
+          ProjectLogger.log("UNSUPPORTED OPERATION");
           ProjectCommonException exception =
                   new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
                           ResponseCode.invalidOperationName.getErrorMessage(),
@@ -211,11 +211,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         updateOrgDBO.put(JsonKey.STATUS, ProjectUtil.OrgStatus.ACTIVE.getValue());
       }
       if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
-        String updatedByName = getUserNamebyUserId(updatedBy);
-        // updateOrgDBO.put(JsonKey.UPDATED_BY_NAME,updatedByName);
         updateOrgDBO.put(JsonKey.UPDATED_BY, updatedBy);
         updateOrgDBO.put(JsonKey.APPROVED_BY, updatedBy);
-        updateOrgDBO.put(APPROVED_BY, updatedBy);
       }
       updateOrgDBO.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
       updateOrgDBO.put(JsonKey.ID, (String) orgDBO.get(JsonKey.ID));
@@ -281,8 +278,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       }
 
       if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
-        String updatedByName = getUserNamebyUserId(updatedBy);
-        // updateOrgDBO.put(JsonKey.UPDATED_BY_NAME, updatedByName);
         updateOrgDBO.put(JsonKey.UPDATED_BY, updatedBy);
       }
       updateOrgDBO.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
@@ -321,7 +316,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       String parentOrg = (String) req.get(JsonKey.PARENT_ORG_ID);
       Boolean isValidParent = false;
       logger.info(parentOrg);
-      ProjectLogger.log(parentOrg);
+      ProjectLogger.log("Parent Org Id:"+ parentOrg);
       if (!ProjectUtil.isStringNullOREmpty(parentOrg) && isValidParent(parentOrg)) {
         validateCyclicRelationForOrganisation(req);
         validateRootOrg(req);

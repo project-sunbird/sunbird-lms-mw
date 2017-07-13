@@ -596,15 +596,6 @@ public class UserManagementActor extends UntypedAbstractActor {
             }else{
               userMap.put(JsonKey.LOGIN_ID,userMap.get(JsonKey.USERNAME));
             }
-		        /*if(null != userMap.get(JsonKey.EMAIL)){
-		        	String email = (String)userMap.get(JsonKey.EMAIL);
-			        Response resultFrEmail = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.EMAIL,email);
-			        if(((List<Map<String,Object>>)resultFrEmail.get(JsonKey.RESPONSE)).size() != 0){
-			        	ProjectCommonException exception = new ProjectCommonException(ResponseCode.emailAlreadyExistError.getErrorCode(), ResponseCode.emailAlreadyExistError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
-			            sender().tell(exception, self());
-			            return;
-			        }
-		        }*/
 		        if(null != userMap.get(JsonKey.LOGIN_ID)){
 		        	 String loginId = (String)userMap.get(JsonKey.LOGIN_ID);
 		        	 Response resultFrUserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.LOGIN_ID,loginId);

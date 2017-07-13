@@ -1,7 +1,11 @@
 package org.sunbird.learner;
 
+import java.io.File;
+
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.learner.actors.RequestRouterActor;
 import org.sunbird.learner.util.SchedulerManager;
@@ -45,6 +49,7 @@ public class Application {
     ActorRef learnerActorSelectorRef = system.actorOf(Props.create(RequestRouterActor.class),
         RequestRouterActor.class.getSimpleName());
     logger.info("ACTORS STARTED " + learnerActorSelectorRef);
+        ProjectLogger.log("ACTORS STARTED " + learnerActorSelectorRef, LoggerEnum.INFO.name());
     checkCassandraConnection();
   }
 

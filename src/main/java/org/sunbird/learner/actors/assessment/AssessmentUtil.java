@@ -10,6 +10,7 @@ import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.services.impl.DefaultAssessmentEvaluator;
@@ -48,6 +49,7 @@ public class AssessmentUtil{
 				cassandraOperation.upsertRecord(assmntItemDbInfo.getKeySpace(), assmntItemDbInfo.getTableName(),reqMap);
 			}catch(Exception e){
 				logger.error(e.getMessage(), e);
+				ProjectLogger.log(e.getMessage(), e);
 			}
 		}
 	}
@@ -106,6 +108,7 @@ public class AssessmentUtil{
 				}
 			}catch(Exception e){
 				logger.error(e.getMessage(), e);
+			  ProjectLogger.log(e.getMessage(), e);
 			}
 		}
 	}
@@ -150,6 +153,7 @@ public class AssessmentUtil{
 					}
 				}catch(Exception e){
 					logger.error(e.getMessage(), e);
+				  ProjectLogger.log(e.getMessage(), e);
 				}
 			}
 	}

@@ -1,11 +1,18 @@
 package org.sunbird.learner.actors;
 
+import akka.actor.UntypedAbstractActor;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.util.JSONPObject;
+import com.google.gson.JsonParser;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import java.util.Map.Entry;
+import java.util.Set;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -13,18 +20,13 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
-
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import akka.actor.UntypedAbstractActor;
 
 /**
  * This actor will handle page management operation .
@@ -34,11 +36,6 @@ import akka.actor.UntypedAbstractActor;
 public class PageManagementActor extends UntypedAbstractActor {
 	private LogHelper logger = LogHelper.getInstance(PageManagementActor.class.getName());
 
-//	private static Map<String, String> headers = new HashMap<String, String>();
-//	static {
-//		headers.put("content-type", "application/json");
-//		headers.put("accept", "application/json");
-//	}
 	private CassandraOperation cassandraOperation = new CassandraOperationImpl();
 	Util.DbInfo pageDbInfo = Util.dbInfoMap.get(JsonKey.PAGE_MGMT_DB);
 	Util.DbInfo sectionDbInfo = Util.dbInfoMap.get(JsonKey.SECTION_MGMT_DB);
@@ -49,6 +46,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 		if (message instanceof Request) {
 			try {
 				logger.info("PageManagementActor onReceive called");
+		    ProjectLogger.log("PageManagementActor onReceive called");
 				Request actorMessage = (Request) message;
 				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_PAGE.getValue())) {
 					createPage(actorMessage);
@@ -70,6 +68,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 					getAllSections(actorMessage);
 				} else {
 					logger.info("UNSUPPORTED OPERATION");
+			        ProjectLogger.log("UNSUPPORTED OPERATION");
 					ProjectCommonException exception = new ProjectCommonException(
 							ResponseCode.invalidOperationName.getErrorCode(),
 							ResponseCode.invalidOperationName.getErrorMessage(),
@@ -78,11 +77,13 @@ public class PageManagementActor extends UntypedAbstractActor {
 				}
 			}catch(Exception ex){
 				logger.error(ex);
+				ProjectLogger.log(ex.getMessage(), ex);
 				sender().tell(ex, self());
 			}
 		} else {
 			// Throw exception as message body
 			logger.info("UNSUPPORTED MESSAGE");
+		    ProjectLogger.log("UNSUPPORTED MESSAGE");
 			ProjectCommonException exception = new ProjectCommonException(
 					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
 					ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -132,6 +133,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 				sectionMap.put(JsonKey.SEARCH_QUERY, mapper.writeValueAsString(sectionMap.get(JsonKey.SEARCH_QUERY)));
 			} catch (IOException e) {
 				logger.error(e.getMessage(), e);
+			    ProjectLogger.log(e.getMessage(), e);
 			}
 		}
 		if (null != sectionMap.get(JsonKey.SECTION_DISPLAY)) {
@@ -140,6 +142,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 				sectionMap.put(JsonKey.SECTION_DISPLAY, mapper.writeValueAsString(sectionMap.get(JsonKey.SECTION_DISPLAY)));
 			} catch (IOException e) {
 				logger.error(e.getMessage(), e);
+			    ProjectLogger.log(e.getMessage(), e);
 			}
 		}
 		sectionMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
@@ -168,6 +171,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 				sectionMap.put(JsonKey.SEARCH_QUERY, mapper.writeValueAsString(sectionMap.get(JsonKey.SEARCH_QUERY)));
 			} catch (IOException e) {
 				logger.error(e.getMessage(), e);
+			    ProjectLogger.log(e.getMessage(), e);
 			}
 		}
 		if (null != sectionMap.get(JsonKey.SECTION_DISPLAY)) {
@@ -176,6 +180,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 				sectionMap.put(JsonKey.SECTION_DISPLAY,mapper.writeValueAsString(sectionMap.get(JsonKey.SECTION_DISPLAY)));
 			} catch (IOException e) {
 				logger.error(e.getMessage(), e);
+			    ProjectLogger.log(e.getMessage(), e);
 			}
 		}
 		sectionMap.put(JsonKey.ID, uniqueId);
@@ -200,10 +205,11 @@ public class PageManagementActor extends UntypedAbstractActor {
 		String sectionQuery = null;
 		List<Map<String,Object>> sectionList = new ArrayList<>();
 		Response response = null;
-		Map<String, Object> req = actorMessage.getRequest();
-		String pageName = (String) req.get(JsonKey.ID);
+		Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.PAGE);
+		String pageName = (String) req.get(JsonKey.PAGE_NAME);
 		String source = (String) req.get(JsonKey.SOURCE);
 		String orgCode = (String) req.get(JsonKey.ORG_CODE);
+		Map<String,Object> reqFilters = (Map<String, Object>) req.get(JsonKey.FILTERS);
 		List<Map<String, Object>> result = null;
 		try{
 		  if(!ProjectUtil.isStringNullOREmpty(orgCode)){
@@ -212,6 +218,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 		  }
 		}catch(Exception e){
 			logger.error(e.getMessage(), e);
+		    ProjectLogger.log(e.getMessage(), e);
 		}
 		
 		Map<String, Object> map = null;
@@ -247,7 +254,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 			for(Object obj : arr){
 				Map<String,Object>  sectionMap = (Map<String, Object>) obj ;
 				Map<String, Object> sectionData = DataCacheHandler.sectionMap.get((String)sectionMap.get(JsonKey.ID));
-				getContentData(sectionData);
+				getContentData(sectionData,reqFilters);
 				sectionData.put(JsonKey.GROUP, sectionMap.get(JsonKey.GROUP));
 				sectionData.put(JsonKey.INDEX, sectionMap.get(JsonKey.INDEX));
 				removeUnwantedData(sectionData,"getPageData");
@@ -259,12 +266,16 @@ public class PageManagementActor extends UntypedAbstractActor {
 	        responseMap.put(JsonKey.SECTIONS, sectionList);
       } catch (JsonParseException e) {
         logger.error(e);
+        ProjectLogger.log(e.getMessage(), e);
       } catch (JsonMappingException e) {
         logger.error(e);
+        ProjectLogger.log(e.getMessage(), e);
       } catch (IOException e) {
         logger.error(e);
+        ProjectLogger.log(e.getMessage(), e);
       }catch (Exception e) {
         logger.error(e);
+        ProjectLogger.log(e.getMessage(), e);
       }
 		Response pageResponse = new Response();
 		pageResponse.put(JsonKey.RESPONSE, responseMap);
@@ -319,6 +330,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 				pageMap.put(JsonKey.PORTAL_MAP, mapper.writeValueAsString(pageMap.get(JsonKey.PORTAL_MAP)));
 			} catch (IOException e) {
 				logger.error(e.getMessage(), e);
+				ProjectLogger.log(e.getMessage(), e);
 			}
 		}
 		if (null != pageMap.get(JsonKey.APP_MAP)) {
@@ -327,6 +339,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 				pageMap.put(JsonKey.APP_MAP, mapper.writeValueAsString(pageMap.get(JsonKey.APP_MAP)));
 			} catch (IOException e) {
 				logger.error(e.getMessage(), e);
+				ProjectLogger.log(e.getMessage(), e);
 			}
 		}
 		Response response = cassandraOperation.updateRecord(pageDbInfo.getKeySpace(), pageDbInfo.getTableName(),
@@ -360,6 +373,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 				pageMap.put(JsonKey.PORTAL_MAP, mapper.writeValueAsString(pageMap.get(JsonKey.PORTAL_MAP)));
 			} catch (IOException e) {
 				logger.error(e.getMessage(), e);
+				ProjectLogger.log(e.getMessage(), e);
 			}
 		}
 		if (null != pageMap.get(JsonKey.APP_MAP)) {
@@ -368,6 +382,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 				pageMap.put(JsonKey.APP_MAP, mapper.writeValueAsString(pageMap.get(JsonKey.APP_MAP)));
 			} catch (IOException e) {
 				logger.error(e.getMessage(), e);
+			    ProjectLogger.log(e.getMessage(), e);
 			}
 		}
 		Response response = cassandraOperation.insertRecord(pageDbInfo.getKeySpace(), pageDbInfo.getTableName(),
@@ -388,13 +403,63 @@ public class PageManagementActor extends UntypedAbstractActor {
 		}.start();
 	}
 
-	private void getContentData(Map<String, Object> section) {
+	@SuppressWarnings("unchecked")
+  private void getContentData(Map<String, Object> section,Map<String, Object> reqFilters) {
+      ObjectMapper mapper = new ObjectMapper();
+      Map<String, Object> map = new HashMap<>();
+      try {
+        map = mapper.readValue((String)section.get(JsonKey.SEARCH_QUERY), HashMap.class);
+      } catch (IOException e) {
+        logger.error(e);
+      }
+      Map<String, Object> filters = (Map<String, Object>) ((Map<String, Object>)map.get(JsonKey.REQUEST)).get(JsonKey.FILTERS);
+	    applyFilters(filters,reqFilters);
 		Object[] result = EkStepRequestUtil.searchContent((String) section.get(JsonKey.SEARCH_QUERY));
 		if (null != result)
 			section.put(JsonKey.CONTENTS, result);
 	}
 
-	private Map<String, Object> getPageSetting(Map<String, Object> pageDO) {
+  @SuppressWarnings("unchecked")
+  private void applyFilters(Map<String, Object> filters,Map<String, Object> reqFilters) {
+    if(null != reqFilters){
+	  Set<Entry<String, Object>> entrySet = reqFilters.entrySet();
+	  
+	  for(Entry<String, Object> entry : entrySet){
+	    String key = entry.getKey();
+      if (filters.containsKey(key)) {
+        Object obj = entry.getValue();
+        if (obj instanceof List) {
+          if (filters.get(key) instanceof List) {
+            ((List<Object>) filters.get(key)).addAll((List<Object>) obj);
+          } else if (filters.get(key) instanceof Map) {
+            filters.put(key, obj);
+          } else {
+            ((List<Object>) obj).add((String) filters.get(key));
+            filters.put(key, obj);
+          }
+        } else if (obj instanceof Map) {
+          filters.put(key, obj);
+        } else {
+          if (filters.get(key) instanceof List) {
+            ((List<Object>) filters.get(key)).add(obj);
+          } else if (filters.get(key) instanceof Map) {
+            filters.put(key, obj);
+          } else {
+            List<Object> list = new ArrayList<>();
+            list.add(filters.get(key));
+            list.add(obj);
+            filters.put(key, list);
+          }
+        }
+
+      }else{
+	      filters.put(key, entry.getValue());
+	    }
+	  }
+    }
+    }
+
+  private Map<String, Object> getPageSetting(Map<String, Object> pageDO) {
 
 		Map<String, Object> responseMap = new HashMap<>();
 		responseMap.put(JsonKey.NAME, pageDO.get(JsonKey.NAME));
@@ -443,6 +508,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 			}
 		}catch(Exception e){
 			logger.error(e);
+		   ProjectLogger.log(e.getMessage(), e);
 		}
 		return sections;
 	}

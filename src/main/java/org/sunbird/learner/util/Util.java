@@ -84,6 +84,7 @@ public class Util {
     public static void checkCassandraDbConnections() {
         if (readConfigFromEnv()) {
             logger.info("db connection is created from System env variable.");
+            ProjectLogger.log("db connection is created from System env variable.");
             return ;
         }   
         String[] ipList=prop.getProperty(JsonKey.DB_IP).split(",");
@@ -103,12 +104,15 @@ public class Util {
                         password, keyspace);
                 if (result) {
                     logger.info("CONNECTION CREATED SUCCESSFULLY FOR IP: " + ip + " : KEYSPACE :" + keyspace);
+                      ProjectLogger.log("CONNECTION CREATED SUCCESSFULLY FOR IP: " + ip + " : KEYSPACE :" + keyspace);
                     } else {
                     logger.info("CONNECTION CREATION FAILED FOR IP: " + ip + " : KEYSPACE :" + keyspace);
+                      ProjectLogger.log("CONNECTION CREATION FAILED FOR IP: " + ip + " : KEYSPACE :" + keyspace);
                     }
 
             } catch (ProjectCommonException ex) {
                 logger.error(ex);
+                ProjectLogger.log(ex.getMessage(), ex);
                 }
 
         }
@@ -126,6 +130,7 @@ public class Util {
         
         if (ProjectUtil.isStringNullOREmpty(ips) || ProjectUtil.isStringNullOREmpty(envPort) ) {
             logger.info("Configuration value is not coming form System variable.");
+            ProjectLogger.log("Configuration value is not coming form System variable.");
             return response;
         }
         String[] ipList = ips.split(",");
@@ -139,12 +144,15 @@ public class Util {
                 boolean result = CassandraConnectionManager.createConnection(ip, port, userName, password, KEY_SPACE_NAME);
                 if (result) {
                     logger.info("CONNECTION CREATED SUCCESSFULLY FOR IP: " + ip + " : KEYSPACE :" + KEY_SPACE_NAME);
+                    ProjectLogger.log("CONNECTION CREATED SUCCESSFULLY FOR IP: " + ip + " : KEYSPACE :" + KEY_SPACE_NAME, LoggerEnum.INFO.name());
                 } else {
                     logger.info("CONNECTION CREATION FAILED FOR IP: " + ip + " : KEYSPACE :" + KEY_SPACE_NAME);
+                  ProjectLogger.log("CONNECTION CREATION FAILED FOR IP: " + ip + " : KEYSPACE :" + KEY_SPACE_NAME, LoggerEnum.INFO.name());
                 }
                 response = true;
             } catch (ProjectCommonException ex) {
                 logger.error(ex);
+                ProjectLogger.log(ex.getMessage(), ex);
                 throw new ProjectCommonException(ResponseCode.invaidConfiguration.getErrorCode(),
                         ResponseCode.invaidConfiguration.getErrorCode(), ResponseCode.SERVER_ERROR.hashCode());
             }
@@ -376,8 +384,10 @@ public class Util {
             section.put(JsonKey.CONTENTS, mapper.readValue(contentArray.toString(), Object[].class));
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
+            ProjectLogger.log(e.getMessage(), e);
         } catch (JSONException e) {
             logger.error(e.getMessage(), e);
+            ProjectLogger.log(e.getMessage(), e);
         }
     }
 

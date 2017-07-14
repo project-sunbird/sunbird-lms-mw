@@ -1,5 +1,8 @@
 package org.sunbird.learner.actors;
 
+import static org.sunbird.learner.util.Util.isNotNull;
+import static org.sunbird.learner.util.Util.isNull;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,16 +46,16 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_ORG.getValue())) {
           createOrg(actorMessage);
         } else if (actorMessage.getOperation()
-                .equalsIgnoreCase(ActorOperations.UPDATE_ORG_STATUS.getValue())) {
+            .equalsIgnoreCase(ActorOperations.UPDATE_ORG_STATUS.getValue())) {
           updateOrgStatus(actorMessage);
         } else if (actorMessage.getOperation()
-                .equalsIgnoreCase(ActorOperations.UPDATE_ORG.getValue())) {
+            .equalsIgnoreCase(ActorOperations.UPDATE_ORG.getValue())) {
           updateOrgData(actorMessage);
         } else if (actorMessage.getOperation()
-                .equalsIgnoreCase(ActorOperations.APPROVE_ORG.getValue())) {
+            .equalsIgnoreCase(ActorOperations.APPROVE_ORG.getValue())) {
           approveOrg(actorMessage);
         } else if (actorMessage.getOperation()
-                .equalsIgnoreCase(ActorOperations.GET_ORG_DETAILS.getValue())) {
+            .equalsIgnoreCase(ActorOperations.GET_ORG_DETAILS.getValue())) {
           getOrgDetails(actorMessage);
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.ADD_MEMBER_ORGANISATION.getValue())) {

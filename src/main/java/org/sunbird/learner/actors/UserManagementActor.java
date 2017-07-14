@@ -850,6 +850,8 @@ public class UserManagementActor extends UntypedAbstractActor {
     	reqMap.remove(JsonKey.EMAIL_VERIFIED);
     	reqMap.remove(JsonKey.PHONE_NUMBER_VERIFIED);
     	reqMap.remove(JsonKey.ROLES);
+    	reqMap.remove(JsonKey.REGISTERED_ORG);
+    	reqMap.remove(JsonKey.ROOT_ORG);
 	}
 
 	/**

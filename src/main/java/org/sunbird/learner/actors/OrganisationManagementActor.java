@@ -609,7 +609,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
           dataMap.put(JsonKey.UPDATED_BY, updatedBy);
         }
-        dataMap.put(JsonKey.ORG_LEFT_DATE.toLowerCase(), ProjectUtil.getFormattedDate());
+        dataMap.put(JsonKey.ORG_LEFT_DATE, ProjectUtil.getFormattedDate());
         dataMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
         dataMap.put(JsonKey.IS_DELETED, true);
         response = cassandraOperation.updateRecord(userOrgDbInfo.getKeySpace(),

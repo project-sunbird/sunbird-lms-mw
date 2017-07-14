@@ -132,6 +132,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.UPDATE_ORG.getValue(), organisationManagementRouter);
         routerMap.put(ActorOperations.UPDATE_ORG_STATUS.getValue(), organisationManagementRouter);
         routerMap.put(ActorOperations.GET_ORG_DETAILS.getValue(), organisationManagementRouter);
+        routerMap.put(ActorOperations.ADD_MEMBER_ORGANISATION.getValue(), organisationManagementRouter);
+        routerMap.put(ActorOperations.REMOVE_MEMBER_ORGANISATION.getValue(), organisationManagementRouter);
         
         routerMap.put(ActorOperations.SEARCH_COURSE.getValue(), courseSearchActorRouter);
         routerMap.put(ActorOperations.GET_COURSE_BY_ID.getValue(), courseSearchActorRouter);

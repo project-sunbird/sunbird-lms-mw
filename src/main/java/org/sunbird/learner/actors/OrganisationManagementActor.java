@@ -54,6 +54,12 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         } else if (actorMessage.getOperation()
                 .equalsIgnoreCase(ActorOperations.GET_ORG_DETAILS.getValue())) {
           getOrgDetails(actorMessage);
+        } else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.ADD_MEMBER_ORGANISATION.getValue())) {
+          addMemberOrganisation(actorMessage);
+        } else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.REMOVE_MEMBER_ORGANISATION.getValue())) {
+          removeMemberOrganisation(actorMessage);
         } else {
           logger.info("UNSUPPORTED OPERATION");
           ProjectLogger.log("UNSUPPORTED OPERATION");
@@ -400,6 +406,213 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
       return;
+    }
+  }
+
+  /**
+   * Method to add member to the organisation
+   * 
+   * @param actorMessage
+   */
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  private void addMemberOrganisation(Request actorMessage) {
+
+    Response response = new Response();
+
+    Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+    Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+    Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+
+    Map<String, Object> req = actorMessage.getRequest();
+    
+    Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
+    if (isNull(usrOrgData)) {
+      // create exception here and sender.tell the exception and return
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
+
+    String updatedBy = null;
+    String orgId = null;
+    String userId = null;
+    List<String> roles = null;
+    if (isNotNull(usrOrgData.get(JsonKey.ORGANISATION_ID))) {
+      orgId = (String) usrOrgData.get(JsonKey.ORGANISATION_ID);
+    }
+    if (isNotNull(usrOrgData.get(JsonKey.USER_ID))) {
+      userId = (String) usrOrgData.get(JsonKey.USER_ID);
+    }
+    if (isNotNull(req.get(JsonKey.REQUESTED_BY))) {
+      updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
+    }
+    if (isNotNull(usrOrgData.get(JsonKey.ROLES))) {
+      roles = (List<String>) usrOrgData.get(JsonKey.ROLES);
+    }
+
+    if ((isNull(orgId) || isNull(userId)) || isNull(roles)) {
+      // create exception here invalid request data and tell the exception , ther return
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
+
+    // check org exist or not
+    Response orgResult = cassandraOperation.getRecordById(organisationDbInfo.getKeySpace(),
+        organisationDbInfo.getTableName(), orgId);
+
+    List orgList = (List) orgResult.get(JsonKey.RESPONSE);
+    if (orgList.size() == 0) {
+      // user already enrolled for the organisation
+      logger.info("Org does not exist");
+      ProjectLogger.log("Org does not exist");
+      ProjectCommonException exception = new ProjectCommonException(
+          ResponseCode.invalidOrgId.getErrorCode(), ResponseCode.invalidOrgId.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
+
+    // check user exist or not
+    Response userResult = cassandraOperation.getRecordById(userDbInfo.getKeySpace(),
+        userDbInfo.getTableName(), userId);
+
+    List userList = (List) userResult.get(JsonKey.RESPONSE);
+    if (userList.size() == 0) {
+      logger.info("User does not exist");
+      ProjectLogger.log("User does not exist");
+      ProjectCommonException exception = new ProjectCommonException(
+          ResponseCode.invalidUserId.getErrorCode(), ResponseCode.invalidUserId.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
+
+
+    // check user already exist for the org or not
+    Map<String, Object> requestData = new HashMap<String, Object>();
+    requestData.put(JsonKey.USER_ID, userId);
+    requestData.put(JsonKey.ORGANISATION_ID, orgId);
+    
+    Response result = cassandraOperation.getRecordsByProperties(userOrgDbInfo.getKeySpace(),
+        userOrgDbInfo.getTableName(), requestData);
+
+    List list = (List) result.get(JsonKey.RESPONSE);
+    if (list.size() > 0) {
+      // user already enrolled for the organisation
+      response = new Response();
+      response.getResult().put(JsonKey.RESPONSE, "User already a member of the organisation");
+      sender().tell(response, self());
+      return;
+    }
+
+
+
+    String id = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
+    usrOrgData.put(JsonKey.ID, id);
+    if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
+      String updatedByName = Util.getUserNamebyUserId(updatedBy);
+      usrOrgData.put(JsonKey.ADDED_BY, updatedBy);
+      usrOrgData.put(JsonKey.APPROVED_BY, updatedBy);
+      if(!ProjectUtil.isStringNullOREmpty(updatedByName)){
+         usrOrgData.put(JsonKey.ADDED_BY_NAME, Util.getUserNamebyUserId(updatedBy));
+      }
+    }
+    usrOrgData.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
+    usrOrgData.put(JsonKey.APPROOVE_DATE, ProjectUtil.getFormattedDate());
+    usrOrgData.put(JsonKey.IS_REJECTED, false);
+    usrOrgData.put(JsonKey.IS_APPROVED, true);
+
+    response = cassandraOperation.insertRecord(userOrgDbInfo.getKeySpace(),
+        userOrgDbInfo.getTableName(), usrOrgData);
+    sender().tell(response, self());
+    return;
+
+  }
+
+  /**
+   * Method to remove member from the organisation
+   * 
+   * @param actorMessage
+   */
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  private void removeMemberOrganisation(Request actorMessage) {
+
+    Response response = new Response();
+
+    Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+
+    Map<String, Object> req = actorMessage.getRequest();
+
+    Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
+    if (isNull(usrOrgData)) {
+      // create exception here and sender.tell the exception and return
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
+
+    String updatedBy = null;
+    String orgId = null;
+    String userId = null;
+    if (isNotNull(usrOrgData.get(JsonKey.ORGANISATION_ID))) {
+      orgId = (String) usrOrgData.get(JsonKey.ORGANISATION_ID);
+    }
+
+    if (isNotNull(usrOrgData.get(JsonKey.USER_ID))) {
+      userId = (String) usrOrgData.get(JsonKey.USER_ID);
+    }
+    if (isNotNull(req.get(JsonKey.REQUESTED_BY))) {
+      updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
+    }
+
+    if (isNull(orgId) || isNull(userId)) {
+      // create exception here invalid request data and tell the exception , ther return
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
+
+    // check user already exist for the org or not
+    Map<String, Object> requestData = new HashMap<String, Object>();
+    requestData.put(JsonKey.USER_ID, userId);
+    requestData.put(JsonKey.ORGANISATION_ID, orgId);
+
+    Response result = cassandraOperation.getRecordsByProperties(userOrgDbInfo.getKeySpace(),
+        userOrgDbInfo.getTableName(), requestData);
+
+    List list = (List) result.get(JsonKey.RESPONSE);
+    if (list.size() < 0) {
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    } else {
+        Map<String, Object> dataMap = (Map<String, Object>) list.get(0);
+        if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
+          dataMap.put(JsonKey.UPDATED_BY, updatedBy);
+        }
+        dataMap.put(JsonKey.ORG_LEFT_DATE.toLowerCase(), ProjectUtil.getFormattedDate());
+        dataMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+        dataMap.put(JsonKey.IS_DELETED, true);
+        response = cassandraOperation.updateRecord(userOrgDbInfo.getKeySpace(),
+            userOrgDbInfo.getTableName(), dataMap);
+        sender().tell(response, self());
+        return;
     }
   }
 

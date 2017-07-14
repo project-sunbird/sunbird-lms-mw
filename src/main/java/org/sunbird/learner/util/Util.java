@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -399,5 +401,22 @@ public class Util {
         return null != obj? true:false;
     }
 
-
+    /**
+     * This method will provide user name based on user id if user not found
+     * then it will return null.
+     *
+     * @param userId String
+     * @return String
+     */
+    @SuppressWarnings("unchecked")
+    public static String getUserNamebyUserId(String userId) {
+        CassandraOperation cassandraOperation = new CassandraOperationImpl();
+        Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+        Response result = cassandraOperation.getRecordById(userdbInfo.getKeySpace(), userdbInfo.getTableName(), userId);
+        List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+        if (!(list.isEmpty())) {
+            return (String) (list.get(0).get(JsonKey.USERNAME));
+        }
+        return null;
+    }
 }

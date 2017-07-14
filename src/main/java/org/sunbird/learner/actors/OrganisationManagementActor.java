@@ -212,7 +212,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         return;
       }
 
-      boolean isApprove = (boolean) req.get(JsonKey.IS_APPROVED);
+      boolean isApprove = true;
 
       if (isApprove) {
 

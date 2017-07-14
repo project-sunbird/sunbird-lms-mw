@@ -24,7 +24,11 @@ public class OrganisationManagementActorTest {
 
     static ActorSystem system;
     final static Props props = Props.create(OrganisationManagementActor.class);
-
+    public static String orgId = "";
+    public static String usrId = "";
+    public static String parentOrgId = "";
+    //TODO: Complete the test cases based on scenarios
+    
     @BeforeClass
     public static void setUp() {
         system = ActorSystem.create("system");
@@ -72,7 +76,7 @@ public class OrganisationManagementActorTest {
     }
     
     @Test
-    public void createOrg(){
+    public void testCreateOrg(){
       TestKit probe = new TestKit(system);
       ActorRef subject = system.actorOf(props);
 
@@ -84,6 +88,7 @@ public class OrganisationManagementActorTest {
       orgMap.put(JsonKey.DESCRIPTION, "Central Board of Secondary Education");
       orgMap.put("orgCode", "CBSE");
       orgMap.put("isRootOrg", true);
+      orgMap.put("channel", "test");
       innerMap.put(JsonKey.ORGANISATION , orgMap);
 
       reqObj.setRequest(innerMap);
@@ -92,7 +97,7 @@ public class OrganisationManagementActorTest {
     }
     
     @Test
-    public void createOrg1(){
+    public void testCreateOrg1Exception(){
       TestKit probe = new TestKit(system);
       ActorRef subject = system.actorOf(props);
 
@@ -124,7 +129,7 @@ public class OrganisationManagementActorTest {
     }
     
     @Test
-    public void createOrg2(){
+    public void testCreateOrg2Exception(){
       TestKit probe = new TestKit(system);
       ActorRef subject = system.actorOf(props);
 
@@ -155,7 +160,7 @@ public class OrganisationManagementActorTest {
       probe.expectMsgClass(ProjectCommonException.class);
     }
     
-    public void testApproveOrg(){
+    public void testApproveOrgException(){
       TestKit probe = new TestKit(system);
       
       ActorRef subject = system.actorOf(props);
@@ -189,7 +194,7 @@ public class OrganisationManagementActorTest {
       probe.expectMsgClass(ProjectCommonException.class);
     }
     
-    public void testUpdateOrg(){
+    public void testUpdateOrgException(){
       TestKit probe = new TestKit(system);
       
       ActorRef subject = system.actorOf(props);
@@ -202,6 +207,41 @@ public class OrganisationManagementActorTest {
       orgMap.put(JsonKey.IS_APPROVED, true);
       orgMap.put("orgType", "Training");
       orgMap.put("status", "blocked");
+      innerMap.put(JsonKey.ORGANISATION , orgMap);
+      reqObj.setRequest(innerMap);
+      subject.tell(reqObj, probe.getRef());
+      probe.expectMsgClass(ProjectCommonException.class);
+    }
+    
+    public void testAddMemberToOrgException(){
+      TestKit probe = new TestKit(system);
+      
+      ActorRef subject = system.actorOf(props);
+
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.UPDATE_ORG.getValue());
+      HashMap<String, Object> innerMap = new HashMap<>();
+      Map<String , Object> orgMap = new HashMap<String , Object>();
+      orgMap.put(JsonKey.ORGANISATION_ID , "");
+      orgMap.put(JsonKey.USER_ID, "");
+      orgMap.put(JsonKey.ROLE,"");
+      innerMap.put(JsonKey.ORGANISATION , orgMap);
+      reqObj.setRequest(innerMap);
+      subject.tell(reqObj, probe.getRef());
+      probe.expectMsgClass(ProjectCommonException.class);
+    }
+    
+    public void testRemoveMemberFromOrgException(){
+      TestKit probe = new TestKit(system);
+      
+      ActorRef subject = system.actorOf(props);
+
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.UPDATE_ORG.getValue());
+      HashMap<String, Object> innerMap = new HashMap<>();
+      Map<String , Object> orgMap = new HashMap<String , Object>();
+      orgMap.put(JsonKey.ORGANISATION_ID , "");
+      orgMap.put(JsonKey.USER_ID, "");
       innerMap.put(JsonKey.ORGANISATION , orgMap);
       reqObj.setRequest(innerMap);
       subject.tell(reqObj, probe.getRef());

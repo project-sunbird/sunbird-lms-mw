@@ -4,7 +4,7 @@
     2. Run [cassandra.cql](https://github.com/ekstep/sunbird-mw/blob/alpha2/actors/learner-actor/src/main/resources/cassandra.cql) file to create the required keyspaces, tables and indices
     3. Copy pageMgmt.csv and pageSection.csv to a temp folder on cassandra machine. e.g.: /tmp/cql/pageMgmt.csv and /tmp/cql/pageSection.csv.
     4. Execute the command: cqlsh -e "COPY sunbird.page_management(id, appmap,createdby ,createddate ,name ,organisationid ,portalmap ,updatedby ,updateddate ) FROM '/tmp/cql/pageMgmt.csv'"
-    5. Execute the command: cqlsh -e "COPY sunbird.page_section(id, alt,createdby ,createdby ,createddate ,description ,display ,imgurl ,name,searchquery , sectiondatatype ,status , updatedby ,updateddate) FROM '/tmp/cql/pageSection.csv'"
+    5. Execute the command: cqlsh -e "COPY sunbird.page_section(id, alt,createdby ,createddate ,description ,display ,imgurl ,name,searchquery , sectiondatatype ,status , updatedby ,updateddate) FROM '/tmp/cql/pageSection.csv'"
 2. ElasticSearch
     1. Install ElasticSearch database and start the server
 

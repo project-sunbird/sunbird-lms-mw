@@ -44,7 +44,7 @@ public class RecommendorActor extends UntypedAbstractActor {
                 if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_RECOMMENDED_COURSES.getValue())) {
                     logger.info("RecommendorActor  -- GET Recommended courses");
                     ProjectLogger.log("RecommendorActor  -- GET Recommended courses");
-                    getRecommendedContents(request);
+                    getRecommendedCourses(request);
                 } else {
                     logger.info("UNSUPPORTED OPERATION");
                     ProjectLogger.log("UNSUPPORTED OPERATION");
@@ -70,7 +70,7 @@ public class RecommendorActor extends UntypedAbstractActor {
      * @param request
      * @return
      */
-    private void getRecommendedContents(Request request) {
+    private void getRecommendedCourses(Request request) {
 
         Response response = new Response();
         Map<String, Object> req = request.getRequest();
@@ -102,14 +102,7 @@ public class RecommendorActor extends UntypedAbstractActor {
         // add object type and content type in query filter
         filterMap.put(JsonKey.OBJECT_TYPE , JsonKey.CONTENT);
         List<String> contentTypes = new ArrayList<String>();
-        contentTypes.add("story");
-        contentTypes.add("Worksheet");
-        contentTypes.add("Game");
-        contentTypes.add("TextBook");
-        contentTypes.add("Simulation");
-        contentTypes.add("Puzzle");
-        contentTypes.add("Diagnostic");
-        contentTypes.add("Collection");
+        contentTypes.add(JsonKey.COURSE);
         filterMap.put(JsonKey.CONTENT_TYPE , contentTypes);
 
         searchQueryMap.put(JsonKey.FILTERS, filterMap);

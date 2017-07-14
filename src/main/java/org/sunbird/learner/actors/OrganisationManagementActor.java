@@ -127,7 +127,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
       req.put(JsonKey.ID, uniqueId);
       req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-      req.put(JsonKey.STATUS , ProjectUtil.OrgStatus.ACTIVE.name());
+      req.put(JsonKey.STATUS , ProjectUtil.OrgStatus.ACTIVE.getValue());
 
       // update address if present in request
       if (null != addressReq && addressReq.size() > 0) {

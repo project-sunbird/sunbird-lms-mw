@@ -406,6 +406,9 @@ ALTER TABLE sunbird.user ADD profileSummary text;
 ALTER TABLE sunbird.organisation ADD source text;
 ALTER TABLE sunbird.organisation ADD externalId text;
 
+ALTER TABLE sunbird.user_org drop role;
+ALTER TABLE sunbird.user_org ADD roles list<text>;
+
 //to export data from csv to cassandra table run below command(for page_section and page_management table) 
 // change the path of csv file
 //COPY sunbird.page_management(id, appmap,createdby ,createddate ,name ,organisationid ,portalmap ,updatedby ,updateddate ) FROM '/tmp/cql/pageMgmt.csv';

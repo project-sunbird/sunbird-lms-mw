@@ -1160,7 +1160,7 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
 
         String orgId = null;
         String userId = null;
-        String role = null;
+        List<String> roles = null;
         if(isNotNull(usrOrgData.get(JsonKey.ORGANISATION_ID))){
             orgId = (String)usrOrgData.get(JsonKey.ORGANISATION_ID);
         }
@@ -1168,12 +1168,12 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
         if(isNotNull(usrOrgData.get(JsonKey.USER_ID))){
             userId = (String)usrOrgData.get(JsonKey.USER_ID);
         }
-        if(isNotNull(usrOrgData.get(JsonKey.ROLE))){
-            role = (String)usrOrgData.get(JsonKey.ROLE);
+        if(isNotNull(usrOrgData.get(JsonKey.ROLES))){
+            roles = (List<String>)usrOrgData.get(JsonKey.ROLES);
         }
 
 
-        if(isNull(orgId)||isNull(userId)||isNull(role)){
+        if(isNull(orgId)||isNull(userId)||isNull(roles)){
             //creeate exception here invalid request data and tell the exception , ther return
             ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
             sender().tell(exception, self());
@@ -1211,7 +1211,7 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
 
         updateUserOrgDBO.put(JsonKey.IS_APPROVED, true);
         updateUserOrgDBO.put(JsonKey.IS_REJECTED, false);
-        updateUserOrgDBO.put(JsonKey.ROLE , role);
+        updateUserOrgDBO.put(JsonKey.ROLES , roles);
 
 
         response = cassandraOperation.updateRecord(userOrgDbInfo.getKeySpace() , userOrgDbInfo.getTableName() , updateUserOrgDBO);

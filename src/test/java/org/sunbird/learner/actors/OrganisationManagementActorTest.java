@@ -88,6 +88,7 @@ public class OrganisationManagementActorTest {
       orgMap.put(JsonKey.DESCRIPTION, "Central Board of Secondary Education");
       orgMap.put("orgCode", "CBSE");
       orgMap.put("isRootOrg", true);
+      orgMap.put("channel", "test");
       innerMap.put(JsonKey.ORGANISATION , orgMap);
 
       reqObj.setRequest(innerMap);

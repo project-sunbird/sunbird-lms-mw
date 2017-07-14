@@ -12,9 +12,12 @@ import org.sunbird.common.Constants;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LogHelper;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -286,7 +289,6 @@ public class UserManagementActor extends UntypedAbstractActor {
 		Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
         Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
         Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
-        Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
         Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
         Map<String , Object> req = actorMessage.getRequest();
         Map<String,Object> requestMap = null;
@@ -370,20 +372,8 @@ public class UserManagementActor extends UntypedAbstractActor {
             		processJobProfileInfo(reqMap,userMap,req,addrDbInfo,jobProDbInfo);
             	}
             }
-            if(userMap.containsKey(JsonKey.ORGANISATION)){
-              List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.ORGANISATION);
-              for(int i = 0 ; i < reqList.size() ;i++ ){
-                  Map<String,Object> reqMap = reqList.get(i);
-                  if(reqMap.containsKey(JsonKey.IS_DELETED) && null != reqMap.get(JsonKey.IS_DELETED) && ((boolean)reqMap.get(JsonKey.IS_DELETED)) 
-                      && !ProjectUtil.isStringNullOREmpty((String)reqMap.get(JsonKey.ID))){
-                      deleteRecord(usrOrgDb.getKeySpace(),usrOrgDb.getTableName(),(String)reqMap.get(JsonKey.ID));
-                      continue;
-                  }
-                  processOrganisationInfo(reqMap,userMap,req,addrDbInfo,usrOrgDb);
-              }
-              
-              updateUserExtId(requestMap,usrExtIdDb);
-          }
+           
+        updateUserExtId(requestMap,usrExtIdDb);
         sender().tell(result, self());
         
         Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
@@ -403,49 +393,6 @@ public class UserManagementActor extends UntypedAbstractActor {
 	    logger.error(ex);
 	    ProjectLogger.log(ex.getMessage(), ex);
 	  }
-    }
-
-  private void processOrganisationInfo(Map<String, Object> reqMap, Map<String, Object> userMap,
-        Map<String, Object> req, DbInfo addrDbInfo, DbInfo usrOrgDb) {
-	  String addrId = null;
-      Response addrResponse = null;
-      if(reqMap.containsKey(JsonKey.ADDRESS)){
-          @SuppressWarnings("unchecked")
-          Map<String,Object> address = (Map<String,Object>)reqMap.get(JsonKey.ADDRESS);
-          if(!address.containsKey(JsonKey.ID)){
-              addrId = ProjectUtil.getUniqueIdFromTimestamp(1);
-              address.put(JsonKey.ID, addrId);
-              address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-              address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
-          }else{
-              addrId = (String) address.get(JsonKey.ID);
-              address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-              address.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
-          }
-          try{
-            addrResponse = cassandraOperation.upsertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
-          }catch(Exception ex){
-            logger.error(ex);
-            ProjectLogger.log(ex.getMessage(), ex);
-          }
-      }
-      if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
-          reqMap.put(JsonKey.ADDRESS_ID, addrId);
-          reqMap.remove(JsonKey.ADDRESS);
-      }
-      if(reqMap.containsKey(JsonKey.ID)){
-        reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-        reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
-      }else{
-        reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-        reqMap.put(JsonKey.USER_ID,userMap.get(JsonKey.ID));
-      }
-      try{
-       cassandraOperation.upsertRecord(usrOrgDb.getKeySpace(),usrOrgDb.getTableName(),reqMap);
-      }catch(Exception ex){
-        logger.error(ex);
-         ProjectLogger.log(ex.getMessage(), ex);
-      }
     }
 
   private void processJobProfileInfo(Map<String, Object> reqMap, Map<String, Object> userMap, Map<String, Object> req, DbInfo addrDbInfo, DbInfo jobProDbInfo) {
@@ -701,8 +648,8 @@ public class UserManagementActor extends UntypedAbstractActor {
 	              insertJobProfileDetails(userMap,addrDbInfo,jobProDbInfo);
 	              logger.info("User insertation for Job profile done--.....");
 	            }
-	            if(userMap.containsKey(JsonKey.ORGANISATION)){
-	              insertOrganisationDetails(userMap,addrDbInfo,usrOrgDb);
+	            if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.REGISTERED_ORG_ID))){
+	              insertOrganisationDetails(userMap,usrOrgDb);
 	            }
 	            //update the user external identity data
 	            logger.info("User insertation for extrenal identity started--.....");
@@ -726,43 +673,22 @@ public class UserManagementActor extends UntypedAbstractActor {
             }
     }
 
-    @SuppressWarnings("unchecked")
-    private void insertOrganisationDetails(Map<String, Object> userMap, DbInfo addrDbInfo, DbInfo usrOrgDb) {
+    private void insertOrganisationDetails(Map<String, Object> userMap,DbInfo usrOrgDb) {
 
-      List<Map<String,Object>> reqList = (List<Map<String,Object>>)userMap.get(JsonKey.ORGANISATION);
-      for(int i = 0 ; i < reqList.size() ;i++ ){
-          Map<String,Object> reqMap = reqList.get(i);
-          reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i+1));
-          String addrId = null;
-          Response addrResponse = null;
-          if(reqMap.containsKey(JsonKey.ADDRESS)){
-              Map<String,Object> address = (Map<String,Object>)reqMap.get(JsonKey.ADDRESS);
-              addrId = ProjectUtil.getUniqueIdFromTimestamp(i+1);
-              address.put(JsonKey.ID, addrId);
-              address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-              address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
-              try{
-                addrResponse = cassandraOperation.insertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
-              }catch(Exception e){
-                logger.error(e);
-                ProjectLogger.log(e.getMessage(), e);
-              }
-          }
-          if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
-              reqMap.put(JsonKey.ADDRESS_ID, addrId);
-              reqMap.remove(JsonKey.ADDRESS);
-          }
+          Map<String,Object> reqMap = new HashMap<>();
+          reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
           reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+          reqMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.REGISTERED_ORG_ID));
+          reqMap.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
+          reqMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
+          
           try{
             cassandraOperation.insertRecord(usrOrgDb.getKeySpace(),usrOrgDb.getTableName(),reqMap);
           }catch(Exception e){
             logger.error(e);
             ProjectLogger.log(e.getMessage(), e);
           }
-      }
-  
-    
-  }
+    }
 
     @SuppressWarnings("unchecked")
     private void insertJobProfileDetails(Map<String, Object> userMap, DbInfo addrDbInfo, DbInfo jobProDbInfo) {
@@ -923,6 +849,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     	reqMap.remove(JsonKey.ORGANISATION);
     	reqMap.remove(JsonKey.EMAIL_VERIFIED);
     	reqMap.remove(JsonKey.PHONE_NUMBER_VERIFIED);
+    	reqMap.remove(JsonKey.ROLES);
 	}
 
 	/**

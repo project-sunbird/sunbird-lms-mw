@@ -181,16 +181,15 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   @SuppressWarnings("unchecked")
   private void approveOrg(Request actorMessage) {
 
-    if(!(validateOrgRequest(actorMessage))){
-      logger.info("REQUESTED DATA IS NOT VALID");
-      return;
-    }
-
     try {
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
       Map<String, Object> req =
           (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+      if(!(validateOrgRequest(req))){
+        logger.info("REQUESTED DATA IS NOT VALID");
+        return;
+      }
 
       Map<String, Object> orgDBO;
       Map<String, Object> updateOrgDBO = new HashMap<String, Object>();
@@ -258,16 +257,17 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
    */
   @SuppressWarnings("unchecked")
   private void updateOrgStatus(Request actorMessage) {
-    if(!(validateOrgRequest(actorMessage))){
-      logger.info("REQUESTED DATA IS NOT VALID");
-      return;
-    }
 
     try {
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
       Map<String, Object> req =
           (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+
+      if(!(validateOrgRequest(req))){
+        logger.info("REQUESTED DATA IS NOT VALID");
+        return;
+      }
       Map<String, Object> orgDBO;
       Map<String, Object> updateOrgDBO = new HashMap<String, Object>();
       String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
@@ -329,14 +329,13 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   @SuppressWarnings("unchecked")
   private void updateOrgData(Request actorMessage) throws ProjectCommonException {
 
-    if(!(validateOrgRequest(actorMessage))){
-      logger.info("REQUESTED DATA IS NOT VALID");
-      return;
-    }
-
     try {
       Map<String, Object> req =
           (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+      if(!(validateOrgRequest(req))){
+        logger.info("REQUESTED DATA IS NOT VALID");
+        return;
+      }
       Map<String, Object> addressReq = null;
       if (null != actorMessage.getRequest().get(JsonKey.ADDRESS)) {
         addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
@@ -451,6 +450,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
 
     Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
+    if(!(validateOrgRequest(usrOrgData))){
+      logger.info("REQUESTED DATA IS NOT VALID");
+      return;
+    }
     if (isNull(usrOrgData)) {
       // create exception here and sender.tell the exception and return
       ProjectCommonException exception =
@@ -460,6 +463,11 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       sender().tell(exception, self());
       return;
     }
+
+    //remove source and external id
+    usrOrgData.remove(JsonKey.EXTERNAL_ID);
+    usrOrgData.remove(JsonKey.SOURCE);
+
 
     String updatedBy = null;
     String orgId = null;
@@ -576,6 +584,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
 
     Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
+    if(!(validateOrgRequest(usrOrgData))){
+      logger.info("REQUESTED DATA IS NOT VALID");
+      return;
+    }
     if (isNull(usrOrgData)) {
       // create exception here and sender.tell the exception and return
       ProjectCommonException exception =
@@ -585,6 +597,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       sender().tell(exception, self());
       return;
     }
+
+    //remove source and external id
+    usrOrgData.remove(JsonKey.EXTERNAL_ID);
+    usrOrgData.remove(JsonKey.SOURCE);
 
     String updatedBy = null;
     String orgId = null;
@@ -649,14 +665,12 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   @SuppressWarnings("unchecked")
   private void getOrgDetails(Request actorMessage) {
 
-
-    if(!(validateOrgRequest(actorMessage))){
+    Map<String, Object> req =
+        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+    if(!(validateOrgRequest(req))){
       logger.info("REQUESTED DATA IS NOT VALID");
       return;
     }
-
-    Map<String, Object> req =
-        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
     Map<String, Object> orgDBO;
     String orgId = (String) req.get(JsonKey.ORGANISATION_ID);
     Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName(), orgId);
@@ -677,15 +691,15 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
    */
   @SuppressWarnings({"unchecked", "unused"})
   private void getOrgData(Request actorMessage) {
-    if(!(validateOrgRequest(actorMessage))){
-      logger.info("REQUESTED DATA IS NOT VALID");
-      return;
-    }
 
     Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
     Map<String, Object> req =
         (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+    if(!(validateOrgRequest(req))){
+      logger.info("REQUESTED DATA IS NOT VALID");
+      return;
+    }
     Map<String, Object> orgDBO;
     String orgId = (String) req.get(JsonKey.ORGANISATION_ID);
     Response result =
@@ -721,12 +735,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   @SuppressWarnings({"rawtypes", "unchecked"})
   private void joinUserOrganisation(Request actorMessage) {
 
-    if(!(validateOrgRequest(actorMessage))){
-      logger.info("REQUESTED DATA IS NOT VALID");
-      return;
-    }
-
-    Response response = new Response();
+     Response response = new Response();
 
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
@@ -734,12 +743,20 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
 
     Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
+    if(!(validateOrgRequest(usrOrgData))){
+      logger.info("REQUESTED DATA IS NOT VALID");
+      return;
+    }
     if (isNull(usrOrgData)) {
       //create exception here and sender.tell the exception and return
       ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
       return;
     }
+
+    //remove source and external id
+    usrOrgData.remove(JsonKey.EXTERNAL_ID);
+    usrOrgData.remove(JsonKey.SOURCE);
 
     String updatedBy = null;
     String orgId = null;
@@ -816,11 +833,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   @SuppressWarnings("unchecked")
   private void approveUserOrg(Request actorMessage) {
 
-    if(!(validateOrgRequest(actorMessage))){
-      logger.info("REQUESTED DATA IS NOT VALID");
-      return;
-    }
-
     Response response = new Response();
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
 
@@ -829,12 +841,20 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     String updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
 
     Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
+    if(!(validateOrgRequest(usrOrgData))){
+      logger.info("REQUESTED DATA IS NOT VALID");
+      return;
+    }
     if (isNull(usrOrgData)) {
       //create exception here and sender.tell the exception and return
       ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
       return;
     }
+
+    //remove source and external id
+    usrOrgData.remove(JsonKey.EXTERNAL_ID);
+    usrOrgData.remove(JsonKey.SOURCE);
 
     String orgId = null;
     String userId = null;
@@ -905,11 +925,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
    */
   private void rejectUserOrg(Request actorMessage) {
 
-    if(!(validateOrgRequest(actorMessage))){
-      logger.info("REQUESTED DATA IS NOT VALID");
-      return;
-    }
-
     Response response = new Response();
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
 
@@ -918,12 +933,20 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     String updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
 
     Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
+    if(!(validateOrgRequest(usrOrgData))){
+      logger.info("REQUESTED DATA IS NOT VALID");
+      return;
+    }
     if (isNull(usrOrgData)) {
       //create exception here and sender.tell the exception and return
       ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
       return;
     }
+
+    //remove source and external id
+    usrOrgData.remove(JsonKey.EXTERNAL_ID);
+    usrOrgData.remove(JsonKey.SOURCE);
 
     String orgId = null;
     String userId = null;
@@ -1253,13 +1276,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     return null;
   }
 
-  private boolean validateOrgRequest(Request request) {
+  private boolean validateOrgRequest(Map<String, Object> req) {
 
-    Map<String, Object> req =
-            (Map<String, Object>) request.getRequest().get(JsonKey.ORGANISATION);
-
-    if (isNull(req)) {
-
+    if(isNull(req)){
       ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
       return false;
@@ -1291,7 +1310,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         return false;
       }
 
-      req.put(JsonKey.ORGANISATION_ID, list.get(0).get(JsonKey.ORGANISATION_ID));
+      req.put(JsonKey.ORGANISATION_ID, list.get(0).get(JsonKey.ID));
 
     }
     return true;

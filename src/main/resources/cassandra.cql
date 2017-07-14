@@ -415,4 +415,4 @@ ALTER TABLE sunbird.organisation ADD externalId text;
 //changes on 14th july 2017
 
 ALTER TABLE sunbird.user_org DROP role;
-ALTER TABLE sunbird.user_org ADD role List<text>;
+ALTER TABLE sunbird.user_org ADD roles List<text>;

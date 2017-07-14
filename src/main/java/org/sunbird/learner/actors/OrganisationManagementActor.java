@@ -236,7 +236,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       }
       updateOrgDBO.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
       updateOrgDBO.put(JsonKey.ID, (String) orgDBO.get(JsonKey.ID));
-      updateOrgDBO.put(JsonKey.IS_APPROVED, req.get(JsonKey.IS_APPROVED));
+      updateOrgDBO.put(JsonKey.IS_APPROVED, true);
       updateOrgDBO.put(JsonKey.APPROVED_DATE, ProjectUtil.getFormattedDate());
 
       Response response = cassandraOperation.updateRecord(orgDbInfo.getKeySpace(),

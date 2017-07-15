@@ -5,8 +5,16 @@
     3. Copy pageMgmt.csv and pageSection.csv to a temp folder on cassandra machine. e.g.: /tmp/cql/pageMgmt.csv and /tmp/cql/pageSection.csv.
     4. Execute the command: cqlsh -e "COPY sunbird.page_management(id, appmap,createdby ,createddate ,name ,organisationid ,portalmap ,updatedby ,updateddate ) FROM '/tmp/cql/pageMgmt.csv'"
     5. Execute the command: cqlsh -e "COPY sunbird.page_section(id, alt,createdby ,createddate ,description ,display ,imgurl ,name,searchquery , sectiondatatype ,status , updatedby ,updateddate) FROM '/tmp/cql/pageSection.csv'"
+	
 2. ElasticSearch
     1. Install ElasticSearch database and start the server
+	2. Run this curl command
+	curl -X PUT \
+	  http://localhost:9200/sunbird/org/ORG_001 \
+	  -H 'cache-control: no-cache' \
+	  -H 'content-type: application/json' \
+	  -H 'postman-token: caa7eaa7-2a08-d1f3-1eb2-bf7c73bef663' \
+	  -d '{}'
 
 ## Configuration
 1. Environment Variables:
@@ -34,3 +42,5 @@
 2. To run the actors with custom configuration:
     1. Create **application.conf** file with the custom configuration. Sample [application.conf](https://github.com/ekstep/sunbird-mw/blob/alpha2/actors/learner-actor/src/main/resources/application.conf)
     2. Run the command **java -cp "path_to_folder_containing_custom_application.conf:learner-actor-1.0-SNAPSHOT.jar" org.sunbird.learner.Application**. This will override the default configuration (like hostname, port, etc).
+	
+	

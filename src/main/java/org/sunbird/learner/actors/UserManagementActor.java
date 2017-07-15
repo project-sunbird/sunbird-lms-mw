@@ -632,7 +632,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 		    
             userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
             userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
-            if(ProjectUtil.isStringNullOREmpty(JsonKey.ROOT_ORG_ID)){
+            if(ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.ROOT_ORG_ID))){
               userMap.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
             }
             if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PASSWORD))){

@@ -3,13 +3,16 @@
  */
 package org.sunbird.learner.actors;
 
+import akka.actor.UntypedAbstractActor;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.cassandra.CassandraOperation;
@@ -27,12 +30,6 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.Util;
-import scala.util.parsing.json.JSON;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import akka.actor.UntypedAbstractActor;
 
 /**
  * This class will handle all the background job.

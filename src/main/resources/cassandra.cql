@@ -421,9 +421,8 @@ ALTER TABLE sunbird.user_org DROP role;
 ALTER TABLE sunbird.user_org ADD roles List<text>;
 
 // insert default root organisation -- July 15,2017
-INSERT INTO sunbird.organisation(orgName,description,orgType,imgUrl,channel,preferredLanguage,homeUrl,orgCode,isRootOrg,source,externalId,createdBy,id,createdDate,status,addressId) VALUES
-('Sunbird', 'National Teachers Platform', 'Public', 'N/A', 'NTP', 'English', 'N/A', 'SUNBIRD', true, 'NTP', '10000', '7d086e8c-68ac-4aaa-8b91-d75ff922bae5', '01228880969533849633', '2017-07-15 11:51:23:958+0530', 'active', '01228881509150720034') IF NOT EXISTS;
-
-INSERT INTO sunbird.address(city,state,country,zipCode,id,createdDate,createdBy) VALUES ('Bangalore','KA','INDIA','566666','01228881509150720034','2017-07-15 12:12:41:191+0530','7d086e8c-68ac-4aaa-8b91-d75ff922bae5');
-
 ALTER TABLE sunbird.organisation ADD isDefault boolean;
+
+INSERT INTO sunbird.organisation(id , isRootOrg , isDefault, status) values('ORG_001' , true , true, 'active');
+
+

@@ -304,11 +304,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 	    	UpdateKeyCloakUserBase(userMap);
 	    }
         userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-        userMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
-        if(ProjectUtil.isStringNullOREmpty(JsonKey.ROOT_ORG_ID)){
-          userMap.remove(JsonKey.ROOT_ORG_ID);
-        }
-        
+        userMap.put(JsonKey.UPDATED_BY, req.get(userMap.get(JsonKey.REQUESTED_BY)));
         requestMap = new HashMap<>();
         requestMap.putAll(userMap);
         if(!userMap.containsKey(JsonKey.ROLES)){
@@ -888,6 +884,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     	reqMap.remove(JsonKey.ROLES);
     	reqMap.remove(JsonKey.REGISTERED_ORG);
     	reqMap.remove(JsonKey.ROOT_ORG);
+    	reqMap.remove(JsonKey.IDENTIFIER);
 	}
 
 	/**

@@ -305,6 +305,9 @@ public class UserManagementActor extends UntypedAbstractActor {
 	    }
         userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
         userMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+        if(ProjectUtil.isStringNullOREmpty(JsonKey.ROOT_ORG_ID)){
+          userMap.remove(JsonKey.ROOT_ORG_ID);
+        }
         
         requestMap = new HashMap<>();
         requestMap.putAll(userMap);
@@ -629,6 +632,9 @@ public class UserManagementActor extends UntypedAbstractActor {
 		    
             userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
             userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
+            if(ProjectUtil.isStringNullOREmpty(JsonKey.ROOT_ORG_ID)){
+              userMap.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
+            }
             if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PASSWORD))){
               userMap.put(JsonKey.PASSWORD,OneWayHashing.encryptVal((String)userMap.get(JsonKey.PASSWORD)));
             }

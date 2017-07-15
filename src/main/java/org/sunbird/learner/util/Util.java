@@ -81,7 +81,7 @@ public class Util {
         if(null == list){
             return false;
         }
-        return list.contains(nextState);
+        return list.contains(nextState.toLowerCase());
     }
 
     public static void checkCassandraDbConnections() {

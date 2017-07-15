@@ -128,6 +128,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       req.put(JsonKey.ID, uniqueId);
       req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
       req.put(JsonKey.STATUS , ProjectUtil.OrgStatus.ACTIVE.getValue());
+      //removing default from request, not allowing user to create default org.
+      req.remove(JsonKey.DEFAULT);
 
       // update address if present in request
       if (null != addressReq && addressReq.size() > 0) {
@@ -341,6 +343,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
       }
       String relation = (String) req.get(JsonKey.RELATION);
+    //removing default from request, not allowing user to create default org.
+      req.remove(JsonKey.DEFAULT);
       req.remove(JsonKey.RELATION);
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
       String parentOrg = (String) req.get(JsonKey.PARENT_ORG_ID);

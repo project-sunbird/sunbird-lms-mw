@@ -245,6 +245,12 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           orgDbInfo.getTableName(), updateOrgDBO);
       response.getResult().put(JsonKey.ORGANISATION_ID, orgDBO.get(JsonKey.ID));
       sender().tell(response, self());
+      // update the ES --
+      Response orgResponse =  new Response();
+      Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+      orgResponse.put(JsonKey.ORGANISATION, updateOrgDBO);
+      orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
+      Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
       return;
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
@@ -316,6 +322,12 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           orgDbInfo.getTableName(), updateOrgDBO);
       response.getResult().put(JsonKey.ORGANISATION_ID, orgDBO.get(JsonKey.ID));
       sender().tell(response, self());
+      // update the ES --
+      Response orgResponse =  new Response();
+      Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+      orgResponse.put(JsonKey.ORGANISATION, updateOrgDBO);
+      orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
+      Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
       return;
     } catch (ProjectCommonException e) {
       sender().tell(e, self());

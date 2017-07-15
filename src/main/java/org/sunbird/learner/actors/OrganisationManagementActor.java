@@ -114,10 +114,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       req.remove(JsonKey.RELATION);
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
       String parentOrg = (String) req.get(JsonKey.PARENT_ORG_ID);
+      validateChannelIdForRootOrg(req);
       Boolean isValidParent = false;
       if (!ProjectUtil.isStringNullOREmpty(parentOrg) && isValidParent(parentOrg)) {
         validateRootOrg(req);
-        validateChannelIdForRootOrg(req);
         isValidParent = true;
       }
       String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
@@ -212,7 +212,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         return;
       }
 
-      boolean isApprove = (boolean) req.get(JsonKey.IS_APPROVED);
+      boolean isApprove = true;
 
       if (isApprove) {
 
@@ -236,7 +236,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       }
       updateOrgDBO.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
       updateOrgDBO.put(JsonKey.ID, (String) orgDBO.get(JsonKey.ID));
-      updateOrgDBO.put(JsonKey.IS_APPROVED, req.get(JsonKey.IS_APPROVED));
+      updateOrgDBO.put(JsonKey.IS_APPROVED, true);
       updateOrgDBO.put(JsonKey.APPROVED_DATE, ProjectUtil.getFormattedDate());
 
       Response response = cassandraOperation.updateRecord(orgDbInfo.getKeySpace(),
@@ -344,13 +344,12 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       req.remove(JsonKey.RELATION);
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
       String parentOrg = (String) req.get(JsonKey.PARENT_ORG_ID);
+      validateChannelIdForRootOrg(req);
       Boolean isValidParent = false;
-      logger.info(parentOrg);
       ProjectLogger.log("Parent Org Id:"+ parentOrg);
       if (!ProjectUtil.isStringNullOREmpty(parentOrg) && isValidParent(parentOrg)) {
         validateCyclicRelationForOrganisation(req);
         validateRootOrg(req);
-        validateChannelIdForRootOrg(req);
         isValidParent = true;
       }
       Map<String, Object> orgDBO;
@@ -554,7 +553,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       usrOrgData.put(JsonKey.ADDED_BY, updatedBy);
       usrOrgData.put(JsonKey.APPROVED_BY, updatedBy);
       if(!ProjectUtil.isStringNullOREmpty(updatedByName)){
-         usrOrgData.put(JsonKey.ADDED_BY_NAME, Util.getUserNamebyUserId(updatedBy));
+         usrOrgData.put(JsonKey.ADDED_BY_NAME, updatedByName);
       }
     }
     usrOrgData.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());

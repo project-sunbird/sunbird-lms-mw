@@ -354,6 +354,15 @@ public class UserManagementActor extends UntypedAbstractActor {
             		Map<String,Object> reqMap = reqList.get(i);
             		if(reqMap.containsKey(JsonKey.IS_DELETED) && null != reqMap.get(JsonKey.IS_DELETED) && ((boolean)reqMap.get(JsonKey.IS_DELETED)) 
             		    && !ProjectUtil.isStringNullOREmpty((String)reqMap.get(JsonKey.ID))){
+            		    String addrsId = null;
+            		    if(reqMap.containsKey(JsonKey.ADDRESS) && null != reqMap.get(JsonKey.ADDRESS)){
+            		      addrsId = (String)((Map<String,Object>)reqMap.get(JsonKey.ADDRESS)).get(JsonKey.ID);
+            		      deleteRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),addrsId);
+            		    }else{
+            		      addrsId = getAddressId((String)reqMap.get(JsonKey.ID),eduDbInfo);
+            		      if(null != addrsId)
+            		      deleteRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),addrsId);
+            		    }
                         deleteRecord(eduDbInfo.getKeySpace(),eduDbInfo.getTableName(),(String)reqMap.get(JsonKey.ID));
                         continue;
                     }
@@ -366,6 +375,15 @@ public class UserManagementActor extends UntypedAbstractActor {
             		Map<String,Object> reqMap = reqList.get(i);
             		if(reqMap.containsKey(JsonKey.IS_DELETED) && null != reqMap.get(JsonKey.IS_DELETED) && ((boolean)reqMap.get(JsonKey.IS_DELETED)) 
             		    && !ProjectUtil.isStringNullOREmpty((String)reqMap.get(JsonKey.ID))){
+            		  String addrsId = null;
+            		  if(reqMap.containsKey(JsonKey.ADDRESS) && null != reqMap.get(JsonKey.ADDRESS)){
+                        addrsId = (String)((Map<String,Object>)reqMap.get(JsonKey.ADDRESS)).get(JsonKey.ID);
+                        deleteRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),addrsId);
+                      }else{
+                        addrsId = getAddressId((String)reqMap.get(JsonKey.ID),eduDbInfo);
+                        if(null != addrsId)
+                        deleteRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),addrsId);
+                      }
                         deleteRecord(jobProDbInfo.getKeySpace(),jobProDbInfo.getTableName(),(String)reqMap.get(JsonKey.ID));
                         continue;
                     }
@@ -386,7 +404,19 @@ public class UserManagementActor extends UntypedAbstractActor {
 	}
 
 
-	private void deleteRecord(String keyspaceName, String tableName, String id) {
+	private String getAddressId(String id, DbInfo eduDbInfo) {
+      String addressId = null;
+      try{
+      Response res= cassandraOperation.getPropertiesValueById(eduDbInfo.getKeySpace(), eduDbInfo.getTableName(), id, JsonKey.ADDRESS_ID);
+        addressId = (String) (((List<Map<String,Object>>)res.get(JsonKey.RESPONSE)).get(0)).get(JsonKey.ADDRESS_ID);
+      }catch(Exception ex){
+        logger.error(ex);
+        ProjectLogger.log(ex.getMessage(), ex);
+      }
+      return addressId;
+    }
+
+  private void deleteRecord(String keyspaceName, String tableName, String id) {
 	  try{
 	    cassandraOperation.deleteRecord(keyspaceName, tableName, id);
 	  }catch(Exception ex){
@@ -850,6 +880,8 @@ public class UserManagementActor extends UntypedAbstractActor {
     	reqMap.remove(JsonKey.EMAIL_VERIFIED);
     	reqMap.remove(JsonKey.PHONE_NUMBER_VERIFIED);
     	reqMap.remove(JsonKey.ROLES);
+    	reqMap.remove(JsonKey.REGISTERED_ORG);
+    	reqMap.remove(JsonKey.ROOT_ORG);
 	}
 
 	/**

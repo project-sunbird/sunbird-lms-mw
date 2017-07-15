@@ -127,7 +127,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
       req.put(JsonKey.ID, uniqueId);
       req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-      req.put(JsonKey.STATUS , ProjectUtil.OrgStatus.ACTIVE.name());
+      req.put(JsonKey.STATUS , ProjectUtil.OrgStatus.ACTIVE.getValue());
+      //removing default from request, not allowing user to create default org.
+      req.remove(JsonKey.DEFAULT);
 
       // update address if present in request
       if (null != addressReq && addressReq.size() > 0) {
@@ -243,6 +245,12 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           orgDbInfo.getTableName(), updateOrgDBO);
       response.getResult().put(JsonKey.ORGANISATION_ID, orgDBO.get(JsonKey.ID));
       sender().tell(response, self());
+      // update the ES --
+      Response orgResponse =  new Response();
+      Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+      orgResponse.put(JsonKey.ORGANISATION, updateOrgDBO);
+      orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
+      Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
       return;
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
@@ -314,6 +322,12 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           orgDbInfo.getTableName(), updateOrgDBO);
       response.getResult().put(JsonKey.ORGANISATION_ID, orgDBO.get(JsonKey.ID));
       sender().tell(response, self());
+      // update the ES --
+      Response orgResponse =  new Response();
+      Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+      orgResponse.put(JsonKey.ORGANISATION, updateOrgDBO);
+      orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
+      Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
       return;
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
@@ -341,6 +355,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
       }
       String relation = (String) req.get(JsonKey.RELATION);
+    //removing default from request, not allowing user to create default org.
+      req.remove(JsonKey.DEFAULT);
       req.remove(JsonKey.RELATION);
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
       String parentOrg = (String) req.get(JsonKey.PARENT_ORG_ID);

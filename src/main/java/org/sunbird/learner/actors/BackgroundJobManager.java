@@ -3,13 +3,16 @@
  */
 package org.sunbird.learner.actors;
 
+import akka.actor.UntypedAbstractActor;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.cassandra.CassandraOperation;
@@ -27,12 +30,6 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.Util;
-import scala.util.parsing.json.JSON;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import akka.actor.UntypedAbstractActor;
 
 /**
  * This class will handle all the background job.
@@ -127,7 +124,6 @@ public class BackgroundJobManager extends UntypedAbstractActor{
     Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
-    Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
     Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
     Response response = null;
     List<Map<String,Object>> list = null;
@@ -226,46 +222,12 @@ public class BackgroundJobManager extends UntypedAbstractActor{
             }
             map.put(JsonKey.JOB_PROFILE, list);
 
-        Response usrOrgResponse = null;
-        list = null;
-        try{
-          LOGGER.debug("collecting user Org response ==" + userId);
-          usrOrgResponse = cassandraOperation.getRecordsByProperty(usrOrgDb.getKeySpace(),usrOrgDb.getTableName(), JsonKey.USER_ID, userId);
-          list = (List<Map<String,Object>>)usrOrgResponse.getResult().get(JsonKey.RESPONSE);
-          LOGGER.debug("collecting user Org response completed ==" + userId);
-        }catch(Exception e){
-          LOGGER.error(e);
-          ProjectLogger.log(e.getMessage(), e);
-        }finally{
-          if(null == list )
-          list=new ArrayList<Map<String,Object>>();
-        }
-            for(Map<String,Object> eduMap : list){
-                String addressId = (String)eduMap.get(JsonKey.ADDRESS_ID);
-                if(!ProjectUtil.isStringNullOREmpty(addressId)){
-                  Response addrResponseMap = null;
-                  List<Map<String,Object>> addrList = null;
-                  try{
-                    addrResponseMap = cassandraOperation.getRecordById(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(), addressId);
-                    addrList = (List<Map<String,Object>>)addrResponseMap.getResult().get(JsonKey.RESPONSE);
-                  }catch(Exception e){
-                    LOGGER.error(e);
-                    ProjectLogger.log(e.getMessage(), e);
-                  }finally{
-                    if(null == addrList )
-                    addrList=new ArrayList<Map<String,Object>>();
-                  }
-                        eduMap.put(JsonKey.ADDRESS, addrList.get(0));
-                }
-            }
-            map.put(JsonKey.ORGANISATION, list);
-
        Util.removeAttributes(map, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY, JsonKey.ID));
     }else {
       LOGGER.debug("User data not found to save to ES ==" + userId);
     }
     if(((List<Map<String,String>>)response.getResult().get(JsonKey.RESPONSE)).size()>0){
-      LOGGER.info("saving statretd user to es==" + userId);
+      LOGGER.info("saving statrted user to es==" + userId);
       Map<String,Object> map = ((List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE)).get(0);
       insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(),
           userId,map);

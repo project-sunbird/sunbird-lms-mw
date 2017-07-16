@@ -403,11 +403,14 @@ public class UserManagementActor extends UntypedAbstractActor {
 	}
 
 
-	private String getAddressId(String id, DbInfo eduDbInfo) {
+	@SuppressWarnings("unchecked")
+  private String getAddressId(String id, DbInfo eduDbInfo) {
       String addressId = null;
       try{
       Response res= cassandraOperation.getPropertiesValueById(eduDbInfo.getKeySpace(), eduDbInfo.getTableName(), id, JsonKey.ADDRESS_ID);
+      if(!((List<Map<String,Object>>)res.get(JsonKey.RESPONSE)).isEmpty()){
         addressId = (String) (((List<Map<String,Object>>)res.get(JsonKey.RESPONSE)).get(0)).get(JsonKey.ADDRESS_ID);
+      }
       }catch(Exception ex){
         logger.error(ex);
         ProjectLogger.log(ex.getMessage(), ex);
@@ -1203,6 +1206,7 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
         Map<String , Object> req = actorMessage.getRequest();
         String updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
 
+        @SuppressWarnings("unchecked")
         Map<String , Object> usrOrgData = (Map<String , Object>)req.get(JsonKey.USER_ORG);
         if(isNull(usrOrgData)){
             //create exception here and sender.tell the exception and return
@@ -1236,6 +1240,7 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
 
         Response result = cassandraOperation.getRecordsByProperties(userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName() , requestData);
 
+        @SuppressWarnings("unchecked")
         List<Map<String , Object>> list =(List<Map<String , Object>>)result.get(JsonKey.RESPONSE);
         if(list.size()==0){
             // user already enrolled for the organisation

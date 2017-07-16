@@ -498,7 +498,11 @@ public class UserManagementActor extends UntypedAbstractActor {
 			reqMap.put(JsonKey.ADDRESS_ID, addrId);
 			reqMap.remove(JsonKey.ADDRESS);
 		}
-    	reqMap.put(JsonKey.YEAR_OF_PASSING, ((BigInteger)reqMap.get(JsonKey.YEAR_OF_PASSING)).intValue());
+		try{
+    	  reqMap.put(JsonKey.YEAR_OF_PASSING, ((BigInteger)reqMap.get(JsonKey.YEAR_OF_PASSING)).intValue());
+		}catch(Exception ex){
+		  logger.error(ex);
+		}
     	
     	if(null != reqMap.get(JsonKey.PERCENTAGE)){
     		reqMap.put(JsonKey.PERCENTAGE, Double.parseDouble(String.valueOf(reqMap.get(JsonKey.PERCENTAGE))));
@@ -788,7 +792,11 @@ public class UserManagementActor extends UntypedAbstractActor {
               reqMap.put(JsonKey.ADDRESS_ID, addrId);
               reqMap.remove(JsonKey.ADDRESS);
           }
+          try{
           reqMap.put(JsonKey.YEAR_OF_PASSING, ((BigInteger)reqMap.get(JsonKey.YEAR_OF_PASSING)).intValue());
+          }catch(Exception ex){
+            logger.error(ex);
+          }
           if(null != reqMap.get(JsonKey.PERCENTAGE)){
               reqMap.put(JsonKey.PERCENTAGE, Double.parseDouble(String.valueOf(reqMap.get(JsonKey.PERCENTAGE))));
           }

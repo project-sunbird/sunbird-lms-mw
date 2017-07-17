@@ -110,9 +110,36 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       if (null != actorMessage.getRequest().get(JsonKey.ADDRESS)) {
         addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
       }
+      Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+      //validate if Source and exteral id is in request , it should not alredy exist in DataBase .....
+      if(req.containsKey(JsonKey.SOURCE) || req.containsKey(JsonKey.EXTERNAL_ID)) {
+        if (isNull(req.get(JsonKey.SOURCE)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
+          ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+          sender().tell(exception, self());
+          return;
+        }
+
+        Map<String , Object> dbMap = new HashMap<String , Object>();
+        dbMap.put(JsonKey.SOURCE ,req.get(JsonKey.SOURCE));
+        dbMap.put(JsonKey.EXTERNAL_ID ,req.get(JsonKey.EXTERNAL_ID));
+        Response result = cassandraOperation.getRecordsByProperties(orgDbInfo.getKeySpace(),
+                orgDbInfo.getTableName(), dbMap);
+        List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+        if (!(list.isEmpty())) {
+          logger.info("Org exist with Source "+req.get(JsonKey.SOURCE)+" , External Id "+req.get(JsonKey.EXTERNAL_ID));
+          ProjectLogger.log("Org exist with Source "+req.get(JsonKey.SOURCE)+" , External Id "+req.get(JsonKey.EXTERNAL_ID));
+          ProjectCommonException exception =
+                  new ProjectCommonException(ResponseCode.sourceAndExternalIdAlreadyExist.getErrorCode(),
+                          ResponseCode.sourceAndExternalIdAlreadyExist.getErrorMessage(),
+                          ResponseCode.CLIENT_ERROR.getResponseCode());
+          sender().tell(exception, self());
+          return;
+        }
+      }
+
       String relation = (String) req.get(JsonKey.RELATION);
       req.remove(JsonKey.RELATION);
-      Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+
       String parentOrg = (String) req.get(JsonKey.PARENT_ORG_ID);
       validateChannelIdForRootOrg(req);
       Boolean isValidParent = false;
@@ -345,12 +372,43 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   @SuppressWarnings("unchecked")
   private void updateOrgData(Request actorMessage) throws ProjectCommonException {
 
+    Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
     try {
       Map<String, Object> req =
           (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
       if(!(validateOrgRequest(req))){
         logger.info("REQUESTED DATA IS NOT VALID");
         return;
+      }
+      //validate if Source and exteral id is in request , it should not alredy exist in DataBase .....
+      if(req.containsKey(JsonKey.SOURCE) || req.containsKey(JsonKey.EXTERNAL_ID)) {
+        if (isNull(req.get(JsonKey.SOURCE)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
+          ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+          sender().tell(exception, self());
+          return;
+        }
+
+        Map<String , Object> dbMap = new HashMap<String , Object>();
+        dbMap.put(JsonKey.SOURCE ,req.get(JsonKey.SOURCE));
+        dbMap.put(JsonKey.EXTERNAL_ID ,req.get(JsonKey.EXTERNAL_ID));
+        Response result = cassandraOperation.getRecordsByProperties(orgDbInfo.getKeySpace(),
+                orgDbInfo.getTableName(), dbMap);
+        List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+        if (!(list.isEmpty())) {
+          String organisationId = (String) list.get(0).get(JsonKey.ID);
+
+          if (!(req.get(JsonKey.ORGANISATION_ID).equals(organisationId))) {
+
+            logger.info("Org exist with Source " + req.get(JsonKey.SOURCE) + " , External Id " + req.get(JsonKey.EXTERNAL_ID));
+            ProjectLogger.log("Org exist with Source " + req.get(JsonKey.SOURCE) + " , External Id " + req.get(JsonKey.EXTERNAL_ID));
+            ProjectCommonException exception =
+                    new ProjectCommonException(ResponseCode.sourceAndExternalIdAlreadyExist.getErrorCode(),
+                            ResponseCode.sourceAndExternalIdAlreadyExist.getErrorMessage(),
+                            ResponseCode.CLIENT_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;
+          }
+        }
       }
       Map<String, Object> addressReq = null;
       if (null != actorMessage.getRequest().get(JsonKey.ADDRESS)) {
@@ -360,7 +418,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     //removing default from request, not allowing user to create default org.
       req.remove(JsonKey.IS_DEFAULT);
       req.remove(JsonKey.RELATION);
-      Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+
       String parentOrg = (String) req.get(JsonKey.PARENT_ORG_ID);
       validateChannelIdForRootOrg(req);
       Boolean isValidParent = false;

@@ -216,7 +216,16 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
         if (null == obj || ((String)obj).equalsIgnoreCase(JsonKey.NULL)) {
             return null;
         }
-        return formatter.parse((String) obj);
+        Date date = null;
+        try {
+            date = formatter.parse((String)obj);
+        } catch (ParseException ex) {
+            ex.printStackTrace();
+            ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidDateFormat.getErrorCode(), ResponseCode.invalidDateFormat.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+            throw exception;
+
+        }
+        return date;
     }
 
     private String compareTime(Date currentValue, Date requestedValue) {

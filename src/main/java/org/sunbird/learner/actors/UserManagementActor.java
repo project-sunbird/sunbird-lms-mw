@@ -494,7 +494,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 			  addrResponse = cassandraOperation.upsertRecord(addrDbInfo.getKeySpace(),addrDbInfo.getTableName(),address);
 			}catch(Exception ex){
               logger.error(ex);
-              ProjectLogger.log(ex.getMessage(), ex);;
+              ProjectLogger.log(ex.getMessage(), ex);
             }
 		}
 		if(null!= addrResponse && ((String)addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
@@ -531,17 +531,6 @@ public class UserManagementActor extends UntypedAbstractActor {
 
 	@SuppressWarnings("unchecked")
 	private void checkForEmailAndUserNameUniqueness(Map<String, Object> userMap, DbInfo usrDbInfo) {
-   		/*String email = (String)userMap.get(JsonKey.EMAIL);
-        Response resultFrEmail = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.EMAIL,email);
-        if(((List<Map<String,Object>>)resultFrEmail.get(JsonKey.RESPONSE)).size() != 0){
-        	Map<String,Object> dbusrMap = ((List<Map<String,Object>>)resultFrEmail.get(JsonKey.RESPONSE)).get(0);
-        	String usrId = (String) dbusrMap.get(JsonKey.USER_ID);
-        	if(!(usrId.equals(userMap.get(JsonKey.ID)))){
-        		ProjectCommonException exception = new ProjectCommonException(ResponseCode.emailAlreadyExistError.getErrorCode(), ResponseCode.emailAlreadyExistError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
-	            sender().tell(exception, self());
-	            return;
-        	}
-        }*/
         if(null != userMap.get(JsonKey.USERNAME)){
 	        String userName = (String)userMap.get(JsonKey.USERNAME);
 	        Response resultFruserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.USERNAME,userName);
@@ -678,22 +667,22 @@ public class UserManagementActor extends UntypedAbstractActor {
 	                    }
 	            	}
 	            }
-	            logger.info("User insertation on DB started--.....");
+	            logger.info("User insertion on DB started--.....");
 	            if(userMap.containsKey(JsonKey.EDUCATION)){
 	              insertEducationDetails(userMap,addrDbInfo,eduDbInfo);
-	              logger.info("User insertation for Education done--.....");
+	              logger.info("User insertion for Education done--.....");
 	            }
 	            if(userMap.containsKey(JsonKey.JOB_PROFILE)){
 	              insertJobProfileDetails(userMap,addrDbInfo,jobProDbInfo);
-	              logger.info("User insertation for Job profile done--.....");
+	              logger.info("User insertion for Job profile done--.....");
 	            }
 	            if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.REGISTERED_ORG_ID))){
 	              insertOrganisationDetails(userMap,usrOrgDb);
 	            }
 	            //update the user external identity data
-	            logger.info("User insertation for extrenal identity started--.....");
+	            logger.info("User insertion for extrenal identity started--.....");
 	            updateUserExtId(requestMap,usrExtIdDb);
-	            logger.info("User insertation for extrenal identity completed--.....");
+	            logger.info("User insertion for extrenal identity completed--.....");
             }
             
             logger.info("User created successfully....."); 
@@ -1057,7 +1046,7 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
 		}
 
 		if(isNull(orgId)||isNull(userId)){
-			//create exception here invalid request data and tell the exception , ther return
+			//create exception here invalid request data and tell the exception , then return
 			ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
 			sender().tell(exception, self());
 			return;
@@ -1147,7 +1136,7 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
 
 
         if(isNull(orgId)||isNull(userId)||isNull(roles)){
-            //creeate exception here invalid request data and tell the exception , ther return
+            //create exception here invalid request data and tell the exception , then return
             ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
             sender().tell(exception, self());
             return;
@@ -1227,7 +1216,7 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
         }
 
         if(isNull(orgId)||isNull(userId)){
-            //creeate exception here invalid request data and tell the exception , ther return
+            //creating exception here, invalid request data and tell the exception , then return
             ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
             sender().tell(exception, self());
             return;

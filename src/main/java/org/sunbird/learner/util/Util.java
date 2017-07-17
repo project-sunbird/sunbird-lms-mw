@@ -379,19 +379,20 @@ public class Util {
         JSONObject jObject;
         ObjectMapper mapper = new ObjectMapper();
         try {
-            response = HttpUtil.sendPostRequest(PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTNET_SEARCH_URL),
+          String baseSearchUrl = System.getenv(JsonKey.EKSTEP_CONTENT_SEARCH_BASE_URL);
+          if(ProjectUtil.isStringNullOREmpty(baseSearchUrl)){
+            baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_BASE_URL);
+          }
+            response = HttpUtil.sendPostRequest(baseSearchUrl+PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTNET_SEARCH_URL),
                     (String) section.get(JsonKey.SEARCH_QUERY), headers);
             jObject = new JSONObject(response);
             data = jObject.getJSONObject(JsonKey.RESULT);
             JSONArray contentArray = data.getJSONArray(JsonKey.CONTENT);
             section.put(JsonKey.CONTENTS, mapper.readValue(contentArray.toString(), Object[].class));
-        } catch (IOException e) {
+        } catch (IOException | JSONException e) {
             logger.error(e.getMessage(), e);
             ProjectLogger.log(e.getMessage(), e);
-        } catch (JSONException e) {
-            logger.error(e.getMessage(), e);
-            ProjectLogger.log(e.getMessage(), e);
-        }
+        } 
     }
 
     public static boolean isNull(Object obj){

@@ -150,6 +150,7 @@ CREATE INDEX inx_uei_userid ON sunbird.user_external_identity (userId);
 CREATE INDEX inx_uei_externalId ON sunbird.user_external_identity (externalId);
 CREATE INDEX inx_uei_source ON sunbird.user_external_identity (source);
 
+//Address Type values(permanent, current, office, home)
 CREATE TABLE IF NOT EXISTS sunbird.address(id text, userId text, country text,state text,city text,zipCode text,addType text,createdDate text,createdBy text,updatedDate text,updatedBy text, PRIMARY KEY (id));
 CREATE INDEX inx_add_userid ON sunbird.address (userId);
 CREATE INDEX inx_add_addType ON sunbird.address (addType);
@@ -424,5 +425,8 @@ ALTER TABLE sunbird.user_org ADD roles List<text>;
 ALTER TABLE sunbird.organisation ADD isDefault boolean;
 
 INSERT INTO sunbird.organisation(id , isRootOrg , isDefault, status) values('ORG_001' , true , true, 'active');
+
+
+
 
 

@@ -207,6 +207,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 		String pageName = (String) req.get(JsonKey.PAGE_NAME);
 		String source = (String) req.get(JsonKey.SOURCE);
 		String orgCode = (String) req.get(JsonKey.ORG_CODE);
+		Map<String,String> headers = (Map<String, String>) actorMessage.getRequest().get(JsonKey.HEADER);
 		Map<String,Object> reqFilters = (Map<String, Object>) req.get(JsonKey.FILTERS);
 		List<Map<String, Object>> result = null;
 		try{
@@ -252,7 +253,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 			for(Object obj : arr){
 				Map<String,Object>  sectionMap = (Map<String, Object>) obj ;
 				Map<String, Object> sectionData = DataCacheHandler.sectionMap.get((String)sectionMap.get(JsonKey.ID));
-				getContentData(sectionData,reqFilters);
+				getContentData(sectionData,reqFilters,headers);
 				sectionData.put(JsonKey.GROUP, sectionMap.get(JsonKey.GROUP));
 				sectionData.put(JsonKey.INDEX, sectionMap.get(JsonKey.INDEX));
 				removeUnwantedData(sectionData,"getPageData");
@@ -402,7 +403,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 	}
 
 	@SuppressWarnings("unchecked")
-  private void getContentData(Map<String, Object> section,Map<String, Object> reqFilters) {
+  private void getContentData(Map<String, Object> section,Map<String, Object> reqFilters, Map<String, String> headers) {
       ObjectMapper mapper = new ObjectMapper();
       Map<String, Object> map = new HashMap<>();
       try {
@@ -412,7 +413,7 @@ public class PageManagementActor extends UntypedAbstractActor {
       }
       Map<String, Object> filters = (Map<String, Object>) ((Map<String, Object>)map.get(JsonKey.REQUEST)).get(JsonKey.FILTERS);
 	    applyFilters(filters,reqFilters);
-		Object[] result = EkStepRequestUtil.searchContent((String) section.get(JsonKey.SEARCH_QUERY));
+		Object[] result = EkStepRequestUtil.searchContent((String) section.get(JsonKey.SEARCH_QUERY),headers);
 		if (null != result)
 			section.put(JsonKey.CONTENTS, result);
 	}

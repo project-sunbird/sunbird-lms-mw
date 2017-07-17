@@ -103,7 +103,7 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
     	if (!ProjectUtil.isStringNullOREmpty(courseId)) {
     		try {
     			String query = EKSTEP_COURSE_SEARCH_QUERY.replaceAll("COURSE_ID_PLACEHOLDER", courseId);
-        		Object[] result = EkStepRequestUtil.searchContent(query);
+        		Object[] result = EkStepRequestUtil.searchContent(query,null);
         		if (null != result && result.length > 0) {
         			Object contentObject = result[0];
         			Map<String, Object> map = (Map<String, Object>) contentObject;

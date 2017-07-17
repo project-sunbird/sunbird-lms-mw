@@ -17,7 +17,6 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LogHelper;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
@@ -34,7 +33,6 @@ import scala.concurrent.duration.Duration;
  * @author Manzarul
  */
 public class CourseManagementActor extends UntypedAbstractActor {
-    private LogHelper logger = LogHelper.getInstance(CourseManagementActor.class.getName());
 
      private CassandraOperation cassandraOperation = new CassandraOperationImpl();
      private Util.DbInfo dbInfo = null;
@@ -48,7 +46,6 @@ public class CourseManagementActor extends UntypedAbstractActor {
     public void onReceive(Object message) throws Throwable {
         if (message instanceof Request) {
             try {
-                logger.info("CourseManagementActor  onReceive called");
                 ProjectLogger.log("CourseManagementActor  onReceive called");
                 dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_MANAGEMENT_DB);
                 Request actorMessage = (Request) message;
@@ -66,18 +63,16 @@ public class CourseManagementActor extends UntypedAbstractActor {
                     deleteCourse(actorMessage);
 
                 } else {
-                    logger.info("UNSUPPORTED OPERATION");
                     ProjectLogger.log("UNSUPPORTED OPERATION");
                     ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
                     sender().tell(exception, self());
                 }
             }catch(Exception ex){
-                logger.error(ex);
+                ProjectLogger.log(ex.getMessage(), ex);
                 sender().tell(ex, self());
             }
         } else {
             // Throw exception as message body
-            logger.info("UNSUPPORTED MESSAGE");
             ProjectLogger.log("UNSUPPORTED MESSAGE");
             ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
             sender().tell(exception, self());

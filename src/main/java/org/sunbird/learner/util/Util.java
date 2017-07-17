@@ -26,7 +26,6 @@ import java.util.*;
 public class Util {
 
     public static Map<String, DbInfo> dbInfoMap = new HashMap<String, DbInfo>();
-    private static LogHelper logger = LogHelper.getInstance(Util.class.getName());
     private static final String KEY_SPACE_NAME = "sunbird";
     private static Properties prop = new Properties();
     private static Map<String, String> headers = new HashMap<String, String>();
@@ -86,7 +85,6 @@ public class Util {
 
     public static void checkCassandraDbConnections() {
         if (readConfigFromEnv()) {
-            logger.info("db connection is created from System env variable.");
             ProjectLogger.log("db connection is created from System env variable.");
             return ;
         }   
@@ -106,15 +104,12 @@ public class Util {
                 boolean result = CassandraConnectionManager.createConnection(ip, port, userName,
                         password, keyspace);
                 if (result) {
-                    logger.info("CONNECTION CREATED SUCCESSFULLY FOR IP: " + ip + " : KEYSPACE :" + keyspace);
-                      ProjectLogger.log("CONNECTION CREATED SUCCESSFULLY FOR IP: " + ip + " : KEYSPACE :" + keyspace);
+                      ProjectLogger.log("CONNECTION CREATED SUCCESSFULLY FOR IP: " + ip + " : KEYSPACE :" + keyspace, LoggerEnum.INFO.name());
                     } else {
-                    logger.info("CONNECTION CREATION FAILED FOR IP: " + ip + " : KEYSPACE :" + keyspace);
                       ProjectLogger.log("CONNECTION CREATION FAILED FOR IP: " + ip + " : KEYSPACE :" + keyspace);
                     }
 
             } catch (ProjectCommonException ex) {
-                logger.error(ex);
                 ProjectLogger.log(ex.getMessage(), ex);
                 }
 
@@ -132,7 +127,6 @@ public class Util {
         String envPort = System.getenv(JsonKey.SUNBIRD_CASSANDRA_PORT);
         
         if (ProjectUtil.isStringNullOREmpty(ips) || ProjectUtil.isStringNullOREmpty(envPort) ) {
-            logger.info("Configuration value is not coming form System variable.");
             ProjectLogger.log("Configuration value is not coming form System variable.");
             return response;
         }
@@ -146,15 +140,12 @@ public class Util {
             try {
                 boolean result = CassandraConnectionManager.createConnection(ip, port, userName, password, KEY_SPACE_NAME);
                 if (result) {
-                    logger.info("CONNECTION CREATED SUCCESSFULLY FOR IP: " + ip + " : KEYSPACE :" + KEY_SPACE_NAME);
                     ProjectLogger.log("CONNECTION CREATED SUCCESSFULLY FOR IP: " + ip + " : KEYSPACE :" + KEY_SPACE_NAME, LoggerEnum.INFO.name());
                 } else {
-                    logger.info("CONNECTION CREATION FAILED FOR IP: " + ip + " : KEYSPACE :" + KEY_SPACE_NAME);
-                  ProjectLogger.log("CONNECTION CREATION FAILED FOR IP: " + ip + " : KEYSPACE :" + KEY_SPACE_NAME, LoggerEnum.INFO.name());
+                    ProjectLogger.log("CONNECTION CREATION FAILED FOR IP: " + ip + " : KEYSPACE :" + KEY_SPACE_NAME, LoggerEnum.INFO.name());
                 }
                 response = true;
             } catch (ProjectCommonException ex) {
-                logger.error(ex);
                 ProjectLogger.log(ex.getMessage(), ex);
                 throw new ProjectCommonException(ResponseCode.invaidConfiguration.getErrorCode(),
                         ResponseCode.invaidConfiguration.getErrorCode(), ResponseCode.SERVER_ERROR.hashCode());
@@ -390,7 +381,6 @@ public class Util {
             JSONArray contentArray = data.getJSONArray(JsonKey.CONTENT);
             section.put(JsonKey.CONTENTS, mapper.readValue(contentArray.toString(), Object[].class));
         } catch (IOException | JSONException e) {
-            logger.error(e.getMessage(), e);
             ProjectLogger.log(e.getMessage(), e);
         } 
     }

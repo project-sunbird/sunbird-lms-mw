@@ -1,8 +1,11 @@
 package org.sunbird.learner.actors;
 
 
-import akka.actor.ActorRef;
-import akka.actor.UntypedAbstractActor;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
@@ -10,17 +13,13 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LogHelper;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.Util;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
+import akka.actor.ActorRef;
+import akka.actor.UntypedAbstractActor;
 
 /**
  * This actor will handle leaner's state operation like get course , get content etc.
@@ -30,7 +29,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class LearnerStateActor extends UntypedAbstractActor {
 
     private CassandraOperation cassandraOperation = new CassandraOperationImpl();
-    private LogHelper logger = LogHelper.getInstance(LearnerStateActor.class.getName());
 
     /**
      * Receives the actor message and perform the operation like get course , get content etc.
@@ -41,7 +39,6 @@ public class LearnerStateActor extends UntypedAbstractActor {
     public void onReceive(Object message) throws Exception {
         if (message instanceof Request) {
             try {
-                logger.debug("LearnerStateActor onReceive called");
                 ProjectLogger.log("LearnerStateActor onReceive called");
                 Request actorMessage = (Request) message;
                 if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_COURSE.getValue())) {
@@ -65,18 +62,16 @@ public class LearnerStateActor extends UntypedAbstractActor {
                     removeUnwantedProperties(res);
                     sender().tell(res, self());
                 } else {
-                    logger.info("UNSUPPORTED OPERATION");
-                ProjectLogger.log("UNSUPPORTED OPERATION");
+                    ProjectLogger.log("UNSUPPORTED OPERATION");
                     ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
                     sender().tell(exception, ActorRef.noSender());
                 }
             }catch(Exception ex){
-                logger.error(ex);
+                ProjectLogger.log(ex.getMessage(), ex);
                 sender().tell(ex, ActorRef.noSender());
             }
 
         } else {
-            logger.info("UNSUPPORTED MESSAGE");
             ProjectLogger.log("UNSUPPORTED MESSAGE");
             ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
             sender().tell(exception, ActorRef.noSender());

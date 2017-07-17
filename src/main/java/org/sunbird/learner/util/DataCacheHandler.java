@@ -11,7 +11,6 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LogHelper;
 import org.sunbird.common.models.util.ProjectLogger;
 
 /**
@@ -26,12 +25,10 @@ public class DataCacheHandler implements Runnable{
 	 */
 	public static ConcurrentHashMap<String, Map<String,Object>> pageMap = new ConcurrentHashMap<>();
 	public static ConcurrentHashMap<String, Map<String,Object>> sectionMap = new ConcurrentHashMap<>();
-	private static LogHelper logger = LogHelper.getInstance(DataCacheHandler.class.getName());
 	CassandraOperation cassandraOperation = new CassandraOperationImpl();
 	
 	@Override
 	public void run() {
-		logger.info("Data cache started..");
 		ProjectLogger.log("Data cache started..");
 		cache(pageMap,"page_management");
 		cache(sectionMap,"page_section");
@@ -53,7 +50,6 @@ public class DataCacheHandler implements Runnable{
 				}
 			}
 		}catch(Exception e){
-			logger.error(e.getMessage(), e);
 			ProjectLogger.log(e.getMessage(), e);
 		}
 	}

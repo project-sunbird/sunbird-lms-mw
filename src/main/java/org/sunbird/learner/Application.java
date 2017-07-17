@@ -1,9 +1,6 @@
 package org.sunbird.learner;
 
-import java.io.File;
-
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LogHelper;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
@@ -23,7 +20,6 @@ import akka.actor.Props;
  * Remote actor Application start point .
  */
 public class Application {
-    private static LogHelper logger = LogHelper.getInstance(Application.class.getName());
     private static ActorSystem system;
     private static final String ACTOR_CONFIG_NAME = "RemoteMWConfig";
     private static final String ACTOR_SYSTEM_NAME = "RemoteMiddlewareSystem";
@@ -48,8 +44,7 @@ public class Application {
     system = ActorSystem.create(ACTOR_SYSTEM_NAME, con);
     ActorRef learnerActorSelectorRef = system.actorOf(Props.create(RequestRouterActor.class),
         RequestRouterActor.class.getSimpleName());
-    logger.info("ACTORS STARTED " + learnerActorSelectorRef);
-        ProjectLogger.log("ACTORS STARTED " + learnerActorSelectorRef, LoggerEnum.INFO.name());
+    ProjectLogger.log("ACTORS STARTED " + learnerActorSelectorRef, LoggerEnum.INFO.name());
     checkCassandraConnection();
   }
 

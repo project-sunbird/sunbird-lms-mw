@@ -8,14 +8,12 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LogHelper;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 
 public class EkStepRequestUtil {
 
-	private static LogHelper logger = LogHelper.getInstance(EkStepRequestUtil.class.getName());
 	private static ObjectMapper mapper = new ObjectMapper();
 	
 	public static Object[] searchContent(String params, Map<String, String> headers) {
@@ -35,7 +33,6 @@ public class EkStepRequestUtil {
 			JSONArray contentArray = data.getJSONArray(JsonKey.CONTENT);
 			result = mapper.readValue(contentArray.toString(), Object[].class);
 		} catch (IOException | JSONException e) {
-			logger.error(e.getMessage(), e);
 			ProjectLogger.log(e.getMessage(), e);
 		} 
 		return result;

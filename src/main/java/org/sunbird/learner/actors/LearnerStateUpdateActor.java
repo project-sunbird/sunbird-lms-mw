@@ -3,22 +3,7 @@
  */
 package org.sunbird.learner.actors;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
-import akka.actor.UntypedAbstractActor;
-import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LogHelper;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.datasecurity.OneWayHashing;
-import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.learner.util.Util;
+import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 
 import java.math.BigInteger;
 import java.sql.Timestamp;
@@ -29,7 +14,22 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
+import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.cassandraimpl.CassandraOperationImpl;
+import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.datasecurity.OneWayHashing;
+import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.learner.util.Util;
+
+import akka.actor.ActorRef;
+import akka.actor.Props;
+import akka.actor.UntypedAbstractActor;
 
 /**
  * This actor to handle learner's state update operation .
@@ -39,7 +39,6 @@ import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 public class LearnerStateUpdateActor extends UntypedAbstractActor {
 
     private CassandraOperation cassandraOperation = new CassandraOperationImpl();
-    private LogHelper logger = LogHelper.getInstance(LearnerStateUpdateActor.class.getName());
     SimpleDateFormat sdf = ProjectUtil.format;
     private final String CONTENT_STATE_INFO= "contentStateInfo";
     private ActorRef utilityActorRef;
@@ -58,7 +57,6 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
     public void onReceive(Object message) throws Throwable {
         if (message instanceof Request) {
             try {
-                logger.debug("LearnerStateUpdateActor onReceive called");
                 ProjectLogger.log("LearnerStateUpdateActor onReceive called");
                 Request actorMessage = (Request) message;
                 Response response = new Response();
@@ -90,17 +88,15 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
                     actorMessage.getRequest().put(this.CONTENT_STATE_INFO, contentStatusHolder);
                     utilityActorRef.tell(actorMessage, ActorRef.noSender());
                 } else {
-                    logger.info("UNSUPPORTED OPERATION");
-                ProjectLogger.log("UNSUPPORTED OPERATION");
+                    ProjectLogger.log("UNSUPPORTED OPERATION");
                     ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
                     sender().tell(exception, ActorRef.noSender());
                 }
             }catch(Exception ex){
-                logger.error(ex);
+                ProjectLogger.log(ex.getMessage(), ex);
                 sender().tell(ex, ActorRef.noSender());
             }
         } else {
-            logger.info("UNSUPPORTED MESSAGE");
             ProjectLogger.log("UNSUPPORTED MESSAGE");
             ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
             sender().tell(exception, ActorRef.noSender());
@@ -216,7 +212,16 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
         if (null == obj || ((String)obj).equalsIgnoreCase(JsonKey.NULL)) {
             return null;
         }
-        return formatter.parse((String) obj);
+        Date date = null;
+        try {
+            date = formatter.parse((String)obj);
+        } catch (ParseException ex) {
+            ex.printStackTrace();
+            ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidDateFormat.getErrorCode(), ResponseCode.invalidDateFormat.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+            throw exception;
+
+        }
+        return date;
     }
 
     private String compareTime(Date currentValue, Date requestedValue) {

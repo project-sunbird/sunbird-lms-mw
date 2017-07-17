@@ -1,40 +1,34 @@
 package org.sunbird.learner.actors.search;
 
-import akka.actor.UntypedAbstractActor;
-
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LogHelper;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.Util;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import akka.actor.UntypedAbstractActor;
 
 /**
  * This class will handle search operation for course.
  * @author Amit Kumar
  */
 public class CourseSearchActor extends UntypedAbstractActor {
-    private LogHelper logger = LogHelper.getInstance(CourseSearchActor.class.getName());
 
 	@Override
 	public void onReceive(Object message) throws Throwable {
 		 if (message instanceof Request) {
 		 	try {
-				logger.info("CourseSearchActor  onReceive called");
 		        ProjectLogger.log("CourseSearchActor  onReceive called");
 				Request actorMessage = (Request) message;
 				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.SEARCH_COURSE.getValue())) {
@@ -72,18 +66,16 @@ public class CourseSearchActor extends UntypedAbstractActor {
 					}
 					sender().tell(response, self());
 				} else {
-					logger.info("UNSUPPORTED OPERATION");
 	                ProjectLogger.log("UNSUPPORTED OPERATION");
 					ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
 					sender().tell(exception, self());
 				}
 			}catch (Exception ex){
-		 		logger.error(ex);
+		 		ProjectLogger.log(ex.getMessage(), ex);
 		 		sender().tell(ex , self());
 			}
 	        } else {
 	            // Throw exception as message body
-	            logger.info("UNSUPPORTED MESSAGE");
 	            ProjectLogger.log("UNSUPPORTED MESSAGE");
 	            ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
 	            sender().tell(exception, self());

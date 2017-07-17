@@ -1,17 +1,5 @@
 package org.sunbird.learner.actors;
 
-import akka.actor.UntypedAbstractActor;
-import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LogHelper;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.request.Request;
-import org.sunbird.learner.util.Util;
-
-import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -19,13 +7,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.cassandraimpl.CassandraOperationImpl;
+import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.request.Request;
+import org.sunbird.learner.util.Util;
+
+import akka.actor.UntypedAbstractActor;
+
 /**
  * @author arvind
  */
 public class UtilityActor extends UntypedAbstractActor {
 
     private CassandraOperation cassandraOperation = new CassandraOperationImpl();
-    private LogHelper logger = LogHelper.getInstance(UtilityActor.class.getName());
     private final String CONTENT_STATE_INFO= "contentStateInfo";
     SimpleDateFormat sdf = ProjectUtil.format;
 
@@ -111,7 +109,6 @@ public class UtilityActor extends UntypedAbstractActor {
                try {
                   cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), course);
               }catch(Exception ex){
-                  logger.error(ex);
                   ProjectLogger.log(ex.getMessage(), ex);
               }
             }
@@ -148,7 +145,6 @@ public class UtilityActor extends UntypedAbstractActor {
                 return next;
             }
         } catch (ParseException e) {
-            logger.error(e);
             ProjectLogger.log(e.getMessage(), e);
         }
         return null;

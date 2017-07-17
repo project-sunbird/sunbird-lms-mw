@@ -9,7 +9,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LogHelper;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
 
@@ -17,7 +16,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class EkStepRequestUtil {
 
-	private static LogHelper logger = LogHelper.getInstance(EkStepRequestUtil.class.getName());
 	private static ObjectMapper mapper = new ObjectMapper();
 	private static Map<String, String> headers = new HashMap<String, String>();
 	static {
@@ -38,10 +36,8 @@ public class EkStepRequestUtil {
 			JSONArray contentArray = data.getJSONArray(JsonKey.CONTENT);
 			result = mapper.readValue(contentArray.toString(), Object[].class);
 		} catch (IOException e) {
-			logger.error(e.getMessage(), e);
 			ProjectLogger.log(e.getMessage(), e);
 		} catch (JSONException e) {
-			logger.error(e.getMessage(), e);
 		    ProjectLogger.log(e.getMessage(), e);
 		}
 		return result;

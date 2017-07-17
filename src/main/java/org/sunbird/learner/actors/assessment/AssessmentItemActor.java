@@ -12,7 +12,6 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LogHelper;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
@@ -27,7 +26,6 @@ import akka.actor.UntypedAbstractActor;
  *
  */
 public class AssessmentItemActor extends UntypedAbstractActor {
-	private LogHelper logger = LogHelper.getInstance(AssessmentItemActor.class.getName());
 
 	private CassandraOperation cassandraOperation = new CassandraOperationImpl();
 	Util.DbInfo assmntItemDbInfo = Util.dbInfoMap.get(JsonKey.ASSESSMENT_ITEM_DB);
@@ -36,7 +34,6 @@ public class AssessmentItemActor extends UntypedAbstractActor {
 	public void onReceive(Object message) throws Throwable {
 		if (message instanceof Request) {
 			try {
-				logger.info("AssessmentItemActor onReceive called");
 			    ProjectLogger.log("AssessmentItemActor onReceive called");
 				Request actorMessage = (Request) message;
 				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_ASSESSMENT.getValue())) {
@@ -44,7 +41,6 @@ public class AssessmentItemActor extends UntypedAbstractActor {
 				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.SAVE_ASSESSMENT.getValue())) {
 					saveAssessment(actorMessage);
 				} else {
-					logger.info("UNSUPPORTED OPERATION");
 			        ProjectLogger.log("UNSUPPORTED OPERATION");
 					ProjectCommonException exception = new ProjectCommonException(
 							ResponseCode.invalidOperationName.getErrorCode(),
@@ -53,13 +49,11 @@ public class AssessmentItemActor extends UntypedAbstractActor {
 					sender().tell(exception, self());
 				}
 			}catch(Exception ex){
-				logger.error(ex);
 				ProjectLogger.log(ex.getMessage(), ex);
 				sender().tell(ex , self());
 			}
 		} else {
 			// Throw exception as message body
-			logger.info("UNSUPPORTED MESSAGE");
 		    ProjectLogger.log("UNSUPPORTED MESSAGE");
 			ProjectCommonException exception = new ProjectCommonException(
 					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),

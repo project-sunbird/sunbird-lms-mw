@@ -8,9 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import akka.actor.UntypedAbstractActor;
-import akka.pattern.Patterns;
-import akka.util.Timeout;
+
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
@@ -18,12 +16,16 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.Util;
+
+import akka.actor.UntypedAbstractActor;
+import akka.pattern.Patterns;
+import akka.util.Timeout;
 import scala.concurrent.duration.Duration;
 
 /**
@@ -32,7 +34,6 @@ import scala.concurrent.duration.Duration;
  * @author Amit Kumar
  */
 public class OrganisationManagementActor extends UntypedAbstractActor {
-  private LogHelper logger = LogHelper.getInstance(OrganisationManagementActor.class.getName());
 
   private CassandraOperation cassandraOperation = new CassandraOperationImpl();
 
@@ -40,7 +41,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   public void onReceive(Object message) throws Throwable {
     if (message instanceof Request) {
       try {
-        logger.info("OrganisationManagementActor  onReceive called");
         ProjectLogger.log("OrganisationManagementActor  onReceive called");
         Request actorMessage = (Request) message;
         if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_ORG.getValue())) {
@@ -70,8 +70,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
             .equalsIgnoreCase(ActorOperations.REMOVE_MEMBER_ORGANISATION.getValue())) {
           removeMemberOrganisation(actorMessage);
         } else {
-          logger.info("UNSUPPORTED OPERATION");
-          ProjectLogger.log("UNSUPPORTED OPERATION");
+          ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
           ProjectCommonException exception =
                   new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
                           ResponseCode.invalidOperationName.getErrorMessage(),
@@ -79,13 +78,11 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           sender().tell(exception, self());
         }
       } catch (Exception ex) {
-        logger.error(ex);
         ProjectLogger.log(ex.getMessage(), ex);
         sender().tell(ex, self());
       }
     } else {
       // Throw exception as message body
-      logger.info("UNSUPPORTED MESSAGE");
       ProjectLogger.log("UNSUPPORTED MESSAGE");
       ProjectCommonException exception =
           new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
@@ -126,7 +123,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
                 orgDbInfo.getTableName(), dbMap);
         List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
         if (!(list.isEmpty())) {
-          logger.info("Org exist with Source "+req.get(JsonKey.SOURCE)+" , External Id "+req.get(JsonKey.EXTERNAL_ID));
           ProjectLogger.log("Org exist with Source "+req.get(JsonKey.SOURCE)+" , External Id "+req.get(JsonKey.EXTERNAL_ID));
           ProjectCommonException exception =
                   new ProjectCommonException(ResponseCode.sourceAndExternalIdAlreadyExist.getErrorCode(),
@@ -218,7 +214,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       Map<String, Object> req =
           (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
       if(!(validateOrgRequest(req))){
-        logger.info("REQUESTED DATA IS NOT VALID");
+        ProjectLogger.log("REQUESTED DATA IS NOT VALID");
         return;
       }
 
@@ -233,7 +229,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       if (!(list.isEmpty())) {
         orgDBO = (Map<String, Object>) list.get(0);
       } else {
-        logger.info("Invalid Org Id");
         ProjectLogger.log("Invalid Org Id");
         ProjectCommonException exception =
             new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
@@ -249,7 +244,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
         String orgStatus = (String) orgDBO.get(JsonKey.STATUS);
         if ((ProjectUtil.OrgStatus.INACTIVE.name().equalsIgnoreCase(orgStatus))) {
-          logger.info("Can not approve org");
           ProjectLogger.log("Can not approve org");
           ProjectCommonException exception =
               new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
@@ -302,7 +296,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
 
       if(!(validateOrgRequest(req))){
-        logger.info("REQUESTED DATA IS NOT VALID");
+        ProjectLogger.log("REQUESTED DATA IS NOT VALID");
         return;
       }
       Map<String, Object> orgDBO;
@@ -316,7 +310,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       if (!(list.isEmpty())) {
         orgDBO = (Map<String, Object>) list.get(0);
       } else {
-        logger.info("Invalid Org Id");
         ProjectLogger.log("Invalid Org Id");
         ProjectCommonException exception =
             new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
@@ -330,7 +323,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       String nextStatus = (String) req.get(JsonKey.STATUS);
       if (!(Util.checkOrgStatusTransition(currentStatus, nextStatus))) {
 
-        logger.info("Invalid Org State transation");
         ProjectLogger.log("Invalid Org State transation");
         ProjectCommonException exception =
             new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
@@ -377,7 +369,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       Map<String, Object> req =
           (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
       if(!(validateOrgRequest(req))){
-        logger.info("REQUESTED DATA IS NOT VALID");
+        ProjectLogger.log("REQUESTED DATA IS NOT VALID");
         return;
       }
       //validate if Source and exteral id is in request , it should not alredy exist in DataBase .....
@@ -399,7 +391,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
           if (!(req.get(JsonKey.ORGANISATION_ID).equals(organisationId))) {
 
-            logger.info("Org exist with Source " + req.get(JsonKey.SOURCE) + " , External Id " + req.get(JsonKey.EXTERNAL_ID));
             ProjectLogger.log("Org exist with Source " + req.get(JsonKey.SOURCE) + " , External Id " + req.get(JsonKey.EXTERNAL_ID));
             ProjectCommonException exception =
                     new ProjectCommonException(ResponseCode.sourceAndExternalIdAlreadyExist.getErrorCode(),
@@ -445,7 +436,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       if (!(list.isEmpty())) {
         orgDBO = (Map<String, Object>) list.get(0);
       } else {
-        logger.info("Invalid Org Id");
         ProjectLogger.log("Invalid Org Id");
         ProjectCommonException exception =
             new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
@@ -526,7 +516,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
     Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
     if(!(validateOrgRequest(usrOrgData))){
-      logger.info("REQUESTED DATA IS NOT VALID");
+      ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
     }
     if (isNull(usrOrgData)) {
@@ -578,7 +568,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     List orgList = (List) orgResult.get(JsonKey.RESPONSE);
     if (orgList.size() == 0) {
       // user already enrolled for the organisation
-      logger.info("Org does not exist");
       ProjectLogger.log("Org does not exist");
       ProjectCommonException exception = new ProjectCommonException(
           ResponseCode.invalidOrgId.getErrorCode(), ResponseCode.invalidOrgId.getErrorMessage(),
@@ -593,7 +582,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
     List userList = (List) userResult.get(JsonKey.RESPONSE);
     if (userList.size() == 0) {
-      logger.info("User does not exist");
       ProjectLogger.log("User does not exist");
       ProjectCommonException exception = new ProjectCommonException(
           ResponseCode.invalidUserId.getErrorCode(), ResponseCode.invalidUserId.getErrorMessage(),
@@ -674,7 +662,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
     Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
     if(!(validateOrgRequest(usrOrgData))){
-      logger.info("REQUESTED DATA IS NOT VALID");
+      ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
     }
     if (isNull(usrOrgData)) {
@@ -771,7 +759,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Map<String, Object> req =
         (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
     if(!(validateOrgRequest(req))){
-      logger.info("REQUESTED DATA IS NOT VALID");
+      ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
     }
     Map<String, Object> orgDBO;
@@ -800,7 +788,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Map<String, Object> req =
         (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
     if(!(validateOrgRequest(req))){
-      logger.info("REQUESTED DATA IS NOT VALID");
+      ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
     }
     Map<String, Object> orgDBO;
@@ -811,7 +799,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     if (!(list.isEmpty())) {
       orgDBO = (Map<String, Object>) list.get(0);
     } else {
-      logger.info("Invalid Org Id");
       ProjectLogger.log("Invalid Org Id");
       ProjectCommonException exception =
           new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
@@ -847,7 +834,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
     Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
     if(!(validateOrgRequest(usrOrgData))){
-      logger.info("REQUESTED DATA IS NOT VALID");
+      ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
     }
     if (isNull(usrOrgData)) {
@@ -888,7 +875,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     List orgList = (List) orgResult.get(JsonKey.RESPONSE);
     if (orgList.size() == 0) {
       // user already enrolled for the organisation
-      logger.info("Org does not exist");
       ProjectLogger.log("Org does not exist");
       ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOrgId.getErrorCode(), ResponseCode.invalidOrgId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
@@ -957,7 +943,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
     Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
     if(!(validateOrgRequest(usrOrgData))){
-      logger.info("REQUESTED DATA IS NOT VALID");
+      ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
     }
     if (isNull(usrOrgData)) {
@@ -1003,7 +989,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
     if (list.size() == 0) {
       // user already enrolled for the organisation
-      logger.info("User does not belong to org");
       ProjectLogger.log("User does not belong to org");
       ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOrgId.getErrorCode(), ResponseCode.invalidOrgId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
@@ -1050,7 +1035,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
     Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
     if(!(validateOrgRequest(usrOrgData))){
-      logger.info("REQUESTED DATA IS NOT VALID");
+      ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
     }
     if (isNull(usrOrgData)) {
@@ -1092,7 +1077,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
     if (list.size() == 0) {
       // user already enrolled for the organisation
-      logger.info("User does not belong to org");
+      ProjectLogger.log("User does not belong to org");
       ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOrgId.getErrorCode(), ResponseCode.invalidOrgId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
       return;

@@ -6,7 +6,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.LogHelper;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -32,7 +31,6 @@ import scala.concurrent.duration.Duration;
  */
 public class RequestRouterActor extends UntypedAbstractActor {
 
-    private LogHelper logger = LogHelper.getInstance(RequestRouterActor.class.getName());
     private ActorRef courseEnrollmentActorRouter;
     private ActorRef learnerStateActorRouter;
     private ActorRef learnerStateUpdateActorRouter;
@@ -152,7 +150,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
     public void onReceive(Object message) throws Exception {
         if (message instanceof Request) {
         	System.out.println("Received actor message....");
-            logger.debug("Actor selector onReceive called");
             ProjectLogger.log("Actor selector onReceive called");
             Request actorMessage = (Request) message;
             org.sunbird.common.request.ExecutionContext.setRequestId(actorMessage.getRequestId());
@@ -160,13 +157,11 @@ public class RequestRouterActor extends UntypedAbstractActor {
             if (null != ref) {
                 route(ref, actorMessage);
             } else {
-                logger.info("UNSUPPORTED OPERATION TYPE");
                 ProjectLogger.log("UNSUPPORTED OPERATION TYPE");
                 ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
                 sender().tell(exception, ActorRef.noSender());
             }
         } else {
-            logger.info("UNSUPPORTED MESSAGE");
             ProjectLogger.log("UNSUPPORTED MESSAGE");
             ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
             sender().tell(exception, ActorRef.noSender());
@@ -191,7 +186,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
             public void onComplete(Throwable failure, Object result) {
                 if (failure != null) {
                     //We got a failure, handle it here
-                    logger.error(failure);
                     ProjectLogger.log(failure.getMessage(), failure);
                     if(failure instanceof ProjectCommonException){
                         parent.tell(failure, ActorRef.noSender());
@@ -200,7 +194,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
                         parent.tell(exception, ActorRef.noSender());
                     }
                 } else {
-                    logger.info("PARENT RESULT IS " + result);
                     ProjectLogger.log("PARENT RESULT IS " + result);
                     // We got a result, handle it
                     parent.tell(result, ActorRef.noSender());

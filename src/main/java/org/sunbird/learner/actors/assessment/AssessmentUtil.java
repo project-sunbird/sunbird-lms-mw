@@ -9,7 +9,6 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LogHelper;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
@@ -22,7 +21,6 @@ import org.sunbird.learner.util.Util;
  *
  */
 public class AssessmentUtil{
-	private LogHelper logger = LogHelper.getInstance(AssessmentUtil.class.getName());
 	private CassandraOperation cassandraOperation = new CassandraOperationImpl();
 	Util.DbInfo assmntEvalDbInfo = Util.dbInfoMap.get(JsonKey.ASSESSMENT_EVAL_DB);
 	Util.DbInfo assmntItemDbInfo = Util.dbInfoMap.get(JsonKey.ASSESSMENT_ITEM_DB);
@@ -48,7 +46,6 @@ public class AssessmentUtil{
 			try{
 				cassandraOperation.upsertRecord(assmntItemDbInfo.getKeySpace(), assmntItemDbInfo.getTableName(),reqMap);
 			}catch(Exception e){
-				logger.error(e.getMessage(), e);
 				ProjectLogger.log(e.getMessage(), e);
 			}
 		}
@@ -107,7 +104,6 @@ public class AssessmentUtil{
 					}
 				}
 			}catch(Exception e){
-				logger.error(e.getMessage(), e);
 			  ProjectLogger.log(e.getMessage(), e);
 			}
 		}
@@ -152,7 +148,6 @@ public class AssessmentUtil{
 						cassandraOperation.insertRecord(assmntEvalDbInfo.getKeySpace(), assmntEvalDbInfo.getTableName(),map);
 					}
 				}catch(Exception e){
-					logger.error(e.getMessage(), e);
 				  ProjectLogger.log(e.getMessage(), e);
 				}
 			}

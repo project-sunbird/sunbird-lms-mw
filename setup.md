@@ -27,6 +27,12 @@
     7. sunbird_es_cluster (optional): name of the elasticsearch cluster
     8. sunbird_learner_actor_host: host running for learner actor
     9. sunbird_learner_actor_port: port on which learner actor is running.
+    10.sunbird_sso_url: url for keycloak server
+    11.sunbird_sso_realm: keycloak realm name
+    12.sunbird_sso_username: keycloak user name
+    13.sunbird_sso_password: keycloak password
+    14.sunbird_sso_client_id: key cloak client id
+    15.sunbird_sso_client_secret : keycloak client secret (not mandatory)
 2. Actor configuration: Actor configuration is provided via [application.conf](https://github.com/ekstep/sunbird-mw/blob/alpha2/actors/learner-actor/src/main/resources/application.conf) file. The project is bundled with default application.conf file which runs 5 instances of each actor with hostname as "127.0.0.1" and on the port "8088". This configuration can be overrided by providing a custom application.conf file:
     1. hostname: the hostname on the which the akka actors will be listening
     2. port: port on which the akka actors will be listening

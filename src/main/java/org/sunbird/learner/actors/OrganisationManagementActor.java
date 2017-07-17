@@ -581,6 +581,19 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
     response = cassandraOperation.insertRecord(userOrgDbInfo.getKeySpace(),
         userOrgDbInfo.getTableName(), usrOrgData);
+    
+    Map<String,Object> newOrgMap = new HashMap<String,Object>();
+    if(orgList.size()>0){
+      Integer count = 0;
+      Map<String,Object> orgMap = (Map<String, Object>) orgList.get(0);
+      if(isNotNull(orgMap.get(JsonKey.NO_OF_MEMBERS.toLowerCase()))){
+        count = Integer.valueOf((String)orgMap.get(JsonKey.NO_OF_MEMBERS.toLowerCase()));
+      } 
+      newOrgMap.put(JsonKey.ID, orgId);
+      newOrgMap.put(JsonKey.NO_OF_MEMBERS, count+1);
+      cassandraOperation.updateRecord(organisationDbInfo.getKeySpace(), organisationDbInfo.getTableName(), newOrgMap);
+    }
+    
     sender().tell(response, self());
     return;
 
@@ -597,7 +610,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Response response = new Response();
 
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
-
+    Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+    
     Map<String, Object> req = actorMessage.getRequest();
 
     Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
@@ -669,6 +683,20 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         dataMap.put(JsonKey.IS_DELETED, true);
         response = cassandraOperation.updateRecord(userOrgDbInfo.getKeySpace(),
             userOrgDbInfo.getTableName(), dataMap);
+        Map<String,Object> newOrgMap = new HashMap<String,Object>();
+        
+        Response orgresult = cassandraOperation.updateRecord(userOrgDbInfo.getKeySpace(),
+            userOrgDbInfo.getTableName(), dataMap);
+        List orgList = (List) orgresult.get(JsonKey.RESPONSE);
+        if(orgList.size()>0){
+          Map<String,Object> orgMap = (Map<String, Object>) orgList.get(0);
+          if(isNotNull(orgMap.get(JsonKey.NO_OF_MEMBERS.toLowerCase()))){
+            Integer count = Integer.valueOf((String)orgMap.get(JsonKey.NO_OF_MEMBERS.toLowerCase()));
+            newOrgMap.put(JsonKey.ID, orgId);
+            newOrgMap.put(JsonKey.NO_OF_MEMBERS, count == 0 ? 0:(count-1));
+            cassandraOperation.updateRecord(organisationDbInfo.getKeySpace(), organisationDbInfo.getTableName(), newOrgMap);
+          }
+        }
         sender().tell(response, self());
         return;
     }
@@ -837,6 +865,18 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     usrOrgData.put(JsonKey.IS_APPROVED, false);
 
     response = cassandraOperation.insertRecord(userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName(), usrOrgData);
+    Map<String,Object> newOrgMap = new HashMap<String,Object>();
+    if(orgList.size()>0){
+      Integer count = 0;
+      Map<String,Object> orgMap = (Map<String, Object>) orgList.get(0);
+      if(isNotNull(orgMap.get(JsonKey.NO_OF_MEMBERS.toLowerCase()))){
+        count = Integer.valueOf((String)orgMap.get(JsonKey.NO_OF_MEMBERS.toLowerCase()));
+      } 
+      newOrgMap.put(JsonKey.ID, orgId);
+      newOrgMap.put(JsonKey.NO_OF_MEMBERS, count+1);
+      cassandraOperation.updateRecord(organisationDbInfo.getKeySpace(), organisationDbInfo.getTableName(), newOrgMap);
+    }
+    
     sender().tell(response, self());
     return;
 
@@ -940,6 +980,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
    *
    * @param actorMessage
    */
+  @SuppressWarnings("unchecked")
   private void rejectUserOrg(Request actorMessage) {
 
     Response response = new Response();
@@ -1293,6 +1334,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     return null;
   }
 
+  @SuppressWarnings("unchecked")
   private boolean validateOrgRequest(Map<String, Object> req) {
 
     if(isNull(req)){

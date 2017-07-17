@@ -55,9 +55,9 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
                    Map<String, Object> req = actorMessage.getRequest();
                    String addedBy = (String) req.get(JsonKey.REQUESTED_BY);
                    Map<String, Object> courseMap = (Map<String, Object>) req.get(JsonKey.COURSE);
-
+                   Map<String,String> headers = (Map<String, String>) actorMessage.getRequest().get(JsonKey.HEADER);
                    String courseId = (String) courseMap.get(JsonKey.COURSE_ID);
-                   Map<String, Object> ekStepContent = getCourseObjectFromEkStep(courseId);
+                   Map<String, Object> ekStepContent = getCourseObjectFromEkStep(courseId,headers);
                    if (null == ekStepContent || ekStepContent.size() == 0) {
                     	ProjectLogger.log("Course Id not found in EkStep");
                        ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidCourseId.getErrorCode(), ResponseCode.invalidCourseId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -99,11 +99,11 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
     }
     
     @SuppressWarnings("unchecked")
-	private Map<String, Object> getCourseObjectFromEkStep(String courseId) {
+	private Map<String, Object> getCourseObjectFromEkStep(String courseId, Map<String, String> headers) {
     	if (!ProjectUtil.isStringNullOREmpty(courseId)) {
     		try {
     			String query = EKSTEP_COURSE_SEARCH_QUERY.replaceAll("COURSE_ID_PLACEHOLDER", courseId);
-        		Object[] result = EkStepRequestUtil.searchContent(query);
+        		Object[] result = EkStepRequestUtil.searchContent(query,headers);
         		if (null != result && result.length > 0) {
         			Object contentObject = result[0];
         			Map<String, Object> map = (Map<String, Object>) contentObject;

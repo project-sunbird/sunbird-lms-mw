@@ -102,7 +102,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
    */
   @SuppressWarnings("unchecked")
   private void createOrg(Request actorMessage) {
-
+    ProjectLogger.log(
+        "Create org method call start");
     try {
       Map<String, Object> req =
           (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
@@ -114,6 +115,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       //combination of source and external id should be unique ...
       if (req.containsKey(JsonKey.SOURCE) || req.containsKey(JsonKey.EXTERNAL_ID)) {
         if (isNull(req.get(JsonKey.SOURCE)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
+          ProjectLogger.log(
+              "Source and external ids are unique.");
           ProjectCommonException exception = new ProjectCommonException(
               ResponseCode.invalidRequestData.getErrorCode(),
               ResponseCode.invalidRequestData.getErrorMessage(),
@@ -180,7 +183,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       }
       Response result =
           cassandraOperation.insertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), req);
-
+      ProjectLogger.log("Org data saved into cassandra.");
       // create org_map if parentOrgId is present in request
       if (isValidParent) {
         upsertOrgMap(uniqueId, parentOrg, (String) req.get(JsonKey.ROOT_ORG_ID),
@@ -191,7 +194,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       if (!ProjectUtil.isStringNullOREmpty(orgType)) {
         upsertOrgType(orgType, actorMessage.getEnv());
       }
-
+      ProjectLogger.log("Created org id is ----." + uniqueId);
       result.getResult().put(JsonKey.ORGANISATION_ID, uniqueId);
       sender().tell(result, self());
 
@@ -203,8 +206,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       }
       orgResponse.put(JsonKey.ORGANISATION, req);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
+      ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
       Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
     } catch (ProjectCommonException e) {
+      ProjectLogger.log("Some error occurs" + e.getMessage());
       sender().tell(e, self());
       return;
     }
@@ -1312,6 +1317,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
    */
   @SuppressWarnings("unchecked")
   public void validateRootOrg(Map<String, Object> request) throws ProjectCommonException {
+    ProjectLogger.log("Validating Root org started---");
     Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
     if (!ProjectUtil.isStringNullOREmpty((String) request.get(JsonKey.PARENT_ORG_ID))) {
       Response result = cassandraOperation.getRecordById(orgDbInfo.getKeySpace(),
@@ -1333,12 +1339,14 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         }
       }
     }
+    ProjectLogger.log("Validating Root org ended successfully---");
   }
 
   /**
    * validates whether the channelId is present for the parent organization
    */
   public void validateChannelIdForRootOrg(Map<String, Object> request) {
+    ProjectLogger.log("Doing relation check");
     if (null != request.get(JsonKey.IS_ROOT_ORG) && (Boolean) request.get(JsonKey.IS_ROOT_ORG)) {
       if (null == request.get(JsonKey.CHANNEL)) {
         throw new ProjectCommonException(ResponseCode.channelIdRequiredForRootOrg.getErrorCode(),
@@ -1346,6 +1354,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
     }
+    ProjectLogger.log("Relation check end successfully!");
   }
 
   /**

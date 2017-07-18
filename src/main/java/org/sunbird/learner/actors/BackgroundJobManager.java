@@ -99,13 +99,15 @@ public class BackgroundJobManager extends UntypedAbstractActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void insertOrgInfoToEs(Response actorMessage) {
     Map<String, Object> orgMap = (Map<String, Object>) actorMessage.get(JsonKey.ORGANISATION);
     insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.organisation.getTypeName(),
         (String) orgMap.get(JsonKey.ID), orgMap);
   }
-
+ 
+  @SuppressWarnings("unchecked")
   private void updateOrgInfoToEs(Response actorMessage) {
     Map<String, Object> orgMap = (Map<String, Object>) actorMessage.get(JsonKey.ORGANISATION);
     updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),

@@ -1,3 +1,6 @@
+/**
+ * 
+ */
 package org.sunbird.learner.actors;
 
 import java.text.ParseException;
@@ -19,6 +22,10 @@ import org.sunbird.learner.util.Util;
 import akka.actor.UntypedAbstractActor;
 
 /**
+ * This will updated user learner state activity.
+ * example what was the last accessed content. 
+ * how much percentage is completed, what is the 
+ * state of content.
  * @author arvind
  */
 public class UtilityActor extends UntypedAbstractActor {
@@ -50,18 +57,18 @@ public class UtilityActor extends UntypedAbstractActor {
                     String primary = (String)map.get(JsonKey.COURSE_ID);
                     if(temp.containsKey(primary)){
                         Map<String , Object> innerMap = (Map<String , Object>)temp.get(primary);
-                        innerMap.put("content" , getLatestContent((Map<String, Object>) ((Map<String , Object>)temp.get(primary)).get("content"), map));
+                        innerMap.put(JsonKey.CONTENT , getLatestContent((Map<String, Object>) ((Map<String , Object>)temp.get(primary)).get(JsonKey.CONTENT), map));
                         if(((int)map.get(JsonKey.COMPLETED_COUNT))==1 && contentStateInfo.get(contentid)==2){
-                            innerMap.put("progress",(Integer)innerMap.get("progress")+1);
+                            innerMap.put(JsonKey.PROGRESS,(Integer)innerMap.get(JsonKey.PROGRESS)+1);
                         }
 
                     }else{
                         Map<String , Object> innerMap = new HashMap<String,Object>();
-                        innerMap.put("content" , map);
+                        innerMap.put(JsonKey.CONTENT , map);
                         if(((int)map.get(JsonKey.COMPLETED_COUNT))==1 && contentStateInfo.get(contentid)==2){
-                            innerMap.put("progress",new Integer(1));
+                            innerMap.put(JsonKey.PROGRESS,new Integer(1));
                         }else{
-                            innerMap.put("progress",new Integer(0));
+                            innerMap.put(JsonKey.PROGRESS,new Integer(0));
                         }
                         temp.put(primary ,  innerMap);
                     }
@@ -117,16 +124,6 @@ public class UtilityActor extends UntypedAbstractActor {
 
     }
 
-    private boolean activeStatus(Object obj) {
-
-        if(null == obj || !(obj instanceof Boolean)){
-            return false;
-        } else{
-            return (boolean)obj;
-        }
-
-
-    }
 
     private Map<String , Object> getLatestContent(Map<String , Object> current , Map<String , Object> next){
         if(current.get(JsonKey.LAST_ACCESS_TIME) == null && next.get(JsonKey.LAST_ACCESS_TIME) == null){

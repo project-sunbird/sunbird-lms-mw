@@ -15,7 +15,6 @@ import org.sunbird.common.models.util.ProjectLogger;
 
 /**
  * This class will handle the data cache.
- * @author Manzarul
  * @author Amit Kumar
  */
 public class DataCacheHandler implements Runnable{

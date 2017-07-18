@@ -32,11 +32,14 @@ import java.util.Properties;
 public class Util {
 
     public static Map<String, DbInfo> dbInfoMap = new HashMap<String, DbInfo>();
+    public static final int RECOMENDED_LIST_SIZE = 10;
+    
     private static final String KEY_SPACE_NAME = "sunbird";
     private static Properties prop = new Properties();
     private static Map<String, String> headers = new HashMap<String, String>();
     private static Map<String , Object> orgStatusTransition = new HashMap<String , Object>();
-
+    
+    
     static {
         loadPropertiesFile();
         initializeOrgStatusTransition();

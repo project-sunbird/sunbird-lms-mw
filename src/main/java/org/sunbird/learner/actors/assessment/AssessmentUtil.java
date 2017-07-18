@@ -135,7 +135,7 @@ public class AssessmentUtil{
 	/**
 	 * This method will save user assessment records inside assessment eval table.
 	 * @param assmntList List<Map<String, Object>>
-	 * @param assmntReq
+	 * @param assmntReq  Map<String, Object>
 	 */
 	@SuppressWarnings("unchecked")
   private void insertRecordIntoAssmntEvalTable(List<Map<String, Object>> assmntList,

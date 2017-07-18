@@ -407,6 +407,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 	    if(ProjectUtil.isStringNullOREmpty(query)){
 	      query = (String)section.get(JsonKey.SEARCH_QUERY);
 	    }
+	    ProjectLogger.log("search query for ekstep for page data assemble api : "+ query);
 		Object[] result = EkStepRequestUtil.searchContent(query,headers);
 		if (null != result)
 			section.put(JsonKey.CONTENTS, result);

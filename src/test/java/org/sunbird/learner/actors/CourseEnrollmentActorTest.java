@@ -36,6 +36,7 @@ import org.sunbird.learner.util.Util;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.TestActorRef;
+
 import static akka.testkit.JavaTestKit.duration;
 import static org.mockito.Matchers.anyObject;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -50,145 +51,135 @@ import static org.powermock.api.mockito.PowerMockito.when;
 public class CourseEnrollmentActorTest {
 
 
-    static ActorSystem system;
-    final static  Props props = Props.create(CourseEnrollmentActor.class);
-    static Util.DbInfo userCoursesdbInfo = null;
-    private static CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  final static Props props = Props.create(CourseEnrollmentActor.class);
+  static ActorSystem system;
+  static Util.DbInfo userCoursesdbInfo = null;
+  private static CassandraOperation cassandraOperation = new CassandraOperationImpl();
 
-    @BeforeClass
-    public static void setUp() {
-        system = ActorSystem.create("system");
-        Util.checkCassandraDbConnections();
-        userCoursesdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
-        //PowerMockito.mockStatic(EkStepRequestUtil.class);
-         }
+  @BeforeClass
+  public static void setUp() {
+    system = ActorSystem.create("system");
+    Util.checkCassandraDbConnections();
+    userCoursesdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
+    //PowerMockito.mockStatic(EkStepRequestUtil.class);
+  }
 
-    @Test()
-    public void testAonReceive() {
-        System.out.println("testAonReceive - start"+new Date());
+  @AfterClass
+  public static void destroy() {
+    cassandraOperation
+        .deleteRecord(userCoursesdbInfo.getKeySpace(), userCoursesdbInfo.getTableName(),
+            OneWayHashing
+                .encryptVal("USR" + JsonKey.PRIMARY_KEY_DELIMETER + "do_212282810555342848180"));
+  }
 
-        TestKit probe = new TestKit(system);
-        ActorRef subject = system.actorOf(props);
+  @Test()
+  public void testAonReceive() {
 
-        Request reqObj = new Request();
-        reqObj.setRequest_id("1");
-        reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
-        reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
-        reqObj.put(JsonKey.USER_ID, "USR");
-        HashMap<String, Object> innerMap = new HashMap<>();
-        innerMap.put(JsonKey.COURSE, reqObj.getRequest());
-        innerMap.put(JsonKey.USER_ID, "USR");
-        reqObj.setRequest(innerMap);
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
-        PowerMockito.mockStatic(EkStepRequestUtil.class);
-        Map<String , Object> ekstepResponse = new HashMap<String , Object>();
-        ekstepResponse.put("count" , 10);
-        Object[] ekstepMockResult = {ekstepResponse};
-        when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
+    Request reqObj = new Request();
+    reqObj.setRequest_id("1");
+    reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
+    reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
+    reqObj.put(JsonKey.USER_ID, "USR");
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.COURSE, reqObj.getRequest());
+    innerMap.put(JsonKey.USER_ID, "USR");
+    reqObj.setRequest(innerMap);
 
+    PowerMockito.mockStatic(EkStepRequestUtil.class);
+    Map<String, Object> ekstepResponse = new HashMap<String, Object>();
+    ekstepResponse.put("count", 10);
+    Object[] ekstepMockResult = {ekstepResponse};
+    when(EkStepRequestUtil.searchContent(Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(ekstepMockResult);
 
-        subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(duration("100 second"),Response.class);
-        try {
-            Thread.sleep(3000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        //probe.expectMsgClass(Response.class);
-        System.out.println("testAonReceive - end"+new Date());
-
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(duration("100 second"), Response.class);
+    try {
+      Thread.sleep(3000);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
     }
 
-    @Test
-    public void testBEnrollWithSameCourse(){
-        System.out.println("testBEnrollWithSameCourse - start"+new Date());
-        TestKit probe = new TestKit(system);
-        ActorRef subject = system.actorOf(props);
+  }
 
-        Request reqObj = new Request();
-        reqObj.setRequest_id("1");
-        reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
-        reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
-        reqObj.put(JsonKey.USER_ID, "USR");
-        HashMap<String, Object> innerMap = new HashMap<>();
-        innerMap.put(JsonKey.COURSE, reqObj.getRequest());
-        innerMap.put(JsonKey.USER_ID, "USR");
-        reqObj.setRequest(innerMap);
+  @Test
+  public void testBEnrollWithSameCourse() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
-        subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-        //probe.expectMsgClass(ProjectCommonException.class);
-        System.out.println("testBEnrollWithSameCourse - end"+new Date());
-    }
+    Request reqObj = new Request();
+    reqObj.setRequest_id("1");
+    reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
+    reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
+    reqObj.put(JsonKey.USER_ID, "USR");
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.COURSE, reqObj.getRequest());
+    innerMap.put(JsonKey.USER_ID, "USR");
+    reqObj.setRequest(innerMap);
 
-    @Test
-    public void aonReceiveTestWithInvalidEkStepContent(){
-        System.out.println("aonReceiveTestWithInvalidEkStepContent - start"+new Date());
-        TestKit probe = new TestKit(system);
-        ActorRef subject = system.actorOf(props);
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
 
-        PowerMockito.mockStatic(EkStepRequestUtil.class);
+  }
 
-        Object[] ekstepMockResult = {};
-        when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
+  @Test
+  public void aonReceiveTestWithInvalidEkStepContent() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
-        Request reqObj = new Request();
-        reqObj.setRequest_id("1");
-        reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
-        reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
-        reqObj.put(JsonKey.USER_ID, "USR");
-        HashMap<String, Object> innerMap = new HashMap<>();
-        innerMap.put(JsonKey.COURSE, reqObj.getRequest());
-        innerMap.put(JsonKey.USER_ID, "USR");
-        innerMap.put(JsonKey.COURSE_ID ,"do_212282810555342848180" );
-        reqObj.setRequest(innerMap);
+    PowerMockito.mockStatic(EkStepRequestUtil.class);
 
+    Object[] ekstepMockResult = {};
+    when(EkStepRequestUtil.searchContent(Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(ekstepMockResult);
 
-        subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-        //probe.expectMsgClass(ProjectCommonException.class);
-        System.out.println("aonReceiveTestWithInvalidEkStepContent - end"+new Date());
-    }
+    Request reqObj = new Request();
+    reqObj.setRequest_id("1");
+    reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
+    reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
+    reqObj.put(JsonKey.USER_ID, "USR");
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.COURSE, reqObj.getRequest());
+    innerMap.put(JsonKey.USER_ID, "USR");
+    innerMap.put(JsonKey.COURSE_ID, "do_212282810555342848180");
+    reqObj.setRequest(innerMap);
 
-    @Test()
-    public void onReceiveTestWithInvalidOperation() throws Throwable {
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
 
-        System.out.println("onReceiveTestWithInvalidOperation - start"+new Date());
-        TestKit probe = new TestKit(system);
-        ActorRef subject = system.actorOf(props);
+  }
 
-        Request reqObj = new Request();
-        reqObj.setRequest_id("1211");
-        reqObj.setOperation("INVALID_OPERATION");
-        HashMap<String, Object> innerMap = new HashMap<>();
-        innerMap.put(JsonKey.COURSE, reqObj.getRequest());
-        innerMap.put(JsonKey.USER_ID, "USR1");
-        innerMap.put(JsonKey.ID, "");
-        reqObj.setRequest(innerMap);
-        subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-        System.out.println("onReceiveTestWithInvalidOperation - end"+new Date());
+  @Test()
+  public void onReceiveTestWithInvalidOperation() throws Throwable {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request reqObj = new Request();
+    reqObj.setRequest_id("1211");
+    reqObj.setOperation("INVALID_OPERATION");
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.COURSE, reqObj.getRequest());
+    innerMap.put(JsonKey.USER_ID, "USR1");
+    innerMap.put(JsonKey.ID, "");
+    reqObj.setRequest(innerMap);
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
 
 
-    }
+  }
 
-    @Test()
-    public void onReceiveTestWithInvalidRequestType() throws Throwable {
-        System.out.println("onReceiveTestWithInvalidRequestType - start"+new Date());
+  @Test()
+  public void onReceiveTestWithInvalidRequestType() throws Throwable {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
-        TestKit probe = new TestKit(system);
-        ActorRef subject = system.actorOf(props);
+    subject.tell("INVALID REQ", probe.getRef());
+    probe.expectMsgClass(ProjectCommonException.class);
 
 
-        subject.tell("INVALID REQ", probe.getRef());
-        probe.expectMsgClass( ProjectCommonException.class);
-
-        System.out.println("onReceiveTestWithInvalidRequestType - end"+new Date());
-
-    }
-
-    @AfterClass
-    public static void destroy(){
-        cassandraOperation.deleteRecord(userCoursesdbInfo.getKeySpace(), userCoursesdbInfo.getTableName(), OneWayHashing.encryptVal("USR"+ JsonKey.PRIMARY_KEY_DELIMETER+"do_212282810555342848180"));
-    }
+  }
 }

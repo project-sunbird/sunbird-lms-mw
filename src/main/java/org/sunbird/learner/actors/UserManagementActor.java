@@ -140,7 +140,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 
                 String regOrgId = (String) result.get(JsonKey.REGISTERED_ORG_ID);
                 Map<String, Object> esResult = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName(), regOrgId);
-                result.put(JsonKey.REGISTERED_ORG, esResult);
+                result.put(JsonKey.REGISTERED_ORG, esResult!=null ? esResult: new HashMap<>());
             }
         } catch (Exception ex) {
             ProjectLogger.log(ex.getMessage(), ex);

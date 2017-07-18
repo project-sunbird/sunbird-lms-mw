@@ -397,7 +397,17 @@ public class PageManagementActor extends UntypedAbstractActor {
       }
       Map<String, Object> filters = (Map<String, Object>) ((Map<String, Object>)map.get(JsonKey.REQUEST)).get(JsonKey.FILTERS);
 	    applyFilters(filters,reqFilters);
-		Object[] result = EkStepRequestUtil.searchContent((String) section.get(JsonKey.SEARCH_QUERY),headers);
+	    String query = "";
+	    
+	    try{
+	      query = mapper.writeValueAsString(map);
+	    }catch(Exception e){
+	      ProjectLogger.log("Exception occurred while parsing filters for Ekstep search query", e);
+	    }
+	    if(ProjectUtil.isStringNullOREmpty(query)){
+	      query = (String)section.get(JsonKey.SEARCH_QUERY);
+	    }
+		Object[] result = EkStepRequestUtil.searchContent(query,headers);
 		if (null != result)
 			section.put(JsonKey.CONTENTS, result);
 	}

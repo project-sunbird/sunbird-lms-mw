@@ -30,6 +30,7 @@ public class EkStepRequestUtil {
 					PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTNET_SEARCH_URL), params, headers);
 			jObject = new JSONObject(response);
 			data = jObject.getJSONObject(JsonKey.RESULT);
+			ProjectLogger.log("Total number of content fetched from Ekstep while assembling page data : "+data.get("count"));
 			JSONArray contentArray = data.getJSONArray(JsonKey.CONTENT);
 			result = mapper.readValue(contentArray.toString(), Object[].class);
 		} catch (IOException | JSONException e) {

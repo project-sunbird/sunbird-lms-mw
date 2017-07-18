@@ -21,6 +21,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.learner.util.Util;
 
 import akka.actor.UntypedAbstractActor;
@@ -611,7 +612,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     if (list.size() > 0) {
       // user already enrolled for the organisation
       response = new Response();
-      response.getResult().put(JsonKey.RESPONSE, "User already a member of the organisation");
+      response.getResult().put(JsonKey.RESPONSE, ResponseMessage.Message.EXISTING_ORG_MEMBER);
       sender().tell(response, self());
       return;
     }
@@ -768,7 +769,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
     }
-    Map<String, Object> orgDBO;
     String orgId = (String) req.get(JsonKey.ORGANISATION_ID);
     Map<String, Object> result = ElasticSearchUtil
         .getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
@@ -907,7 +907,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     if (list.size() > 0) {
       // user already enrolled for the organisation
       response = new Response();
-      response.getResult().put(JsonKey.RESPONSE, "User already joined the organisation");
+      response.getResult().put(JsonKey.RESPONSE, ResponseMessage.Message.EXISTING_ORG_MEMBER);
       sender().tell(response, self());
       return;
     }

@@ -14,6 +14,7 @@ import org.sunbird.common.models.util.ProjectLogger;
  *All the scheduler job will be handle by this class.
  */
 public class SchedulerManager {
+  
 	 private static final int PAGE_DATA_TTL = 24;
 	    /*
 	     * service ScheduledExecutorService object

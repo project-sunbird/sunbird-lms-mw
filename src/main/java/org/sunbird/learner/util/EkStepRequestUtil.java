@@ -1,21 +1,40 @@
+/**
+ * 
+ */
 package org.sunbird.learner.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.IOException;
+
 import java.util.Map;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 
+/**
+ * This class will make the call to EkStep content
+ * search
+ * @author Manzarul
+ *
+ */
 public class EkStepRequestUtil {
 
 	private static ObjectMapper mapper = new ObjectMapper();
 	
+	/**
+	 * 
+	 * @param params String
+	 * @param headers Map<String, String>
+	 * @return Object[]
+	 */
 	public static Object[] searchContent(String params, Map<String, String> headers) {
 		Object[] result = null;
 		String response = "";

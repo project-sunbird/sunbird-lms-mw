@@ -17,7 +17,13 @@ import org.sunbird.helper.CassandraConnectionManager;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+
 
 /**
  * Utility class for actors
@@ -36,6 +42,8 @@ public class Util {
         initializeOrgStatusTransition();
 
         //setting db info (keyspace , table) into static map
+        //this map will be used during cassandra data base interaction.
+        //this map will have each DB name and it's corresponding keyspace and table name.
         dbInfoMap.put(JsonKey.LEARNER_COURSE_DB, getDbInfoObject("sunbird","user_courses"));
         dbInfoMap.put(JsonKey.LEARNER_CONTENT_DB, getDbInfoObject("sunbird","content_consumption"));
         dbInfoMap.put(JsonKey.COURSE_MANAGEMENT_DB, getDbInfoObject("sunbird","course_management"));
@@ -67,6 +75,11 @@ public class Util {
         headers.put("accept", "application/json");
     }
 
+    /**
+     * This method will a map of organization state transaction. 
+     * which will help us to move the organization status from one 
+     * Valid state to another state.
+     */
     private static void initializeOrgStatusTransition() {
         orgStatusTransition.put(JsonKey.ACTIVE , Arrays.asList(JsonKey.INACTIVE, JsonKey.BLOCKED, JsonKey.RETIRED));
         orgStatusTransition.put(JsonKey.INACTIVE , Arrays.asList(JsonKey.ACTIVE));
@@ -74,6 +87,14 @@ public class Util {
         orgStatusTransition.put(JsonKey.RETIRED ,Arrays.asList());
     }
 
+    /**
+     * This method will take org current state and next state and check 
+     * is it possible to move organization from current state to next state 
+     * if possible to move then return true else false.
+     * @param currentState String
+     * @param nextState String
+     * @return boolean
+     */
     @SuppressWarnings("rawtypes")
     public static boolean checkOrgStatusTransition(String currentState , String nextState){
         List list = (List)orgStatusTransition.get(currentState);
@@ -82,7 +103,13 @@ public class Util {
         }
         return list.contains(nextState.toLowerCase());
     }
-
+    
+    /**
+     * This method will check the cassandra data base connection.
+     * first it will try to established the data base connection from 
+     * provided environment variable , if environment variable values 
+     * are not set then connection will be established from property file.
+     */
     public static void checkCassandraDbConnections() {
         if (readConfigFromEnv()) {
             ProjectLogger.log("db connection is created from System env variable.");
@@ -154,7 +181,9 @@ public class Util {
         return response;
     }
     
-    
+    /**
+     * This method will load the db config properties file.
+     */
     private static void loadPropertiesFile() {
 
         InputStream input = null;
@@ -181,27 +210,6 @@ public class Util {
           return prop.getProperty(key);
        }
 
-    /**
-     * 
-     * @param value
-     * @return
-     */
-    private static DbInfo getDbInfoObject(String value) {
-
-        DbInfo dbInfo = new DbInfo();
-
-        String configDetails = prop.getProperty(value);
-        String[] details = configDetails.split(",");
-
-        dbInfo.setIp(details[0]);
-        dbInfo.setPort(details[1]);
-        dbInfo.setUserName(details[2]);
-        dbInfo.setPassword(details[3]);
-        dbInfo.setKeySpace(details[4]);
-        dbInfo.setTableName(details[5]);
-
-        return dbInfo;
-    }
 
     private static DbInfo getDbInfoObject(String keySpace, String table) {
 
@@ -310,7 +318,13 @@ public class Util {
             this.port = port;
         }
     }
-
+    
+    /**
+     * This method will take the  map<String,Object> and list<Stirng> of keys.
+     * it will remove all the keys from the source map.
+     * @param map  Map<String, Object>
+     * @param keys List<String> 
+     */
     public static void removeAttributes(Map<String, Object> map ,List<String> keys ){
 
         if(null != map && null != keys) {
@@ -320,6 +334,12 @@ public class Util {
         }
     }
     
+    /**
+     * This method will take searchQuery map and internally it will convert map to
+     * SearchDto object.
+     * @param searchQueryMap Map<String , Object>
+     * @return SearchDTO
+     */
     @SuppressWarnings("unchecked")
     public static SearchDTO createSearchDto(Map<String , Object> searchQueryMap){
         SearchDTO search = new SearchDTO();
@@ -363,7 +383,14 @@ public class Util {
         }
         return search;
     }
-
+    
+    /**
+     * This method will make a call to EKStep content search api
+     * and final response will be appended with same requested map, 
+     * with key "contents". Requester can read this key to collect 
+     * the response.
+     * @param section String, Object> 
+     */
     public static void getContentData(Map<String, Object> section) {
         String response = "";
         JSONObject data;
@@ -384,11 +411,21 @@ public class Util {
             ProjectLogger.log(e.getMessage(), e);
         } 
     }
-
+    
+    /**
+     * if Object is null then it will return true else false.
+     * @param obj Object
+     * @return boolean
+     */
     public static boolean isNull(Object obj){
         return null == obj ? true:false;
     }
-
+    
+    /** 
+     * if Object is not null then it will return true else false.
+     * @param obj Object
+     * @return boolean
+     */
     public static boolean isNotNull(Object obj){
         return null != obj? true:false;
     }

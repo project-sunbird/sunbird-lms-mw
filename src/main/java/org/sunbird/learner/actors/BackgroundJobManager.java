@@ -101,6 +101,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
 
   @SuppressWarnings("unchecked")
   private void insertOrgInfoToEs(Response actorMessage) {
+    ProjectLogger.log("Calling method to save inside Es==");
     Map<String, Object> orgMap = (Map<String, Object>) actorMessage.get(JsonKey.ORGANISATION);
     insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.organisation.getTypeName(),
@@ -422,9 +423,11 @@ public class BackgroundJobManager extends UntypedAbstractActor {
    */
   private boolean insertDataToElastic(String index, String type, String identifier,
       Map<String, Object> data) {
+    ProjectLogger.log("making call to ES for type ,identifier ,data==" + type +" " + identifier + data);
     String response = ElasticSearchUtil.createData(index, type, identifier, data);
+    ProjectLogger.log("Getting ES save response for type , identiofier==" +type+"  " + identifier + "  "+ response);
     if (!ProjectUtil.isStringNullOREmpty(response)) {
-      ProjectLogger.log("User Data is saved successfully ES .");
+      ProjectLogger.log("User Data is saved successfully ES ." + type+ "  " + identifier);
       return true;
     }
     ProjectLogger.log("unbale to save the data inside ES with identifier " + identifier,

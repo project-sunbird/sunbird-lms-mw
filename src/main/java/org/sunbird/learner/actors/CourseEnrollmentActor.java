@@ -98,6 +98,7 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
             courseMap.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
             courseMap.put(JsonKey.ID, generatePrimaryKey(courseMap));
             courseMap.put(JsonKey.COURSE_PROGRESS, 0);
+            courseMap.put(JsonKey.LEAF_NODE_COUNT, ekStepContent.get(JsonKey.LEAF_NODE_COUNT));
             Response result = cassandraOperation.insertRecord(courseEnrollmentdbInfo.getKeySpace(),
                 courseEnrollmentdbInfo.getTableName(), courseMap);
             sender().tell(result, self());

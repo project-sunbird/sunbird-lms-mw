@@ -426,6 +426,8 @@ ALTER TABLE sunbird.organisation ADD isDefault boolean;
 
 INSERT INTO sunbird.organisation(id , isRootOrg , isDefault, status) values('ORG_001' , true , true, 'active');
 
+ALTER TABLE sunbird.user_courses ADD leafNodesCount int;
+
 
 
 

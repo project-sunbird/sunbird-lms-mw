@@ -10,6 +10,7 @@ import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.CassandraConnectionManager;
@@ -37,7 +38,7 @@ public class Util {
     private static final String KEY_SPACE_NAME = "sunbird";
     private static Properties prop = new Properties();
     private static Map<String, String> headers = new HashMap<String, String>();
-    private static Map<String , Object> orgStatusTransition = new HashMap<String , Object>();
+    private static Map<Integer , List<Integer>> orgStatusTransition = new HashMap<Integer , List<Integer>>();
     
     
     static {
@@ -84,10 +85,10 @@ public class Util {
      * Valid state to another state.
      */
     private static void initializeOrgStatusTransition() {
-        orgStatusTransition.put(JsonKey.ACTIVE , Arrays.asList(JsonKey.INACTIVE, JsonKey.BLOCKED, JsonKey.RETIRED));
-        orgStatusTransition.put(JsonKey.INACTIVE , Arrays.asList(JsonKey.ACTIVE));
-        orgStatusTransition.put(JsonKey.BLOCKED ,Arrays.asList(JsonKey.ACTIVE , JsonKey.RETIRED));
-        orgStatusTransition.put(JsonKey.RETIRED ,Arrays.asList());
+        orgStatusTransition.put(OrgStatus.ACTIVE.getValue(), Arrays.asList(OrgStatus.ACTIVE.getValue(),OrgStatus.INACTIVE.getValue(),OrgStatus.BLOCKED.getValue(),OrgStatus.RETIRED.getValue()));
+        orgStatusTransition.put(OrgStatus.INACTIVE.getValue() , Arrays.asList(OrgStatus.ACTIVE.getValue(),OrgStatus.INACTIVE.getValue()));
+        orgStatusTransition.put(OrgStatus.BLOCKED.getValue() ,Arrays.asList(OrgStatus.ACTIVE.getValue(),OrgStatus.BLOCKED.getValue(),OrgStatus.RETIRED.getValue()));
+        orgStatusTransition.put(OrgStatus.RETIRED.getValue() ,Arrays.asList(OrgStatus.RETIRED.getValue()));
     }
 
     /**
@@ -99,12 +100,12 @@ public class Util {
      * @return boolean
      */
     @SuppressWarnings("rawtypes")
-    public static boolean checkOrgStatusTransition(String currentState , String nextState){
+    public static boolean checkOrgStatusTransition(Integer currentState , Integer nextState){
         List list = (List)orgStatusTransition.get(currentState);
         if(null == list){
             return false;
         }
-        return list.contains(nextState.toLowerCase());
+        return list.contains(nextState);
     }
     
     /**

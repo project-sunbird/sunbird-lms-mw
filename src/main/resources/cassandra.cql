@@ -427,6 +427,11 @@ ALTER TABLE sunbird.organisation ADD isDefault boolean;
 INSERT INTO sunbird.organisation(id , isRootOrg , isDefault, status) values('ORG_001' , true , true, 'active');
 
 ALTER TABLE sunbird.user_courses ADD leafNodesCount int;
+// change organisation status field from text to int -- July 19,2017
+drop index inx_org_status;
+ALTER TABLE sunbird.organisation DROP status ;
+ALTER TABLE sunbird.organisation ADD status int;
+CREATE INDEX inx_org_status ON sunbird.organisation (status);
 
 
 

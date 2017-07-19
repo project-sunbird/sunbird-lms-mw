@@ -709,7 +709,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         userOrgDbInfo.getTableName(), requestData);
 
     List list = (List) result.get(JsonKey.RESPONSE);
-    if (list.size() < 0) {
+    if (list.size() == 0) {
       ProjectCommonException exception =
           new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
               ResponseCode.invalidRequestData.getErrorMessage(),
@@ -728,9 +728,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           userOrgDbInfo.getTableName(), dataMap);
       Map<String, Object> newOrgMap = new HashMap<String, Object>();
 
-      Response orgresult = cassandraOperation.getRecordById(organisationDbInfo.getKeySpace(),
-          organisationDbInfo.getTableName(), orgId);
-      List orgList = (List) orgresult.get(JsonKey.RESPONSE);
+
+      List orgList = (List) response.get(JsonKey.RESPONSE);
       if (orgList.size() > 0) {
         Map<String, Object> orgMap = (Map<String, Object>) orgList.get(0);
         if (isNotNull(orgMap.get(JsonKey.NO_OF_MEMBERS.toLowerCase()))) {
@@ -1379,6 +1378,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   private boolean validateOrgRequest(Map<String, Object> req) {
 
     if (isNull(req)) {
+      ProjectLogger.log("In null req");
       ProjectCommonException exception = new ProjectCommonException(
           ResponseCode.invalidRequestData.getErrorCode(),
           ResponseCode.invalidRequestData.getErrorMessage(),

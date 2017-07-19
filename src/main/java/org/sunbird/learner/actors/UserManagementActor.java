@@ -111,10 +111,10 @@ public class UserManagementActor extends UntypedAbstractActor {
           Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(), (String)map.get(JsonKey.USER_ID));
             fetchRootAndRegisterOrganisation(result);
           Response response = new Response();
-          if(result !=null) {
-          response.put(JsonKey.RESPONSE, result);
+          if(null != result) {
+            response.put(JsonKey.RESPONSE, result);
           } else {
-               result = new HashMap<String, Object>();
+               result = new HashMap<>();
                response.put(JsonKey.RESPONSE, result);    
           }
           sender().tell(response, self());
@@ -157,10 +157,10 @@ public class UserManagementActor extends UntypedAbstractActor {
       Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(), (String)userMap.get(JsonKey.USER_ID));
         fetchRootAndRegisterOrganisation(result);
       Response response = new Response();
-      if(result !=null) {
+      if(null != result ) {
       response.put(JsonKey.RESPONSE, result);
       } else {
-           result = new HashMap<String, Object>();
+           result = new HashMap<>();
            response.put(JsonKey.RESPONSE, result);    
       }
       sender().tell(response, self());
@@ -589,7 +589,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 		                 sender().tell(exception, self());
 		                 return;
 		             }
-		        }
+		        } 
 		        SSOManager ssoManager = new KeyCloakServiceImpl();
 		    if(isSSOEnabled){
 		    	try{
@@ -1090,7 +1090,7 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
         Response response = new Response();
         Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
 
-        Map<String , Object> updateUserOrgDBO = new HashMap<String , Object>();
+        Map<String , Object> updateUserOrgDBO = new HashMap<>();
         Map<String , Object> req = actorMessage.getRequest();
         String updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
 
@@ -1125,7 +1125,7 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
         }
 
         // check user already exist for the org or not
-        Map<String , Object> requestData = new HashMap<String , Object>();
+        Map<String , Object> requestData = new HashMap<>();
         requestData.put(JsonKey.USER_ID , userId);
         requestData.put(JsonKey.ORGANISATION_ID , orgId);
 
@@ -1172,7 +1172,7 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
         Response response = new Response();
         Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
 
-        Map<String , Object> updateUserOrgDBO = new HashMap<String , Object>();
+        Map<String , Object> updateUserOrgDBO = new HashMap<>();
         Map<String , Object> req = actorMessage.getRequest();
         String updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
 
@@ -1204,7 +1204,7 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
         }
 
         // check user already exist for the org or not
-        Map<String , Object> requestData = new HashMap<String , Object>();
+        Map<String , Object> requestData = new HashMap<>();
         requestData.put(JsonKey.USER_ID , userId);
         requestData.put(JsonKey.ORGANISATION_ID , orgId);
 

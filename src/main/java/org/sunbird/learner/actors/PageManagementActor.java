@@ -1,5 +1,7 @@
 package org.sunbird.learner.actors;
 
+import akka.actor.UntypedAbstractActor;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -7,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -21,12 +22,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
-
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import akka.actor.UntypedAbstractActor;
 
 /**
  * This actor will handle page management operation .
@@ -53,7 +48,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_PAGE_SETTING.getValue())) {
 					getPageSetting(actorMessage);
 				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_PAGE_SETTINGS.getValue())) {
-					getPageSettings(actorMessage);
+					getPageSettings();
 				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_PAGE_DATA.getValue())) {
 					getPageData(actorMessage);
 				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_SECTION.getValue())) {
@@ -63,7 +58,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_SECTION.getValue())) {
 					getSection(actorMessage);
 				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_ALL_SECTION.getValue())) {
-					getAllSections(actorMessage);
+					getAllSections();
 				} else {
 			        ProjectLogger.log("UNSUPPORTED OPERATION");
 					ProjectCommonException exception = new ProjectCommonException(
@@ -87,7 +82,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 
 	}
 
-	private void getAllSections(Request actorMessage) {
+	private void getAllSections() {
 		Response response = null;
 		response = cassandraOperation.getAllRecords(sectionDbInfo.getKeySpace(), sectionDbInfo.getTableName());
 		@SuppressWarnings("unchecked")
@@ -145,6 +140,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 		//update DataCacheHandler section map with updated page section data
 		new Thread()
 		{
+		  @Override
 		    public void run() {
 		    	if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
 					DataCacheHandler.sectionMap.put((String)sectionMap.get(JsonKey.ID), sectionMap);
@@ -179,10 +175,12 @@ public class PageManagementActor extends UntypedAbstractActor {
 		sectionMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
 		Response response = cassandraOperation.insertRecord(sectionDbInfo.getKeySpace(), sectionDbInfo.getTableName(),
 				sectionMap);
+		response.put(JsonKey.SECTION_ID, uniqueId);
 		sender().tell(response, self());
 		//update DataCacheHandler section map with new page section data
 		new Thread()
 		{
+		  @Override
 		    public void run() {
 		    	if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
 					DataCacheHandler.sectionMap.put((String)sectionMap.get(JsonKey.ID), sectionMap);
@@ -214,7 +212,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 		
 		Map<String, Object> map = null;
 		String orgId = "NA";
-		if(null != result && result.size() > 0){
+		if(null != result && !result.isEmpty()){
 			map = result.get(0);
 			orgId = (String) map.get(JsonKey.ID);
 		}
@@ -255,16 +253,10 @@ public class PageManagementActor extends UntypedAbstractActor {
 	        responseMap.put(JsonKey.NAME, pageMap.get(JsonKey.NAME));
 	        responseMap.put(JsonKey.ID, pageMap.get(JsonKey.ID));
 	        responseMap.put(JsonKey.SECTIONS, sectionList);
-      } catch (JsonParseException e) {
-        ProjectLogger.log(e.getMessage(), e);
-      } catch (JsonMappingException e) {
-        ProjectLogger.log(e.getMessage(), e);
       } catch (IOException e) {
         ProjectLogger.log(e.getMessage(), e);
-      }catch (Exception e) {
-        ProjectLogger.log(e.getMessage(), e);
       }
-		Response pageResponse = new Response();
+		Response pageResponse = new Response();  
 		pageResponse.put(JsonKey.RESPONSE, responseMap);
 		sender().tell(pageResponse, self());
 	}
@@ -288,12 +280,12 @@ public class PageManagementActor extends UntypedAbstractActor {
 	}
 	
 	@SuppressWarnings("unchecked")
-	private void getPageSettings(Request actorMessage) {
+	private void getPageSettings() {
 
 		Response response = cassandraOperation.getAllRecords(pageDbInfo.getKeySpace(), pageDbInfo.getTableName());
 		List<Map<String, Object>> result = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
 
-		List<Map<String, Object>> pageList = new ArrayList<Map<String, Object>>();
+		List<Map<String, Object>> pageList = new ArrayList<>();
 
 		for (Map<String, Object> pageDO : result) {
 			Map<String, Object> responseMap = getPageSetting(pageDO);
@@ -333,6 +325,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 		//update DataCacheHandler page map with updated page data
 		new Thread()
 		{
+		  @Override
 		    public void run() {
 		    	if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
 		    	  String orgId = "NA";
@@ -370,10 +363,12 @@ public class PageManagementActor extends UntypedAbstractActor {
 		}
 		Response response = cassandraOperation.insertRecord(pageDbInfo.getKeySpace(), pageDbInfo.getTableName(),
 				pageMap);
+		response.put(JsonKey.PAGE_ID, uniqueId);
 		sender().tell(response, self());
 		//update DataCacheHandler page map with new page data
 		new Thread()
 		{
+		  @Override
 		    public void run() {
 		    	if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
 		    	  String orgId = "NA";
@@ -414,6 +409,12 @@ public class PageManagementActor extends UntypedAbstractActor {
 	}
 
   @SuppressWarnings("unchecked")
+  /**
+   * combine both requested page filters with default page filters.
+   * 
+   * @param filters
+   * @param reqFilters
+   */
   private void applyFilters(Map<String, Object> filters,Map<String, Object> reqFilters) {
     if(null != reqFilters){
 	  Set<Entry<String, Object>> entrySet = reqFilters.entrySet();
@@ -493,7 +494,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 
 				List<Map<String, Object>> sectionResult = (List<Map<String, Object>>) sectionResponse.getResult()
 						.get(JsonKey.RESPONSE);
-				if(null != sectionResult && sectionResult.size()>0){
+				if(null != sectionResult && !sectionResult.isEmpty()){
 					sectionResult.get(0).put(JsonKey.GROUP, sectionMap.get(JsonKey.GROUP));
 					sectionResult.get(0).put(JsonKey.INDEX, sectionMap.get(JsonKey.INDEX));
 					removeUnwantedData(sectionResult.get(0),"");

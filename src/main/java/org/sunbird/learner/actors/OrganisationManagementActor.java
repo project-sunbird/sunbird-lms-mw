@@ -709,7 +709,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         userOrgDbInfo.getTableName(), requestData);
 
     List list = (List) result.get(JsonKey.RESPONSE);
-    if (list.size() < 0) {
+    if (list.isEmpty()) {
       ProjectCommonException exception =
           new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
               ResponseCode.invalidRequestData.getErrorMessage(),
@@ -728,8 +728,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           userOrgDbInfo.getTableName(), dataMap);
       Map<String, Object> newOrgMap = new HashMap<String, Object>();
 
-      Response orgresult = cassandraOperation.updateRecord(userOrgDbInfo.getKeySpace(),
-          userOrgDbInfo.getTableName(), dataMap);
+      Response orgresult = cassandraOperation.getRecordById(organisationDbInfo.getKeySpace(),
+          organisationDbInfo.getTableName(), orgId);
       List orgList = (List) orgresult.get(JsonKey.RESPONSE);
       if (orgList.size() > 0) {
         Map<String, Object> orgMap = (Map<String, Object>) orgList.get(0);

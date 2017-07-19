@@ -28,6 +28,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.util.EkStepRequestUtil;
@@ -36,7 +37,6 @@ import org.sunbird.learner.util.Util;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.TestActorRef;
-
 import static akka.testkit.JavaTestKit.duration;
 import static org.mockito.Matchers.anyObject;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -51,8 +51,8 @@ import static org.powermock.api.mockito.PowerMockito.when;
 public class CourseEnrollmentActorTest {
 
 
-  final static Props props = Props.create(CourseEnrollmentActor.class);
   static ActorSystem system;
+  final static  Props props = Props.create(CourseEnrollmentActor.class);
   static Util.DbInfo userCoursesdbInfo = null;
   private static CassandraOperation cassandraOperation = new CassandraOperationImpl();
 
@@ -64,17 +64,8 @@ public class CourseEnrollmentActorTest {
     //PowerMockito.mockStatic(EkStepRequestUtil.class);
   }
 
-  @AfterClass
-  public static void destroy() {
-    cassandraOperation
-        .deleteRecord(userCoursesdbInfo.getKeySpace(), userCoursesdbInfo.getTableName(),
-            OneWayHashing
-                .encryptVal("USR" + JsonKey.PRIMARY_KEY_DELIMETER + "do_212282810555342848180"));
-  }
-
   @Test()
   public void testAonReceive() {
-
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -89,19 +80,20 @@ public class CourseEnrollmentActorTest {
     reqObj.setRequest(innerMap);
 
     PowerMockito.mockStatic(EkStepRequestUtil.class);
-    Map<String, Object> ekstepResponse = new HashMap<String, Object>();
-    ekstepResponse.put("count", 10);
+    Map<String , Object> ekstepResponse = new HashMap<String , Object>();
+    ekstepResponse.put("count" , 10);
     Object[] ekstepMockResult = {ekstepResponse};
-    when(EkStepRequestUtil.searchContent(Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(ekstepMockResult);
+    when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
+
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("100 second"), Response.class);
+    probe.expectMsgClass(duration("100 second"),Response.class);
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
+
 
   }
 
@@ -122,19 +114,17 @@ public class CourseEnrollmentActorTest {
 
     subject.tell(reqObj, probe.getRef());
     probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-
   }
 
   @Test
-  public void aonReceiveTestWithInvalidEkStepContent() {
+  public void aonReceiveTestWithInvalidEkStepContent(){
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
     PowerMockito.mockStatic(EkStepRequestUtil.class);
 
     Object[] ekstepMockResult = {};
-    when(EkStepRequestUtil.searchContent(Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(ekstepMockResult);
+    when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
 
     Request reqObj = new Request();
     reqObj.setRequest_id("1");
@@ -144,12 +134,12 @@ public class CourseEnrollmentActorTest {
     HashMap<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.COURSE, reqObj.getRequest());
     innerMap.put(JsonKey.USER_ID, "USR");
-    innerMap.put(JsonKey.COURSE_ID, "do_212282810555342848180");
+    innerMap.put(JsonKey.COURSE_ID ,"do_212282810555342848180" );
     reqObj.setRequest(innerMap);
+
 
     subject.tell(reqObj, probe.getRef());
     probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-
   }
 
   @Test()
@@ -168,8 +158,6 @@ public class CourseEnrollmentActorTest {
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
     probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-
-
   }
 
   @Test()
@@ -177,9 +165,14 @@ public class CourseEnrollmentActorTest {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
+
     subject.tell("INVALID REQ", probe.getRef());
-    probe.expectMsgClass(ProjectCommonException.class);
+    probe.expectMsgClass( ProjectCommonException.class);
 
+  }
 
+  @AfterClass
+  public static void destroy(){
+    cassandraOperation.deleteRecord(userCoursesdbInfo.getKeySpace(), userCoursesdbInfo.getTableName(), OneWayHashing.encryptVal("USR"+ JsonKey.PRIMARY_KEY_DELIMETER+"do_212282810555342848180"));
   }
 }

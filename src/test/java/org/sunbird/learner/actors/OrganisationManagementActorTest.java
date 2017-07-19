@@ -23,13 +23,13 @@ import akka.testkit.javadsl.TestKit;
 /**
  * @author arvind.
  */
-public class OrganisationManagementActorTest {/*
+public class OrganisationManagementActorTest {
 
 
     static ActorSystem system;
     final static Props props = Props.create(OrganisationManagementActor.class);
     final static Props propsUser = Props.create(UserManagementActor.class);
-    public static String orgId = "";
+   /* public static String orgId = "";
     public static String usrId = "123";//TODO:change while committing
     public static String parentOrgId = "";
     public final static String source = "Test";

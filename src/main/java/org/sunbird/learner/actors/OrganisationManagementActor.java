@@ -1378,7 +1378,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   private boolean validateOrgRequest(Map<String, Object> req) {
 
     if (isNull(req)) {
-      ProjectLogger.log("In null req");
       ProjectCommonException exception = new ProjectCommonException(
           ResponseCode.invalidRequestData.getErrorCode(),
           ResponseCode.invalidRequestData.getErrorMessage(),

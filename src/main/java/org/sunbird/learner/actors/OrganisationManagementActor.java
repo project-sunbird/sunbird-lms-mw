@@ -3,6 +3,7 @@ package org.sunbird.learner.actors;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -246,23 +247,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         return;
       }
 
-      boolean isApprove = true;
-
-      if (isApprove) {
-
-        String orgStatus = (String) orgDBO.get(JsonKey.STATUS);
-        if ((ProjectUtil.OrgStatus.INACTIVE.name().equalsIgnoreCase(orgStatus))) {
-          ProjectLogger.log("Can not approve org");
-          ProjectCommonException exception =
-              new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-                  ResponseCode.invalidRequestData.getErrorMessage(),
-                  ResponseCode.CLIENT_ERROR.getResponseCode());
-          sender().tell(exception, self());
-          return;
-        }
-
-        updateOrgDBO.put(JsonKey.STATUS, ProjectUtil.OrgStatus.ACTIVE.getValue());
-      }
+      updateOrgDBO.put(JsonKey.STATUS, ProjectUtil.OrgStatus.ACTIVE.getValue());
       if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
         updateOrgDBO.put(JsonKey.UPDATED_BY, updatedBy);
         updateOrgDBO.put(JsonKey.APPROVED_BY, updatedBy);
@@ -326,8 +311,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         return;
       }
 
-      String currentStatus = (String) orgDBO.get(JsonKey.STATUS);
-      String nextStatus = (String) req.get(JsonKey.STATUS);
+      Integer currentStatus = (Integer) orgDBO.get(JsonKey.STATUS);
+      Integer nextStatus = ((BigInteger) req.get(JsonKey.STATUS)).intValue();
       if (!(Util.checkOrgStatusTransition(currentStatus, nextStatus))) {
 
         ProjectLogger.log("Invalid Org State transation");

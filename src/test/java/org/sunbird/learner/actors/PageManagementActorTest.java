@@ -325,11 +325,13 @@ public class PageManagementActorTest {
       //create search query for section
       Map<String,Object> filterMap = new HashMap<>();
       Map<String,Object> reqMap = new HashMap<>();
+      Map<String,Object> searchQueryMap = new HashMap<>();
       List<String> list = new ArrayList<>();
       list.add("Bengali");
       filterMap.put("language", list);
-      filterMap.put("limit", 1);
-      reqMap.put("request", filterMap);
+      //filterMap.put("limit", 1);
+      reqMap.put(JsonKey.FILTERS, filterMap);
+      searchQueryMap.put(JsonKey.REQUEST, reqMap);
       
       TestKit probe = new TestKit(system);
       ActorRef subject = system.actorOf(props);
@@ -340,7 +342,7 @@ public class PageManagementActorTest {
       sectionMap.put(JsonKey.ID , sectionId2);
       sectionMap.put(JsonKey.SECTION_DISPLAY , "TOP1");
       sectionMap.put(JsonKey.SECTION_NAME, "Updated Test Section2");
-      sectionMap.put(JsonKey.SEARCH_QUERY, reqMap);
+      sectionMap.put(JsonKey.SEARCH_QUERY, searchQueryMap);
       sectionMap.put(JsonKey.SECTION_DATA_TYPE, "course");
       innerMap.put(JsonKey.SECTION , sectionMap);
       reqObj.setRequest(innerMap);
@@ -370,7 +372,6 @@ public class PageManagementActorTest {
     
     @Test
     public void testHGetPageData(){
-      boolean section = false;
       Map<String,Object> header = new HashMap<>();
       header.put("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkMTc1MDIwNDdlODc0ODZjOTM0ZDQ1ODdlYTQ4MmM3MyJ9.7LWocwCn5rrCScFQYOne8_Op2EOo-xTCK5JCFarHKSs");
       header.put("Accept", "application/json");
@@ -398,7 +399,7 @@ public class PageManagementActorTest {
       map.put(JsonKey.HEADER, header);
       reqObj.setRequest(map);
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("10 second"),Response.class);
+      probe.expectMsgClass(duration("100 second"),Response.class);
     }
     
     @AfterClass

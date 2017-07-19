@@ -55,7 +55,7 @@ public class UserManagementActor extends UntypedAbstractActor {
      * @throws Throwable
      */
     @Override
-    public void onReceive(Object message) throws Throwable {
+    public void onReceive(Object message) throws Throwable { 
         if (message instanceof Request) {
             try {
                 ProjectLogger.log("UserManagementActor  onReceive called");
@@ -184,7 +184,7 @@ public class UserManagementActor extends UntypedAbstractActor {
             if (passwordMatched) {
                 // update the new password
                 String newHashedPassword = OneWayHashing.encryptVal(newPassword);
-                Map<String, Object> queryMap = new LinkedHashMap<String, Object>();
+                Map<String, Object> queryMap = new LinkedHashMap<>();
                 queryMap.put(JsonKey.ID, userMap.get(JsonKey.USER_ID));
                 queryMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
                 queryMap.put(JsonKey.UPDATED_BY, actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
@@ -1039,7 +1039,7 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
 		Response orgResult = cassandraOperation.getRecordById(organisationDbInfo.getKeySpace(), organisationDbInfo.getTableName() , orgId);
 
 		List orgList =(List)orgResult.get(JsonKey.RESPONSE);
-		if(orgList.size()==0){
+		if(orgList.isEmpty()){
 			// user already enrolled for the organisation
 			ProjectLogger.log("Org does not exist");
 			ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOrgId.getErrorCode(), ResponseCode.invalidOrgId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -1048,14 +1048,14 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
 		}
 
 		// check user already exist for the org or not
-		Map<String , Object> requestData = new HashMap<String , Object>();
+		Map<String , Object> requestData = new HashMap<>();
 		requestData.put(JsonKey.USER_ID , userId);
 		requestData.put(JsonKey.ORGANISATION_ID , orgId);
 
 		Response result = cassandraOperation.getRecordsByProperties(userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName() , requestData);
 
 		List list =(List)result.get(JsonKey.RESPONSE);
-		if(list.size()>0){
+		if(!list.isEmpty()){
 			// user already enrolled for the organisation
 			response = new Response();
 			response.getResult().put(JsonKey.RESPONSE, "User already joined the organisation");
@@ -1132,7 +1132,7 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
         Response result = cassandraOperation.getRecordsByProperties(userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName() , requestData);
 
         List<Map<String , Object>> list =(List<Map<String , Object>>)result.get(JsonKey.RESPONSE);
-        if(list.size()==0){
+        if(list.isEmpty()){
             // user already enrolled for the organisation
 			ProjectLogger.log("User does not belong to org");
             ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOrgId.getErrorCode(), ResponseCode.invalidOrgId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -1212,7 +1212,7 @@ private Map< String, Object> getSubRoleListMap (List<Map<String, Object>> urlAct
 
         @SuppressWarnings("unchecked")
         List<Map<String , Object>> list =(List<Map<String , Object>>)result.get(JsonKey.RESPONSE);
-        if(list.size()==0){
+        if(list.isEmpty()){
             // user already enrolled for the organisation
             ProjectLogger.log("User does not belong to org");
             ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOrgId.getErrorCode(), ResponseCode.invalidOrgId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());

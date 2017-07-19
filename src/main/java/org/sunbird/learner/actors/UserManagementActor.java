@@ -622,7 +622,7 @@ public class UserManagementActor extends UntypedAbstractActor {
             }
             if(!userMap.containsKey(JsonKey.ROLES)){
               List<String> roles = new ArrayList<>();
-              roles.add(JsonKey.PUBLIC);
+              roles.add(JsonKey.CONTENT_CREATOR);
               userMap.put(JsonKey.ROLES, roles);
             }
             requestMap = new HashMap<>();
@@ -864,7 +864,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     	reqMap.remove(JsonKey.ORGANISATION);
     	reqMap.remove(JsonKey.EMAIL_VERIFIED);
     	reqMap.remove(JsonKey.PHONE_NUMBER_VERIFIED);
-    	reqMap.remove(JsonKey.ROLES);
+    	//reqMap.remove(JsonKey.ROLES);
     	reqMap.remove(JsonKey.REGISTERED_ORG);
     	reqMap.remove(JsonKey.ROOT_ORG);
     	reqMap.remove(JsonKey.IDENTIFIER);

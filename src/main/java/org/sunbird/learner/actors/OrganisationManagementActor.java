@@ -709,7 +709,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         userOrgDbInfo.getTableName(), requestData);
 
     List list = (List) result.get(JsonKey.RESPONSE);
-    if (list.size() < 0) {
+    if (list.isEmpty()) {
       ProjectCommonException exception =
           new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
               ResponseCode.invalidRequestData.getErrorMessage(),

@@ -112,6 +112,10 @@ public class UserManagementActor extends UntypedAbstractActor {
             fetchRootAndRegisterOrganisation(result);
           Response response = new Response();
           if(null != result) {
+            if(!ProjectUtil.isStringNullOREmpty((String)result.get(JsonKey.USER_ID))) {
+              List<Map<String, Object>> organisations = getOrganisationDetailsByUserId((String)result.get(JsonKey.USER_ID));
+              result.put(JsonKey.ORGANISATIONS, organisations);
+            }
             response.put(JsonKey.RESPONSE, result);
           } else {
                result = new HashMap<>();
@@ -158,12 +162,40 @@ public class UserManagementActor extends UntypedAbstractActor {
         fetchRootAndRegisterOrganisation(result);
       Response response = new Response();
       if(null != result ) {
+        if(!ProjectUtil.isStringNullOREmpty((String)result.get(JsonKey.USER_ID))) {
+          List<Map<String, Object>> organisations = getOrganisationDetailsByUserId((String)result.get(JsonKey.USER_ID));
+          result.put(JsonKey.ORGANISATIONS, organisations);
+        }
       response.put(JsonKey.RESPONSE, result);
       } else {
            result = new HashMap<>();
            response.put(JsonKey.RESPONSE, result);    
       }
       sender().tell(response, self());
+    }
+    /**
+     * Gets the organisation details for the given user Id from cassandra
+     * @param userId
+     * @return List<Map<String,Object>>
+     */
+    @SuppressWarnings("unchecked")
+    private List<Map<String,Object>> getOrganisationDetailsByUserId(String userId){
+      List<Map<String,Object>> organisations = new ArrayList<>();
+     
+      Util.DbInfo orgUsrDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+      Response result = cassandraOperation.getRecordsByProperty(orgUsrDbInfo.getKeySpace(), orgUsrDbInfo.getTableName(), JsonKey.USER_ID, userId);
+      List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      Map<String, Object> orgDb = new HashMap<>();
+      if (!(list.isEmpty())) {
+        for(Map<String, Object> map : list){
+          Map<String, Object> orgData = new HashMap<>();
+          orgDb = (Map<String, Object>) map; 
+          orgData.put(JsonKey.ORGANISATION_ID, orgDb.get(JsonKey.ORGANISATION_ID));
+          orgData.put(JsonKey.ROLES, orgDb.get(JsonKey.ROLES));
+          organisations.add(orgData);
+        }
+      }
+      return organisations;
     }
 
     /**

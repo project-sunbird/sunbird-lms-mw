@@ -615,6 +615,13 @@ public class UserManagementActor extends UntypedAbstractActor {
             if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PASSWORD))){
               userMap.put(JsonKey.PASSWORD,OneWayHashing.encryptVal((String)userMap.get(JsonKey.PASSWORD)));
             }
+            /**
+             * set role as PUBLIC by default if role is empty in request body.
+             * And if roles are coming in request body, then check for PUBLIC role , if not 
+             * present then add PUBLIC role to the list
+             * 
+             */
+            
             if(userMap.containsKey(JsonKey.ROLES)){
               List<String> roles = (List<String>) userMap.get(JsonKey.ROLES);
               if(!roles.contains(ProjectUtil.UserRole.PUBLIC.getValue())){

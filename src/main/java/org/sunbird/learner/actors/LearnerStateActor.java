@@ -159,12 +159,12 @@ public class LearnerStateActor extends UntypedAbstractActor {
 
     if (request.get(JsonKey.COURSE) != null) {
       Map<String, Object> courseMap = (Map<String, Object>) request.get(JsonKey.COURSE);
-      String course = (String) courseMap.get(JsonKey.COURSE_ID);
+      String courseId = (String) courseMap.get(JsonKey.COURSE_ID);
       CopyOnWriteArrayList<String> contentIds = new CopyOnWriteArrayList<String>(
           (List<String>) courseMap.get(JsonKey.CONTENT_IDS));
       LinkedHashMap<String, Object> queryMap = new LinkedHashMap<String, Object>();
       queryMap.put(JsonKey.USER_ID, userId);
-      queryMap.put(JsonKey.COURSE_ID, course);
+      queryMap.put(JsonKey.COURSE_ID, courseId);
       response = cassandraOperation
           .getRecordsByProperties(dbInfo.getKeySpace(), dbInfo.getTableName(), queryMap);
       List<Map<String, Object>> modifiedContentList = new ArrayList<Map<String, Object>>();

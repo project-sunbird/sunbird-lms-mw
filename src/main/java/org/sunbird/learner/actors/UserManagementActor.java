@@ -921,6 +921,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     	reqMap.remove(JsonKey.REGISTERED_ORG);
     	reqMap.remove(JsonKey.ROOT_ORG);
     	reqMap.remove(JsonKey.IDENTIFIER);
+    	reqMap.remove(JsonKey.ORGANISATIONS);
 	}
 
 	/**

@@ -103,9 +103,19 @@ public class BackgroundJobManager extends UntypedAbstractActor {
   private void insertOrgInfoToEs(Response actorMessage) {
     ProjectLogger.log("Calling method to save inside Es==");
     Map<String, Object> orgMap = (Map<String, Object>) actorMessage.get(JsonKey.ORGANISATION);
-    insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
-        ProjectUtil.EsType.organisation.getTypeName(),
-        (String) orgMap.get(JsonKey.ID), orgMap);
+    if(ProjectUtil.isNotNull(orgMap)) {
+      Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+      String id = (String)orgMap.get(JsonKey.ID);
+      Response orgResponse = cassandraOperation.getRecordById(orgDbInfo.getKeySpace() , orgDbInfo.getTableName() , id);
+      List<Map<String , Object>> orgList = (List<Map<String, Object>>) orgResponse.getResult().get(JsonKey.RESPONSE);
+      Map<String , Object> esMap = new HashMap<String , Object>();
+      if(!(orgList.isEmpty())) {
+        esMap = orgList.get(0);
+      }
+        insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.organisation.getTypeName(),
+            id, esMap);
+    }
   }
  
   @SuppressWarnings("unchecked")

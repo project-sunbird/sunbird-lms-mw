@@ -190,11 +190,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         upsertOrgMap(uniqueId, parentOrg, (String) req.get(JsonKey.ROOT_ORG_ID),
             actorMessage.getEnv(), relation);
       }
-      // create record in org_type if present in request
-      String orgType = (String) req.get(JsonKey.ORG_TYPE);
-      if (!ProjectUtil.isStringNullOREmpty(orgType)) {
-        upsertOrgType(orgType, actorMessage.getEnv());
-      }
+      
       ProjectLogger.log("Created org id is ----." + uniqueId);
       result.getResult().put(JsonKey.ORGANISATION_ID, uniqueId);
       sender().tell(result, self());
@@ -473,12 +469,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         upsertOrgMap((String) orgDBO.get(JsonKey.ID), parentOrg,
             (String) req.get(JsonKey.ROOT_ORG_ID),
             actorMessage.getEnv(), relation);
-      }
-
-      // create record in org_type if present in request
-      String orgType = (String) req.get(JsonKey.ORG_TYPE);
-      if (!ProjectUtil.isStringNullOREmpty(orgType)) {
-        upsertOrgType(orgType, actorMessage.getEnv());
       }
 
       Response response = cassandraOperation.updateRecord(orgDbInfo.getKeySpace(),
@@ -1244,19 +1234,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     orgMap.put(JsonKey.RELATION, relation);
     orgMap.put(JsonKey.ORG_ID_TWO, orgId);
     orgMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
-    cassandraOperation.insertRecord(orgMapDbInfo.getKeySpace(), orgMapDbInfo.getTableName(),
-        orgMap);
-  }
-
-  /**
-   * Inserts orgType if not exists, else updates the orgType
-   */
-  public void upsertOrgType(String orgType, int env) {
-    Util.DbInfo orgMapDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
-    String orgMapId = ProjectUtil.getUniqueIdFromTimestamp(env);
-    Map<String, Object> orgMap = new HashMap<>();
-    orgMap.put(JsonKey.ID, orgMapId);
-    orgMap.put(JsonKey.NAME, orgType);
     cassandraOperation.insertRecord(orgMapDbInfo.getKeySpace(), orgMapDbInfo.getTableName(),
         orgMap);
   }

@@ -563,7 +563,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
         Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
         Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
-    Util.DbInfo orgDb = Util.dbInfoMap.get(JsonKey.ORG_DB);
+        Util.DbInfo orgDb = Util.dbInfoMap.get(JsonKey.ORG_DB);
         Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
         ProjectLogger.log("collected all the DB setup..");
         Map<String , Object> req = actorMessage.getRequest();
@@ -685,7 +685,6 @@ public class UserManagementActor extends UntypedAbstractActor {
 	                insertOrganisationDetails(userMap,usrOrgDb);
 	              }else{
 	                ProjectLogger.log("Reg Org Id :"+(String)userMap.get(JsonKey.REGISTERED_ORG_ID)+" for user id "+userMap.get(JsonKey.ID)+" is not valid.");
-	                System.out.println("Reg Org Id :"+(String)userMap.get(JsonKey.REGISTERED_ORG_ID)+" for user id "+userMap.get(JsonKey.ID)+" is not valid.");
 	              }
 	            }
 	            //update the user external identity data

@@ -424,7 +424,7 @@ ALTER TABLE sunbird.user_org ADD roles List<text>;
 // insert default root organisation -- July 15,2017
 ALTER TABLE sunbird.organisation ADD isDefault boolean;
 
-INSERT INTO sunbird.organisation(id , isRootOrg , isDefault, status) values('ORG_001' , true , true, 'active');
+INSERT INTO sunbird.organisation(id , isRootOrg , isDefault, status) values('ORG_001' , true , true, 1);
 
 ALTER TABLE sunbird.user_courses ADD leafNodesCount int;
 // change organisation status field from text to int -- July 19,2017

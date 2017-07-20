@@ -563,6 +563,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
         Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
         Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
+    Util.DbInfo orgDb = Util.dbInfoMap.get(JsonKey.ORG_DB);
         Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
         ProjectLogger.log("collected all the DB setup..");
         Map<String , Object> req = actorMessage.getRequest();
@@ -676,7 +677,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 	            if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.REGISTERED_ORG_ID))){
 	              Response orgResponse = null;
 	              try{
-	                orgResponse = cassandraOperation.getRecordById(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), (String)userMap.get(JsonKey.REGISTERED_ORG_ID));
+	                orgResponse = cassandraOperation.getRecordById(orgDb.getKeySpace(), orgDb.getTableName(), (String)userMap.get(JsonKey.REGISTERED_ORG_ID));
 	              }catch(Exception e){
 	                ProjectLogger.log("Exception occured while verifying regOrgId during create user : ", e);
 	              }

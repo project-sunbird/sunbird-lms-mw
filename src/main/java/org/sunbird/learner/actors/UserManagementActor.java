@@ -615,9 +615,15 @@ public class UserManagementActor extends UntypedAbstractActor {
             if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PASSWORD))){
               userMap.put(JsonKey.PASSWORD,OneWayHashing.encryptVal((String)userMap.get(JsonKey.PASSWORD)));
             }
-            if(!userMap.containsKey(JsonKey.ROLES)){
+            if(userMap.containsKey(JsonKey.ROLES)){
+              List<String> roles = (List<String>) userMap.get(JsonKey.ROLES);
+              if(!roles.contains(ProjectUtil.UserRole.PUBLIC.getValue())){
+                roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
+                userMap.put(JsonKey.ROLES, roles);
+              }
+            }else{
               List<String> roles = new ArrayList<>();
-              roles.add(JsonKey.CONTENT_CREATOR);
+              roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
               userMap.put(JsonKey.ROLES, roles);
             }
             requestMap = new HashMap<>();
@@ -661,7 +667,18 @@ public class UserManagementActor extends UntypedAbstractActor {
 	              ProjectLogger.log("User insertation for Job profile done--.....");
 	            }
 	            if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.REGISTERED_ORG_ID))){
-	              insertOrganisationDetails(userMap,usrOrgDb);
+	              Response orgResponse = null;
+	              try{
+	                orgResponse = cassandraOperation.getRecordById(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), (String)userMap.get(JsonKey.REGISTERED_ORG_ID));
+	              }catch(Exception e){
+	                ProjectLogger.log("Exception occured while verifying regOrgId during create user : ", e);
+	              }
+	              if(null!=orgResponse && (!((List<Map<String,Object>>)orgResponse.get(JsonKey.RESPONSE)).isEmpty())){
+	                insertOrganisationDetails(userMap,usrOrgDb);
+	              }else{
+	                ProjectLogger.log("Reg Org Id :"+(String)userMap.get(JsonKey.REGISTERED_ORG_ID)+" for user id "+userMap.get(JsonKey.ID)+" is not valid.");
+	                System.out.println("Reg Org Id :"+(String)userMap.get(JsonKey.REGISTERED_ORG_ID)+" for user id "+userMap.get(JsonKey.ID)+" is not valid.");
+	              }
 	            }
 	            //update the user external identity data
 	            ProjectLogger.log("User insertation for extrenal identity started--.....");
@@ -692,7 +709,9 @@ public class UserManagementActor extends UntypedAbstractActor {
           reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
           reqMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.REGISTERED_ORG_ID));
           reqMap.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
-          reqMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
+          List<String> roleList = new ArrayList<>();
+          roleList.add(ProjectUtil.UserRole.CONTENT_CREATOR.getValue());
+          reqMap.put(JsonKey.ROLES, roleList);
           
           try{
             cassandraOperation.insertRecord(usrOrgDb.getKeySpace(),usrOrgDb.getTableName(),reqMap);

@@ -74,9 +74,9 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
               //replace the course id (equivalent to Ekstep content id) with One way hashing of userId#courseId , bcoz in cassndra we are saving course id as userId#courseId
               if (null == map.get(JsonKey.COURSE_ID)) {
                 map.put(JsonKey.COURSE_ID, JsonKey.NOT_AVAILABLE);
-              }else{
+              }/*else{
                 map.put(JsonKey.COURSE_ID , OneWayHashing.encryptVal(userId + JsonKey.PRIMARY_KEY_DELIMETER + (String)map.get(JsonKey.COURSE_ID)));
-              }
+              }*/
               preOperation(map, userId, contentStatusHolder);
               map.put(JsonKey.USER_ID, userId);
               map.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
@@ -190,15 +190,26 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
         req.put(JsonKey.VIEW_COUNT, viewCount + 1);
         req.put(JsonKey.LAST_ACCESS_TIME, compareTime(accessTime, requestAccessTime));
         req.put(JsonKey.LAST_UPDATED_TIME, ProjectUtil.getFormattedDate());
+        req.put(JsonKey.COMPLETED_COUNT, completedCount);
       }
 
     } else {
       // IT IS NEW CONTENT SIMPLY ADD IT
+      Date requestCompletedTime = parseDate(req.get(JsonKey.LAST_COMPLETED_TIME), sdf);
       if (null != req.get(JsonKey.STATUS)) {
         int requestedStatus = ((BigInteger) req.get(JsonKey.STATUS)).intValue();
         req.put(JsonKey.STATUS, requestedStatus);
+        if (requestedStatus == 2) {
+          req.put(JsonKey.COMPLETED_COUNT, 1);
+          req.put(JsonKey.LAST_COMPLETED_TIME, compareTime(null, requestCompletedTime));
+          req.put(JsonKey.COMPLETED_COUNT, 1);
+        }else{
+          req.put(JsonKey.COMPLETED_COUNT, 0);
+        }
+
       } else {
         req.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
+        req.put(JsonKey.COMPLETED_COUNT, 0);
       }
 
       int progressStatus = 0;
@@ -207,8 +218,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
       }
       req.put(JsonKey.CONTENT_PROGRESS, progressStatus);
 
-      req.put(JsonKey.VIEW_COUNT, 0);
-      req.put(JsonKey.COMPLETED_COUNT, 0);
+      req.put(JsonKey.VIEW_COUNT, 1);
       Date requestAccessTime = parseDate(req.get(JsonKey.LAST_ACCESS_TIME), sdf);
 
       req.put(JsonKey.LAST_UPDATED_TIME, ProjectUtil.getFormattedDate());
@@ -255,8 +265,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
 
   private String generatePrimaryKey(Map<String, Object> req, String userId) {
     String contentId = (String) req.get(JsonKey.CONTENT_ID);
-    String courseId = (req.get(JsonKey.COURSE_ID) == null ? JsonKey.NOT_AVAILABLE
-        : (String) req.get(JsonKey.COURSE_ID));
+    String courseId = (String) req.get(JsonKey.COURSE_ID);
     String key = userId + JsonKey.PRIMARY_KEY_DELIMETER + contentId + JsonKey.PRIMARY_KEY_DELIMETER
         + courseId;
     return OneWayHashing.encryptVal(key);

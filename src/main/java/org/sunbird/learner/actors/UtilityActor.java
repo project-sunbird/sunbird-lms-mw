@@ -16,6 +16,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.util.Util;
 
@@ -54,7 +55,12 @@ public class UtilityActor extends UntypedAbstractActor {
                 String contentid = (String) map.get(JsonKey.ID);
 
                 if (map.get(JsonKey.COURSE_ID) != null) {
-                    String primary = (String)map.get(JsonKey.COURSE_ID);
+                    String userId = (String) map.get(JsonKey.USER_ID);
+                    String courseId = (String) map.get(JsonKey.COURSE_ID);
+                    //generate course table primary key as hash of userid##courseid
+                    String primary = OneWayHashing
+                        .encryptVal(userId + JsonKey.PRIMARY_KEY_DELIMETER + courseId);
+
                     if(temp.containsKey(primary)){
                         Map<String , Object> innerMap = (Map<String , Object>)temp.get(primary);
                         innerMap.put(JsonKey.CONTENT , getLatestContent((Map<String, Object>) ((Map<String , Object>)temp.get(primary)).get(JsonKey.CONTENT), map));

@@ -125,6 +125,18 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           sender().tell(exception, self());
           return;
         }
+        validateChannelIdForRootOrg(req);
+        if (req.containsKey(JsonKey.CHANNEL)) {
+          if (!validateChannelForUniqueness((String) req.get(JsonKey.CHANNEL))) {
+            ProjectLogger.log("Channel validation failed");
+            ProjectCommonException exception =
+                new ProjectCommonException(ResponseCode.channelUniquenessInvalid.getErrorCode(),
+                    ResponseCode.channelUniquenessInvalid.getErrorMessage(),
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;
+          }
+        }
 
         Map<String, Object> dbMap = new HashMap<String, Object>();
         dbMap.put(JsonKey.SOURCE, req.get(JsonKey.SOURCE));
@@ -150,7 +162,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       req.remove(JsonKey.RELATION);
 
       String parentOrg = (String) req.get(JsonKey.PARENT_ORG_ID);
-      validateChannelIdForRootOrg(req);
+
       Boolean isValidParent = false;
       if (!ProjectUtil.isStringNullOREmpty(parentOrg) && isValidParent(parentOrg)) {
         validateRootOrg(req);
@@ -374,6 +386,18 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           sender().tell(exception, self());
           return;
         }
+        validateChannelIdForRootOrg(req);
+        if (req.containsKey(JsonKey.CHANNEL)) {
+          if (!validateChannelForUniqueness((String) req.get(JsonKey.CHANNEL))) {
+            ProjectLogger.log("Channel validation failed");
+            ProjectCommonException exception =
+                new ProjectCommonException(ResponseCode.channelUniquenessInvalid.getErrorCode(),
+                    ResponseCode.channelUniquenessInvalid.getErrorMessage(),
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;
+          }
+        }
 
         Map<String, Object> dbMap = new HashMap<String, Object>();
         dbMap.put(JsonKey.SOURCE, req.get(JsonKey.SOURCE));
@@ -408,7 +432,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       req.remove(JsonKey.RELATION);
 
       String parentOrg = (String) req.get(JsonKey.PARENT_ORG_ID);
-      validateChannelIdForRootOrg(req);
       Boolean isValidParent = false;
       ProjectLogger.log("Parent Org Id:" + parentOrg);
       if (!ProjectUtil.isStringNullOREmpty(parentOrg) && isValidParent(parentOrg)) {
@@ -527,7 +550,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     String updatedBy = null;
     String orgId = null;
     String userId = null;
-    List<String> roles = null;
+    List<String> roles = new ArrayList<String>();
     if (isNotNull(usrOrgData.get(JsonKey.ORGANISATION_ID))) {
       orgId = (String) usrOrgData.get(JsonKey.ORGANISATION_ID);
     }
@@ -538,7 +561,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
     }
     if (isNotNull(usrOrgData.get(JsonKey.ROLES))) {
-      roles = (List<String>) usrOrgData.get(JsonKey.ROLES);
+      roles.addAll((List<String>) usrOrgData.get(JsonKey.ROLES));
     }
 
     if ((isNull(orgId) || isNull(userId)) || isNull(roles)) {
@@ -550,7 +573,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       sender().tell(exception, self());
       return;
     }
-
+    if (!roles.contains(ProjectUtil.UserRole.CONTENT_CREATOR.getValue())) {
+      roles.add(ProjectUtil.UserRole.CONTENT_CREATOR.getValue());
+      usrOrgData.put(JsonKey.ROLES, roles);
+    }
     // check org exist or not
     Response orgResult = cassandraOperation.getRecordById(organisationDbInfo.getKeySpace(),
         organisationDbInfo.getTableName(), orgId);
@@ -838,6 +864,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     String updatedBy = null;
     String orgId = null;
     String userId = null;
+    List<String> roles = new ArrayList<String>();
     if (isNotNull(usrOrgData.get(JsonKey.ORGANISATION_ID))) {
       orgId = (String) usrOrgData.get(JsonKey.ORGANISATION_ID);
     }
@@ -848,15 +875,23 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     if (isNotNull(req.get(JsonKey.REQUESTED_BY))) {
       updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
     }
+    if (isNotNull(usrOrgData.get(JsonKey.ROLES))) {
+      roles.addAll((List<String>) usrOrgData.get(JsonKey.ROLES));
+    }
 
-    if (isNull(orgId) || isNull(userId)) {
+    if (isNull(orgId) || isNull(userId) || isNull(roles)) {
       //create exception here invalid request data and tell the exception , ther return
-      ProjectCommonException exception = new ProjectCommonException(
-          ResponseCode.invalidRequestData.getErrorCode(),
-          ResponseCode.invalidRequestData.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
       return;
+    }
+
+    if (!roles.contains(ProjectUtil.UserRole.CONTENT_CREATOR.getValue())) {
+      roles.add(ProjectUtil.UserRole.CONTENT_CREATOR.getValue());
+      usrOrgData.put(JsonKey.ROLES, roles);
     }
 
     //check org exist or not
@@ -1307,16 +1342,20 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   /**
    * validates whether the channelId is present for the parent organization
    */
-  public void validateChannelIdForRootOrg(Map<String, Object> request) {
+  public boolean validateChannelIdForRootOrg(Map<String, Object> request) {
     ProjectLogger.log("Doing relation check");
     if (null != request.get(JsonKey.IS_ROOT_ORG) && (Boolean) request.get(JsonKey.IS_ROOT_ORG)) {
-      if (null == request.get(JsonKey.CHANNEL)) {
+      if (ProjectUtil.isStringNullOREmpty((String) request.get(JsonKey.CHANNEL))) {
         throw new ProjectCommonException(ResponseCode.channelIdRequiredForRootOrg.getErrorCode(),
             ResponseCode.channelIdRequiredForRootOrg.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
+      } else if (null != request.get(JsonKey.CHANNEL)
+          || !ProjectUtil.isStringNullOREmpty((String) request.get(JsonKey.CHANNEL))) {
+        return true;
       }
     }
     ProjectLogger.log("Relation check end successfully!");
+    return false;
   }
 
   /**
@@ -1399,6 +1438,20 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
     }
     return true;
+  }
+
+  @SuppressWarnings("unchecked")
+  private boolean validateChannelForUniqueness(String channel) {
+    if (!ProjectUtil.isStringNullOREmpty(channel)) {
+      Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+      Response result = cassandraOperation.getRecordsByProperty(orgDbInfo.getKeySpace(),
+          orgDbInfo.getTableName(), JsonKey.CHANNEL, channel);
+      List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      if ((list.isEmpty())) {
+        return true;
+      }
+    }
+    return false;
   }
 
 }

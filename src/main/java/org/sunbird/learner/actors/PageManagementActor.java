@@ -302,6 +302,25 @@ public class PageManagementActor extends UntypedAbstractActor {
 	private void updatePage(Request actorMessage) {
 		Map<String, Object> req = actorMessage.getRequest();
 		Map<String, Object> pageMap = (Map<String, Object>) req.get(JsonKey.PAGE);
+		//default value for orgId
+        if(ProjectUtil.isStringNullOREmpty((String)pageMap.get(JsonKey.ORGANISATION_ID))){
+          pageMap.put(JsonKey.ORGANISATION_ID, "NA");
+        }
+        if(!ProjectUtil.isStringNullOREmpty((String)pageMap.get(JsonKey.PAGE_NAME))){
+          Map<String,Object> map = new HashMap<>();
+          map.put(JsonKey.PAGE_NAME, pageMap.get(JsonKey.PAGE_NAME));
+          map.put(JsonKey.ORGANISATION_ID, pageMap.get(JsonKey.ORGANISATION_ID));
+          
+          Response res = cassandraOperation.getRecordsByProperties(pageDbInfo.getKeySpace(), pageDbInfo.getTableName(), map);
+          if(!((List<Map<String,Object>>)res.get(JsonKey.RESPONSE)).isEmpty()){
+            Map<String,Object> page = ((List<Map<String,Object>>)res.get(JsonKey.RESPONSE)).get(0);
+            if(!(((String)page.get(JsonKey.ID)).equals((String)pageMap.get(JsonKey.ID)))){
+              ProjectCommonException exception = new ProjectCommonException(ResponseCode.pageAlreadyExist.getErrorCode(), ResponseCode.pageAlreadyExist.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+              sender().tell(exception, self());
+              return;
+            }
+          }
+        }
 		pageMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
 		if (null != pageMap.get(JsonKey.PORTAL_MAP)) {
 			ObjectMapper mapper = new ObjectMapper();
@@ -342,7 +361,23 @@ public class PageManagementActor extends UntypedAbstractActor {
 	private void createPage(Request actorMessage) {
 		Map<String, Object> req = actorMessage.getRequest();
 		Map<String, Object> pageMap = (Map<String, Object>) req.get(JsonKey.PAGE);
+		//default value for orgId
+		if(ProjectUtil.isStringNullOREmpty((String)pageMap.get(JsonKey.ORGANISATION_ID))){
+		  pageMap.put(JsonKey.ORGANISATION_ID, "NA");
+        }
 		String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
+		if(!ProjectUtil.isStringNullOREmpty((String)pageMap.get(JsonKey.PAGE_NAME))){
+		  Map<String,Object> map = new HashMap<>();
+          map.put(JsonKey.PAGE_NAME, pageMap.get(JsonKey.PAGE_NAME));
+          map.put(JsonKey.ORGANISATION_ID, pageMap.get(JsonKey.ORGANISATION_ID));
+		  
+		  Response res = cassandraOperation.getRecordsByProperties(pageDbInfo.getKeySpace(), pageDbInfo.getTableName(), map);
+          if(!((List<Map<String,Object>>)res.get(JsonKey.RESPONSE)).isEmpty()){
+            ProjectCommonException exception = new ProjectCommonException(ResponseCode.pageAlreadyExist.getErrorCode(), ResponseCode.pageAlreadyExist.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;
+          }
+		}
 		pageMap.put(JsonKey.ID, uniqueId);
 		pageMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
 		if (null != pageMap.get(JsonKey.PORTAL_MAP)) {

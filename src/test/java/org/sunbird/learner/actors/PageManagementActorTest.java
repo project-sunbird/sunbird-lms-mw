@@ -45,6 +45,7 @@ public class PageManagementActorTest {
     static String sectionId = "";
     static String sectionId2 = "";
     static String pageId = "";
+    static String pageIdWithOrg = "";
     
     @BeforeClass
     public static void setUp() {
@@ -81,10 +82,14 @@ public class PageManagementActorTest {
       Map<String,Object> filterMap = new HashMap<>();
       Map<String,Object> reqMap = new HashMap<>();
       Map<String,Object> searchQueryMap = new HashMap<>();
+      
       List<String> list = new ArrayList<>();
       list.add("Bengali");
       filterMap.put("language", list);
-      //filterMap.put("limit", 1);
+      Map<String,Object> sizeMap = new HashMap<>();
+      sizeMap.put("<=", "1000000");
+      //"size": {"<=" : "1000000"}
+      filterMap.put("size",sizeMap);
       reqMap.put(JsonKey.FILTERS, filterMap);
       searchQueryMap.put(JsonKey.REQUEST, reqMap);
       
@@ -114,7 +119,10 @@ public class PageManagementActorTest {
       List<String> list = new ArrayList<>();
       list.add("Bengali");
       filterMap.put("language", list);
-      //filterMap.put("limit", 1);
+      Map<String,Object> sizeMap = new HashMap<>();
+      sizeMap.put("<=", "1000000");
+      //"size": {"<=" : "1000000"}
+      filterMap.put("size",sizeMap);
       reqMap.put(JsonKey.FILTERS, filterMap);
       searchQueryMap.put(JsonKey.REQUEST, reqMap);
       
@@ -133,6 +141,44 @@ public class PageManagementActorTest {
       subject.tell(reqObj, probe.getRef());
       Response response = probe.expectMsgClass(Response.class);
       sectionId2 = (String) response.get(JsonKey.SECTION_ID);
+    }
+
+    @Test
+    public void testBCreatePageWithOrgId(){
+
+        TestKit probe = new TestKit(system);
+        ActorRef subject = system.actorOf(props);
+
+        Request reqObj = new Request();
+        reqObj.setOperation(ActorOperations.CREATE_PAGE.getValue());
+        HashMap<String, Object> innerMap = new HashMap<>();
+        Map<String , Object> pageMap = new HashMap<String , Object>();
+        List<Map<String, Object>> appMapList = new ArrayList<Map<String, Object>>();
+        Map<String , Object> appMap = new HashMap<String , Object>();
+        appMap.put(JsonKey.ID , sectionId);
+        appMap.put(JsonKey.INDEX , new BigInteger("1"));
+        appMap.put(JsonKey.GROUP , new BigInteger("1"));
+        appMapList.add(appMap);
+        
+        pageMap.put(JsonKey.APP_MAP , appMapList);
+
+        List<Map<String, Object>> portalMapList = new ArrayList<Map<String, Object>>();
+        Map<String , Object> portalMap = new HashMap<String , Object>();
+        portalMap.put(JsonKey.ID , sectionId);
+        portalMap.put(JsonKey.INDEX , new BigInteger("1"));
+        portalMap.put(JsonKey.GROUP , new BigInteger("1"));
+        portalMapList.add(portalMap);
+        
+        pageMap.put(JsonKey.PORTAL_MAP , portalMapList);
+        
+        pageMap.put(JsonKey.PAGE_NAME, "Test Page");
+        pageMap.put(JsonKey.ORGANISATION_ID, "ORG1");
+        innerMap.put(JsonKey.PAGE , pageMap);
+        reqObj.setRequest(innerMap);
+
+        subject.tell(reqObj, probe.getRef());
+        Response response = probe.expectMsgClass(Response.class);
+        pageIdWithOrg = (String) response.get(JsonKey.PAGE_ID);
     }
 
     @Test
@@ -170,9 +216,8 @@ public class PageManagementActorTest {
         subject.tell(reqObj, probe.getRef());
         Response response = probe.expectMsgClass(Response.class);
         pageId = (String) response.get(JsonKey.PAGE_ID);
-        System.out.println(pageId);
     }
-
+    
     @Test
     public void testCGetPageSetting(){
         boolean pageName = false;
@@ -250,6 +295,26 @@ public class PageManagementActorTest {
         assertTrue(section);
     }
 
+    @Test
+    public void testCUpdatePageWithSameName(){
+
+        TestKit probe = new TestKit(system);
+        ActorRef subject = system.actorOf(props);
+
+        Request reqObj = new Request();
+        reqObj.setOperation(ActorOperations.UPDATE_PAGE.getValue());
+        HashMap<String, Object> innerMap = new HashMap<>();
+        Map<String , Object> pageMap = new HashMap<String , Object>();
+        
+        pageMap.put(JsonKey.PAGE_NAME, "Test Page");
+        pageMap.put(JsonKey.ID, pageId);
+        innerMap.put(JsonKey.PAGE , pageMap);
+        reqObj.setRequest(innerMap);
+
+        subject.tell(reqObj, probe.getRef());
+        probe.expectMsgClass(duration("100 second"),Response.class);
+    }
+    
     @Test
     public void testDUpdatePage(){
 
@@ -373,16 +438,20 @@ public class PageManagementActorTest {
     @Test
     public void testHGetPageData(){
       Map<String,Object> header = new HashMap<>();
-      header.put("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkMTc1MDIwNDdlODc0ODZjOTM0ZDQ1ODdlYTQ4MmM3MyJ9.7LWocwCn5rrCScFQYOne8_Op2EOo-xTCK5JCFarHKSs");
+     // header.put("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkMTc1MDIwNDdlODc0ODZjOTM0ZDQ1ODdlYTQ4MmM3MyJ9.7LWocwCn5rrCScFQYOne8_Op2EOo-xTCK5JCFarHKSs");
       header.put("Accept", "application/json");
       header.put("Content-Type", "application/json");
       
       Map<String,Object> filterMap = new HashMap<>();
-      Map<String,Object> reqMap = new HashMap<>();
       List<String> list = new ArrayList<>();
       list.add("English");
       filterMap.put("language", list);
-      //filterMap.put("limit", 1);
+      Map<String,Object> compMap = new HashMap<>();
+      compMap.put("<=", 2);
+      compMap.put(">", 0.5);
+      //"orthographic_complexity":{"<=":2,">":0.5}
+      filterMap.put("size",compMap);
+      filterMap.put("orthographic_complexity", 1);
       List<String> gradeListist = new ArrayList<>();
       gradeListist.add("Grade 1");
       filterMap.put("gradeLevel", gradeListist);
@@ -402,12 +471,52 @@ public class PageManagementActorTest {
       probe.expectMsgClass(duration("100 second"),Response.class);
     }
     
+    @Test
+    public void testHGetPageDataWithOrgCode(){
+      Map<String,Object> header = new HashMap<>();
+      header.put("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkMTc1MDIwNDdlODc0ODZjOTM0ZDQ1ODdlYTQ4MmM3MyJ9.7LWocwCn5rrCScFQYOne8_Op2EOo-xTCK5JCFarHKSs");
+      header.put("Accept", "application/json");
+      header.put("Content-Type", "application/json");
+      
+      Map<String,Object> filterMap = new HashMap<>();
+      List<String> list = new ArrayList<>();
+      list.add("English");
+      filterMap.put("language", list);
+      Map<String,Object> compMap = new HashMap<>();
+      compMap.put("<=", 2);
+      compMap.put(">", 0.5);
+      //"orthographic_complexity":{"<=":2,">":0.5}
+      filterMap.put("size",compMap);
+      filterMap.put("orthographic_complexity", 1);
+      List<String> gradeListist = new ArrayList<>();
+      gradeListist.add("Grade 1");
+      filterMap.put("gradeLevel", gradeListist);
+      
+      TestKit probe = new TestKit(system);
+      ActorRef subject = system.actorOf(props);
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.GET_PAGE_DATA.getValue());
+      reqObj.getRequest().put(JsonKey.SOURCE, "web");
+      reqObj.getRequest().put(JsonKey.PAGE_NAME, "Test Page Name Updated");
+      reqObj.getRequest().put(JsonKey.FILTERS, filterMap);
+      reqObj.getRequest().put(JsonKey.ORG_CODE,"ORG1");
+      HashMap<String, Object> map = new HashMap<>();
+      map.put(JsonKey.PAGE, reqObj.getRequest());
+      map.put(JsonKey.HEADER, header);
+      reqObj.setRequest(map);
+      subject.tell(reqObj, probe.getRef());
+      probe.expectMsgClass(duration("100 second"),Response.class);
+    }
+    
+    
     @AfterClass
     public static void deletePageAndSection() {
       Response response=operation.deleteRecord(pageMgmntDbInfo.getKeySpace(), pageMgmntDbInfo.getTableName(), pageId);
       assertEquals("SUCCESS", response.get("response"));
-      Response response1=operation.deleteRecord(pageSectionDbInfo.getKeySpace(), pageSectionDbInfo.getTableName(), sectionId);
+      Response response1=operation.deleteRecord(pageMgmntDbInfo.getKeySpace(), pageMgmntDbInfo.getTableName(), pageIdWithOrg);
       assertEquals("SUCCESS", response1.get("response"));
+      Response response2=operation.deleteRecord(pageSectionDbInfo.getKeySpace(), pageSectionDbInfo.getTableName(), sectionId);
+      assertEquals("SUCCESS", response2.get("response"));
       Response response3=operation.deleteRecord(pageSectionDbInfo.getKeySpace(), pageSectionDbInfo.getTableName(), sectionId2);
       assertEquals("SUCCESS", response3.get("response"));
     }

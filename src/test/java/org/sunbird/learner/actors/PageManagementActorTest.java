@@ -438,7 +438,6 @@ public class PageManagementActorTest {
     @Test
     public void testHGetPageData(){
       Map<String,Object> header = new HashMap<>();
-     // header.put("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkMTc1MDIwNDdlODc0ODZjOTM0ZDQ1ODdlYTQ4MmM3MyJ9.7LWocwCn5rrCScFQYOne8_Op2EOo-xTCK5JCFarHKSs");
       header.put("Accept", "application/json");
       header.put("Content-Type", "application/json");
       
@@ -474,7 +473,6 @@ public class PageManagementActorTest {
     @Test
     public void testHGetPageDataWithOrgCode(){
       Map<String,Object> header = new HashMap<>();
-      header.put("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkMTc1MDIwNDdlODc0ODZjOTM0ZDQ1ODdlYTQ4MmM3MyJ9.7LWocwCn5rrCScFQYOne8_Op2EOo-xTCK5JCFarHKSs");
       header.put("Accept", "application/json");
       header.put("Content-Type", "application/json");
       

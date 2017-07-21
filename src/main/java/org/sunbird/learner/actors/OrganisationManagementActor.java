@@ -127,7 +127,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         }
         validateChannelIdForRootOrg(req);
         if (req.containsKey(JsonKey.CHANNEL)) {
-          if (!validateChannelForUniqueness((String) req.get(JsonKey.CHANNEL))) {
+          if(!req.containsKey(JsonKey.IS_ROOT_ORG)){
+            req.remove(JsonKey.CHANNEL);
+          }else if (!validateChannelForUniqueness((String) req.get(JsonKey.CHANNEL))) {
             ProjectLogger.log("Channel validation failed");
             ProjectCommonException exception =
                 new ProjectCommonException(ResponseCode.channelUniquenessInvalid.getErrorCode(),
@@ -135,9 +137,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
                     ResponseCode.CLIENT_ERROR.getResponseCode());
             sender().tell(exception, self());
             return;
-          }
-          if(!req.containsKey(JsonKey.IS_ROOT_ORG)){
-            req.remove(JsonKey.CHANNEL);
           }
         }
 
@@ -411,7 +410,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       }
       validateChannelIdForRootOrg(req);
       if (req.containsKey(JsonKey.CHANNEL)) {
-        if (!validateChannelForUniquenessForUpdate((String)req.get(JsonKey.CHANNEL),(String)req.get(JsonKey.ORGANISATION_ID))) {
+        if(!req.containsKey(JsonKey.IS_ROOT_ORG)){
+          req.remove(JsonKey.CHANNEL);
+        }else if (!validateChannelForUniquenessForUpdate((String)req.get(JsonKey.CHANNEL),(String)req.get(JsonKey.ORGANISATION_ID))) {
           ProjectLogger.log("Channel validation failed");
           ProjectCommonException exception =
               new ProjectCommonException(ResponseCode.channelUniquenessInvalid.getErrorCode(),
@@ -419,9 +420,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
                   ResponseCode.CLIENT_ERROR.getResponseCode());
           sender().tell(exception, self());
           return;
-        }
-        if(!req.containsKey(JsonKey.IS_ROOT_ORG)){
-          req.remove(JsonKey.CHANNEL);
         }
       }
       Map<String, Object> addressReq = null;

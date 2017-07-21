@@ -127,7 +127,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         }
         validateChannelIdForRootOrg(req);
         if (req.containsKey(JsonKey.CHANNEL)) {
-          if(!req.containsKey(JsonKey.IS_ROOT_ORG)){
+          if(!req.containsKey(JsonKey.IS_ROOT_ORG) || !(Boolean)req.get(JsonKey.IS_ROOT_ORG)){
             req.remove(JsonKey.CHANNEL);
           }else if (!validateChannelForUniqueness((String) req.get(JsonKey.CHANNEL))) {
             ProjectLogger.log("Channel validation failed");
@@ -413,7 +413,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       }
       validateChannelIdForRootOrg(req);
       if (req.containsKey(JsonKey.CHANNEL)) {
-        if(!req.containsKey(JsonKey.IS_ROOT_ORG)){
+        if(!req.containsKey(JsonKey.IS_ROOT_ORG) || !(Boolean)req.get(JsonKey.IS_ROOT_ORG)){
           req.remove(JsonKey.CHANNEL);
         }else if (!validateChannelForUniquenessForUpdate((String)req.get(JsonKey.CHANNEL),(String)req.get(JsonKey.ORGANISATION_ID))) {
           ProjectLogger.log("Channel validation failed");

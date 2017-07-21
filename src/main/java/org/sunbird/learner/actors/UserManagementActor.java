@@ -666,6 +666,7 @@ public class UserManagementActor extends UntypedAbstractActor {
               roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
               userMap.put(JsonKey.ROLES, roles);
             }
+            ProjectLogger.log("User roles is===" + userMap.get(JsonKey.ROLES));
             requestMap = new HashMap<>();
             requestMap.putAll(userMap);
             removeUnwanted(requestMap);
@@ -920,6 +921,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     	reqMap.remove(JsonKey.REGISTERED_ORG);
     	reqMap.remove(JsonKey.ROOT_ORG);
     	reqMap.remove(JsonKey.IDENTIFIER);
+    	reqMap.remove(JsonKey.ORGANISATIONS);
 	}
 
 	/**

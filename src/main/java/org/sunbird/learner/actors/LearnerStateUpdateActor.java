@@ -74,9 +74,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
               //replace the course id (equivalent to Ekstep content id) with One way hashing of userId#courseId , bcoz in cassndra we are saving course id as userId#courseId
               if (null == map.get(JsonKey.COURSE_ID)) {
                 map.put(JsonKey.COURSE_ID, JsonKey.NOT_AVAILABLE);
-              }/*else{
-                map.put(JsonKey.COURSE_ID , OneWayHashing.encryptVal(userId + JsonKey.PRIMARY_KEY_DELIMETER + (String)map.get(JsonKey.COURSE_ID)));
-              }*/
+              }
               preOperation(map, userId, contentStatusHolder);
               map.put(JsonKey.USER_ID, userId);
               map.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));

@@ -5,13 +5,20 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.TestActorRef;
 import akka.testkit.javadsl.TestKit;
+import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
+import org.junit.runners.MethodSorters;
+import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.util.Util;
 
@@ -24,44 +31,63 @@ import java.util.Map;
 /**
  * @author  arvind
  */
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class LearnerStateUpdateActorTest {
 
     static ActorSystem system;
     final static Props props = Props.create(LearnerStateUpdateActor.class);
-    static TestActorRef<LearnerStateUpdateActor> ref;
     private String USER_ID = "dummyUser";
+    static String userId = "user121gama";
+    static String courseId = "alpha01crs";
+    private static final String contentId = "cont3544TeBuk";
+    private static CassandraOperation cassandraOperation = new CassandraOperationImpl();
+    private static Util.DbInfo contentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
+    private static Util.DbInfo coursedbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
 
     @BeforeClass
     public static void setUp() {
         system = ActorSystem.create("system");
         Util.checkCassandraDbConnections();
-        //ref = TestActorRef.create(system, props, "testActor");
+        insertCourse();
+    }
+
+    private static void insertCourse() {
+        Map<String , Object> courseMap = new HashMap<String , Object>();
+        courseMap.put(JsonKey.ID , OneWayHashing.encryptVal(userId+JsonKey.PRIMARY_KEY_DELIMETER+courseId));
+        courseMap.put(JsonKey.COURSE_ID , courseId);
+        courseMap.put(JsonKey.USER_ID , userId);
+        courseMap.put(JsonKey.CONTENT_ID , courseId);
+        cassandraOperation.insertRecord(coursedbInfo.getKeySpace() , coursedbInfo.getTableName() , courseMap);
+
     }
 
     @Test
-    public void onReceiveAddContentTest() throws Throwable {
+    public void addContentTest() throws Throwable {
 
         TestKit probe = new TestKit(system);
         ActorRef subject = system.actorOf(props);
         Request req = new Request();
         List<Map<String, Object>> contentList = new ArrayList<Map<String, Object>>();
         Map<String , Object> content1 = createContent();
-        content1.put(JsonKey.STATUS , new BigInteger("1"));
+        content1.put(JsonKey.STATUS , new BigInteger("2"));
         contentList.add(content1);
 
         HashMap<String, Object> innerMap = new HashMap<>();
         innerMap.put(JsonKey.CONTENTS, contentList);
-        innerMap.put(JsonKey.USER_ID, USER_ID);
+        innerMap.put(JsonKey.USER_ID, userId);
         req.setOperation(ActorOperations.ADD_CONTENT.getValue());
         req.setRequest(innerMap);
-
         subject.tell(req, probe.getRef());
-        probe.expectMsgClass(Response.class);
+        //probe.expectMsgClass(Response.class);
+        Thread.sleep(3000);
+        Response dbbRes = cassandraOperation.getRecordsByProperty(contentdbInfo.getKeySpace() , contentdbInfo.getTableName() , JsonKey.CONTENT_ID , contentId);
+        List list = (List)dbbRes.getResult().get(JsonKey.RESPONSE);
+        Assert.assertEquals(1 , list.size());
 
     }
 
     @Test
-    public void onReceiveUpdateContentTest() throws Throwable {
+    public void updateContentTest() throws Throwable {
 
         TestKit probe = new TestKit(system);
         ActorRef subject = system.actorOf(props);
@@ -74,12 +100,67 @@ public class LearnerStateUpdateActorTest {
         contentList.add(content1);
         HashMap<String, Object> innerMap = new HashMap<>();
         innerMap.put(JsonKey.CONTENTS, contentList);
-        innerMap.put(JsonKey.USER_ID, USER_ID);
+        innerMap.put(JsonKey.USER_ID, userId);
         req.setOperation(ActorOperations.ADD_CONTENT.getValue());
         req.setRequest(innerMap);
 
         subject.tell(req, probe.getRef());
         probe.expectMsgClass(Response.class);
+        Thread.sleep(3000);
+        Response dbbRes = cassandraOperation.getRecordsByProperty(contentdbInfo.getKeySpace() , contentdbInfo.getTableName() , JsonKey.CONTENT_ID , contentId);
+        List list = (List)dbbRes.getResult().get(JsonKey.RESPONSE);
+        Assert.assertEquals(1 , list.size());
+
+    }
+
+    @Test
+    public void updateContentTest_001() throws Throwable {
+
+        TestKit probe = new TestKit(system);
+        ActorRef subject = system.actorOf(props);
+
+        Request req = new Request();
+        List<Map<String, Object>> contentList = new ArrayList<Map<String, Object>>();
+        Map<String , Object> content1 = createContent();
+        content1.put(JsonKey.STATUS , new BigInteger("2"));
+
+        contentList.add(content1);
+        HashMap<String, Object> innerMap = new HashMap<>();
+        innerMap.put(JsonKey.CONTENTS, contentList);
+        innerMap.put(JsonKey.USER_ID, userId);
+        req.setOperation(ActorOperations.ADD_CONTENT.getValue());
+        req.setRequest(innerMap);
+
+        subject.tell(req, probe.getRef());
+        probe.expectMsgClass(Response.class);
+        Thread.sleep(3000);
+        Response dbbRes = cassandraOperation.getRecordsByProperty(contentdbInfo.getKeySpace() , contentdbInfo.getTableName() , JsonKey.CONTENT_ID , contentId);
+        List list = (List)dbbRes.getResult().get(JsonKey.RESPONSE);
+        Assert.assertEquals(1 , list.size());
+
+    }
+
+    @Test
+    public void updateContentTestWithInvalidDateFormat() throws Throwable {
+
+        TestKit probe = new TestKit(system);
+        ActorRef subject = system.actorOf(props);
+
+        Request req = new Request();
+        List<Map<String, Object>> contentList = new ArrayList<Map<String, Object>>();
+        Map<String , Object> content1 = createContent();
+        content1.put(JsonKey.STATUS , new BigInteger("2"));
+        content1.put(JsonKey.LAST_ACCESS_TIME , "July 4 , 2150");
+
+        contentList.add(content1);
+        HashMap<String, Object> innerMap = new HashMap<>();
+        innerMap.put(JsonKey.CONTENTS, contentList);
+        innerMap.put(JsonKey.USER_ID, userId);
+        req.setOperation(ActorOperations.ADD_CONTENT.getValue());
+        req.setRequest(innerMap);
+
+        subject.tell(req, probe.getRef());
+        probe.expectMsgClass(ProjectCommonException.class);
 
     }
 
@@ -88,38 +169,51 @@ public class LearnerStateUpdateActorTest {
 
         TestKit probe = new TestKit(system);
         ActorRef subject = system.actorOf(props);
-
         Request req = new Request();
-        List<Map<String, Object>> contentList = new ArrayList<Map<String, Object>>();
-        Map<String , Object> content1 = createContent();
-
-        contentList.add(content1);
-        HashMap<String, Object> innerMap = new HashMap<>();
-        innerMap.put(JsonKey.CONTENTS, contentList);
-        innerMap.put(JsonKey.USER_ID, USER_ID);
         req.setOperation("INVALID_OPERATION");
-        req.setRequest(innerMap);
-
         subject.tell(req, probe.getRef());
         probe.expectMsgClass(ProjectCommonException.class);
+    }
 
+    @Test
+    public void onReceiveUpdateContentWithInvalidRequest() throws Throwable {
+
+        TestKit probe = new TestKit(system);
+        ActorRef subject = system.actorOf(props);
+        subject.tell("INVALID REQUEST", probe.getRef());
+        probe.expectMsgClass(ProjectCommonException.class);
     }
 
 
     private Map<String , Object> createContent(){
 
         Map<String , Object> content = new HashMap<String , Object>();
-        content.put(JsonKey.CONTENT_ID, "123");
-        content.put(JsonKey.USER_ID , USER_ID);
-        content.put(JsonKey.VIEW_POSITION , "123");
-        content.put(JsonKey.VIEW_COUNT , "123");
+        String key = userId + JsonKey.PRIMARY_KEY_DELIMETER + contentId + JsonKey.PRIMARY_KEY_DELIMETER
+            + courseId;
         content.put(JsonKey.LAST_ACCESS_TIME , ProjectUtil.getFormattedDate());
         content.put(JsonKey.COMPLETED_COUNT , "0");
         content.put(JsonKey.STATUS , "1");
         content.put(JsonKey.LAST_UPDATED_TIME , ProjectUtil.getFormattedDate());
         content.put(JsonKey.LAST_COMPLETED_TIME , ProjectUtil.getFormattedDate());
-
+        String id = OneWayHashing.encryptVal(key);
+        content.put(JsonKey.ID , id);
+        content.put(JsonKey.COURSE_ID , courseId);
+        content.put(JsonKey.USER_ID , userId);
+        content.put(JsonKey.CONTENT_ID , contentId);
+        content.put(JsonKey.PROGRESS , new BigInteger("100"));
         return content;
+    }
+
+    @AfterClass
+    public static void destroy(){
+
+        cassandraOperation.deleteRecord(coursedbInfo.getKeySpace() , coursedbInfo.getTableName(),
+            OneWayHashing.encryptVal(userId+JsonKey.PRIMARY_KEY_DELIMETER+courseId));
+        String key = userId + JsonKey.PRIMARY_KEY_DELIMETER + contentId + JsonKey.PRIMARY_KEY_DELIMETER
+            + courseId;
+        String contentid = OneWayHashing.encryptVal(key);
+        cassandraOperation.deleteRecord(contentdbInfo.getKeySpace() , contentdbInfo.getTableName(),contentid);
+
     }
 
 }

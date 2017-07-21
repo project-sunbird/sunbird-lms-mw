@@ -64,7 +64,16 @@ public class CourseEnrollmentActorTest {
     //PowerMockito.mockStatic(EkStepRequestUtil.class);
   }
 
-  @Test()
+  @Test
+  public void testAll() throws Throwable {
+    this.onReceiveTestWithInvalidOperation();
+    this.aonReceiveTestWithInvalidEkStepContent();
+    this.testAonReceive();
+    this.testBEnrollWithSameCourse();
+    this.onReceiveTestWithInvalidRequestType();
+  }
+
+  //@Test()
   public void testAonReceive() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -97,7 +106,7 @@ public class CourseEnrollmentActorTest {
 
   }
 
-  @Test
+  //@Test
   public void testBEnrollWithSameCourse() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -116,7 +125,7 @@ public class CourseEnrollmentActorTest {
     probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
   }
 
-  @Test
+  //@Test
   public void aonReceiveTestWithInvalidEkStepContent(){
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -142,7 +151,7 @@ public class CourseEnrollmentActorTest {
     probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
   }
 
-  @Test()
+  //@Test()
   public void onReceiveTestWithInvalidOperation() throws Throwable {
 
     TestKit probe = new TestKit(system);
@@ -160,7 +169,7 @@ public class CourseEnrollmentActorTest {
     probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
   }
 
-  @Test()
+  //@Test()
   public void onReceiveTestWithInvalidRequestType() throws Throwable {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);

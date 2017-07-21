@@ -45,7 +45,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private ActorRef searchHandlerActor; 
     private ExecutionContext ec;
     Map<String, ActorRef> routerMap = new HashMap<>();
-    private static final int WAIT_TIME_VALUE = 5;
+    private static final int WAIT_TIME_VALUE = 9;
     private static final String COURSE_ENROLLMENT_ROUTER = "courseEnrollmentRouter";
     private static final String LEARNER_ACTOR_ROUTER = "learnerActorRouter";
     private static final String LEARNER_STATE_ROUTER = "learnerStateRouter";

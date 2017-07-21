@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -426,6 +427,7 @@ public class PageManagementActor extends UntypedAbstractActor {
         ProjectLogger.log(e.getMessage(), e);
       }
       Map<String, Object> filters = (Map<String, Object>) ((Map<String, Object>)map.get(JsonKey.REQUEST)).get(JsonKey.FILTERS);
+      ProjectLogger.log("default search query for ekstep for page data assemble api : "+ (String)section.get(JsonKey.SEARCH_QUERY));
 	    applyFilters(filters,reqFilters);
 	    String query = "";
 	    
@@ -437,7 +439,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 	    if(ProjectUtil.isStringNullOREmpty(query)){
 	      query = (String)section.get(JsonKey.SEARCH_QUERY);
 	    }
-	    ProjectLogger.log("search query for ekstep for page data assemble api : "+ query);
+	    ProjectLogger.log("search query after applying filter for ekstep for page data assemble api : "+ query);
 		Object[] result = EkStepRequestUtil.searchContent(query,headers);
 		if (null != result)
 			section.put(JsonKey.CONTENTS, result);
@@ -453,25 +455,31 @@ public class PageManagementActor extends UntypedAbstractActor {
   private void applyFilters(Map<String, Object> filters,Map<String, Object> reqFilters) {
     if(null != reqFilters){
 	  Set<Entry<String, Object>> entrySet = reqFilters.entrySet();
-	  
 	  for(Entry<String, Object> entry : entrySet){
 	    String key = entry.getKey();
       if (filters.containsKey(key)) {
         Object obj = entry.getValue();
         if (obj instanceof List) {
           if (filters.get(key) instanceof List) {
-            ((List<Object>) filters.get(key)).addAll((List<Object>) obj);
+            Set<Object> set = new HashSet<>((List<Object>) filters.get(key));
+            set.addAll((List<Object>) obj);
+            ((List<Object>) filters.get(key)).clear();
+            ((List<Object>) filters.get(key)).addAll(set);
           } else if (filters.get(key) instanceof Map) {
             filters.put(key, obj);
           } else {
-            ((List<Object>) obj).add((String) filters.get(key));
+            if(!(((List<Object>) obj).contains((String) filters.get(key)))){
+              ((List<Object>) obj).add((String) filters.get(key));
+            }
             filters.put(key, obj);
           }
         } else if (obj instanceof Map) {
           filters.put(key, obj);
         } else {
           if (filters.get(key) instanceof List) {
-            ((List<Object>) filters.get(key)).add(obj);
+            if(!(((List<Object>) filters.get(key)).contains(obj))){
+              ((List<Object>) filters.get(key)).add(obj);
+            }
           } else if (filters.get(key) instanceof Map) {
             filters.put(key, obj);
           } else {
@@ -481,7 +489,6 @@ public class PageManagementActor extends UntypedAbstractActor {
             filters.put(key, list);
           }
         }
-
       }else{
 	      filters.put(key, entry.getValue());
 	    }

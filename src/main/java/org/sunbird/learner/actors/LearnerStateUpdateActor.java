@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -64,8 +65,11 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
         if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ADD_CONTENT.getValue())) {
           Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
           String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
-          List<Map<String, Object>> contentList = (List<Map<String, Object>>) actorMessage
+          List<Map<String, Object>> requestedcontentList = (List<Map<String, Object>>) actorMessage
               .getRequest().get(JsonKey.CONTENTS);
+          CopyOnWriteArrayList<Map<String, Object>> contentList = new CopyOnWriteArrayList<Map<String, Object>>(requestedcontentList);
+          actorMessage
+              .getRequest().put(JsonKey.CONTENTS , contentList);
           // map to hold the status of requested state of contents
           Map<String, Integer> contentStatusHolder = new HashMap<String, Integer>();
 
@@ -83,7 +87,8 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
                 cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), map);
                 response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.SUCCESS);
               } catch (Exception ex) {
-                response.getResult().put((String) map.get(JsonKey.CONTENT_ID), ex.getMessage());
+                response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.FAILED);
+                contentList.remove(map);
               }
             }
           }

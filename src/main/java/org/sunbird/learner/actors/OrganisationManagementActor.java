@@ -136,6 +136,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
             sender().tell(exception, self());
             return;
           }
+          if(!req.containsKey(JsonKey.IS_ROOT_ORG)){
+            req.remove(JsonKey.CHANNEL);
+          }
         }
 
         Map<String, Object> dbMap = new HashMap<String, Object>();
@@ -386,18 +389,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           sender().tell(exception, self());
           return;
         }
-        validateChannelIdForRootOrg(req);
-        if (req.containsKey(JsonKey.CHANNEL)) {
-          if (!validateChannelForUniqueness((String) req.get(JsonKey.CHANNEL))) {
-            ProjectLogger.log("Channel validation failed");
-            ProjectCommonException exception =
-                new ProjectCommonException(ResponseCode.channelUniquenessInvalid.getErrorCode(),
-                    ResponseCode.channelUniquenessInvalid.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
-            sender().tell(exception, self());
-            return;
-          }
-        }
 
         Map<String, Object> dbMap = new HashMap<String, Object>();
         dbMap.put(JsonKey.SOURCE, req.get(JsonKey.SOURCE));
@@ -420,6 +411,21 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
             sender().tell(exception, self());
             return;
           }
+        }
+      }
+      validateChannelIdForRootOrg(req);
+      if (req.containsKey(JsonKey.CHANNEL)) {
+        if (!validateChannelForUniquenessForUpdate((String)req.get(JsonKey.CHANNEL),(String)req.get(JsonKey.ORGANISATION_ID))) {
+          ProjectLogger.log("Channel validation failed");
+          ProjectCommonException exception =
+              new ProjectCommonException(ResponseCode.channelUniquenessInvalid.getErrorCode(),
+                  ResponseCode.channelUniquenessInvalid.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
+          sender().tell(exception, self());
+          return;
+        }
+        if(!req.containsKey(JsonKey.IS_ROOT_ORG)){
+          req.remove(JsonKey.CHANNEL);
         }
       }
       Map<String, Object> addressReq = null;
@@ -1440,6 +1446,11 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     return true;
   }
 
+  /**
+   * validates if channel is already present in the organisation
+   * @param channel
+   * @return boolean
+   */
   @SuppressWarnings("unchecked")
   private boolean validateChannelForUniqueness(String channel) {
     if (!ProjectUtil.isStringNullOREmpty(channel)) {
@@ -1453,5 +1464,31 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
     return false;
   }
+
+  /**
+   * validates if channel is already present in the organisation while Updating
+   * @param channel
+   * @return boolean
+   */
+  @SuppressWarnings("unchecked")
+  private boolean validateChannelForUniquenessForUpdate(String channel, String orgId) {
+    if (!ProjectUtil.isStringNullOREmpty(channel)) {
+      Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+      Response result = cassandraOperation.getRecordsByProperty(orgDbInfo.getKeySpace(),
+          orgDbInfo.getTableName(), JsonKey.CHANNEL, channel);
+      List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      if ((list.isEmpty())) {
+        return true;
+      } else {
+        Map<String, Object> data = list.get(0);
+        String id = (String) data.get(JsonKey.ID);
+        if(id.equalsIgnoreCase(orgId)){
+          return true;
+        }
+      }
+    }
+    return false;
+   }
+
 
 }

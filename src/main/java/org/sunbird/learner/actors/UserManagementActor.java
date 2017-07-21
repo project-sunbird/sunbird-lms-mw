@@ -418,13 +418,17 @@ public class UserManagementActor extends UntypedAbstractActor {
         updateUserExtId(requestMap,usrExtIdDb);
         sender().tell(result, self());
         
-        Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
         if (((String)result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
                 Response UsrResponse = new Response();
                 UsrResponse.getResult().put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
                 UsrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));
-                Patterns.ask(RequestRouterActor.backgroundJobManager, UsrResponse, timeout);
-        }
+                Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+                try{
+                  Patterns.ask(RequestRouterActor.backgroundJobManager,UsrResponse,timeout);
+                  }catch(Exception ex){
+                    ProjectLogger.log("Exception Occured during saving user to Es while updating user : ", ex);
+                 }
+          }
 	}
 
 
@@ -729,6 +733,7 @@ public class UserManagementActor extends UntypedAbstractActor {
             ProjectLogger.log("User created successfully.....");
             sender().tell(response, self());
             
+            
             Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
             if (((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
               ProjectLogger.log("method call going to satrt for ES--.....");
@@ -736,10 +741,15 @@ public class UserManagementActor extends UntypedAbstractActor {
                     UsrResponse.getResult().put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
                     UsrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));
                      ProjectLogger.log("making a call to save user data to ES");
-                    Patterns.ask(RequestRouterActor.backgroundJobManager, UsrResponse, timeout);
+                     try{
+                       Patterns.ask(RequestRouterActor.backgroundJobManager, UsrResponse, timeout);
+                     }catch(Exception ex){
+                       ProjectLogger.log("Exception Occured during saving user to Es while creating user : ", ex);
+                     }
             }else {
               ProjectLogger.log("no call for ES to save user");
             }
+            
     }
 
     private void insertOrganisationDetails(Map<String, Object> userMap,DbInfo usrOrgDb) {

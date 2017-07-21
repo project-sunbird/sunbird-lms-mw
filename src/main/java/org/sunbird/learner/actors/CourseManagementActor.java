@@ -148,13 +148,17 @@ public class CourseManagementActor extends UntypedAbstractActor {
             .updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), queryMap);
 
         sender().tell(result, self());
-        Timeout timeout = new Timeout(
-            Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+       
         if (cloneResponse != null) {
           if (cloneResponse.getResult() != null && cloneResponse.getResult().size() > 0) {
+            Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
             cloneResponse.getResult()
                 .put(JsonKey.OPERATION, ActorOperations.PUBLISH_COURSE.getValue());
-            Patterns.ask(RequestRouterActor.backgroundJobManager, cloneResponse, timeout);
+            try{
+              Patterns.ask(RequestRouterActor.backgroundJobManager,cloneResponse,timeout);
+          }catch(Exception ex){
+            ProjectLogger.log("Exception Occured during saving course details to Es while publishing course : ", ex);
+          }
           }
         }
       }

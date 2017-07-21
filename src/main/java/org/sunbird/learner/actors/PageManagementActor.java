@@ -194,12 +194,19 @@ public class PageManagementActor extends UntypedAbstractActor {
 	private void getPageData(Request actorMessage) {
 		String sectionQuery = null;
 		List<Map<String,Object>> sectionList = new ArrayList<>();
+		Map<String,Object> filterMap = new HashMap<>();
 		Response response = null;
 		Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.PAGE);
 		String pageName = (String) req.get(JsonKey.PAGE_NAME);
 		String source = (String) req.get(JsonKey.SOURCE);
 		String orgCode = (String) req.get(JsonKey.ORG_CODE);
 		Map<String,String> headers = (Map<String, String>) actorMessage.getRequest().get(JsonKey.HEADER);
+		filterMap.putAll(req);
+		filterMap.remove(JsonKey.PAGE_NAME);
+		filterMap.remove(JsonKey.SOURCE);
+		filterMap.remove(JsonKey.ORG_CODE);
+		filterMap.remove(JsonKey.FILTERS);
+		filterMap.remove(JsonKey.CREATED_BY);
 		Map<String,Object> reqFilters = (Map<String, Object>) req.get(JsonKey.FILTERS);
 		List<Map<String, Object>> result = null;
 		try{
@@ -243,8 +250,8 @@ public class PageManagementActor extends UntypedAbstractActor {
       
 			for(Object obj : arr){
 				Map<String,Object>  sectionMap = (Map<String, Object>) obj ;
-				Map<String, Object> sectionData = DataCacheHandler.sectionMap.get((String)sectionMap.get(JsonKey.ID));
-				getContentData(sectionData,reqFilters,headers);
+				Map<String, Object> sectionData = new HashMap<>(DataCacheHandler.sectionMap.get((String)sectionMap.get(JsonKey.ID)));
+				getContentData(sectionData,reqFilters,headers,filterMap);
 				sectionData.put(JsonKey.GROUP, sectionMap.get(JsonKey.GROUP));
 				sectionData.put(JsonKey.INDEX, sectionMap.get(JsonKey.INDEX));
 				removeUnwantedData(sectionData,"getPageData");
@@ -418,13 +425,19 @@ public class PageManagementActor extends UntypedAbstractActor {
 	}
 
 	@SuppressWarnings("unchecked")
-  private void getContentData(Map<String, Object> section,Map<String, Object> reqFilters, Map<String, String> headers) {
+  private void getContentData(Map<String, Object> section,Map<String, Object> reqFilters, Map<String, String> headers, Map<String, Object> filterMap) {
       ObjectMapper mapper = new ObjectMapper();
       Map<String, Object> map = new HashMap<>();
       try {
         map = mapper.readValue((String)section.get(JsonKey.SEARCH_QUERY), HashMap.class);
       } catch (IOException e) {
         ProjectLogger.log(e.getMessage(), e);
+      }
+      Set<Entry<String, Object>> filterEntrySet = filterMap.entrySet();
+      for(Entry<String, Object> entry : filterEntrySet){
+        if(!entry.getKey().equalsIgnoreCase(JsonKey.FILTERS)){
+          ((Map<String, Object>)map.get(JsonKey.REQUEST)).put(entry.getKey(), entry.getValue());
+        }
       }
       Map<String, Object> filters = (Map<String, Object>) ((Map<String, Object>)map.get(JsonKey.REQUEST)).get(JsonKey.FILTERS);
       ProjectLogger.log("default search query for ekstep for page data assemble api : "+ (String)section.get(JsonKey.SEARCH_QUERY));

@@ -175,8 +175,9 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
     userCountresponse.put(JsonKey.OPERATION, ooperation);
     userCountresponse.put(JsonKey.COURSE_ID, courseData);
     userCountresponse.getResult().put(JsonKey.OPERATION, innerOperation);
+    Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
     try{
-      sender().tell(userCountresponse,RequestRouterActor.backgroundJobManager);
+      Patterns.ask(RequestRouterActor.backgroundJobManager,userCountresponse,timeout);
     }catch(Exception ex){
       ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
     }

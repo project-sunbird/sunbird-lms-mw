@@ -127,7 +127,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         }
         validateChannelIdForRootOrg(req);
         if (req.containsKey(JsonKey.CHANNEL)) {
-          if (!validateChannelForUniqueness((String) req.get(JsonKey.CHANNEL))) {
+          if(!req.containsKey(JsonKey.IS_ROOT_ORG)){
+            req.remove(JsonKey.CHANNEL);
+          }else if (!validateChannelForUniqueness((String) req.get(JsonKey.CHANNEL))) {
             ProjectLogger.log("Channel validation failed");
             ProjectCommonException exception =
                 new ProjectCommonException(ResponseCode.channelUniquenessInvalid.getErrorCode(),
@@ -208,15 +210,14 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       sender().tell(result, self());
 
       Response orgResponse = new Response();
-      Timeout timeout = new Timeout(
-          Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
       if (null != addressReq) {
         req.put(JsonKey.ADDRESS, addressReq);
       }
       orgResponse.put(JsonKey.ORGANISATION, req);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
       ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
-      Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
+      Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+      Patterns.ask(RequestRouterActor.backgroundJobManager,orgResponse,timeout);
     } catch (ProjectCommonException e) {
       ProjectLogger.log("Some error occurs" + e.getMessage());
       sender().tell(e, self());
@@ -276,11 +277,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       sender().tell(response, self());
       // update the ES --
       Response orgResponse = new Response();
-      Timeout timeout = new Timeout(
-          Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
       orgResponse.put(JsonKey.ORGANISATION, updateOrgDBO);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-      Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
+      Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+      Patterns.ask(RequestRouterActor.backgroundJobManager,orgResponse,timeout);
       return;
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
@@ -350,11 +350,12 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       sender().tell(response, self());
       // update the ES --
       Response orgResponse = new Response();
-      Timeout timeout = new Timeout(
-          Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+      
       orgResponse.put(JsonKey.ORGANISATION, updateOrgDBO);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-      Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
+      Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+      Patterns.ask(RequestRouterActor.backgroundJobManager,orgResponse,timeout);
+      
       return;
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
@@ -386,18 +387,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           sender().tell(exception, self());
           return;
         }
-        validateChannelIdForRootOrg(req);
-        if (req.containsKey(JsonKey.CHANNEL)) {
-          if (!validateChannelForUniqueness((String) req.get(JsonKey.CHANNEL))) {
-            ProjectLogger.log("Channel validation failed");
-            ProjectCommonException exception =
-                new ProjectCommonException(ResponseCode.channelUniquenessInvalid.getErrorCode(),
-                    ResponseCode.channelUniquenessInvalid.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
-            sender().tell(exception, self());
-            return;
-          }
-        }
 
         Map<String, Object> dbMap = new HashMap<String, Object>();
         dbMap.put(JsonKey.SOURCE, req.get(JsonKey.SOURCE));
@@ -420,6 +409,20 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
             sender().tell(exception, self());
             return;
           }
+        }
+      }
+      validateChannelIdForRootOrg(req);
+      if (req.containsKey(JsonKey.CHANNEL)) {
+        if(!req.containsKey(JsonKey.IS_ROOT_ORG)){
+          req.remove(JsonKey.CHANNEL);
+        }else if (!validateChannelForUniquenessForUpdate((String)req.get(JsonKey.CHANNEL),(String)req.get(JsonKey.ORGANISATION_ID))) {
+          ProjectLogger.log("Channel validation failed");
+          ProjectCommonException exception =
+              new ProjectCommonException(ResponseCode.channelUniquenessInvalid.getErrorCode(),
+                  ResponseCode.channelUniquenessInvalid.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
+          sender().tell(exception, self());
+          return;
         }
       }
       Map<String, Object> addressReq = null;
@@ -500,14 +503,14 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       sender().tell(response, self());
 
       Response orgResponse = new Response();
-      Timeout timeout = new Timeout(
-          Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+      
       if (null != addressReq) {
         updateOrgDBO.put(JsonKey.ADDRESS, addressReq);
       }
       orgResponse.put(JsonKey.ORGANISATION, updateOrgDBO);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-      Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
+      Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+      Patterns.ask(RequestRouterActor.backgroundJobManager,orgResponse,timeout);
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
       return;
@@ -1440,6 +1443,11 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     return true;
   }
 
+  /**
+   * validates if channel is already present in the organisation
+   * @param channel
+   * @return boolean
+   */
   @SuppressWarnings("unchecked")
   private boolean validateChannelForUniqueness(String channel) {
     if (!ProjectUtil.isStringNullOREmpty(channel)) {
@@ -1453,5 +1461,31 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
     return false;
   }
+
+  /**
+   * validates if channel is already present in the organisation while Updating
+   * @param channel
+   * @return boolean
+   */
+  @SuppressWarnings("unchecked")
+  private boolean validateChannelForUniquenessForUpdate(String channel, String orgId) {
+    if (!ProjectUtil.isStringNullOREmpty(channel)) {
+      Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+      Response result = cassandraOperation.getRecordsByProperty(orgDbInfo.getKeySpace(),
+          orgDbInfo.getTableName(), JsonKey.CHANNEL, channel);
+      List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      if ((list.isEmpty())) {
+        return true;
+      } else {
+        Map<String, Object> data = list.get(0);
+        String id = (String) data.get(JsonKey.ID);
+        if(id.equalsIgnoreCase(orgId)){
+          return true;
+        }
+      }
+    }
+    return false;
+   }
+
 
 }

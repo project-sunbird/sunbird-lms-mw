@@ -171,13 +171,16 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
    */
   @SuppressWarnings("unused")
   private void updateCoursemanagement(String ooperation, Object courseData, String innerOperation) {
-    Timeout timeout = new Timeout(
-        Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
     Response userCountresponse = new Response();
     userCountresponse.put(JsonKey.OPERATION, ooperation);
     userCountresponse.put(JsonKey.COURSE_ID, courseData);
     userCountresponse.getResult().put(JsonKey.OPERATION, innerOperation);
-    Patterns.ask(RequestRouterActor.backgroundJobManager, userCountresponse, timeout);
+    Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+    try{
+      Patterns.ask(RequestRouterActor.backgroundJobManager,userCountresponse,timeout);
+    }catch(Exception ex){
+      ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
+    }
   }
 
 }

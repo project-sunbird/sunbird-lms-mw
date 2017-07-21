@@ -88,8 +88,16 @@ public class PageManagementActorTest {
       filterMap.put("language", list);
       Map<String,Object> sizeMap = new HashMap<>();
       sizeMap.put("<=", "1000000");
-      //"size": {"<=" : "1000000"}
       filterMap.put("size",sizeMap);
+      
+      List<String> contentTypeList = new ArrayList<>();
+      contentTypeList.add("Course");
+      filterMap.put("contentType", contentTypeList);
+      
+      List<String> objectTypeList = new ArrayList<>();
+      objectTypeList.add("content");
+      filterMap.put("objectType", objectTypeList);
+      
       reqMap.put(JsonKey.FILTERS, filterMap);
       searchQueryMap.put(JsonKey.REQUEST, reqMap);
       
@@ -394,7 +402,6 @@ public class PageManagementActorTest {
       List<String> list = new ArrayList<>();
       list.add("Bengali");
       filterMap.put("language", list);
-      //filterMap.put("limit", 1);
       reqMap.put(JsonKey.FILTERS, filterMap);
       searchQueryMap.put(JsonKey.REQUEST, reqMap);
       
@@ -440,15 +447,33 @@ public class PageManagementActorTest {
       Map<String,Object> header = new HashMap<>();
       header.put("Accept", "application/json");
       header.put("Content-Type", "application/json");
-      
       Map<String,Object> filterMap = new HashMap<>();
-      List<String> list = new ArrayList<>();
-      list.add("English");
-      filterMap.put("language", list);
+      List<String> contentList = new ArrayList<>();
+      contentList.add("Story");
+      contentList.add("Worksheet");
+      contentList.add("Collection");
+      contentList.add("Game");
+      contentList.add("Collection");
+      contentList.add("Course");
+      filterMap.put("contentType", contentList);
+      
+      List<String> statusList = new ArrayList<>();
+      statusList.add("Live");
+      filterMap.put("language", statusList);
+      
+      List<String> objectTypeList = new ArrayList<>();
+      objectTypeList.add("content");
+      filterMap.put("objectType", objectTypeList);
+      
+      List<String> languageList = new ArrayList<>();
+      languageList.add("English");
+      languageList.add("Hindi");
+      languageList.add("Gujarati");
+      languageList.add("Bengali");
+      filterMap.put("language", languageList);
       Map<String,Object> compMap = new HashMap<>();
       compMap.put("<=", 2);
       compMap.put(">", 0.5);
-      //"orthographic_complexity":{"<=":2,">":0.5}
       filterMap.put("size",compMap);
       filterMap.put("orthographic_complexity", 1);
       List<String> gradeListist = new ArrayList<>();
@@ -483,7 +508,6 @@ public class PageManagementActorTest {
       Map<String,Object> compMap = new HashMap<>();
       compMap.put("<=", 2);
       compMap.put(">", 0.5);
-      //"orthographic_complexity":{"<=":2,">":0.5}
       filterMap.put("size",compMap);
       filterMap.put("orthographic_complexity", 1);
       List<String> gradeListist = new ArrayList<>();

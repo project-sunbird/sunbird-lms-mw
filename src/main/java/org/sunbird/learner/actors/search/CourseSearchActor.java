@@ -35,7 +35,7 @@ public class CourseSearchActor extends UntypedAbstractActor {
 					Map<String, Object> req = actorMessage.getRequest();
 					@SuppressWarnings("unchecked")
 					Map<String, Object> searchQueryMap = (Map<String, Object>) req.get(JsonKey.SEARCH);
-					Map<String, Object> ekStepSearchQuery = new HashMap<String, Object>();
+					Map<String, Object> ekStepSearchQuery = new HashMap<>();
 					ekStepSearchQuery.put(JsonKey.REQUEST, searchQueryMap);
 
 					String json = null;

@@ -418,13 +418,17 @@ public class UserManagementActor extends UntypedAbstractActor {
         updateUserExtId(requestMap,usrExtIdDb);
         sender().tell(result, self());
         
-        Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
         if (((String)result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
                 Response UsrResponse = new Response();
                 UsrResponse.getResult().put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
                 UsrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));
-                Patterns.ask(RequestRouterActor.backgroundJobManager, UsrResponse, timeout);
-        }
+                Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+                try{
+                  Patterns.ask(RequestRouterActor.backgroundJobManager,UsrResponse,timeout);
+                  }catch(Exception ex){
+                    ProjectLogger.log("Exception Occured during saving user to Es while updating user : ", ex);
+                 }
+          }
 	}
 
 
@@ -595,7 +599,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
         Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
         Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
-    Util.DbInfo orgDb = Util.dbInfoMap.get(JsonKey.ORG_DB);
+        Util.DbInfo orgDb = Util.dbInfoMap.get(JsonKey.ORG_DB);
         Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
         ProjectLogger.log("collected all the DB setup..");
         Map<String , Object> req = actorMessage.getRequest();
@@ -666,6 +670,7 @@ public class UserManagementActor extends UntypedAbstractActor {
               roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
               userMap.put(JsonKey.ROLES, roles);
             }
+            ProjectLogger.log("User roles is===" + userMap.get(JsonKey.ROLES));
             requestMap = new HashMap<>();
             requestMap.putAll(userMap);
             removeUnwanted(requestMap);
@@ -717,7 +722,6 @@ public class UserManagementActor extends UntypedAbstractActor {
 	                insertOrganisationDetails(userMap,usrOrgDb);
 	              }else{
 	                ProjectLogger.log("Reg Org Id :"+(String)userMap.get(JsonKey.REGISTERED_ORG_ID)+" for user id "+userMap.get(JsonKey.ID)+" is not valid.");
-	                System.out.println("Reg Org Id :"+(String)userMap.get(JsonKey.REGISTERED_ORG_ID)+" for user id "+userMap.get(JsonKey.ID)+" is not valid.");
 	              }
 	            }
 	            //update the user external identity data
@@ -729,6 +733,7 @@ public class UserManagementActor extends UntypedAbstractActor {
             ProjectLogger.log("User created successfully.....");
             sender().tell(response, self());
             
+            
             Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
             if (((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
               ProjectLogger.log("method call going to satrt for ES--.....");
@@ -736,10 +741,15 @@ public class UserManagementActor extends UntypedAbstractActor {
                     UsrResponse.getResult().put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
                     UsrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));
                      ProjectLogger.log("making a call to save user data to ES");
-                    Patterns.ask(RequestRouterActor.backgroundJobManager, UsrResponse, timeout);
+                     try{
+                       Patterns.ask(RequestRouterActor.backgroundJobManager, UsrResponse, timeout);
+                     }catch(Exception ex){
+                       ProjectLogger.log("Exception Occured during saving user to Es while creating user : ", ex);
+                     }
             }else {
               ProjectLogger.log("no call for ES to save user");
             }
+            
     }
 
     private void insertOrganisationDetails(Map<String, Object> userMap,DbInfo usrOrgDb) {
@@ -921,6 +931,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     	reqMap.remove(JsonKey.REGISTERED_ORG);
     	reqMap.remove(JsonKey.ROOT_ORG);
     	reqMap.remove(JsonKey.IDENTIFIER);
+    	reqMap.remove(JsonKey.ORGANISATIONS);
 	}
 
 	/**

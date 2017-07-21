@@ -208,15 +208,13 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       sender().tell(result, self());
 
       Response orgResponse = new Response();
-      Timeout timeout = new Timeout(
-          Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
       if (null != addressReq) {
         req.put(JsonKey.ADDRESS, addressReq);
       }
       orgResponse.put(JsonKey.ORGANISATION, req);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
       ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
-      Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
+      sender().tell(orgResponse,RequestRouterActor.backgroundJobManager);
     } catch (ProjectCommonException e) {
       ProjectLogger.log("Some error occurs" + e.getMessage());
       sender().tell(e, self());
@@ -276,11 +274,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       sender().tell(response, self());
       // update the ES --
       Response orgResponse = new Response();
-      Timeout timeout = new Timeout(
-          Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
       orgResponse.put(JsonKey.ORGANISATION, updateOrgDBO);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-      Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
+      sender().tell(orgResponse,RequestRouterActor.backgroundJobManager);
       return;
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
@@ -350,11 +346,11 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       sender().tell(response, self());
       // update the ES --
       Response orgResponse = new Response();
-      Timeout timeout = new Timeout(
-          Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+      
       orgResponse.put(JsonKey.ORGANISATION, updateOrgDBO);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-      Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
+      sender().tell(orgResponse,RequestRouterActor.backgroundJobManager);
+      
       return;
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
@@ -500,14 +496,13 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       sender().tell(response, self());
 
       Response orgResponse = new Response();
-      Timeout timeout = new Timeout(
-          Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+      
       if (null != addressReq) {
         updateOrgDBO.put(JsonKey.ADDRESS, addressReq);
       }
       orgResponse.put(JsonKey.ORGANISATION, updateOrgDBO);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-      Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
+      sender().tell(orgResponse,RequestRouterActor.backgroundJobManager);
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
       return;

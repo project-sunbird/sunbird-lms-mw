@@ -114,25 +114,19 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   @SuppressWarnings("unchecked")
   private void getUserDetailsByLoginId(Request actorMessage) {
-   // Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> userMap =
         (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
     if (null != userMap.get(JsonKey.LOGIN_ID)) {
       String loginId = (String) userMap.get(JsonKey.LOGIN_ID);
-      // Response resultFrLoginId =
-      // cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.LOGIN_ID,loginId);
       if (!ProjectUtil.isStringNullOREmpty(loginId)) {
-        // Map<String,Object> map =
-        // ((List<Map<String,Object>>)resultFrLoginId.get(JsonKey.RESPONSE)).get(0);
         SearchDTO dto = new SearchDTO();
-        dto.addAdditionalProperty(JsonKey.LOGIN_ID, loginId.toLowerCase());
+        Map<String,Object> filter =  new HashMap<>();
+        filter.put(JsonKey.LOGIN_ID, loginId.toLowerCase());
+        dto.addAdditionalProperty(JsonKey.FILTERS, filter);
         Map<String, Object> result = null;
         Map<String, List<Map<String, Object>>> results = ElasticSearchUtil
             .complexSearch(dto, ProjectUtil.EsIndex.sunbird.getIndexName(),
                 ProjectUtil.EsType.user.getTypeName());
-        // ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
-        // ProjectUtil.EsType.user.getTypeName(),
-        // (String)map.get(JsonKey.USER_ID));
         if (results != null && results.size() > 0) {
           List<Map<String, Object>> responseMap = results.get(JsonKey.RESPONSE);
           if (responseMap != null && responseMap.size() > 0) {

@@ -28,6 +28,7 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.services.sso.SSOManager;
@@ -113,25 +114,39 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   @SuppressWarnings("unchecked")
   private void getUserDetailsByLoginId(Request actorMessage) {
-    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Map<String, Object> userMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
+   // Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    Map<String, Object> userMap =
+        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
     if (null != userMap.get(JsonKey.LOGIN_ID)) {
       String loginId = (String) userMap.get(JsonKey.LOGIN_ID);
-      Response resultFrLoginId = cassandraOperation
-          .getRecordsByProperty(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(),
-              JsonKey.LOGIN_ID, loginId);
-      if (!((List<Map<String, Object>>) resultFrLoginId.get(JsonKey.RESPONSE)).isEmpty()) {
-        Map<String, Object> map = ((List<Map<String, Object>>) resultFrLoginId
-            .get(JsonKey.RESPONSE)).get(0);
-        Map<String, Object> result = ElasticSearchUtil
-            .getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName(), (String) map.get(JsonKey.USER_ID));
-        fetchRootAndRegisterOrganisation(result);
+      // Response resultFrLoginId =
+      // cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.LOGIN_ID,loginId);
+      if (!ProjectUtil.isStringNullOREmpty(loginId)) {
+        // Map<String,Object> map =
+        // ((List<Map<String,Object>>)resultFrLoginId.get(JsonKey.RESPONSE)).get(0);
+        SearchDTO dto = new SearchDTO();
+        dto.addAdditionalProperty(JsonKey.LOGIN_ID, loginId);
+        Map<String, Object> result = null;
+        Map<String, List<Map<String, Object>>> results = ElasticSearchUtil
+            .complexSearch(dto, ProjectUtil.EsIndex.sunbird.getIndexName(),
+                ProjectUtil.EsType.user.getTypeName());
+        // ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        // ProjectUtil.EsType.user.getTypeName(),
+        // (String)map.get(JsonKey.USER_ID));
+        if (results != null && results.size() > 0) {
+          List<Map<String, Object>> responseMap = results.get(JsonKey.RESPONSE);
+          if (responseMap != null && responseMap.size() > 0) {
+            result = responseMap.get(0);
+            fetchRootAndRegisterOrganisation(result);
+          }
+        }
         Response response = new Response();
         if (null != result) {
-          if (!ProjectUtil.isStringNullOREmpty((String) result.get(JsonKey.USER_ID))) {
-            List<Map<String, Object>> organisations = getOrganisationDetailsByUserId(
-                (String) result.get(JsonKey.USER_ID));
+          if (!ProjectUtil
+              .isStringNullOREmpty((String) result.get(JsonKey.USER_ID))) {
+            List<Map<String, Object>> organisations =
+                getOrganisationDetailsByUserId(
+                    (String) result.get(JsonKey.USER_ID));
             result.put(JsonKey.ORGANISATIONS, organisations);
           }
           response.put(JsonKey.RESPONSE, result);
@@ -142,10 +157,10 @@ public class UserManagementActor extends UntypedAbstractActor {
         sender().tell(response, self());
         return;
       } else {
-        ProjectCommonException exception = new ProjectCommonException(
-            ResponseCode.userNotFound.getErrorCode(),
-            ResponseCode.userNotFound.getErrorMessage(),
-            ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(),
+                ResponseCode.userNotFound.getErrorMessage(),
+                ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
         sender().tell(exception, self());
         return;
       }

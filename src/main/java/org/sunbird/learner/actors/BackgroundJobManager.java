@@ -4,22 +4,15 @@
 package org.sunbird.learner.actors;
 
 import akka.actor.UntypedAbstractActor;
-
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.io.IOException;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.json.JSONException;
 import org.json.JSONObject;
-
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
@@ -45,7 +38,7 @@ import org.sunbird.learner.util.Util;
  */
 public class BackgroundJobManager extends UntypedAbstractActor {
 
-  private static Map<String, String> headerMap = new HashMap<String, String>();
+  private static Map<String, String> headerMap = new HashMap<>();
   private static Util.DbInfo dbInfo = null;
 
   static {
@@ -108,7 +101,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       String id = (String)orgMap.get(JsonKey.ID);
       Response orgResponse = cassandraOperation.getRecordById(orgDbInfo.getKeySpace() , orgDbInfo.getTableName() , id);
       List<Map<String , Object>> orgList = (List<Map<String, Object>>) orgResponse.getResult().get(JsonKey.RESPONSE);
-      Map<String , Object> esMap = new HashMap<String , Object>();
+      Map<String , Object> esMap = new HashMap<>();
       if(!(orgList.isEmpty())) {
         esMap = orgList.get(0);
       }
@@ -177,7 +170,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
         ProjectLogger.log(e.getMessage(), e);
       } finally {
         if (null == list) {
-          list = new ArrayList<Map<String, Object>>();
+          list = new ArrayList<>();
         }
       }
       map.put(JsonKey.ADDRESS, list);
@@ -192,7 +185,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
         ProjectLogger.log(e.getMessage(), e);
       } finally {
         if (null == list) {
-          list = new ArrayList<Map<String, Object>>();
+          list = new ArrayList<>();
         }
       }
       for (Map<String, Object> eduMap : list) {
@@ -210,7 +203,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
             ProjectLogger.log(e.getMessage(), e);
           } finally {
             if (null == addrList) {
-              addrList = new ArrayList<Map<String, Object>>();
+              addrList = new ArrayList<>();
             }
           }
           eduMap.put(JsonKey.ADDRESS, addrList.get(0));
@@ -231,7 +224,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
         ProjectLogger.log(e.getMessage(), e);
       } finally {
         if (null == list) {
-          list = new ArrayList<Map<String, Object>>();
+          list = new ArrayList<>();
         }
       }
       for (Map<String, Object> eduMap : list) {
@@ -248,7 +241,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
             ProjectLogger.log(e.getMessage(), e);
           } finally {
             if (null == addrList) {
-              addrList = new ArrayList<Map<String, Object>>();
+              addrList = new ArrayList<>();
             }
           }
           eduMap.put(JsonKey.ADDRESS, addrList.get(0));
@@ -261,7 +254,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       ProjectLogger
           .log("User data not found to save to ES user Id : " + userId, LoggerEnum.INFO.name());
     }
-    if (((List<Map<String, String>>) response.getResult().get(JsonKey.RESPONSE)).size() > 0) {
+    if (!(((List<Map<String, String>>) response.getResult().get(JsonKey.RESPONSE)).isEmpty())) {
       ProjectLogger.log("saving started user to es userId : " + userId, LoggerEnum.INFO.name());
       Map<String, Object> map = ((List<Map<String, Object>>) response.getResult()
           .get(JsonKey.RESPONSE)).get(0);
@@ -288,7 +281,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
             JsonKey.USER_COUNT);
     Map<String, Object> responseMap = null;
     if (null != (result.get(JsonKey.RESPONSE))
-        && ((List<Map<String, Object>>) result.get(JsonKey.RESPONSE)).size() > 0) {
+        && (!((List<Map<String, Object>>) result.get(JsonKey.RESPONSE)).isEmpty())) {
       responseMap = ((List<Map<String, Object>>) result.get(JsonKey.RESPONSE)).get(0);
     }
     int userCount = (int) (responseMap.get(JsonKey.USER_COUNT) != null ? responseMap
@@ -386,13 +379,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       map.put(JsonKey.COUNT, contentMap.get(JsonKey.LEAF_NODE_COUNT));
       map.put(JsonKey.RESULT, contentMap);
 
-    } catch (JSONException e) {
-      ProjectLogger.log(e.getMessage(), e);
-    } catch (JsonParseException e) {
-      ProjectLogger.log(e.getMessage(), e);
-    } catch (JsonMappingException e) {
-      ProjectLogger.log(e.getMessage(), e);
-    } catch (IOException e) {
+    } catch (JSONException | IOException e) {
       ProjectLogger.log(e.getMessage(), e);
     }
     return map;
@@ -416,7 +403,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
     Response resposne = cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(),
         updateRequestMap);
     ProjectLogger.log(resposne.toString());
-    if (!(resposne.get(JsonKey.RESPONSE) instanceof ProjectCommonException)) {
+    if(!(resposne.get(JsonKey.RESPONSE) instanceof ProjectCommonException)) {
       return true;
     }
     return false;

@@ -22,8 +22,8 @@ public class DataCacheHandler implements Runnable{
 	 * pageMap is the map of (orgId:pageName) and page Object (i.e map of string , object)
 	 * sectionMap is the map of section Id and section Object (i.e map of string , object)
 	 */
-	public static ConcurrentHashMap<String, Map<String,Object>> pageMap = new ConcurrentHashMap<>();
-	public static ConcurrentHashMap<String, Map<String,Object>> sectionMap = new ConcurrentHashMap<>();
+	private static Map<String, Map<String,Object>> pageMap = new ConcurrentHashMap<>();
+	private static Map<String, Map<String,Object>> sectionMap = new ConcurrentHashMap<>();
 	CassandraOperation cassandraOperation = new CassandraOperationImpl();
 	
 	@Override
@@ -38,7 +38,7 @@ public class DataCacheHandler implements Runnable{
 		try{
 			Response response = cassandraOperation.getAllRecords(Util.getProperty("db.keyspace"), tableName);
 			List<Map<String, Object>> responseList = (List<Map<String, Object>>)response.get(JsonKey.RESPONSE);
-			if(null != responseList && responseList.size() > 0){
+			if(null != responseList && !responseList.isEmpty()){
 				for(Map<String, Object> resultMap:responseList){
 					if(tableName.equalsIgnoreCase(JsonKey.PAGE_SECTION)){
 						map.put((String) resultMap.get(JsonKey.ID), resultMap);
@@ -52,5 +52,33 @@ public class DataCacheHandler implements Runnable{
 			ProjectLogger.log(e.getMessage(), e);
 		}
 	}
+
+  /**
+   * @return the pageMap
+   */
+  public static Map<String, Map<String, Object>> getPageMap() {
+    return pageMap;
+  }
+
+  /**
+   * @param pageMap the pageMap to set
+   */
+  public static void setPageMap(Map<String, Map<String, Object>> pageMap) {
+    DataCacheHandler.pageMap = pageMap;
+  }
+
+  /**
+   * @return the sectionMap
+   */
+  public static Map<String, Map<String, Object>> getSectionMap() {
+    return sectionMap;
+  }
+
+  /**
+   * @param sectionMap the sectionMap to set
+   */
+  public static void setSectionMap(Map<String, Map<String, Object>> sectionMap) {
+    DataCacheHandler.sectionMap = sectionMap;
+  }
 
 }

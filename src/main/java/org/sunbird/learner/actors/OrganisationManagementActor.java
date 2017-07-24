@@ -557,6 +557,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     usrOrgData.remove(JsonKey.SOURCE);
     usrOrgData.remove(JsonKey.USERNAME);
     usrOrgData.remove(JsonKey.USER_NAME);
+    usrOrgData.put(JsonKey.IS_DELETED, false);
     
     String updatedBy = null;
     String orgId = null;
@@ -892,6 +893,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     //remove source and external id
     usrOrgData.remove(JsonKey.EXTERNAL_ID);
     usrOrgData.remove(JsonKey.SOURCE);
+    usrOrgData.put(JsonKey.IS_DELETED, false);
 
     String updatedBy = null;
     String orgId = null;
@@ -1485,8 +1487,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     if (isNull(req.get(JsonKey.ORGANISATION_ID))) {
       if (isNull(req.get(JsonKey.SOURCE)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
         ProjectCommonException exception =
-            new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-                ResponseCode.invalidRequestData.getErrorMessage(),
+            new ProjectCommonException(ResponseCode.sourceAndExternalIdValidationError.getErrorCode(),
+                ResponseCode.sourceAndExternalIdValidationError.getErrorMessage(),
                 ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
         return false;
@@ -1504,8 +1506,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       requestDbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
     } else {
       ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
+          new ProjectCommonException(ResponseCode.sourceAndExternalIdValidationError.getErrorCode(),
+              ResponseCode.sourceAndExternalIdValidationError.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
     }
@@ -1516,8 +1518,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
     if (list.isEmpty()) {
       ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
+          new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
+              ResponseCode.invalidOrgData.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
       return false;
@@ -1544,8 +1546,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     if (isNull(req.get(JsonKey.USER_ID))) {
       if (isNull(data.get(JsonKey.USERNAME)) || isNull(data.get(JsonKey.SOURCE))) {
         ProjectCommonException exception =
-            new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-                ResponseCode.invalidRequestData.getErrorMessage(),
+            new ProjectCommonException(ResponseCode.usrValidationError.getErrorCode(),
+                ResponseCode.usrValidationError.getErrorMessage(),
                 ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
         return false;
@@ -1563,8 +1565,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       requestDbMap.put(JsonKey.USERNAME, data.get(JsonKey.USERNAME));
     } else {
       ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
+          new ProjectCommonException(ResponseCode.usrValidationError.getErrorCode(),
+              ResponseCode.usrValidationError.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
     }
@@ -1575,8 +1577,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
     if (list.isEmpty()) {
       ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
+          new ProjectCommonException(ResponseCode.invalidUsrData.getErrorCode(),
+              ResponseCode.invalidUsrData.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
       return false;

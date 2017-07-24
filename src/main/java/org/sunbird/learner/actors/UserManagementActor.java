@@ -125,7 +125,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         // Map<String,Object> map =
         // ((List<Map<String,Object>>)resultFrLoginId.get(JsonKey.RESPONSE)).get(0);
         SearchDTO dto = new SearchDTO();
-        dto.addAdditionalProperty(JsonKey.LOGIN_ID, loginId);
+        dto.addAdditionalProperty(JsonKey.LOGIN_ID, loginId.toLowerCase());
         Map<String, Object> result = null;
         Map<String, List<Map<String, Object>>> results = ElasticSearchUtil
             .complexSearch(dto, ProjectUtil.EsIndex.sunbird.getIndexName(),
@@ -729,12 +729,13 @@ public class UserManagementActor extends UntypedAbstractActor {
     boolean isSSOEnabled = Boolean
         .valueOf(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
 
-    if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PROVIDER))) {
-      userMap.put(JsonKey.LOGIN_ID,
-          ((String) userMap.get(JsonKey.USERNAME) + "@" + (String) userMap.get(JsonKey.PROVIDER)));
-    } else {
-      userMap.put(JsonKey.LOGIN_ID, userMap.get(JsonKey.USERNAME));
+    if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PROVIDER))){
+      userMap.put(JsonKey.LOGIN_ID, 
+          ((String)userMap.get(JsonKey.USERNAME)+"@"+(String)userMap.get(JsonKey.PROVIDER)).toLowerCase());
+    }else{
+      userMap.put(JsonKey.LOGIN_ID,((String)userMap.get(JsonKey.USERNAME)).toLowerCase());
     }
+    
     if (null != userMap.get(JsonKey.LOGIN_ID)) {
       String loginId = (String) userMap.get(JsonKey.LOGIN_ID);
       Response resultFrUserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),

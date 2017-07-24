@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
@@ -574,6 +575,20 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     if (isNotNull(usrOrgData.get(JsonKey.ROLES))) {
       roles.addAll((List<String>) usrOrgData.get(JsonKey.ROLES));
     }
+    if (isNotNull(usrOrgData.get(JsonKey.ROLE))) {
+    	String role = usrOrgData.get(JsonKey.ROLE).toString();
+    	// partners are going to send these role values 
+    	if (StringUtils.equalsIgnoreCase(role, "content-creator"))
+    		role = ProjectUtil.UserRole.CONTENT_CREATOR.getValue();
+    	else if (StringUtils.equalsIgnoreCase(role, "member"))
+    		role = ProjectUtil.UserRole.ORG_MEMBER.getValue();
+    	else if (StringUtils.equalsIgnoreCase(role, "admin"))
+    		role = ProjectUtil.UserRole.ORG_ADMIN.getValue();
+    	else if (StringUtils.equalsIgnoreCase(role, "content-reviewer"))
+    		role = ProjectUtil.UserRole.CONTENT_REVIEWER.getValue();
+        roles.add(role);
+    }
+    usrOrgData.remove(JsonKey.ROLE);
 
     if ((isNull(orgId) || isNull(userId)) || isNull(roles)) {
       // create exception here invalid request data and tell the exception , ther return
@@ -586,8 +601,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
     if (!roles.contains(ProjectUtil.UserRole.CONTENT_CREATOR.getValue())) {
       roles.add(ProjectUtil.UserRole.CONTENT_CREATOR.getValue());
-      usrOrgData.put(JsonKey.ROLES, roles);
     }
+    if (!roles.isEmpty())
+    	usrOrgData.put(JsonKey.ROLES, roles);
     // check org exist or not
     Response orgResult = cassandraOperation.getRecordById(organisationDbInfo.getKeySpace(),
         organisationDbInfo.getTableName(), orgId);

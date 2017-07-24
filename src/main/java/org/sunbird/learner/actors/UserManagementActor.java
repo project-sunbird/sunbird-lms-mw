@@ -121,7 +121,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       if (!ProjectUtil.isStringNullOREmpty(loginId)) {
         SearchDTO dto = new SearchDTO();
         Map<String,Object> filter =  new HashMap<>();
-        filter.put(JsonKey.LOGIN_ID, loginId.toLowerCase());
+        filter.put(JsonKey.LOGIN_ID, loginId);
         dto.addAdditionalProperty(JsonKey.FILTERS, filter);
         Map<String, Object> result = null;
         Map<String, List<Map<String, Object>>> results = ElasticSearchUtil
@@ -722,16 +722,11 @@ public class UserManagementActor extends UntypedAbstractActor {
 
     boolean isSSOEnabled = Boolean
         .valueOf(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
-
-    userMap.put(JsonKey.USERNAME, ((String)userMap.get(JsonKey.USERNAME)).toLowerCase());
-    if (userMap.containsKey(JsonKey.PROVIDER) && null != userMap.get(JsonKey.PROVIDER)) {
-      userMap.put(JsonKey.PROVIDER, ((String)userMap.get(JsonKey.PROVIDER)).toLowerCase());
-    }
-    if (!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PROVIDER))) {
+    if (userMap.containsKey(JsonKey.PROVIDER) && !ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PROVIDER))) {
       userMap.put(JsonKey.LOGIN_ID, 
-          ((String)userMap.get(JsonKey.USERNAME)+"@"+(String)userMap.get(JsonKey.PROVIDER)).toLowerCase());
+          (String)userMap.get(JsonKey.USERNAME)+"@"+(String)userMap.get(JsonKey.PROVIDER));
     } else {
-      userMap.put(JsonKey.LOGIN_ID,((String)userMap.get(JsonKey.USERNAME)).toLowerCase());
+      userMap.put(JsonKey.LOGIN_ID,userMap.get(JsonKey.USERNAME));
     }
    
     if (null != userMap.get(JsonKey.LOGIN_ID)) {

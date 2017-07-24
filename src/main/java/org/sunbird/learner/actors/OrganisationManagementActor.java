@@ -182,12 +182,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       req.put(JsonKey.STATUS, ProjectUtil.OrgStatus.ACTIVE.getValue());
       //removing default from request, not allowing user to create default org.
       req.remove(JsonKey.IS_DEFAULT);
-      if(req.get(JsonKey.SOURCE) !=null) {
-         req.put(JsonKey.SOURCE, ((String)req.get(JsonKey.SOURCE)).toLowerCase());
-      }
-      if(req.get(JsonKey.EXTERNAL_ID) !=null) {
-        req.put(JsonKey.EXTERNAL_ID, ((String)req.get(JsonKey.EXTERNAL_ID)).toLowerCase());
-      }
       // update address if present in request
       if (null != addressReq && addressReq.size() > 0) {
         String addressId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());

@@ -125,7 +125,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         // Map<String,Object> map =
         // ((List<Map<String,Object>>)resultFrLoginId.get(JsonKey.RESPONSE)).get(0);
         SearchDTO dto = new SearchDTO();
-        dto.addAdditionalProperty(JsonKey.LOGIN_ID, loginId);
+        dto.addAdditionalProperty(JsonKey.LOGIN_ID, loginId.toLowerCase());
         Map<String, Object> result = null;
         Map<String, List<Map<String, Object>>> results = ElasticSearchUtil
             .complexSearch(dto, ProjectUtil.EsIndex.sunbird.getIndexName(),

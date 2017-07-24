@@ -1469,8 +1469,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     if (isNull(req.get(JsonKey.ORGANISATION_ID))) {
       if (isNull(req.get(JsonKey.SOURCE)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
         ProjectCommonException exception =
-            new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-                ResponseCode.invalidRequestData.getErrorMessage(),
+            new ProjectCommonException(ResponseCode.sourceAndExternalIdValidationError.getErrorCode(),
+                ResponseCode.sourceAndExternalIdValidationError.getErrorMessage(),
                 ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
         return false;
@@ -1488,8 +1488,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       requestDbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
     } else {
       ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
+          new ProjectCommonException(ResponseCode.sourceAndExternalIdValidationError.getErrorCode(),
+              ResponseCode.sourceAndExternalIdValidationError.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
     }
@@ -1500,8 +1500,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
     if (list.isEmpty()) {
       ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
+          new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
+              ResponseCode.invalidOrgData.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
       return false;

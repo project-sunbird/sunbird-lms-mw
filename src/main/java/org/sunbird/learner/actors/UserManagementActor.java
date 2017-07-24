@@ -189,16 +189,19 @@ public class UserManagementActor extends UntypedAbstractActor {
     @SuppressWarnings("unchecked")
     private List<Map<String,Object>> getOrganisationDetailsByUserId(String userId){
       List<Map<String,Object>> organisations = new ArrayList<>();
+      
+      Map<String, Object> reqMap = new HashMap<>();
+      reqMap.put(JsonKey.USER_ID, userId);
+      reqMap.put(JsonKey.IS_DELETED, false);
      
       Util.DbInfo orgUsrDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
-      Response result = cassandraOperation.getRecordsByProperty(orgUsrDbInfo.getKeySpace(), orgUsrDbInfo.getTableName(), 
-          JsonKey.USER_ID, userId);
+      Response result = cassandraOperation.getRecordsByProperties(orgUsrDbInfo.getKeySpace(), orgUsrDbInfo.getTableName(), reqMap);
       List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-      Map<String, Object> orgDb = null;
+      Map<String, Object> orgDb = new HashMap<>();
       if (!(list.isEmpty())) {
         for(Map<String, Object> map : list){
           Map<String, Object> orgData = new HashMap<>();
-          orgDb = map; 
+          orgDb = (Map<String, Object>) map; 
           orgData.put(JsonKey.ORGANISATION_ID, orgDb.get(JsonKey.ORGANISATION_ID));
           orgData.put(JsonKey.ROLES, orgDb.get(JsonKey.ROLES));
           organisations.add(orgData);

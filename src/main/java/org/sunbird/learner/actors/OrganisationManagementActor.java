@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 import org.sunbird.cassandra.CassandraOperation;
@@ -127,7 +128,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         }
         validateChannelIdForRootOrg(req);
         if (req.containsKey(JsonKey.CHANNEL)) {
-          if(!req.containsKey(JsonKey.IS_ROOT_ORG)){
+          if(!req.containsKey(JsonKey.IS_ROOT_ORG) || !(Boolean)req.get(JsonKey.IS_ROOT_ORG)){
             req.remove(JsonKey.CHANNEL);
           }else if (!validateChannelForUniqueness((String) req.get(JsonKey.CHANNEL))) {
             ProjectLogger.log("Channel validation failed");
@@ -413,7 +414,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       }
       validateChannelIdForRootOrg(req);
       if (req.containsKey(JsonKey.CHANNEL)) {
-        if(!req.containsKey(JsonKey.IS_ROOT_ORG)){
+        if(!req.containsKey(JsonKey.IS_ROOT_ORG) || !(Boolean)req.get(JsonKey.IS_ROOT_ORG)){
           req.remove(JsonKey.CHANNEL);
         }else if (!validateChannelForUniquenessForUpdate((String)req.get(JsonKey.CHANNEL),(String)req.get(JsonKey.ORGANISATION_ID))) {
           ProjectLogger.log("Channel validation failed");
@@ -532,7 +533,11 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
 
     Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
-    if (!(validateOrgRequest(usrOrgData))) {
+    if (!(validateOrgRequestForMembers(usrOrgData))) {
+      ProjectLogger.log("REQUESTED DATA IS NOT VALID");
+      return;
+    }
+    if (!(validateUsrRequest(usrOrgData))) {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
     }
@@ -549,7 +554,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     //remove source and external id
     usrOrgData.remove(JsonKey.EXTERNAL_ID);
     usrOrgData.remove(JsonKey.SOURCE);
-
+    usrOrgData.remove(JsonKey.USERNAME);
+    usrOrgData.remove(JsonKey.USER_NAME);
+    
     String updatedBy = null;
     String orgId = null;
     String userId = null;
@@ -677,7 +684,11 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
 
     Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
-    if (!(validateOrgRequest(usrOrgData))) {
+    if (!(validateOrgRequestForMembers(usrOrgData))) {
+      ProjectLogger.log("REQUESTED DATA IS NOT VALID");
+      return;
+    }
+    if (!(validateUsrRequest(usrOrgData))) {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
     }
@@ -694,7 +705,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     //remove source and external id
     usrOrgData.remove(JsonKey.EXTERNAL_ID);
     usrOrgData.remove(JsonKey.SOURCE);
-
+    usrOrgData.remove(JsonKey.USERNAME);
+    usrOrgData.remove(JsonKey.USER_NAME);
+    
     String updatedBy = null;
     String orgId = null;
     String userId = null;
@@ -1429,10 +1442,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
 
       if (list.isEmpty()) {
-        ProjectCommonException exception = new ProjectCommonException(
-            ResponseCode.invalidRequestData.getErrorCode(),
-            ResponseCode.invalidRequestData.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+                ResponseCode.invalidRequestData.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
         return false;
       }
@@ -1440,6 +1453,120 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       req.put(JsonKey.ORGANISATION_ID, list.get(0).get(JsonKey.ID));
 
     }
+    return true;
+  }
+
+  @SuppressWarnings("unchecked")
+  private boolean validateOrgRequestForMembers(Map<String, Object> req) {
+    if (isNull(req)) {
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return false;
+    }
+    if (isNull(req.get(JsonKey.ORGANISATION_ID))) {
+      if (isNull(req.get(JsonKey.SOURCE)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+                ResponseCode.invalidRequestData.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+        sender().tell(exception, self());
+        return false;
+      }
+    }
+    // fetch orgid from database on basis of source and external id and put orgid into request .
+    Util.DbInfo orgDBInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+
+    Map<String, Object> requestDbMap = new HashMap<String, Object>();
+    if (!ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ORGANISATION_ID))) {
+      requestDbMap.put(JsonKey.ID, req.get(JsonKey.ORGANISATION_ID));
+    } else if (!ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.SOURCE))
+        && !ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.EXTERNAL_ID))) {
+      requestDbMap.put(JsonKey.SOURCE, req.get(JsonKey.SOURCE));
+      requestDbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
+    } else {
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+    }
+
+    Response result = cassandraOperation.getRecordsByProperties(orgDBInfo.getKeySpace(),
+        orgDBInfo.getTableName(), requestDbMap);
+    List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+
+    if (list.isEmpty()) {
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return false;
+    }
+    req.put(JsonKey.ORGANISATION_ID, list.get(0).get(JsonKey.ID));
+    req.put(JsonKey.SOURCE, list.get(0).get(JsonKey.SOURCE));
+
+    return true;
+  }
+
+
+  @SuppressWarnings("unchecked")
+  private boolean validateUsrRequest(Map<String, Object> req) {
+    if (isNull(req)) {
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return false;
+    }
+    Map<String, Object> data = new TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
+    data.putAll(req);
+    if (isNull(req.get(JsonKey.USER_ID))) {
+      if (isNull(data.get(JsonKey.USERNAME)) || isNull(data.get(JsonKey.SOURCE))) {
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+                ResponseCode.invalidRequestData.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+        sender().tell(exception, self());
+        return false;
+      }
+    }
+    // fetch orgid from database on basis of source and external id and put orgid into request .
+    Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+
+    Map<String, Object> requestDbMap = new HashMap<String, Object>();
+    if (!ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.USER_ID))) {
+      requestDbMap.put(JsonKey.ID, req.get(JsonKey.USER_ID));
+    } else if (!ProjectUtil.isStringNullOREmpty((String) data.get(JsonKey.SOURCE))
+        && !ProjectUtil.isStringNullOREmpty((String) data.get(JsonKey.USERNAME))) {
+      requestDbMap.put(JsonKey.PROVIDER, data.get(JsonKey.SOURCE));
+      requestDbMap.put(JsonKey.USERNAME, data.get(JsonKey.USERNAME));
+    } else {
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+    }
+
+    Response result = cassandraOperation.getRecordsByProperties(userdbInfo.getKeySpace(),
+        userdbInfo.getTableName(), requestDbMap);
+    List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+
+    if (list.isEmpty()) {
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return false;
+    }
+    req.put(JsonKey.USER_ID, list.get(0).get(JsonKey.ID));
+
     return true;
   }
 

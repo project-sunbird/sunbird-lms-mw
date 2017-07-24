@@ -114,10 +114,6 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
         }
       } catch (Exception ex) {
         ProjectLogger.log(ex.getMessage(), ex);
-        ProjectCommonException exception = new ProjectCommonException(
-            ResponseCode.invalidOperationName.getErrorCode(),
-            ResponseCode.invalidOperationName.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(ex, self());
       }
     } else {

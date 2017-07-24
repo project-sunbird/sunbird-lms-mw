@@ -129,7 +129,7 @@ public class UserManagementActor extends UntypedAbstractActor {
                 ProjectUtil.EsType.user.getTypeName());
         if (results != null && results.size() > 0) {
           List<Map<String, Object>> responseMap = results.get(JsonKey.RESPONSE);
-          if (responseMap != null && responseMap.size() > 0) {
+          if (responseMap != null && !(responseMap.isEmpty())) {
             result = responseMap.get(0);
             fetchRootAndRegisterOrganisation(result);
           }
@@ -723,13 +723,17 @@ public class UserManagementActor extends UntypedAbstractActor {
     boolean isSSOEnabled = Boolean
         .valueOf(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
 
-    if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PROVIDER))){
+    userMap.put(JsonKey.USERNAME, ((String)userMap.get(JsonKey.USERNAME)).toLowerCase());
+    if (userMap.containsKey(JsonKey.PROVIDER) && null != userMap.get(JsonKey.PROVIDER)) {
+      userMap.put(JsonKey.PROVIDER, ((String)userMap.get(JsonKey.PROVIDER)).toLowerCase());
+    }
+    if (!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PROVIDER))) {
       userMap.put(JsonKey.LOGIN_ID, 
           ((String)userMap.get(JsonKey.USERNAME)+"@"+(String)userMap.get(JsonKey.PROVIDER)).toLowerCase());
-    }else{
+    } else {
       userMap.put(JsonKey.LOGIN_ID,((String)userMap.get(JsonKey.USERNAME)).toLowerCase());
     }
-    
+   
     if (null != userMap.get(JsonKey.LOGIN_ID)) {
       String loginId = (String) userMap.get(JsonKey.LOGIN_ID);
       Response resultFrUserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),

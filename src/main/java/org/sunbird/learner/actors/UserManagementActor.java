@@ -980,7 +980,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         List<Map<String,Object>> urlActionListMap  = (List<Map<String,Object>>) urlAction.getResult().get(JsonKey.RESPONSE);
         List<Map<String,Object>> roleGroupMap  = (List<Map<String,Object>>) rolegroup.getResult().get(JsonKey.RESPONSE);
         list = (List<Map<String,Object>>)response.getResult().get(JsonKey.RESPONSE);
-        if (list != null && list.size()>0) {
+        if (list != null && list.size()>0) { 
           //This map will have all the master roles 
           for (Map<String,Object> map: list) {
             Map<String,Object> roleResponseMap = new HashMap<>();

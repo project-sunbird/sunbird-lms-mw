@@ -211,7 +211,8 @@ public class PageManagementActor extends UntypedAbstractActor {
 		List<Map<String, Object>> result = null;
 		try{
 		  if(!ProjectUtil.isStringNullOREmpty(orgCode)){
-			response = cassandraOperation.getRecordsByProperty(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), JsonKey.ORG_CODE, orgCode);
+			response = cassandraOperation.getRecordsByProperty(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), 
+			        JsonKey.ORG_CODE, orgCode);
 			result = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
 		  }
 		}catch(Exception e){
@@ -271,7 +272,6 @@ public class PageManagementActor extends UntypedAbstractActor {
 
 	@SuppressWarnings("unchecked")
 	private void getPageSetting(Request actorMessage) {
-
 		Map<String, Object> req = actorMessage.getRequest();
 		String pageName = (String) req.get(JsonKey.ID);
 		Response response = cassandraOperation.getRecordsByProperty(pageDbInfo.getKeySpace(), pageDbInfo.getTableName(),
@@ -283,27 +283,21 @@ public class PageManagementActor extends UntypedAbstractActor {
 			response.getResult().put(JsonKey.PAGE, responseMap);
 			response.getResult().remove(JsonKey.RESPONSE);
 		}
-
 		sender().tell(response, self());
 	}
 	
 	@SuppressWarnings("unchecked")
 	private void getPageSettings() {
-
 		Response response = cassandraOperation.getAllRecords(pageDbInfo.getKeySpace(), pageDbInfo.getTableName());
 		List<Map<String, Object>> result = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
-
 		List<Map<String, Object>> pageList = new ArrayList<>();
-
 		for (Map<String, Object> pageDO : result) {
 			Map<String, Object> responseMap = getPageSetting(pageDO);
 			pageList.add(responseMap);
 		}
-
 		response.getResult().put(JsonKey.PAGE, pageList);
 		response.getResult().remove(JsonKey.RESPONSE);
 		sender().tell(response, self());
-
 	}
 
 	@SuppressWarnings("unchecked")
@@ -323,7 +317,8 @@ public class PageManagementActor extends UntypedAbstractActor {
           if(!((List<Map<String,Object>>)res.get(JsonKey.RESPONSE)).isEmpty()){
             Map<String,Object> page = ((List<Map<String,Object>>)res.get(JsonKey.RESPONSE)).get(0);
             if(!(((String)page.get(JsonKey.ID)).equals((String)pageMap.get(JsonKey.ID)))){
-              ProjectCommonException exception = new ProjectCommonException(ResponseCode.pageAlreadyExist.getErrorCode(), ResponseCode.pageAlreadyExist.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+              ProjectCommonException exception = new ProjectCommonException(ResponseCode.pageAlreadyExist.getErrorCode(), 
+                      ResponseCode.pageAlreadyExist.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
               sender().tell(exception, self());
               return;
             }
@@ -381,7 +376,8 @@ public class PageManagementActor extends UntypedAbstractActor {
 		  
 		  Response res = cassandraOperation.getRecordsByProperties(pageDbInfo.getKeySpace(), pageDbInfo.getTableName(), map);
           if(!((List<Map<String,Object>>)res.get(JsonKey.RESPONSE)).isEmpty()){
-            ProjectCommonException exception = new ProjectCommonException(ResponseCode.pageAlreadyExist.getErrorCode(), ResponseCode.pageAlreadyExist.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+            ProjectCommonException exception = new ProjectCommonException(ResponseCode.pageAlreadyExist.getErrorCode(), 
+                  ResponseCode.pageAlreadyExist.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
             sender().tell(exception, self());
             return;
           }
@@ -425,7 +421,8 @@ public class PageManagementActor extends UntypedAbstractActor {
 	}
 
 	@SuppressWarnings("unchecked")
-  private void getContentData(Map<String, Object> section,Map<String, Object> reqFilters, Map<String, String> headers, Map<String, Object> filterMap) {
+  private void getContentData(Map<String, Object> section,Map<String, Object> reqFilters, Map<String, String> headers, 
+              Map<String, Object> filterMap) {
       ObjectMapper mapper = new ObjectMapper();
       Map<String, Object> map = new HashMap<>();
       try {
@@ -550,10 +547,10 @@ public class PageManagementActor extends UntypedAbstractActor {
 				List<Map<String, Object>> sectionResult = (List<Map<String, Object>>) sectionResponse.getResult()
 						.get(JsonKey.RESPONSE);
 				if(null != sectionResult && !sectionResult.isEmpty()){
-					sectionResult.get(0).put(JsonKey.GROUP, sectionMap.get(JsonKey.GROUP));
+					sectionResult.get(0).put(JsonKey.GROUP, sectionMap.get(JsonKey.GROUP)); 
 					sectionResult.get(0).put(JsonKey.INDEX, sectionMap.get(JsonKey.INDEX));
 					removeUnwantedData(sectionResult.get(0),"");
-					sections.add(sectionResult.get(0));
+					sections.add(sectionResult.get(0)); 
 				}
 			}
 		}catch(Exception e){

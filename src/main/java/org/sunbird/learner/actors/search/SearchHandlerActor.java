@@ -48,7 +48,7 @@ public class SearchHandlerActor extends UntypedAbstractActor {
                   if(result !=null) {
                   response.put(JsonKey.RESPONSE, result);
                   } else {
-                       result = new HashMap<String, List<Map<String, Object>>>();
+                       result = new HashMap<>();
                        response.put(JsonKey.RESPONSE, result);    
                   }
                   sender().tell(response, self());

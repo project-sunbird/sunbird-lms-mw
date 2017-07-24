@@ -144,7 +144,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 		  @Override
 		    public void run() {
 		    	if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
-					DataCacheHandler.sectionMap.put((String)sectionMap.get(JsonKey.ID), sectionMap);
+					DataCacheHandler.getSectionMap().put((String)sectionMap.get(JsonKey.ID), sectionMap);
 				}
 		    }
 		}.start();
@@ -184,7 +184,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 		  @Override
 		    public void run() {
 		    	if(((String)response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
-					DataCacheHandler.sectionMap.put((String)sectionMap.get(JsonKey.ID), sectionMap);
+					DataCacheHandler.getSectionMap().put((String)sectionMap.get(JsonKey.ID), sectionMap);
 				}
 		    }
 		}.start();
@@ -225,13 +225,13 @@ public class PageManagementActor extends UntypedAbstractActor {
 			orgId = (String) map.get(JsonKey.ID);
 		}
 		
-		Map<String, Object> pageMap = DataCacheHandler.pageMap.get(orgId+":"+pageName);
+		Map<String, Object> pageMap = DataCacheHandler.getPageMap().get(orgId+":"+pageName);
 		/**
 		 * if requested page for this organisation is not found,
 		 * return default NTP page
 		 */
 		if(null == pageMap){
-			pageMap = DataCacheHandler.pageMap.get("NA"+":"+pageName);
+			pageMap = DataCacheHandler.getPageMap().get("NA"+":"+pageName);
 		}
 		if (source.equalsIgnoreCase(ProjectUtil.Source.WEB.getValue())) {
 			if(null != pageMap && null != pageMap.get(JsonKey.PORTAL_MAP)){
@@ -250,7 +250,7 @@ public class PageManagementActor extends UntypedAbstractActor {
       
 			for(Object obj : arr){
 				Map<String,Object>  sectionMap = (Map<String, Object>) obj ;
-				Map<String, Object> sectionData = new HashMap<>(DataCacheHandler.sectionMap.get((String)sectionMap.get(JsonKey.ID)));
+				Map<String, Object> sectionData = new HashMap<>(DataCacheHandler.getSectionMap().get((String)sectionMap.get(JsonKey.ID)));
 				getContentData(sectionData,reqFilters,headers,filterMap);
 				sectionData.put(JsonKey.GROUP, sectionMap.get(JsonKey.GROUP));
 				sectionData.put(JsonKey.INDEX, sectionMap.get(JsonKey.INDEX));
@@ -359,7 +359,7 @@ public class PageManagementActor extends UntypedAbstractActor {
                   if(pageMap.containsKey(JsonKey.ORGANISATION_ID)){
                     orgId = (String)pageMap.get(JsonKey.ORGANISATION_ID);
                   }
-                    DataCacheHandler.pageMap.put(orgId+":"+(String)pageMap.get(JsonKey.PAGE_NAME), pageMap);
+                    DataCacheHandler.getPageMap().put(orgId+":"+(String)pageMap.get(JsonKey.PAGE_NAME), pageMap);
 				}
 		    }
 		}.start();
@@ -418,7 +418,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 		    	  if(pageMap.containsKey(JsonKey.ORGANISATION_ID)){
 		    	    orgId = (String)pageMap.get(JsonKey.ORGANISATION_ID);
 		    	  }
-					DataCacheHandler.pageMap.put(orgId+":"+(String)pageMap.get(JsonKey.PAGE_NAME), pageMap);
+					DataCacheHandler.getPageMap().put(orgId+":"+(String)pageMap.get(JsonKey.PAGE_NAME), pageMap);
 				}
 		    }
 		}.start();

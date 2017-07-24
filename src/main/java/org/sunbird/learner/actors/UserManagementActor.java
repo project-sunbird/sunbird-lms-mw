@@ -56,7 +56,7 @@ public class UserManagementActor extends UntypedAbstractActor {
      */
     @Override
     public void onReceive(Object message) throws Throwable { 
-        if (message instanceof Request) {
+        if (message instanceof Request) { 
             try {
                 ProjectLogger.log("UserManagementActor  onReceive called");
                 Request actorMessage = (Request) message;
@@ -185,11 +185,11 @@ public class UserManagementActor extends UntypedAbstractActor {
       Util.DbInfo orgUsrDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
       Response result = cassandraOperation.getRecordsByProperty(orgUsrDbInfo.getKeySpace(), orgUsrDbInfo.getTableName(), JsonKey.USER_ID, userId);
       List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-      Map<String, Object> orgDb = new HashMap<>();
+      Map<String, Object> orgDb = null;
       if (!(list.isEmpty())) {
         for(Map<String, Object> map : list){
           Map<String, Object> orgData = new HashMap<>();
-          orgDb = (Map<String, Object>) map; 
+          orgDb = map; 
           orgData.put(JsonKey.ORGANISATION_ID, orgDb.get(JsonKey.ORGANISATION_ID));
           orgData.put(JsonKey.ROLES, orgDb.get(JsonKey.ROLES));
           organisations.add(orgData);
@@ -324,7 +324,9 @@ public class UserManagementActor extends UntypedAbstractActor {
         Map<String , Object> req = actorMessage.getRequest();
         Map<String,Object> requestMap = null;
         Map<String , Object> userMap=(Map<String, Object>) req.get(JsonKey.USER);
-        userMap.put(JsonKey.ID,userMap.get(JsonKey.USER_ID));
+        if(null != userMap.get(JsonKey.USER_ID)){
+          userMap.put(JsonKey.ID,userMap.get(JsonKey.USER_ID));
+        }
 		if(null != userMap.get(JsonKey.EMAIL)){
 			checkForEmailAndUserNameUniqueness(userMap,usrDbInfo);
         }
@@ -557,7 +559,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         if(null != userMap.get(JsonKey.USERNAME)){
 	        String userName = (String)userMap.get(JsonKey.USERNAME);
 	        Response resultFruserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.USERNAME,userName);
-	        if(((List<Map<String,Object>>)resultFruserName.get(JsonKey.RESPONSE)).size() != 0){
+	        if(!(((List<Map<String,Object>>)resultFruserName.get(JsonKey.RESPONSE)).isEmpty())){
 	        	Map<String,Object> dbusrMap = ((List<Map<String,Object>>)resultFruserName.get(JsonKey.RESPONSE)).get(0);
 	        	String usrId = (String) dbusrMap.get(JsonKey.USER_ID);
 	        	if(!(usrId.equals(userMap.get(JsonKey.ID)))){
@@ -616,7 +618,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 		        if(null != userMap.get(JsonKey.LOGIN_ID)){
 		        	 String loginId = (String)userMap.get(JsonKey.LOGIN_ID);
 		        	 Response resultFrUserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),JsonKey.LOGIN_ID,loginId);
-		        	 if(((List<Map<String,Object>>)resultFrUserName.get(JsonKey.RESPONSE)).size() != 0){
+		        	 if(!(((List<Map<String,Object>>)resultFrUserName.get(JsonKey.RESPONSE)).isEmpty())){
 		             	ProjectCommonException exception = new ProjectCommonException(ResponseCode.userAlreadyExist.getErrorCode(), ResponseCode.userAlreadyExist.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
 		                 sender().tell(exception, self());
 		                 return;
@@ -949,10 +951,10 @@ public class UserManagementActor extends UntypedAbstractActor {
         map.put(JsonKey.USER_ID, resultMap.get(JsonKey.USER_ID));
         Response authResponse = cassandraOperation.getRecordsByProperties(userAuthDbInfo.getKeySpace(),userAuthDbInfo.getTableName(), map);
         List<Map<String, Object>> userAuthList = ((List<Map<String,Object>>)authResponse.get(JsonKey.RESPONSE));
-        if(null != userAuthList && userAuthList.size() == 0){
+        if(null != userAuthList && userAuthList.isEmpty()){
             cassandraOperation.insertRecord(userAuthDbInfo.getKeySpace(),userAuthDbInfo.getTableName(),userAuthMap);
         }else{
-            cassandraOperation.deleteRecord(userAuthDbInfo.getKeySpace(),userAuthDbInfo.getTableName(),(String)((Map<String, Object>) userAuthList.get(0)).get(JsonKey.ID));
+            cassandraOperation.deleteRecord(userAuthDbInfo.getKeySpace(),userAuthDbInfo.getTableName(),(String)(userAuthList.get(0)).get(JsonKey.ID));
             userAuth = ProjectUtil.createUserAuthToken((String)resultMap.get(JsonKey.ID), (String)reqMap.get(JsonKey.SOURCE));
             userAuthMap.put(JsonKey.ID, userAuth);
             userAuthMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());

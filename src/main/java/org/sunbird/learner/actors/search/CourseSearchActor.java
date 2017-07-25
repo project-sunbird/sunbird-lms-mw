@@ -41,7 +41,7 @@ public class CourseSearchActor extends UntypedAbstractActor {
 					String json;
 					try {
 						json = new ObjectMapper().writeValueAsString(ekStepSearchQuery);
-						Map<String, Object> query = new HashMap<String, Object>();
+						Map<String, Object> query = new HashMap<>();
 						query.put(JsonKey.SEARCH_QUERY, json);
 						Util.getContentData(query);
 						Object ekStepResponse = query.get(JsonKey.CONTENTS);
@@ -61,7 +61,7 @@ public class CourseSearchActor extends UntypedAbstractActor {
 					if (result != null) {
 						response.put(JsonKey.RESPONSE, result);
 					} else {
-						result = new HashMap<String, Object>();
+						result = new HashMap<>();
 						response.put(JsonKey.RESPONSE, result);
 					}
 					sender().tell(response, self());

@@ -44,36 +44,7 @@ public class Util {
     static {
         loadPropertiesFile();
         initializeOrgStatusTransition();
-
-        //setting db info (keyspace , table) into static map
-        //this map will be used during cassandra data base interaction.
-        //this map will have each DB name and it's corresponding keyspace and table name.
-        dbInfoMap.put(JsonKey.LEARNER_COURSE_DB, getDbInfoObject("sunbird","user_courses"));
-        dbInfoMap.put(JsonKey.LEARNER_CONTENT_DB, getDbInfoObject("sunbird","content_consumption"));
-        dbInfoMap.put(JsonKey.COURSE_MANAGEMENT_DB, getDbInfoObject("sunbird","course_management"));
-        dbInfoMap.put(JsonKey.USER_DB, getDbInfoObject("sunbird","user"));
-        dbInfoMap.put(JsonKey.USER_AUTH_DB, getDbInfoObject("sunbird","user_auth"));
-        dbInfoMap.put(JsonKey.ORG_DB, getDbInfoObject("sunbird","organisation"));
-        dbInfoMap.put(JsonKey.PAGE_MGMT_DB, getDbInfoObject("sunbird","page_management"));
-        dbInfoMap.put(JsonKey.PAGE_SECTION_DB, getDbInfoObject("sunbird","page_section"));
-        dbInfoMap.put(JsonKey.SECTION_MGMT_DB, getDbInfoObject("sunbird","page_section"));
-        dbInfoMap.put(JsonKey.ASSESSMENT_EVAL_DB, getDbInfoObject("sunbird","assessment_eval"));
-        dbInfoMap.put(JsonKey.ASSESSMENT_ITEM_DB, getDbInfoObject("sunbird","assessment_item"));
-        dbInfoMap.put(JsonKey.ADDRESS_DB, getDbInfoObject("sunbird","address"));
-        dbInfoMap.put(JsonKey.EDUCATION_DB, getDbInfoObject("sunbird","user_education"));
-        dbInfoMap.put(JsonKey.JOB_PROFILE_DB, getDbInfoObject("sunbird","user_job_profile"));
-        dbInfoMap.put(JsonKey.USR_ORG_DB, getDbInfoObject("sunbird","user_org"));
-        dbInfoMap.put(JsonKey.USR_EXT_ID_DB, getDbInfoObject("sunbird","user_external_identity"));
-
-        dbInfoMap.put(JsonKey.ORG_MAP_DB, getDbInfoObject("sunbird","org_mapping"));
-        dbInfoMap.put(JsonKey.ORG_TYPE_DB, getDbInfoObject("sunbird","org_type"));
-        dbInfoMap.put(JsonKey.ROLE, getDbInfoObject("sunbird","role"));
-        dbInfoMap.put(JsonKey.MASTER_ACTION, getDbInfoObject("sunbird","master_action"));
-        dbInfoMap.put(JsonKey.URL_ACTION, getDbInfoObject("sunbird","url_action"));
-        dbInfoMap.put(JsonKey.ACTION_GROUP, getDbInfoObject("sunbird","action_group"));
-        dbInfoMap.put(JsonKey.USER_ACTION_ROLE, getDbInfoObject("sunbird","user_action_role"));
-        dbInfoMap.put(JsonKey.ROLE_GROUP, getDbInfoObject("sunbird","role_group"));
-        dbInfoMap.put(JsonKey.USER_ORG_DB , getDbInfoObject("sunbird" , "user_org"));
+        initializeDBProperty();
         // EkStep HttpClient headers init
         headers.put("content-type", "application/json");
         headers.put("accept", "application/json");
@@ -90,7 +61,44 @@ public class Util {
         orgStatusTransition.put(OrgStatus.BLOCKED.getValue() ,Arrays.asList(OrgStatus.ACTIVE.getValue(),OrgStatus.BLOCKED.getValue(),OrgStatus.RETIRED.getValue()));
         orgStatusTransition.put(OrgStatus.RETIRED.getValue() ,Arrays.asList(OrgStatus.RETIRED.getValue()));
     }
+    
+    /**
+     * This method will initialize the cassandra data base
+     * property 
+     */
+    private static void initializeDBProperty() {
+      //setting db info (keyspace , table) into static map
+      //this map will be used during cassandra data base interaction.
+      //this map will have each DB name and it's corresponding keyspace and table name.
+      dbInfoMap.put(JsonKey.LEARNER_COURSE_DB, getDbInfoObject(KEY_SPACE_NAME,"user_courses"));
+      dbInfoMap.put(JsonKey.LEARNER_CONTENT_DB, getDbInfoObject(KEY_SPACE_NAME,"content_consumption"));
+      dbInfoMap.put(JsonKey.COURSE_MANAGEMENT_DB, getDbInfoObject(KEY_SPACE_NAME,"course_management"));
+      dbInfoMap.put(JsonKey.USER_DB, getDbInfoObject(KEY_SPACE_NAME,"user"));
+      dbInfoMap.put(JsonKey.USER_AUTH_DB, getDbInfoObject(KEY_SPACE_NAME,"user_auth"));
+      dbInfoMap.put(JsonKey.ORG_DB, getDbInfoObject(KEY_SPACE_NAME,"organisation"));
+      dbInfoMap.put(JsonKey.PAGE_MGMT_DB, getDbInfoObject(KEY_SPACE_NAME,"page_management"));
+      dbInfoMap.put(JsonKey.PAGE_SECTION_DB, getDbInfoObject(KEY_SPACE_NAME,"page_section"));
+      dbInfoMap.put(JsonKey.SECTION_MGMT_DB, getDbInfoObject(KEY_SPACE_NAME,"page_section"));
+      dbInfoMap.put(JsonKey.ASSESSMENT_EVAL_DB, getDbInfoObject(KEY_SPACE_NAME,"assessment_eval"));
+      dbInfoMap.put(JsonKey.ASSESSMENT_ITEM_DB, getDbInfoObject(KEY_SPACE_NAME,"assessment_item"));
+      dbInfoMap.put(JsonKey.ADDRESS_DB, getDbInfoObject(KEY_SPACE_NAME,"address"));
+      dbInfoMap.put(JsonKey.EDUCATION_DB, getDbInfoObject(KEY_SPACE_NAME,"user_education"));
+      dbInfoMap.put(JsonKey.JOB_PROFILE_DB, getDbInfoObject(KEY_SPACE_NAME,"user_job_profile"));
+      dbInfoMap.put(JsonKey.USR_ORG_DB, getDbInfoObject(KEY_SPACE_NAME,"user_org"));
+      dbInfoMap.put(JsonKey.USR_EXT_ID_DB, getDbInfoObject(KEY_SPACE_NAME,"user_external_identity"));
 
+      dbInfoMap.put(JsonKey.ORG_MAP_DB, getDbInfoObject(KEY_SPACE_NAME,"org_mapping"));
+      dbInfoMap.put(JsonKey.ORG_TYPE_DB, getDbInfoObject(KEY_SPACE_NAME,"org_type"));
+      dbInfoMap.put(JsonKey.ROLE, getDbInfoObject(KEY_SPACE_NAME,"role"));
+      dbInfoMap.put(JsonKey.MASTER_ACTION, getDbInfoObject(KEY_SPACE_NAME,"master_action"));
+      dbInfoMap.put(JsonKey.URL_ACTION, getDbInfoObject(KEY_SPACE_NAME,"url_action"));
+      dbInfoMap.put(JsonKey.ACTION_GROUP, getDbInfoObject(KEY_SPACE_NAME,"action_group"));
+      dbInfoMap.put(JsonKey.USER_ACTION_ROLE, getDbInfoObject(KEY_SPACE_NAME,"user_action_role"));
+      dbInfoMap.put(JsonKey.ROLE_GROUP, getDbInfoObject(KEY_SPACE_NAME,"role_group"));
+      dbInfoMap.put(JsonKey.USER_ORG_DB , getDbInfoObject(KEY_SPACE_NAME , "user_org"));
+    }
+    
+    
     /**
      * This method will take org current state and next state and check 
      * is it possible to move organization from current state to next state 
@@ -197,13 +205,13 @@ public class Util {
             // load a properties file
             prop.load(input);
         } catch (IOException ex) {
-            ex.printStackTrace();
+            ProjectLogger.log(ex.getMessage(), ex);
         } finally {
             if (input != null) {
                 try {
                     input.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                  ProjectLogger.log(e.getMessage(), e);
                 }
             }
         }

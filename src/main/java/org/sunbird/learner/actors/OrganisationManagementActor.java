@@ -458,7 +458,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           orgDbInfo.getTableName(), orgId);
       List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
       if (!(list.isEmpty())) {
-        orgDBO = (Map<String, Object>) list.get(0);
+        orgDBO = list.get(0);
       } else {
         ProjectLogger.log("Invalid Org Id");
         ProjectCommonException exception =

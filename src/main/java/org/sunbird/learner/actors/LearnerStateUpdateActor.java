@@ -1,6 +1,3 @@
-/**
- *
- */
 package org.sunbird.learner.actors;
 
 import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
@@ -41,7 +38,7 @@ import akka.actor.UntypedAbstractActor;
 public class LearnerStateUpdateActor extends UntypedAbstractActor {
 
   private final String CONTENT_STATE_INFO = "contentStateInfo";
-  SimpleDateFormat sdf = ProjectUtil.format;
+  private SimpleDateFormat sdf = ProjectUtil.format;
   private CassandraOperation cassandraOperation = new CassandraOperationImpl();
   private ActorRef utilityActorRef;
 
@@ -76,9 +73,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
           if (!(contentList.isEmpty())) {
             for (Map<String, Object> map : contentList) {
               //replace the course id (equivalent to Ekstep content id) with One way hashing of userId#courseId , bcoz in cassndra we are saving course id as userId#courseId
-              if (null == map.get(JsonKey.COURSE_ID)) {
-                map.put(JsonKey.COURSE_ID, JsonKey.NOT_AVAILABLE);
-              }
+              map.putIfAbsent(JsonKey.COURSE_ID, JsonKey.NOT_AVAILABLE);
               preOperation(map, userId, contentStatusHolder);
               map.put(JsonKey.USER_ID, userId);
               map.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
@@ -239,16 +234,15 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
     if (null == obj || ((String) obj).equalsIgnoreCase(JsonKey.NULL)) {
       return null;
     }
-    Date date = null;
+    Date date;
     try {
       date = formatter.parse((String) obj);
     } catch (ParseException ex) {
       ex.printStackTrace();
-      ProjectCommonException exception = new ProjectCommonException(
+      throw new ProjectCommonException(
           ResponseCode.invalidDateFormat.getErrorCode(),
           ResponseCode.invalidDateFormat.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
-      throw exception;
 
     }
     return date;
@@ -275,9 +269,6 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
   }
 
   private boolean isNullCheck(Object obj) {
-    if (null == obj) {
-      return true;
-    }
-    return false;
+    return null == obj;
   }
 }

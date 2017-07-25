@@ -81,7 +81,7 @@ public class AssessmentUtil{
 				for(Map<String, Object> map : resMap){
 					String userId = (String) map.get(JsonKey.USER_ID);
 					if(result.containsKey(userId)){
-						((List<Map<String, Object>>)result.get(userId)).add(map);
+						result.get(userId).add(map);
 					}else{
 						List<Map<String, Object>> list = new ArrayList<>();
 						list.add(map);
@@ -154,7 +154,7 @@ public class AssessmentUtil{
             assmntEvalDbInfo.getKeySpace(), assmntEvalDbInfo.getTableName(), request);
         List<Map<String, Object>> resList =
             (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-        Map<String, Object> resMap = null;
+        Map<String, Object> resMap;
         if (null != resList && resList.size() > 0) {
           resMap = resList.get(0);
           Double scoreFrmDbRes = (resMap.get(JsonKey.ASSESSMENT_SCORE)) != null

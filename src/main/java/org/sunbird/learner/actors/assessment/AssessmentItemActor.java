@@ -28,7 +28,7 @@ import akka.actor.UntypedAbstractActor;
 public class AssessmentItemActor extends UntypedAbstractActor {
 
 	private CassandraOperation cassandraOperation = new CassandraOperationImpl();
-	Util.DbInfo assmntItemDbInfo = Util.dbInfoMap.get(JsonKey.ASSESSMENT_ITEM_DB);
+	private Util.DbInfo assmntItemDbInfo = Util.dbInfoMap.get(JsonKey.ASSESSMENT_ITEM_DB);
 	
 	@Override
 	public void onReceive(Object message) throws Throwable {

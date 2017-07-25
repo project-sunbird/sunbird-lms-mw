@@ -1,6 +1,3 @@
-/**
- *
- */
 package org.sunbird.learner.actors;
 
 import akka.actor.UntypedAbstractActor;
@@ -136,8 +133,7 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
         Object[] result = EkStepRequestUtil.searchContent(query, headers);
         if (null != result && result.length > 0) {
           Object contentObject = result[0];
-          Map<String, Object> map = (Map<String, Object>) contentObject;
-          return map;
+          return (Map<String, Object>) contentObject;
         }
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);

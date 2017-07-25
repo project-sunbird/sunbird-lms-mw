@@ -1,6 +1,3 @@
-/**
- *
- */
 package org.sunbird.learner.actors;
 
 import akka.actor.UntypedAbstractActor;

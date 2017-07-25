@@ -1,6 +1,3 @@
-/**
- *
- */
 package org.sunbird.learner.actors;
 
 import akka.actor.UntypedAbstractActor;
@@ -61,7 +58,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       String requestedOperation = (String) actorMessage.get(JsonKey.OPERATION);
       ProjectLogger.log("Operation name is ==" + requestedOperation);
       if (requestedOperation.equalsIgnoreCase(ActorOperations.PUBLISH_COURSE.getValue())) {
-        manageBackgroundJob(((Response) actorMessage).getResult());
+        manageBackgroundJob(actorMessage.getResult());
 
       } else if (requestedOperation
           .equalsIgnoreCase(ActorOperations.UPDATE_USER_COUNT.getValue())) {
@@ -157,7 +154,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
 
     if (!(list.isEmpty())) {
       Map<String, Object> map = list.get(0);
-      Response addrResponse = null;
+      Response addrResponse;
       list = null;
       try {
         ProjectLogger.log("collecting user address operation user Id : " + userId);
@@ -192,7 +189,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
         String addressId = (String) eduMap.get(JsonKey.ADDRESS_ID);
         if (!ProjectUtil.isStringNullOREmpty(addressId)) {
 
-          Response addrResponseMap = null;
+          Response addrResponseMap;
           List<Map<String, Object>> addrList = null;
           try {
             addrResponseMap = cassandraOperation
@@ -211,7 +208,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       }
       map.put(JsonKey.EDUCATION, list);
 
-      Response jobProfileResponse = null;
+      Response jobProfileResponse;
       list = null;
       try {
         ProjectLogger.log("collecting user jobprofile user Id : " + userId);
@@ -230,7 +227,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       for (Map<String, Object> eduMap : list) {
         String addressId = (String) eduMap.get(JsonKey.ADDRESS_ID);
         if (!ProjectUtil.isStringNullOREmpty(addressId)) {
-          Response addrResponseMap = null;
+          Response addrResponseMap;
           List<Map<String, Object>> addrList = null;
           try {
             addrResponseMap = cassandraOperation
@@ -399,7 +396,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
         data.get(JsonKey.APPICON) != null ? data.get(JsonKey.APPICON) : "");
     updateRequestMap
         .put(JsonKey.TOC_URL, data.get(JsonKey.TOC_URL) != null ? data.get(JsonKey.TOC_URL) : "");
-    updateRequestMap.put(JsonKey.ID, (String) data.get(JsonKey.ID));
+    updateRequestMap.put(JsonKey.ID, data.get(JsonKey.ID));
     Response resposne = cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(),
         updateRequestMap);
     ProjectLogger.log(resposne.toString());

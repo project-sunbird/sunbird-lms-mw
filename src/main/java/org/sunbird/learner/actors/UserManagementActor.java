@@ -1,6 +1,3 @@
-/**
- *
- */
 package org.sunbird.learner.actors;
 
 import static org.sunbird.learner.util.Util.isNotNull;
@@ -485,8 +482,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     if (userMap.containsKey(JsonKey.JOB_PROFILE)) {
       List<Map<String, Object>> reqList = (List<Map<String, Object>>) userMap
           .get(JsonKey.JOB_PROFILE);
-      for (int i = 0; i < reqList.size(); i++) {
-        Map<String, Object> reqMap = reqList.get(i);
+      for (Map<String, Object> reqMap : reqList) {
         if (reqMap.containsKey(JsonKey.IS_DELETED) && null != reqMap.get(JsonKey.IS_DELETED) &&
             ((boolean) reqMap.get(JsonKey.IS_DELETED))
             && !ProjectUtil.isStringNullOREmpty((String) reqMap.get(JsonKey.ID))) {

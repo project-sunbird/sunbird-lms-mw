@@ -76,7 +76,7 @@ public class UserManagementActor extends UntypedAbstractActor {
           getUserProfile(actorMessage);
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.GET_ROLES.getValue())) {
-          getRoles(actorMessage);
+          getRoles(); 
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.JOIN_USER_ORGANISATION.getValue())) {
           joinUserOrganisation(actorMessage);
@@ -229,7 +229,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     Response result = cassandraOperation
         .getRecordsByProperties(orgUsrDbInfo.getKeySpace(), orgUsrDbInfo.getTableName(), reqMap);
     List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-    Map<String, Object> orgDb = new HashMap<>();
+    Map<String, Object> orgDb = null;
     if (!(list.isEmpty())) {
       for (Map<String, Object> map : list) {
         Map<String, Object> orgData = new HashMap<>();
@@ -402,10 +402,13 @@ public class UserManagementActor extends UntypedAbstractActor {
     if (null != userMap.get(JsonKey.EMAIL)) {
       checkForEmailAndUserNameUniqueness(userMap, usrDbInfo);
     }
-    //not allowing user to update the status
+    //not allowing user to update the status,provider,userName
     userMap.remove(JsonKey.STATUS);
+    userMap.remove(JsonKey.PROVIDER);
+    userMap.remove(JsonKey.USERNAME);
+       
     boolean isSSOEnabled = Boolean
-        .valueOf(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
+        .parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
     if (isSSOEnabled) {
       UpdateKeyCloakUserBase(userMap);
     }
@@ -422,6 +425,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       sender().tell(ex, self());
       return;
     }
+    //update user address
     if (userMap.containsKey(JsonKey.ADDRESS)) {
       List<Map<String, Object>> reqList = (List<Map<String, Object>>) userMap.get(JsonKey.ADDRESS);
       for (int i = 0; i < reqList.size(); i++) {
@@ -432,22 +436,8 @@ public class UserManagementActor extends UntypedAbstractActor {
           deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(),
               (String) reqMap.get(JsonKey.ID));
           continue;
-        }
-        if (!reqMap.containsKey(JsonKey.ID)) {
-          reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-          reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-          reqMap.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
-          reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-        } else {
-          reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-          reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
-        }
-        try {
-          cassandraOperation
-              .upsertRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), reqMap);
-        } catch (Exception ex) {
-          ProjectLogger.log(ex.getMessage(), ex);
-        }
+        }  
+        processUserAddress(reqMap,req,userMap,addrDbInfo);
 
       }
     }
@@ -520,6 +510,25 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
   }
 
+
+  private void processUserAddress(Map<String, Object> reqMap, Map<String, Object> req, 
+      Map<String, Object> userMap, DbInfo addrDbInfo) {
+    if (!reqMap.containsKey(JsonKey.ID)) {
+      reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+      reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+      reqMap.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
+      reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+    } else {
+      reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+      reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+    }
+    try {
+      cassandraOperation
+          .upsertRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), reqMap);
+    } catch (Exception ex) {
+      ProjectLogger.log(ex.getMessage(), ex);
+    }
+  }
 
   @SuppressWarnings("unchecked")
   private String getAddressId(String id, DbInfo eduDbInfo) {
@@ -720,8 +729,8 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
 
-    boolean isSSOEnabled = Boolean
-        .valueOf(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
+    boolean isSSOEnabled = Boolean  
+        .parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
     if (userMap.containsKey(JsonKey.PROVIDER) && !ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PROVIDER))) {
       userMap.put(JsonKey.LOGIN_ID, 
           (String)userMap.get(JsonKey.USERNAME)+"@"+(String)userMap.get(JsonKey.PROVIDER));
@@ -1120,7 +1129,7 @@ public class UserManagementActor extends UntypedAbstractActor {
    * @param actorMessage Request
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
-  private void getRoles(Request actorMessage) {
+  private void getRoles() {
     Util.DbInfo roleDbInfo = Util.dbInfoMap.get(JsonKey.ROLE);
     Util.DbInfo roleGroupDbInfo = Util.dbInfoMap.get(JsonKey.ROLE_GROUP);
     Util.DbInfo urlActionDbInfo = Util.dbInfoMap.get(JsonKey.URL_ACTION);
@@ -1138,7 +1147,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     List<Map<String, Object>> roleGroupMap = (List<Map<String, Object>>) rolegroup.getResult()
         .get(JsonKey.RESPONSE);
     list = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
-    if (list != null && list.size() > 0) {
+    if (list != null && !(list.isEmpty())) {
       //This map will have all the master roles
       for (Map<String, Object> map : list) {
         Map<String, Object> roleResponseMap = new HashMap<>();
@@ -1180,7 +1189,7 @@ public class UserManagementActor extends UntypedAbstractActor {
   private Map<String, Object> getRoleAction(List<Map<String, Object>> urlActionListMap,
       String actionName) {
     Map<String, Object> response = new HashMap<>();
-    if (urlActionListMap != null && urlActionListMap.size() > 0) {
+    if (urlActionListMap != null && !(urlActionListMap.isEmpty())) {
       for (Map<String, Object> map : urlActionListMap) {
         if (map.get(JsonKey.ID).equals(actionName)) {
           response.put(JsonKey.ID, map.get(JsonKey.ID));
@@ -1205,7 +1214,7 @@ public class UserManagementActor extends UntypedAbstractActor {
   private Map<String, Object> getSubRoleListMap(List<Map<String, Object>> urlActionListMap,
       String roleName) {
     Map<String, Object> response = new HashMap<>();
-    if (urlActionListMap != null && urlActionListMap.size() > 0) {
+    if (urlActionListMap != null && !(urlActionListMap.isEmpty())) {
       for (Map<String, Object> map : urlActionListMap) {
         if (map.get(JsonKey.ID).equals(roleName)) {
           response.put(JsonKey.ID, map.get(JsonKey.ID));
@@ -1226,7 +1235,7 @@ public class UserManagementActor extends UntypedAbstractActor {
   @SuppressWarnings({"rawtypes", "unchecked"})
   private void joinUserOrganisation(Request actorMessage) {
 
-    Response response = new Response();
+    Response response = null;
 
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
@@ -1325,7 +1334,7 @@ public class UserManagementActor extends UntypedAbstractActor {
   @SuppressWarnings("unchecked")
   private void approveUserOrg(Request actorMessage) {
 
-    Response response = new Response();
+    Response response = null;
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
 
     Map<String, Object> updateUserOrgDBO = new HashMap<>();
@@ -1414,7 +1423,7 @@ public class UserManagementActor extends UntypedAbstractActor {
    */
   private void rejectUserOrg(Request actorMessage) {
 
-    Response response = new Response();
+    Response response = null;
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
 
     Map<String, Object> updateUserOrgDBO = new HashMap<>();

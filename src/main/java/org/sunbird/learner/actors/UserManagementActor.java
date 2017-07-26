@@ -3,14 +3,15 @@ package org.sunbird.learner.actors;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
+import akka.actor.ActorRef;
+import akka.actor.Props;
+import akka.actor.UntypedAbstractActor;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.Constants;
@@ -31,11 +32,6 @@ import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
 
-import akka.actor.UntypedAbstractActor;
-import akka.pattern.Patterns;
-import akka.util.Timeout;
-import scala.concurrent.duration.Duration;
-
 /**
  * This actor will handle course enrollment operation .
  *
@@ -45,6 +41,12 @@ import scala.concurrent.duration.Duration;
 public class UserManagementActor extends UntypedAbstractActor {
 
   private CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  
+  private ActorRef backGroundActorRef;
+
+  public UserManagementActor() {
+    backGroundActorRef = getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
+   }
 
   /**
    * Receives the actor message and perform the course enrollment operation .
@@ -496,10 +498,8 @@ public class UserManagementActor extends UntypedAbstractActor {
       UsrResponse.getResult()
           .put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
       UsrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));
-      Timeout timeout = new Timeout(
-          Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
       try {
-        Patterns.ask(RequestRouterActor.backgroundJobManager, UsrResponse, timeout);
+        backGroundActorRef.tell(UsrResponse,self());
       } catch (Exception ex) {
         ProjectLogger.log("Exception Occured during saving user to Es while updating user : ", ex);
       }
@@ -870,8 +870,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     ProjectLogger.log("User created successfully.....");
     sender().tell(response, self());
 
-    Timeout timeout = new Timeout(
-        Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
+   
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       ProjectLogger.log("method call going to satrt for ES--.....");
       Response UsrResponse = new Response();
@@ -880,7 +879,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       UsrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));
       ProjectLogger.log("making a call to save user data to ES");
       try {
-        Patterns.ask(RequestRouterActor.backgroundJobManager, UsrResponse, timeout);
+        backGroundActorRef.tell(UsrResponse,self());
       } catch (Exception ex) {
         ProjectLogger.log("Exception Occured during saving user to Es while creating user : ", ex);
       }

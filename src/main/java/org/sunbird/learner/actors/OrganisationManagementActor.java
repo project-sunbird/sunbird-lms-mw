@@ -3,14 +3,15 @@ package org.sunbird.learner.actors;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
+import akka.actor.ActorRef;
+import akka.actor.Props;
+import akka.actor.UntypedAbstractActor;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
@@ -27,11 +28,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.UntypedAbstractActor;
-import akka.pattern.Patterns;
-import akka.util.Timeout;
-import scala.concurrent.duration.Duration;
-
 /**
  * This actor will handle organisation related operation .
  *
@@ -42,6 +38,12 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
   private CassandraOperation cassandraOperation = new CassandraOperationImpl();
 
+  private ActorRef backGroundActorRef;
+
+  public OrganisationManagementActor() {
+    backGroundActorRef = getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
+   }
+  
   @Override
   public void onReceive(Object message) throws Throwable {
     if (message instanceof Request) {
@@ -220,9 +222,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       orgResponse.put(JsonKey.ORGANISATION, req);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
       ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
-      Timeout timeout =
-          new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
-      Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
+      backGroundActorRef.tell(orgResponse,self());
     } catch (ProjectCommonException e) {
       ProjectLogger.log("Some error occurs" + e.getMessage());
       sender().tell(e, self());
@@ -284,9 +284,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       Response orgResponse = new Response();
       orgResponse.put(JsonKey.ORGANISATION, updateOrgDBO);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-      Timeout timeout =
-          new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
-      Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
+      backGroundActorRef.tell(orgResponse,self());
       return;
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
@@ -359,9 +357,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
       orgResponse.put(JsonKey.ORGANISATION, updateOrgDBO);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-      Timeout timeout =
-          new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
-      Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
+      backGroundActorRef.tell(orgResponse,self());
 
       return;
     } catch (ProjectCommonException e) {
@@ -521,9 +517,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       }
       orgResponse.put(JsonKey.ORGANISATION, updateOrgDBO);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-      Timeout timeout =
-          new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
-      Patterns.ask(RequestRouterActor.backgroundJobManager, orgResponse, timeout);
+      backGroundActorRef.tell(orgResponse,self());
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
       return;

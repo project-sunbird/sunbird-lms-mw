@@ -1,16 +1,12 @@
 package org.sunbird.learner.actors;
 
+import akka.actor.ActorRef;
+import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
-import akka.pattern.Patterns;
-import akka.util.Timeout;
-
 import java.sql.Timestamp;
-
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -25,8 +21,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
 
-import scala.concurrent.duration.Duration;
-
 /**
  * This actor will handle course enrollment operation .
  *
@@ -38,6 +32,12 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
   private static String EKSTEP_COURSE_SEARCH_QUERY = "{\"request\": {\"filters\":{\"contentType\": [\"Course\"], \"objectType\": [\"Content\"], \"identifier\": \"COURSE_ID_PLACEHOLDER\", \"status\": \"Live\"},\"limit\": 1}}";
   private CassandraOperation cassandraOperation = new CassandraOperationImpl();
 
+  private ActorRef backGroundActorRef;
+
+  public CourseEnrollmentActor() {
+    backGroundActorRef = getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
+   }
+  
   /**
    * Receives the actor message and perform the course enrollment operation .
    *
@@ -167,9 +167,8 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
     userCountresponse.put(JsonKey.OPERATION, ooperation);
     userCountresponse.put(JsonKey.COURSE_ID, courseData);
     userCountresponse.getResult().put(JsonKey.OPERATION, innerOperation);
-    Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
     try{
-      Patterns.ask(RequestRouterActor.backgroundJobManager,userCountresponse,timeout);
+      backGroundActorRef.tell(userCountresponse,self());
     }catch(Exception ex){
       ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
     }

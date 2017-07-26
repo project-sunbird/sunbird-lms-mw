@@ -1,5 +1,7 @@
 package org.sunbird.learner.actors;
 
+import akka.actor.ActorRef;
+import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
@@ -36,6 +38,12 @@ public class CourseManagementActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = new CassandraOperationImpl();
   private Util.DbInfo dbInfo = null;
 
+  private ActorRef backGroundActorRef;
+
+  public CourseManagementActor() {
+    backGroundActorRef = getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
+   }
+  
   /**
    * Receives the actor message and perform the course enrollment operation .
    *
@@ -148,11 +156,10 @@ public class CourseManagementActor extends UntypedAbstractActor {
        
         if (cloneResponse != null) {
           if (cloneResponse.getResult() != null && cloneResponse.getResult().size() > 0) {
-            Timeout timeout = new Timeout(Duration.create(ProjectUtil.BACKGROUND_ACTOR_WAIT_TIME, TimeUnit.SECONDS));
             cloneResponse.getResult()
                 .put(JsonKey.OPERATION, ActorOperations.PUBLISH_COURSE.getValue());
             try{
-              Patterns.ask(RequestRouterActor.backgroundJobManager,cloneResponse,timeout);
+              backGroundActorRef.tell(cloneResponse,self());
           }catch(Exception ex){
             ProjectLogger.log("Exception Occured during saving course details to Es while publishing course : ", ex);
           }

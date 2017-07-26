@@ -26,7 +26,6 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.services.sso.SSOManager;
@@ -113,52 +112,35 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   @SuppressWarnings("unchecked")
   private void getUserDetailsByLoginId(Request actorMessage) {
-    Map<String, Object> userMap =
-        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
-    if (null != userMap.get(JsonKey.LOGIN_ID)) {
-      String loginId = (String) userMap.get(JsonKey.LOGIN_ID);
-      if (!ProjectUtil.isStringNullOREmpty(loginId)) {
-        SearchDTO dto = new SearchDTO();
-        Map<String,Object> filter =  new HashMap<>();
-        filter.put(JsonKey.LOGIN_ID, loginId);
-        dto.addAdditionalProperty(JsonKey.FILTERS, filter);
-        Map<String, Object> result = null;
-        Map<String, List<Map<String, Object>>> results = ElasticSearchUtil
-            .complexSearch(dto, ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName());
-        if (results != null && results.size() > 0) {
-          List<Map<String, Object>> responseMap = results.get(JsonKey.RESPONSE);
-          if (responseMap != null && !(responseMap.isEmpty())) {
-            result = responseMap.get(0);
-            fetchRootAndRegisterOrganisation(result);
-          }
-        }
-        Response response = new Response();
-        if (null != result) {
-          if (!ProjectUtil
-              .isStringNullOREmpty((String) result.get(JsonKey.USER_ID))) {
-            List<Map<String, Object>> organisations =
-                getOrganisationDetailsByUserId(
-                    (String) result.get(JsonKey.USER_ID));
-            result.put(JsonKey.ORGANISATIONS, organisations);
-          }
-          response.put(JsonKey.RESPONSE, result);
-        } else {
-          result = new HashMap<>();
-          response.put(JsonKey.RESPONSE, result);
-        }
-        sender().tell(response, self());
-        return;
+    
+  Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+  Map<String , Object> userMap=(Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
+  if(null != userMap.get(JsonKey.LOGIN_ID)){
+    String loginId = (String)userMap.get(JsonKey.LOGIN_ID);
+    Response resultFrLoginId = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),
+        JsonKey.LOGIN_ID,loginId);
+    if(!((List<Map<String,Object>>)resultFrLoginId.get(JsonKey.RESPONSE)).isEmpty()){
+      Map<String,Object> map = ((List<Map<String,Object>>)resultFrLoginId.get(JsonKey.RESPONSE)).get(0);
+      Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), 
+          ProjectUtil.EsType.user.getTypeName(), (String)map.get(JsonKey.USER_ID));
+        fetchRootAndRegisterOrganisation(result);
+      Response response = new Response();
+      if(null != result) {
+        response.put(JsonKey.RESPONSE, result);
       } else {
-        ProjectCommonException exception =
-            new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(),
-                ResponseCode.userNotFound.getErrorMessage(),
-                ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
-        sender().tell(exception, self());
-        return;
+           result = new HashMap<>();
+           response.put(JsonKey.RESPONSE, result);    
       }
+      sender().tell(response, self());
+      return;
+    }else{
+      ProjectCommonException exception = new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(), 
+          ResponseCode.userNotFound.getErrorMessage(), ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+      sender().tell(exception, self());
+      return;
     }
   }
+}
 
   private void fetchRootAndRegisterOrganisation(Map<String, Object> result) {
     try {
@@ -397,6 +379,8 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
     if (null != userMap.get(JsonKey.USER_ID)) {
       userMap.put(JsonKey.ID, userMap.get(JsonKey.USER_ID));
+    }else{
+      userMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
     }
     if (null != userMap.get(JsonKey.EMAIL)) {
       checkForEmailAndUserNameUniqueness(userMap, usrDbInfo);
@@ -690,8 +674,9 @@ public class UserManagementActor extends UntypedAbstractActor {
             ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
             ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
             ResponseCode.SERVER_ERROR.getResponseCode());
-        sender().tell(exception, self());
-        return;
+        throw exception;
+        //sender().tell(exception, self());
+       // return;
       }
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
@@ -699,8 +684,9 @@ public class UserManagementActor extends UntypedAbstractActor {
           ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
           ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
+      throw exception;
+      //sender().tell(exception, self());
+      //return;
     }
 
   }

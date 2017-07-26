@@ -82,7 +82,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
             ResponseCode.invalidOperationName.getErrorCode(),
             ResponseCode.invalidOperationName.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
-        sender().tell(exception, self());
+        ProjectLogger.log("UnSupported operation in Background Job Manager", exception);
       }
     } else {
       ProjectLogger.log("UNSUPPORTED MESSAGE FOR BACKGROUND JOB MANAGER");

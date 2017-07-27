@@ -150,7 +150,7 @@ public class LearnerStateUpdateActorTest {
         List<Map<String, Object>> contentList = new ArrayList<Map<String, Object>>();
         Map<String , Object> content1 = createContent();
         content1.put(JsonKey.STATUS , new BigInteger("2"));
-        content1.put(JsonKey.LAST_ACCESS_TIME , "July 4 , 2150");
+        content1.put(JsonKey.LAST_ACCESS_TIME , "2017-87-20 21:03:29:599+0530");
 
         contentList.add(content1);
         HashMap<String, Object> innerMap = new HashMap<>();

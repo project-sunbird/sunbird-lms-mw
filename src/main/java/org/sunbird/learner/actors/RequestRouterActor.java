@@ -143,6 +143,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.JOIN_USER_ORGANISATION.getValue(), organisationManagementRouter);
         routerMap.put(ActorOperations.COMPOSITE_SEARCH.getValue(), searchHandlerActor);
         routerMap.put(ActorOperations.REJECT_USER_ORGANISATION.getValue(), organisationManagementRouter);
+        routerMap.put(ActorOperations.DELETE_USER.getValue(), userManagementRouter);
     }
 
 

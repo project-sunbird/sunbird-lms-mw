@@ -22,6 +22,7 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.Status;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
@@ -87,6 +88,9 @@ public class UserManagementActor extends UntypedAbstractActor {
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.REJECT_USER_ORGANISATION.getValue())) {
           rejectUserOrg(actorMessage);
+        }else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.DELETE_USER.getValue())) {
+          deleteUser(actorMessage);
         } else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
           ProjectCommonException exception = new ProjectCommonException(
@@ -123,6 +127,14 @@ public class UserManagementActor extends UntypedAbstractActor {
       Map<String,Object> map = ((List<Map<String,Object>>)resultFrLoginId.get(JsonKey.RESPONSE)).get(0);
       Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), 
           ProjectUtil.EsType.user.getTypeName(), (String)map.get(JsonKey.USER_ID));
+
+      //check whether is_deletd true or false
+      if(ProjectUtil.isNotNull(result) && result.containsKey(JsonKey.IS_DELETED) && ProjectUtil.isNotNull(result.get(JsonKey.IS_DELETED))&&(Boolean)result.get(JsonKey.IS_DELETED)){
+        throw new ProjectCommonException(
+            ResponseCode.userAccountlocked.getErrorCode(),
+            ResponseCode.userAccountlocked.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
         fetchRootAndRegisterOrganisation(result);
       Response response = new Response();
       if(null != result) {
@@ -177,6 +189,14 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> result = ElasticSearchUtil
         .getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.user.getTypeName(), (String) userMap.get(JsonKey.USER_ID));
+    //check whether is_deletd true or false
+    if(ProjectUtil.isNotNull(result) && result.containsKey(JsonKey.IS_DELETED) && ProjectUtil.isNotNull(result.get(JsonKey.IS_DELETED))&&(Boolean)result.get(JsonKey.IS_DELETED)){
+      throw new ProjectCommonException(
+          ResponseCode.userAccountlocked.getErrorCode(),
+          ResponseCode.userAccountlocked.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+
     fetchRootAndRegisterOrganisation(result);
     Response response = new Response();
     if (null != result) {
@@ -478,12 +498,12 @@ public class UserManagementActor extends UntypedAbstractActor {
     sender().tell(result, self());
 
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      Response UsrResponse = new Response();
-      UsrResponse.getResult()
+      Response usrResponse = new Response();
+      usrResponse.getResult()
           .put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-      UsrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));
+      usrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));
       try {
-        backGroundActorRef.tell(UsrResponse,self());
+        backGroundActorRef.tell(usrResponse,self());
       } catch (Exception ex) {
         ProjectLogger.log("Exception Occured during saving user to Es while updating user : ", ex);
       }
@@ -852,13 +872,13 @@ public class UserManagementActor extends UntypedAbstractActor {
    
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       ProjectLogger.log("method call going to satrt for ES--.....");
-      Response UsrResponse = new Response();
-      UsrResponse.getResult()
+      Response usrResponse = new Response();
+      usrResponse.getResult()
           .put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-      UsrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));
+      usrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));
       ProjectLogger.log("making a call to save user data to ES");
       try {
-        backGroundActorRef.tell(UsrResponse,self());
+        backGroundActorRef.tell(usrResponse,self());
       } catch (Exception ex) {
         ProjectLogger.log("Exception Occured during saving user to Es while creating user : ", ex);
       }
@@ -1065,6 +1085,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     reqMap.remove(JsonKey.ROOT_ORG);
     reqMap.remove(JsonKey.IDENTIFIER);
     reqMap.remove(JsonKey.ORGANISATIONS);
+    reqMap.remove(JsonKey.IS_DELETED);
   }
 
   /**
@@ -1100,7 +1121,6 @@ public class UserManagementActor extends UntypedAbstractActor {
   /**
    * This method will provide the complete role structure..
    *
-   * @param actorMessage Request
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
   private void getRoles() {
@@ -1498,5 +1518,56 @@ public class UserManagementActor extends UntypedAbstractActor {
     return null;
   }
 
+  private void deleteUser(Request actorMessage) {
+
+    ProjectLogger.log("Method call  "+"deleteUser");
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    Map<String , Object> userMap=(Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
+    if(ProjectUtil.isNull(userMap.get(JsonKey.USER_ID))) {
+      ProjectCommonException exception = new ProjectCommonException(
+          ResponseCode.invalidRequestData.getErrorCode(),
+          ResponseCode.invalidRequestData.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+
+    }
+    String userId = (String)userMap.get(JsonKey.USER_ID);
+    Response resultFrUserId = cassandraOperation.getRecordById(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),
+        userId);
+    if(((List<Map<String,Object>>)resultFrUserId.get(JsonKey.RESPONSE)).isEmpty()) {
+      ProjectCommonException exception = new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(),
+          ResponseCode.userNotFound.getErrorMessage(), ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
+
+    Map<String , Object> dbMap = new HashMap<>();
+    dbMap.put(JsonKey.IS_DELETED , true);
+    dbMap.put(JsonKey.STATUS , Status.INACTIVE.getValue());
+    dbMap.put(JsonKey.ID , userId);
+    dbMap.put(JsonKey.USER_ID , userId);
+    dbMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+    dbMap.put(JsonKey.UPDATED_BY, actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
+
+    // deactivate from keycloak -- softdelete
+    boolean isSSOEnabled = Boolean
+        .parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
+    if (isSSOEnabled) {
+      SSOManager ssoManager = new KeyCloakServiceImpl();
+      ssoManager.deactivateUser(dbMap);
+    }
+    //soft delete from cassandra--
+    Response response = cassandraOperation.updateRecord(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),dbMap);
+    ProjectLogger.log("USER DELETED "+userId);
+    sender().tell(response,self());
+
+    // update record in elasticsearch ......
+    Response usrResponse = new Response();
+    usrResponse.getResult()
+        .put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+    usrResponse.getResult().put(JsonKey.ID, userId);
+    backGroundActorRef.tell(usrResponse,self());
+  }
 
 }

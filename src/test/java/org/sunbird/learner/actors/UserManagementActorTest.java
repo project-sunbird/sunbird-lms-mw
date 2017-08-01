@@ -15,6 +15,7 @@ import java.util.Map;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import org.sunbird.cassandra.CassandraOperation;
@@ -34,6 +35,7 @@ import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
 /**
  * @author Amit Kumar
  */
+//@Ignore
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class UserManagementActorTest {
 

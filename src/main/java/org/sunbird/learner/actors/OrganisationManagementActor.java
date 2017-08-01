@@ -26,6 +26,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
+import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -79,7 +80,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.REMOVE_MEMBER_ORGANISATION.getValue())) {
           removeMemberOrganisation(actorMessage);
-        } else {
+        } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.DOWNLOAD_ORGS.getValue())) {
+            getOrgsData(actorMessage);
+        }
+        else {
           ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
           ProjectCommonException exception =
               new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
@@ -101,6 +105,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       sender().tell(exception, self());
     }
   }
+
 
   /**
    * Method to create an organisation .
@@ -1582,5 +1587,27 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     return false;
   }
 
+  /**
+   * @param actorMessage
+   */
+  private List<Map<String,Object>> getOrgsData(Request actorMessage) {
+    Map<String, Object> requestMap = actorMessage.getRequest();
+    SearchDTO dto = new SearchDTO();
+    Map<String, Object> map = new HashMap<String, Object>();
+    //TODO need to check with request body what data we will get
+    //map.put(JsonKey.REGISTERED_ORG_ID, "some value");
+    //map.put(JsonKey.ROOT_ORG_ID, "");
+    Map<String, Object> additionalProperty = new HashMap<>();
+    additionalProperty.put(JsonKey.FILTERS, map);
+    dto.setAdditionalProperties(additionalProperty);
+    Map<String, List<Map<String, Object>>> responseMap = ElasticSearchUtil
+        .complexSearch(dto, ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.organisation.getTypeName());
+    if (requestMap != null) {
+      return responseMap.get(JsonKey.RESPONSE);
+    }
+    return null;
 
-}
+  }
+    
+  }

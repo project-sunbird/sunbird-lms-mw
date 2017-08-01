@@ -26,6 +26,7 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.services.sso.SSOManager;
@@ -87,7 +88,10 @@ public class UserManagementActor extends UntypedAbstractActor {
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.REJECT_USER_ORGANISATION.getValue())) {
           rejectUserOrg(actorMessage);
-        } else {
+        }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.DOWNLOAD_USERS.getValue())) {
+           getUserDetails(actorMessage);
+        }
+        else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
           ProjectCommonException exception = new ProjectCommonException(
               ResponseCode.invalidOperationName.getErrorCode(),
@@ -109,6 +113,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       sender().tell(exception, self());
     }
   }
+
 
   @SuppressWarnings("unchecked")
   private void getUserDetailsByLoginId(Request actorMessage) {
@@ -1505,5 +1510,27 @@ public class UserManagementActor extends UntypedAbstractActor {
     return null;
   }
 
+  
+  /**
+   * @param actorMessage
+   */
+  private List<Map<String, Object>> getUserDetails(Request actorMessage) {
+    Map<String, Object> requestMap = actorMessage.getRequest();
+    SearchDTO dto = new SearchDTO();
+    Map<String, Object> map = new HashMap<String, Object>();
+    map.put(JsonKey.REGISTERED_ORG_ID, "some value");
+    map.put(JsonKey.ROOT_ORG_ID, "");
+    Map<String, Object> additionalProperty = new HashMap<>();
+    additionalProperty.put(JsonKey.FILTERS, map);
+    dto.setAdditionalProperties(additionalProperty);
+    Map<String, List<Map<String, Object>>> responseMap = ElasticSearchUtil
+        .complexSearch(dto, ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName());
+    if (requestMap != null) {
+      return responseMap.get(JsonKey.RESPONSE);
+    }
+    return null;
+
+  }
 
 }

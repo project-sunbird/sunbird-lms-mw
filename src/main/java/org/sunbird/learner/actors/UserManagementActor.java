@@ -1236,7 +1236,7 @@ public class UserManagementActor extends UntypedAbstractActor {
   @SuppressWarnings({"rawtypes", "unchecked"})
   private void joinUserOrganisation(Request actorMessage) {
 
-    Response response = null;
+    Response response = null;  
 
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);

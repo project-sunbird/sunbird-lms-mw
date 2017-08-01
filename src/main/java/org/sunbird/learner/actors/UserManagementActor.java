@@ -670,25 +670,18 @@ public class UserManagementActor extends UntypedAbstractActor {
       SSOManager ssoManager = new KeyCloakServiceImpl();
       String userId = ssoManager.updateUser(userMap);
       if (!(!ProjectUtil.isStringNullOREmpty(userId) && userId.equalsIgnoreCase(JsonKey.SUCCESS))) {
-        ProjectCommonException exception = new ProjectCommonException(
+        throw new ProjectCommonException(
             ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
             ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
             ResponseCode.SERVER_ERROR.getResponseCode());
-        throw exception;
-        //sender().tell(exception, self());
-       // return;
       }
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
-      ProjectCommonException exception = new ProjectCommonException(
+      throw new ProjectCommonException(
           ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
           ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
-      throw exception;
-      //sender().tell(exception, self());
-      //return;
     }
-
   }
 
   /**

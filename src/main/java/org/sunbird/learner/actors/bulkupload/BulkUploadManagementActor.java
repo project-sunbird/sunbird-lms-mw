@@ -1,0 +1,197 @@
+package org.sunbird.learner.actors.bulkupload;
+
+import akka.actor.ActorRef;
+import akka.actor.Props;
+import akka.actor.UntypedAbstractActor;
+import com.opencsv.CSVReader;
+import java.io.File;
+import java.io.FileReader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.cassandraimpl.CassandraOperationImpl;
+import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.learner.util.Util;
+import org.sunbird.learner.util.Util.DbInfo;
+
+public class BulkUploadManagementActor extends UntypedAbstractActor {
+
+private CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  Util.DbInfo  bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
+
+  private ActorRef bulkUploadBackGroundJobActorRef;
+
+  public BulkUploadManagementActor() {
+    bulkUploadBackGroundJobActorRef = getContext().actorOf(Props.create(BulkUploadBackGroundJobActor.class), 
+        "bulkUploadBackGroundJobActor");
+   }
+  
+  @Override
+  public void onReceive(Object message) throws Throwable {
+
+    if (message instanceof Request) {
+      try {
+        ProjectLogger.log("BulkUploadManagementActor onReceive called");
+        Request actorMessage = (Request) message;
+        if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.BULK_UPLOAD.getValue())) {
+          upload(actorMessage);
+        }else {
+          ProjectLogger.log("UNSUPPORTED OPERATION");
+          ProjectCommonException exception = new ProjectCommonException(
+              ResponseCode.invalidOperationName.getErrorCode(),
+              ResponseCode.invalidOperationName.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+          sender().tell(exception, self());
+        }
+      } catch (Exception ex) {
+        ProjectLogger.log(ex.getMessage(), ex);
+        sender().tell(ex, self());
+      }
+    }else {
+      // Throw exception as message body
+      ProjectLogger.log("UNSUPPORTED MESSAGE");
+      ProjectCommonException exception = new ProjectCommonException(
+          ResponseCode.invalidRequestData.getErrorCode(),
+          ResponseCode.invalidRequestData.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void upload(Request actorMessage) {
+    String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
+    Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.DATA);
+    if(((String)req.get(JsonKey.OBJECT_TYPE)).equals(JsonKey.USER)){
+      processBulkUserUpload(req,processId);
+    }
+    
+    Map<String,Object> map = new HashMap<>();
+    map.put(JsonKey.ID, processId);
+    Response res = cassandraOperation.insertRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), map);
+    res.put(JsonKey.PROCESS_ID, map.get(JsonKey.ID));
+    sender().tell(res, self());
+    
+  }
+
+  @SuppressWarnings("unchecked")
+  private void processBulkUserUpload(Map<String, Object> req,String processId) {
+    
+    DbInfo orgDb = Util.dbInfoMap.get(JsonKey.ORG_DB);
+    Response response = null;
+    if (!ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ORGANISATION_ID))){
+      response = cassandraOperation.getRecordById(orgDb.getKeySpace(), orgDb.getTableName(), 
+          (String) req.get(JsonKey.ORGANISATION_ID));
+    }else{
+      Map<String,Object> map = new HashMap<>();
+      map.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
+      map.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
+      response = cassandraOperation.getRecordsByProperties(orgDb.getKeySpace(), orgDb.getTableName(), map);
+    }
+    List<Map<String,Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    
+    if(responseList.isEmpty()){
+      throw  new ProjectCommonException(
+          ResponseCode.invalidOrgData.getErrorCode(),
+          ResponseCode.invalidOrgData.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    List<String[]> userList = parseCsvFile((File)req.get(JsonKey.FILE));
+    if (null != userList ) {
+        if (userList.size() > 201) {
+          throw  new ProjectCommonException(
+              ResponseCode.dataSizeError.getErrorCode(),
+              ResponseCode.dataSizeError.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
+        if(!userList.isEmpty()){
+          String[] columns = userList.get(0);
+          validateUserProperty(columns);
+        }else{
+          throw  new ProjectCommonException(
+              ResponseCode.dataSizeError.getErrorCode(),
+              ResponseCode.dataSizeError.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
+    }else{
+      throw new ProjectCommonException(
+          ResponseCode.dataSizeError.getErrorCode(),
+          ResponseCode.dataSizeError.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    
+    //send data for processing to background job
+    Request request = new Request();
+    request.put(JsonKey.DATA, userList);
+    request.put(JsonKey.OBJECT_TYPE,JsonKey.USER);
+    request.put(JsonKey.PROCESS_ID, processId);
+    request.setOperation(ActorOperations.PROCESS_BULK_UPLOAD.getValue());
+    bulkUploadBackGroundJobActorRef.tell(request, self());
+    
+  }
+
+  private List<String[]> parseCsvFile(File file) {
+    CSVReader csvReader = null;
+    //Create List for holding objects
+    List<String[]> rows = new ArrayList<>();
+    try
+    {
+    //Reading the csv file
+      csvReader = new CSVReader(new FileReader(file),',','"',0);
+      String [] nextLine;
+      //Read one line at a time
+      while ((nextLine = csvReader.readNext()) != null) 
+      {
+          List<String> list = new ArrayList<>();
+          for(String token : nextLine)
+          {
+            list.add(token);
+          }
+          rows.add(list.toArray(list.toArray(new String[nextLine.length])));
+      }
+    }catch(Exception e){
+      ProjectLogger.log("Exception occured while processing csv file : ", e);
+    }finally
+    {
+      try
+      {
+          //closing the reader
+          csvReader.close();
+      }
+      catch(Exception e)
+      {
+        ProjectLogger.log("Exception occured while closing csv reader : ", e);
+      }
+    }
+    return rows;
+  }
+
+  private void validateUserProperty(String[] property) {
+    ArrayList<String> properties = new ArrayList<>(
+        Arrays.asList(JsonKey.FIRST_NAME.toLowerCase(), JsonKey.LAST_NAME.toLowerCase(), 
+            JsonKey.PHONE.toLowerCase(),JsonKey.EMAIL.toLowerCase(),
+            JsonKey.PASSWORD.toLowerCase(),JsonKey.USERNAME.toLowerCase(),
+            JsonKey.PROVIDER.toLowerCase(),JsonKey.PHONE_NUMBER_VERIFIED.toLowerCase(),
+            JsonKey.EMAIL_VERIFIED));
+    
+    for(String key : property){
+      if(! properties.contains(key.toLowerCase())){
+        throw new ProjectCommonException(ResponseCode.InvalidColumnError.getErrorCode(),
+            ResponseCode.InvalidColumnError.getErrorMessage(), 
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
+    
+  }
+ 
+}

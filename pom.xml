@@ -91,6 +91,12 @@
             <version>1.6.4</version>
             <scope>test</scope>
         </dependency>
+        
+        <dependency>
+			<groupId>com.opencsv</groupId>
+			<artifactId>opencsv</artifactId>
+			<version>3.8</version>
+		</dependency>
 
     </dependencies>
 

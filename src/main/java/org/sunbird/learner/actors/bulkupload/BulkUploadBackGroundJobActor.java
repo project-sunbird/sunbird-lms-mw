@@ -1,5 +1,7 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import akka.actor.ActorRef;
+import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,12 +18,19 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.learner.actors.BackgroundJobManager;
 import org.sunbird.learner.util.Util;
+import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
 
 public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
+  private ActorRef backGroundActorRef;
+
+  public BulkUploadBackGroundJobActor() {
+    backGroundActorRef = getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
+   }
   private CassandraOperation cassandraOperation = new CassandraOperationImpl();
   private SSOManager ssoManager = new KeyCloakServiceImpl();
   @Override
@@ -62,6 +71,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     if(((String)actorMessage.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.USER)){
       String[] columnArr = dataList.get(0);
       List<Map<String, Object>> badUserReq = new ArrayList<>();
+      List<Map<String, Object>> successUserReq = new ArrayList<>();
       Map<String,Object> userMap = null;
       for(int i = 1 ; i < dataList.size() ; i++){
         userMap = new HashMap<>();
@@ -81,7 +91,20 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
                 ssoManager.removeUser(userMap);
               }
             }
-          }catch(Exception ex){
+            successUserReq.add(userMap);
+            //insert details to user_org table
+            insertRecordToUserOrgTable(userMap);
+            //insert details to user Ext Identity table
+            insertRecordToUserExtTable(userMap);
+            //update elastic search
+            Response usrResponse = new Response();
+            usrResponse.getResult()
+                .put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+            usrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));
+            ProjectLogger.log("making a call to save user data to ES");
+            backGroundActorRef.tell(usrResponse,self());
+              
+          } catch(Exception ex) {
             ProjectLogger.log("Exception occurred while bulk user upload :", ex);
             userMap.remove(JsonKey.ID);
             badUserReq.add(userMap);
@@ -95,6 +118,99 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
      }
    }
   
+
+  private void insertRecordToUserExtTable(Map<String, Object> requestMap) {
+    Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
+    Map<String, Object> map = new HashMap<>();
+    Map<String, Object> reqMap = new HashMap<>();
+    reqMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
+      /* update table for userName,phone,email,Aadhar No
+       * for each of these parameter insert a record into db
+       * for username update isVerified as true
+       * and for others param this will be false
+       * once verified will update this flag to true
+       */
+
+    map.put(JsonKey.USER_ID, requestMap.get(JsonKey.ID));
+    map.put(JsonKey.IS_VERIFIED, false);
+    if (requestMap.containsKey(JsonKey.USERNAME) && !(ProjectUtil
+        .isStringNullOREmpty((String) requestMap.get(JsonKey.USERNAME)))) {
+      map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+      map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.USERNAME));
+      map.put(JsonKey.EXTERNAL_ID_VALUE, JsonKey.USERNAME);
+      map.put(JsonKey.IS_VERIFIED, true);
+
+      reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.USERNAME));
+
+      updateUserExtIdentity(map, usrExtIdDb);
+    }
+    if (requestMap.containsKey(JsonKey.PHONE) && !(ProjectUtil
+        .isStringNullOREmpty((String) requestMap.get(JsonKey.PHONE)))) {
+      map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+      map.put(JsonKey.EXTERNAL_ID, JsonKey.PHONE);
+      map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.PHONE));
+
+      if (!ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.PHONE_NUMBER_VERIFIED))
+          &&
+          (boolean) requestMap.get(JsonKey.PHONE_NUMBER_VERIFIED)) {
+        map.put(JsonKey.IS_VERIFIED, true);
+      }
+      reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.PHONE));
+
+      updateUserExtIdentity(map, usrExtIdDb);
+    }
+    if (requestMap.containsKey(JsonKey.EMAIL) && !(ProjectUtil
+        .isStringNullOREmpty((String) requestMap.get(JsonKey.EMAIL)))) {
+      map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+      map.put(JsonKey.EXTERNAL_ID, JsonKey.EMAIL);
+      map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.EMAIL));
+
+      if (!ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.EMAIL_VERIFIED)) &&
+          (boolean) requestMap.get(JsonKey.EMAIL_VERIFIED)) {
+        map.put(JsonKey.IS_VERIFIED, true);
+      }
+      reqMap.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EMAIL));
+
+      updateUserExtIdentity(map, usrExtIdDb);
+    }
+    if (requestMap.containsKey(JsonKey.AADHAAR_NO) && !(ProjectUtil
+        .isStringNullOREmpty((String) requestMap.get(JsonKey.AADHAAR_NO)))) {
+      map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+      map.put(JsonKey.EXTERNAL_ID, JsonKey.AADHAAR_NO);
+      map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.AADHAAR_NO));
+
+      reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.AADHAAR_NO));
+
+      updateUserExtIdentity(map, usrExtIdDb);
+    }
+  }
+  
+  private void updateUserExtIdentity(Map<String, Object> map, DbInfo usrExtIdDb) {
+    try {
+      cassandraOperation.insertRecord(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), map);
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+
+  }
+
+  private void insertRecordToUserOrgTable(Map<String, Object> userMap) {
+    Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
+    Map<String, Object> reqMap = new HashMap<>();
+    reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+    reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+    reqMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.REGISTERED_ORG_ID));
+    reqMap.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
+    List<String> roleList = new ArrayList<>();
+    roleList.add(ProjectUtil.UserRole.CONTENT_CREATOR.getValue());
+    reqMap.put(JsonKey.ROLES, roleList);
+
+    try {
+      cassandraOperation.insertRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), reqMap);
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+  }
 
   @SuppressWarnings("unchecked")
   private Map<String, Object> insertRecordToKeyCloak(Map<String, Object> userMap) {

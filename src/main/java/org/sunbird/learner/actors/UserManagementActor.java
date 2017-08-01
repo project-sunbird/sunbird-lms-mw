@@ -95,7 +95,10 @@ public class UserManagementActor extends UntypedAbstractActor {
         else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.DELETE_USER.getValue())) {
           deleteUser(actorMessage);
-        } else {
+        } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ASSIGN_ROLES.getValue())) {
+            assignRoles(actorMessage);
+        }
+        else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
           ProjectCommonException exception = new ProjectCommonException(
               ResponseCode.invalidOperationName.getErrorCode(),
@@ -110,6 +113,8 @@ public class UserManagementActor extends UntypedAbstractActor {
     } 
     }
 
+
+ 
 
   @SuppressWarnings("unchecked")
   private void getUserDetailsByLoginId(Request actorMessage) {
@@ -1587,6 +1592,15 @@ public class UserManagementActor extends UntypedAbstractActor {
         .put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
     usrResponse.getResult().put(JsonKey.ID, userId);
     backGroundActorRef.tell(usrResponse,self());
+  }
+  
+  
+  /**
+   * @param actorMessage
+   */
+  private void assignRoles(Request actorMessage) {
+    // TODO Auto-generated method stub
+    
   }
 
 }

@@ -1,5 +1,8 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import static org.sunbird.learner.util.Util.isNotNull;
+import static org.sunbird.learner.util.Util.isNull;
+
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
@@ -10,6 +13,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -18,6 +22,7 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -30,6 +35,7 @@ import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
 public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
   private ActorRef backGroundActorRef;
+  Util.DbInfo  bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
 
   public BulkUploadBackGroundJobActor() {
     backGroundActorRef = getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
@@ -46,24 +52,24 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           process(actorMessage);
         }else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
-          ProjectCommonException exception = new ProjectCommonException(
+          /*ProjectCommonException exception = new ProjectCommonException(
               ResponseCode.invalidOperationName.getErrorCode(),
               ResponseCode.invalidOperationName.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
-          sender().tell(exception, self());
+          //sender().tell(exception, self());*/
         }
       } catch (Exception ex) {
         ProjectLogger.log(ex.getMessage(), ex);
-        sender().tell(ex, self());
+        //sender().tell(ex, self());
       }
     }else {
       // Throw exception as message body
       ProjectLogger.log("UNSUPPORTED MESSAGE");
-      ProjectCommonException exception = new ProjectCommonException(
+      /*ProjectCommonException exception = new ProjectCommonException(
           ResponseCode.invalidRequestData.getErrorCode(),
           ResponseCode.invalidRequestData.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+      //sender().tell(exception, self());*/
     }
   }
 
@@ -80,10 +86,114 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
     if(((String)dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.USER)){
       processUserInfo(jsonList);
+    }else if(((String)dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.ORGANISATION)){
+      processOrgInfo(jsonList , dataMap);
     }
     
    }
-  
+
+  private void processOrgInfo(List<Map<String, Object>> jsonList, Map<String,Object> dataMap) {
+
+    List<Map<String , Object>> successList = new ArrayList<>();
+    List<Map<String , Object>> failureList = new ArrayList<>();
+    for(Map<String , Object> map : jsonList){
+      try {
+        processOrg(map, dataMap, successList, failureList);
+      }catch(Exception ex){
+        ProjectLogger.log("Exception occurs  " ,ex);
+        map.put(JsonKey.ERROR_MSG , ex.getMessage());
+        failureList.add(map);
+      }
+    }
+
+    dataMap.put(JsonKey.SUCCESS_RESULT , convertMapToJsonString(successList));
+    dataMap.put(JsonKey.FAILURE_RESULT , convertMapToJsonString(failureList));
+    dataMap.put(JsonKey.STATUS , BulkProcessStatus.COMPLETED.getValue());
+
+    cassandraOperation.updateRecord(bulkDb.getKeySpace(),bulkDb.getTableName() , dataMap);
+
+  }
+
+  private void processOrg(Map<String, Object> map, Map<String, Object> dataMap,
+      List<Map<String, Object>> successList,
+      List<Map<String, Object>> failureList) {
+
+    ConcurrentHashMap<String , Object> concurrentHashMap = new ConcurrentHashMap<>(map);
+    Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+
+    /*Map<String, Object> orgAttributes = new HashMap<>();
+    orgAttributes.put(JsonKey.IS_ROOT_ORG, Boolean.class);*/
+
+    if (concurrentHashMap.containsKey(JsonKey.PROVIDER) || concurrentHashMap.containsKey(JsonKey.EXTERNAL_ID)) {
+      if (isNull(concurrentHashMap.get(JsonKey.PROVIDER)) || isNull(
+          concurrentHashMap.get(JsonKey.EXTERNAL_ID))) {
+        ProjectLogger.log("Source and external ids both should exist.");
+        concurrentHashMap.put(JsonKey.ERROR_MSG , "Source and external ids both should exist.");
+        failureList.add(concurrentHashMap);
+        return;
+      }
+
+      Map<String, Object> dbMap = new HashMap<String, Object>();
+      dbMap.put(JsonKey.PROVIDER, concurrentHashMap.get(JsonKey.PROVIDER));
+      dbMap.put(JsonKey.EXTERNAL_ID, concurrentHashMap.get(JsonKey.EXTERNAL_ID));
+      Response result = cassandraOperation.getRecordsByProperties(orgDbInfo.getKeySpace(),
+          orgDbInfo.getTableName(), dbMap);
+      List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      if (!(list.isEmpty())) {
+        ProjectLogger.log("Org exist with Provider " + concurrentHashMap.get(JsonKey.PROVIDER) + " , External Id "
+            + concurrentHashMap.get(JsonKey.EXTERNAL_ID));
+        concurrentHashMap.put(JsonKey.ERROR_MSG , "Org exist with Provider " + concurrentHashMap.get(JsonKey.PROVIDER) + " , External Id "
+            + concurrentHashMap.get(JsonKey.EXTERNAL_ID));
+        failureList.add(concurrentHashMap);
+        return;
+      }
+    }
+
+      if(isNotNull(concurrentHashMap.get(JsonKey.IS_ROOT_ORG))){
+        boolean isRootOrg = new Boolean((String)concurrentHashMap.get(JsonKey.IS_ROOT_ORG));
+        if(isRootOrg && isNull(concurrentHashMap.get(JsonKey.CHANNEL))) {
+          concurrentHashMap.put(JsonKey.ERROR_MSG , "Channel is mandatory for root org ");
+          failureList.add(concurrentHashMap);
+          return;
+        }
+
+      concurrentHashMap.put(JsonKey.IS_ROOT_ORG , new Boolean((String)concurrentHashMap.get(JsonKey.IS_ROOT_ORG)));
+    }
+
+    String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(1);
+    concurrentHashMap.put(JsonKey.ID, uniqueId);
+    concurrentHashMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+    concurrentHashMap.put(JsonKey.STATUS, ProjectUtil.OrgStatus.ACTIVE.getValue());
+    // allow lower case values for source and externalId to the database
+    if (concurrentHashMap.get(JsonKey.SOURCE) != null) {
+      concurrentHashMap.put(JsonKey.SOURCE, ((String) concurrentHashMap.get(JsonKey.SOURCE)).toLowerCase());
+    }
+    if (concurrentHashMap.get(JsonKey.EXTERNAL_ID) != null) {
+      concurrentHashMap.put(JsonKey.EXTERNAL_ID, ((String) concurrentHashMap.get(JsonKey.EXTERNAL_ID)).toLowerCase());
+    }
+    concurrentHashMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+    concurrentHashMap.put(JsonKey.CREATED_BY, dataMap.get(JsonKey.UPLOADED_BY));
+
+    try {
+      Response result =
+          cassandraOperation
+              .insertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), concurrentHashMap);
+      Response orgResponse = new Response();
+      orgResponse.put(JsonKey.ORGANISATION, concurrentHashMap);
+      orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
+      ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
+      backGroundActorRef.tell(orgResponse, self());
+      successList.add(concurrentHashMap);
+    }catch(Exception ex){
+
+      ProjectLogger.log("Exception occurs  " ,ex);
+      concurrentHashMap.put(JsonKey.ERROR_MSG , ex.getMessage());
+      failureList.add(concurrentHashMap);
+      return;
+    }
+
+  }
+
 
   private void processUserInfo(List<Map<String, Object>> dataMapList) {
 
@@ -347,6 +457,16 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       } 
     }
     return true;
+  }
+
+  private String convertMapToJsonString(List<Map<String, Object>> mapList) {
+    ObjectMapper mapper = new ObjectMapper();
+    try {
+      return mapper.writeValueAsString(mapList);
+    } catch (IOException e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    return null;
   }
 
 }

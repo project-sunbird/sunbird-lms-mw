@@ -134,7 +134,7 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
 
   private void uploadCsvToDB(List<String[]> dataList, String processId, String orgId, String objectType, String requestedBy) {
     List<Map<String,Object>> userMapList = new ArrayList<>();
-    if (dataList.size() > 2) {
+    if (dataList.size() > 1) {
       String[] columnArr = dataList.get(0);
       Map<String,Object> userMap = null;
       for(int i = 1 ; i < dataList.size() ; i++){

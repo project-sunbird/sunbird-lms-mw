@@ -3,6 +3,9 @@ package org.sunbird.learner.actors.bulkupload;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -64,62 +67,80 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private void process(Request actorMessage) {
-    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    List<String[]> dataList = (List<String[]>) actorMessage.get(JsonKey.DATA);
-    if(((String)actorMessage.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.USER)){
-      String[] columnArr = dataList.get(0);
-      List<Map<String, Object>> badUserReq = new ArrayList<>();
-      List<Map<String, Object>> successUserReq = new ArrayList<>();
-      Map<String,Object> userMap = null;
-      for(int i = 1 ; i < dataList.size() ; i++){
-        userMap = new HashMap<>();
-        String[] valueArr = dataList.get(i);
-        for(int j = 0 ; j < valueArr.length ; j++){
-            userMap.put(columnArr[j], valueArr[j]);
-         }
-        if(validateUser(userMap)){
-          try{
-            
-            userMap = insertRecordToKeyCloak(userMap);
-            Response response = null;
-            try {
-              response = cassandraOperation
-                  .insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
-            } finally {
-              if (null == response) {
-                ssoManager.removeUser(userMap);
-              }
-            }
-            //save successfully created user data 
-            successUserReq.add(userMap);
-            //insert details to user_org table
-            insertRecordToUserOrgTable(userMap);
-            //insert details to user Ext Identity table
-            insertRecordToUserExtTable(userMap);
-            //update elastic search
-            Response usrResponse = new Response();
-            usrResponse.getResult()
-                .put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-            usrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));
-            ProjectLogger.log("making a call to save user data to ES");
-            backGroundActorRef.tell(usrResponse,self());
-              
-          } catch(Exception ex) {
-            ProjectLogger.log("Exception occurred while bulk user upload :", ex);
-            userMap.remove(JsonKey.ID);
-            badUserReq.add(userMap);
-          }
-        }else{
-          badUserReq.add(userMap);
-        }
-       }
-      //Insert record to BulkDb table
-      //String processId = (String) actorMessage.get(JsonKey.PROCESS_ID);
-     }
+    ObjectMapper mapper = new ObjectMapper();
+    String processId = (String) actorMessage.get(JsonKey.PROCESS_ID);
+    Map<String,Object> dataMap = getBulkData(processId);
+    TypeReference<List<Map<String,Object>>> mapType = new TypeReference<List<Map<String,Object>>>() {};
+    List<Map<String,Object>> jsonList = null;
+    try {
+      jsonList = mapper.readValue((String)dataMap.get(JsonKey.DATA), mapType);
+    } catch (IOException e) {
+      ProjectLogger.log("Exception occurred while converting json String to List in BulkUploadBackGroundJobActor : ", e);
+    }
+    if(((String)dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.USER)){
+      processUserInfo(jsonList);
+    }
+    
    }
   
+
+  private void processUserInfo(List<Map<String, Object>> dataMapList) {
+
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    List<Map<String, Object>> badUserReq = new ArrayList<>();
+    List<Map<String, Object>> successUserReq = new ArrayList<>();
+    Map<String,Object> userMap = null;
+    for(int i = 0 ; i < dataMapList.size() ; i++){
+      userMap = dataMapList.get(i);
+      if(validateUser(userMap)){
+        try{
+          
+          userMap = insertRecordToKeyCloak(userMap);
+          Response response = null;
+          try {
+            response = cassandraOperation
+                .insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
+          } finally {
+            if (null == response) {
+              ssoManager.removeUser(userMap);
+            }
+          }
+          //save successfully created user data 
+          successUserReq.add(userMap);
+          //insert details to user_org table
+          insertRecordToUserOrgTable(userMap);
+          //insert details to user Ext Identity table
+          insertRecordToUserExtTable(userMap);
+          //update elastic search
+          Response usrResponse = new Response();
+          usrResponse.getResult()
+              .put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+          usrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));
+          ProjectLogger.log("making a call to save user data to ES");
+          backGroundActorRef.tell(usrResponse,self());
+            
+        } catch(Exception ex) {
+          ProjectLogger.log("Exception occurred while bulk user upload :", ex);
+          userMap.remove(JsonKey.ID);
+          badUserReq.add(userMap);
+        }
+      }else{
+        badUserReq.add(userMap);
+      }
+     }
+    //Insert record to BulkDb table
+    //String processId = (String) actorMessage.get(JsonKey.PROCESS_ID);
+   
+    
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> getBulkData(String processId) {
+    Util.DbInfo  bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
+    Response res = cassandraOperation.getRecordById(bulkDb.getKeySpace(), bulkDb.getTableName(), processId);
+    return (((List<Map<String,Object>>)res.get(JsonKey.RESPONSE)).get(0));
+  }
 
   private void insertRecordToUserExtTable(Map<String, Object> requestMap) {
     Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);

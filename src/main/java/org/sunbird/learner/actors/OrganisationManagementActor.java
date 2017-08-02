@@ -1590,7 +1590,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   /**
    * @param actorMessage
    */
-  private List<Map<String,Object>> getOrgsData(Request actorMessage) {
+  private Map<String,Object> getOrgsData(Request actorMessage) {
     Map<String, Object> requestMap = actorMessage.getRequest();
     SearchDTO dto = new SearchDTO();
     Map<String, Object> map = new HashMap<String, Object>();
@@ -1600,11 +1600,11 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Map<String, Object> additionalProperty = new HashMap<>();
     additionalProperty.put(JsonKey.FILTERS, map);
     dto.setAdditionalProperties(additionalProperty);
-    Map<String, List<Map<String, Object>>> responseMap = ElasticSearchUtil
+    Map<String, Object> responseMap = ElasticSearchUtil
         .complexSearch(dto, ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.organisation.getTypeName());
     if (requestMap != null) {
-      return responseMap.get(JsonKey.RESPONSE);
+      return responseMap;
     }
     return null;
 

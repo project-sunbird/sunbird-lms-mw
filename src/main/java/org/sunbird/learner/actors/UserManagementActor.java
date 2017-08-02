@@ -1545,9 +1545,10 @@ public class UserManagementActor extends UntypedAbstractActor {
   }
 
   /**
-   * Method to bblock the user , it performs only soft delete from Cassandra , ES , Keycloak
+   * Method to block the user , it performs only soft delete from Cassandra , ES , Keycloak
    * @param actorMessage
    */
+  @SuppressWarnings("unchecked")
   private void blockUser(Request actorMessage) {
 
     ProjectLogger.log("Method call  "+"deleteUser");
@@ -1610,9 +1611,10 @@ public class UserManagementActor extends UntypedAbstractActor {
   }
 
   /**
-   * Method to bblock the user , it performs only soft delete from Cassandra , ES , Keycloak
+   * Method to un block the user 
    * @param actorMessage
    */
+  @SuppressWarnings("unchecked")
   private void unBlockUser(Request actorMessage) {
 
     ProjectLogger.log("Method call  "+"UnblockeUser");
@@ -1625,7 +1627,6 @@ public class UserManagementActor extends UntypedAbstractActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
       return;
-
     }
     String userId = (String)userMap.get(JsonKey.USER_ID);
     Response resultFrUserId = cassandraOperation.getRecordById(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),
@@ -1653,19 +1654,19 @@ public class UserManagementActor extends UntypedAbstractActor {
     dbMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     dbMap.put(JsonKey.UPDATED_BY, actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
 
-    // deactivate from keycloak -- softdelete
+    // Activate user from keycloak
     boolean isSSOEnabled = Boolean
         .parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
     if (isSSOEnabled) {
       SSOManager ssoManager = new KeyCloakServiceImpl();
       ssoManager.activateUser(dbMap);
     }
-    //soft delete from cassandra--
+    //Activate user from cassandra-
     Response response = cassandraOperation.updateRecord(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),dbMap);
     ProjectLogger.log("USER UNLOCKED "+userId);
     sender().tell(response,self());
 
-    // update record in elasticsearch ......
+    // make user active in elasticsearch ......
     Response usrResponse = new Response();
     usrResponse.getResult()
         .put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());

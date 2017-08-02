@@ -130,12 +130,6 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
     }
     //save csv file to db
     uploadCsvToDB(userList,processId,orgId,JsonKey.USER,(String)req.get(JsonKey.REQUESTED_BY));
-    //send processId for data processing to background job
-    Request request = new Request();
-    request.put(JsonKey.PROCESS_ID, processId);
-    request.setOperation(ActorOperations.PROCESS_BULK_UPLOAD.getValue());
-    bulkUploadBackGroundJobActorRef.tell(request, self());
-    
   }
 
   private void uploadCsvToDB(List<String[]> dataList, String processId, String orgId, String objectType, String requestedBy) {
@@ -176,6 +170,13 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
     Response res = cassandraOperation.insertRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), map);
     res.put(JsonKey.PROCESS_ID, processId);
     sender().tell(res, self());
+    if(((String)res.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)){
+    //send processId for data processing to background job
+      Request request = new Request();
+      request.put(JsonKey.PROCESS_ID, processId);
+      request.setOperation(ActorOperations.PROCESS_BULK_UPLOAD.getValue());
+      bulkUploadBackGroundJobActorRef.tell(request, self());
+    }
   }
 
   private List<String[]> parseCsvFile(File file) {

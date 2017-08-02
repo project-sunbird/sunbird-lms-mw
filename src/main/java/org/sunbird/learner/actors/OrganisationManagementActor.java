@@ -1474,8 +1474,11 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       return false;
     }
     req.put(JsonKey.ORGANISATION_ID, list.get(0).get(JsonKey.ID));
-    req.put(JsonKey.SOURCE, list.get(0).get(JsonKey.SOURCE));
-
+    if(req.containsKey(JsonKey.PROVIDER) || req.containsKey(JsonKey.SOURCE)) {
+      req.put(JsonKey.SOURCE, req.get(JsonKey.PROVIDER)); 
+    }else{
+      req.put(JsonKey.SOURCE, list.get(0).get(JsonKey.SOURCE));
+    }
     return true;
   }
 

@@ -140,14 +140,19 @@ public class UserManagementActor extends UntypedAbstractActor {
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
         fetchRootAndRegisterOrganisation(result);
-      Response response = new Response();
-      if(null != result) {
-        response.put(JsonKey.RESPONSE, result);
-      } else {
-           result = new HashMap<>();
-           response.put(JsonKey.RESPONSE, result);    
-      }
-      sender().tell(response, self());
+        Response response = new Response();
+        if (null != result) {
+          if (!ProjectUtil.isStringNullOREmpty((String) result.get(JsonKey.USER_ID))) {
+            List<Map<String, Object>> organisations = getOrganisationDetailsByUserId(
+                (String) result.get(JsonKey.USER_ID));
+            result.put(JsonKey.ORGANISATIONS, organisations);
+          }
+          response.put(JsonKey.RESPONSE, result);
+        } else {
+          result = new HashMap<>();
+          response.put(JsonKey.RESPONSE, result);
+        }
+       sender().tell(response, self());
       return;
     }else{
       ProjectCommonException exception = new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(), 
@@ -1603,11 +1608,103 @@ public class UserManagementActor extends UntypedAbstractActor {
   
   
   /**
+   * This method will assign roles to users or user organizations.
    * @param actorMessage
    */
+  @SuppressWarnings("unchecked")
   private void assignRoles(Request actorMessage) {
-    // TODO Auto-generated method stub
-    
+     Map<String,Object> requestMap  =  actorMessage.getRequest();
+     if(requestMap == null || requestMap.size()==0) {
+       ProjectCommonException exception = new ProjectCommonException(
+           ResponseCode.invalidRequestData.getErrorCode(),
+           ResponseCode.invalidRequestData.getErrorMessage(),
+           ResponseCode.CLIENT_ERROR.getResponseCode());
+       sender().tell(exception, self());
+       return;
+     }
+     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+      String userId = (String)requestMap.get(JsonKey.USER_ID) ;
+      Map<String,Object> tempMap = new HashMap<>();
+      String externalId = (String) requestMap.get(JsonKey.EXTERNAL_ID);
+      String provider = (String) requestMap.get(JsonKey.PROVIDER);
+      String userName = (String) requestMap.get(JsonKey.USERNAME);
+       if (ProjectUtil.isStringNullOREmpty(userId)) {
+           if(ProjectUtil.isStringNullOREmpty(userName) || ProjectUtil.isStringNullOREmpty(provider)) {
+             ProjectCommonException exception = new ProjectCommonException(
+                 ResponseCode.invalidUserId.getErrorCode(),
+                 ResponseCode.invalidUserId.getErrorMessage(),
+                 ResponseCode.CLIENT_ERROR.getResponseCode());
+             sender().tell(exception, self());
+             return; 
+           }
+           tempMap.put(JsonKey.LOGIN_ID, userName+JsonKey.LOGIN_ID_DELIMETER+provider);
+          Response response = cassandraOperation.getRecordsByProperties(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
+          List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+          if (list.isEmpty()) {
+            ProjectCommonException exception = new ProjectCommonException(
+                ResponseCode.invalidUsrData.getErrorCode(), ResponseCode.invalidUsrData.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;
+          }
+          requestMap.put(JsonKey.USER_ID, list.get(0).get(JsonKey.ID));
+       }
+     String orgId = (String) requestMap.get(JsonKey.ORGANISATION_ID);
+     if(ProjectUtil.isStringNullOREmpty(orgId)) {
+        if(!ProjectUtil.isStringNullOREmpty(externalId) && !ProjectUtil.isStringNullOREmpty(provider)) {
+          tempMap.remove(JsonKey.LOGIN_ID);
+          tempMap.put(JsonKey.EXTERNAL_ID, externalId);
+          tempMap.put(JsonKey.SOURCE, provider);
+          Util.DbInfo orgDBInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+          Response result = cassandraOperation.getRecordsByProperties(orgDBInfo.getKeySpace(),
+              orgDBInfo.getTableName(), tempMap);
+          List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+
+          if (list.isEmpty()) {
+            ProjectCommonException exception = new ProjectCommonException(
+                ResponseCode.invalidOrgData.getErrorCode(), ResponseCode.invalidOrgData.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return ;
+          }
+          requestMap.put(JsonKey.ORGANISATION_ID, list.get(0).get(JsonKey.ID));
+        }
+     }
+     //now we have valid userid , roles and need to check organisation id is also coming.
+     //if organisationid is coming it means need to update userOrg role.
+     //if organisationId is not coming then need to update only userRole.
+     if(requestMap.containsKey(JsonKey.ORGANISATION_ID)) {
+       tempMap.remove(JsonKey.EXTERNAL_ID);
+       tempMap.remove(JsonKey.SOURCE);
+       tempMap.put(JsonKey.ORGANISATION_ID, requestMap.get(JsonKey.ORGANISATION_ID));
+       tempMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
+       Util.DbInfo userOrgDb = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+       Response response = cassandraOperation.getRecordsByProperties(userOrgDb.getKeySpace(), userOrgDb.getTableName(), tempMap);
+       List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+       if (list.isEmpty()) {
+         ProjectCommonException exception = new ProjectCommonException(
+             ResponseCode.invalidUsrData.getErrorCode(), ResponseCode.invalidUsrData.getErrorMessage(),
+             ResponseCode.CLIENT_ERROR.getResponseCode());
+         sender().tell(exception, self());
+         return;
+       }
+       tempMap.put(JsonKey.ID, list.get(0).get(JsonKey.ID));
+       tempMap.put(JsonKey.ROLES, requestMap.get(JsonKey.ROLES));
+       response = cassandraOperation.updateRecord(userOrgDb.getKeySpace(), userOrgDb.getTableName(), tempMap);
+       sender().tell(response,self());
+       return;
+       
+     }else {
+       tempMap.remove(JsonKey.EXTERNAL_ID);
+       tempMap.remove(JsonKey.SOURCE);
+       tempMap.remove(JsonKey.ORGANISATION_ID);
+       tempMap.put(JsonKey.ID, requestMap.get(JsonKey.USER_ID));
+       tempMap.put(JsonKey.ROLES, requestMap.get(JsonKey.ROLES));
+        Response response = cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
+       ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(), (String)requestMap.get(JsonKey.USER_ID), tempMap);
+       sender().tell(response,self());
+       return;
+     }
   }
 
   /**

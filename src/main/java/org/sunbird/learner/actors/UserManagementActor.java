@@ -91,12 +91,14 @@ public class UserManagementActor extends UntypedAbstractActor {
           rejectUserOrg(actorMessage);
         }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.DOWNLOAD_USERS.getValue())) {
            getUserDetails(actorMessage);
-        }
-        else if (actorMessage.getOperation()
-            .equalsIgnoreCase(ActorOperations.DELETE_USER.getValue())) {
-          deleteUser(actorMessage);
+        }else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.BLOCK_USER.getValue())) {
+          blockUser(actorMessage);
         } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ASSIGN_ROLES.getValue())) {
             assignRoles(actorMessage);
+        }else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.UNBLOCK_USER.getValue())) {
+          unBlockUser(actorMessage);
         }
         else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
@@ -1524,7 +1526,7 @@ public class UserManagementActor extends UntypedAbstractActor {
   /**
    * @param actorMessage
    */
-  private List<Map<String, Object>> getUserDetails(Request actorMessage) {
+  private Map<String, Object> getUserDetails(Request actorMessage) {
     Map<String, Object> requestMap = actorMessage.getRequest();
     SearchDTO dto = new SearchDTO();
     Map<String, Object> map = new HashMap<String, Object>();
@@ -1533,16 +1535,21 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> additionalProperty = new HashMap<>();
     additionalProperty.put(JsonKey.FILTERS, map);
     dto.setAdditionalProperties(additionalProperty);
-    Map<String, List<Map<String, Object>>> responseMap = ElasticSearchUtil
+    Map<String, Object> responseMap = ElasticSearchUtil
         .complexSearch(dto, ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.user.getTypeName());
     if (requestMap != null) {
-      return responseMap.get(JsonKey.RESPONSE);
+      return responseMap;
     }
     return null;
-  } 
+  }
 
-  private void deleteUser(Request actorMessage) {
+  /**
+   * Method to block the user , it performs only soft delete from Cassandra , ES , Keycloak
+   * @param actorMessage
+   */
+  @SuppressWarnings("unchecked")
+  private void blockUser(Request actorMessage) {
 
     ProjectLogger.log("Method call  "+"deleteUser");
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
@@ -1601,6 +1608,70 @@ public class UserManagementActor extends UntypedAbstractActor {
   private void assignRoles(Request actorMessage) {
     // TODO Auto-generated method stub
     
+  }
+
+  /**
+   * Method to un block the user 
+   * @param actorMessage
+   */
+  @SuppressWarnings("unchecked")
+  private void unBlockUser(Request actorMessage) {
+
+    ProjectLogger.log("Method call  "+"UnblockeUser");
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    Map<String , Object> userMap=(Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
+    if(ProjectUtil.isNull(userMap.get(JsonKey.USER_ID))) {
+      ProjectCommonException exception = new ProjectCommonException(
+          ResponseCode.invalidRequestData.getErrorCode(),
+          ResponseCode.invalidRequestData.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
+    String userId = (String)userMap.get(JsonKey.USER_ID);
+    Response resultFrUserId = cassandraOperation.getRecordById(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),
+        userId);
+    List<Map<String,Object>> dbResult = (List<Map<String,Object>>)resultFrUserId.get(JsonKey.RESPONSE);
+    if(dbResult.isEmpty()) {
+      ProjectCommonException exception = new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(),
+          ResponseCode.userNotFound.getErrorMessage(), ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
+    Map<String,Object> dbUser = dbResult.get(0);
+    if(dbUser.containsKey(JsonKey.IS_DELETED) && isNotNull(dbUser.get(JsonKey.IS_DELETED)) && !((Boolean)dbUser.get(JsonKey.IS_DELETED))){
+      ProjectCommonException exception = new ProjectCommonException(ResponseCode.userAlreadyActive.getErrorCode(),
+          ResponseCode.userAlreadyActive.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
+
+    Map<String , Object> dbMap = new HashMap<>();
+    dbMap.put(JsonKey.IS_DELETED , false);
+    dbMap.put(JsonKey.STATUS , Status.ACTIVE.getValue());
+    dbMap.put(JsonKey.ID , userId);
+    dbMap.put(JsonKey.USER_ID , userId);
+    dbMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+    dbMap.put(JsonKey.UPDATED_BY, actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
+
+    // Activate user from keycloak
+    boolean isSSOEnabled = Boolean
+        .parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
+    if (isSSOEnabled) {
+      SSOManager ssoManager = new KeyCloakServiceImpl();
+      ssoManager.activateUser(dbMap);
+    }
+    //Activate user from cassandra-
+    Response response = cassandraOperation.updateRecord(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),dbMap);
+    ProjectLogger.log("USER UNLOCKED "+userId);
+    sender().tell(response,self());
+
+    // make user active in elasticsearch ......
+    Response usrResponse = new Response();
+    usrResponse.getResult()
+        .put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+    usrResponse.getResult().put(JsonKey.ID, userId);
+    backGroundActorRef.tell(usrResponse,self());
   }
 
 }

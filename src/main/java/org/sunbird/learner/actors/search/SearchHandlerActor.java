@@ -43,7 +43,7 @@ public class SearchHandlerActor extends UntypedAbstractActor {
 	               }
 	              ((Map<String,Object>)searchQueryMap.get(JsonKey.FILTERS)).remove(JsonKey.OBJECT_TYPE);
 	              SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
-                  Map<String, List<Map<String, Object>>> result = ElasticSearchUtil.complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.name(), types);
+                  Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.name(), types);
                   Response response = new Response();
                   if(result !=null) {
                   response.put(JsonKey.RESPONSE, result);

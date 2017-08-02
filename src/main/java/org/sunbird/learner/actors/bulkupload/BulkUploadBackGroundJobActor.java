@@ -79,22 +79,28 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       ProjectLogger.log("Exception occurred while converting json String to List in BulkUploadBackGroundJobActor : ", e);
     }
     if(((String)dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.USER)){
-      processUserInfo(jsonList);
+      processUserInfo(jsonList,processId);
     }
     
    }
   
 
-  private void processUserInfo(List<Map<String, Object>> dataMapList) {
+  private void processUserInfo(List<Map<String, Object>> dataMapList, String processId) {
 
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    List<Map<String, Object>> badUserReq = new ArrayList<>();
+    List<Map<String, Object>> failureUserReq = new ArrayList<>();
     List<Map<String, Object>> successUserReq = new ArrayList<>();
     Map<String,Object> userMap = null;
     for(int i = 0 ; i < dataMapList.size() ; i++){
       userMap = dataMapList.get(i);
-      if(validateUser(userMap)){
+      String errMsg = validateUser(userMap);
+      if(errMsg.equalsIgnoreCase(JsonKey.SUCCESS)){
         try{
+
+          if ( null != userMap.get(JsonKey.ROLES)) {
+            String[] userRole = ((String) userMap.get(JsonKey.ROLES)).split(",");
+            userMap.put(JsonKey.ROLES, userRole);
+          } 
           
           userMap = insertRecordToKeyCloak(userMap);
           Response response = null;
@@ -117,27 +123,56 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           usrResponse.getResult()
               .put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
           usrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));
-          ProjectLogger.log("making a call to save user data to ES");
+          ProjectLogger.log("making a call to save user data to ES in BulkUploadBackGroundJobActor");
           backGroundActorRef.tell(usrResponse,self());
             
         } catch(Exception ex) {
-          ProjectLogger.log("Exception occurred while bulk user upload :", ex);
+          ProjectLogger.log("Exception occurred while bulk user upload in BulkUploadBackGroundJobActor:", ex);
           userMap.remove(JsonKey.ID);
-          badUserReq.add(userMap);
+          userMap.put(JsonKey.ERROR_MSG, ex.getMessage());
+          failureUserReq.add(userMap);
         }
       }else{
-        badUserReq.add(userMap);
+        userMap.put(JsonKey.ERROR_MSG, errMsg);
+        failureUserReq.add(userMap);
       }
      }
     //Insert record to BulkDb table
-    //String processId = (String) actorMessage.get(JsonKey.PROCESS_ID);
-   
-    
+    Map<String,Object> map = new HashMap<>();
+    map.put(JsonKey.ID, processId);
+    map.put(JsonKey.SUCCESS_RESULT, convertMapToJsonString(successUserReq));
+    map.put(JsonKey.FAILURE_RESULT, convertMapToJsonString(failureUserReq));
+    map.put(JsonKey.PROCESS_END_TIME, ProjectUtil.getFormattedDate());
+    Util.DbInfo  bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
+    try{
+    cassandraOperation.updateRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), map);
+    }catch(Exception e){
+      ProjectLogger.log("Exception Occurred while updating bulk_upload_process in BulkUploadBackGroundJobActor : ", e);
+    }
+  }
+
+  private String convertMapToJsonString(List<Map<String, Object>> mapList) {
+    ObjectMapper mapper = new ObjectMapper();
+    try {
+      return mapper.writeValueAsString(mapList);
+    } catch (IOException e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    return null;
   }
 
   @SuppressWarnings("unchecked")
   private Map<String, Object> getBulkData(String processId) {
     Util.DbInfo  bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
+    try{
+      Map<String,Object> map = new HashMap<>();
+      map.put(JsonKey.ID, processId);
+      map.put(JsonKey.PROCESS_START_TIME, ProjectUtil.getFormattedDate());
+      map.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.IN_PROGRESS.getValue());
+      cassandraOperation.updateRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), map);
+    }catch(Exception ex){
+      ProjectLogger.log("Exception occurred while updating status to bulk_upload_process table in BulkUploadBackGroundJobActor.", ex);
+    }
     Response res = cassandraOperation.getRecordById(bulkDb.getKeySpace(), bulkDb.getTableName(), processId);
     return (((List<Map<String,Object>>)res.get(JsonKey.RESPONSE)).get(0));
   }
@@ -306,47 +341,59 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       return userMap;
     }
 
-  private boolean validateUser(Map<String,Object> map) {
+  private String validateUser(Map<String,Object> map) {
     if (map.get(JsonKey.USERNAME) == null) {
-        return false;
+        return ResponseCode.userNameRequired.getErrorMessage();
     }
     if (map.get(JsonKey.FIRST_NAME) == null
             || (ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.FIRST_NAME)))) {
-      return false;
+      return ResponseCode.firstNameRequired.getErrorMessage();
     }  
-    if (map.get(JsonKey.EMAIL) == null) {
-      return false;
+    if (!(ProjectUtil.isStringNullOREmpty((String)map.get(JsonKey.EMAIL))) && !ProjectUtil.isEmailvalid((String) map.get(JsonKey.EMAIL))) {
+      return ResponseCode.emailFormatError.getErrorMessage();
     }
-    if (!ProjectUtil.isEmailvalid((String) map.get(JsonKey.EMAIL))) {
-      return false;
+    if(ProjectUtil.isStringNullOREmpty((String)map.get(JsonKey.PHONE_VERIFIED))){
+      try{
+        map.put(JsonKey.PHONE_VERIFIED, Boolean.parseBoolean((String)map.get(JsonKey.PHONE_VERIFIED)));
+      }catch(Exception ex){
+        return "property phoneVerified should be instanceOf type Boolean.";
+      }
+    }
+    if(ProjectUtil.isStringNullOREmpty((String)map.get(JsonKey.EMAIL_VERIFIED))){
+      try{
+        map.put(JsonKey.EMAIL_VERIFIED, Boolean.parseBoolean((String)map.get(JsonKey.EMAIL_VERIFIED)));
+      }catch(Exception ex){
+        return "property emailVerified should be instanceOf type Boolean.";
+      }
     }
     if(!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.PROVIDER))){
       if(!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.PHONE))){
-          if(null != map.get(JsonKey.PHONE_NUMBER_VERIFIED)){
-            if(map.get(JsonKey.PHONE_NUMBER_VERIFIED) instanceof Boolean){
-              if(!((boolean) map.get(JsonKey.PHONE_NUMBER_VERIFIED))){
-                return false;
+          if(null != map.get(JsonKey.PHONE_VERIFIED)){
+            if(map.get(JsonKey.PHONE_VERIFIED) instanceof Boolean){
+              if(!((boolean) map.get(JsonKey.PHONE_VERIFIED))){
+                return ResponseCode.phoneVerifiedError.getErrorMessage();
               }
             }else{
-              return false;
+              return "property phoneVerified should be instanceOf type Boolean.";
             }
           }else{
-            return false;
+            return ResponseCode.phoneVerifiedError.getErrorMessage();
           }
         }
       if(null != map.get(JsonKey.EMAIL_VERIFIED)){
         if(map.get(JsonKey.EMAIL_VERIFIED) instanceof Boolean){
           if(!((boolean) map.get(JsonKey.EMAIL_VERIFIED))){
-            return false;
+            return ResponseCode.emailVerifiedError.getErrorMessage();
           }
         }else{
-          return false;
+          return "property emailVerified should be instanceOf type Boolean.";
         }
       }else{
-        return false;
+        return ResponseCode.emailVerifiedError.getErrorMessage();
       } 
     }
-    return true;
+    
+    return JsonKey.SUCCESS;
   }
 
 }

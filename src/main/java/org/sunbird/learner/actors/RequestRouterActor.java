@@ -10,6 +10,8 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.assessment.AssessmentItemActor;
+import org.sunbird.learner.actors.bulkupload.BulkUploadBackGroundJobActor;
+import org.sunbird.learner.actors.bulkupload.BulkUploadManagementActor;
 import org.sunbird.learner.actors.recommend.RecommendorActor;
 import org.sunbird.learner.actors.search.CourseSearchActor;
 import org.sunbird.learner.actors.search.SearchHandlerActor;
@@ -43,6 +45,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private ActorRef courseSearchActorRouter;
     private ActorRef assessmentItemActor;
     private ActorRef searchHandlerActor; 
+    private ActorRef bulkUploadManagementActor;
+    private ActorRef bulkUploadBackGroundJobActor;
     private ExecutionContext ec;
     Map<String, ActorRef> routerMap = new HashMap<>();
     private static final int WAIT_TIME_VALUE = 9;
@@ -58,6 +62,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private static final String ASSESSMENT_ITEM_ACTOR_ROUTER = "assessmentItemActor";
     private static final String RECOMMENDOR_ACTOR_ROUTER = "recommendorActorRouter";
     private static final String SEARCH_HANDLER_ACTOR_ROUTER = "searchHandlerActor";
+    private static final String BULK_UPLOAD_MGMT_ACTOR = "bulkUploadManagementActor";
+    private static final String BULK_UPLOAD_BACKGROUND_ACTOR = "bulkUploadBackGroundJobActor";
     /**
      * constructor to initialize router actor with child actor pool
      */
@@ -88,6 +94,10 @@ public class RequestRouterActor extends UntypedAbstractActor {
                 RECOMMENDOR_ACTOR_ROUTER);
         searchHandlerActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(SearchHandlerActor.class)),
             SEARCH_HANDLER_ACTOR_ROUTER);
+        bulkUploadManagementActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(BulkUploadManagementActor.class)),
+            BULK_UPLOAD_MGMT_ACTOR);
+        bulkUploadBackGroundJobActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(BulkUploadBackGroundJobActor.class)),
+            BULK_UPLOAD_BACKGROUND_ACTOR);
         ec = getContext().dispatcher();
         initializeRouterMap();
     }
@@ -148,6 +158,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.BLOCK_USER.getValue(), userManagementRouter);
         routerMap.put(ActorOperations.ASSIGN_ROLES.getValue(), userManagementRouter);
         routerMap.put(ActorOperations.UNBLOCK_USER.getValue(), userManagementRouter);
+        routerMap.put(ActorOperations.BULK_UPLOAD.getValue(), bulkUploadManagementActor);
+        routerMap.put(ActorOperations.PROCESS_BULK_UPLOAD.getValue(), bulkUploadBackGroundJobActor);
     }
 
 

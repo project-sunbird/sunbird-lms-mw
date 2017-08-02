@@ -1603,11 +1603,22 @@ public class UserManagementActor extends UntypedAbstractActor {
   
   
   /**
+   * This method will assign roles to users or user organizations.
    * @param actorMessage
    */
   private void assignRoles(Request actorMessage) {
-    // TODO Auto-generated method stub
-    
+     Map<String,Object> requestMap  =  actorMessage.getRequest();
+     if(requestMap == null || requestMap.size()==0) {
+       ProjectCommonException exception = new ProjectCommonException(
+           ResponseCode.invalidRequestData.getErrorCode(),
+           ResponseCode.invalidRequestData.getErrorMessage(),
+           ResponseCode.CLIENT_ERROR.getResponseCode());
+       sender().tell(exception, self());
+       return;
+     }
+     
+     
+     
   }
 
   /**

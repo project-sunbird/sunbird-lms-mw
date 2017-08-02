@@ -3,9 +3,11 @@ package org.sunbird.learner.actors.bulkupload;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.CSVReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -76,18 +78,13 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
       processBulkUserUpload(req,processId);
     }
     
-    Map<String,Object> map = new HashMap<>();
-    map.put(JsonKey.ID, processId);
-    Response res = cassandraOperation.insertRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), map);
-    res.put(JsonKey.PROCESS_ID, map.get(JsonKey.ID));
-    sender().tell(res, self());
-    
   }
 
   @SuppressWarnings("unchecked")
   private void processBulkUserUpload(Map<String, Object> req,String processId) {
     
     DbInfo orgDb = Util.dbInfoMap.get(JsonKey.ORG_DB);
+    String orgId = "";
     Response response = null;
     if (!ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ORGANISATION_ID))){
       response = cassandraOperation.getRecordById(orgDb.getKeySpace(), orgDb.getTableName(), 
@@ -105,6 +102,8 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
           ResponseCode.invalidOrgData.getErrorCode(),
           ResponseCode.invalidOrgData.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
+      } else{
+        orgId = (String) responseList.get(0).get(JsonKey.ID);
       }
     List<String[]> userList = parseCsvFile((File)req.get(JsonKey.FILE));
     if (null != userList ) {
@@ -129,15 +128,54 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
           ResponseCode.dataSizeError.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-    
-    //send data for processing to background job
+    //save csv file to db
+    uploadCsvToDB(userList,processId,orgId,JsonKey.USER,(String)req.get(JsonKey.REQUESTED_BY));
+    //send processId for data processing to background job
     Request request = new Request();
-    request.put(JsonKey.DATA, userList);
-    request.put(JsonKey.OBJECT_TYPE,JsonKey.USER);
     request.put(JsonKey.PROCESS_ID, processId);
     request.setOperation(ActorOperations.PROCESS_BULK_UPLOAD.getValue());
     bulkUploadBackGroundJobActorRef.tell(request, self());
     
+  }
+
+  private void uploadCsvToDB(List<String[]> dataList, String processId, String orgId, String objectType, String requestedBy) {
+    List<Map<String,Object>> userMapList = new ArrayList<>();
+    if (dataList.size() > 2) {
+      String[] columnArr = dataList.get(0);
+      Map<String,Object> userMap = null;
+      for(int i = 1 ; i < dataList.size() ; i++){
+        userMap = new HashMap<>();
+        String[] valueArr = dataList.get(i);
+        for(int j = 0 ; j < valueArr.length ; j++){
+            userMap.put(columnArr[j], valueArr[j]);
+         }
+        if(!ProjectUtil.isStringNullOREmpty(objectType) && objectType.equalsIgnoreCase(JsonKey.USER)){
+          userMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
+        }
+        userMapList.add(userMap);
+      }
+    }
+    //convert userMapList to json string 
+    Map<String,Object> map = new HashMap<>();
+    
+    ObjectMapper mapper = new ObjectMapper();
+    try {
+      map.put(JsonKey.DATA,
+          mapper.writeValueAsString(userMapList));
+    } catch (IOException e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    
+    
+    map.put(JsonKey.ID, processId);
+    map.put(JsonKey.OBJECT_TYPE, objectType);
+    map.put(JsonKey.UPLOADED_BY, requestedBy);
+   // map.put(JsonKey.UPLOADED_DATE, ProjectUtil.);
+   // map.put(JsonKey.PROCESS_START_TIME, ProjectUtil.);
+   // map.put(JsonKey.STATUS, ProjectUtil.);
+    Response res = cassandraOperation.insertRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), map);
+    res.put(JsonKey.PROCESS_ID, processId);
+    sender().tell(res, self());
   }
 
   private List<String[]> parseCsvFile(File file) {
@@ -193,5 +231,7 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
     }
     
   }
+  
+  
  
 }

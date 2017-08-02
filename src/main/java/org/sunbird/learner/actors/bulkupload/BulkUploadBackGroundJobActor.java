@@ -81,6 +81,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
          }
         if(validateUser(userMap)){
           try{
+            
             userMap = insertRecordToKeyCloak(userMap);
             Response response = null;
             try {
@@ -91,6 +92,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
                 ssoManager.removeUser(userMap);
               }
             }
+            //save successfully created user data 
             successUserReq.add(userMap);
             //insert details to user_org table
             insertRecordToUserOrgTable(userMap);

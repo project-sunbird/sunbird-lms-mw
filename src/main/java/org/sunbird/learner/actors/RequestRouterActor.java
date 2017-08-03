@@ -160,6 +160,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.UNBLOCK_USER.getValue(), userManagementRouter);
         routerMap.put(ActorOperations.BULK_UPLOAD.getValue(), bulkUploadManagementActor);
         routerMap.put(ActorOperations.PROCESS_BULK_UPLOAD.getValue(), bulkUploadBackGroundJobActor);
+        routerMap.put(ActorOperations.GET_BULK_OP_STATUS.getValue(), bulkUploadManagementActor);
     }
 
 

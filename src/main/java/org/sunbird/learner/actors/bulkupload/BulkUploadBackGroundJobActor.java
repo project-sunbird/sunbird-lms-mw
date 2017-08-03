@@ -154,6 +154,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     map.put(JsonKey.SUCCESS_RESULT, convertMapToJsonString(successUserReq));
     map.put(JsonKey.FAILURE_RESULT, convertMapToJsonString(failureUserReq));
     map.put(JsonKey.PROCESS_END_TIME, ProjectUtil.getFormattedDate());
+    map.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
     Util.DbInfo  bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     try{
     cassandraOperation.updateRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), map);

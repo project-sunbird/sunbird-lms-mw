@@ -48,6 +48,8 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
         Request actorMessage = (Request) message;
         if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.BULK_UPLOAD.getValue())) {
           upload(actorMessage);
+        }if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_BULK_OP_STATUS.getValue())) {
+          getUploadStatus(actorMessage);
         }else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
           ProjectCommonException exception = new ProjectCommonException(
@@ -69,6 +71,54 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
           ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
     }
+  }
+
+  private void getUploadStatus(Request actorMessage) {
+    String processId = (String) actorMessage.getRequest().get(JsonKey.PROCESS_ID);
+    Response response = null;
+    response = cassandraOperation.getRecordById(bulkDb.getKeySpace(), bulkDb.getTableName(), processId);
+    @SuppressWarnings("unchecked")
+    List<Map<String,Object>> resList = ((List<Map<String, Object>>) response.get(JsonKey.RESPONSE));
+    if(!resList.isEmpty()){
+      Map<String,Object> resMap = resList.get(0);
+      if((int)resMap.get(JsonKey.STATUS) == ProjectUtil.BulkProcessStatus.COMPLETED.getValue()){
+        resMap.remove(JsonKey.STATUS);
+        resMap.remove(JsonKey.PROCESS_END_TIME);
+        resMap.remove(JsonKey.PROCESS_START_TIME);
+        resMap.remove(JsonKey.DATA);
+        resMap.remove(JsonKey.UPLOADED_BY);
+        resMap.remove(JsonKey.UPLOADED_DATE);
+        resMap.remove(JsonKey.OBJECT_TYPE);
+        resMap.remove(JsonKey.ORGANISATION_ID);
+        resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
+        resMap.remove(JsonKey.ID);
+        ObjectMapper mapper = new ObjectMapper();
+        Object[]  successMap = null;;
+        Object[]  failureMap = null;
+        try {
+          if(null != resMap.get(JsonKey.SUCCESS_RESULT)){
+            successMap = mapper.readValue((String) resMap.get(JsonKey.SUCCESS_RESULT), Object[].class);
+            resMap.put(JsonKey.SUCCESS_RESULT, successMap);
+          }
+          if(null != resMap.get(JsonKey.FAILURE_RESULT)){
+            failureMap = mapper.readValue((String) resMap.get(JsonKey.FAILURE_RESULT), Object[].class);
+            resMap.put(JsonKey.FAILURE_RESULT, failureMap);
+          }
+        } catch (IOException e) {
+          ProjectLogger.log(e.getMessage(), e);
+        }
+        sender().tell(response, self());
+      }else{
+        response = new Response();
+        response.put(JsonKey.RESPONSE, "Operation is still in progress, Please try after some time.");
+      }
+    }else{
+      throw new ProjectCommonException(
+          ResponseCode.internalError.getErrorCode(),
+          ResponseCode.internalError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
+    
   }
 
   @SuppressWarnings("unchecked")

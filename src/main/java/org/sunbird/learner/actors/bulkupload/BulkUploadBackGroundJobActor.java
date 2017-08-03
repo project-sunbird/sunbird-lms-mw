@@ -307,7 +307,12 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             }
           }
           //save successfully created user data 
-          successUserReq.add(userMap);
+          tempMap.putAll(userMap);
+          tempMap.remove(JsonKey.STATUS);
+          tempMap.remove(JsonKey.CREATED_DATE);
+          tempMap.remove(JsonKey.CREATED_BY);
+          tempMap.remove(JsonKey.ID);
+          successUserReq.add(tempMap);
           //insert details to user_org table
           insertRecordToUserOrgTable(userMap);
           //insert details to user Ext Identity table

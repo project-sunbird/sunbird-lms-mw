@@ -205,14 +205,14 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
           validateUserProperty(columns);
         }else{
           throw  new ProjectCommonException(
-              ResponseCode.dataSizeError.getErrorCode(),
-              ResponseCode.dataSizeError.getErrorMessage(),
+              ResponseCode.csvError.getErrorCode(),
+              ResponseCode.csvError.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
     }else{
       throw new ProjectCommonException(
-          ResponseCode.dataSizeError.getErrorCode(),
-          ResponseCode.dataSizeError.getErrorMessage(),
+          ResponseCode.csvError.getErrorCode(),
+          ResponseCode.csvError.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     //save csv file to db

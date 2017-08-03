@@ -57,24 +57,13 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           process(actorMessage);
         }else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
-          /*ProjectCommonException exception = new ProjectCommonException(
-              ResponseCode.invalidOperationName.getErrorCode(),
-              ResponseCode.invalidOperationName.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-          //sender().tell(exception, self());*/
         }
       } catch (Exception ex) {
         ProjectLogger.log(ex.getMessage(), ex);
-        //sender().tell(ex, self());
       }
     }else {
       // Throw exception as message body
       ProjectLogger.log("UNSUPPORTED MESSAGE");
-      /*ProjectCommonException exception = new ProjectCommonException(
-          ResponseCode.invalidRequestData.getErrorCode(),
-          ResponseCode.invalidRequestData.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-      //sender().tell(exception, self());*/
     }
   }
 
@@ -91,10 +80,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
     if(((String)dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.USER)){
       processUserInfo(jsonList,processId);
-      //processUserInfo(jsonList);
     }else if(((String)dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.ORGANISATION)){
       CopyOnWriteArrayList<Map<String,Object>> orgList = new CopyOnWriteArrayList<>(jsonList);
-      //processOrgInfoForRootOrg(orgList , dataMap);
       processOrgInfo(orgList , dataMap);
     }
 
@@ -343,6 +330,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     map.put(JsonKey.SUCCESS_RESULT, convertMapToJsonString(successUserReq));
     map.put(JsonKey.FAILURE_RESULT, convertMapToJsonString(failureUserReq));
     map.put(JsonKey.PROCESS_END_TIME, ProjectUtil.getFormattedDate());
+    map.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
     Util.DbInfo  bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     try{
     cassandraOperation.updateRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), map);

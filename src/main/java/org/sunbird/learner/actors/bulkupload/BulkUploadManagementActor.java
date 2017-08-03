@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -29,7 +30,8 @@ import org.sunbird.learner.util.Util.DbInfo;
 
 public class BulkUploadManagementActor extends UntypedAbstractActor {
 
-private CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  private static final String CSV_FILE_EXTENSION = ".csv";
+  private CassandraOperation cassandraOperation = new CassandraOperationImpl();
   Util.DbInfo  bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
 
   private ActorRef bulkUploadBackGroundJobActorRef;
@@ -122,13 +124,82 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
   }
 
   @SuppressWarnings("unchecked")
-  private void upload(Request actorMessage) {
+  private void upload(Request actorMessage) throws IOException {
     String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.DATA);
     if(((String)req.get(JsonKey.OBJECT_TYPE)).equals(JsonKey.USER)){
       processBulkUserUpload(req,processId);
+    }else if(((String)req.get(JsonKey.OBJECT_TYPE)).equals(JsonKey.ORGANISATION)){
+      processBulkOrgUpload(req,processId);
     }
     
+  }
+
+  private void processBulkOrgUpload(Map<String, Object> req, String processId) throws IOException {
+
+    File file = new File("bulk-"+processId+CSV_FILE_EXTENSION);
+    List<String[]> userList = null;
+    FileOutputStream fos = null;
+    try {
+      fos = new FileOutputStream(file);
+      fos.write( (byte[]) req.get(JsonKey.FILE));
+      userList = parseCsvFile(file);
+    } catch (IOException e) {
+      ProjectLogger.log("Exception Occurred while reading file in BulkUploadManagementActor", e);
+      throw e;
+    }finally{
+      try {
+        if(ProjectUtil.isNotNull(fos)) {
+          fos.close();
+        }
+        if(ProjectUtil.isNotNull(file)){
+          file.delete();
+        }
+      } catch (IOException e) {
+        ProjectLogger.log("Exception Occurred while closing fileInputStream in BulkUploadManagementActor", e);
+      }
+    }
+
+    //List<String[]> userList = parseCsvFile(file);
+    if (null != userList ) {
+      if (userList.size() > 201) {
+        throw  new ProjectCommonException(
+            ResponseCode.dataSizeError.getErrorCode(),
+            ResponseCode.dataSizeError.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+      if(!userList.isEmpty()){
+        String[] columns = userList.get(0);
+        validateOrgProperty(columns);
+      }else{
+        throw  new ProjectCommonException(
+            ResponseCode.dataSizeError.getErrorCode(),
+            ResponseCode.dataSizeError.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }else{
+      throw new ProjectCommonException(
+          ResponseCode.dataSizeError.getErrorCode(),
+          ResponseCode.dataSizeError.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    //save csv file to db
+    uploadCsvToDB(userList,processId,null,JsonKey.ORGANISATION,(String)req.get(JsonKey.REQUESTED_BY));
+  }
+
+  private void validateOrgProperty(String[] property) {
+
+    List<String> propertyList = Arrays.asList(property).stream().map(String::toLowerCase).collect(Collectors.toList());
+    ArrayList<String> properties = new ArrayList<>(
+        Arrays.asList(JsonKey.ORGANISATION_NAME.toLowerCase()));
+
+    for(String key : properties){
+      if(! propertyList.contains(key)){
+        throw new ProjectCommonException(ResponseCode.InvalidColumnError.getErrorCode(),
+            ResponseCode.InvalidColumnError.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
   }
 
   @SuppressWarnings("unchecked")

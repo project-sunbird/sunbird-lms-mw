@@ -138,18 +138,19 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
   }
 
   private void validateOrgProperty(String[] property) {
-
-    List<String> propertyList = Arrays.asList(property).stream().map(String::toLowerCase).collect(Collectors.toList());
     ArrayList<String> properties = new ArrayList<>(
-        Arrays.asList(JsonKey.ORGANISATION_NAME.toLowerCase()));
+        Arrays.asList(JsonKey.ORGANISATION_NAME, JsonKey.CHANNEL,
+            JsonKey.IS_ROOT_ORG,JsonKey.PROVIDER,
+            JsonKey.EXTERNAL_ID,JsonKey.DESCRIPTION));
 
-    for(String key : properties){
-      if(! propertyList.contains(key)){
+    for(String key : property){
+      if(! properties.contains(key)){
         throw new ProjectCommonException(ResponseCode.InvalidColumnError.getErrorCode(),
             ResponseCode.InvalidColumnError.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
     }
+
   }
 
   @SuppressWarnings("unchecked")
@@ -223,12 +224,14 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
     List<Map<String,Object>> userMapList = new ArrayList<>();
     if (dataList.size() > 1) {
       String[] columnArr = dataList.get(0);
+      columnArr=trimColumnAttriutes(columnArr);
       Map<String,Object> userMap = null;
       for(int i = 1 ; i < dataList.size() ; i++){
         userMap = new HashMap<>();
         String[] valueArr = dataList.get(i);
         for(int j = 0 ; j < valueArr.length ; j++){
-            userMap.put(columnArr[j], valueArr[j]);
+            String value = (valueArr[j].trim().length()==0?null:valueArr[j].trim());
+            userMap.put(columnArr[j], value);
          }
         if(!ProjectUtil.isStringNullOREmpty(objectType) && objectType.equalsIgnoreCase(JsonKey.USER)){
           userMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
@@ -264,6 +267,14 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
       request.setOperation(ActorOperations.PROCESS_BULK_UPLOAD.getValue());
       bulkUploadBackGroundJobActorRef.tell(request, self());
     }
+  }
+
+  private String[] trimColumnAttriutes(String[] columnArr) {
+
+    for(int i=0;i<columnArr.length;i++){
+      columnArr[i]=columnArr[i].trim();
+    }
+    return columnArr;
   }
 
   private List<String[]> parseCsvFile(File file) {
@@ -305,14 +316,14 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
 
   private void validateUserProperty(String[] property) {
     ArrayList<String> properties = new ArrayList<>(
-        Arrays.asList(JsonKey.FIRST_NAME.toLowerCase(), JsonKey.LAST_NAME.toLowerCase(), 
-            JsonKey.PHONE.toLowerCase(),JsonKey.EMAIL.toLowerCase(),
-            JsonKey.PASSWORD.toLowerCase(),JsonKey.USERNAME.toLowerCase(),
-            JsonKey.PROVIDER.toLowerCase(),JsonKey.PHONE_VERIFIED.toLowerCase(),
-            JsonKey.EMAIL_VERIFIED.toLowerCase(),JsonKey.ROLES.toLowerCase()));
+        Arrays.asList(JsonKey.FIRST_NAME, JsonKey.LAST_NAME,
+            JsonKey.PHONE,JsonKey.EMAIL,
+            JsonKey.PASSWORD,JsonKey.USERNAME,
+            JsonKey.PROVIDER,JsonKey.PHONE_VERIFIED,
+            JsonKey.EMAIL_VERIFIED,JsonKey.ROLES));
     
     for(String key : property){
-      if(! properties.contains(key.toLowerCase())){
+      if(! properties.contains(key)){
         throw new ProjectCommonException(ResponseCode.InvalidColumnError.getErrorCode(),
             ResponseCode.InvalidColumnError.getErrorMessage(), 
             ResponseCode.CLIENT_ERROR.getResponseCode());

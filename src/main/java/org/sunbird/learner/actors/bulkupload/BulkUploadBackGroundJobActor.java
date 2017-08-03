@@ -14,9 +14,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -24,9 +25,12 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
+import org.sunbird.common.models.util.ProjectUtil.EsIndex;
+import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.actors.BackgroundJobManager;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
@@ -89,18 +93,39 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       processUserInfo(jsonList,processId);
       //processUserInfo(jsonList);
     }else if(((String)dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.ORGANISATION)){
-      processOrgInfo(jsonList , dataMap);
+      CopyOnWriteArrayList<Map<String,Object>> orgList = new CopyOnWriteArrayList<>(jsonList);
+      //processOrgInfoForRootOrg(orgList , dataMap);
+      processOrgInfo(orgList , dataMap);
     }
 
    }
 
-  private void processOrgInfo(List<Map<String, Object>> jsonList, Map<String,Object> dataMap) {
+  private void processOrgInfo(CopyOnWriteArrayList<Map<String, Object>> jsonList, Map<String,Object> dataMap) {
 
+    Map<String , String> channelToRootOrgCache = new HashMap<>();
     List<Map<String , Object>> successList = new ArrayList<>();
     List<Map<String , Object>> failureList = new ArrayList<>();
+    //Iteration for rootorg
     for(Map<String , Object> map : jsonList){
       try {
-        processOrg(map, dataMap, successList, failureList);
+        if(map.containsKey(JsonKey.IS_ROOT_ORG) && isNotNull(map.get(JsonKey.IS_ROOT_ORG))) {
+          Boolean isRootOrg = new Boolean((String)map.get(JsonKey.IS_ROOT_ORG));
+          if(isRootOrg) {
+            processOrg(map, dataMap, successList, failureList, channelToRootOrgCache);
+            jsonList.remove(map);
+          }
+        }
+      }catch(Exception ex){
+        ProjectLogger.log("Exception occurs  " ,ex);
+        map.put(JsonKey.ERROR_MSG , ex.getMessage());
+        failureList.add(map);
+      }
+    }
+
+    //Iteration for non root org
+    for(Map<String , Object> map : jsonList){
+      try {
+        processOrg(map, dataMap, successList, failureList, channelToRootOrgCache);
       }catch(Exception ex){
         ProjectLogger.log("Exception occurs  " ,ex);
         map.put(JsonKey.ERROR_MSG , ex.getMessage());
@@ -118,13 +143,11 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
   private void processOrg(Map<String, Object> map, Map<String, Object> dataMap,
       List<Map<String, Object>> successList,
-      List<Map<String, Object>> failureList) {
+      List<Map<String, Object>> failureList,
+      Map<String, String> channelToRootOrgCache) {
 
-    ConcurrentHashMap<String , Object> concurrentHashMap = new ConcurrentHashMap<>(map);
+    Map<String , Object> concurrentHashMap = map;
     Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-
-    /*Map<String, Object> orgAttributes = new HashMap<>();
-    orgAttributes.put(JsonKey.IS_ROOT_ORG, Boolean.class);*/
 
     if (concurrentHashMap.containsKey(JsonKey.PROVIDER) || concurrentHashMap.containsKey(JsonKey.EXTERNAL_ID)) {
       if (isNull(concurrentHashMap.get(JsonKey.PROVIDER)) || isNull(
@@ -151,24 +174,70 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       }
     }
 
-      if(isNotNull(concurrentHashMap.get(JsonKey.IS_ROOT_ORG))){
-        boolean isRootOrg = new Boolean((String)concurrentHashMap.get(JsonKey.IS_ROOT_ORG));
-        if(isRootOrg && isNull(concurrentHashMap.get(JsonKey.CHANNEL))) {
+    Boolean isRootOrg ;
+    if(isNotNull(concurrentHashMap.get(JsonKey.IS_ROOT_ORG))){
+      isRootOrg = new Boolean((String)concurrentHashMap.get(JsonKey.IS_ROOT_ORG));
+    }else{
+      isRootOrg=false;
+    }
+    concurrentHashMap.put(JsonKey.IS_ROOT_ORG , isRootOrg);
+      if(isRootOrg){
+        if(isNull(concurrentHashMap.get(JsonKey.CHANNEL))) {
           concurrentHashMap.put(JsonKey.ERROR_MSG , "Channel is mandatory for root org ");
           failureList.add(concurrentHashMap);
           return;
         }
 
-      concurrentHashMap.put(JsonKey.IS_ROOT_ORG , new Boolean((String)concurrentHashMap.get(JsonKey.IS_ROOT_ORG)));
-    }
+        //check for unique root org for channel -----
+          Map<String , Object> filters = new HashMap<>();
+          filters.put(JsonKey.CHANNEL , (String)concurrentHashMap.get(JsonKey.CHANNEL));
+          filters.put(JsonKey.IS_ROOT_ORG , true);
+
+          Map<String , Object> esResult = elasticSearchComplexSearch(filters, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
+          if(isNotNull(esResult) && esResult.containsKey(JsonKey.CONTENT) && isNotNull(esResult.get(JsonKey.CONTENT)) && ((List)esResult.get(JsonKey.CONTENT)).size()>0){
+            concurrentHashMap.put(JsonKey.ERROR_MSG , "Root Org already exist for Channel "+concurrentHashMap.get(JsonKey.CHANNEL));
+            failureList.add(concurrentHashMap);
+            return;
+          }
+        concurrentHashMap.put(JsonKey.ROOT_ORG_ID , JsonKey.DEFAULT_ROOT_ORG_ID);
+        channelToRootOrgCache.put((String)concurrentHashMap.get(JsonKey.CHANNEL) , (String)concurrentHashMap.get(JsonKey.ORGANISATION_NAME));
+
+    }else{
+
+        if(concurrentHashMap.containsKey(JsonKey.CHANNEL) && isNotNull(JsonKey.CHANNEL)){
+          String channel = (String)concurrentHashMap.get(JsonKey.CHANNEL);
+          if(channelToRootOrgCache.containsKey(channel)){
+            concurrentHashMap.put(JsonKey.ROOT_ORG_ID , channelToRootOrgCache.get(channel));
+          }else{
+            Map<String , Object> filters = new HashMap<>();
+            filters.put(JsonKey.CHANNEL , (String)concurrentHashMap.get(JsonKey.CHANNEL));
+            filters.put(JsonKey.IS_ROOT_ORG , true);
+
+            Map<String , Object> esResult = elasticSearchComplexSearch(filters, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
+            if(isNotNull(esResult) && esResult.containsKey(JsonKey.CONTENT) && isNotNull(esResult.get(JsonKey.CONTENT)) && ((List)esResult.get(JsonKey.CONTENT)).size()>0){
+
+              Map<String , Object> esContent = ((List<Map<String, Object>>)esResult.get(JsonKey.CONTENT)).get(0);
+              concurrentHashMap.put(JsonKey.ROOT_ORG_ID , esContent.get(JsonKey.ORGANISATION_NAME));
+
+            }else{
+              concurrentHashMap.put(JsonKey.ERROR_MSG , "This is not root org and No Root Org id exist for channel  "+concurrentHashMap.get(JsonKey.CHANNEL));
+              failureList.add(concurrentHashMap);
+              return;
+            }
+          }
+        }else{
+          concurrentHashMap.put(JsonKey.ROOT_ORG_ID , JsonKey.DEFAULT_ROOT_ORG_ID);
+        }
+
+      }
 
     String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(1);
     concurrentHashMap.put(JsonKey.ID, uniqueId);
     concurrentHashMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     concurrentHashMap.put(JsonKey.STATUS, ProjectUtil.OrgStatus.ACTIVE.getValue());
     // allow lower case values for source and externalId to the database
-    if (concurrentHashMap.get(JsonKey.SOURCE) != null) {
-      concurrentHashMap.put(JsonKey.SOURCE, ((String) concurrentHashMap.get(JsonKey.SOURCE)).toLowerCase());
+    if (concurrentHashMap.get(JsonKey.PROVIDER) != null) {
+      concurrentHashMap.put(JsonKey.PROVIDER, ((String) concurrentHashMap.get(JsonKey.PROVIDER)).toLowerCase());
     }
     if (concurrentHashMap.get(JsonKey.EXTERNAL_ID) != null) {
       concurrentHashMap.put(JsonKey.EXTERNAL_ID, ((String) concurrentHashMap.get(JsonKey.EXTERNAL_ID)).toLowerCase());
@@ -193,6 +262,15 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       failureList.add(concurrentHashMap);
       return;
     }
+
+  }
+
+  private Map<String , Object> elasticSearchComplexSearch(Map<String , Object> filters , String index , String type) {
+
+    SearchDTO searchDTO = new SearchDTO();
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS , filters);
+
+    return ElasticSearchUtil.complexSearch(searchDTO , index,type);
 
   }
 

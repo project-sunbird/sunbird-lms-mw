@@ -6,6 +6,8 @@ import akka.actor.UntypedAbstractActor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.CSVReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -13,6 +15,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.io.FileUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -105,7 +108,22 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
       } else{
         orgId = (String) responseList.get(0).get(JsonKey.ID);
       }
-    List<String[]> userList = parseCsvFile((File)req.get(JsonKey.FILE));
+    File file = new File("bulkCsv");
+    FileInputStream fileInputStream = null;
+    try {
+      fileInputStream = new FileInputStream(file);
+      fileInputStream.read( (byte[]) req.get(JsonKey.FILE));
+    } catch (IOException e) {
+      ProjectLogger.log("Exception Occurred while reading file in BulkUploadManagementActor", e);
+    }finally{
+      try {
+        fileInputStream.close();
+      } catch (IOException e) {
+        ProjectLogger.log("Exception Occurred while closing fileInputStream in BulkUploadManagementActor", e);
+      }
+    }
+    
+    List<String[]> userList = parseCsvFile(file);
     if (null != userList ) {
         if (userList.size() > 201) {
           throw  new ProjectCommonException(
@@ -164,9 +182,9 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
     map.put(JsonKey.ID, processId);
     map.put(JsonKey.OBJECT_TYPE, objectType);
     map.put(JsonKey.UPLOADED_BY, requestedBy);
-   // map.put(JsonKey.UPLOADED_DATE, ProjectUtil.);
-   // map.put(JsonKey.PROCESS_START_TIME, ProjectUtil.);
-   // map.put(JsonKey.STATUS, ProjectUtil.);
+    map.put(JsonKey.UPLOADED_DATE, ProjectUtil.getFormattedDate());
+    map.put(JsonKey.PROCESS_START_TIME, ProjectUtil.getFormattedDate());
+    map.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.NEW.getValue());
     Response res = cassandraOperation.insertRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), map);
     res.put(JsonKey.PROCESS_ID, processId);
     sender().tell(res, self());

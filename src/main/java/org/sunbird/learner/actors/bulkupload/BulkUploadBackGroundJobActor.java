@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -214,10 +215,14 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           }
 
           userMap = insertRecordToKeyCloak(userMap);
+          Map<String,Object> tempMap = new HashMap<>();
+          tempMap.putAll(userMap);
+          tempMap.remove(JsonKey.EMAIL_VERIFIED);
+          tempMap.remove(JsonKey.PHONE_VERIFIED);
           Response response = null;
           try {
             response = cassandraOperation
-                .insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
+                .insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
           } finally {
             if (null == response) {
               ssoManager.removeUser(userMap);
@@ -228,6 +233,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           //insert details to user_org table
           insertRecordToUserOrgTable(userMap);
           //insert details to user Ext Identity table
+          userMap.put(JsonKey.PHONE_NUMBER_VERIFIED,userMap.get(JsonKey.PHONE_VERIFIED));
           insertRecordToUserExtTable(userMap);
           //update elastic search
           Response usrResponse = new Response();
@@ -282,7 +288,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       map.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.IN_PROGRESS.getValue());
       cassandraOperation.updateRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), map);
     }catch(Exception ex){
-      ProjectLogger.log("Exception occurred while updating status to bulk_upload_process table in BulkUploadBackGroundJobActor.", ex);
+      ProjectLogger.log("Exception occurred while updating status to bulk_upload_process "
+          + "table in BulkUploadBackGroundJobActor.", ex);
     }
     Response res = cassandraOperation.getRecordById(bulkDb.getKeySpace(), bulkDb.getTableName(), processId);
     return (((List<Map<String,Object>>)res.get(JsonKey.RESPONSE)).get(0));
@@ -319,7 +326,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       map.put(JsonKey.EXTERNAL_ID, JsonKey.PHONE);
       map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.PHONE));
 
-      if (!ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.PHONE_NUMBER_VERIFIED))
+      if (null != (requestMap.get(JsonKey.PHONE_NUMBER_VERIFIED))
           &&
           (boolean) requestMap.get(JsonKey.PHONE_NUMBER_VERIFIED)) {
         map.put(JsonKey.IS_VERIFIED, true);
@@ -334,7 +341,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       map.put(JsonKey.EXTERNAL_ID, JsonKey.EMAIL);
       map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.EMAIL));
 
-      if (!ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.EMAIL_VERIFIED)) &&
+      if (null != (requestMap.get(JsonKey.EMAIL_VERIFIED)) &&
           (boolean) requestMap.get(JsonKey.EMAIL_VERIFIED)) {
         map.put(JsonKey.IS_VERIFIED, true);
       }
@@ -386,7 +393,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     
-    if (userMap.containsKey(JsonKey.PROVIDER) && !ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PROVIDER))) {
+    if (userMap.containsKey(JsonKey.PROVIDER) && 
+        !ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PROVIDER))) {
       userMap.put(JsonKey.LOGIN_ID, 
           (String)userMap.get(JsonKey.USERNAME)+"@"+(String)userMap.get(JsonKey.PROVIDER));
     } else {
@@ -417,7 +425,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
               ResponseCode.SERVER_ERROR.getResponseCode());
         }
       } catch (Exception exception) {
-        ProjectLogger.log(exception.getMessage(), exception);
+        ProjectLogger.log("Exception occured while creating user in keycloak ", exception);
         throw exception;
       }
       
@@ -438,7 +446,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
        */
 
       if (userMap.containsKey(JsonKey.ROLES)) {
-        List<String> roles = (List<String>) userMap.get(JsonKey.ROLES);
+        String[] roleList = (String[]) userMap.get(JsonKey.ROLES);
+        List<String> roles = new ArrayList<>(Arrays.asList(roleList));
         if (!roles.contains(ProjectUtil.UserRole.PUBLIC.getValue())) {
           roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
           userMap.put(JsonKey.ROLES, roles);
@@ -463,14 +472,14 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     if (!(ProjectUtil.isStringNullOREmpty((String)map.get(JsonKey.EMAIL))) && !ProjectUtil.isEmailvalid((String) map.get(JsonKey.EMAIL))) {
       return ResponseCode.emailFormatError.getErrorMessage();
     }
-    if(ProjectUtil.isStringNullOREmpty((String)map.get(JsonKey.PHONE_VERIFIED))){
+    if(!ProjectUtil.isStringNullOREmpty((String)map.get(JsonKey.PHONE_VERIFIED))){
       try{
         map.put(JsonKey.PHONE_VERIFIED, Boolean.parseBoolean((String)map.get(JsonKey.PHONE_VERIFIED)));
       }catch(Exception ex){
         return "property phoneVerified should be instanceOf type Boolean.";
       }
     }
-    if(ProjectUtil.isStringNullOREmpty((String)map.get(JsonKey.EMAIL_VERIFIED))){
+    if(!ProjectUtil.isStringNullOREmpty((String)map.get(JsonKey.EMAIL_VERIFIED))){
       try{
         map.put(JsonKey.EMAIL_VERIFIED, Boolean.parseBoolean((String)map.get(JsonKey.EMAIL_VERIFIED)));
       }catch(Exception ex){

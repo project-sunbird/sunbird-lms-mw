@@ -435,3 +435,16 @@ CREATE INDEX inx_org_status ON sunbird.organisation (status);
 
 // add isdeleted field to user table -- July 31,2017
 ALTER TABLE sunbird.user ADD isDeleted boolean;
+
+//added for course batch
+CREATE TABLE IF NOT EXISTS sunbird.course_batch(id text, courseId text,courseCreator text,createdBy text,createdOn text,enrolmentType text,startDate text,endDate text,name text,description text,status int,lastUpdatedOn text,mentors List<text>,participants List<text>,createdFor List<text>,PRIMARY KEY (id));
+CREATE INDEX inx_cou_bat_status ON sunbird.course_batch (status); 
+CREATE INDEX inx_cou_bat_courseId ON sunbird.course_batch (courseId);     
+CREATE INDEX inx_cou_bat_courseCreator ON sunbird.course_batch (courseCreator); 
+CREATE INDEX inx_cou_bat_createdBy ON sunbird.course_batch (createdBy); 
+CREATE INDEX inx_cou_bat_enrolmentType ON sunbird.course_batch (enrolmentType); 
+ALTER TABLE sunbird.course_batch DROP createdon;
+ALTER TABLE sunbird.course_batch ADD createdDate text;
+ALTER TABLE sunbird.course_batch DROP lastupdatedon;
+ALTER TABLE sunbird.course_batch ADD updatedDate text;
+

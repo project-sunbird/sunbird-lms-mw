@@ -86,7 +86,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
     if(((String)dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.USER)){
       processUserInfo(jsonList,processId);
-      processUserInfo(jsonList);
+      //processUserInfo(jsonList);
     }else if(((String)dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.ORGANISATION)){
       processOrgInfo(jsonList , dataMap);
     }
@@ -505,16 +505,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
 
     return JsonKey.SUCCESS;
-  }
-
-  private String convertMapToJsonString(List<Map<String, Object>> mapList) {
-    ObjectMapper mapper = new ObjectMapper();
-    try {
-      return mapper.writeValueAsString(mapList);
-    } catch (IOException e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-    return null;
   }
 
 }

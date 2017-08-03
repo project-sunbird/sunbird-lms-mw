@@ -6,8 +6,7 @@ import akka.actor.UntypedAbstractActor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.CSVReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -15,7 +14,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.io.FileUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -108,16 +106,16 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
       } else{
         orgId = (String) responseList.get(0).get(JsonKey.ID);
       }
-    File file = new File("bulkCsv");
-    FileInputStream fileInputStream = null;
+    File file = new File("bulk.csv");
+    FileOutputStream fos = null;
     try {
-      fileInputStream = new FileInputStream(file);
-      fileInputStream.read( (byte[]) req.get(JsonKey.FILE));
+       fos = new FileOutputStream(file);
+       fos.write( (byte[]) req.get(JsonKey.FILE));
     } catch (IOException e) {
       ProjectLogger.log("Exception Occurred while reading file in BulkUploadManagementActor", e);
     }finally{
       try {
-        fileInputStream.close();
+        fos.close();
       } catch (IOException e) {
         ProjectLogger.log("Exception Occurred while closing fileInputStream in BulkUploadManagementActor", e);
       }
@@ -152,7 +150,7 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
 
   private void uploadCsvToDB(List<String[]> dataList, String processId, String orgId, String objectType, String requestedBy) {
     List<Map<String,Object>> userMapList = new ArrayList<>();
-    if (dataList.size() > 2) {
+    if (dataList.size() > 1) {
       String[] columnArr = dataList.get(0);
       Map<String,Object> userMap = null;
       for(int i = 1 ; i < dataList.size() ; i++){
@@ -224,6 +222,7 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
       {
           //closing the reader
           csvReader.close();
+          file.delete();
       }
       catch(Exception e)
       {
@@ -238,8 +237,8 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
         Arrays.asList(JsonKey.FIRST_NAME.toLowerCase(), JsonKey.LAST_NAME.toLowerCase(), 
             JsonKey.PHONE.toLowerCase(),JsonKey.EMAIL.toLowerCase(),
             JsonKey.PASSWORD.toLowerCase(),JsonKey.USERNAME.toLowerCase(),
-            JsonKey.PROVIDER.toLowerCase(),JsonKey.PHONE_NUMBER_VERIFIED.toLowerCase(),
-            JsonKey.EMAIL_VERIFIED));
+            JsonKey.PROVIDER.toLowerCase(),JsonKey.PHONE_VERIFIED.toLowerCase(),
+            JsonKey.EMAIL_VERIFIED.toLowerCase(),JsonKey.ROLES.toLowerCase()));
     
     for(String key : property){
       if(! properties.contains(key.toLowerCase())){

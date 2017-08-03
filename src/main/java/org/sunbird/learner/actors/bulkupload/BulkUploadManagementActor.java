@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -29,7 +30,8 @@ import org.sunbird.learner.util.Util.DbInfo;
 
 public class BulkUploadManagementActor extends UntypedAbstractActor {
 
-private CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  private static final String CSV_FILE_EXTENSION = ".csv";
+  private CassandraOperation cassandraOperation = new CassandraOperationImpl();
   Util.DbInfo  bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
 
   private ActorRef bulkUploadBackGroundJobActorRef;
@@ -48,6 +50,8 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
         Request actorMessage = (Request) message;
         if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.BULK_UPLOAD.getValue())) {
           upload(actorMessage);
+        }if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_BULK_OP_STATUS.getValue())) {
+          getUploadStatus(actorMessage);
         }else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
           ProjectCommonException exception = new ProjectCommonException(
@@ -71,14 +75,132 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
     }
   }
 
+  private void getUploadStatus(Request actorMessage) {
+    String processId = (String) actorMessage.getRequest().get(JsonKey.PROCESS_ID);
+    Response response = null;
+    response = cassandraOperation.getRecordById(bulkDb.getKeySpace(), bulkDb.getTableName(), processId);
+    @SuppressWarnings("unchecked")
+    List<Map<String,Object>> resList = ((List<Map<String, Object>>) response.get(JsonKey.RESPONSE));
+    if(!resList.isEmpty()){
+      Map<String,Object> resMap = resList.get(0);
+      if((int)resMap.get(JsonKey.STATUS) == ProjectUtil.BulkProcessStatus.COMPLETED.getValue()){
+        resMap.remove(JsonKey.STATUS);
+        resMap.remove(JsonKey.PROCESS_END_TIME);
+        resMap.remove(JsonKey.PROCESS_START_TIME);
+        resMap.remove(JsonKey.DATA);
+        resMap.remove(JsonKey.UPLOADED_BY);
+        resMap.remove(JsonKey.UPLOADED_DATE);
+        resMap.remove(JsonKey.OBJECT_TYPE);
+        resMap.remove(JsonKey.ORGANISATION_ID);
+        resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
+        resMap.remove(JsonKey.ID);
+        ObjectMapper mapper = new ObjectMapper();
+        Object[]  successMap = null;;
+        Object[]  failureMap = null;
+        try {
+          if(null != resMap.get(JsonKey.SUCCESS_RESULT)){
+            successMap = mapper.readValue((String) resMap.get(JsonKey.SUCCESS_RESULT), Object[].class);
+            resMap.put(JsonKey.SUCCESS_RESULT, successMap);
+          }
+          if(null != resMap.get(JsonKey.FAILURE_RESULT)){
+            failureMap = mapper.readValue((String) resMap.get(JsonKey.FAILURE_RESULT), Object[].class);
+            resMap.put(JsonKey.FAILURE_RESULT, failureMap);
+          }
+        } catch (IOException e) {
+          ProjectLogger.log(e.getMessage(), e);
+        }
+        sender().tell(response, self());
+      }else{
+        response = new Response();
+        response.put(JsonKey.RESPONSE, "Operation is still in progress, Please try after some time.");
+      }
+    }else{
+      throw new ProjectCommonException(
+          ResponseCode.internalError.getErrorCode(),
+          ResponseCode.internalError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
+    
+  }
+
   @SuppressWarnings("unchecked")
-  private void upload(Request actorMessage) {
+  private void upload(Request actorMessage) throws IOException {
     String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.DATA);
     if(((String)req.get(JsonKey.OBJECT_TYPE)).equals(JsonKey.USER)){
       processBulkUserUpload(req,processId);
+    }else if(((String)req.get(JsonKey.OBJECT_TYPE)).equals(JsonKey.ORGANISATION)){
+      processBulkOrgUpload(req,processId);
     }
     
+  }
+
+  private void processBulkOrgUpload(Map<String, Object> req, String processId) throws IOException {
+
+    File file = new File("bulk-"+processId+CSV_FILE_EXTENSION);
+    List<String[]> userList = null;
+    FileOutputStream fos = null;
+    try {
+      fos = new FileOutputStream(file);
+      fos.write( (byte[]) req.get(JsonKey.FILE));
+      userList = parseCsvFile(file);
+    } catch (IOException e) {
+      ProjectLogger.log("Exception Occurred while reading file in BulkUploadManagementActor", e);
+      throw e;
+    }finally{
+      try {
+        if(ProjectUtil.isNotNull(fos)) {
+          fos.close();
+        }
+        if(ProjectUtil.isNotNull(file)){
+          file.delete();
+        }
+      } catch (IOException e) {
+        ProjectLogger.log("Exception Occurred while closing fileInputStream in BulkUploadManagementActor", e);
+      }
+    }
+
+    //List<String[]> userList = parseCsvFile(file);
+    if (null != userList ) {
+      if (userList.size() > 201) {
+        throw  new ProjectCommonException(
+            ResponseCode.dataSizeError.getErrorCode(),
+            ResponseCode.dataSizeError.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+      if(!userList.isEmpty()){
+        String[] columns = userList.get(0);
+        validateOrgProperty(columns);
+      }else{
+        throw  new ProjectCommonException(
+            ResponseCode.dataSizeError.getErrorCode(),
+            ResponseCode.dataSizeError.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }else{
+      throw new ProjectCommonException(
+          ResponseCode.dataSizeError.getErrorCode(),
+          ResponseCode.dataSizeError.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    //save csv file to db
+    uploadCsvToDB(userList,processId,null,JsonKey.ORGANISATION,(String)req.get(JsonKey.REQUESTED_BY));
+  }
+
+  private void validateOrgProperty(String[] property) {
+    ArrayList<String> properties = new ArrayList<>(
+        Arrays.asList(JsonKey.ORGANISATION_NAME, JsonKey.CHANNEL,
+            JsonKey.IS_ROOT_ORG,JsonKey.PROVIDER,
+            JsonKey.EXTERNAL_ID,JsonKey.DESCRIPTION));
+
+    for(String key : property){
+      if(! properties.contains(key)){
+        throw new ProjectCommonException(ResponseCode.InvalidColumnError.getErrorCode(),
+            ResponseCode.InvalidColumnError.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
+
   }
 
   @SuppressWarnings("unchecked")
@@ -134,14 +256,14 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
           validateUserProperty(columns);
         }else{
           throw  new ProjectCommonException(
-              ResponseCode.dataSizeError.getErrorCode(),
-              ResponseCode.dataSizeError.getErrorMessage(),
+              ResponseCode.csvError.getErrorCode(),
+              ResponseCode.csvError.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
     }else{
       throw new ProjectCommonException(
-          ResponseCode.dataSizeError.getErrorCode(),
-          ResponseCode.dataSizeError.getErrorMessage(),
+          ResponseCode.csvError.getErrorCode(),
+          ResponseCode.csvError.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     //save csv file to db
@@ -152,12 +274,14 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
     List<Map<String,Object>> userMapList = new ArrayList<>();
     if (dataList.size() > 1) {
       String[] columnArr = dataList.get(0);
+      columnArr=trimColumnAttriutes(columnArr);
       Map<String,Object> userMap = null;
       for(int i = 1 ; i < dataList.size() ; i++){
         userMap = new HashMap<>();
         String[] valueArr = dataList.get(i);
         for(int j = 0 ; j < valueArr.length ; j++){
-            userMap.put(columnArr[j], valueArr[j]);
+            String value = (valueArr[j].trim().length()==0?null:valueArr[j].trim());
+            userMap.put(columnArr[j], value);
          }
         if(!ProjectUtil.isStringNullOREmpty(objectType) && objectType.equalsIgnoreCase(JsonKey.USER)){
           userMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
@@ -193,6 +317,14 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
       request.setOperation(ActorOperations.PROCESS_BULK_UPLOAD.getValue());
       bulkUploadBackGroundJobActorRef.tell(request, self());
     }
+  }
+
+  private String[] trimColumnAttriutes(String[] columnArr) {
+
+    for(int i=0;i<columnArr.length;i++){
+      columnArr[i]=columnArr[i].trim();
+    }
+    return columnArr;
   }
 
   private List<String[]> parseCsvFile(File file) {
@@ -234,14 +366,14 @@ private CassandraOperation cassandraOperation = new CassandraOperationImpl();
 
   private void validateUserProperty(String[] property) {
     ArrayList<String> properties = new ArrayList<>(
-        Arrays.asList(JsonKey.FIRST_NAME.toLowerCase(), JsonKey.LAST_NAME.toLowerCase(), 
-            JsonKey.PHONE.toLowerCase(),JsonKey.EMAIL.toLowerCase(),
-            JsonKey.PASSWORD.toLowerCase(),JsonKey.USERNAME.toLowerCase(),
-            JsonKey.PROVIDER.toLowerCase(),JsonKey.PHONE_VERIFIED.toLowerCase(),
-            JsonKey.EMAIL_VERIFIED.toLowerCase(),JsonKey.ROLES.toLowerCase()));
+        Arrays.asList(JsonKey.FIRST_NAME, JsonKey.LAST_NAME,
+            JsonKey.PHONE,JsonKey.EMAIL,
+            JsonKey.PASSWORD,JsonKey.USERNAME,
+            JsonKey.PROVIDER,JsonKey.PHONE_VERIFIED,
+            JsonKey.EMAIL_VERIFIED,JsonKey.ROLES));
     
     for(String key : property){
-      if(! properties.contains(key.toLowerCase())){
+      if(! properties.contains(key)){
         throw new ProjectCommonException(ResponseCode.InvalidColumnError.getErrorCode(),
             ResponseCode.InvalidColumnError.getErrorMessage(), 
             ResponseCode.CLIENT_ERROR.getResponseCode());

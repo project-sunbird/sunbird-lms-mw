@@ -169,6 +169,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.ADD_USER_TO_BATCH.getValue(), courseBatchActor);
         routerMap.put(ActorOperations.REMOVE_USER_FROM_BATCH.getValue(), courseBatchActor);
         routerMap.put(ActorOperations.GET_BATCH.getValue(), courseBatchActor);
+        routerMap.put(ActorOperations.GET_BULK_OP_STATUS.getValue(), bulkUploadManagementActor);
     }
 
 

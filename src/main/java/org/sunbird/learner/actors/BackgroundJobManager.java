@@ -76,6 +76,14 @@ public class BackgroundJobManager extends UntypedAbstractActor {
           .equalsIgnoreCase(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue())) {
         insertOrgInfoToEs(actorMessage);
 
+      }else if (requestedOperation
+          .equalsIgnoreCase(ActorOperations.INSERT_COURSE_BATCH_ES.getValue())) {
+        insertCourseBatchInfoToEs(actorMessage);
+
+      }else if (requestedOperation
+          .equalsIgnoreCase(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue())) {
+        updateCourseBatchInfoToEs(actorMessage);
+
       } else {
         ProjectLogger.log("UNSUPPORTED OPERATION");
         ProjectCommonException exception = new ProjectCommonException(
@@ -87,6 +95,20 @@ public class BackgroundJobManager extends UntypedAbstractActor {
     } else {
       ProjectLogger.log("UNSUPPORTED MESSAGE FOR BACKGROUND JOB MANAGER");
     }
+  }
+
+  private void updateCourseBatchInfoToEs(Response actorMessage) {
+    Map<String,Object> batch = (Map<String, Object>) actorMessage.get(JsonKey.BATCH);
+    insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.course.getTypeName(),
+        (String)batch.get(JsonKey.ID), batch);
+  }
+
+  private void insertCourseBatchInfoToEs(Response actorMessage) {
+    Map<String,Object> batch = (Map<String, Object>) actorMessage.get(JsonKey.BATCH);
+    updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.course.getTypeName(),
+        (String) batch.get(JsonKey.ID), batch);
   }
 
   @SuppressWarnings("unchecked")

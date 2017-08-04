@@ -3,8 +3,10 @@ package org.sunbird.learner.actors;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
-
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -54,6 +56,10 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
         String requestedOperation = actorMessage.getOperation();
         if (requestedOperation.equalsIgnoreCase(ActorOperations.CREATE_BATCH.getValue())) {
           createCourseBatch(actorMessage);
+        }if (requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_BATCH.getValue())) {
+          updateCourseBatch(actorMessage);
+        } if (requestedOperation.equalsIgnoreCase(ActorOperations.GET_BATCH.getValue())) {
+          getCourseBatch(actorMessage);
         }  else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
           ProjectCommonException exception = new ProjectCommonException(
@@ -77,53 +83,21 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     }
   }
 
-  /**
-   * This method will allow user to update the course details.Only Draft course details can be
-   * updated. once course is live then updated is not allowed.
-   *
-   * @param actorMessage Request
-   */
-  @SuppressWarnings("unchecked")
-  private void updateCourse(Request actorMessage) {
+  private void getCourseBatch(Request actorMessage) {
 
-    Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.COURSE);
-    String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
-
-    String updatedByName = null;
-    if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
-      updatedByName = getUserNamebyUserId(updatedBy);
+    Map<String, Object> map = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
+    Map<String, Object> result = ElasticSearchUtil
+        .getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.course.getTypeName(), (String) map.get(JsonKey.BATCH_ID));
+    Response response = new Response();
+    if (null != result) {
+      response.put(JsonKey.RESPONSE, result);
+    } else {
+      result = new HashMap<>();
+      response.put(JsonKey.RESPONSE, result);
     }
-
-    Response result = cassandraOperation.getRecordById(dbInfo.getKeySpace(), dbInfo.getTableName(),
-        (String) req.get(JsonKey.COURSE_ID));
-    List<Map<String, Object>> courseList = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-    if (!(courseList.isEmpty())) {
-      Map<String, Object> courseObject = courseList.get(0);
-      if (((String) courseObject.get(JsonKey.STATUS))
-          .equalsIgnoreCase(ProjectUtil.CourseMgmtStatus.LIVE.getValue())) {
-        ProjectCommonException projectCommonException = new ProjectCommonException(
-            ResponseCode.publishedCourseCanNotBeUpdated.getErrorCode(),
-            ResponseCode.publishedCourseCanNotBeUpdated.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-        sender().tell(projectCommonException, self());
-      } else {
-
-        Map<String, Object> queryMap = new LinkedHashMap<String, Object>();
-        for (Map.Entry<String, Object> entry : req.entrySet()) {
-          queryMap.put(entry.getKey(), entry.getValue());
-        }
-        queryMap.put(JsonKey.ID, (String) req.get(JsonKey.COURSE_ID));
-        queryMap.put(JsonKey.UPDATED_BY, updatedBy);
-        queryMap.put(JsonKey.UPDATED_BY_NAME, updatedByName);
-        queryMap.remove(JsonKey.COURSE_ID);
-
-        result = cassandraOperation
-            .updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), queryMap);
-        sender().tell(result, self());
-
-      }
-    }
-
+    sender().tell(response, self());
+  
   }
 
   /**
@@ -134,16 +108,6 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
   private void createCourseBatch(Request actorMessage) {
     Map<String, Object> req =
         (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
-    // Do the check for course id null or empty.
-    if (req.get(JsonKey.COURSE_ID) == null || ProjectUtil
-        .isStringNullOREmpty((String) req.get(JsonKey.COURSE_ID))) {
-      ProjectCommonException exception = new ProjectCommonException(
-          ResponseCode.invalidCourseId.getErrorCode(),
-          ResponseCode.invalidCourseId.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
     Map<String, String> headers =
         (Map<String, String>) actorMessage.getRequest().get(JsonKey.HEADER);
     String courseId = (String) req.get(JsonKey.COURSE_ID);
@@ -151,32 +115,46 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
         CourseEnrollmentActor.getCourseObjectFromEkStep(courseId, headers);
     if (null == ekStepContent || ekStepContent.size() == 0) {
       ProjectLogger.log("Course Id not found in EkStep");
-      ProjectCommonException exception = new ProjectCommonException(
+      throw new ProjectCommonException(
           ResponseCode.invalidCourseId.getErrorCode(),
           ResponseCode.invalidCourseId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
     }
-    String enrolmentReq = (String) req.get(JsonKey.ENROLMENTTYPE);
+    String enrolmentType = (String) req.get(JsonKey.ENROLMENTTYPE);
     List<String> createdFor = new ArrayList<>();
     if (req.containsKey(JsonKey.COURSE_CREATED_FOR)
         && req.get(JsonKey.COURSE_CREATED_FOR) instanceof List) {
-      createdFor = (List) req.get(JsonKey.COURSE_CREATED_FOR);
+      createdFor = (List<String>) req.get(JsonKey.COURSE_CREATED_FOR);
     }
     if (ProjectUtil.EnrolmentType.inviteOnly.getVal()
-        .equalsIgnoreCase(enrolmentReq)) {
+        .equalsIgnoreCase(enrolmentType)) {
       if (createdFor != null) {
         for (String orgId : createdFor) {
           if (!isOrgValid(orgId)) {
-            ProjectCommonException exception = new ProjectCommonException(
+            throw new ProjectCommonException(
                 ResponseCode.invalidOrgId.getErrorCode(),
                 ResponseCode.invalidOrgId.getErrorMessage(),
                 ResponseCode.CLIENT_ERROR.getResponseCode());
-            sender().tell(exception, self());
-            return;
           }
         }
+      }
+    }
+    if(req.containsKey(JsonKey.MENTORS)
+        && req.get(JsonKey.MENTORS) instanceof List){
+      List<String> mentors = (List<String>) req.get(JsonKey.MENTORS);
+      for(String userId : mentors){
+        Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(), userId);
+        //check whether is_deletd true or false
+        if((ProjectUtil.isNull(result))||(ProjectUtil.isNotNull(result) && result.containsKey(JsonKey.IS_DELETED) && 
+            ProjectUtil.isNotNull(result.get(JsonKey.IS_DELETED))&& 
+            (Boolean)result.get(JsonKey.IS_DELETED))){
+          throw new ProjectCommonException(
+              ResponseCode.invalidUserId.getErrorCode(),
+              ResponseCode.invalidUserId.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
+
       }
     }
     String courseCreator = (String) ekStepContent.get(JsonKey.CREATED_BY);
@@ -192,35 +170,145 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     Response result = cassandraOperation.insertRecord(dbInfo.getKeySpace(),
         dbInfo.getTableName(), req);
-    List<Map<String, Object>> responseList = new ArrayList<>();
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.BATCH_ID, uniqueId);
-    responseList.add(map);
-    result.put(Constants.RESPONSE, responseList);
+    result.put(JsonKey.BATCH_ID, uniqueId);
     sender().tell(result, self());
+    
+    if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      ProjectLogger.log("method call going to satrt for ES--.....");
+      Response response = new Response();
+      response.getResult()
+          .put(JsonKey.OPERATION, ActorOperations.INSERT_COURSE_BATCH_ES.getValue());
+      response.getResult().put(JsonKey.BATCH, req);
+      ProjectLogger.log("making a call to save Course Batch data to ES");
+      try {
+        backGroundActorRef.tell(response,self());
+      } catch (Exception ex) {
+        ProjectLogger.log("Exception Occured during saving Course Batch to Es while creating Course Batch : ", ex);
+      }
+    } else {
+      ProjectLogger.log("no call for ES to save Course Batch");
+    }
   }
-
+  
   /**
-   * This method will provide user name based on user id if user not found
-   * then it will return null.
+   * This method will allow user to update the course batch details.
    *
-   * @param userId String
-   * @return String
+   * @param actorMessage Request
    */
   @SuppressWarnings("unchecked")
-  private String getUserNamebyUserId(String userId) {
-
-    Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Response result = cassandraOperation
-        .getRecordById(userdbInfo.getKeySpace(), userdbInfo.getTableName(), userId);
-
-    List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-    if (!(list.isEmpty())) {
-      return (String) (list.get(0).get(JsonKey.USERNAME));
+  private void updateCourseBatch(Request actorMessage) {
+    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd"); 
+    Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
+    Response response = cassandraOperation.getRecordById(dbInfo.getKeySpace(),
+        dbInfo.getTableName(), (String)req.get(JsonKey.ID));
+    List<Map<String,Object>> resList = ((List<Map<String, Object>>) response.get(JsonKey.RESPONSE));
+    if(null != resList && ! resList.isEmpty()){
+      Map<String, Object> res = resList.get(0);
+      if(req.containsKey(JsonKey.START_DATE)){
+        Date dbBatchStartDate = null;
+        Date reqStartdate = null;
+        try {
+          dbBatchStartDate = format.parse((String)res.get(JsonKey.START_DATE));
+          reqStartdate = format.parse((String)req.get(JsonKey.START_DATE));
+        } catch (ParseException e) {
+          ProjectLogger.log("Exception occured while parsing date in CourseBatchManagementActor ", e);
+        }
+        if (dbBatchStartDate.before(reqStartdate)) {
+          throw new ProjectCommonException(
+              ResponseCode.courseBatchStartDateError.getErrorCode(),
+              ResponseCode.courseBatchStartDateError.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
+      }
+      
+      String enrolmentType = "";
+      if(req.containsKey(JsonKey.ENROLMENTTYPE)){
+        enrolmentType = (String) req.get(JsonKey.ENROLMENTTYPE);
+      }else{
+        enrolmentType = (String) res.get(JsonKey.ENROLMENTTYPE);
+      }
+      List<String> createdFor = new ArrayList<>();
+      if (req.containsKey(JsonKey.COURSE_CREATED_FOR)
+          && req.get(JsonKey.COURSE_CREATED_FOR) instanceof List) {
+        createdFor = (List<String>) req.get(JsonKey.COURSE_CREATED_FOR);
+      }
+      
+      if(null != createdFor){
+        List<String> dbValueCreatedFor = (List<String>) res.get(JsonKey.COURSE_CREATED_FOR);
+        if (ProjectUtil.EnrolmentType.inviteOnly.getVal()
+            .equalsIgnoreCase(enrolmentType)) {
+          if (createdFor != null) {
+            for (String orgId : createdFor) {
+              if(!dbValueCreatedFor.contains(orgId)){
+                if (!isOrgValid(orgId)) {
+                  throw new ProjectCommonException(
+                      ResponseCode.invalidOrgId.getErrorCode(),
+                      ResponseCode.invalidOrgId.getErrorMessage(),
+                      ResponseCode.CLIENT_ERROR.getResponseCode());
+                }
+              }
+            }
+          }
+        }else{
+          //enrollmentType is open
+          if(null != createdFor)
+          for(String orgId : createdFor){
+            if(!dbValueCreatedFor.contains(orgId)){
+              dbValueCreatedFor.add(orgId);
+            }
+          }
+        }
+        req.put(JsonKey.COURSE_CREATED_FOR, dbValueCreatedFor);
+      }
+      
+      if(req.containsKey(JsonKey.MENTORS)
+          && req.get(JsonKey.MENTORS) instanceof List){
+        List<String> mentors = (List<String>) req.get(JsonKey.MENTORS);
+        List<String> dnMentorsValue = (List<String>) res.get(JsonKey.MENTORS);
+        if(null != mentors){
+          for(String userId : mentors){
+            if(!dnMentorsValue.contains(userId)){
+            Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+                ProjectUtil.EsType.user.getTypeName(), userId);
+            //check whether is_deletd true or false
+            if((ProjectUtil.isNull(result))||(ProjectUtil.isNotNull(result) && result.containsKey(JsonKey.IS_DELETED) && 
+                ProjectUtil.isNotNull(result.get(JsonKey.IS_DELETED))&& 
+                (Boolean)result.get(JsonKey.IS_DELETED))){
+              throw new ProjectCommonException(
+                  ResponseCode.invalidUserId.getErrorCode(),
+                  ResponseCode.invalidUserId.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
+              }
+            dnMentorsValue.add(userId);
+            }
+          }
+        }
+        req.put(JsonKey.MENTORS, dnMentorsValue);
+      }
+     
+      Response result = cassandraOperation.updateRecord(dbInfo.getKeySpace(),
+          dbInfo.getTableName(), req);
+      sender().tell(result, self());
+      
+      if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+        ProjectLogger.log("method call going to satrt for ES--.....");
+        Response batchRes = new Response();
+        batchRes.getResult()
+            .put(JsonKey.OPERATION, ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
+        batchRes.getResult().put(JsonKey.BATCH, req);
+        ProjectLogger.log("making a call to save Course Batch data to ES");
+        try {
+          backGroundActorRef.tell(batchRes,self());
+        } catch (Exception ex) {
+          ProjectLogger.log("Exception Occured during saving Course Batch to Es while updating Course Batch : ", ex);
+        }
+      } else {
+        ProjectLogger.log("no call for ES to save Course Batch");
+      }
     }
-    return null;
+   
   }
- 
+
   /**
    * THis method will do the organization validation.
    * @param orgId String

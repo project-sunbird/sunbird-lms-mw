@@ -34,6 +34,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
 
   private CassandraOperation cassandraOperation = new CassandraOperationImpl();
   private Util.DbInfo dbInfo = null;
+  private Util.DbInfo userOrgdbInfo = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
 
   private ActorRef backGroundActorRef;
 
@@ -60,6 +61,10 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
           updateCourseBatch(actorMessage);
         } if (requestedOperation.equalsIgnoreCase(ActorOperations.GET_BATCH.getValue())) {
           getCourseBatch(actorMessage);
+        }else if (requestedOperation.equalsIgnoreCase(ActorOperations.ADD_USER_TO_BATCH.getValue())) {
+          addUserCourseBatch(actorMessage);
+        }else if (requestedOperation.equalsIgnoreCase(ActorOperations.GET_COURSE_BATCH_DETAIL.getValue())) {
+          getCourseBatchDetail(actorMessage);
         }  else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
           ProjectCommonException exception = new ProjectCommonException(
@@ -99,6 +104,98 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     sender().tell(response, self());
   
   }
+  
+  private void getCourseBatchDetail(Request actorMessage) {
+
+    Map<String, Object> req =
+        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
+    String batchId = (String)req.get(JsonKey.BATCH_ID);
+    Response result = cassandraOperation.getRecordById(dbInfo.getKeySpace(), dbInfo.getTableName(),
+        batchId);
+    List<Map<String, Object>> courseList = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+    if ((courseList.isEmpty())) {
+      throw new ProjectCommonException(
+          ResponseCode.invalidCourseBatchId.getErrorCode(),
+          ResponseCode.invalidCourseBatchId.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    sender().tell(result , self());
+  }
+
+  private void addUserCourseBatch(Request actorMessage) {
+
+    Map<String, Object> req =
+        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
+    String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
+    Response response = new Response();
+
+    String batchId = (String)req.get(JsonKey.BATCH_ID);
+    //check bbatch exist in db or not
+    Response result = cassandraOperation.getRecordById(dbInfo.getKeySpace(), dbInfo.getTableName(),
+        batchId);
+    List<Map<String, Object>> courseList = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+    if ((courseList.isEmpty())) {
+      throw new ProjectCommonException(
+          ResponseCode.invalidCourseBatchId.getErrorCode(),
+          ResponseCode.invalidCourseBatchId.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    Map<String, Object> courseObject = courseList.get(0);
+    // check whether coursebbatch type is invite only or not ...
+    if(ProjectUtil.isNull(courseObject.get(JsonKey.ENROLLMENT_TYPE)) || !((String)courseObject.get(JsonKey.ENROLLMENT_TYPE)).equalsIgnoreCase(JsonKey.INVITE_ONLY)){
+     //TODO : provide proper error
+      throw new ProjectCommonException(
+          ResponseCode.publishedCourseCanNotBeUpdated.getErrorCode(),
+          ResponseCode.publishedCourseCanNotBeUpdated.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    if(ProjectUtil.isNull(courseObject.get(JsonKey.COURSE_CREATED_FOR)) || ((List)courseObject.get(JsonKey.COURSE_CREATED_FOR)).isEmpty()){
+      //TODO : provide proper error
+      throw new ProjectCommonException(
+          ResponseCode.publishedCourseCanNotBeUpdated.getErrorCode(),
+          ResponseCode.publishedCourseCanNotBeUpdated.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+
+    List<String> createdFor = (List<String>)courseObject.get(JsonKey.COURSE_CREATED_FOR);
+    List<String> participants = (List<String>)courseObject.get(JsonKey.PARTICIPANTS);
+    // check whether can update user or not
+    List<String> userIds = (List<String>)req.get(JsonKey.USER_IDs);
+
+    for(String userId : userIds){
+      Response dbResponse = cassandraOperation.getRecordsByProperty(userOrgdbInfo.getKeySpace() , userOrgdbInfo.getTableName() , JsonKey.USER_ID , userId);
+      List<Map<String , Object>> userOrgResult = (List<Map<String , Object>>)dbResponse.get(JsonKey.RESPONSE);
+
+      if(userOrgResult.isEmpty()){
+        //TODO: provide the proper error like user id does not exist
+        throw new ProjectCommonException(
+            ResponseCode.publishedCourseCanNotBeUpdated.getErrorCode(),
+            ResponseCode.publishedCourseCanNotBeUpdated.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+
+      boolean flag = false;
+      for(int i=0;i<userOrgResult.size()&&!flag;i++){
+        Map<String ,  Object> usrOrgDetail = userOrgResult.get(i);
+        if(createdFor.contains((String)usrOrgDetail.get(JsonKey.ORGANISATION_ID))){
+          if(!(participants.contains(userId))) {
+            participants.add(userId);
+          }
+          flag = true;
+        }
+      }
+      if(flag){
+        response.getResult().put(userId , JsonKey.SUCCESS);
+      }else{
+        response.getResult().put(userId , JsonKey.FAILED);
+      }
+
+    }
+    courseObject.put(JsonKey.PARTICIPANTS , participants);
+    cassandraOperation.updateRecord(dbInfo.getKeySpace() , dbInfo.getTableName() , courseObject);
+    sender().tell(response , self());
+  }
+
 
   /**
    * This method will create course under cassandra db.

@@ -3,6 +3,8 @@ package org.sunbird.learner.actors;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -14,11 +16,14 @@ import org.sunbird.common.Constants;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -30,7 +35,7 @@ public class CourseManagementActor extends UntypedAbstractActor {
 
   private CassandraOperation cassandraOperation = new CassandraOperationImpl();
   private Util.DbInfo dbInfo = null;
-
+  private String coursePublishedBody = "{\"request\":{\"content\":{\"lastPublishedBy\": \"userId\"}}}";
   private ActorRef backGroundActorRef;
 
   public CourseManagementActor() {
@@ -47,7 +52,7 @@ public class CourseManagementActor extends UntypedAbstractActor {
     if (message instanceof Request) {
       try {
         ProjectLogger.log("CourseManagementActor-onReceive called");
-        dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_MANAGEMENT_DB);
+        dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
         Request actorMessage = (Request) message;
         String requestedOperation = actorMessage.getOperation();
         if (requestedOperation.equalsIgnoreCase(ActorOperations.CREATE_COURSE.getValue())) {
@@ -114,52 +119,35 @@ public class CourseManagementActor extends UntypedAbstractActor {
    */
   @SuppressWarnings("unchecked")
   private void publishCourse(Request actorMessage) {
-    Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.COURSE);
+    Map<String, Object> req =
+        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.COURSE);
     req.put(JsonKey.ID, (String) req.get(JsonKey.COURSE_ID));
-    String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
-    String updatedByName = null;
-    if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
-      updatedByName = getUserNamebyUserId(updatedBy);
+    String updatedBy =
+        (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
+    Map<String, String> headers =
+        (Map<String, String>) actorMessage.getRequest().get(JsonKey.HEADER);
+    String resposne = null;
+    try {
+      resposne = HttpUtil.sendPostRequest(
+          PropertiesCache.getInstance()
+              .getProperty("ekstep.course.publish.base.url")
+              + PropertiesCache.getInstance()
+                  .getProperty("ekstep.course.publish.url")
+              + "/" + (String) req.get(JsonKey.COURSE_ID),
+          coursePublishedBody.replace("userId", updatedBy), headers);
+    } catch (IOException e) {
+       ProjectLogger.log(e.getMessage(), e);
+       sender().tell(e, self());
+       return;
     }
-
-    Response result = cassandraOperation
-        .getRecordById(dbInfo.getKeySpace(), dbInfo.getTableName(), (String) req.get(JsonKey.ID));
-    List<Map<String, Object>> courseList = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-    if (!(courseList.isEmpty())) {
-      Map<String, Object> courseObject = courseList.get(0);
-      if (((String) courseObject.get(JsonKey.STATUS))
-          .equalsIgnoreCase(ProjectUtil.CourseMgmtStatus.LIVE.getValue())) {
-        ProjectCommonException projectCommonException = new ProjectCommonException(
-            ResponseCode.invalidRequestData.getErrorCode(),
-            ResponseCode.invalidRequestData.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-        sender().tell(projectCommonException, self());
-      } else {
-        Map<String, Object> queryMap = new LinkedHashMap<String, Object>();
-        queryMap.put(JsonKey.ID, (String) req.get(JsonKey.COURSE_ID));
-        queryMap.put(JsonKey.STATUS, ProjectUtil.CourseMgmtStatus.LIVE.getValue());
-        queryMap.put(JsonKey.UPDATED_BY, updatedBy);
-        queryMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-        queryMap.put(JsonKey.UPDATED_BY_NAME, updatedByName);
-        Response cloneResponse = result.clone(result);
-        result = cassandraOperation
-            .updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), queryMap);
-
-        sender().tell(result, self());
-       
-        if (cloneResponse != null) {
-          if (cloneResponse.getResult() != null && cloneResponse.getResult().size() > 0) {
-            cloneResponse.getResult()
-                .put(JsonKey.OPERATION, ActorOperations.PUBLISH_COURSE.getValue());
-            try{
-              backGroundActorRef.tell(cloneResponse,self());
-          }catch(Exception ex){
-            ProjectLogger.log("Exception Occured during saving course details to Es while publishing course : ", ex);
-          }
-          }
-        }
-      }
-    }
+    ProjectLogger.log("Resposne for Course published==" + resposne);
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.ID, (String) req.get(JsonKey.COURSE_ID));
+    map.put(JsonKey.STATUS, 0);
+    map.put(JsonKey.SUBMIT_DATE, ProjectUtil.getFormattedDate());
+    Response result = cassandraOperation.insertRecord(dbInfo.getKeySpace(),
+        dbInfo.getTableName(), map);
+    sender().tell(result, self());
   }
 
   /**

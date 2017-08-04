@@ -146,7 +146,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       }
 
       Map<String, Object> dbMap = new HashMap<String, Object>();
-      dbMap.put(JsonKey.PROVIDER, concurrentHashMap.get(JsonKey.PROVIDER));
+      dbMap.put(JsonKey.SOURCE, concurrentHashMap.get(JsonKey.PROVIDER));
       dbMap.put(JsonKey.EXTERNAL_ID, concurrentHashMap.get(JsonKey.EXTERNAL_ID));
       Response result = cassandraOperation.getRecordsByProperties(orgDbInfo.getKeySpace(),
           orgDbInfo.getTableName(), dbMap);
@@ -205,6 +205,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
               Map<String , Object> esContent = ((List<Map<String, Object>>)esResult.get(JsonKey.CONTENT)).get(0);
               concurrentHashMap.put(JsonKey.ROOT_ORG_ID , esContent.get(JsonKey.ORGANISATION_NAME));
+              channelToRootOrgCache.put((String)concurrentHashMap.get(JsonKey.CHANNEL) , (String)esContent.get(JsonKey.ORGANISATION_NAME));
 
             }else{
               concurrentHashMap.put(JsonKey.ERROR_MSG , "This is not root org and No Root Org id exist for channel  "+concurrentHashMap.get(JsonKey.CHANNEL));
@@ -231,7 +232,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
     concurrentHashMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     concurrentHashMap.put(JsonKey.CREATED_BY, dataMap.get(JsonKey.UPLOADED_BY));
-
     try {
       Response result =
           cassandraOperation
@@ -303,7 +303,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           //insert details to user_org table
           insertRecordToUserOrgTable(userMap);
           //insert details to user Ext Identity table
-          userMap.put(JsonKey.PHONE_NUMBER_VERIFIED,userMap.get(JsonKey.PHONE_VERIFIED));
           insertRecordToUserExtTable(userMap);
           //update elastic search
           Response usrResponse = new Response();
@@ -397,9 +396,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       map.put(JsonKey.EXTERNAL_ID, JsonKey.PHONE);
       map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.PHONE));
 
-      if (null != (requestMap.get(JsonKey.PHONE_NUMBER_VERIFIED))
+      if (null != (requestMap.get(JsonKey.PHONE_VERIFIED))
           &&
-          (boolean) requestMap.get(JsonKey.PHONE_NUMBER_VERIFIED)) {
+          (boolean) requestMap.get(JsonKey.PHONE_VERIFIED)) {
         map.put(JsonKey.IS_VERIFIED, true);
       }
       reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.PHONE));

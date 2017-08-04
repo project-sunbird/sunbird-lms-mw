@@ -122,8 +122,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       }
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
       // combination of source and external id should be unique ...
-      if (req.containsKey(JsonKey.SOURCE) || req.containsKey(JsonKey.EXTERNAL_ID)) {
-        if (isNull(req.get(JsonKey.SOURCE)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
+      if (req.containsKey(JsonKey.PROVIDER) || req.containsKey(JsonKey.EXTERNAL_ID)) {
+        if (isNull(req.get(JsonKey.PROVIDER)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
           ProjectLogger.log("Source and external ids are unique.");
           ProjectCommonException exception =
               new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
@@ -148,13 +148,13 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         }
 
         Map<String, Object> dbMap = new HashMap<String, Object>();
-        dbMap.put(JsonKey.SOURCE, req.get(JsonKey.SOURCE));
+        dbMap.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
         dbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
         Response result = cassandraOperation.getRecordsByProperties(orgDbInfo.getKeySpace(),
             orgDbInfo.getTableName(), dbMap);
         List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
         if (!(list.isEmpty())) {
-          ProjectLogger.log("Org exist with Source " + req.get(JsonKey.SOURCE) + " , External Id "
+          ProjectLogger.log("Org exist with Source " + req.get(JsonKey.PROVIDER) + " , External Id "
               + req.get(JsonKey.EXTERNAL_ID));
           ProjectCommonException exception = new ProjectCommonException(
               ResponseCode.sourceAndExternalIdAlreadyExist.getErrorCode(),
@@ -186,8 +186,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       // removing default from request, not allowing user to create default org.
       req.remove(JsonKey.IS_DEFAULT);
       // allow lower case values for source and externalId to the database
-      if (req.get(JsonKey.SOURCE) != null) {
-        req.put(JsonKey.SOURCE, ((String) req.get(JsonKey.SOURCE)).toLowerCase());
+      if (req.get(JsonKey.PROVIDER) != null) {
+        req.put(JsonKey.PROVIDER, ((String) req.get(JsonKey.PROVIDER)).toLowerCase());
       }
       if (req.get(JsonKey.EXTERNAL_ID) != null) {
         req.put(JsonKey.EXTERNAL_ID, ((String) req.get(JsonKey.EXTERNAL_ID)).toLowerCase());
@@ -387,8 +387,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       }
       // validate if Source and external id is in request , it should not already exist in DataBase
       // .....
-      if (req.containsKey(JsonKey.SOURCE) || req.containsKey(JsonKey.EXTERNAL_ID)) {
-        if (isNull(req.get(JsonKey.SOURCE)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
+      if (req.containsKey(JsonKey.PROVIDER) || req.containsKey(JsonKey.EXTERNAL_ID)) {
+        if (isNull(req.get(JsonKey.PROVIDER)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
           ProjectCommonException exception =
               new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
                   ResponseCode.invalidRequestData.getErrorMessage(),
@@ -398,7 +398,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         }
 
         Map<String, Object> dbMap = new HashMap<String, Object>();
-        dbMap.put(JsonKey.SOURCE, req.get(JsonKey.SOURCE));
+        dbMap.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
         dbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
         Response result = cassandraOperation.getRecordsByProperties(orgDbInfo.getKeySpace(),
             orgDbInfo.getTableName(), dbMap);
@@ -407,7 +407,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           String organisationId = (String) list.get(0).get(JsonKey.ID);
 
           if (!(req.get(JsonKey.ORGANISATION_ID).equals(organisationId))) {
-            ProjectLogger.log("Org exist with Source " + req.get(JsonKey.SOURCE) + " , External Id "
+            ProjectLogger.log("Org exist with Source " + req.get(JsonKey.PROVIDER) + " , External Id "
                 + req.get(JsonKey.EXTERNAL_ID));
             ProjectCommonException exception = new ProjectCommonException(
                 ResponseCode.sourceAndExternalIdAlreadyExist.getErrorCode(),
@@ -442,8 +442,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       req.remove(JsonKey.IS_DEFAULT);
       req.remove(JsonKey.RELATION);
       // allow lower case values for source and externalId to the database
-      if (req.get(JsonKey.SOURCE) != null) {
-        req.put(JsonKey.SOURCE, ((String) req.get(JsonKey.SOURCE)).toLowerCase());
+      if (req.get(JsonKey.PROVIDER) != null) {
+        req.put(JsonKey.PROVIDER, ((String) req.get(JsonKey.PROVIDER)).toLowerCase());
       }
       if (req.get(JsonKey.EXTERNAL_ID) != null) {
         req.put(JsonKey.EXTERNAL_ID, ((String) req.get(JsonKey.EXTERNAL_ID)).toLowerCase());
@@ -1383,7 +1383,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
     if (isNull(req.get(JsonKey.ORGANISATION_ID))) {
 
-      if (isNull(req.get(JsonKey.SOURCE)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
+      if (isNull(req.get(JsonKey.PROVIDER)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
         ProjectCommonException exception =
             new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
                 ResponseCode.invalidRequestData.getErrorMessage(),
@@ -1396,7 +1396,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
       Map<String, Object> requestDbMap = new HashMap<String, Object>();
-      requestDbMap.put(JsonKey.SOURCE, req.get(JsonKey.SOURCE));
+      requestDbMap.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
       requestDbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
 
       Response result = cassandraOperation.getRecordsByProperties(userdbInfo.getKeySpace(),
@@ -1435,7 +1435,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       return false;
     }
     if (isNull(req.get(JsonKey.ORGANISATION_ID))) {
-      if (isNull(req.get(JsonKey.SOURCE)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
+      if (isNull(req.get(JsonKey.PROVIDER)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
         ProjectCommonException exception = new ProjectCommonException(
             ResponseCode.sourceAndExternalIdValidationError.getErrorCode(),
             ResponseCode.sourceAndExternalIdValidationError.getErrorMessage(),
@@ -1450,9 +1450,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Map<String, Object> requestDbMap = new HashMap<String, Object>();
     if (!ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ORGANISATION_ID))) {
       requestDbMap.put(JsonKey.ID, req.get(JsonKey.ORGANISATION_ID));
-    } else if (!ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.SOURCE))
+    } else if (!ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.PROVIDER))
         && !ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.EXTERNAL_ID))) {
-      requestDbMap.put(JsonKey.SOURCE, req.get(JsonKey.SOURCE));
+      requestDbMap.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
       requestDbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
     } else {
       ProjectCommonException exception =
@@ -1475,9 +1475,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
     req.put(JsonKey.ORGANISATION_ID, list.get(0).get(JsonKey.ID));
     if(req.containsKey(JsonKey.PROVIDER) || req.containsKey(JsonKey.SOURCE)) {
-      req.put(JsonKey.SOURCE, req.get(JsonKey.PROVIDER)); 
+      req.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER)); 
     }else{
-      req.put(JsonKey.SOURCE, list.get(0).get(JsonKey.SOURCE));
+      req.put(JsonKey.PROVIDER, list.get(0).get(JsonKey.PROVIDER));
     }
     return true;
   }
@@ -1501,7 +1501,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Map<String, Object> data = new TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
     data.putAll(req);
     if (isNull(req.get(JsonKey.USER_ID))) {
-      if (isNull(data.get(JsonKey.USERNAME)) || isNull(data.get(JsonKey.SOURCE))) {
+      if (isNull(data.get(JsonKey.USERNAME)) || isNull(data.get(JsonKey.PROVIDER))) {
         ProjectCommonException exception =
             new ProjectCommonException(ResponseCode.usrValidationError.getErrorCode(),
                 ResponseCode.usrValidationError.getErrorMessage(),
@@ -1516,9 +1516,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Map<String, Object> requestDbMap = new HashMap<String, Object>();
     if (!ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.USER_ID))) {
       requestDbMap.put(JsonKey.ID, req.get(JsonKey.USER_ID));
-    } else if (!ProjectUtil.isStringNullOREmpty((String) data.get(JsonKey.SOURCE))
+    } else if (!ProjectUtil.isStringNullOREmpty((String) data.get(JsonKey.PROVIDER))
         && !ProjectUtil.isStringNullOREmpty((String) data.get(JsonKey.USERNAME))) {
-      requestDbMap.put(JsonKey.PROVIDER, data.get(JsonKey.SOURCE));
+      requestDbMap.put(JsonKey.PROVIDER, data.get(JsonKey.PROVIDER));
       requestDbMap.put(JsonKey.USERNAME, data.get(JsonKey.USERNAME));
     } else {
       ProjectCommonException exception =

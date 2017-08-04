@@ -1039,9 +1039,9 @@ public class UserManagementActor extends UntypedAbstractActor {
       map.put(JsonKey.EXTERNAL_ID, JsonKey.PHONE);
       map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.PHONE));
 
-      if (!ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.PHONE_NUMBER_VERIFIED))
+      if (!ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.PHONE_VERIFIED))
           &&
-          (boolean) requestMap.get(JsonKey.PHONE_NUMBER_VERIFIED)) {
+          (boolean) requestMap.get(JsonKey.PHONE_VERIFIED)) {
         map.put(JsonKey.IS_VERIFIED, true);
       }
       reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.PHONE));

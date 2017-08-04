@@ -14,7 +14,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -138,12 +137,12 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
   private void processBulkOrgUpload(Map<String, Object> req, String processId) throws IOException {
 
     File file = new File("bulk-"+processId+CSV_FILE_EXTENSION);
-    List<String[]> userList = null;
+    List<String[]> orgList = null;
     FileOutputStream fos = null;
     try {
       fos = new FileOutputStream(file);
       fos.write( (byte[]) req.get(JsonKey.FILE));
-      userList = parseCsvFile(file);
+      orgList = parseCsvFile(file);
     } catch (IOException e) {
       ProjectLogger.log("Exception Occurred while reading file in BulkUploadManagementActor", e);
       throw e;
@@ -159,17 +158,15 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
         ProjectLogger.log("Exception Occurred while closing fileInputStream in BulkUploadManagementActor", e);
       }
     }
-
-    //List<String[]> userList = parseCsvFile(file);
-    if (null != userList ) {
-      if (userList.size() > 201) {
+    if (null != orgList ) {
+      if (orgList.size() > 201) {
         throw  new ProjectCommonException(
             ResponseCode.dataSizeError.getErrorCode(),
             ResponseCode.dataSizeError.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
-      if(!userList.isEmpty()){
-        String[] columns = userList.get(0);
+      if(!orgList.isEmpty()){
+        String[] columns = orgList.get(0);
         validateOrgProperty(columns);
       }else{
         throw  new ProjectCommonException(
@@ -184,7 +181,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     //save csv file to db
-    uploadCsvToDB(userList,processId,null,JsonKey.ORGANISATION,(String)req.get(JsonKey.REQUESTED_BY));
+    uploadCsvToDB(orgList,processId,null,JsonKey.ORGANISATION,(String)req.get(JsonKey.REQUESTED_BY));
   }
 
   private void validateOrgProperty(String[] property) {

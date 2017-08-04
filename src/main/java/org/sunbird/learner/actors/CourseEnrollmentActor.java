@@ -125,7 +125,7 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
   }
 
   @SuppressWarnings("unchecked")
-  private Map<String, Object> getCourseObjectFromEkStep(String courseId,
+  public static Map<String, Object> getCourseObjectFromEkStep(String courseId,
       Map<String, String> headers) {
     if (!ProjectUtil.isStringNullOREmpty(courseId)) {
       try {

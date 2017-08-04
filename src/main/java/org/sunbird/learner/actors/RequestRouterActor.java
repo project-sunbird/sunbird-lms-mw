@@ -47,6 +47,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private ActorRef searchHandlerActor; 
     private ActorRef bulkUploadManagementActor;
     private ActorRef bulkUploadBackGroundJobActor;
+    private ActorRef courseBatchActor;
     private ExecutionContext ec;
     Map<String, ActorRef> routerMap = new HashMap<>();
     private static final int WAIT_TIME_VALUE = 9;
@@ -64,6 +65,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private static final String SEARCH_HANDLER_ACTOR_ROUTER = "searchHandlerActor";
     private static final String BULK_UPLOAD_MGMT_ACTOR = "bulkUploadManagementActor";
     private static final String BULK_UPLOAD_BACKGROUND_ACTOR = "bulkUploadBackGroundJobActor";
+    private static final String COURSE_BATCH_MANAGEMENT_ACTOR = "courseBatchActor";
     /**
      * constructor to initialize router actor with child actor pool
      */
@@ -98,6 +100,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
             BULK_UPLOAD_MGMT_ACTOR);
         bulkUploadBackGroundJobActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(BulkUploadBackGroundJobActor.class)),
             BULK_UPLOAD_BACKGROUND_ACTOR);
+        courseBatchActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(BulkUploadBackGroundJobActor.class)),
+            COURSE_BATCH_MANAGEMENT_ACTOR);
         ec = getContext().dispatcher();
         initializeRouterMap();
     }
@@ -160,6 +164,11 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.UNBLOCK_USER.getValue(), userManagementRouter);
         routerMap.put(ActorOperations.BULK_UPLOAD.getValue(), bulkUploadManagementActor);
         routerMap.put(ActorOperations.PROCESS_BULK_UPLOAD.getValue(), bulkUploadBackGroundJobActor);
+        routerMap.put(ActorOperations.CREATE_BATCH.getValue(), courseBatchActor);
+        routerMap.put(ActorOperations.UPDATE_BATCH.getValue(), courseBatchActor);
+        routerMap.put(ActorOperations.ADD_USER_TO_BATCH.getValue(), courseBatchActor);
+        routerMap.put(ActorOperations.REMOVE_USER_FROM_BATCH.getValue(), courseBatchActor);
+        routerMap.put(ActorOperations.GET_BATCH.getValue(), courseBatchActor);
         routerMap.put(ActorOperations.GET_BULK_OP_STATUS.getValue(), bulkUploadManagementActor);
     }
 

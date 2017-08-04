@@ -33,6 +33,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = new CassandraOperationImpl();
   private Util.DbInfo dbInfo = null;
   private Util.DbInfo userOrgdbInfo = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
+  private Util.DbInfo coursePublishdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
 
   private ActorRef backGroundActorRef;
 
@@ -159,6 +160,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
             participants.add(userId);
           }
           flag = true;
+          addUserCourses();
         }
       }
       if(flag){
@@ -171,6 +173,12 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     courseObject.put(JsonKey.PARTICIPANTS , participants);
     cassandraOperation.updateRecord(dbInfo.getKeySpace() , dbInfo.getTableName() , courseObject);
     sender().tell(response , self());
+  }
+
+  private void addUserCourses() {
+
+
+
   }
 
   /**

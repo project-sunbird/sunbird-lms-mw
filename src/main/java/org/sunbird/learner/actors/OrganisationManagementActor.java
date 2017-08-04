@@ -187,7 +187,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       req.remove(JsonKey.IS_DEFAULT);
       // allow lower case values for source and externalId to the database
       if (req.get(JsonKey.PROVIDER) != null) {
-        req.put(JsonKey.PROVIDER, ((String) req.get(JsonKey.SOURCE)).toLowerCase());
+        req.put(JsonKey.PROVIDER, ((String) req.get(JsonKey.PROVIDER)).toLowerCase());
       }
       if (req.get(JsonKey.EXTERNAL_ID) != null) {
         req.put(JsonKey.EXTERNAL_ID, ((String) req.get(JsonKey.EXTERNAL_ID)).toLowerCase());

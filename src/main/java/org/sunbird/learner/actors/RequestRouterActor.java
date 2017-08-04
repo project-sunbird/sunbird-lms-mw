@@ -100,7 +100,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
             BULK_UPLOAD_MGMT_ACTOR);
         bulkUploadBackGroundJobActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(BulkUploadBackGroundJobActor.class)),
             BULK_UPLOAD_BACKGROUND_ACTOR);
-        courseBatchActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(BulkUploadBackGroundJobActor.class)),
+        courseBatchActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(CourseBatchManagementActor.class)),
             COURSE_BATCH_MANAGEMENT_ACTOR);
         ec = getContext().dispatcher();
         initializeRouterMap();
@@ -168,7 +168,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.UPDATE_BATCH.getValue(), courseBatchActor);
         routerMap.put(ActorOperations.ADD_USER_TO_BATCH.getValue(), courseBatchActor);
         routerMap.put(ActorOperations.REMOVE_USER_FROM_BATCH.getValue(), courseBatchActor);
-        routerMap.put(ActorOperations.GET_BATCH.getValue(), courseBatchActor);
+        routerMap.put(ActorOperations.GET_COURSE_BATCH_DETAIL.getValue(), courseBatchActor);
         routerMap.put(ActorOperations.GET_BULK_OP_STATUS.getValue(), bulkUploadManagementActor);
     }
 

@@ -225,15 +225,13 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     concurrentHashMap.put(JsonKey.STATUS, ProjectUtil.OrgStatus.ACTIVE.getValue());
     // allow lower case values for source and externalId to the database
     if (concurrentHashMap.get(JsonKey.PROVIDER) != null) {
-      concurrentHashMap.put(JsonKey.SOURCE, ((String) concurrentHashMap.get(JsonKey.PROVIDER)).toLowerCase());
+      concurrentHashMap.put(JsonKey.PROVIDER, ((String) concurrentHashMap.get(JsonKey.PROVIDER)).toLowerCase());
     }
     if (concurrentHashMap.get(JsonKey.EXTERNAL_ID) != null) {
       concurrentHashMap.put(JsonKey.EXTERNAL_ID, ((String) concurrentHashMap.get(JsonKey.EXTERNAL_ID)).toLowerCase());
     }
     concurrentHashMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     concurrentHashMap.put(JsonKey.CREATED_BY, dataMap.get(JsonKey.UPLOADED_BY));
-
-    concurrentHashMap.remove(JsonKey.PROVIDER);
     try {
       Response result =
           cassandraOperation
@@ -243,8 +241,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
       ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
       backGroundActorRef.tell(orgResponse, self());
-      concurrentHashMap.put(JsonKey.PROVIDER , concurrentHashMap.get(JsonKey.SOURCE));
-      concurrentHashMap.remove(JsonKey.SOURCE);
       successList.add(concurrentHashMap);
     }catch(Exception ex){
 
@@ -307,7 +303,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           //insert details to user_org table
           insertRecordToUserOrgTable(userMap);
           //insert details to user Ext Identity table
-          userMap.put(JsonKey.PHONE_NUMBER_VERIFIED,userMap.get(JsonKey.PHONE_VERIFIED));
           insertRecordToUserExtTable(userMap);
           //update elastic search
           Response usrResponse = new Response();
@@ -401,9 +396,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       map.put(JsonKey.EXTERNAL_ID, JsonKey.PHONE);
       map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.PHONE));
 
-      if (null != (requestMap.get(JsonKey.PHONE_NUMBER_VERIFIED))
+      if (null != (requestMap.get(JsonKey.PHONE_VERIFIED))
           &&
-          (boolean) requestMap.get(JsonKey.PHONE_NUMBER_VERIFIED)) {
+          (boolean) requestMap.get(JsonKey.PHONE_VERIFIED)) {
         map.put(JsonKey.IS_VERIFIED, true);
       }
       reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.PHONE));

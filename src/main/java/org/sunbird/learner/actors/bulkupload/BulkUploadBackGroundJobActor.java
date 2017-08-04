@@ -146,7 +146,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       }
 
       Map<String, Object> dbMap = new HashMap<String, Object>();
-      dbMap.put(JsonKey.PROVIDER, concurrentHashMap.get(JsonKey.PROVIDER));
+      dbMap.put(JsonKey.SOURCE, concurrentHashMap.get(JsonKey.PROVIDER));
       dbMap.put(JsonKey.EXTERNAL_ID, concurrentHashMap.get(JsonKey.EXTERNAL_ID));
       Response result = cassandraOperation.getRecordsByProperties(orgDbInfo.getKeySpace(),
           orgDbInfo.getTableName(), dbMap);
@@ -205,6 +205,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
               Map<String , Object> esContent = ((List<Map<String, Object>>)esResult.get(JsonKey.CONTENT)).get(0);
               concurrentHashMap.put(JsonKey.ROOT_ORG_ID , esContent.get(JsonKey.ORGANISATION_NAME));
+              channelToRootOrgCache.put((String)concurrentHashMap.get(JsonKey.CHANNEL) , (String)esContent.get(JsonKey.ORGANISATION_NAME));
 
             }else{
               concurrentHashMap.put(JsonKey.ERROR_MSG , "This is not root org and No Root Org id exist for channel  "+concurrentHashMap.get(JsonKey.CHANNEL));
@@ -224,7 +225,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     concurrentHashMap.put(JsonKey.STATUS, ProjectUtil.OrgStatus.ACTIVE.getValue());
     // allow lower case values for source and externalId to the database
     if (concurrentHashMap.get(JsonKey.PROVIDER) != null) {
-      concurrentHashMap.put(JsonKey.PROVIDER, ((String) concurrentHashMap.get(JsonKey.PROVIDER)).toLowerCase());
+      concurrentHashMap.put(JsonKey.SOURCE, ((String) concurrentHashMap.get(JsonKey.PROVIDER)).toLowerCase());
     }
     if (concurrentHashMap.get(JsonKey.EXTERNAL_ID) != null) {
       concurrentHashMap.put(JsonKey.EXTERNAL_ID, ((String) concurrentHashMap.get(JsonKey.EXTERNAL_ID)).toLowerCase());
@@ -232,6 +233,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     concurrentHashMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     concurrentHashMap.put(JsonKey.CREATED_BY, dataMap.get(JsonKey.UPLOADED_BY));
 
+    concurrentHashMap.remove(JsonKey.PROVIDER);
     try {
       Response result =
           cassandraOperation
@@ -241,6 +243,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
       ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
       backGroundActorRef.tell(orgResponse, self());
+      concurrentHashMap.put(JsonKey.PROVIDER , concurrentHashMap.get(JsonKey.SOURCE));
+      concurrentHashMap.remove(JsonKey.SOURCE);
       successList.add(concurrentHashMap);
     }catch(Exception ex){
 

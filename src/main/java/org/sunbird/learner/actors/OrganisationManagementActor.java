@@ -1383,7 +1383,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
     if (isNull(req.get(JsonKey.ORGANISATION_ID))) {
 
-      if (isNull(req.get(JsonKey.SOURCE)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
+      if (isNull(req.get(JsonKey.PROVIDER)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
         ProjectCommonException exception =
             new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
                 ResponseCode.invalidRequestData.getErrorMessage(),
@@ -1396,7 +1396,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
       Map<String, Object> requestDbMap = new HashMap<String, Object>();
-      requestDbMap.put(JsonKey.SOURCE, req.get(JsonKey.SOURCE));
+      requestDbMap.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
       requestDbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
 
       Response result = cassandraOperation.getRecordsByProperties(userdbInfo.getKeySpace(),
@@ -1450,7 +1450,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Map<String, Object> requestDbMap = new HashMap<String, Object>();
     if (!ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ORGANISATION_ID))) {
       requestDbMap.put(JsonKey.ID, req.get(JsonKey.ORGANISATION_ID));
-    } else if (!ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.SOURCE))
+    } else if (!ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.PROVIDER))
         && !ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.EXTERNAL_ID))) {
       requestDbMap.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
       requestDbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
@@ -1477,7 +1477,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     if(req.containsKey(JsonKey.PROVIDER) || req.containsKey(JsonKey.SOURCE)) {
       req.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER)); 
     }else{
-      req.put(JsonKey.PROVIDER, list.get(0).get(JsonKey.SOURCE));
+      req.put(JsonKey.PROVIDER, list.get(0).get(JsonKey.PROVIDER));
     }
     return true;
   }
@@ -1501,7 +1501,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Map<String, Object> data = new TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
     data.putAll(req);
     if (isNull(req.get(JsonKey.USER_ID))) {
-      if (isNull(data.get(JsonKey.USERNAME)) || isNull(data.get(JsonKey.SOURCE))) {
+      if (isNull(data.get(JsonKey.USERNAME)) || isNull(data.get(JsonKey.PROVIDER))) {
         ProjectCommonException exception =
             new ProjectCommonException(ResponseCode.usrValidationError.getErrorCode(),
                 ResponseCode.usrValidationError.getErrorMessage(),
@@ -1516,9 +1516,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Map<String, Object> requestDbMap = new HashMap<String, Object>();
     if (!ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.USER_ID))) {
       requestDbMap.put(JsonKey.ID, req.get(JsonKey.USER_ID));
-    } else if (!ProjectUtil.isStringNullOREmpty((String) data.get(JsonKey.SOURCE))
+    } else if (!ProjectUtil.isStringNullOREmpty((String) data.get(JsonKey.PROVIDER))
         && !ProjectUtil.isStringNullOREmpty((String) data.get(JsonKey.USERNAME))) {
-      requestDbMap.put(JsonKey.PROVIDER, data.get(JsonKey.SOURCE));
+      requestDbMap.put(JsonKey.PROVIDER, data.get(JsonKey.PROVIDER));
       requestDbMap.put(JsonKey.USERNAME, data.get(JsonKey.USERNAME));
     } else {
       ProjectCommonException exception =

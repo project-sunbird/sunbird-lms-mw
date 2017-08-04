@@ -448,3 +448,7 @@ ALTER TABLE sunbird.course_batch ADD createdDate text;
 ALTER TABLE sunbird.course_batch DROP lastupdatedon;
 ALTER TABLE sunbird.course_batch ADD updatedDate text;
 
+ALTER TABLE sunbird.organisation add provider text;
+COPY  sunbird.organisation (id,source) TO '/tmp/cql/source.csv';
+COPY  sunbird.organisation (id,provider) FROM '/tmp/cql/source.csv';
+ALTER TABLE sunbird.organisation DROP source;

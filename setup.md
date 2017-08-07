@@ -1,7 +1,7 @@
 ## Pre-requisites
 1. Cassandra
     1. Install Cassandra database and start the server
-    2. Run [cassandra.cql](https://github.com/ekstep/sunbird-mw/blob/alpha2/actors/learner-actor/src/main/resources/cassandra.cql) file to create the required keyspaces, tables and indices
+    2. Run [cassandra.cql](https://github.com/project-sunbird/sunbird-lms-mw/blob/master/actors/src/main/resources/cassandra.cql) file to create the required keyspaces, tables and indices
     3. Copy pageMgmt.csv and pageSection.csv to a temp folder on cassandra machine. e.g.: /tmp/cql/pageMgmt.csv and /tmp/cql/pageSection.csv.
     4. Execute the command: cqlsh -e "COPY sunbird.page_management(id, appmap,createdby ,createddate ,name ,organisationid ,portalmap ,updatedby ,updateddate ) FROM '/tmp/cql/pageMgmt.csv'"
     5. Execute the command: cqlsh -e "COPY sunbird.page_section(id, alt,createdby ,createddate ,description ,display ,imgurl ,name,searchquery , sectiondatatype ,status , updatedby ,updateddate) FROM '/tmp/cql/pageSection.csv'"
@@ -42,13 +42,11 @@
     4. nr-of-instances: number of instances of actor to run in this host
 
 ## Build
-1. Run "mvn clean install" from "sunbird-mw/actors" to build the actors.
-2. The build file is a executable jar file "learner-actor-1.0-SNAPSHOT.jar" generated in "sunbird-mw/actors/learner-actor/target" folder
+1. Clone the repository "sunbird-lms-mw"
+1. Run "git submodule foreach git pull origin master" to pull the latest sunbird-common submodule.
+2. Run "mvn clean install" to build the actors.
+3. The build file is a executable jar file "learner-actor-1.0-SNAPSHOT.jar" generated in "sunbird-lms-mw/actors/target" folder
 
 ## Run
-1. Actors can be started with default configuration by running **java -cp "learner-actor-1.0-SNAPSHOT.jar" org.sunbird.learner.Application**
-2. To run the actors with custom configuration:
-    1. Create **application.conf** file with the custom configuration. Sample [application.conf](https://github.com/ekstep/sunbird-mw/blob/alpha2/actors/learner-actor/src/main/resources/application.conf)
-    2. Run the command **java -cp "path_to_folder_containing_custom_application.conf:learner-actor-1.0-SNAPSHOT.jar" org.sunbird.learner.Application**. This will override the default configuration (like hostname, port, etc).
-	
+1. Actors can be started by running **java -cp "learner-actor-1.0-SNAPSHOT.jar" org.sunbird.learner.Application**	
 	

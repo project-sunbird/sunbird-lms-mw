@@ -99,14 +99,14 @@ public class BackgroundJobManager extends UntypedAbstractActor {
 
   private void updateCourseBatchInfoToEs(Response actorMessage) {
     Map<String,Object> batch = (Map<String, Object>) actorMessage.get(JsonKey.BATCH);
-    insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+    updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.course.getTypeName(),
         (String)batch.get(JsonKey.ID), batch);
   }
 
   private void insertCourseBatchInfoToEs(Response actorMessage) {
     Map<String,Object> batch = (Map<String, Object>) actorMessage.get(JsonKey.BATCH);
-    updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+    insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.course.getTypeName(),
         (String) batch.get(JsonKey.ID), batch);
   }

@@ -1,6 +1,7 @@
 package org.sunbird.metrics.actors;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -10,6 +11,7 @@ import java.util.Map;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -86,17 +88,21 @@ public class OrganisationMetricsActor extends UntypedAbstractActor {
       String query = getQuery(periodStr,orgId);
       String esResponse = getESData(query); 
       String responseFormat = metricsESResponseGenerator(esResponse);
-      Map<String,Object> orgData = new HashMap<>();
-      Map<String,Object> viewData = new HashMap<>();
-      orgData.put(JsonKey.ORG_ID,orgId);
-      viewData.put("org", orgData);
-      Response response = metricsResponseGenerator(responseFormat, periodStr, viewData);
+      Response response = metricsResponseGenerator(responseFormat, periodStr, getViewData(orgId));
       sender().tell(response, self());
     } catch (ProjectCommonException e) {
       ProjectLogger.log("Some error occurs" + e.getMessage());
       sender().tell(e, self());
       return;
     }
+  }
+  
+  private Map<String, Object> getViewData(String orgId){
+    Map<String,Object> orgData = new HashMap<>();
+    Map<String,Object> viewData = new HashMap<>();
+    orgData.put(JsonKey.ORG_ID,orgId);
+    viewData.put("org", orgData);
+    return viewData;
   }
   private String getQuery(String periodStr, String orgId){
     String query = "{\"query\":{\"filtered\":{\"query\":{\"bool\":{\"must\":[{\"query\":{\"range\":{\"lastUpdatedOn\":{\"gt\":\"2017-07-24T00:00:00.000+0530\",\"lte\":\"2017-08-01T00:00:00.000+0530\"}}}},{\"match\":{\"createdFor.raw\":\"Sunbird\"}}]}}}},\"size\":0,\"aggs\":{\"created_on\":{\"date_histogram\":{\"field\":\"lastUpdatedOn\",\"interval\":\"1d\",\"format\":\"yyyy-MM-dd\"}},\"status\":{\"terms\":{\"field\":\"status.raw\",\"include\":[\"draft\",\"live\",\"review\"]},\"aggs\":{\"updated_on\":{\"date_histogram\":{\"field\":\"lastUpdatedOn\",\"interval\":\"1d\",\"format\":\"yyyy-MM-dd\"}}}},\"authors.count\":{\"cardinality\":{\"field\":\"createdBy.raw\",\"precision_threshold\":100}},\"content_count\":{\"terms\":{\"field\":\"objectType.raw\",\"include\":\"content\"}}}}";
@@ -236,7 +242,7 @@ public class OrganisationMetricsActor extends UntypedAbstractActor {
     List<Map<String, Double>> aggKeyList = (List<Map<String, Double>>) aggKeyMap.get("buckets");
     List<Map<String, Object>> parentGroupList = new ArrayList<Map<String, Object>>();
     for (Map aggKeyListMap : aggKeyList) {
-        Map<String, Object> parentCountObject = new HashMap<String, Object>();
+        Map<String, Object> parentCountObject = new LinkedHashMap<String, Object>();
         parentCountObject.put("key", aggKeyListMap.get("key"));
         parentCountObject.put("key_name", aggKeyListMap.get("key_as_string"));
         parentCountObject.put("value", aggKeyListMap.get("doc_count"));
@@ -262,12 +268,105 @@ public class OrganisationMetricsActor extends UntypedAbstractActor {
       ProjectLogger.log(e.getMessage());
       //throw new ProjectCommonException("", "", ResponseCode.SERVER_ERROR.getResponseCode());
     }
-    response.put("result", responseData);
+    response.putAll(responseData);
     return response;
   }
   
+  @SuppressWarnings("unchecked")
   private void orgConsumptionMetrics(Request actorMessage) {
-
+    Request request = new Request();
+    String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
+    String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
+    request.setId(actorMessage.getId());
+    request.setContext(actorMessage.getContext());
+    Map<String, Object> requestMap = new HashMap<>();
+    Map<String, Object> filter = new HashMap<>();
+    requestMap.put(JsonKey.PERIOD, periodStr);
+    filter.put(JsonKey.TAG, orgId);
+    //requestMap.put(JsonKey.CHANNEL, getChannel());
+    request.setRequest(requestMap);
+    String requestStr;
+    Map<String,Object> resultData = new HashMap<>();
+    try {
+      requestStr = mapper.writeValueAsString(request);
+      String resp = getDataFromEkstep(requestStr);
+      Map<String,Object> ekstepResponse = mapper.readValue(resp, Map.class);
+      resultData = (Map<String,Object>) ekstepResponse.get(JsonKey.RESULT);
+    } catch (JsonProcessingException e) {
+     ProjectLogger.log(e.getMessage(),e);
+    } catch (IOException e) {
+      ProjectLogger.log(e.getMessage(),e);
+    }
+    Map<String, Object> responseMap = new LinkedHashMap<>();
+    Map<String,Object> snapshot = new LinkedHashMap<>();
+    Map<String,Object> dataMap = new HashMap<>();
+    dataMap.put(JsonKey.NAME, "Number of visits by users" );
+    dataMap.put(JsonKey.VALUE,"345");
+    snapshot.put("org.consumption.content.session.count", dataMap);
+    dataMap = new LinkedHashMap<>();
+    dataMap.put(JsonKey.NAME, "Content consumption time" );
+    dataMap.put(JsonKey.VALUE,"23400");
+    dataMap.put(JsonKey.TIME_UNIT, "seconds");
+    snapshot.put("org.consumption.content.time_spent.sum", dataMap);
+    dataMap = new LinkedHashMap<>();
+    dataMap.put(JsonKey.NAME, "Average time spent by user per visit" );
+    dataMap.put(JsonKey.VALUE,"512");
+    dataMap.put(JsonKey.TIME_UNIT, "seconds");
+    snapshot.put("org.consumption.content.time_spent.average", dataMap);
+    dataMap = new LinkedHashMap<>();
+    List<Map<String,Object>> valueMap = new ArrayList<>();
+    List<Map<String, Object>> bucket = new ArrayList<>();
+    valueMap = (List<Map<String,Object>>) resultData.get("metrics");
+    try {
+      for(int count=0;count<7;count++){
+        Map<String, Object> parentCountObject = new LinkedHashMap<String, Object>();
+        String value = "2017-07-2"+(count);
+        parentCountObject.put("key", new SimpleDateFormat("yyyy-MM-dd").parse(value).getTime());
+        parentCountObject.put("key_name", value);
+        parentCountObject.put("value", count*8);
+        bucket.add(parentCountObject);
+      }
+    }catch(Exception e){
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    Map<String, Object> series = new HashMap<>();
+    
+    Map<String,Object> seriesData = new LinkedHashMap<>();
+    seriesData.put(JsonKey.NAME, "Time spent by day");
+    seriesData.put(JsonKey.SPLIT, "content.session.start_time");
+    dataMap.put(JsonKey.TIME_UNIT, "seconds");
+    seriesData.put("buckets", bucket);
+    series.put("org.consumption.content.time_spent.sum", seriesData);
+    responseMap.putAll(getViewData(orgId));
+    responseMap.put(JsonKey.PERIOD, periodStr);
+    responseMap.put(JsonKey.SNAPSHOT, snapshot);
+    responseMap.put(JsonKey.SERIES, series);
+    Response response = new Response();
+    response.putAll(responseMap);
+    sender().tell(response, self()); 
+  }
+  
+  private String getDataFromEkstep(String request){
+    Map<String,String> headers = new HashMap<>();
+    String response = null;
+    try {
+      String baseSearchUrl = System.getenv(JsonKey.EKSTEP_CONTENT_SEARCH_BASE_URL);
+      if(ProjectUtil.isStringNullOREmpty(baseSearchUrl)){
+        baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_BASE_URL);
+      }
+      //TODO:Remove this once mockup api's are replaced
+      baseSearchUrl = "https://dev.ekstep.in/api";
+      headers.put(JsonKey.AUTHORIZATION, System.getenv(JsonKey.AUTHORIZATION));
+      if(ProjectUtil.isStringNullOREmpty((String)headers.get(JsonKey.AUTHORIZATION))){
+        headers.put(JsonKey.AUTHORIZATION, JsonKey.BEARER+PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
+      }
+      response = HttpUtil.sendPostRequest(baseSearchUrl+PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_METRICS_URL),
+                request, headers);
+      
+    } catch (Exception e) {
+        ProjectLogger.log(e.getMessage(), e);
+    }
+    return response;
   }
 
 }

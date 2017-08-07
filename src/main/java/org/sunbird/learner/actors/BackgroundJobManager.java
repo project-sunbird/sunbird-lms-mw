@@ -162,6 +162,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
     Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
+    Util.DbInfo userOrgDb = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Response response = null;
     List<Map<String, Object>> list = null;
     try {
@@ -267,7 +268,30 @@ public class BackgroundJobManager extends UntypedAbstractActor {
         }
       }
       map.put(JsonKey.JOB_PROFILE, list);
-
+      list = null;
+      List<Map<String, Object>> organisations = new ArrayList<>();
+      try {
+        Map<String, Object> reqMap = new HashMap<>();
+         reqMap.put(JsonKey.USER_ID, userId);
+         reqMap.put(JsonKey.IS_DELETED, false);
+        Util.DbInfo orgUsrDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+         Response result = cassandraOperation
+             .getRecordsByProperties(orgUsrDbInfo.getKeySpace(), orgUsrDbInfo.getTableName(), reqMap);
+          list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+         Map<String, Object> orgDb = null;
+         if (!(list.isEmpty())) {
+           for (Map<String, Object> tempMap : list) {
+             Map<String, Object> orgData = new HashMap<>();
+             orgDb = (Map<String, Object>) tempMap;
+             orgData.put(JsonKey.ORGANISATION_ID, orgDb.get(JsonKey.ORGANISATION_ID));
+             orgData.put(JsonKey.ROLES, orgDb.get(JsonKey.ROLES));
+             organisations.add(orgData);
+           }
+         }
+      } catch (Exception e) {
+        ProjectLogger.log(e.getMessage(), e);
+      }
+      map.put(JsonKey.ORGANISATIONS, organisations); 
       Util.removeAttributes(map, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY, JsonKey.ID));
     } else {
       ProjectLogger

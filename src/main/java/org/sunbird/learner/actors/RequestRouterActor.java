@@ -15,7 +15,9 @@ import org.sunbird.learner.actors.bulkupload.BulkUploadManagementActor;
 import org.sunbird.learner.actors.recommend.RecommendorActor;
 import org.sunbird.learner.actors.search.CourseSearchActor;
 import org.sunbird.learner.actors.search.SearchHandlerActor;
+import org.sunbird.metrics.actors.CourseMetricsActor;
 import org.sunbird.metrics.actors.OrganisationMetricsActor;
+import org.sunbird.metrics.actors.UserMetricsActor;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
@@ -50,6 +52,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private ActorRef bulkUploadBackGroundJobActor;
     private ActorRef courseBatchActor;
     private ActorRef organisationMetricsRouter;
+    private ActorRef courseMetricsRouter;
+    private ActorRef userMetricsRouter;
     private ExecutionContext ec;
     Map<String, ActorRef> routerMap = new HashMap<>();
     private static final int WAIT_TIME_VALUE = 9;
@@ -69,6 +73,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private static final String BULK_UPLOAD_BACKGROUND_ACTOR = "bulkUploadBackGroundJobActor";
     private static final String COURSE_BATCH_MANAGEMENT_ACTOR = "courseBatchActor";
     private static final String ORGANISATION_METRICS_ROUTER = "organisationMetricsRouter";
+    private static final String COURSE_METRICS_ROUTER = "courseMetricsRouter";
+    private static final String USER_METRICS_ROUTER = "userMetricsRouter";
     /**
      * constructor to initialize router actor with child actor pool
      */
@@ -107,6 +113,10 @@ public class RequestRouterActor extends UntypedAbstractActor {
             COURSE_BATCH_MANAGEMENT_ACTOR);
         organisationMetricsRouter=getContext().actorOf(FromConfig.getInstance().props(Props.create(OrganisationMetricsActor.class)),
            ORGANISATION_METRICS_ROUTER);
+        courseMetricsRouter=getContext().actorOf(FromConfig.getInstance().props(Props.create(CourseMetricsActor.class)),
+            COURSE_METRICS_ROUTER);
+        userMetricsRouter=getContext().actorOf(FromConfig.getInstance().props(Props.create(UserMetricsActor.class)),
+            USER_METRICS_ROUTER);
         ec = getContext().dispatcher();
         initializeRouterMap();
     }
@@ -177,6 +187,11 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.GET_COURSE_BATCH_DETAIL.getValue(), courseBatchActor);
         routerMap.put(ActorOperations.GET_BULK_OP_STATUS.getValue(), bulkUploadManagementActor);
         routerMap.put(ActorOperations.ORG_CREATION_METRICS.getValue(), organisationMetricsRouter);
+        routerMap.put(ActorOperations.ORG_CONSUMPTION_METRICS.getValue(), organisationMetricsRouter);
+        routerMap.put(ActorOperations.COURSE_PROGRESS_METRICS.getValue(), courseMetricsRouter);
+        routerMap.put(ActorOperations.COURSE_CREATION_METRICS.getValue(), courseMetricsRouter);
+        routerMap.put(ActorOperations.USER_CREATION_METRICS.getValue(), userMetricsRouter);
+        routerMap.put(ActorOperations.USER_CONSUMPTION_METRICS.getValue(), userMetricsRouter);
     }
 
 

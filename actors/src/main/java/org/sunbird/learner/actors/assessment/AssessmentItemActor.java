@@ -12,7 +12,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -26,31 +26,35 @@ import akka.actor.UntypedAbstractActor;
  *
  */
 public class AssessmentItemActor extends UntypedAbstractActor {
-	private LogHelper logger = LogHelper.getInstance(AssessmentItemActor.class.getName());
 
 	private CassandraOperation cassandraOperation = new CassandraOperationImpl();
-	Util.DbInfo assmntItemDbInfo = Util.dbInfoMap.get(JsonKey.ASSESSMENT_ITEM_DB);
+	private Util.DbInfo assmntItemDbInfo = Util.dbInfoMap.get(JsonKey.ASSESSMENT_ITEM_DB);
 	
 	@Override
 	public void onReceive(Object message) throws Throwable {
 		if (message instanceof Request) {
-			logger.info("AssessmentItemActor onReceive called");
-			Request actorMessage = (Request) message;
-			if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_ASSESSMENT.getValue())) {
-				getAssessment(actorMessage);
-			}else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.SAVE_ASSESSMENT.getValue())) {
-				saveAssessment(actorMessage);
-			} else {
-				logger.info("UNSUPPORTED OPERATION");
-				ProjectCommonException exception = new ProjectCommonException(
-						ResponseCode.invalidOperationName.getErrorCode(),
-						ResponseCode.invalidOperationName.getErrorMessage(),
-						ResponseCode.CLIENT_ERROR.getResponseCode());
-				sender().tell(exception, self());
+			try {
+			    ProjectLogger.log("AssessmentItemActor onReceive called");
+				Request actorMessage = (Request) message;
+				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_ASSESSMENT.getValue())) {
+					getAssessment(actorMessage);
+				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.SAVE_ASSESSMENT.getValue())) {
+					saveAssessment(actorMessage);
+				} else {
+			        ProjectLogger.log("UNSUPPORTED OPERATION");
+					ProjectCommonException exception = new ProjectCommonException(
+							ResponseCode.invalidOperationName.getErrorCode(),
+							ResponseCode.invalidOperationName.getErrorMessage(),
+							ResponseCode.CLIENT_ERROR.getResponseCode());
+					sender().tell(exception, self());
+				}
+			}catch(Exception ex){
+				ProjectLogger.log(ex.getMessage(), ex);
+				sender().tell(ex , self());
 			}
 		} else {
 			// Throw exception as message body
-			logger.info("UNSUPPORTED MESSAGE");
+		    ProjectLogger.log("UNSUPPORTED MESSAGE");
 			ProjectCommonException exception = new ProjectCommonException(
 					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
 					ResponseCode.CLIENT_ERROR.getResponseCode());

@@ -28,7 +28,7 @@ public class CourseManagementActorTest {
     private static TestActorRef<CourseManagementActor> ref;
     static CourseManagementActor courseManagementActor;
 
-    @BeforeClass
+    //@BeforeClass
     public static void setUp() {
         system = ActorSystem.create("system");
         Util.checkCassandraDbConnections();
@@ -36,7 +36,7 @@ public class CourseManagementActorTest {
         courseManagementActor = ref.underlyingActor();
     }
 
-    @Test
+    //@Test
     public void onReceiveTest() throws Throwable {
 
         TestKit probe = new TestKit(system);

@@ -6,12 +6,18 @@ import java.util.concurrent.TimeUnit;
 
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.LogHelper;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.assessment.AssessmentItemActor;
+import org.sunbird.learner.actors.bulkupload.BulkUploadBackGroundJobActor;
+import org.sunbird.learner.actors.bulkupload.BulkUploadManagementActor;
 import org.sunbird.learner.actors.recommend.RecommendorActor;
 import org.sunbird.learner.actors.search.CourseSearchActor;
+import org.sunbird.learner.actors.search.SearchHandlerActor;
+import org.sunbird.metrics.actors.CourseMetricsActor;
+import org.sunbird.metrics.actors.OrganisationMetricsActor;
+import org.sunbird.metrics.actors.UserMetricsActor;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
@@ -30,7 +36,6 @@ import scala.concurrent.duration.Duration;
  */
 public class RequestRouterActor extends UntypedAbstractActor {
 
-    private LogHelper logger = LogHelper.getInstance(RequestRouterActor.class.getName());
     private ActorRef courseEnrollmentActorRouter;
     private ActorRef learnerStateActorRouter;
     private ActorRef learnerStateUpdateActorRouter;
@@ -42,9 +47,16 @@ public class RequestRouterActor extends UntypedAbstractActor {
     public static ActorRef backgroundJobManager;
     private ActorRef courseSearchActorRouter;
     private ActorRef assessmentItemActor;
+    private ActorRef searchHandlerActor; 
+    private ActorRef bulkUploadManagementActor;
+    private ActorRef bulkUploadBackGroundJobActor;
+    private ActorRef courseBatchActor;
+    private ActorRef organisationMetricsRouter;
+    private ActorRef courseMetricsRouter;
+    private ActorRef userMetricsRouter;
     private ExecutionContext ec;
     Map<String, ActorRef> routerMap = new HashMap<>();
-    private static final int WAIT_TIME_VALUE = 5;
+    private static final int WAIT_TIME_VALUE = 9;
     private static final String COURSE_ENROLLMENT_ROUTER = "courseEnrollmentRouter";
     private static final String LEARNER_ACTOR_ROUTER = "learnerActorRouter";
     private static final String LEARNER_STATE_ROUTER = "learnerStateRouter";
@@ -56,7 +68,13 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private static final String COURSE_SEARCH_ACTOR_ROUTER = "courseSearchActorRouter";
     private static final String ASSESSMENT_ITEM_ACTOR_ROUTER = "assessmentItemActor";
     private static final String RECOMMENDOR_ACTOR_ROUTER = "recommendorActorRouter";
-
+    private static final String SEARCH_HANDLER_ACTOR_ROUTER = "searchHandlerActor";
+    private static final String BULK_UPLOAD_MGMT_ACTOR = "bulkUploadManagementActor";
+    private static final String BULK_UPLOAD_BACKGROUND_ACTOR = "bulkUploadBackGroundJobActor";
+    private static final String COURSE_BATCH_MANAGEMENT_ACTOR = "courseBatchActor";
+    private static final String ORGANISATION_METRICS_ROUTER = "organisationMetricsRouter";
+    private static final String COURSE_METRICS_ROUTER = "courseMetricsRouter";
+    private static final String USER_METRICS_ROUTER = "userMetricsRouter";
     /**
      * constructor to initialize router actor with child actor pool
      */
@@ -75,16 +93,30 @@ public class RequestRouterActor extends UntypedAbstractActor {
         courseManagementRouter = getContext().actorOf(FromConfig.getInstance().props(Props.create(CourseManagementActor.class)),
                 COURSE_MANAGEMENT_ROUTER);
         pageManagementRouter = getContext().actorOf(FromConfig.getInstance().props(Props.create(PageManagementActor.class)),
-        		PAGE_MANAGEMENT_ROUTER);
+                PAGE_MANAGEMENT_ROUTER);
         organisationManagementRouter = getContext().actorOf(FromConfig.getInstance().props(Props.create(OrganisationManagementActor.class)),
-        		ORGANISATION_MANAGEMENT_ROUTER);
+                ORGANISATION_MANAGEMENT_ROUTER);
         backgroundJobManager = getContext().actorOf(FromConfig.getInstance().props(Props.create(BackgroundJobManager.class)),BkJOB);
         courseSearchActorRouter = getContext().actorOf(FromConfig.getInstance().props(Props.create(CourseSearchActor.class)),
-        		COURSE_SEARCH_ACTOR_ROUTER);
+                COURSE_SEARCH_ACTOR_ROUTER);
         assessmentItemActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(AssessmentItemActor.class)),
-        		ASSESSMENT_ITEM_ACTOR_ROUTER);
+                ASSESSMENT_ITEM_ACTOR_ROUTER);
         recommendorActorRouter=getContext().actorOf(FromConfig.getInstance().props(Props.create(RecommendorActor.class)),
                 RECOMMENDOR_ACTOR_ROUTER);
+        searchHandlerActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(SearchHandlerActor.class)),
+            SEARCH_HANDLER_ACTOR_ROUTER);
+        bulkUploadManagementActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(BulkUploadManagementActor.class)),
+            BULK_UPLOAD_MGMT_ACTOR);
+        bulkUploadBackGroundJobActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(BulkUploadBackGroundJobActor.class)),
+            BULK_UPLOAD_BACKGROUND_ACTOR);
+        courseBatchActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(CourseBatchManagementActor.class)),
+            COURSE_BATCH_MANAGEMENT_ACTOR);
+        organisationMetricsRouter=getContext().actorOf(FromConfig.getInstance().props(Props.create(OrganisationMetricsActor.class)),
+           ORGANISATION_METRICS_ROUTER);
+        courseMetricsRouter=getContext().actorOf(FromConfig.getInstance().props(Props.create(CourseMetricsActor.class)),
+            COURSE_METRICS_ROUTER);
+        userMetricsRouter=getContext().actorOf(FromConfig.getInstance().props(Props.create(UserMetricsActor.class)),
+            USER_METRICS_ROUTER);
         ec = getContext().dispatcher();
         initializeRouterMap();
     }
@@ -109,6 +141,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.LOGOUT.getValue(), userManagementRouter);
         routerMap.put(ActorOperations.CHANGE_PASSWORD.getValue(), userManagementRouter);
         routerMap.put(ActorOperations.GET_PROFILE.getValue(), userManagementRouter);
+        routerMap.put(ActorOperations.GET_ROLES.getValue(), userManagementRouter);
+        routerMap.put(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue(), userManagementRouter);
+        routerMap.put(ActorOperations.DOWNLOAD_USERS.getValue(), userManagementRouter);
         
         routerMap.put(ActorOperations.CREATE_PAGE.getValue(), pageManagementRouter);
         routerMap.put(ActorOperations.UPDATE_PAGE.getValue(), pageManagementRouter);
@@ -120,7 +155,13 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.GET_SECTION.getValue(), pageManagementRouter);
         routerMap.put(ActorOperations.GET_ALL_SECTION.getValue(), pageManagementRouter);
         
+        routerMap.put(ActorOperations.CREATE_ORG.getValue(), organisationManagementRouter);
+        routerMap.put(ActorOperations.APPROVE_ORG.getValue(), organisationManagementRouter);
+        routerMap.put(ActorOperations.UPDATE_ORG.getValue(), organisationManagementRouter);
+        routerMap.put(ActorOperations.UPDATE_ORG_STATUS.getValue(), organisationManagementRouter);
         routerMap.put(ActorOperations.GET_ORG_DETAILS.getValue(), organisationManagementRouter);
+        routerMap.put(ActorOperations.ADD_MEMBER_ORGANISATION.getValue(), organisationManagementRouter);
+        routerMap.put(ActorOperations.REMOVE_MEMBER_ORGANISATION.getValue(), organisationManagementRouter);
         
         routerMap.put(ActorOperations.SEARCH_COURSE.getValue(), courseSearchActorRouter);
         routerMap.put(ActorOperations.GET_COURSE_BY_ID.getValue(), courseSearchActorRouter);
@@ -128,25 +169,49 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.GET_ASSESSMENT.getValue(), assessmentItemActor);
         routerMap.put(ActorOperations.SAVE_ASSESSMENT.getValue(), assessmentItemActor);
         routerMap.put(ActorOperations.GET_RECOMMENDED_COURSES.getValue(), recommendorActorRouter);
+        routerMap.put(ActorOperations.APPROVE_USER_ORGANISATION.getValue() , organisationManagementRouter);
+        routerMap.put(ActorOperations.JOIN_USER_ORGANISATION.getValue(), organisationManagementRouter);
+        routerMap.put(ActorOperations.COMPOSITE_SEARCH.getValue(), searchHandlerActor);
+        routerMap.put(ActorOperations.REJECT_USER_ORGANISATION.getValue(), organisationManagementRouter);
+        routerMap.put(ActorOperations.DOWNLOAD_ORGS.getValue(), organisationManagementRouter);
+        routerMap.put(ActorOperations.BLOCK_USER.getValue(), userManagementRouter);
+        routerMap.put(ActorOperations.ASSIGN_ROLES.getValue(), userManagementRouter);
+        routerMap.put(ActorOperations.UNBLOCK_USER.getValue(), userManagementRouter);
+        routerMap.put(ActorOperations.BULK_UPLOAD.getValue(), bulkUploadManagementActor);
+        routerMap.put(ActorOperations.PROCESS_BULK_UPLOAD.getValue(), bulkUploadBackGroundJobActor);
+        routerMap.put(ActorOperations.CREATE_BATCH.getValue(), courseBatchActor);
+        routerMap.put(ActorOperations.UPDATE_BATCH.getValue(), courseBatchActor);
+        routerMap.put(ActorOperations.ADD_USER_TO_BATCH.getValue(), courseBatchActor);
+        routerMap.put(ActorOperations.REMOVE_USER_FROM_BATCH.getValue(), courseBatchActor);
+        routerMap.put(ActorOperations.GET_BATCH.getValue(), courseBatchActor);
+        routerMap.put(ActorOperations.GET_COURSE_BATCH_DETAIL.getValue(), courseBatchActor);
+        routerMap.put(ActorOperations.GET_BULK_OP_STATUS.getValue(), bulkUploadManagementActor);
+        routerMap.put(ActorOperations.ORG_CREATION_METRICS.getValue(), organisationMetricsRouter);
+        routerMap.put(ActorOperations.ORG_CONSUMPTION_METRICS.getValue(), organisationMetricsRouter);
+        routerMap.put(ActorOperations.COURSE_PROGRESS_METRICS.getValue(), courseMetricsRouter);
+        routerMap.put(ActorOperations.COURSE_CREATION_METRICS.getValue(), courseMetricsRouter);
+        routerMap.put(ActorOperations.USER_CREATION_METRICS.getValue(), userMetricsRouter);
+        routerMap.put(ActorOperations.USER_CONSUMPTION_METRICS.getValue(), userMetricsRouter);
     }
 
 
     @Override
     public void onReceive(Object message) throws Exception {
         if (message instanceof Request) {
-            logger.debug("Actor selector onReceive called");
+        	System.out.println("Received actor message....");
+            ProjectLogger.log("Actor selector onReceive called");
             Request actorMessage = (Request) message;
             org.sunbird.common.request.ExecutionContext.setRequestId(actorMessage.getRequestId());
             ActorRef ref = routerMap.get(actorMessage.getOperation());
             if (null != ref) {
                 route(ref, actorMessage);
             } else {
-                logger.info("UNSUPPORTED OPERATION TYPE");
+                ProjectLogger.log("UNSUPPORTED OPERATION TYPE");
                 ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(), ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
                 sender().tell(exception, ActorRef.noSender());
             }
         } else {
-            logger.info("UNSUPPORTED MESSAGE");
+            ProjectLogger.log("UNSUPPORTED MESSAGE");
             ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
             sender().tell(exception, ActorRef.noSender());
         }
@@ -170,7 +235,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
             public void onComplete(Throwable failure, Object result) {
                 if (failure != null) {
                     //We got a failure, handle it here
-                    logger.error(failure);
+                    ProjectLogger.log(failure.getMessage(), failure);
                     if(failure instanceof ProjectCommonException){
                         parent.tell(failure, ActorRef.noSender());
                     }else{
@@ -178,7 +243,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
                         parent.tell(exception, ActorRef.noSender());
                     }
                 } else {
-                    logger.info("PARENT RESULT IS " + result);
+                    ProjectLogger.log("PARENT RESULT IS " + result);
                     // We got a result, handle it
                     parent.tell(result, ActorRef.noSender());
                 }

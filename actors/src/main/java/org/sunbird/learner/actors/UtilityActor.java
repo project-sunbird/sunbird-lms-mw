@@ -1,16 +1,5 @@
 package org.sunbird.learner.actors;
 
-import akka.actor.UntypedAbstractActor;
-import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LogHelper;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.request.Request;
-import org.sunbird.learner.util.Util;
-
-import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -18,13 +7,28 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.cassandraimpl.CassandraOperationImpl;
+import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.datasecurity.OneWayHashing;
+import org.sunbird.common.request.Request;
+import org.sunbird.learner.util.Util;
+
+import akka.actor.UntypedAbstractActor;
+
 /**
+ * This will updated user learner state activity.
+ * example what was the last accessed content. 
+ * how much percentage is completed, what is the 
+ * state of content.
  * @author arvind
  */
 public class UtilityActor extends UntypedAbstractActor {
 
     private CassandraOperation cassandraOperation = new CassandraOperationImpl();
-    private LogHelper logger = LogHelper.getInstance(UtilityActor.class.getName());
     private final String CONTENT_STATE_INFO= "contentStateInfo";
     SimpleDateFormat sdf = ProjectUtil.format;
 
@@ -48,21 +52,26 @@ public class UtilityActor extends UntypedAbstractActor {
                 String contentid = (String) map.get(JsonKey.ID);
 
                 if (map.get(JsonKey.COURSE_ID) != null) {
-                    String primary = (String)map.get(JsonKey.COURSE_ID);
+                    String userId = (String) map.get(JsonKey.USER_ID);
+                    String courseId = (String) map.get(JsonKey.COURSE_ID);
+                    //generate course table primary key as hash of userid##courseid
+                    String primary = OneWayHashing
+                        .encryptVal(userId + JsonKey.PRIMARY_KEY_DELIMETER + courseId);
+
                     if(temp.containsKey(primary)){
                         Map<String , Object> innerMap = (Map<String , Object>)temp.get(primary);
-                        innerMap.put("content" , getLatestContent((Map<String, Object>) ((Map<String , Object>)temp.get(primary)).get("content"), map));
+                        innerMap.put(JsonKey.CONTENT , getLatestContent((Map<String, Object>) ((Map<String , Object>)temp.get(primary)).get(JsonKey.CONTENT), map));
                         if(((int)map.get(JsonKey.COMPLETED_COUNT))==1 && contentStateInfo.get(contentid)==2){
-                            innerMap.put("progress",(Integer)innerMap.get("progress")+1);
+                            innerMap.put(JsonKey.PROGRESS,(Integer)innerMap.get(JsonKey.PROGRESS)+1);
                         }
 
                     }else{
                         Map<String , Object> innerMap = new HashMap<String,Object>();
-                        innerMap.put("content" , map);
+                        innerMap.put(JsonKey.CONTENT , map);
                         if(((int)map.get(JsonKey.COMPLETED_COUNT))==1 && contentStateInfo.get(contentid)==2){
-                            innerMap.put("progress",new Integer(1));
+                            innerMap.put(JsonKey.PROGRESS,new Integer(1));
                         }else{
-                            innerMap.put("progress",new Integer(0));
+                            innerMap.put(JsonKey.PROGRESS,new Integer(0));
                         }
                         temp.put(primary ,  innerMap);
                     }
@@ -97,11 +106,12 @@ public class UtilityActor extends UntypedAbstractActor {
             Map<String , Object> course = null;
             if(null != courseList && courseList.size()>0){
               course = courseList.get(0);
-              Integer courseProgress = (int) course.get(JsonKey.COURSE_PROGRESS);
-              courseProgress = courseProgress+(Integer)value.get("progress");
 
-              course.put(JsonKey.ACTIVE , activeStatus(course.get(JsonKey.ACTIVE)));
-              course.put(JsonKey.DATE_TIME , new Timestamp(new Date().getTime()));
+              Integer courseProgress = 0;
+              if(ProjectUtil.isNotNull(course.get(JsonKey.COURSE_PROGRESS))) {
+                  courseProgress = (Integer) course.get(JsonKey.COURSE_PROGRESS);
+              }
+              courseProgress = courseProgress+(Integer)value.get("progress");
 
               course.put(JsonKey.COURSE_PROGRESS , courseProgress);
               course.put(JsonKey.LAST_READ_CONTENTID ,((Map<String,Object>)value.get("content")).get(JsonKey.CONTENT_ID));
@@ -109,7 +119,7 @@ public class UtilityActor extends UntypedAbstractActor {
                try {
                   cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), course);
               }catch(Exception ex){
-                  logger.error(ex);
+                  ProjectLogger.log(ex.getMessage(), ex);
               }
             }
             
@@ -117,35 +127,25 @@ public class UtilityActor extends UntypedAbstractActor {
 
     }
 
-    private boolean activeStatus(Object obj) {
-
-        if(null == obj || !(obj instanceof Boolean)){
-            return false;
-        } else{
-            return (boolean)obj;
-        }
-
-
-    }
 
     private Map<String , Object> getLatestContent(Map<String , Object> current , Map<String , Object> next){
-        if(current.get(JsonKey.LAST_UPDATED_TIME) == null && next.get(JsonKey.LAST_UPDATED_TIME) == null){
+        if(current.get(JsonKey.LAST_ACCESS_TIME) == null && next.get(JsonKey.LAST_ACCESS_TIME) == null){
             return next;
-        }else if(current.get(JsonKey.LAST_UPDATED_TIME) == null){
+        }else if(current.get(JsonKey.LAST_ACCESS_TIME) == null){
             return next;
-        }else if(next.get(JsonKey.LAST_UPDATED_TIME) == null){
+        }else if(next.get(JsonKey.LAST_ACCESS_TIME) == null){
             return current;
         }
         try {
-            Date currentUpdatedTime = sdf.parse((String)current.get(JsonKey.LAST_UPDATED_TIME));
-            Date nextUpdatedTime = sdf.parse((String)next.get(JsonKey.LAST_UPDATED_TIME));
+            Date currentUpdatedTime = sdf.parse((String)current.get(JsonKey.LAST_ACCESS_TIME));
+            Date nextUpdatedTime = sdf.parse((String)next.get(JsonKey.LAST_ACCESS_TIME));
             if(currentUpdatedTime.after(nextUpdatedTime)){
                 return current ;
             }else{
                 return next;
             }
         } catch (ParseException e) {
-            logger.error(e);
+            ProjectLogger.log(e.getMessage(), e);
         }
         return null;
     }

@@ -454,6 +454,12 @@ COPY  sunbird.organisation (id,provider) FROM '/tmp/cql/source.csv';
 ALTER TABLE sunbird.organisation DROP source;
 CREATE TABLE IF NOT EXISTS sunbird.course_publish_status(id text,submitDate text,status int,PRIMARY KEY (id));
 
-// convert data type of participants from List to map
+// convert data type of participants from List to map -- Aug 7,2017
 ALTER TABLE sunbird.course_batch DROP participants;
 ALTER TABLE sunbird.course_batch ADD participant map<text,boolean>;
+
+ALTER TABLE sunbird.course_batch ADD courseAdditionalInfo map<text,text>;
+DROP INDEX inx_cou_bat_enrolmentType;
+ALTER TABLE sunbird.course_batch DROP enrolmentType;
+ALTER TABLE sunbird.course_batch ADD enrollmentType text;
+DROP INDEX inx_cou_bat_enrolmentType ON sunbird.course_batch (enrollmentType);

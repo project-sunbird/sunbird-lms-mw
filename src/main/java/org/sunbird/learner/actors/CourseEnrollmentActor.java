@@ -33,6 +33,7 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = new CassandraOperationImpl();
 
   private ActorRef backGroundActorRef;
+  private static final String DEFAULT_BATCH_ID ="1";
 
   public CourseEnrollmentActor() {
     backGroundActorRef = getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
@@ -56,6 +57,9 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
           Map<String, Object> req = actorMessage.getRequest();
           String addedBy = (String) req.get(JsonKey.REQUESTED_BY);
           Map<String, Object> courseMap = (Map<String, Object>) req.get(JsonKey.COURSE);
+          if(ProjectUtil.isNull(courseMap.get(JsonKey.BATCH_ID))) {
+            courseMap.put(JsonKey.BATCH_ID, DEFAULT_BATCH_ID);
+          }
           //check whether user already enroll  for course
           Response dbResult = cassandraOperation.getRecordById(courseEnrollmentdbInfo.getKeySpace(),
               courseEnrollmentdbInfo.getTableName() , generatePrimaryKey(courseMap));
@@ -87,7 +91,6 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
             courseMap.put(JsonKey.CONTENT_ID, courseId);
             courseMap.put(JsonKey.COURSE_NAME, ekStepContent.get(JsonKey.NAME));
             courseMap.put(JsonKey.DESCRIPTION, ekStepContent.get(JsonKey.DESCRIPTION));
-            courseMap.put(JsonKey.BATCH_ID, "1");
             courseMap.put(JsonKey.ADDED_BY, addedBy);
             courseMap.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
             courseMap.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
@@ -151,7 +154,8 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
   private String generatePrimaryKey(Map<String, Object> req) {
     String userId = (String) req.get(JsonKey.USER_ID);
     String courseId = (String) req.get(JsonKey.COURSE_ID);
-    return OneWayHashing.encryptVal(userId + JsonKey.PRIMARY_KEY_DELIMETER + courseId);
+    String batchId = (String) req.get(JsonKey.BATCH_ID);
+    return OneWayHashing.encryptVal(userId + JsonKey.PRIMARY_KEY_DELIMETER + courseId+JsonKey.PRIMARY_KEY_DELIMETER+batchId);
   }
 
   /**

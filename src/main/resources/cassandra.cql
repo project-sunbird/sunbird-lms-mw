@@ -21,7 +21,7 @@ CREATE INDEX inx_ce_course_name ON sunbird.course_enrollment (courseName);
 CREATE INDEX inx_ce_status ON sunbird.course_enrollment (status);
 
 /*
-creation of id = one way hash of (userId##contentId##courseId) 
+creation of id = one way hash of (userId##contentId##courseId##batchId)
 status is (default(0),inProgress(1),completed(2))
 */
 CREATE TABLE IF NOT EXISTS sunbird.content_consumption(id text, contentId text, courseId text, userId text,viewPosition text,viewCount int,lastAccessTime text,
@@ -360,7 +360,7 @@ CREATE INDEX inx_uorg_orgid ON sunbird.user_org (organisationid);
 
 
 /*
-creation of id= one way hash of (userId##courseId) here courseId is identifier of EkStep course
+creation of id= one way hash of (userId##courseId##batchId) here courseId is identifier of EkStep course
 toc url is generated from ekStep
 here status is (default(0),inProgress(1),completed(2))
 progress is no of content completed

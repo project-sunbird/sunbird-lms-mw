@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import org.json.JSONException;
@@ -85,6 +86,14 @@ public class BackgroundJobManager extends UntypedAbstractActor {
         updateCourseBatchInfoToEs(actorMessage);
 
       } else if (requestedOperation
+          .equalsIgnoreCase(ActorOperations.UPDATE_USER_ORG_ES.getValue())) {
+        updateUserOrgInfoToEs(actorMessage);
+
+      } else if (requestedOperation
+          .equalsIgnoreCase(ActorOperations.REMOVE_USER_ORG_ES.getValue())) {
+        removeUserOrgInfoToEs(actorMessage);
+
+      } else if (requestedOperation
           .equalsIgnoreCase(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue())) {
         insertUserCourseInfoToEs(actorMessage);
 
@@ -120,6 +129,46 @@ public class BackgroundJobManager extends UntypedAbstractActor {
         ProjectUtil.EsType.usercourses.getTypeName(),
         (String) batch.get(JsonKey.ID), batch);
 
+  }
+
+  private void removeUserOrgInfoToEs(Response actorMessage) {
+    Map<String, Object> orgMap = (Map<String, Object>) actorMessage.get(JsonKey.USER);
+    Map<String, Object> result = ElasticSearchUtil
+        .getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(), (String) orgMap.get(JsonKey.USER_ID));
+    if(result.containsKey(JsonKey.ORGANISATIONS) && null != result.get(JsonKey.ORGANISATIONS)){
+      List<Map<String,Object>> orgMapList = (List<Map<String, Object>>) result.get(JsonKey.ORGANISATIONS);
+         Iterator<Map<String, Object>> itr = orgMapList.iterator();
+         while(itr.hasNext()){
+           Map<String,Object> map = (Map<String, Object>) itr.next();
+          if((((String)map.get(JsonKey.USER_ID)).equalsIgnoreCase((String)orgMap.get(JsonKey.USER_ID))) &&
+              (((String)map.get(JsonKey.ORGANISATION_ID)).equalsIgnoreCase((String)orgMap.get(JsonKey.ORGANISATION_ID)))){
+            itr.remove();
+          }
+        }
+      }
+    updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.user.getTypeName(),
+        (String) result.get(JsonKey.IDENTIFIER), result);
+
+  }
+
+  private void updateUserOrgInfoToEs(Response actorMessage) {
+    Map<String, Object> orgMap = (Map<String, Object>) actorMessage.get(JsonKey.USER);
+    Map<String, Object> result = ElasticSearchUtil
+        .getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(), (String) orgMap.get(JsonKey.USER_ID));
+    if(result.containsKey(JsonKey.ORGANISATIONS) && null != result.get(JsonKey.ORGANISATIONS)){
+      List<Map<String,Object>> orgMapList = (List<Map<String, Object>>) result.get(JsonKey.ORGANISATIONS);
+        orgMapList.add(orgMap);
+      }else{
+        List<Map<String,Object>> mapList = new ArrayList<>();
+        mapList.add(orgMap);
+        result.put(JsonKey.ORGANISATIONS, mapList);
+      }
+    updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.user.getTypeName(),
+        (String) result.get(JsonKey.IDENTIFIER), result);
   }
 
   private void updateCourseBatchInfoToEs(Response actorMessage) {

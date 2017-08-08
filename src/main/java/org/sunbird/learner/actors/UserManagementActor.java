@@ -1329,7 +1329,6 @@ public class UserManagementActor extends UntypedAbstractActor {
         .insertRecord(userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName(), usrOrgData);
     sender().tell(response, self());
     return;
-
   }
 
   /**
@@ -1418,6 +1417,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     response = cassandraOperation
         .updateRecord(userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName(), updateUserOrgDBO);
     sender().tell(response, self());
+    
     return;
 
   }

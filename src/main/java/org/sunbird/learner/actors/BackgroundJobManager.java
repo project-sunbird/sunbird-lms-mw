@@ -94,9 +94,8 @@ public class BackgroundJobManager extends UntypedAbstractActor {
         removeUserOrgInfoToEs(actorMessage);
 
       } else if (requestedOperation
-          .equalsIgnoreCase(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue())) {
-        insertUserCourseInfoToEs(actorMessage);
-
+          .equalsIgnoreCase(ActorOperations.UPDATE_USER_ROLES_ES.getValue())) {
+        updateUserRoleToEs(actorMessage);
       }else if (requestedOperation
           .equalsIgnoreCase(ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue())) {
         updateUserCourseInfoToEs(actorMessage);
@@ -114,6 +113,31 @@ public class BackgroundJobManager extends UntypedAbstractActor {
     }
   }
 
+  private void updateUserRoleToEs(Response actorMessage) {
+    List<String> roles = (List<String>) actorMessage.get(JsonKey.ROLES);
+    String type = (String) actorMessage.get(JsonKey.TYPE);
+    String orgId = (String) actorMessage.get(JsonKey.ORGANISATION_ID);
+    Map<String, Object> result = ElasticSearchUtil
+        .getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(), (String) actorMessage.get(JsonKey.USER_ID));
+    if(type.equals(JsonKey.USER)){
+      result.put(JsonKey.ROLES, roles);
+    }else if(type.equals(JsonKey.ORGANISATION)){
+      List<Map<String,Object>> roleMapList = (List<Map<String, Object>>) result.get(JsonKey.ORGANISATIONS);
+      if(null != roleMapList){
+          for(Map<String,Object> map : roleMapList){
+            if((((String)map.get(JsonKey.USER_ID)).equalsIgnoreCase((String) actorMessage.get(JsonKey.USER_ID))) && 
+                (((String)map.get(JsonKey.ORGANISATION_ID)).equalsIgnoreCase(orgId))){
+              map.put(JsonKey.ROLES, roles);
+            }
+          }
+      }
+    }
+    updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.user.getTypeName(),
+        (String) result.get(JsonKey.IDENTIFIER), result);
+  }
+  
   private void updateUserCourseInfoToEs(Response actorMessage) {
 
     Map<String,Object> batch = (Map<String, Object>) actorMessage.get(JsonKey.USER_COURSES);
@@ -138,6 +162,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
             ProjectUtil.EsType.user.getTypeName(), (String) orgMap.get(JsonKey.USER_ID));
     if(result.containsKey(JsonKey.ORGANISATIONS) && null != result.get(JsonKey.ORGANISATIONS)){
       List<Map<String,Object>> orgMapList = (List<Map<String, Object>>) result.get(JsonKey.ORGANISATIONS);
+      if(null != orgMapList){
          Iterator<Map<String, Object>> itr = orgMapList.iterator();
          while(itr.hasNext()){
            Map<String,Object> map = (Map<String, Object>) itr.next();
@@ -146,6 +171,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
             itr.remove();
           }
         }
+      }
       }
     updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.user.getTypeName(),

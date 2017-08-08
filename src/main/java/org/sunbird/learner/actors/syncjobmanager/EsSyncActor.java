@@ -37,7 +37,7 @@ public class EsSyncActor extends UntypedAbstractActor {
         if (requestedOperation.equalsIgnoreCase(ActorOperations.SYNC.getValue())) {
           //return SUCCESS to controller and run the sync process in background
           Response response = new Response();
-          response.put(JsonKey.SUCCESS, response);
+          response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
           sender().tell(response, self());
           syncData(actorMessage);
         } else {

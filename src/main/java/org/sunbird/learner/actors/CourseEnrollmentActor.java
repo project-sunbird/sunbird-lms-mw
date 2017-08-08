@@ -102,6 +102,7 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
             Response result = cassandraOperation.insertRecord(courseEnrollmentdbInfo.getKeySpace(),
                 courseEnrollmentdbInfo.getTableName(), courseMap);
             sender().tell(result, self());
+            insertUserCoursesToES(courseMap);
             return;
             }
         } else {
@@ -124,6 +125,17 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
           ResponseCode.invalidRequestData.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
+    }
+  }
+
+  private void insertUserCoursesToES(Map<String, Object> courseMap) {
+    Response response = new Response();
+    response.put(JsonKey.OPERATION, ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue());
+    response.put(JsonKey.USER_COURSES, courseMap);
+    try{
+      backGroundActorRef.tell(response,self());
+    }catch(Exception ex){
+      ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
     }
   }
 
@@ -161,14 +173,14 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
   /**
    * This method will call the background job manager and update course enroll user count.
    *
-   * @param ooperation String (operation name)
+   * @param operation String (operation name)
    * @param courseData Object
    * @param innerOperation String
    */
   @SuppressWarnings("unused")
-  private void updateCoursemanagement(String ooperation, Object courseData, String innerOperation) {
+  private void updateCoursemanagement(String operation, Object courseData, String innerOperation) {
     Response userCountresponse = new Response();
-    userCountresponse.put(JsonKey.OPERATION, ooperation);
+    userCountresponse.put(JsonKey.OPERATION, operation);
     userCountresponse.put(JsonKey.COURSE_ID, courseData);
     userCountresponse.getResult().put(JsonKey.OPERATION, innerOperation);
     try{

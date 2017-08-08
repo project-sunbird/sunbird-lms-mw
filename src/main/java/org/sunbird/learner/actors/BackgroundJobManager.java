@@ -96,6 +96,9 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       } else if (requestedOperation
           .equalsIgnoreCase(ActorOperations.UPDATE_USER_ROLES_ES.getValue())) {
         updateUserRoleToEs(actorMessage);
+      }else if (requestedOperation
+          .equalsIgnoreCase(ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue())) {
+        updateUserCourseInfoToEs(actorMessage);
 
       }else {
         ProjectLogger.log("UNSUPPORTED OPERATION");
@@ -133,7 +136,23 @@ public class BackgroundJobManager extends UntypedAbstractActor {
     updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.user.getTypeName(),
         (String) result.get(JsonKey.IDENTIFIER), result);
-    
+  }
+  
+  private void updateUserCourseInfoToEs(Response actorMessage) {
+
+    Map<String,Object> batch = (Map<String, Object>) actorMessage.get(JsonKey.USER_COURSES);
+    updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.usercourses.getTypeName(),
+        (String)batch.get(JsonKey.ID), batch);
+  }
+
+  private void insertUserCourseInfoToEs(Response actorMessage) {
+
+    Map<String,Object> batch = (Map<String, Object>) actorMessage.get(JsonKey.USER_COURSES);
+    insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.usercourses.getTypeName(),
+        (String) batch.get(JsonKey.ID), batch);
+
   }
 
   private void removeUserOrgInfoToEs(Response actorMessage) {
@@ -147,7 +166,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
          Iterator<Map<String, Object>> itr = orgMapList.iterator();
          while(itr.hasNext()){
            Map<String,Object> map = (Map<String, Object>) itr.next();
-          if((((String)map.get(JsonKey.USER_ID)).equalsIgnoreCase((String)orgMap.get(JsonKey.USER_ID))) && 
+          if((((String)map.get(JsonKey.USER_ID)).equalsIgnoreCase((String)orgMap.get(JsonKey.USER_ID))) &&
               (((String)map.get(JsonKey.ORGANISATION_ID)).equalsIgnoreCase((String)orgMap.get(JsonKey.ORGANISATION_ID)))){
             itr.remove();
           }
@@ -157,7 +176,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
     updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.user.getTypeName(),
         (String) result.get(JsonKey.IDENTIFIER), result);
-    
+
   }
 
   private void updateUserOrgInfoToEs(Response actorMessage) {

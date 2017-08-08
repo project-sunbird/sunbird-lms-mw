@@ -86,6 +86,7 @@ public class CourseMetricsActor extends UntypedAbstractActor {
       for(int count=0;count<7;count++){
         Map<String, Object> parentCountObject = new LinkedHashMap<String, Object>();
         parentCountObject.put("user", "123456"+(count));
+        parentCountObject.put("userName", Character.toString ((char) (count+65)));
         bucket.add(parentCountObject);
       }
     }catch(Exception e){
@@ -105,6 +106,11 @@ public class CourseMetricsActor extends UntypedAbstractActor {
         Map<String, Object> parentCountObject = new LinkedHashMap<String, Object>();
         parentCountObject.put("user", "123456"+(count));
         parentCountObject.put("progress", count*8);
+        parentCountObject.put("lastAccessTime", "2017-07-2"+count+" "+(count*3)+":"+(count*2)+":"+(count*4));
+        parentCountObject.put("userName", Character.toString ((char) (count+65)));
+        parentCountObject.put("batchEndsOn", "2017-07-"+(count+20));
+        parentCountObject.put("org", "sunbird");
+        parentCountObject.put("enrolledOn", "2017-07-"+(count+10));
         bucket.add(parentCountObject);
       }
     }catch(Exception e){

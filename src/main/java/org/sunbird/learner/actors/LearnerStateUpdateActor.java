@@ -263,8 +263,9 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
   private String generatePrimaryKey(Map<String, Object> req, String userId) {
     String contentId = (String) req.get(JsonKey.CONTENT_ID);
     String courseId = (String) req.get(JsonKey.COURSE_ID);
+    String batchId = (String) req.get(JsonKey.BATCH_ID);
     String key = userId + JsonKey.PRIMARY_KEY_DELIMETER + contentId + JsonKey.PRIMARY_KEY_DELIMETER
-        + courseId;
+        + courseId+JsonKey.PRIMARY_KEY_DELIMETER+batchId;
     return OneWayHashing.encryptVal(key);
   }
 

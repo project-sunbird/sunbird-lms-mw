@@ -55,6 +55,7 @@ public class CourseEnrollmentActorTest {
   final static  Props props = Props.create(CourseEnrollmentActor.class);
   static Util.DbInfo userCoursesdbInfo = null;
   private static CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  private static String batchId="115";
 
   @BeforeClass
   public static void setUp() {
@@ -82,6 +83,7 @@ public class CourseEnrollmentActorTest {
     reqObj.setRequest_id("1");
     reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
     reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
+    reqObj.put(JsonKey.BATCH_ID,batchId);
     reqObj.put(JsonKey.USER_ID, "USR");
     HashMap<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.COURSE, reqObj.getRequest());
@@ -97,12 +99,6 @@ public class CourseEnrollmentActorTest {
 
     subject.tell(reqObj, probe.getRef());
     probe.expectMsgClass(duration("100 second"),Response.class);
-    try {
-      Thread.sleep(3000);
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    }
-
 
   }
 
@@ -116,6 +112,7 @@ public class CourseEnrollmentActorTest {
     reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
     reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
     reqObj.put(JsonKey.USER_ID, "USR");
+    reqObj.put(JsonKey.BATCH_ID,batchId);
     HashMap<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.COURSE, reqObj.getRequest());
     innerMap.put(JsonKey.USER_ID, "USR");
@@ -140,6 +137,7 @@ public class CourseEnrollmentActorTest {
     reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
     reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
     reqObj.put(JsonKey.USER_ID, "USR");
+    reqObj.put(JsonKey.BATCH_ID,batchId);
     HashMap<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.COURSE, reqObj.getRequest());
     innerMap.put(JsonKey.USER_ID, "USR");
@@ -182,6 +180,7 @@ public class CourseEnrollmentActorTest {
 
   @AfterClass
   public static void destroy(){
-    cassandraOperation.deleteRecord(userCoursesdbInfo.getKeySpace(), userCoursesdbInfo.getTableName(), OneWayHashing.encryptVal("USR"+ JsonKey.PRIMARY_KEY_DELIMETER+"do_212282810555342848180"));
+
+    cassandraOperation.deleteRecord(userCoursesdbInfo.getKeySpace(), userCoursesdbInfo.getTableName(), OneWayHashing.encryptVal("USR"+ JsonKey.PRIMARY_KEY_DELIMETER+"do_212282810555342848180"+JsonKey.PRIMARY_KEY_DELIMETER+batchId));
   }
 }

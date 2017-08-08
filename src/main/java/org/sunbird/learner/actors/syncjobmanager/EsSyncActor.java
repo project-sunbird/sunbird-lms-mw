@@ -120,7 +120,6 @@ public class EsSyncActor extends UntypedAbstractActor {
   }
 
   private Map<String, Object> getOrgDetails(Entry<String, Object> entry) {
-    String orgId = entry.getKey();
     Map<String,Object> orgMap = (Map<String, Object>) entry.getValue();
     if(orgMap.containsKey(JsonKey.ADDRESS_ID) && !ProjectUtil.isStringNullOREmpty((String)orgMap.get(JsonKey.ADDRESS_ID))){
       orgMap.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),(String)orgMap.get(JsonKey.ADDRESS_ID)));
@@ -136,18 +135,18 @@ public class EsSyncActor extends UntypedAbstractActor {
     List<Map<String, Object>> eduMap = getDetails(Util.dbInfoMap.get(JsonKey.EDUCATION_DB),userId,JsonKey.USER_ID);
     for(Map<String, Object> map : eduMap){
       if(map.containsKey(JsonKey.ADDRESS_ID) && !ProjectUtil.isStringNullOREmpty((String)map.get(JsonKey.ADDRESS_ID))){
-        map.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),userId));
+        map.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),(String)map.get(JsonKey.ADDRESS_ID)));
       }
     }
     userMap.put(JsonKey.EDUCATION, eduMap);
     List<Map<String, Object>> jobMap = getDetails(Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB),userId,JsonKey.USER_ID);
     for(Map<String, Object> map : jobMap){
       if(map.containsKey(JsonKey.ADDRESS_ID) && !ProjectUtil.isStringNullOREmpty((String)map.get(JsonKey.ADDRESS_ID))){
-        map.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),userId));
+        map.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),(String)map.get(JsonKey.ADDRESS_ID)));
       }
     }
     userMap.put(JsonKey.JOB_PROFILE, jobMap);
-    List<Map<String, Object>> orgMap = getDetails(Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB),userId,JsonKey.USER_ID);
+    List<Map<String, Object>> orgMap = getDetails(Util.dbInfoMap.get(JsonKey.USER_ORG_DB),userId,JsonKey.USER_ID);
     List<Map<String, Object>> organisations = new ArrayList<>();
     Map<String, Object> orgDb = null;
     for(Map<String, Object> map : orgMap){
@@ -158,12 +157,29 @@ public class EsSyncActor extends UntypedAbstractActor {
         organisations.add(orgData);
     }
     userMap.put(JsonKey.ORGANISATIONS, organisations);
+    
+    if(userMap.containsKey(JsonKey.ROOT_ORG_ID) && !ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.ROOT_ORG_ID))){
+      Map<String,Object> rootOrg = getDetailsById(Util.dbInfoMap.get(JsonKey.ORG_DB),(String)userMap.get(JsonKey.ROOT_ORG_ID));
+      userMap.put(JsonKey.ROOT_ORG, rootOrg);
+      if(null != rootOrg && rootOrg.containsKey(JsonKey.ADDRESS_ID) && 
+          !ProjectUtil.isStringNullOREmpty((String)rootOrg.get(JsonKey.ADDRESS_ID))){
+        rootOrg.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),(String)rootOrg.get(JsonKey.ADDRESS_ID)));
+      }
+    }
+    if(userMap.containsKey(JsonKey.REGISTERED_ORG_ID) && !ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.REGISTERED_ORG_ID))){
+      Map<String,Object> regOrg = getDetailsById(Util.dbInfoMap.get(JsonKey.ORG_DB),(String)userMap.get(JsonKey.REGISTERED_ORG_ID));
+      userMap.put(JsonKey.REGISTERED_ORG, regOrg);
+      if(null != regOrg && regOrg.containsKey(JsonKey.ADDRESS_ID) && 
+          !ProjectUtil.isStringNullOREmpty((String)regOrg.get(JsonKey.ADDRESS_ID))){
+        regOrg.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),(String)regOrg.get(JsonKey.ADDRESS_ID)));
+      }
+    }
     return userMap;
   }
   
   
 
-  private Object getDetailsById(DbInfo dbInfo, String userId) {
+  private Map<String,Object> getDetailsById(DbInfo dbInfo, String userId) {
     try{
       Response response = cassandraOperation.getRecordById(dbInfo.getKeySpace(), dbInfo.getTableName(),userId);
       return ((((List<Map<String, Object>>) response.get(JsonKey.RESPONSE)).isEmpty()) ?  new HashMap<>(): ((List<Map<String, Object>>) response.get(JsonKey.RESPONSE)).get(0));
@@ -173,9 +189,9 @@ public class EsSyncActor extends UntypedAbstractActor {
     return null;
   }
 
-  private List<Map<String,Object>> getDetails(DbInfo dbInfo, String userId, String property) {
+  private List<Map<String,Object>> getDetails(DbInfo dbInfo, String id, String property) {
     try{
-      Response response = cassandraOperation.getRecordsByProperty(dbInfo.getKeySpace(), dbInfo.getTableName(), property, userId);
+      Response response = cassandraOperation.getRecordsByProperty(dbInfo.getKeySpace(), dbInfo.getTableName(), property, id);
       return (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     }catch(Exception ex){
       

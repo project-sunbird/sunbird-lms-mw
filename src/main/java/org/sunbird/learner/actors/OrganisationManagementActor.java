@@ -565,6 +565,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     // remove source and external id
     usrOrgData.remove(JsonKey.EXTERNAL_ID);
     usrOrgData.remove(JsonKey.SOURCE);
+    usrOrgData.remove(JsonKey.PROVIDER);
     usrOrgData.remove(JsonKey.USERNAME);
     usrOrgData.remove(JsonKey.USER_NAME);
     usrOrgData.put(JsonKey.IS_DELETED, false);
@@ -692,6 +693,23 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
 
     sender().tell(response, self());
+    
+  //update ES with latest data through background job manager
+    if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      ProjectLogger.log("method call going to satrt for ES--.....");
+      Response usrResponse = new Response();
+      usrResponse.getResult()
+          .put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_ORG_ES.getValue());
+      usrResponse.getResult().put(JsonKey.USER, usrOrgData);
+      ProjectLogger.log("making a call to save user data to ES");
+      try {
+        backGroundActorRef.tell(usrResponse,self());
+      } catch (Exception ex) {
+        ProjectLogger.log("Exception Occured during saving user to Es while addMemberOrganisation : ", ex);
+      }
+    } else {
+      ProjectLogger.log("no call for ES to save user");
+    }
     return;
 
   }
@@ -725,6 +743,22 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
               ResponseCode.invalidRequestData.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
+    //update ES with latest data through background job manager
+      if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+        ProjectLogger.log("method call going to satrt for ES--.....");
+        Response usrResponse = new Response();
+        usrResponse.getResult()
+            .put(JsonKey.OPERATION, ActorOperations.REMOVE_USER_ORG_ES.getValue());
+        usrResponse.getResult().put(JsonKey.USER, usrOrgData);
+        ProjectLogger.log("making a call to save user data to ES");
+        try {
+          backGroundActorRef.tell(usrResponse,self());
+        } catch (Exception ex) {
+          ProjectLogger.log("Exception Occured during saving user to Es while removeMeOrganisation : ", ex);
+        }
+      } else {
+        ProjectLogger.log("no call for ES to save user");
+      }
       return;
     }
 
@@ -800,6 +834,23 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         }
       }
       sender().tell(response, self());
+      
+    //update ES with latest data through background job manager
+      if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+        ProjectLogger.log("method call going to satrt for ES--.....");
+        Response usrResponse = new Response();
+        usrResponse.getResult()
+            .put(JsonKey.OPERATION, ActorOperations.REMOVE_USER_ORG_ES.getValue());
+        usrResponse.getResult().put(JsonKey.USER, usrOrgData);
+        ProjectLogger.log("making a call to save user data to ES");
+        try {
+          backGroundActorRef.tell(usrResponse,self());
+        } catch (Exception ex) {
+          ProjectLogger.log("Exception Occured during saving user to Es while joinUserOrganisation : ", ex);
+        }
+      } else {
+        ProjectLogger.log("no call for ES to save user");
+      }
       return;
     }
   }

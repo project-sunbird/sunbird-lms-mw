@@ -52,11 +52,8 @@ public class UtilityActor extends UntypedAbstractActor {
                 String contentid = (String) map.get(JsonKey.ID);
 
                 if (map.get(JsonKey.COURSE_ID) != null) {
-                    String userId = (String) map.get(JsonKey.USER_ID);
-                    String courseId = (String) map.get(JsonKey.COURSE_ID);
-                    //generate course table primary key as hash of userid##courseid
-                    String primary = OneWayHashing
-                        .encryptVal(userId + JsonKey.PRIMARY_KEY_DELIMETER + courseId);
+                    //generate course table primary key as hash of userid##courseid##batchId
+                    String primary = generateUserCoursesPrimaryKey(map);
 
                     if(temp.containsKey(primary)){
                         Map<String , Object> innerMap = (Map<String , Object>)temp.get(primary);
@@ -148,5 +145,18 @@ public class UtilityActor extends UntypedAbstractActor {
             ProjectLogger.log(e.getMessage(), e);
         }
         return null;
+    }
+
+    /**
+     * This method will combined map values with delimiter and create an encrypted key.
+     *
+     * @param req Map<String , Object>
+     * @return String encrypted value
+     */
+    private String generateUserCoursesPrimaryKey(Map<String, Object> req) {
+        String userId = (String) req.get(JsonKey.USER_ID);
+        String courseId = (String) req.get(JsonKey.COURSE_ID);
+        String batchId = (String) req.get(JsonKey.BATCH_ID);
+        return OneWayHashing.encryptVal(userId + JsonKey.PRIMARY_KEY_DELIMETER + courseId+JsonKey.PRIMARY_KEY_DELIMETER+batchId);
     }
 }

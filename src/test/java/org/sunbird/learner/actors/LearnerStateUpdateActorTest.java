@@ -36,13 +36,13 @@ public class LearnerStateUpdateActorTest {
 
     static ActorSystem system;
     final static Props props = Props.create(LearnerStateUpdateActor.class);
-    private String USER_ID = "dummyUser";
     static String userId = "user121gama";
     static String courseId = "alpha01crs";
-    private static final String contentId = "cont3544TeBuk";
+    private static final String contentId = "cont3544TeBukGame";
     private static CassandraOperation cassandraOperation = new CassandraOperationImpl();
     private static Util.DbInfo contentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
     private static Util.DbInfo coursedbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
+    private static final String batchId = "220";
 
     @BeforeClass
     public static void setUp() {
@@ -53,10 +53,11 @@ public class LearnerStateUpdateActorTest {
 
     private static void insertCourse() {
         Map<String , Object> courseMap = new HashMap<String , Object>();
-        courseMap.put(JsonKey.ID , OneWayHashing.encryptVal(userId+JsonKey.PRIMARY_KEY_DELIMETER+courseId));
+        courseMap.put(JsonKey.ID , OneWayHashing.encryptVal(userId+JsonKey.PRIMARY_KEY_DELIMETER+courseId+JsonKey.PRIMARY_KEY_DELIMETER+batchId));
         courseMap.put(JsonKey.COURSE_ID , courseId);
         courseMap.put(JsonKey.USER_ID , userId);
         courseMap.put(JsonKey.CONTENT_ID , courseId);
+        courseMap.put(JsonKey.BATCH_ID , batchId);
         cassandraOperation.insertRecord(coursedbInfo.getKeySpace() , coursedbInfo.getTableName() , courseMap);
 
     }
@@ -200,6 +201,7 @@ public class LearnerStateUpdateActorTest {
         content.put(JsonKey.COURSE_ID , courseId);
         content.put(JsonKey.USER_ID , userId);
         content.put(JsonKey.CONTENT_ID , contentId);
+        content.put(JsonKey.BATCH_ID , batchId);
         content.put(JsonKey.PROGRESS , new BigInteger("100"));
         return content;
     }
@@ -208,9 +210,9 @@ public class LearnerStateUpdateActorTest {
     public static void destroy(){
 
         cassandraOperation.deleteRecord(coursedbInfo.getKeySpace() , coursedbInfo.getTableName(),
-            OneWayHashing.encryptVal(userId+JsonKey.PRIMARY_KEY_DELIMETER+courseId));
+            OneWayHashing.encryptVal(userId+JsonKey.PRIMARY_KEY_DELIMETER+courseId+JsonKey.PRIMARY_KEY_DELIMETER+batchId));
         String key = userId + JsonKey.PRIMARY_KEY_DELIMETER + contentId + JsonKey.PRIMARY_KEY_DELIMETER
-            + courseId;
+            + courseId+JsonKey.PRIMARY_KEY_DELIMETER+batchId;
         String contentid = OneWayHashing.encryptVal(key);
         cassandraOperation.deleteRecord(contentdbInfo.getKeySpace() , contentdbInfo.getTableName(),contentid);
 

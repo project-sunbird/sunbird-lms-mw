@@ -48,14 +48,19 @@ public class EsSyncActor extends UntypedAbstractActor {
               ResponseCode.CLIENT_ERROR.getResponseCode());
           ProjectLogger.log("Unsupported operation in Es sync Background Job Manager", exception);
           sender().tell(exception, self());
+          return;
         }
       
       }catch(Exception ex){
         ProjectLogger.log(ex.getMessage(), ex);
         sender().tell(ex, self());
+        return;
       }
     } else {
       ProjectLogger.log("UNSUPPORTED MESSAGE FOR BACKGROUND JOB MANAGER");
+      ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
     }
     }
 

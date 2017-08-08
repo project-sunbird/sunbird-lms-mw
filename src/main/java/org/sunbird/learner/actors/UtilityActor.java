@@ -1,5 +1,7 @@
 package org.sunbird.learner.actors;
 
+import akka.actor.ActorRef;
+import akka.actor.Props;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -10,6 +12,7 @@ import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
@@ -31,6 +34,12 @@ public class UtilityActor extends UntypedAbstractActor {
     private CassandraOperation cassandraOperation = new CassandraOperationImpl();
     private final String CONTENT_STATE_INFO= "contentStateInfo";
     SimpleDateFormat sdf = ProjectUtil.format;
+    private ActorRef backGroundActorRef;
+    private static final String DEFAULT_BATCH_ID ="1";
+
+    public UtilityActor() {
+        backGroundActorRef = getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
+    }
 
     @SuppressWarnings("unchecked")
 	@Override
@@ -102,6 +111,7 @@ public class UtilityActor extends UntypedAbstractActor {
             List<Map<String , Object>> courseList = (List<Map<String , Object>>)response.getResult().get(JsonKey.RESPONSE);
             Map<String , Object> course = null;
             if(null != courseList && courseList.size()>0){
+                Map<String , Object> updateDb = new HashMap<>();
               course = courseList.get(0);
 
               Integer courseProgress = 0;
@@ -110,11 +120,13 @@ public class UtilityActor extends UntypedAbstractActor {
               }
               courseProgress = courseProgress+(Integer)value.get("progress");
 
-              course.put(JsonKey.COURSE_PROGRESS , courseProgress);
-              course.put(JsonKey.LAST_READ_CONTENTID ,((Map<String,Object>)value.get("content")).get(JsonKey.CONTENT_ID));
-              course.put(JsonKey.LAST_READ_CONTENT_STATUS , (contentStateInfo.get((String)((Map<String,Object>)value.get("content")).get(JsonKey.ID))));
+              updateDb.put(JsonKey.ID , (String)course.get(JsonKey.ID));
+              updateDb.put(JsonKey.COURSE_PROGRESS , courseProgress);
+              updateDb.put(JsonKey.LAST_READ_CONTENTID ,((Map<String,Object>)value.get("content")).get(JsonKey.CONTENT_ID));
+              updateDb.put(JsonKey.LAST_READ_CONTENT_STATUS , (contentStateInfo.get((String)((Map<String,Object>)value.get("content")).get(JsonKey.ID))));
                try {
-                  cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), course);
+                  cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), updateDb);
+                  updateUserCoursesToES(updateDb);
               }catch(Exception ex){
                   ProjectLogger.log(ex.getMessage(), ex);
               }
@@ -158,5 +170,16 @@ public class UtilityActor extends UntypedAbstractActor {
         String courseId = (String) req.get(JsonKey.COURSE_ID);
         String batchId = (String) req.get(JsonKey.BATCH_ID);
         return OneWayHashing.encryptVal(userId + JsonKey.PRIMARY_KEY_DELIMETER + courseId+JsonKey.PRIMARY_KEY_DELIMETER+batchId);
+    }
+
+    private void updateUserCoursesToES(Map<String, Object> courseMap) {
+        Response response = new Response();
+        response.put(JsonKey.OPERATION, ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue());
+        response.put(JsonKey.USER_COURSES, courseMap);
+        try{
+            backGroundActorRef.tell(response,self());
+        }catch(Exception ex){
+            ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
+        }
     }
 }

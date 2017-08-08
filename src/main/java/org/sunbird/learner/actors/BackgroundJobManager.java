@@ -84,7 +84,15 @@ public class BackgroundJobManager extends UntypedAbstractActor {
           .equalsIgnoreCase(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue())) {
         updateCourseBatchInfoToEs(actorMessage);
 
-      } else {
+      } else if (requestedOperation
+          .equalsIgnoreCase(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue())) {
+        insertUserCourseInfoToEs(actorMessage);
+
+      }else if (requestedOperation
+          .equalsIgnoreCase(ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue())) {
+        updateUserCourseInfoToEs(actorMessage);
+
+      }else {
         ProjectLogger.log("UNSUPPORTED OPERATION");
         ProjectCommonException exception = new ProjectCommonException(
             ResponseCode.invalidOperationName.getErrorCode(),
@@ -95,6 +103,23 @@ public class BackgroundJobManager extends UntypedAbstractActor {
     } else {
       ProjectLogger.log("UNSUPPORTED MESSAGE FOR BACKGROUND JOB MANAGER");
     }
+  }
+
+  private void updateUserCourseInfoToEs(Response actorMessage) {
+
+    Map<String,Object> batch = (Map<String, Object>) actorMessage.get(JsonKey.USER_COURSES);
+    updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.usercourses.getTypeName(),
+        (String)batch.get(JsonKey.ID), batch);
+  }
+
+  private void insertUserCourseInfoToEs(Response actorMessage) {
+
+    Map<String,Object> batch = (Map<String, Object>) actorMessage.get(JsonKey.USER_COURSES);
+    insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.usercourses.getTypeName(),
+        (String) batch.get(JsonKey.ID), batch);
+
   }
 
   private void updateCourseBatchInfoToEs(Response actorMessage) {

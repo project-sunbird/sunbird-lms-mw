@@ -1693,6 +1693,11 @@ public class UserManagementActor extends UntypedAbstractActor {
        tempMap.put(JsonKey.ROLES, requestMap.get(JsonKey.ROLES));
        response = cassandraOperation.updateRecord(userOrgDb.getKeySpace(), userOrgDb.getTableName(), tempMap);
        sender().tell(response,self());
+       if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+         updateRoleToEs(tempMap,JsonKey.ORGANISATION,(String)requestMap.get(JsonKey.USER_ID),(String)requestMap.get(JsonKey.ORGANISATION_ID));
+       } else {
+         ProjectLogger.log("no call for ES to save user");
+       }
        return;
        
      }else {
@@ -1704,9 +1709,36 @@ public class UserManagementActor extends UntypedAbstractActor {
         Response response = cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
        ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(), (String)requestMap.get(JsonKey.USER_ID), tempMap);
        sender().tell(response,self());
+       if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+         updateRoleToEs(tempMap,JsonKey.USER,(String)requestMap.get(JsonKey.USER_ID),null);
+       } else {
+         ProjectLogger.log("no call for ES to save user");
+       }
        return;
      }
   }
+
+  private void updateRoleToEs(Map<String, Object> tempMap, String type,String userid,String orgId) {
+    
+      ProjectLogger.log("method call going to satrt for ES--.....");
+      Response usrResponse = new Response();
+      usrResponse.getResult()
+          .put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_ROLES_ES.getValue());
+      usrResponse.getResult().put(JsonKey.ROLES, tempMap.get(JsonKey.ROLES));
+      usrResponse.getResult().put(JsonKey.TYPE,type);
+      usrResponse.getResult().put(JsonKey.USER_ID,userid);
+      usrResponse.getResult().put(JsonKey.ORGANISATION_ID,orgId);
+      ProjectLogger.log("making a call to save user data to ES");
+      try {
+        backGroundActorRef.tell(usrResponse,self());
+      } catch (Exception ex) {
+        ProjectLogger.log("Exception Occured during saving user to Es while joinUserOrganisation : ", ex);
+      }
+    
+    return;
+  }
+    
+  
 
   /**
    * Method to un block the user 

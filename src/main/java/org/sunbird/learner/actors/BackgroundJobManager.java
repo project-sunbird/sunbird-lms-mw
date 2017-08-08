@@ -138,11 +138,8 @@ public class BackgroundJobManager extends UntypedAbstractActor {
         orgMapList.add(orgMap);
       }else{
         List<Map<String,Object>> mapList = new ArrayList<>();
-        Map<String,Object> userOrg =  new HashMap<>();
-        userOrg.put(JsonKey.USER_ID, orgMap.get(JsonKey.USER_ID));
-        userOrg.put(JsonKey.ORGANISATION_ID, orgMap.get(JsonKey.ORGANISATION_ID));
-        userOrg.put(JsonKey.ROLES, orgMap.get(JsonKey.ROLES));
-        result.put(JsonKey.ORGANISATIONS, userOrg);
+        mapList.add(orgMap);
+        result.put(JsonKey.ORGANISATIONS, mapList);
       }
     updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.user.getTypeName(),

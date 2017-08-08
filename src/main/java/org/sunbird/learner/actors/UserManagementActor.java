@@ -142,11 +142,11 @@ public class UserManagementActor extends UntypedAbstractActor {
         fetchRootAndRegisterOrganisation(result);
         Response response = new Response();
         if (null != result) {
-          if (!ProjectUtil.isStringNullOREmpty((String) result.get(JsonKey.USER_ID))) {
+         /* if (!ProjectUtil.isStringNullOREmpty((String) result.get(JsonKey.USER_ID))) {
             List<Map<String, Object>> organisations = getOrganisationDetailsByUserId(
                 (String) result.get(JsonKey.USER_ID));
             result.put(JsonKey.ORGANISATIONS, organisations);
-          }
+          }*/
           response.put(JsonKey.RESPONSE, result);
         } else {
           result = new HashMap<>();
@@ -209,11 +209,11 @@ public class UserManagementActor extends UntypedAbstractActor {
     fetchRootAndRegisterOrganisation(result);
     Response response = new Response();
     if (null != result) {
-      if (!ProjectUtil.isStringNullOREmpty((String) result.get(JsonKey.USER_ID))) {
+     /* if (!ProjectUtil.isStringNullOREmpty((String) result.get(JsonKey.USER_ID))) {
         List<Map<String, Object>> organisations = getOrganisationDetailsByUserId(
             (String) result.get(JsonKey.USER_ID));
         result.put(JsonKey.ORGANISATIONS, organisations);
-      }
+      }*/
       response.put(JsonKey.RESPONSE, result);
     } else {
       result = new HashMap<>();

@@ -466,3 +466,6 @@ DROP INDEX inx_cou_bat_enrolmentType ON sunbird.course_batch (enrollmentType);
 
 // adding the batchId column to content consumption table -- Aug 8,2017
 ALTER TABLE sunbird.content_consumption ADD batchId text;
+
+insert into sunbird.role_group (id,name) values ('COURSE_MENTOR','COURSE_MENTOR');
+update sunbird.role_group set url_action_ids=['courseMentor'] where id='COURSE_MENTOR';

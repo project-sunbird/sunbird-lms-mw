@@ -117,7 +117,7 @@ public class EsSyncActor extends UntypedAbstractActor {
     ElasticSearchUtil.bulkInsertData(ProjectUtil.EsIndex.sunbird.getIndexName(), getType(objectType), result);
     long stopTime = System.currentTimeMillis();
     long elapsedTime = stopTime - startTime;
-    ProjectLogger.log("total time taken to sync db data for "+ objectType +" to Elastic search "+ elapsedTime);
+    ProjectLogger.log("total time taken to sync db data for "+ objectType +" to Elastic search "+ elapsedTime+" ms.");
   }
 
   private String getType(String objectType) {

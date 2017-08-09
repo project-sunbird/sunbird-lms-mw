@@ -101,6 +101,7 @@ public class OrganisationMetricsActor extends UntypedAbstractActor {
     Map<String,Object> orgData = new HashMap<>();
     Map<String,Object> viewData = new HashMap<>();
     orgData.put(JsonKey.ORG_ID,orgId);
+    orgData.put(JsonKey.ORG_NAME, "sunbird");
     viewData.put("org", orgData);
     return viewData;
   }
@@ -144,6 +145,10 @@ public class OrganisationMetricsActor extends UntypedAbstractActor {
       
       Map<String,Object> snapshot = new LinkedHashMap<>();
       Map<String,Object> dataMap = new HashMap<>();
+      dataMap.put(JsonKey.NAME, "Number of contents created" );
+      dataMap.put(JsonKey.VALUE,340);
+      snapshot.put("org.creation.content.count", dataMap);
+      dataMap = new HashMap<>();
       dataMap.put(JsonKey.NAME, "Number of authors" );
       dataMap.putAll((Map<String,Object>)resultData.get("authors.count"));
       snapshot.put("org.creation.authors.count", dataMap);
@@ -188,6 +193,7 @@ public class OrganisationMetricsActor extends UntypedAbstractActor {
       Map<String,Object> seriesData = new LinkedHashMap<>();
       seriesData.put(JsonKey.NAME, "Content created by day");
       seriesData.put(JsonKey.SPLIT, "content.created_on");
+      seriesData.put(JsonKey.TIME_UNIT, "seconds");
       seriesData.put("buckets", bucket);
       series.put("org.creation.content.created_on.count", seriesData);
       
@@ -205,6 +211,7 @@ public class OrganisationMetricsActor extends UntypedAbstractActor {
           statusBucket = getBucketData(statusList);
           seriesData.put(JsonKey.NAME, "Live");
           seriesData.put(JsonKey.SPLIT, "content.published_on");
+          seriesData.put(JsonKey.TIME_UNIT, "seconds");
           seriesData.put("buckets", statusBucket);
           series.put("org.creation.content[@status=published].published_on.count", seriesData);
         }else if("draft".equalsIgnoreCase((String)status.get("key"))){
@@ -212,6 +219,7 @@ public class OrganisationMetricsActor extends UntypedAbstractActor {
           statusBucket = getBucketData(statusList);
           seriesData.put(JsonKey.NAME, "Draft");
           seriesData.put(JsonKey.SPLIT, "content.created_on");
+          seriesData.put(JsonKey.TIME_UNIT, "seconds");
           seriesData.put("buckets", statusBucket);
           series.put("org.creation.content[@status=draft].count", seriesData);
         }else if("review".equalsIgnoreCase((String)status.get("key"))){
@@ -219,6 +227,7 @@ public class OrganisationMetricsActor extends UntypedAbstractActor {
           statusBucket = getBucketData(statusList);
           seriesData.put(JsonKey.NAME, "Review");
           seriesData.put(JsonKey.SPLIT, "content.reviewed_on");
+          seriesData.put(JsonKey.TIME_UNIT, "seconds");
           seriesData.put("buckets", statusBucket);
           series.put("org.creation.content[@status=review].count", seriesData);
         }

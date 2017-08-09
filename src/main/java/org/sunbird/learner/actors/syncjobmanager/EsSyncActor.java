@@ -130,7 +130,7 @@ public class EsSyncActor extends UntypedAbstractActor {
   private Map<String, Object> getUserDetails(Entry<String, Object> entry) {
     String userId = entry.getKey();
     Map<String,Object> userMap = (Map<String, Object>) entry.getValue();
-    Util.removeAttributes(userMap, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY, JsonKey.ID));
+    Util.removeAttributes(userMap, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY));
     userMap.put(JsonKey.ADDRESS, getDetails(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),userId,JsonKey.USER_ID));
     List<Map<String, Object>> eduMap = getDetails(Util.dbInfoMap.get(JsonKey.EDUCATION_DB),userId,JsonKey.USER_ID);
     for(Map<String, Object> map : eduMap){

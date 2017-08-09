@@ -462,7 +462,7 @@ ALTER TABLE sunbird.course_batch ADD courseAdditionalInfo map<text,text>;
 DROP INDEX inx_cou_bat_enrolmentType;
 ALTER TABLE sunbird.course_batch DROP enrolmentType;
 ALTER TABLE sunbird.course_batch ADD enrollmentType text;
-DROP INDEX inx_cou_bat_enrolmentType ON sunbird.course_batch (enrollmentType);
+CREATE INDEX inx_cou_bat_enrollmentType ON sunbird.course_batch (enrollmentType);
 
 // adding the batchId column to content consumption table -- Aug 8,2017
 ALTER TABLE sunbird.content_consumption ADD batchId text;

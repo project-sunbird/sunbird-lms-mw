@@ -3,6 +3,7 @@ package org.sunbird.learner.actors.syncjobmanager;
 import akka.actor.UntypedAbstractActor;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -65,6 +66,7 @@ public class EsSyncActor extends UntypedAbstractActor {
     }
 
   private void syncData(Request message) {
+    ProjectLogger.log("DB data sync operation to elastic search started ");
     long startTime = System.currentTimeMillis();
     Map<String, Object> req = message.getRequest();
     Map<String ,Object> responseMap = new HashMap<>();
@@ -77,17 +79,26 @@ public class EsSyncActor extends UntypedAbstractActor {
       objectIds = (List<String>) dataMap.get(JsonKey.OBJECT_IDS);
     }
     Util.DbInfo dbInfo = getDbInfoObj(objectType);
+    if(null == dbInfo){
+      throw new ProjectCommonException(ResponseCode.invalidObjectType.getErrorCode(), 
+          ResponseCode.invalidObjectType.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
     if(null != objectIds && !objectIds.isEmpty()){
+      ProjectLogger.log("fetching data for "+objectType+" for these ids "+Arrays.toString(objectIds.toArray())+" started");
       Response response = cassandraOperation.getRecordsByProperty(dbInfo.getKeySpace(), dbInfo.getTableName(), JsonKey.ID, objectIds);
       reponseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+      ProjectLogger.log("fetching data for "+objectType+" for these ids "+Arrays.toString(objectIds.toArray())+" done");
     }
     if(null != reponseList  && !reponseList.isEmpty()){
       for(Map<String, Object> map : reponseList){
         responseMap.put((String)map.get(JsonKey.ID), map);
       }
     }else{
+      ProjectLogger.log("fetching all data for "+objectType+" started");
       Response response =  cassandraOperation.getAllRecords(dbInfo.getKeySpace(), dbInfo.getTableName());
       reponseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+      ProjectLogger.log("fetching all data for "+objectType+" done");
+      ProjectLogger.log("total db data to sync for "+ objectType +" to Elastic search "+ reponseList.size());
       if(null != reponseList ){
         for(Map<String, Object> map : reponseList){
           responseMap.put((String)map.get(JsonKey.ID), map);
@@ -120,18 +131,24 @@ public class EsSyncActor extends UntypedAbstractActor {
   }
 
   private Map<String, Object> getOrgDetails(Entry<String, Object> entry) {
+    ProjectLogger.log("fetching org data started");
     Map<String,Object> orgMap = (Map<String, Object>) entry.getValue();
     if(orgMap.containsKey(JsonKey.ADDRESS_ID) && !ProjectUtil.isStringNullOREmpty((String)orgMap.get(JsonKey.ADDRESS_ID))){
       orgMap.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),(String)orgMap.get(JsonKey.ADDRESS_ID)));
     }
+    ProjectLogger.log("fetching org data completed");
     return orgMap;
   }
 
   private Map<String, Object> getUserDetails(Entry<String, Object> entry) {
     String userId = entry.getKey();
+    ProjectLogger.log("fetching user data started");
     Map<String,Object> userMap = (Map<String, Object>) entry.getValue();
     Util.removeAttributes(userMap, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY));
+    
+    ProjectLogger.log("fetching user address data started");
     userMap.put(JsonKey.ADDRESS, getDetails(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),userId,JsonKey.USER_ID));
+    ProjectLogger.log("fetching user education data started");
     List<Map<String, Object>> eduMap = getDetails(Util.dbInfoMap.get(JsonKey.EDUCATION_DB),userId,JsonKey.USER_ID);
     for(Map<String, Object> map : eduMap){
       if(map.containsKey(JsonKey.ADDRESS_ID) && !ProjectUtil.isStringNullOREmpty((String)map.get(JsonKey.ADDRESS_ID))){
@@ -139,6 +156,7 @@ public class EsSyncActor extends UntypedAbstractActor {
       }
     }
     userMap.put(JsonKey.EDUCATION, eduMap);
+    ProjectLogger.log("fetching user job profile data started");
     List<Map<String, Object>> jobMap = getDetails(Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB),userId,JsonKey.USER_ID);
     for(Map<String, Object> map : jobMap){
       if(map.containsKey(JsonKey.ADDRESS_ID) && !ProjectUtil.isStringNullOREmpty((String)map.get(JsonKey.ADDRESS_ID))){
@@ -146,18 +164,10 @@ public class EsSyncActor extends UntypedAbstractActor {
       }
     }
     userMap.put(JsonKey.JOB_PROFILE, jobMap);
+    ProjectLogger.log("fetching user orga data started");
     List<Map<String, Object>> orgMap = getDetails(Util.dbInfoMap.get(JsonKey.USER_ORG_DB),userId,JsonKey.USER_ID);
-    List<Map<String, Object>> organisations = new ArrayList<>();
-    Map<String, Object> orgDb = null;
-    for(Map<String, Object> map : orgMap){
-        Map<String, Object> orgData = new HashMap<>();
-        orgDb =  map;
-        orgData.put(JsonKey.ORGANISATION_ID, orgDb.get(JsonKey.ORGANISATION_ID));
-        orgData.put(JsonKey.ROLES, orgDb.get(JsonKey.ROLES));
-        organisations.add(orgData);
-    }
-    userMap.put(JsonKey.ORGANISATIONS, organisations);
-    
+    userMap.put(JsonKey.ORGANISATIONS, orgMap);
+    ProjectLogger.log("fetching user root org data started");
     if(userMap.containsKey(JsonKey.ROOT_ORG_ID) && !ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.ROOT_ORG_ID))){
       Map<String,Object> rootOrg = getDetailsById(Util.dbInfoMap.get(JsonKey.ORG_DB),(String)userMap.get(JsonKey.ROOT_ORG_ID));
       userMap.put(JsonKey.ROOT_ORG, rootOrg);
@@ -166,6 +176,7 @@ public class EsSyncActor extends UntypedAbstractActor {
         rootOrg.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),(String)rootOrg.get(JsonKey.ADDRESS_ID)));
       }
     }
+    ProjectLogger.log("fetching user registered org data started");
     if(userMap.containsKey(JsonKey.REGISTERED_ORG_ID) && !ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.REGISTERED_ORG_ID))){
       Map<String,Object> regOrg = getDetailsById(Util.dbInfoMap.get(JsonKey.ORG_DB),(String)userMap.get(JsonKey.REGISTERED_ORG_ID));
       userMap.put(JsonKey.REGISTERED_ORG, regOrg);
@@ -174,6 +185,7 @@ public class EsSyncActor extends UntypedAbstractActor {
         regOrg.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),(String)regOrg.get(JsonKey.ADDRESS_ID)));
       }
     }
+    ProjectLogger.log("fetching user data completed");
     return userMap;
   }
   
@@ -196,7 +208,7 @@ public class EsSyncActor extends UntypedAbstractActor {
     }catch(Exception ex){
       
     }
-    return null;
+    return Collections.emptyList();
   }
 
   private DbInfo getDbInfoObj(String objectType) {

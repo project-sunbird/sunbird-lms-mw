@@ -33,7 +33,7 @@ public class SearchHandlerActor extends UntypedAbstractActor {
 		 if (message instanceof Request) {
 		        ProjectLogger.log("CompositeSearch  onReceive called");
 	            Request actorMessage = (Request) message;
-	            if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.COMPOSITE_SEARCH.getValue())) {
+		            if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.COMPOSITE_SEARCH.getValue())) {
 	              Map<String , Object> searchQueryMap = actorMessage.getRequest();
 	              Object objectType = ((Map<String,Object>)searchQueryMap.get(JsonKey.FILTERS)).get(JsonKey.OBJECT_TYPE);
 	              String [] types =  null;

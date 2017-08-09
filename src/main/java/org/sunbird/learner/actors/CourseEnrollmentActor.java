@@ -62,7 +62,7 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
           }
           //check whether user already enroll  for course
           Response dbResult = cassandraOperation.getRecordById(courseEnrollmentdbInfo.getKeySpace(),
-              courseEnrollmentdbInfo.getTableName() , generatePrimaryKey(courseMap));
+              courseEnrollmentdbInfo.getTableName() , generateUserCoursesPrimaryKey(courseMap));
           List<Map<String , Object>> dbList = (List<Map<String, Object>>) dbResult.get(JsonKey.RESPONSE);
           if(!dbList.isEmpty()){
             ProjectLogger.log("User Already Enrolled Course ");
@@ -96,7 +96,7 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
             courseMap.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
             courseMap.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
             courseMap.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
-            courseMap.put(JsonKey.ID, generatePrimaryKey(courseMap));
+            courseMap.put(JsonKey.ID, generateUserCoursesPrimaryKey(courseMap));
             courseMap.put(JsonKey.COURSE_PROGRESS, 0);
             courseMap.put(JsonKey.LEAF_NODE_COUNT, ekStepContent.get(JsonKey.LEAF_NODE_COUNT));
             Response result = cassandraOperation.insertRecord(courseEnrollmentdbInfo.getKeySpace(),
@@ -163,7 +163,7 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
    * @param req Map<String , Object>
    * @return String encrypted value
    */
-  private String generatePrimaryKey(Map<String, Object> req) {
+  private String generateUserCoursesPrimaryKey(Map<String, Object> req) {
     String userId = (String) req.get(JsonKey.USER_ID);
     String courseId = (String) req.get(JsonKey.COURSE_ID);
     String batchId = (String) req.get(JsonKey.BATCH_ID);

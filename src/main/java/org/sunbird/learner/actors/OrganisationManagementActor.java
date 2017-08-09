@@ -841,7 +841,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         Response usrResponse = new Response();
         usrResponse.getResult()
             .put(JsonKey.OPERATION, ActorOperations.REMOVE_USER_ORG_ES.getValue());
-        usrResponse.getResult().put(JsonKey.USER, usrOrgData);
+        usrResponse.getResult().put(JsonKey.USER, dataMap);
         ProjectLogger.log("making a call to save user data to ES");
         try {
           backGroundActorRef.tell(usrResponse,self());

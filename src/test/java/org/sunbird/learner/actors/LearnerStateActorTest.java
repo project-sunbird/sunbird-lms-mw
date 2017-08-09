@@ -75,7 +75,7 @@ public class LearnerStateActorTest {
         cassandraOperation.insertRecord(coursedbInfo.getKeySpace() , coursedbInfo.getTableName() , courseMap);
     }
 
-    @Test
+    //@Test
     public void onReceiveTestForGetCourse() throws Exception {
 
         TestKit probe = new TestKit(system);

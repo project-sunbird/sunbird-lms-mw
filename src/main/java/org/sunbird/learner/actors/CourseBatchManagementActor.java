@@ -378,7 +378,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
           ResponseCode.invalidCourseId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-    String enrolmentType = (String) req.get(JsonKey.ENROLMENTTYPE);
+    String enrolmentType = (String) req.get(JsonKey.ENROLLMENT_TYPE);
     List<String> createdFor = new ArrayList<>();
     if (req.containsKey(JsonKey.COURSE_CREATED_FOR)
         && req.get(JsonKey.COURSE_CREATED_FOR) instanceof List) {

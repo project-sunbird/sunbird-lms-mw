@@ -111,6 +111,8 @@ public class EsSyncActor extends UntypedAbstractActor {
           result.add(getUserDetails(itr.next()));
         }else if (objectType.equals(JsonKey.ORGANISATION)){
           result.add(getOrgDetails(itr.next()));
+        }else if (objectType.equals(JsonKey.BATCH) || objectType.equals(JsonKey.USER_COURSE)){
+          result.add((Map<String, Object>) (itr.next().getValue()));
         }
       }
     
@@ -126,6 +128,10 @@ public class EsSyncActor extends UntypedAbstractActor {
       type = ProjectUtil.EsType.user.getTypeName();
     }else if(objectType.equals(JsonKey.ORGANISATION)){
       type = ProjectUtil.EsType.organisation.getTypeName();
+    }else if(objectType.equals(JsonKey.BATCH)){
+      type = ProjectUtil.EsType.course.getTypeName();
+    }else if(objectType.equals(JsonKey.USER_COURSE)){
+      type = ProjectUtil.EsType.usercourses.getTypeName();
     }
     return type;
   }
@@ -206,7 +212,7 @@ public class EsSyncActor extends UntypedAbstractActor {
       Response response = cassandraOperation.getRecordsByProperty(dbInfo.getKeySpace(), dbInfo.getTableName(), property, id);
       return (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     }catch(Exception ex){
-      
+      ProjectLogger.log(ex.getMessage(), ex);
     }
     return Collections.emptyList();
   }
@@ -216,7 +222,12 @@ public class EsSyncActor extends UntypedAbstractActor {
       return Util.dbInfoMap.get(JsonKey.USER_DB);
     }else if (objectType.equals(JsonKey.ORGANISATION)){
       return Util.dbInfoMap.get(JsonKey.ORG_DB);
+    }else if (objectType.equals(JsonKey.BATCH)){
+      return Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
+    }else if (objectType.equals(JsonKey.USER_COURSE)){
+      return Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
     }
+    
     return null;
   }
  }

@@ -484,21 +484,21 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
       Map<String, Object> res = resList.get(0);
       if(req.containsKey(JsonKey.START_DATE)){
         Date dbBatchStartDate = null;
-        Date reqStartdate = null;
+        Date todaydate = null;
         try {
           dbBatchStartDate = format.parse((String)res.get(JsonKey.START_DATE));
-          reqStartdate = format.parse((String)req.get(JsonKey.START_DATE));
+          todaydate = format.parse((String)format.format(new Date()));
           Calendar cal1 = Calendar.getInstance();
           Calendar cal2 = Calendar.getInstance();
           cal1.setTime(dbBatchStartDate);
-          cal2.setTime(reqStartdate);
+          cal2.setTime(todaydate);
         } catch (ParseException e) {
           ProjectLogger.log("Exception occured while parsing date in CourseBatchManagementActor ", e);
         }
-        if (dbBatchStartDate.before(reqStartdate)) {
+        if (dbBatchStartDate.before(todaydate)) {
           throw new ProjectCommonException(
-              ResponseCode.courseBatchStartDateError.getErrorCode(),
-              ResponseCode.courseBatchStartDateError.getErrorMessage(),
+              ResponseCode.courseBatchStartPassedDateError.getErrorCode(),
+              ResponseCode.courseBatchStartPassedDateError.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
       }

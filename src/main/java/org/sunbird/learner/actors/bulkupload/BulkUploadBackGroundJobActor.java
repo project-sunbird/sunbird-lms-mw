@@ -193,6 +193,18 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     cassandraOperation.updateRecord(dbInfo.getKeySpace() , dbInfo.getTableName() , courseBatchObject);
     successList.put(JsonKey.SUCCESS_RESULT, passedUserList);
     failList.put(JsonKey.FAILURE_RESULT, failedUserList);
+    
+    ProjectLogger.log("method call going to satrt for ES--.....");
+    Response batchRes = new Response();
+    batchRes.getResult()
+        .put(JsonKey.OPERATION, ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
+    batchRes.getResult().put(JsonKey.BATCH, courseBatchObject);
+    ProjectLogger.log("making a call to save Course Batch data to ES");
+    try {
+      backGroundActorRef.tell(batchRes,self());
+    } catch (Exception ex) {
+      ProjectLogger.log("Exception Occured during saving Course Batch to Es while updating Course Batch : ", ex);
+    }
   }
 
   private Boolean addUserCourses(String batchId, String courseId, String updatedBy,

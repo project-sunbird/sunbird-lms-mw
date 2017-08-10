@@ -8,6 +8,7 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -37,7 +38,6 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = new CassandraOperationImpl();
   private Util.DbInfo dbInfo = null;
   private Util.DbInfo userOrgdbInfo = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
-  private Util.DbInfo coursePublishdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
   private ActorRef backGroundActorRef;
 
   public CourseBatchManagementActor() {
@@ -188,7 +188,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
         if (flag) {
           response.getResult().put(userId, JsonKey.SUCCESS);
         } else {
-          response.getResult().put(userId, JsonKey.FAILED);
+          response.getResult().put(userId, ResponseCode.userNotAssociatedToOrg.getErrorMessage());
         }
 
       }else{
@@ -415,6 +415,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
 
       }
     }
+    req.remove(JsonKey.PARTICIPANT);
     String courseCreator = (String) ekStepContent.get(JsonKey.CREATED_BY);
     String createdBy =
         (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
@@ -452,8 +453,8 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
   private Map<String,String> getAdditionalCourseInfo(Map<String, Object> ekStepContent) {
 
     Map<String , String> courseMap = new HashMap<>();
-    courseMap.put(JsonKey.COURSE_LOGO_URL, (String)ekStepContent.get(JsonKey.APP_ICON));
-    courseMap.put(JsonKey.COURSE_NAME, (String)ekStepContent.get(JsonKey.DESCRIPTION));
+    courseMap.put(JsonKey.COURSE_LOGO_URL, (String)ekStepContent.get(JsonKey.APP_ICON) == null ?"" : (String)ekStepContent.get(JsonKey.APP_ICON));
+    courseMap.put(JsonKey.COURSE_NAME, (String)ekStepContent.get(JsonKey.DESCRIPTION) == null ? "" : (String)ekStepContent.get(JsonKey.DESCRIPTION));
     if(ProjectUtil.isNotNull(ekStepContent.get(JsonKey.LEAF_NODE_COUNT))) {
       courseMap.put(JsonKey.LEAF_NODE_COUNT,
           ((Integer) ekStepContent.get(JsonKey.LEAF_NODE_COUNT)).toString());
@@ -472,6 +473,12 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
     Response response = cassandraOperation.getRecordById(dbInfo.getKeySpace(),
         dbInfo.getTableName(), (String)req.get(JsonKey.ID));
+    req.remove(JsonKey.IDENTIFIER);
+    if(null != req.get(JsonKey.STATUS)){
+      int status = Integer.parseInt(""+req.get(JsonKey.STATUS));
+      req.put(JsonKey.STATUS,status);
+    }
+    
     List<Map<String,Object>> resList = ((List<Map<String, Object>>) response.get(JsonKey.RESPONSE));
     if(null != resList && ! resList.isEmpty()){
       Map<String, Object> res = resList.get(0);
@@ -481,6 +488,10 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
         try {
           dbBatchStartDate = format.parse((String)res.get(JsonKey.START_DATE));
           reqStartdate = format.parse((String)req.get(JsonKey.START_DATE));
+          Calendar cal1 = Calendar.getInstance();
+          Calendar cal2 = Calendar.getInstance();
+          cal1.setTime(dbBatchStartDate);
+          cal2.setTime(reqStartdate);
         } catch (ParseException e) {
           ProjectLogger.log("Exception occured while parsing date in CourseBatchManagementActor ", e);
         }

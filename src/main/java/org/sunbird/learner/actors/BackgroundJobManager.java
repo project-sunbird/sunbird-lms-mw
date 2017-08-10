@@ -100,6 +100,10 @@ public class BackgroundJobManager extends UntypedAbstractActor {
           .equalsIgnoreCase(ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue())) {
         updateUserCourseInfoToEs(actorMessage);
 
+      }else if (requestedOperation
+          .equalsIgnoreCase(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue())) {
+        insertUserCourseInfoToEs(actorMessage);
+
       }else {
         ProjectLogger.log("UNSUPPORTED OPERATION");
         ProjectCommonException exception = new ProjectCommonException(

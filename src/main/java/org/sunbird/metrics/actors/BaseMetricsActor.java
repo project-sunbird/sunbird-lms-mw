@@ -3,10 +3,12 @@ package org.sunbird.metrics.actors;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.codec.Charsets;
@@ -25,7 +27,7 @@ import akka.actor.UntypedAbstractActor;
 
 public abstract class BaseMetricsActor extends UntypedAbstractActor {
 
-  protected abstract Map<String, Object> getViewData(String id);
+  protected abstract Map<String, Object> getViewData(String id, Object data);
 
   protected Map<String, Object> addSnapshot(String keyName, String name, Object value,
       String timeUnit) {
@@ -40,6 +42,20 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
 
   protected static Map<String, String> getStartAndEndDate(String period) {
     Map<String, String> dateMap = new HashMap<>();
+    int days = getDaysByPeriod(period);
+    Date endDate = new Date();
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+    Calendar cal = Calendar.getInstance();
+    cal.setTimeInMillis(endDate.getTime());
+    cal.add(Calendar.DATE, -days);
+    String startDateStr = sdf.format(cal.getTimeInMillis());
+    String endDateStr = sdf.format(endDate.getTime());
+    dateMap.put("startDate", startDateStr);
+    dateMap.put("endDate", endDateStr);
+    return dateMap;
+  }
+
+  protected static int getDaysByPeriod(String period) {
     int days = 0;
     switch (period) {
       case "7d": {
@@ -55,17 +71,24 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
         break;
       }
     }
-    Date endDate = new Date();
-    //Date endDate = new Date(2017, 07, 10);
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-    Calendar cal = Calendar.getInstance();
-    cal.setTimeInMillis(endDate.getTime());
-    cal.add(Calendar.DATE, -days);
-    String startDateStr = sdf.format(cal.getTimeInMillis());
-    String endDateStr = sdf.format(endDate.getTime());
-    dateMap.put("startDate", startDateStr);
-    dateMap.put("endDate", endDateStr);
-    return dateMap;
+    return days;
+  }
+  
+  protected List<Map<String,Object>> createBucketStructure(String periodStr) {
+    int days = getDaysByPeriod(periodStr);
+    Date date = new Date();
+    List<Map<String,Object>> bucket = new ArrayList<>();
+    for(int day = 0; day < days; day++){
+      Map<String, Object> bucketData = new LinkedHashMap<String, Object>();
+      Calendar cal = Calendar.getInstance();
+      cal.setTimeInMillis(date.getTime());
+      cal.add(Calendar.DATE, -days);
+      bucketData.put("key", cal.getTimeInMillis());
+      bucketData.put("key_name", new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime()));
+      bucketData.put("value", 0);
+      bucket.add(bucketData);
+    }
+    return bucket;
   }
 
   protected String getDataFromEkstep(String request, String apiUrl) {

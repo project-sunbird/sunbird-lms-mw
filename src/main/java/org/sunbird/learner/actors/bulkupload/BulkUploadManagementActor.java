@@ -130,7 +130,53 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
       processBulkUserUpload(req,processId);
     }else if(((String)req.get(JsonKey.OBJECT_TYPE)).equals(JsonKey.ORGANISATION)){
       processBulkOrgUpload(req,processId);
+    }else if(((String)req.get(JsonKey.OBJECT_TYPE)).equals(JsonKey.BATCH)){
+      processBulkBatchEnrollment(req,processId);
     }
+    
+  }
+
+  private void processBulkBatchEnrollment(Map<String, Object> req, String processId) {
+    File file = new File("bulk.csv");
+    FileOutputStream fos = null;
+    try {
+       fos = new FileOutputStream(file);
+       fos.write( (byte[]) req.get(JsonKey.FILE));
+    } catch (IOException e) {
+      ProjectLogger.log("Exception Occurred while reading file in BulkUploadManagementActor", e);
+    }finally{
+      try {
+        fos.close();
+      } catch (IOException e) {
+        ProjectLogger.log("Exception Occurred while closing fileInputStream in BulkUploadManagementActor", e);
+      }
+    }
+    
+    List<String[]> batchList = parseCsvFile(file);
+    if (null != batchList ) {
+        if (batchList.size() > 201) {
+          throw  new ProjectCommonException(
+              ResponseCode.dataSizeError.getErrorCode(),
+              ResponseCode.dataSizeError.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
+        if(!batchList.isEmpty()){
+          String[] columns = batchList.get(0);
+          validateBatchProperty(columns);
+        }else{
+          throw  new ProjectCommonException(
+              ResponseCode.csvError.getErrorCode(),
+              ResponseCode.csvError.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
+    }else{
+      throw new ProjectCommonException(
+          ResponseCode.csvError.getErrorCode(),
+          ResponseCode.csvError.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    //save csv file to db
+    uploadCsvToDB(batchList,processId,null,JsonKey.BATCH,(String)req.get(JsonKey.REQUESTED_BY));
     
   }
 
@@ -268,22 +314,22 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
   }
 
   private void uploadCsvToDB(List<String[]> dataList, String processId, String orgId, String objectType, String requestedBy) {
-    List<Map<String,Object>> userMapList = new ArrayList<>();
+    List<Map<String,Object>> dataMapList = new ArrayList<>();
     if (dataList.size() > 1) {
       String[] columnArr = dataList.get(0);
       columnArr=trimColumnAttriutes(columnArr);
-      Map<String,Object> userMap = null;
+      Map<String,Object> dataMap = null;
       for(int i = 1 ; i < dataList.size() ; i++){
-        userMap = new HashMap<>();
+        dataMap = new HashMap<>();
         String[] valueArr = dataList.get(i);
         for(int j = 0 ; j < valueArr.length ; j++){
             String value = (valueArr[j].trim().length()==0?null:valueArr[j].trim());
-            userMap.put(columnArr[j], value);
+            dataMap.put(columnArr[j], value);
          }
         if(!ProjectUtil.isStringNullOREmpty(objectType) && objectType.equalsIgnoreCase(JsonKey.USER)){
-          userMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
+          dataMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
         }
-        userMapList.add(userMap);
+        dataMapList.add(dataMap);
       }
     }
     //convert userMapList to json string 
@@ -292,7 +338,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
     ObjectMapper mapper = new ObjectMapper();
     try {
       map.put(JsonKey.DATA,
-          mapper.writeValueAsString(userMapList));
+          mapper.writeValueAsString(dataMapList));
     } catch (IOException e) {
       ProjectLogger.log(e.getMessage(), e);
     }
@@ -378,7 +424,19 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
     }
     
   }
-  
+  private void validateBatchProperty(String[] property) {
+    ArrayList<String> properties = new ArrayList<>(
+        Arrays.asList(JsonKey.BATCH_ID, JsonKey.USER_IDs));
+    
+    for(String key : property){
+      if(! properties.contains(key)){
+        throw new ProjectCommonException(ResponseCode.InvalidColumnError.getErrorCode(),
+            ResponseCode.InvalidColumnError.getErrorMessage(), 
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
+    
+  }
   
  
 }

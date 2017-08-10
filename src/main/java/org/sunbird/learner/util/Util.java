@@ -11,6 +11,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
+import org.sunbird.common.quartz.scheduler.SchedulerManager;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.CassandraConnectionManager;
@@ -48,6 +49,8 @@ public class Util {
         // EkStep HttpClient headers init
         headers.put("content-type", "application/json");
         headers.put("accept", "application/json");
+       // SchedulerManager schedulerManager = new SchedulerManager();
+        //schedulerManager.schedule();
     }
 
     /**

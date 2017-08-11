@@ -245,13 +245,24 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       cassandraOperation
           .insertRecord(courseEnrollmentdbInfo.getKeySpace(), courseEnrollmentdbInfo.getTableName(),
               userCourses);
-
+      insertUserCoursesToES(userCourses);
       flag = true;
     }catch(Exception ex) {
       ProjectLogger.log("INSERT RECORD TO USER COURSES EXCEPTION ",ex);
       flag = false;
     }
     return flag;
+  }
+  
+  private void insertUserCoursesToES(Map<String, Object> courseMap) {
+    Response response = new Response();
+    response.put(JsonKey.OPERATION, ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue());
+    response.put(JsonKey.USER_COURSES, courseMap);
+    try{
+      backGroundActorRef.tell(response,self());
+    }catch(Exception ex){
+      ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
+    }
   }
   
   private String validateBatchInfo(Response courseBatchResult) {

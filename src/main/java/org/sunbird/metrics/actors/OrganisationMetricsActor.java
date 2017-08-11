@@ -72,7 +72,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       String query = getQuery(periodStr, orgId, dateMap);
       String esResponse = getESData(query);
       String responseFormat = metricsESResponseGenerator(esResponse);
-      Response response = metricsResponseGenerator(responseFormat, periodStr, getViewData(orgId));
+      Response response = metricsResponseGenerator(responseFormat, periodStr, getViewData(orgId, null));
       sender().tell(response, self());
     } catch (ProjectCommonException e) {
       ProjectLogger.log("Some error occurs" + e.getMessage());
@@ -82,7 +82,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   }
 
   @Override
-  protected Map<String, Object> getViewData(String orgId) {
+  protected Map<String, Object> getViewData(String orgId , Object org) {
     Map<String, Object> orgData = new HashMap<>();
     Map<String, Object> viewData = new HashMap<>();
     orgData.put(JsonKey.ORG_ID, orgId);
@@ -377,7 +377,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     dataMap.put(JsonKey.TIME_UNIT, "seconds");
     seriesData.put("buckets", bucket);
     series.put("org.consumption.content.time_spent.sum", seriesData);
-    responseMap.putAll(getViewData(orgId));
+    responseMap.putAll(getViewData(orgId, null));
     responseMap.put(JsonKey.PERIOD, periodStr);
     responseMap.put(JsonKey.SNAPSHOT, snapshot);
     responseMap.put(JsonKey.SERIES, series);
@@ -395,7 +395,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       String query = getQuery(periodStr, orgId, dateMap);
       String esResponse = makePostRequest(JsonKey.EKSTEP_ES_METRICS_URL, query);
       String responseFormat = metricsESResponseGenerator(esResponse);
-      Response response = metricsResponseGenerator(responseFormat, periodStr, getViewData(orgId));
+      Response response = metricsResponseGenerator(responseFormat, periodStr, getViewData(orgId, null));
       sender().tell(response, self());
     } catch (ProjectCommonException e) {
       ProjectLogger.log("Some error occurs" + e.getMessage());

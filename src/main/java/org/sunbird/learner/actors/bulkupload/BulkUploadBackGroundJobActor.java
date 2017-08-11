@@ -343,7 +343,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       }
 
       Map<String, Object> dbMap = new HashMap<String, Object>();
-      dbMap.put(JsonKey.SOURCE, concurrentHashMap.get(JsonKey.PROVIDER));
+      dbMap.put(JsonKey.PROVIDER, concurrentHashMap.get(JsonKey.PROVIDER));
       dbMap.put(JsonKey.EXTERNAL_ID, concurrentHashMap.get(JsonKey.EXTERNAL_ID));
       Response result = cassandraOperation.getRecordsByProperties(orgDbInfo.getKeySpace(),
           orgDbInfo.getTableName(), dbMap);

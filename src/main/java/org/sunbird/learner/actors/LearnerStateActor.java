@@ -60,11 +60,6 @@ public class LearnerStateActor extends UntypedAbstractActor {
           Map<String, Object> result = ElasticSearchUtil
               .complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.usercourses.getTypeName());
 
-          /*Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
-          Response result = cassandraOperation
-              .getRecordsByProperty(dbInfo.getKeySpace(), dbInfo.getTableName(), JsonKey.USER_ID,
-                  userId);
-          removeUnwantedProperties(result);*/
           response.put(JsonKey.RESPONSE , result.get(JsonKey.CONTENT));
           sender().tell(response, self());
 

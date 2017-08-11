@@ -99,13 +99,11 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     Map<String, String> headers = new HashMap<>();
     String response = null;
     try {
-      String baseSearchUrl = System.getenv(JsonKey.EKSTEP_CONTENT_SEARCH_BASE_URL);
+      String baseSearchUrl = System.getenv(JsonKey.EKSTEP_METRICS_URL);
       if (ProjectUtil.isStringNullOREmpty(baseSearchUrl)) {
         baseSearchUrl =
-            PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_BASE_URL);
+            PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_METRICS_URL);
       }
-      // TODO:Remove this once mockup api's are replaced
-      baseSearchUrl = "https://dev.ekstep.in/api";
       headers.put(JsonKey.AUTHORIZATION, System.getenv(JsonKey.AUTHORIZATION));
       if (ProjectUtil.isStringNullOREmpty((String) headers.get(JsonKey.AUTHORIZATION))) {
         headers.put(JsonKey.AUTHORIZATION, JsonKey.BEARER
@@ -122,12 +120,20 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   }
 
   public static String makePostRequest(String url, String body) throws Exception {
-    String baseSearchUrl = "https://qa.ekstep.in/api";
+    String baseSearchUrl = System.getenv(JsonKey.EKSTEP_METRICS_URL);
+    if (ProjectUtil.isStringNullOREmpty(baseSearchUrl)) {
+      baseSearchUrl =
+          PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_METRICS_URL);
+    }
+    String authKey = System.getenv(JsonKey.AUTHORIZATION);
+    if(ProjectUtil.isStringNullOREmpty(authKey)){
+      authKey = JsonKey.BEARER
+          + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_METRICS_AUTHORIZATION);
+    }
     HttpClient client = HttpClientBuilder.create().build();
     HttpPost post = new HttpPost(baseSearchUrl + PropertiesCache.getInstance().getProperty(url));
     post.addHeader("Content-Type", "application/json; charset=utf-8");
-    post.addHeader(JsonKey.AUTHORIZATION, JsonKey.BEARER
-            + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_METRICS_AUTHORIZATION));
+    post.addHeader(JsonKey.AUTHORIZATION, authKey);
     post.setEntity(new StringEntity(body, Charsets.UTF_8.name()));
     HttpResponse response = client.execute(post);
     if (response.getStatusLine().getStatusCode() != 200) {

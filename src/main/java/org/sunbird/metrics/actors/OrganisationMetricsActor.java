@@ -339,7 +339,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       seriesData.put(JsonKey.NAME, "Live");
       seriesData.put(JsonKey.SPLIT, "content.published_on");
       seriesData.put("buckets", statusBucket);
-      series.put("org.creation.content[@status=published].published_on.count", seriesData);
+      series.put("org.creation.content[@status=published].count", seriesData);
       
       statusList = (Map<String, Object>) statusValueMap.get("reviewBucket");
       statusBucket = getBucketData(statusList);
@@ -445,12 +445,12 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
       String orgName = validateOrg(orgId);
       if (ProjectUtil.isStringNullOREmpty(orgName)) {
-       /* ProjectCommonException exception =
+       ProjectCommonException exception =
             new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
                 ResponseCode.invalidOrgData.getErrorMessage(),
                 ResponseCode.CLIENT_ERROR.getResponseCode());
-        sender().tell(exception, self());*/
-        // return;
+        sender().tell(exception, self());
+        return;
       }
       Map<String, Object> aggregationMap = new HashMap<>();
       for (String operation : operationList) {

@@ -1655,7 +1655,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         if(!ProjectUtil.isStringNullOREmpty(externalId) && !ProjectUtil.isStringNullOREmpty(provider)) {
           tempMap.remove(JsonKey.LOGIN_ID);
           tempMap.put(JsonKey.EXTERNAL_ID, externalId);
-          tempMap.put(JsonKey.SOURCE, provider);
+          tempMap.put(JsonKey.PROVIDER, provider);
           Util.DbInfo orgDBInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
           Response result = cassandraOperation.getRecordsByProperties(orgDBInfo.getKeySpace(),
               orgDBInfo.getTableName(), tempMap);

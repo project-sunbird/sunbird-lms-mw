@@ -45,6 +45,8 @@ public class ManageCourseBatchCount implements Job {
          for (Map<String, Object> map : listMap) {
            Map<String,Object> weakMap = new WeakHashMap<>();
            weakMap.put(JsonKey.ID, (String)map.get(JsonKey.ID));
+           weakMap.put(JsonKey.COUNTER_INCREMENT_STATUS, true);
+           weakMap.put(JsonKey.COUNTER_INCREMENT_STATUS, ProjectUtil.getFormattedDate());
           CourseBatchSchedulerUtil.updateCourseBatchDbStatus(weakMap);
         } 
        }

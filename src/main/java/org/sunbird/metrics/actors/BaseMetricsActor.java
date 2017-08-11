@@ -122,10 +122,12 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   }
 
   public static String makePostRequest(String url, String body) throws Exception {
-    String baseSearchUrl = "https://dev.ekstep.in/api";
+    String baseSearchUrl = "https://qa.ekstep.in/api";
     HttpClient client = HttpClientBuilder.create().build();
     HttpPost post = new HttpPost(baseSearchUrl + PropertiesCache.getInstance().getProperty(url));
     post.addHeader("Content-Type", "application/json; charset=utf-8");
+    post.addHeader(JsonKey.AUTHORIZATION, JsonKey.BEARER
+            + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_METRICS_AUTHORIZATION));
     post.setEntity(new StringEntity(body, Charsets.UTF_8.name()));
     HttpResponse response = client.execute(post);
     if (response.getStatusLine().getStatusCode() != 200) {

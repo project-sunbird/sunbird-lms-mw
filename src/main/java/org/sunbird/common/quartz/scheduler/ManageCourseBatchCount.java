@@ -5,11 +5,14 @@ package org.sunbird.common.quartz.scheduler;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
+import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
@@ -35,6 +38,20 @@ public class ManageCourseBatchCount implements Job {
       yesterDay = format.format(cal.getTime());
       ProjectLogger.log("start date and end date is ==" + today +"  "+ yesterDay);
     Map<String,Object> data =  CourseBatchSchedulerUtil.getBatchDetailsFromES(today, yesterDay);
+    if(data != null && data.size()>0) {
+      Object startDateData = data.get(JsonKey.START_DATE);
+       if (startDateData != null) {
+         List<Map<String,Object>> listMap = (List<Map<String,Object>>) startDateData;
+         for (Map<String, Object> map : listMap) {
+           Map<String,Object> weakMap = new WeakHashMap<>();
+           weakMap.put(JsonKey.ID, (String)map.get(JsonKey.ID));
+          CourseBatchSchedulerUtil.updateCourseBatchDbStatus(weakMap);
+        } 
+       }
+    } else {
+      ProjectLogger.log("No data found in Elasticsearch for course batch update.");
+    }
+    
     
     
   }

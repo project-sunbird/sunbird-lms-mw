@@ -3,6 +3,7 @@
  */
 package org.sunbird.learner.util;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -11,10 +12,13 @@ import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.dto.SearchDTO;
+import org.sunbird.learner.actors.CourseEnrollmentActor;
 
 /**
  * @author Manzarul
@@ -22,6 +26,16 @@ import org.sunbird.dto.SearchDTO;
  */
 public class CourseBatchSchedulerUtil {
   private static  Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
+  private static Map<String,String> headerMap = new HashMap<>();
+  static {
+    String header = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
+    if (ProjectUtil.isStringNullOREmpty(header)) {
+      header = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION);
+    } else {
+      header = JsonKey.BEARER+header;
+    }
+     headerMap.put(JsonKey.AUTHORIZATION, header);
+  }
   /**
    * 
    * @param startDate
@@ -99,6 +113,21 @@ public class CourseBatchSchedulerUtil {
   }
   
   public static void doOperationInEkStepCourse (String contentname, String courseId, boolean increment) {
+    
+    //collect data from EKStep.
+    Map<String, Object> ekStepContent =
+        CourseEnrollmentActor.getCourseObjectFromEkStep(courseId, headerMap);
+    if(ekStepContent != null && ekStepContent.size()>0) {
+       int val = (int) ekStepContent.getOrDefault(contentname, 0);
+      try {
+           HttpUtil.sendPostRequest("URL", "", headerMap) ;
+      } catch (IOException e) {
+        ProjectLogger.log("Error while updating content value "+e.getMessage() ,e);
+      }
+    } else {
+      ProjectLogger.log("EKstep content not found for course id==" + courseId);
+    }
+    
     
   }
   

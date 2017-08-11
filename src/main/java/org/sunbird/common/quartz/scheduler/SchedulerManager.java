@@ -24,13 +24,13 @@ import org.sunbird.common.models.util.ProjectLogger;
  */
 public class SchedulerManager {
   private static final String file = "quartz.properties";
-
+  private static Scheduler scheduler = null;
   public  void schedule() {
     InputStream in = this.getClass().getClassLoader().getResourceAsStream(file);
     Properties configProp = new Properties();
     try {
       configProp.load(in);
-      Scheduler scheduler = new StdSchedulerFactory(configProp).getScheduler();
+       scheduler = new StdSchedulerFactory(configProp).getScheduler();
      String identifier = "NetOps-PC1502295457753";
    // 1- create a job and bind with class which is implementing Job
       // interface.
@@ -68,6 +68,8 @@ public class SchedulerManager {
       }
     } catch (IOException | SchedulerException e ) {
       ProjectLogger.log("Error in properties cache", e);
+    } finally {
+        registerShutDownHook();
     }
   }
   
@@ -75,4 +77,36 @@ public class SchedulerManager {
     new SchedulerManager().schedule();
   }
 
+  
+  /**
+   * This class will be called by registerShutDownHook to 
+   * register the call inside jvm , when jvm terminate it will call
+   * the run method to clean up the resource.
+   * @author Manzarul
+   *
+   */
+  static class ResourceCleanUp extends Thread {
+        public void run() {
+            ProjectLogger.log("started resource cleanup for Quartz job.");
+            try {
+              scheduler.shutdown();
+            } catch (SchedulerException e) {
+              ProjectLogger.log(e.getMessage(), e);
+            }
+            ProjectLogger.log("completed resource cleanup Quartz job.");
+        }
+  }
+  
+  /**
+   * Register the hook for resource clean up.
+   * this will be called when jvm shut down.
+   */
+  public static void registerShutDownHook() {
+      Runtime runtime = Runtime.getRuntime();
+      runtime.addShutdownHook(new ResourceCleanUp());
+      ProjectLogger.log("ShutDownHook registered for Quartz scheduler.");
+  }
+
+  
+  
 }

@@ -82,11 +82,11 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     int days = getDaysByPeriod(periodStr);
     Date date = new Date();
     List<Map<String,Object>> bucket = new ArrayList<>();
-    for(int day = 0; day < days; day++){
+    for(int day = days; day > 0; day--){
       Map<String, Object> bucketData = new LinkedHashMap<String, Object>();
       Calendar cal = Calendar.getInstance();
       cal.setTimeInMillis(date.getTime());
-      cal.add(Calendar.DATE, -days);
+      cal.add(Calendar.DATE, -day);
       bucketData.put("key", cal.getTimeInMillis());
       bucketData.put("key_name", new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime()));
       bucketData.put("value", 0);
@@ -122,10 +122,12 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   }
 
   public static String makePostRequest(String url, String body) throws Exception {
-    String baseSearchUrl = "https://dev.ekstep.in/api";
+    String baseSearchUrl = "https://qa.ekstep.in/api";
     HttpClient client = HttpClientBuilder.create().build();
     HttpPost post = new HttpPost(baseSearchUrl + PropertiesCache.getInstance().getProperty(url));
     post.addHeader("Content-Type", "application/json; charset=utf-8");
+    post.addHeader(JsonKey.AUTHORIZATION, JsonKey.BEARER
+            + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_METRICS_AUTHORIZATION));
     post.setEntity(new StringEntity(body, Charsets.UTF_8.name()));
     HttpResponse response = client.execute(post);
     if (response.getStatusLine().getStatusCode() != 200) {

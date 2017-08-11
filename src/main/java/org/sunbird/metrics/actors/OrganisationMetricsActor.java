@@ -67,7 +67,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     try {
       String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
       String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
-      Map<String, String> dateMap = getStartAndEndDate(periodStr);
+      Map<String, Object> dateMap = getStartAndEndDate(periodStr);
 
       String query = getQuery(periodStr, orgId, dateMap);
       String esResponse = getESData(query);
@@ -98,7 +98,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     return viewData;
   }
 
-  private String getQuery(String periodStr, String orgId, Map<String, String> dateMap) {
+  private String getQuery(String periodStr, String orgId, Map<String, Object> dateMap) {
     // String query =
     // "{\"query\":{\"filtered\":{\"query\":{\"bool\":{\"must\":[{\"query\":{\"range\":{\"lastUpdatedOn\":{\"gt\":\"2017-07-24T00:00:00.000+0530\",\"lte\":\"2017-08-01T00:00:00.000+0530\"}}}},{\"match\":{\"createdFor.raw\":\"Sunbird\"}}]}}}},\"size\":0,\"aggs\":{\"created_on\":{\"date_histogram\":{\"field\":\"lastUpdatedOn\",\"interval\":\"1d\",\"format\":\"yyyy-MM-dd\"}},\"status\":{\"terms\":{\"field\":\"status.raw\",\"include\":[\"draft\",\"live\",\"review\"]},\"aggs\":{\"updated_on\":{\"date_histogram\":{\"field\":\"lastUpdatedOn\",\"interval\":\"1d\",\"format\":\"yyyy-MM-dd\"}}}},\"authors.count\":{\"cardinality\":{\"field\":\"createdBy.raw\",\"precision_threshold\":100}},\"content_count\":{\"terms\":{\"field\":\"objectType.raw\",\"include\":\"content\"}}}}";
     String queryRequest =
@@ -391,7 +391,16 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     try {
       String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
       String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
-      Map<String, String> dateMap = getStartAndEndDate(periodStr);
+      String orgName = validateOrg(orgId);
+      if (ProjectUtil.isStringNullOREmpty(orgName)) {
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
+                ResponseCode.invalidOrgData.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+        sender().tell(exception, self());
+        // return;
+      }
+      Map<String, Object> dateMap = getStartAndEndDate(periodStr);
       String query = getQuery(periodStr, orgId, dateMap);
       String esResponse = makePostRequest(JsonKey.EKSTEP_ES_METRICS_URL, query);
       String responseFormat = metricsESResponseGenerator(esResponse);
@@ -409,8 +418,16 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     }
   }
 
-  private void orgConsumptionMetrics(Request actorMessages) {
-
+  private String validateOrg(String orgId) {
+    String orgName = null;
+    Map<String, Object> result =
+        ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.organisation.getTypeName(), orgId);
+    if (null == result || result.isEmpty()) {
+      return null;
+    }
+    orgName = (String) result.get(JsonKey.ORG_NAME);
+    return orgName;
   }
 
 }

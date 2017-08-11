@@ -17,11 +17,13 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.responsecode.ResponseCode;
 
 import akka.actor.UntypedAbstractActor;
 
@@ -40,8 +42,8 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     return snapshot;
   }
 
-  protected static Map<String, String> getStartAndEndDate(String period) {
-    Map<String, String> dateMap = new HashMap<>();
+  protected static Map<String, Object> getStartAndEndDate(String period) {
+    Map<String, Object> dateMap = new HashMap<>();
     int days = getDaysByPeriod(period);
     Date endDate = new Date();
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
@@ -52,6 +54,8 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     String endDateStr = sdf.format(endDate.getTime());
     dateMap.put("startDate", startDateStr);
     dateMap.put("endDate", endDateStr);
+    dateMap.put("startTimeMilis", cal.getTimeInMillis());
+    dateMap.put("endTimeMilis", endDate.getTime());
     return dateMap;
   }
 
@@ -105,8 +109,8 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
       headers.put(JsonKey.AUTHORIZATION, System.getenv(JsonKey.AUTHORIZATION));
       if (ProjectUtil.isStringNullOREmpty((String) headers.get(JsonKey.AUTHORIZATION))) {
         headers.put(JsonKey.AUTHORIZATION, JsonKey.BEARER
-            + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
-        headers.put("Content_Type", "application/json");
+            + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_METRICS_AUTHORIZATION));
+        headers.put("Content_Type", "application/json; charset=utf-8");
       }
       response = HttpUtil.sendPostRequest(
           baseSearchUrl + PropertiesCache.getInstance().getProperty(apiUrl), request, headers);
@@ -125,8 +129,9 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     post.setEntity(new StringEntity(body, Charsets.UTF_8.name()));
     HttpResponse response = client.execute(post);
     if (response.getStatusLine().getStatusCode() != 200) {
-      throw new Exception("Service unavailable: " + response.getStatusLine().getStatusCode() + " : "
-          + response.getStatusLine().getReasonPhrase());
+      throw new ProjectCommonException(ResponseCode.unableToConnect.getErrorCode(),
+          ResponseCode.unableToConnect.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
     }
     BufferedReader rd = new BufferedReader(
         new InputStreamReader(response.getEntity().getContent(), Charsets.UTF_8));

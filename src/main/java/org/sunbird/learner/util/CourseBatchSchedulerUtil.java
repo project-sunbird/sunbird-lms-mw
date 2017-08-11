@@ -38,7 +38,7 @@ public class CourseBatchSchedulerUtil {
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.START_DATE, startDate);
     map.put(JsonKey.COUNTER_INCREMENT_STATUS, false);
-    dto.addAdditionalProperty(JsonKey.FILTER, map);
+    dto.addAdditionalProperty(JsonKey.FILTERS, map);
     List<Map<String, Object>> listOfMap = new ArrayList<>();
     List<Map<String, Object>> endBatchMap = new ArrayList<>();
     Map<String, Object> responseMap = ElasticSearchUtil.complexSearch(dto,
@@ -60,7 +60,7 @@ public class CourseBatchSchedulerUtil {
     map.clear();
     map.put(JsonKey.END_DATE, endDate);
     map.put(JsonKey.COUNTER_DECREMENT_STATUS, false);
-    dto.addAdditionalProperty(JsonKey.FILTER, map);
+    dto.addAdditionalProperty(JsonKey.FILTERS, map);
     responseMap = ElasticSearchUtil.complexSearch(dto,
         ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.course.getTypeName());

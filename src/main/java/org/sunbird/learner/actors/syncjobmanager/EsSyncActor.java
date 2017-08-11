@@ -202,7 +202,7 @@ public class EsSyncActor extends UntypedAbstractActor {
       Response response = cassandraOperation.getRecordById(dbInfo.getKeySpace(), dbInfo.getTableName(),userId);
       return ((((List<Map<String, Object>>) response.get(JsonKey.RESPONSE)).isEmpty()) ?  new HashMap<>(): ((List<Map<String, Object>>) response.get(JsonKey.RESPONSE)).get(0));
     }catch(Exception ex){
-      
+      ProjectLogger.log(ex.getMessage(), ex);
     }
     return null;
   }

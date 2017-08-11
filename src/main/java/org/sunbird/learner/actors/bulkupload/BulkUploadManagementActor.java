@@ -316,21 +316,35 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
   private void uploadCsvToDB(List<String[]> dataList, String processId, String orgId, String objectType, String requestedBy) {
     List<Map<String,Object>> dataMapList = new ArrayList<>();
     if (dataList.size() > 1) {
-      String[] columnArr = dataList.get(0);
-      columnArr=trimColumnAttriutes(columnArr);
-      Map<String,Object> dataMap = null;
-      for(int i = 1 ; i < dataList.size() ; i++){
-        dataMap = new HashMap<>();
-        String[] valueArr = dataList.get(i);
-        for(int j = 0 ; j < valueArr.length ; j++){
-            String value = (valueArr[j].trim().length()==0?null:valueArr[j].trim());
-            dataMap.put(columnArr[j], value);
-         }
-        if(!ProjectUtil.isStringNullOREmpty(objectType) && objectType.equalsIgnoreCase(JsonKey.USER)){
-          dataMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
+      try{
+        String[] columnArr = dataList.get(0);
+        columnArr=trimColumnAttriutes(columnArr);
+        Map<String,Object> dataMap = null;
+        for(int i = 1 ; i < dataList.size() ; i++){
+          dataMap = new HashMap<>();
+          String[] valueArr = dataList.get(i);
+          for(int j = 0 ; j < valueArr.length ; j++){
+              String value = (valueArr[j].trim().length()==0?null:valueArr[j].trim());
+              dataMap.put(columnArr[j], value);
+           }
+          if(!ProjectUtil.isStringNullOREmpty(objectType) && objectType.equalsIgnoreCase(JsonKey.USER)){
+            dataMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
+          }
+          dataMapList.add(dataMap);
         }
-        dataMapList.add(dataMap);
+      }catch(Exception e){
+        ProjectLogger.log(e.getMessage(), e);
+        throw  new ProjectCommonException(
+            ResponseCode.csvError.getErrorCode(),
+            ResponseCode.csvError.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
       }
+    }else{
+      //tell sender that csv file is empty
+      throw  new ProjectCommonException(
+          ResponseCode.csvError.getErrorCode(),
+          ResponseCode.csvError.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     //convert userMapList to json string 
     Map<String,Object> map = new HashMap<>();

@@ -73,24 +73,30 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     ObjectMapper mapper = new ObjectMapper();
     String processId = (String) actorMessage.get(JsonKey.PROCESS_ID);
     Map<String,Object> dataMap = getBulkData(processId);
-    TypeReference<List<Map<String,Object>>> mapType = new TypeReference<List<Map<String,Object>>>() {};
-    List<Map<String,Object>> jsonList = null;
-    try {
-      jsonList = mapper.readValue((String)dataMap.get(JsonKey.DATA), mapType);
-    } catch (IOException e) {
-      ProjectLogger.log("Exception occurred while converting json String to List in BulkUploadBackGroundJobActor : ", e);
-    }
-    if(((String)dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.USER)){
-      processUserInfo(jsonList,processId);
-    }else if(((String)dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.ORGANISATION)){
-      CopyOnWriteArrayList<Map<String,Object>> orgList = new CopyOnWriteArrayList<>(jsonList);
-      processOrgInfo(orgList , dataMap);
-    }else if(((String)dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.BATCH)){
-      processBatchEnrollment(jsonList,processId);
+    int status = (int) dataMap.get(JsonKey.STATUS);
+    if(!(status == (ProjectUtil.BulkProcessStatus.COMPLETED.getValue())
+        || status == (ProjectUtil.BulkProcessStatus.INTERRUPT.getValue()))){
+      TypeReference<List<Map<String,Object>>> mapType = new TypeReference<List<Map<String,Object>>>() {};
+      List<Map<String,Object>> jsonList = null;
+      try {
+        jsonList = mapper.readValue((String)dataMap.get(JsonKey.DATA), mapType);
+      } catch (IOException e) {
+        ProjectLogger.log("Exception occurred while converting json String to List in BulkUploadBackGroundJobActor : ", e);
+      }
+      if(((String)dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.USER)){
+        processUserInfo(jsonList,processId);
+      }else if(((String)dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.ORGANISATION)){
+        CopyOnWriteArrayList<Map<String,Object>> orgList = new CopyOnWriteArrayList<>(jsonList);
+        processOrgInfo(orgList , dataMap);
+      }else if(((String)dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.BATCH)){
+        processBatchEnrollment(jsonList,processId);
+      }
     }
    }
 
   private void processBatchEnrollment(List<Map<String, Object>> jsonList, String processId) {
+  //update status from NEW to INProgress
+    updateStatusForProcessing(processId);
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
     List<Map<String , Object>> successResultList = new ArrayList<>();
     List<Map<String , Object>> failureResultList = new ArrayList<>();
@@ -342,7 +348,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         return;
       }
 
-      Map<String, Object> dbMap = new HashMap<String, Object>();
+      Map<String, Object> dbMap = new HashMap<>();
       dbMap.put(JsonKey.PROVIDER, concurrentHashMap.get(JsonKey.PROVIDER));
       dbMap.put(JsonKey.EXTERNAL_ID, concurrentHashMap.get(JsonKey.EXTERNAL_ID));
       Response result = cassandraOperation.getRecordsByProperties(orgDbInfo.getKeySpace(),
@@ -460,7 +466,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
 
   private void processUserInfo(List<Map<String, Object>> dataMapList, String processId) {
-
+    //update status from NEW to INProgress
+    updateStatusForProcessing(processId);
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     List<Map<String, Object>> failureUserReq = new ArrayList<>();
     List<Map<String, Object>> successUserReq = new ArrayList<>();
@@ -527,12 +534,24 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     map.put(JsonKey.FAILURE_RESULT, convertMapToJsonString(failureUserReq));
     map.put(JsonKey.PROCESS_END_TIME, ProjectUtil.getFormattedDate());
     map.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
-    Util.DbInfo  bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     try{
     cassandraOperation.updateRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), map);
     }catch(Exception e){
       ProjectLogger.log("Exception Occurred while updating bulk_upload_process in BulkUploadBackGroundJobActor : ", e);
     }
+  }
+
+  private void updateStatusForProcessing(String processId) {
+  //Update status to BulkDb table
+    Map<String,Object> map = new HashMap<>();
+    map.put(JsonKey.ID, processId);
+    map.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.IN_PROGRESS.getValue());
+    try{
+    cassandraOperation.updateRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), map);
+    }catch(Exception e){
+      ProjectLogger.log("Exception Occurred while updating bulk_upload_process in BulkUploadBackGroundJobActor : ", e);
+    }
+    
   }
 
   private String convertMapToJsonString(List<Map<String, Object>> mapList) {
@@ -547,7 +566,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
   @SuppressWarnings("unchecked")
   private Map<String, Object> getBulkData(String processId) {
-    Util.DbInfo  bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     try{
       Map<String,Object> map = new HashMap<>();
       map.put(JsonKey.ID, processId);

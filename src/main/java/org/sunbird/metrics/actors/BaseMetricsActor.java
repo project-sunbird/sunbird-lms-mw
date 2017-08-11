@@ -82,11 +82,11 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     int days = getDaysByPeriod(periodStr);
     Date date = new Date();
     List<Map<String,Object>> bucket = new ArrayList<>();
-    for(int day = 0; day < days; day++){
+    for(int day = days; day > 0; day--){
       Map<String, Object> bucketData = new LinkedHashMap<String, Object>();
       Calendar cal = Calendar.getInstance();
       cal.setTimeInMillis(date.getTime());
-      cal.add(Calendar.DATE, -days);
+      cal.add(Calendar.DATE, -day);
       bucketData.put("key", cal.getTimeInMillis());
       bucketData.put("key_name", new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime()));
       bucketData.put("value", 0);

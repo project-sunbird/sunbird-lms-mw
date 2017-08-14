@@ -1,6 +1,7 @@
 package org.sunbird.metrics.actors;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -18,6 +19,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -25,9 +27,14 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.responsecode.ResponseCode;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import akka.actor.UntypedAbstractActor;
 
 public abstract class BaseMetricsActor extends UntypedAbstractActor {
+  
+  private static ObjectMapper mapper = new ObjectMapper();
 
   protected abstract Map<String, Object> getViewData(String id, Object data);
 
@@ -49,7 +56,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
     Calendar cal = Calendar.getInstance();
     cal.setTimeInMillis(endDate.getTime());
-    cal.add(Calendar.DATE, -days);
+    cal.add(Calendar.DATE, -(days-1));
     String startDateStr = sdf.format(cal.getTimeInMillis());
     String endDateStr = sdf.format(endDate.getTime());
     dateMap.put("startDate", startDateStr);
@@ -78,6 +85,25 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     return days;
   }
   
+  protected static String getEkstepPeriod(String period) {
+    String days = "";
+    switch (period) {
+      case "7d": {
+        days = "LAST_7_DAYS";
+        break;
+      }
+      case "14d": {
+        days = "LAST_7_DAYS";
+        break;
+      }
+      case "5w": {
+        days = "LAST_7_DAYS";
+        break;
+      }
+    }
+    return days;
+  }
+  
   protected List<Map<String,Object>> createBucketStructure(String periodStr) {
     int days = getDaysByPeriod(periodStr);
     Date date = new Date();
@@ -86,7 +112,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
       Map<String, Object> bucketData = new LinkedHashMap<String, Object>();
       Calendar cal = Calendar.getInstance();
       cal.setTimeInMillis(date.getTime());
-      cal.add(Calendar.DATE, -day);
+      cal.add(Calendar.DATE, -(day-1));
       bucketData.put("key", cal.getTimeInMillis());
       bucketData.put("key_name", new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime()));
       bucketData.put("value", 0);
@@ -150,6 +176,45 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
       result.append(line);
     }
     return result.toString();
+  }
+  
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  protected List<Map<String, Object>> getBucketData(Map aggKeyMap) {
+    List<Map<String, Object>> parentGroupList = new ArrayList<Map<String, Object>>();
+    if(null==aggKeyMap || aggKeyMap.isEmpty()){
+      return parentGroupList;
+    }
+    List<Map<String, Double>> aggKeyList = (List<Map<String, Double>>) aggKeyMap.get("buckets");
+    for (Map aggKeyListMap : aggKeyList) {
+      Map<String, Object> parentCountObject = new LinkedHashMap<String, Object>();
+      parentCountObject.put("key", aggKeyListMap.get("key"));
+      parentCountObject.put("key_name", aggKeyListMap.get("key_as_string"));
+      parentCountObject.put("value", aggKeyListMap.get("doc_count"));
+      parentGroupList.add(parentCountObject);
+    }
+    return parentGroupList;
+  }
+  
+  @SuppressWarnings("unchecked")
+  protected Response metricsResponseGenerator(String esResponse, String periodStr,
+      Map<String, Object> viewData) {
+    Response response = new Response();
+    Map<String, Object> responseData = new LinkedHashMap<>();
+    try {
+      Map<String, Object> esData = mapper.readValue(esResponse, Map.class);
+      responseData.putAll(viewData);
+      responseData.put(JsonKey.PERIOD, periodStr);
+      responseData.put(JsonKey.SNAPSHOT, esData.get(JsonKey.SNAPSHOT));
+      responseData.put(JsonKey.SERIES, esData.get(JsonKey.SERIES));
+    } catch (JsonProcessingException e) {
+      ProjectLogger.log(e.getMessage());
+      // throw new ProjectCommonException("", "", ResponseCode.SERVER_ERROR.getResponseCode());
+    } catch (IOException e) {
+      ProjectLogger.log(e.getMessage());
+      // throw new ProjectCommonException("", "", ResponseCode.SERVER_ERROR.getResponseCode());
+    }
+    response.putAll(responseData);
+    return response;
   }
 
 }

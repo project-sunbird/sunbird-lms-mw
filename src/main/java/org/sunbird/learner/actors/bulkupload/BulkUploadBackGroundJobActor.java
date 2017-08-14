@@ -333,6 +333,13 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     Map<String , Object> concurrentHashMap = map;
     Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
+    if (isNull(concurrentHashMap.get(JsonKey.ORGANISATION_NAME)) || ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.ORGANISATION_NAME))) {
+        ProjectLogger.log("orgName is mandatory for org creation.");
+        concurrentHashMap.put(JsonKey.ERROR_MSG, "orgName is mandatory for org creation.");
+        failureList.add(concurrentHashMap);
+        return;
+    }
+
     if (concurrentHashMap.containsKey(JsonKey.PROVIDER) || concurrentHashMap.containsKey(JsonKey.EXTERNAL_ID)) {
       if (isNull(concurrentHashMap.get(JsonKey.PROVIDER)) || isNull(
           concurrentHashMap.get(JsonKey.EXTERNAL_ID))) {

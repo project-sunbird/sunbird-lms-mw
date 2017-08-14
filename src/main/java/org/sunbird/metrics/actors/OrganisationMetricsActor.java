@@ -27,7 +27,23 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   private static ObjectMapper mapper = new ObjectMapper();
   private static final String view = "org";
   private static List<String> operationList = new ArrayList<>();
-
+  
+  protected enum ContentStatus {
+    Draft("Create"),
+    Review("Review"),
+    Live("Publish");
+    
+    private String contentOperation;
+    
+    private ContentStatus(String operation) {
+        this.contentOperation = operation;
+    }
+    
+    private String getOperation(){
+      return this.contentOperation;
+    }
+    
+  }
   static {
     operationList.add("Create");
     operationList.add("Review");
@@ -151,49 +167,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     return builder.toString();
   }
 
-  @SuppressWarnings({"unchecked", "rawtypes"})
-  private List<Map<String, Object>> getBucketData(Map aggKeyMap) {
-    List<Map<String, Object>> parentGroupList = new ArrayList<Map<String, Object>>();
-    if(null==aggKeyMap || aggKeyMap.isEmpty()){
-      return parentGroupList;
-    }
-    List<Map<String, Double>> aggKeyList = (List<Map<String, Double>>) aggKeyMap.get("buckets");
-    for (Map aggKeyListMap : aggKeyList) {
-      Map<String, Object> parentCountObject = new LinkedHashMap<String, Object>();
-      parentCountObject.put("key", aggKeyListMap.get("key"));
-      parentCountObject.put("key_name", aggKeyListMap.get("key_as_string"));
-      parentCountObject.put("value", aggKeyListMap.get("doc_count"));
-      parentGroupList.add(parentCountObject);
-    }
-    return parentGroupList;
-  }
-
-  @SuppressWarnings("unchecked")
-  private Response metricsResponseGenerator(String esResponse, String periodStr,
-      Map<String, Object> viewData) {
-    Response response = new Response();
-    Map<String, Object> responseData = new LinkedHashMap<>();
-    try {
-      Map<String, Object> esData = mapper.readValue(esResponse, Map.class);
-      responseData.putAll(viewData);
-      responseData.put(JsonKey.PERIOD, periodStr);
-      responseData.put(JsonKey.SNAPSHOT, esData.get(JsonKey.SNAPSHOT));
-      responseData.put(JsonKey.SERIES, esData.get(JsonKey.SERIES));
-    } catch (JsonProcessingException e) {
-      ProjectLogger.log(e.getMessage());
-      // throw new ProjectCommonException("", "", ResponseCode.SERVER_ERROR.getResponseCode());
-    } catch (IOException e) {
-      ProjectLogger.log(e.getMessage());
-      // throw new ProjectCommonException("", "", ResponseCode.SERVER_ERROR.getResponseCode());
-    }
-    response.putAll(responseData);
-    return response;
-  }
-
-  /*private static Map<String, Object> getAggregationMap() {
-    return aggregationMap;
-  }*/
-
   @SuppressWarnings("unchecked")
   private static Map<String, Object> putAggregationMap(String responseStr, Map<String, Object> aggregationMap, String operation){
     try {
@@ -290,11 +263,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         }
       }
       
-      value = statusValueMap.get("live");
-      dataMap.put(JsonKey.NAME, "Number of content items published");
-      dataMap.put(JsonKey.VALUE, value);
-      snapshot.put("org.creation.content[@status=published].count", dataMap);
-      dataMap = new HashMap<>();
       dataMap.put(JsonKey.NAME, "Number of content items created");
       value = statusValueMap.get("draft");
       dataMap.put(JsonKey.VALUE, value);
@@ -304,8 +272,13 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       value = statusValueMap.get("review");
       dataMap.put(JsonKey.VALUE, value);
       snapshot.put("org.creation.content[@status=review].count", dataMap);
+      dataMap = new HashMap<>();
+      value = statusValueMap.get("live");
+      dataMap.put(JsonKey.NAME, "Number of content items published");
+      dataMap.put(JsonKey.VALUE, value);
+      snapshot.put("org.creation.content[@status=published].count", dataMap);
 
-      Map<String, Object> series = new HashMap<>();
+      Map<String, Object> series = new LinkedHashMap<>();
       Map aggKeyMap = (Map) resultData.get("createdOn");
       List<Map<String, Object>> bucket = getBucketData(aggKeyMap);
       Map<String, Object> seriesData = new LinkedHashMap<>();
@@ -329,6 +302,17 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       seriesData.put(JsonKey.SPLIT, "content.created_on");
       seriesData.put("buckets", statusBucket);
       series.put("org.creation.content[@status=draft].count", seriesData);
+
+      statusList = (Map<String, Object>) statusValueMap.get("reviewBucket");
+      statusBucket = getBucketData(statusList);
+      if(null==statusBucket||statusBucket.isEmpty()){
+        statusBucket = createBucketStructure(periodStr);
+      }
+      seriesData = new LinkedHashMap<>();
+      seriesData.put(JsonKey.NAME, "Review");
+      seriesData.put(JsonKey.SPLIT, "content.reviewed_on");
+      seriesData.put("buckets", statusBucket);
+      series.put("org.creation.content[@status=review].count", seriesData);
       
       statusList = (Map<String, Object>) statusValueMap.get("liveBucket");
       statusBucket = getBucketData(statusList);
@@ -341,17 +325,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       seriesData.put("buckets", statusBucket);
       series.put("org.creation.content[@status=published].count", seriesData);
       
-      statusList = (Map<String, Object>) statusValueMap.get("reviewBucket");
-      statusBucket = getBucketData(statusList);
-      if(null==statusBucket||statusBucket.isEmpty()){
-        statusBucket = createBucketStructure(periodStr);
-      }
-      seriesData = new LinkedHashMap<>();
-      seriesData.put(JsonKey.NAME, "Review");
-      seriesData.put(JsonKey.SPLIT, "content.reviewed_on");
-      seriesData.put("buckets", statusBucket);
-      series.put("org.creation.content[@status=review].count", seriesData);
-      
       responseMap.put(JsonKey.SNAPSHOT, snapshot);
       responseMap.put(JsonKey.SERIES, series);
 
@@ -361,8 +334,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     }
     return result;
   }
-
-
 
   @SuppressWarnings("unchecked")
   private void orgConsumptionMetricsMock(Request actorMessage) {
@@ -375,7 +346,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     Map<String, Object> filter = new HashMap<>();
     requestMap.put(JsonKey.PERIOD, periodStr);
     filter.put(JsonKey.TAG, orgId);
-    // requestMap.put(JsonKey.CHANNEL, getChannel());
     request.setRequest(requestMap);
     String requestStr;
     Map<String, Object> resultData = new HashMap<>();
@@ -455,7 +425,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       Map<String, Object> aggregationMap = new HashMap<>();
       for (String operation : operationList) {
         String request = getQueryRequest(periodStr, orgId, operation);
-        String esResponse = makePostRequest(JsonKey.EKSTEP_ES_METRICS_URL, request);
+        String esResponse = makePostRequest(JsonKey.EKSTEP_ES_METRICS_API_URL, request);
         //String esResponse = getDataFromEkstep(request, JsonKey.EKSTEP_ES_METRICS_URL);
         aggregationMap = putAggregationMap(esResponse, aggregationMap, operation);
       }
@@ -475,8 +445,45 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     }
   }
 
-  private void orgConsumptionMetrics(Request actorMessages) {
-
+  private void orgConsumptionMetrics(Request actorMessage) {
+    ProjectLogger.log("In orgCreationMetrics api");
+    try {
+      String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
+      String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
+      String orgName = validateOrg(orgId);
+      if (ProjectUtil.isStringNullOREmpty(orgName)) {
+       /*ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
+                ResponseCode.invalidOrgData.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+        sender().tell(exception, self());
+        return;*/
+      }
+      Request request = new Request();
+      request.setId(actorMessage.getId());
+      Map<String, Object> requestObject = new HashMap<>();
+      requestObject.put(JsonKey.PERIOD, getEkstepPeriod(periodStr));
+      Map<String, Object> filterMap = new HashMap<>();
+      filterMap.put(JsonKey.TAG, orgId);
+      requestObject.put(JsonKey.FILTER, filterMap);
+      //TODO: get channel from org
+      requestObject.put(JsonKey.CHANNEL, "");
+      request.setRequest(requestObject);
+      String ekStepResponse  = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, request.toString());
+      sender().tell(ekStepResponse,self());
+      //Response response =
+          metricsResponseGenerator(null, periodStr, getViewData(orgId, orgName));
+      //sender().tell(response, self());
+    } catch (ProjectCommonException e) {
+      ProjectLogger.log("Some error occurs",e);
+      sender().tell(e, self());
+      return;
+    } catch (Exception e) {
+      ProjectLogger.log("Some error occurs",e);
+      throw new ProjectCommonException(ResponseCode.internalError.getErrorCode(),
+          ResponseCode.internalError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
   }
 
   private String validateOrg(String orgId) {

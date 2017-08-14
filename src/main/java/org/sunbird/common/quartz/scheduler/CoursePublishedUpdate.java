@@ -91,7 +91,7 @@ public class CoursePublishedUpdate implements Job {
     identifier.append(" ] ");
     try {
       String response = HttpUtil.sendPostRequest("URL",
-          requestData.replace("dataval", identifier.toString()),
+          requestData.replace("dataVal", identifier.toString()),
           CourseBatchSchedulerUtil.headerMap);
       JSONObject object = new JSONObject(response);
       JSONObject resultObj = object.getJSONObject(JsonKey.RESULT);

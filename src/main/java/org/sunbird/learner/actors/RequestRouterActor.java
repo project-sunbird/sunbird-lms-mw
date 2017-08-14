@@ -56,6 +56,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private ActorRef courseMetricsRouter;
     private ActorRef userMetricsRouter;
     private ActorRef esSyncActor;
+    public static ActorRef schedularActor;
     private ExecutionContext ec;
     Map<String, ActorRef> routerMap = new HashMap<>();
     private static final int WAIT_TIME_VALUE = 9;
@@ -78,6 +79,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private static final String COURSE_METRICS_ROUTER = "courseMetricsRouter";
     private static final String USER_METRICS_ROUTER = "userMetricsRouter";
     private static final String ES_SYNC_ROUTER = "esSyncActor";
+    private static final String SCHEDULAR_ACTOR = "schedularActor";
     /**
      * constructor to initialize router actor with child actor pool
      */
@@ -122,6 +124,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
             USER_METRICS_ROUTER);
         esSyncActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(EsSyncActor.class)),
             ES_SYNC_ROUTER);
+        schedularActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(SchedularActor.class)),
+            SCHEDULAR_ACTOR);
         ec = getContext().dispatcher();
         initializeRouterMap();
     }
@@ -205,7 +209,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
     @Override
     public void onReceive(Object message) throws Exception {
         if (message instanceof Request) {
-        	System.out.println("Received actor message....");
             ProjectLogger.log("Actor selector onReceive called");
             Request actorMessage = (Request) message;
             org.sunbird.common.request.ExecutionContext.setRequestId(actorMessage.getRequestId());

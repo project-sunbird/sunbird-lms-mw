@@ -52,6 +52,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   private SSOManager ssoManager = new KeyCloakServiceImpl();
   @Override
   public void onReceive(Object message) throws Throwable {
+    System.out.println("called bulkUploadBackGroundJobActor");
     if (message instanceof Request) {
       try {
         ProjectLogger.log("BulkUploadBackGroundJobActor onReceive called");
@@ -72,6 +73,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   private void process(Request actorMessage) {
     ObjectMapper mapper = new ObjectMapper();
     String processId = (String) actorMessage.get(JsonKey.PROCESS_ID);
+    System.out.println("processId " +processId );
     Map<String,Object> dataMap = getBulkData(processId);
     int status = (int) dataMap.get(JsonKey.STATUS);
     if(!(status == (ProjectUtil.BulkProcessStatus.COMPLETED.getValue())

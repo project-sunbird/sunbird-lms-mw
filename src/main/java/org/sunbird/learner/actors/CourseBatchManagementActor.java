@@ -474,14 +474,11 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     Response response = cassandraOperation.getRecordById(dbInfo.getKeySpace(),
         dbInfo.getTableName(), (String)req.get(JsonKey.ID));
     req.remove(JsonKey.IDENTIFIER);
-    if(null != req.get(JsonKey.STATUS)){
-      int status = Integer.parseInt(""+req.get(JsonKey.STATUS));
-      req.put(JsonKey.STATUS,status);
-    }
-    
+    req.remove(JsonKey.STATUS);
     List<Map<String,Object>> resList = ((List<Map<String, Object>>) response.get(JsonKey.RESPONSE));
     if(null != resList && ! resList.isEmpty()){
       Map<String, Object> res = resList.get(0);
+      
       if(req.containsKey(JsonKey.START_DATE)){
         Date dbBatchStartDate = null;
         Date todaydate = null;
@@ -587,6 +584,11 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
       } else {
         ProjectLogger.log("no call for ES to save Course Batch");
       }
+    }else{
+      throw new ProjectCommonException(
+          ResponseCode.invalidCourseBatchId.getErrorCode(),
+          ResponseCode.invalidCourseBatchId.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
   }

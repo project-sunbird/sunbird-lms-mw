@@ -21,6 +21,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
+import org.sunbird.learner.actors.RequestRouterActor;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -32,7 +33,7 @@ import org.sunbird.learner.util.Util;
  */
 public class UploadLookUpScheduler implements Job {
   private SimpleDateFormat format= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSSZ");
-  private ActorRef bulkUploadBackGroundJobActorRef = null;
+  private ActorRef schedularActorRef = RequestRouterActor.schedularActor;
 
   public void execute(JobExecutionContext ctx) throws JobExecutionException {
     ProjectLogger.log("Running Upload Scheduler Job at: " + Calendar.getInstance().getTime() +
@@ -40,15 +41,19 @@ public class UploadLookUpScheduler implements Job {
     Util.DbInfo  bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     CassandraOperation cassandraOperation = new CassandraOperationImpl();
     List<Map<String,Object>> result = null;
-    //get List of InProgress process
+    //get List of process with status as New
     Response res = cassandraOperation.getRecordsByProperty(bulkDb.getKeySpace(), bulkDb.getTableName(),
-                          JsonKey.STATUS, ProjectUtil.BulkProcessStatus.IN_PROGRESS.getValue());
-    result = ((List<Map<String,Object>>)res.get(JsonKey.RESPONSE));
-    process(result);
-    //get List of new Process
-    res = cassandraOperation.getRecordsByProperty(bulkDb.getKeySpace(), bulkDb.getTableName(),
                           JsonKey.STATUS, ProjectUtil.BulkProcessStatus.NEW.getValue());
     result = ((List<Map<String,Object>>)res.get(JsonKey.RESPONSE));
+    ProjectLogger.log("Total No. of record in Bulk_upload_process table with status as NEW are : :"+result.size());
+    if(!result.isEmpty()){
+      process(result);
+    }
+    //get List of Process  with status as InProgress
+    res = cassandraOperation.getRecordsByProperty(bulkDb.getKeySpace(), bulkDb.getTableName(),
+                          JsonKey.STATUS, ProjectUtil.BulkProcessStatus.IN_PROGRESS.getValue());
+    result = ((List<Map<String,Object>>)res.get(JsonKey.RESPONSE));
+    ProjectLogger.log("Total No. of record in Bulk_upload_process table with status as IN_PROGRESS are : :"+result.size());
     if(null != result){
       Iterator<Map<String, Object>> itr = result.iterator();
       while(itr.hasNext()){
@@ -66,16 +71,18 @@ public class UploadLookUpScheduler implements Job {
           ProjectLogger.log(ex.getMessage(), ex);
         }
       }
-      process(result);
+      if(!result.isEmpty()){
+        ProjectLogger.log("Total No. of record in Bulk_upload_process table with status as IN_PROGRESS "
+            + "with diff bw start time and current time greater than 5Hr are : :"+result.size());
+        process(result);
+      }
     }
   }
 
   private void process(List<Map<String, Object>> result) {
-    for(Map<String,Object> map : result){
       Request request = new Request();
-      request.put(JsonKey.PROCESS_ID, map.get(JsonKey.PROCESS_ID));
-      request.setOperation(ActorOperations.PROCESS_BULK_UPLOAD.getValue());
-      bulkUploadBackGroundJobActorRef.tell(request, null);
-    }
+      request.put(JsonKey.DATA, result);
+      request.setOperation(ActorOperations.SCHEDULE_BULK_UPLOAD.getValue());
+      schedularActorRef.tell(request, null);
   }
 }

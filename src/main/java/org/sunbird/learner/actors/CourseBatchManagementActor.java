@@ -453,8 +453,8 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
   private Map<String,String> getAdditionalCourseInfo(Map<String, Object> ekStepContent) {
 
     Map<String , String> courseMap = new HashMap<>();
-    courseMap.put(JsonKey.COURSE_LOGO_URL, (String)ekStepContent.get(JsonKey.APP_ICON) == null ?"" : (String)ekStepContent.get(JsonKey.APP_ICON));
-    courseMap.put(JsonKey.COURSE_NAME, (String)ekStepContent.get(JsonKey.DESCRIPTION) == null ? "" : (String)ekStepContent.get(JsonKey.DESCRIPTION));
+    courseMap.put(JsonKey.COURSE_LOGO_URL, (String)ekStepContent.getOrDefault(JsonKey.APP_ICON, ""));
+    courseMap.put(JsonKey.COURSE_NAME, (String)ekStepContent.getOrDefault(JsonKey.DESCRIPTION,""));
     if(ProjectUtil.isNotNull(ekStepContent.get(JsonKey.LEAF_NODE_COUNT))) {
       courseMap.put(JsonKey.LEAF_NODE_COUNT,
           ((Integer) ekStepContent.get(JsonKey.LEAF_NODE_COUNT)).toString());

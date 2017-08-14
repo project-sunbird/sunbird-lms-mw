@@ -16,7 +16,6 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 
@@ -26,6 +25,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class OrganisationMetricsActor extends BaseMetricsActor {
 
   private static ObjectMapper mapper = new ObjectMapper();
+  private static final String view = "org";
+  private static List<String> operationList = new ArrayList<>();
+
+  static {
+    operationList.add("Create");
+    operationList.add("Review");
+    operationList.add("Publish");
+  }
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -62,254 +69,254 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     }
   }
 
-  private void orgCreationMetricsMock(Request actorMessage) {
-    ProjectLogger.log("In orgCreation metrics");
-    try {
-      String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
-      String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
-      Map<String, Object> dateMap = getStartAndEndDate(periodStr);
-
-      String query = getQuery(periodStr, orgId, dateMap);
-      String esResponse = getESData(query);
-      String responseFormat = metricsESResponseGenerator(esResponse);
-      Response response = metricsResponseGenerator(responseFormat, periodStr, getViewData(orgId, null));
-      sender().tell(response, self());
-    } catch (ProjectCommonException e) {
-      ProjectLogger.log("Some error occurs" + e.getMessage());
-      sender().tell(e, self());
-      return;
-    }
-  }
-
   @Override
-  protected Map<String, Object> getViewData(String orgId , Object org) {
+  protected Map<String, Object> getViewData(String orgId, Object orgName) {
     Map<String, Object> orgData = new HashMap<>();
     Map<String, Object> viewData = new HashMap<>();
     orgData.put(JsonKey.ORG_ID, orgId);
-    Map<String, Object> result =
-        ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName(), orgId);
-    if (null != result) {
-      orgData.put(JsonKey.ORG_NAME, result.get(JsonKey.ORG_NAME));
-    } else {
-      orgData.put(JsonKey.ORG_NAME, orgId);
-    }
+    orgData.put(JsonKey.ORG_NAME, orgName);
     viewData.put("org", orgData);
     return viewData;
   }
 
-  private String getQuery(String periodStr, String orgId, Map<String, Object> dateMap) {
-    // String query =
-    // "{\"query\":{\"filtered\":{\"query\":{\"bool\":{\"must\":[{\"query\":{\"range\":{\"lastUpdatedOn\":{\"gt\":\"2017-07-24T00:00:00.000+0530\",\"lte\":\"2017-08-01T00:00:00.000+0530\"}}}},{\"match\":{\"createdFor.raw\":\"Sunbird\"}}]}}}},\"size\":0,\"aggs\":{\"created_on\":{\"date_histogram\":{\"field\":\"lastUpdatedOn\",\"interval\":\"1d\",\"format\":\"yyyy-MM-dd\"}},\"status\":{\"terms\":{\"field\":\"status.raw\",\"include\":[\"draft\",\"live\",\"review\"]},\"aggs\":{\"updated_on\":{\"date_histogram\":{\"field\":\"lastUpdatedOn\",\"interval\":\"1d\",\"format\":\"yyyy-MM-dd\"}}}},\"authors.count\":{\"cardinality\":{\"field\":\"createdBy.raw\",\"precision_threshold\":100}},\"content_count\":{\"terms\":{\"field\":\"objectType.raw\",\"include\":\"content\"}}}}";
-    String queryRequest =
-        "{\"id\":\"org.ekstep.analytics.metrics\",\"ver\":\"1.0\",\"params\":{\"msgid\":\"4f04da60-1e24-4d31-aa7b-1daf91c46341\"},\"request\":{\"period\":\"\",\"rawQuery\":{\"query\":{\"filtered\":{\"query\":{\"bool\":{\"must\":[{\"query\":{\"range\":{\"lastUpdatedOn\":{\"gt\":\""
-            + dateMap.get("startDate") + "\",\"lte\":\"" + dateMap.get("endDate")
-            + "\"}}}},{\"match\":{\"createdFor.raw\":\"" + orgId
-            + "\"}}]}}}},\"size\":0,\"aggs\":{\"created_on\":{\"date_histogram\":{\"field\":\"lastUpdatedOn\",\"interval\":\"1d\",\"format\":\"yyyy-MM-dd\"}},\"status\":{\"terms\":{\"field\":\"status.raw\",\"include\":[\"draft\",\"live\",\"review\"]},\"aggs\":{\"updated_on\":{\"date_histogram\":{\"field\":\"lastUpdatedOn\",\"interval\":\"1d\",\"format\":\"yyyy-MM-dd\"}}}},\"authors.count\":{\"cardinality\":{\"field\":\"createdBy.raw\",\"precision_threshold\":100}},\"reviewers.count\":{\"cardinality\":{\"field\":\"lastPublishedBy.raw\",\"precision_threshold\":100}},\"content_count\":{\"terms\":{\"field\":\"objectType.raw\",\"include\":\"content\"}}}}}}";
-    return queryRequest;
+  private String getQueryRequest(String periodStr, String orgId, String operation) {
+    ProjectLogger.log("orgId " + orgId);
+    Map<String, Object> dateMap = getStartAndEndDate(periodStr);
+    Map<String, String> operationMap = new LinkedHashMap<>();
+    ProjectLogger.log("period" + dateMap);
+    switch (operation) {
+      case "Create": {
+        operationMap.put("dateKey", "createdOn");
+        operationMap.put("status", "Draft");
+        operationMap.put("userActionKey", "createdBy");
+        operationMap.put("contentCount", "required");
+        break;
+      }
+      case "Review": {
+        operationMap.put("dateKey", "lastSubmittedOn");
+        operationMap.put("status", "Review");
+        break;
+      }
+      case "Publish": {
+        operationMap.put("dateKey", "lastPublishedOn");
+        operationMap.put("status", "Live");
+        operationMap.put("userActionKey", "lastPublishedBy");
+        break;
+      }
+    }
+    StringBuilder builder = new StringBuilder();
+    builder.append("{\"request\":{\"rawQuery\":{\"query\":{\"filtered\":")
+        .append("{\"query\":{\"bool\":{\"must\":[{\"query\":{\"range\":{\"")
+        .append(operationMap.get("dateKey")).append("\":{\"gte\":\"")
+        .append(dateMap.get("startDate") + "\",\"lte\":\"" + dateMap.get("endDate") + "\"}}}}")
+        .append(",{\"bool\":{\"should\":[{\"match\":{\"contentType.raw\":\"Story\"}}")
+        .append(",{\"match\":{\"contentType.raw\":\"Worksheet\"}}")
+        .append(",{\"match\":{\"contentType.raw\":\"Game\"}}")
+        .append(",{\"match\":{\"contentType.raw\":\"Collection\"}}")
+        .append(",{\"match\":{\"contentType.raw\":\"TextBook\"}}")
+        .append(",{\"match\":{\"contentType.raw\":\"TextBookUnit\"}}")
+        .append(",{\"match\":{\"contentType.raw\":\"Course\"}}")
+        .append(",{\"match\":{\"contentType.raw\":\"CourseUnit\"}}]}},")
+        .append("{\"match\":{\"createdFor.raw\":\"" + orgId + "\"}}")
+        .append(",{\"match\":{\"status.raw\":\"" + operationMap.get("status"))
+        .append("\"}}]}}}},\"aggs\":{\"");
+    if (operationMap.containsValue("createdOn")) {
+      builder.append(operationMap.get("dateKey") + "\":{\"date_histogram\":{\"field\":\"")
+          .append(operationMap.get("dateKey"))
+          .append("\",\"interval\":\"1d\",\"format\":\"yyyy-MM-dd\"")
+          .append(",\"time_zone\":\"+05:30\",\"extended_bounds\":{\"min\":")
+          .append(dateMap.get("startTimeMilis") + ",\"max\":")
+          .append(dateMap.get("endTimeMilis") + "}}},\"");
+    }
+    builder.append("status\":{\"terms\":{\"field\":\"status.raw\",\"include\":[\"")
+        .append(operationMap.get("status").toLowerCase() + "\"]},\"aggs\":{\"")
+        .append(operationMap.get("dateKey") + "\":{\"date_histogram\":{\"field\":\"")
+        .append(operationMap.get("dateKey") + "\",\"interval\":\"1d\",\"format\":")
+        .append("\"yyyy-MM-dd\",\"time_zone\":\"+05:30\",\"extended_bounds\":{\"min\":")
+        .append(dateMap.get("startTimeMilis") + ",\"max\":").append(dateMap.get("endTimeMilis"))
+        .append("}}}}}");
+    if (operationMap.containsKey("userActionKey")) {
+      builder.append(",\"" + operationMap.get("userActionKey") + ".count\":")
+          .append("{\"cardinality\":{\"field\":\"" + operationMap.get("userActionKey"))
+          .append(".raw\",\"precision_threshold\":100}}");
+    }
+
+    if (operationMap.containsKey("contentCount")) {
+      builder.append(",\"content_count\":{\"terms\":{\"field\":\"contentType.raw\"")
+          .append(",\"exclude\":[\"assets\",\"plugin\",\"template\"]}},")
+          .append("\"total_content_count\":{\"sum_bucket\":")
+          .append("{\"buckets_path\":\"content_count>_count\"}}");
+    }
+    builder.append("}}}}");
+    return builder.toString();
   }
 
-  private String getESData(String query) {
-    Map<String, String> headers = new HashMap<>();
-    String response = null;
+  @SuppressWarnings("unchecked")
+  private static Map<String, Object> putAggregationMap(String responseStr, Map<String, Object> aggregationMap, String operation){
     try {
-      // String baseSearchUrl = System.getenv(JsonKey.EKSTEP_CONTENT_SEARCH_BASE_URL);
-      String baseSearchUrl = "http://localhost:9200/compositesearch/_search";
-      if (ProjectUtil.isStringNullOREmpty(baseSearchUrl)) {
-        baseSearchUrl =
-            PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_BASE_URL);
+      Map<String, Object> resultData = mapper.readValue(responseStr, Map.class);
+      resultData = (Map<String, Object>) resultData.get(JsonKey.RESULT);
+      resultData = (Map<String, Object>) resultData.get(JsonKey.AGGREGATIONS);
+      List<Map<String,Object>> statusList = new ArrayList<>();
+      for(Map.Entry<String, Object> data: resultData.entrySet()){
+        if("status".equalsIgnoreCase(data.getKey())){
+          Map<String,Object> statusMap = new HashMap<>();
+          statusMap.put(operation, data.getValue());
+          statusList = (List<Map<String, Object>>) aggregationMap.get(data.getKey());
+          if(null==statusList){
+            statusList = new ArrayList<>();
+          }
+          statusList.add(statusMap);
+          aggregationMap.put(data.getKey(), statusList);
+        }else {
+          aggregationMap.put(data.getKey(),data.getValue());
+        }
       }
-      headers.put(JsonKey.AUTHORIZATION, System.getenv(JsonKey.AUTHORIZATION));
-      if (ProjectUtil.isStringNullOREmpty((String) headers.get(JsonKey.AUTHORIZATION))) {
-        headers.put(JsonKey.AUTHORIZATION, JsonKey.BEARER
-            + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
-      }
-      /*
-       * response =
-       * HttpUtil.sendPostRequest(baseSearchUrl+PropertiesCache.getInstance().getProperty(JsonKey.
-       * EKSTEP_CONTNET_SEARCH_URL), query, headers);
-       */
-      response =
-          "{\"id\":\"ekstep.analytics.metrics.query-proxy\",\"ver\":\"1.0\",\"ts\":\"2016-09-12T18:43:23.890+00:00\",\"params\":{\"resmsgid\":\"4f04da60-1e24-4d31-aa7b-1daf91c46341\",\"status\":\"successful\"},\"responseCode\":\"OK\",\"result\":\"{\\\"took\\\":844,\\\"timed_out\\\":false,\\\"_shards\\\":{\\\"total\\\":1,\\\"successful\\\":1,\\\"failed\\\":0},\\\"hits\\\":{\\\"total\\\":608,\\\"max_score\\\":0,\\\"hits\\\":[]},\\\"aggregations\\\":{\\\"created_on\\\":{\\\"buckets\\\":[{\\\"key_as_string\\\":\\\"2017-07-24\\\",\\\"key\\\":1500854400000,\\\"doc_count\\\":163},{\\\"key_as_string\\\":\\\"2017-07-25\\\",\\\"key\\\":1500940800000,\\\"doc_count\\\":140},{\\\"key_as_string\\\":\\\"2017-07-26\\\",\\\"key\\\":1501027200000,\\\"doc_count\\\":170},{\\\"key_as_string\\\":\\\"2017-07-27\\\",\\\"key\\\":1501113600000,\\\"doc_count\\\":76},{\\\"key_as_string\\\":\\\"2017-07-28\\\",\\\"key\\\":1501200000000,\\\"doc_count\\\":29},{\\\"key_as_string\\\":\\\"2017-07-29\\\",\\\"key\\\":1501286400000,\\\"doc_count\\\":15},{\\\"key_as_string\\\":\\\"2017-07-30\\\",\\\"key\\\":1501372800000,\\\"doc_count\\\":12},{\\\"key_as_string\\\":\\\"2017-07-31\\\",\\\"key\\\":1501459200000,\\\"doc_count\\\":3}]},\\\"authors.count\\\":{\\\"value\\\":25},\\\"reviewers.count\\\":{\\\"value\\\":25},\\\"content_count\\\":{\\\"doc_count_error_upper_bound\\\":0,\\\"sum_other_doc_count\\\":0,\\\"buckets\\\":[{\\\"key\\\":\\\"content\\\",\\\"doc_count\\\":547}]},\\\"status\\\":{\\\"doc_count_error_upper_bound\\\":0,\\\"sum_other_doc_count\\\":0,\\\"buckets\\\":[{\\\"key\\\":\\\"draft\\\",\\\"doc_count\\\":449,\\\"updated_on\\\":{\\\"buckets\\\":[{\\\"key_as_string\\\":\\\"2017-07-24\\\",\\\"key\\\":1500854400000,\\\"doc_count\\\":112},{\\\"key_as_string\\\":\\\"2017-07-25\\\",\\\"key\\\":1500940800000,\\\"doc_count\\\":98},{\\\"key_as_string\\\":\\\"2017-07-26\\\",\\\"key\\\":1501027200000,\\\"doc_count\\\":121},{\\\"key_as_string\\\":\\\"2017-07-27\\\",\\\"key\\\":1501113600000,\\\"doc_count\\\":72},{\\\"key_as_string\\\":\\\"2017-07-28\\\",\\\"key\\\":1501200000000,\\\"doc_count\\\":23},{\\\"key_as_string\\\":\\\"2017-07-29\\\",\\\"key\\\":1501286400000,\\\"doc_count\\\":15},{\\\"key_as_string\\\":\\\"2017-07-30\\\",\\\"key\\\":1501372800000,\\\"doc_count\\\":8}]}},{\\\"key\\\":\\\"live\\\",\\\"doc_count\\\":88,\\\"updated_on\\\":{\\\"buckets\\\":[{\\\"key_as_string\\\":\\\"2017-07-24\\\",\\\"key\\\":1500854400000,\\\"doc_count\\\":22},{\\\"key_as_string\\\":\\\"2017-07-25\\\",\\\"key\\\":1500940800000,\\\"doc_count\\\":34},{\\\"key_as_string\\\":\\\"2017-07-26\\\",\\\"key\\\":1501027200000,\\\"doc_count\\\":26},{\\\"key_as_string\\\":\\\"2017-07-27\\\",\\\"key\\\":1501113600000,\\\"doc_count\\\":3},{\\\"key_as_string\\\":\\\"2017-07-28\\\",\\\"key\\\":1501200000000,\\\"doc_count\\\":3}]}},{\\\"key\\\":\\\"review\\\",\\\"doc_count\\\":69,\\\"updated_on\\\":{\\\"buckets\\\":[{\\\"key_as_string\\\":\\\"2017-07-24\\\",\\\"key\\\":1500854400000,\\\"doc_count\\\":29},{\\\"key_as_string\\\":\\\"2017-07-25\\\",\\\"key\\\":1500940800000,\\\"doc_count\\\":8},{\\\"key_as_string\\\":\\\"2017-07-26\\\",\\\"key\\\":1501027200000,\\\"doc_count\\\":22},{\\\"key_as_string\\\":\\\"2017-07-27\\\",\\\"key\\\":1501113600000,\\\"doc_count\\\":1},{\\\"key_as_string\\\":\\\"2017-07-28\\\",\\\"key\\\":1501200000000,\\\"doc_count\\\":3},{\\\"key_as_string\\\":\\\"2017-07-29\\\",\\\"key\\\":1501286400000,\\\"doc_count\\\":0},{\\\"key_as_string\\\":\\\"2017-07-30\\\",\\\"key\\\":1501372800000,\\\"doc_count\\\":4},{\\\"key_as_string\\\":\\\"2017-07-31\\\",\\\"key\\\":1501459200000,\\\"doc_count\\\":2}]}}]}}}\"}";
-
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
-    return response;
+    return aggregationMap;
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})
-  private String metricsESResponseGenerator(String responseStr) {
+  private String metricsOrgResponseGenerator(String periodStr, Map<String, Object> resultData) {
+    String dataSet = "creation";
     String result = null;
     Map<String, Object> responseMap = new HashMap<>();
     try {
-      Map<String, Object> esData = mapper.readValue(responseStr, Map.class);
-      /*
-       * String resultStr = (String) esData.get(JsonKey.RESULT); Map<String,Object> resultData =
-       * mapper.readValue(resultStr, Map.class);
-       */
-      Map<String, Object> resultData = (Map<String, Object>) esData.get(JsonKey.RESULT);
-      resultData = (Map<String, Object>) resultData.get(JsonKey.AGGREGATIONS);
-
       Map<String, Object> snapshot = new LinkedHashMap<>();
       Map<String, Object> dataMap = new HashMap<>();
       dataMap.put(JsonKey.NAME, "Number of content created");
-      List<Map<String, Object>> contentData = (List<Map<String, Object>>) getBucketData(
-          (Map<String, Object>) resultData.get("content_count"));
+      Map<String, Object> contentData = (Map<String, Object>) resultData.get("total_content_count");
       if (null != contentData && !contentData.isEmpty()) {
-        Map<String, Object> contentMap = contentData.get(0);
-        dataMap.put(JsonKey.VALUE, contentMap.get(JsonKey.VALUE));
+        dataMap.put(JsonKey.VALUE, contentData.get(JsonKey.VALUE));
       } else {
         dataMap.put(JsonKey.VALUE, 0);
       }
       snapshot.put("org.creation.content.count", dataMap);
       dataMap = new HashMap<>();
       dataMap.put(JsonKey.NAME, "Number of authors");
-      dataMap.putAll((Map<String, Object>) resultData.get("authors.count"));
+      if(null!=resultData.get("createdBy.count")){
+        dataMap.putAll((Map<String, Object>) resultData.get("createdBy.count"));
+      } else {
+        dataMap.put(JsonKey.VALUE, 0);
+      }
       snapshot.put("org.creation.authors.count", dataMap);
       dataMap = new HashMap<>();
       dataMap.put(JsonKey.NAME, "Number of reviewers");
-      dataMap.putAll((Map<String, Object>) resultData.get("reviewers.count"));
+      if(null!=resultData.get("lastPublishedBy.count")){
+        dataMap.putAll((Map<String, Object>) resultData.get("lastPublishedBy.count"));
+      } else {
+        dataMap.put(JsonKey.VALUE, 0);
+      }
       snapshot.put("org.creation.reviewers.count", dataMap);
       dataMap = new HashMap<>();
       Object value = null;
-      Map<String, Object> valueMap = new HashMap<>();
-      valueMap = (Map<String, Object>) resultData.get("status");
-      List<Map<String, Object>> valueList = (List<Map<String, Object>>) valueMap.get("buckets");
-      valueMap = new HashMap<>();
-      valueMap.put("live", 0);
-      valueMap.put("draft", 0);
-      valueMap.put("review", 0);
-      for (Map<String, Object> data : valueList) {
-        if ("live".equalsIgnoreCase((String) data.get("key"))) {
-          valueMap.put("live", data.get("doc_count"));
-        } else if ("draft".equalsIgnoreCase((String) data.get("key"))) {
-          valueMap.put("draft", data.get("doc_count"));
-        } else if ("review".equalsIgnoreCase((String) data.get("key"))) {
-          valueMap.put("review", data.get("doc_count"));
+      List<Map<String,Object>> valueMapList = (List<Map<String, Object>>) resultData.get("status");
+      Map<String, Object> statusValueMap = new HashMap<>();
+      statusValueMap.put("live", 0);
+      statusValueMap.put("draft", 0);
+      statusValueMap.put("review", 0);
+      for(Map<String, Object> data: valueMapList){
+        Map<String, Object> statusMap = new HashMap<>();
+        List<Map<String, Object>> valueList = new ArrayList<>();
+        if(data.containsKey("Create")){
+          statusMap = (Map<String, Object>) data.get("Create");
+          valueList = (List<Map<String, Object>>) statusMap.get("buckets");
+          if(!valueList.isEmpty()){
+            statusMap = valueList.get(0);
+            statusValueMap.put("draft",statusMap.get("doc_count"));
+            statusValueMap.put("draftBucket", statusMap.get("createdOn"));
+          }
+        }else if(data.containsKey("Publish")){
+          statusMap = (Map<String, Object>) data.get("Publish");
+          valueList = (List<Map<String, Object>>) statusMap.get("buckets");
+          if(!valueList.isEmpty()){
+            statusMap = valueList.get(0);
+            statusValueMap.put("live",statusMap.get("doc_count"));
+            statusValueMap.put("liveBucket",statusMap.get("lastPublishedOn"));
+          }
+        }else if(data.containsKey("Review")){
+          statusMap = (Map<String, Object>) data.get("Review");
+          valueList = (List<Map<String, Object>>) statusMap.get("buckets");
+          if(!valueList.isEmpty()){
+            statusMap = valueList.get(0);
+            statusValueMap.put("review",statusMap.get("doc_count"));
+            statusValueMap.put("reviewBucket", statusMap.get("lastSubmittedOn"));
+          }
         }
       }
-      value = valueMap.get("live");
+      
+      dataMap.put(JsonKey.NAME, "Number of content items created");
+      value = statusValueMap.get("draft");
+      dataMap.put(JsonKey.VALUE, value);
+      snapshot.put("org.creation.content[@status=draft].count", dataMap);
+      dataMap = new HashMap<>();
+      value = statusValueMap.get("live");
       dataMap.put(JsonKey.NAME, "Number of content items published");
       dataMap.put(JsonKey.VALUE, value);
       snapshot.put("org.creation.content[@status=published].count", dataMap);
       dataMap = new HashMap<>();
-      dataMap.put(JsonKey.NAME, "Number of content items created");
-      value = valueMap.get("draft");
-      dataMap.put(JsonKey.VALUE, value);
-      snapshot.put("org.creation.content[@status=draft].count", dataMap);
-      dataMap = new HashMap<>();
       dataMap.put(JsonKey.NAME, "Number of content items reviewed");
-      value = valueMap.get("review");
+      value = statusValueMap.get("review");
       dataMap.put(JsonKey.VALUE, value);
       snapshot.put("org.creation.content[@status=review].count", dataMap);
 
-
-      Map<String, Object> series = new HashMap<>();
-      Map aggKeyMap = (Map) resultData.get("created_on");
+      Map<String, Object> series = new LinkedHashMap<>();
+      Map aggKeyMap = (Map) resultData.get("createdOn");
       List<Map<String, Object>> bucket = getBucketData(aggKeyMap);
       Map<String, Object> seriesData = new LinkedHashMap<>();
       seriesData.put(JsonKey.NAME, "Content created by day");
       seriesData.put(JsonKey.SPLIT, "content.created_on");
+      if(null==bucket || bucket.isEmpty()){
+        bucket = createBucketStructure(periodStr);
+      }
       seriesData.put("buckets", bucket);
       series.put("org.creation.content.created_on.count", seriesData);
-      seriesData = new LinkedHashMap<>();
-      bucket = new ArrayList<>();
-      seriesData.put(JsonKey.NAME, "Live");
-      seriesData.put(JsonKey.SPLIT, "content.published_on");
-      seriesData.put("buckets", bucket);
-      series.put("org.creation.content[@status=published].published_on.count", seriesData);
+      
+      Map<String, Object> statusList = new HashMap();
+      List<Map<String, Object>> statusBucket = new ArrayList<>();
+      statusList = (Map<String, Object>) statusValueMap.get("draftBucket");
+      statusBucket = getBucketData(statusList);
+      if(null==statusBucket||statusBucket.isEmpty()){
+        statusBucket = createBucketStructure(periodStr);
+      }
       seriesData = new LinkedHashMap<>();
       seriesData.put(JsonKey.NAME, "Draft");
       seriesData.put(JsonKey.SPLIT, "content.created_on");
-      seriesData.put("buckets", bucket);
+      seriesData.put("buckets", statusBucket);
       series.put("org.creation.content[@status=draft].count", seriesData);
+      
+      statusList = (Map<String, Object>) statusValueMap.get("liveBucket");
+      statusBucket = getBucketData(statusList);
+      if(null==statusBucket||statusBucket.isEmpty()){
+        statusBucket = createBucketStructure(periodStr);
+      }
+      seriesData = new LinkedHashMap<>();
+      seriesData.put(JsonKey.NAME, "Live");
+      seriesData.put(JsonKey.SPLIT, "content.published_on");
+      seriesData.put("buckets", statusBucket);
+      series.put("org.creation.content[@status=published].count", seriesData);
+      
+      statusList = (Map<String, Object>) statusValueMap.get("reviewBucket");
+      statusBucket = getBucketData(statusList);
+      if(null==statusBucket||statusBucket.isEmpty()){
+        statusBucket = createBucketStructure(periodStr);
+      }
       seriesData = new LinkedHashMap<>();
       seriesData.put(JsonKey.NAME, "Review");
       seriesData.put(JsonKey.SPLIT, "content.reviewed_on");
-      seriesData.put("buckets", bucket);
+      seriesData.put("buckets", statusBucket);
       series.put("org.creation.content[@status=review].count", seriesData);
-
-      seriesData = new LinkedHashMap<>();
-      bucket = getBucketData(aggKeyMap);
-
-      aggKeyMap = (Map) resultData.get("status");
-      bucket = (List<Map<String, Object>>) aggKeyMap.get("buckets");
-      Map<String, Object> statusList = new HashMap();
-      List<Map<String, Object>> statusBucket = new ArrayList<>();
-      for (Map<String, Object> status : bucket) {
-        seriesData = new LinkedHashMap<>();
-        if ("live".equalsIgnoreCase((String) status.get("key"))) {
-          statusList = (Map<String, Object>) status.get("updated_on");
-          statusBucket = getBucketData(statusList);
-          seriesData.put(JsonKey.NAME, "Live");
-          seriesData.put(JsonKey.SPLIT, "content.published_on");
-          seriesData.put("buckets", statusBucket);
-          series.put("org.creation.content[@status=published].published_on.count", seriesData);
-        } else if ("draft".equalsIgnoreCase((String) status.get("key"))) {
-          statusList = (Map<String, Object>) status.get("updated_on");
-          statusBucket = getBucketData(statusList);
-          seriesData.put(JsonKey.NAME, "Draft");
-          seriesData.put(JsonKey.SPLIT, "content.created_on");
-          seriesData.put("buckets", statusBucket);
-          series.put("org.creation.content[@status=draft].count", seriesData);
-        } else if ("review".equalsIgnoreCase((String) status.get("key"))) {
-          statusList = (Map<String, Object>) status.get("updated_on");
-          statusBucket = getBucketData(statusList);
-          seriesData.put(JsonKey.NAME, "Review");
-          seriesData.put(JsonKey.SPLIT, "content.reviewed_on");
-          seriesData.put("buckets", statusBucket);
-          series.put("org.creation.content[@status=review].count", seriesData);
-        }
-      }
+      
       responseMap.put(JsonKey.SNAPSHOT, snapshot);
       responseMap.put(JsonKey.SERIES, series);
 
       result = mapper.writeValueAsString(responseMap);
     } catch (JsonProcessingException e) {
       ProjectLogger.log(e.getMessage());
-      // throw new ProjectCommonException("", "", ResponseCode.SERVER_ERROR.getResponseCode());
-    } catch (IOException e) {
-      ProjectLogger.log(e.getMessage());
-      // throw new ProjectCommonException("", "", ResponseCode.SERVER_ERROR.getResponseCode());
     }
     return result;
-  }
-
-  @SuppressWarnings({"unchecked", "rawtypes"})
-  private List<Map<String, Object>> getBucketData(Map aggKeyMap) {
-    List<Map<String, Double>> aggKeyList = (List<Map<String, Double>>) aggKeyMap.get("buckets");
-    List<Map<String, Object>> parentGroupList = new ArrayList<Map<String, Object>>();
-    for (Map aggKeyListMap : aggKeyList) {
-      Map<String, Object> parentCountObject = new LinkedHashMap<String, Object>();
-      parentCountObject.put("key", aggKeyListMap.get("key"));
-      parentCountObject.put("key_name", aggKeyListMap.get("key_as_string"));
-      parentCountObject.put("value", aggKeyListMap.get("doc_count"));
-      parentGroupList.add(parentCountObject);
-    }
-    return parentGroupList;
-  }
-
-  @SuppressWarnings("unchecked")
-  private Response metricsResponseGenerator(String esResponse, String periodStr,
-      Map<String, Object> viewData) {
-    Response response = new Response();
-    Map<String, Object> responseData = new LinkedHashMap<>();
-    try {
-      Map<String, Object> esData = mapper.readValue(esResponse, Map.class);
-      responseData.putAll(viewData);
-      responseData.put(JsonKey.PERIOD, periodStr);
-      responseData.put(JsonKey.SNAPSHOT, esData.get(JsonKey.SNAPSHOT));
-      responseData.put(JsonKey.SERIES, esData.get(JsonKey.SERIES));
-    } catch (JsonProcessingException e) {
-      ProjectLogger.log(e.getMessage());
-      // throw new ProjectCommonException("", "", ResponseCode.SERVER_ERROR.getResponseCode());
-    } catch (IOException e) {
-      ProjectLogger.log(e.getMessage());
-      // throw new ProjectCommonException("", "", ResponseCode.SERVER_ERROR.getResponseCode());
-    }
-    response.putAll(responseData);
-    return response;
   }
 
   @SuppressWarnings("unchecked")
@@ -323,7 +330,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     Map<String, Object> filter = new HashMap<>();
     requestMap.put(JsonKey.PERIOD, periodStr);
     filter.put(JsonKey.TAG, orgId);
-    // requestMap.put(JsonKey.CHANNEL, getChannel());
     request.setRequest(requestMap);
     String requestStr;
     Map<String, Object> resultData = new HashMap<>();
@@ -393,29 +399,38 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
       String orgName = validateOrg(orgId);
       if (ProjectUtil.isStringNullOREmpty(orgName)) {
-        ProjectCommonException exception =
+       ProjectCommonException exception =
             new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
                 ResponseCode.invalidOrgData.getErrorMessage(),
                 ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
-        // return;
+        return;
       }
-      Map<String, Object> dateMap = getStartAndEndDate(periodStr);
-      String query = getQuery(periodStr, orgId, dateMap);
-      String esResponse = makePostRequest(JsonKey.EKSTEP_ES_METRICS_URL, query);
-      String responseFormat = metricsESResponseGenerator(esResponse);
-      Response response = metricsResponseGenerator(responseFormat, periodStr, getViewData(orgId, null));
+      Map<String, Object> aggregationMap = new HashMap<>();
+      for (String operation : operationList) {
+        String request = getQueryRequest(periodStr, orgId, operation);
+        String esResponse = makePostRequest(JsonKey.EKSTEP_ES_METRICS_URL, request);
+        //String esResponse = getDataFromEkstep(request, JsonKey.EKSTEP_ES_METRICS_URL);
+        aggregationMap = putAggregationMap(esResponse, aggregationMap, operation);
+      }
+      String responseFormat = metricsOrgResponseGenerator(periodStr, aggregationMap);
+      Response response =
+          metricsResponseGenerator(responseFormat, periodStr, getViewData(orgId, orgName));
       sender().tell(response, self());
     } catch (ProjectCommonException e) {
-      ProjectLogger.log("Some error occurs" + e.getMessage());
+      ProjectLogger.log("Some error occurs",e);
       sender().tell(e, self());
       return;
     } catch (Exception e) {
-      ProjectLogger.log("Some error occurs" + e.getMessage());
+      ProjectLogger.log("Some error occurs",e);
       throw new ProjectCommonException(ResponseCode.internalError.getErrorCode(),
           ResponseCode.internalError.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
+  }
+
+  private void orgConsumptionMetrics(Request actorMessages) {
+
   }
 
   private String validateOrg(String orgId) {

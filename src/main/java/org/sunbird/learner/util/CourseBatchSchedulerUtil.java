@@ -30,7 +30,7 @@ import org.sunbird.learner.actors.CourseEnrollmentActor;
  */
 public class CourseBatchSchedulerUtil {
   private static  Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
-  private static Map<String,String> headerMap = new HashMap<>();
+  public static Map<String,String> headerMap = new HashMap<>();
   static {
     String header = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
     if (ProjectUtil.isStringNullOREmpty(header)) {

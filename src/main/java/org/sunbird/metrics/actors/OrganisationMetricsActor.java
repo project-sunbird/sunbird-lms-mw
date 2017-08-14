@@ -27,7 +27,23 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   private static ObjectMapper mapper = new ObjectMapper();
   private static final String view = "org";
   private static List<String> operationList = new ArrayList<>();
-
+  
+  protected enum ContentStatus {
+    Draft("Create"),
+    Review("Review"),
+    Live("Publish");
+    
+    private String contentOperation;
+    
+    private ContentStatus(String operation) {
+        this.contentOperation = operation;
+    }
+    
+    private String getOperation(){
+      return this.contentOperation;
+    }
+    
+  }
   static {
     operationList.add("Create");
     operationList.add("Review");
@@ -252,15 +268,15 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       dataMap.put(JsonKey.VALUE, value);
       snapshot.put("org.creation.content[@status=draft].count", dataMap);
       dataMap = new HashMap<>();
-      value = statusValueMap.get("live");
-      dataMap.put(JsonKey.NAME, "Number of content items published");
-      dataMap.put(JsonKey.VALUE, value);
-      snapshot.put("org.creation.content[@status=published].count", dataMap);
-      dataMap = new HashMap<>();
       dataMap.put(JsonKey.NAME, "Number of content items reviewed");
       value = statusValueMap.get("review");
       dataMap.put(JsonKey.VALUE, value);
       snapshot.put("org.creation.content[@status=review].count", dataMap);
+      dataMap = new HashMap<>();
+      value = statusValueMap.get("live");
+      dataMap.put(JsonKey.NAME, "Number of content items published");
+      dataMap.put(JsonKey.VALUE, value);
+      snapshot.put("org.creation.content[@status=published].count", dataMap);
 
       Map<String, Object> series = new LinkedHashMap<>();
       Map aggKeyMap = (Map) resultData.get("createdOn");
@@ -286,6 +302,17 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       seriesData.put(JsonKey.SPLIT, "content.created_on");
       seriesData.put("buckets", statusBucket);
       series.put("org.creation.content[@status=draft].count", seriesData);
+
+      statusList = (Map<String, Object>) statusValueMap.get("reviewBucket");
+      statusBucket = getBucketData(statusList);
+      if(null==statusBucket||statusBucket.isEmpty()){
+        statusBucket = createBucketStructure(periodStr);
+      }
+      seriesData = new LinkedHashMap<>();
+      seriesData.put(JsonKey.NAME, "Review");
+      seriesData.put(JsonKey.SPLIT, "content.reviewed_on");
+      seriesData.put("buckets", statusBucket);
+      series.put("org.creation.content[@status=review].count", seriesData);
       
       statusList = (Map<String, Object>) statusValueMap.get("liveBucket");
       statusBucket = getBucketData(statusList);
@@ -297,17 +324,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       seriesData.put(JsonKey.SPLIT, "content.published_on");
       seriesData.put("buckets", statusBucket);
       series.put("org.creation.content[@status=published].count", seriesData);
-      
-      statusList = (Map<String, Object>) statusValueMap.get("reviewBucket");
-      statusBucket = getBucketData(statusList);
-      if(null==statusBucket||statusBucket.isEmpty()){
-        statusBucket = createBucketStructure(periodStr);
-      }
-      seriesData = new LinkedHashMap<>();
-      seriesData.put(JsonKey.NAME, "Review");
-      seriesData.put(JsonKey.SPLIT, "content.reviewed_on");
-      seriesData.put("buckets", statusBucket);
-      series.put("org.creation.content[@status=review].count", seriesData);
       
       responseMap.put(JsonKey.SNAPSHOT, snapshot);
       responseMap.put(JsonKey.SERIES, series);
@@ -409,7 +425,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       Map<String, Object> aggregationMap = new HashMap<>();
       for (String operation : operationList) {
         String request = getQueryRequest(periodStr, orgId, operation);
-        String esResponse = makePostRequest(JsonKey.EKSTEP_ES_METRICS_URL, request);
+        String esResponse = makePostRequest(JsonKey.EKSTEP_ES_METRICS_API_URL, request);
         //String esResponse = getDataFromEkstep(request, JsonKey.EKSTEP_ES_METRICS_URL);
         aggregationMap = putAggregationMap(esResponse, aggregationMap, operation);
       }
@@ -429,8 +445,45 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     }
   }
 
-  private void orgConsumptionMetrics(Request actorMessages) {
-
+  private void orgConsumptionMetrics(Request actorMessage) {
+    ProjectLogger.log("In orgCreationMetrics api");
+    try {
+      String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
+      String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
+      String orgName = validateOrg(orgId);
+      if (ProjectUtil.isStringNullOREmpty(orgName)) {
+       /*ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
+                ResponseCode.invalidOrgData.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+        sender().tell(exception, self());
+        return;*/
+      }
+      Request request = new Request();
+      request.setId(actorMessage.getId());
+      Map<String, Object> requestObject = new HashMap<>();
+      requestObject.put(JsonKey.PERIOD, getEkstepPeriod(periodStr));
+      Map<String, Object> filterMap = new HashMap<>();
+      filterMap.put(JsonKey.TAG, orgId);
+      requestObject.put(JsonKey.FILTER, filterMap);
+      //TODO: get channel from org
+      requestObject.put(JsonKey.CHANNEL, "");
+      request.setRequest(requestObject);
+      String ekStepResponse  = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, request.toString());
+      sender().tell(ekStepResponse,self());
+      //Response response =
+          metricsResponseGenerator(null, periodStr, getViewData(orgId, orgName));
+      //sender().tell(response, self());
+    } catch (ProjectCommonException e) {
+      ProjectLogger.log("Some error occurs",e);
+      sender().tell(e, self());
+      return;
+    } catch (Exception e) {
+      ProjectLogger.log("Some error occurs",e);
+      throw new ProjectCommonException(ResponseCode.internalError.getErrorCode(),
+          ResponseCode.internalError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
   }
 
   private String validateOrg(String orgId) {

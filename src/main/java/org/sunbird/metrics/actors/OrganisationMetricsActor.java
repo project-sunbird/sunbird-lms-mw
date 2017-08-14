@@ -151,49 +151,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     return builder.toString();
   }
 
-  @SuppressWarnings({"unchecked", "rawtypes"})
-  private List<Map<String, Object>> getBucketData(Map aggKeyMap) {
-    List<Map<String, Object>> parentGroupList = new ArrayList<Map<String, Object>>();
-    if(null==aggKeyMap || aggKeyMap.isEmpty()){
-      return parentGroupList;
-    }
-    List<Map<String, Double>> aggKeyList = (List<Map<String, Double>>) aggKeyMap.get("buckets");
-    for (Map aggKeyListMap : aggKeyList) {
-      Map<String, Object> parentCountObject = new LinkedHashMap<String, Object>();
-      parentCountObject.put("key", aggKeyListMap.get("key"));
-      parentCountObject.put("key_name", aggKeyListMap.get("key_as_string"));
-      parentCountObject.put("value", aggKeyListMap.get("doc_count"));
-      parentGroupList.add(parentCountObject);
-    }
-    return parentGroupList;
-  }
-
-  @SuppressWarnings("unchecked")
-  private Response metricsResponseGenerator(String esResponse, String periodStr,
-      Map<String, Object> viewData) {
-    Response response = new Response();
-    Map<String, Object> responseData = new LinkedHashMap<>();
-    try {
-      Map<String, Object> esData = mapper.readValue(esResponse, Map.class);
-      responseData.putAll(viewData);
-      responseData.put(JsonKey.PERIOD, periodStr);
-      responseData.put(JsonKey.SNAPSHOT, esData.get(JsonKey.SNAPSHOT));
-      responseData.put(JsonKey.SERIES, esData.get(JsonKey.SERIES));
-    } catch (JsonProcessingException e) {
-      ProjectLogger.log(e.getMessage());
-      // throw new ProjectCommonException("", "", ResponseCode.SERVER_ERROR.getResponseCode());
-    } catch (IOException e) {
-      ProjectLogger.log(e.getMessage());
-      // throw new ProjectCommonException("", "", ResponseCode.SERVER_ERROR.getResponseCode());
-    }
-    response.putAll(responseData);
-    return response;
-  }
-
-  /*private static Map<String, Object> getAggregationMap() {
-    return aggregationMap;
-  }*/
-
   @SuppressWarnings("unchecked")
   private static Map<String, Object> putAggregationMap(String responseStr, Map<String, Object> aggregationMap, String operation){
     try {
@@ -290,22 +247,22 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         }
       }
       
-      value = statusValueMap.get("live");
-      dataMap.put(JsonKey.NAME, "Number of content items published");
-      dataMap.put(JsonKey.VALUE, value);
-      snapshot.put("org.creation.content[@status=published].count", dataMap);
-      dataMap = new HashMap<>();
       dataMap.put(JsonKey.NAME, "Number of content items created");
       value = statusValueMap.get("draft");
       dataMap.put(JsonKey.VALUE, value);
       snapshot.put("org.creation.content[@status=draft].count", dataMap);
+      dataMap = new HashMap<>();
+      value = statusValueMap.get("live");
+      dataMap.put(JsonKey.NAME, "Number of content items published");
+      dataMap.put(JsonKey.VALUE, value);
+      snapshot.put("org.creation.content[@status=published].count", dataMap);
       dataMap = new HashMap<>();
       dataMap.put(JsonKey.NAME, "Number of content items reviewed");
       value = statusValueMap.get("review");
       dataMap.put(JsonKey.VALUE, value);
       snapshot.put("org.creation.content[@status=review].count", dataMap);
 
-      Map<String, Object> series = new HashMap<>();
+      Map<String, Object> series = new LinkedHashMap<>();
       Map aggKeyMap = (Map) resultData.get("createdOn");
       List<Map<String, Object>> bucket = getBucketData(aggKeyMap);
       Map<String, Object> seriesData = new LinkedHashMap<>();
@@ -362,8 +319,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     return result;
   }
 
-
-
   @SuppressWarnings("unchecked")
   private void orgConsumptionMetricsMock(Request actorMessage) {
     Request request = new Request();
@@ -375,7 +330,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     Map<String, Object> filter = new HashMap<>();
     requestMap.put(JsonKey.PERIOD, periodStr);
     filter.put(JsonKey.TAG, orgId);
-    // requestMap.put(JsonKey.CHANNEL, getChannel());
     request.setRequest(requestMap);
     String requestStr;
     Map<String, Object> resultData = new HashMap<>();

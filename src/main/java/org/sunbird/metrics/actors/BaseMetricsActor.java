@@ -56,7 +56,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
     Calendar cal = Calendar.getInstance();
     cal.setTimeInMillis(endDate.getTime());
-    cal.add(Calendar.DATE, -days);
+    cal.add(Calendar.DATE, -(days-1));
     String startDateStr = sdf.format(cal.getTimeInMillis());
     String endDateStr = sdf.format(endDate.getTime());
     dateMap.put("startDate", startDateStr);
@@ -112,7 +112,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
       Map<String, Object> bucketData = new LinkedHashMap<String, Object>();
       Calendar cal = Calendar.getInstance();
       cal.setTimeInMillis(date.getTime());
-      cal.add(Calendar.DATE, -day);
+      cal.add(Calendar.DATE, -(day-1));
       bucketData.put("key", cal.getTimeInMillis());
       bucketData.put("key_name", new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime()));
       bucketData.put("value", 0);

@@ -143,7 +143,7 @@ public class CourseManagementActor extends UntypedAbstractActor {
     ProjectLogger.log("Resposne for Course published==" + resposne);
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.ID, (String) req.get(JsonKey.COURSE_ID));
-    map.put(JsonKey.STATUS, 0);
+    map.put(JsonKey.STATUS, ProjectUtil.CourseMgmtStatus.DRAFT.ordinal());
     map.put(JsonKey.SUBMIT_DATE, ProjectUtil.getFormattedDate());
     Response result = cassandraOperation.insertRecord(dbInfo.getKeySpace(),
         dbInfo.getTableName(), map);

@@ -475,3 +475,9 @@ ALTER TABLE sunbird.course_batch ADD countDecrementDate text;
 
 CREATE INDEX inx_org_provider ON sunbird.organisation (provider);
 CREATE INDEX inx_org_externalId ON sunbird.organisation (externalId);
+
+insert into sunbird.url_action (id,name) values ('orgupload','orgupload');
+update sunbird.role_group set url_action_ids=['suspendOrg','suspendUser','orgupload'] where id='SYSTEM_ADMINISTRATION';
+update sunbird.url_action set url=['/v1/org/suspend'] where id='suspendOrg';
+update sunbird.url_action set url=['/v1/user/block'] where id='suspendUser';
+update sunbird.url_action set url=['/v1/org/upload'] where id='orgupload';

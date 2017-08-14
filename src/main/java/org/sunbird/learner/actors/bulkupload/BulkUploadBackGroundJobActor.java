@@ -52,7 +52,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   private SSOManager ssoManager = new KeyCloakServiceImpl();
   @Override
   public void onReceive(Object message) throws Throwable {
-    System.out.println("called bulkUploadBackGroundJobActor");
     if (message instanceof Request) {
       try {
         ProjectLogger.log("BulkUploadBackGroundJobActor onReceive called");
@@ -73,7 +72,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   private void process(Request actorMessage) {
     ObjectMapper mapper = new ObjectMapper();
     String processId = (String) actorMessage.get(JsonKey.PROCESS_ID);
-    System.out.println("processId " +processId );
     Map<String,Object> dataMap = getBulkData(processId);
     int status = (int) dataMap.get(JsonKey.STATUS);
     if(!(status == (ProjectUtil.BulkProcessStatus.COMPLETED.getValue())
@@ -489,7 +487,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
           if ( null != userMap.get(JsonKey.ROLES)) {
             String[] userRole = ((String) userMap.get(JsonKey.ROLES)).split(",");
-            userMap.put(JsonKey.ROLES, userRole);
+            List<String> list = new ArrayList<>(Arrays.asList(userRole));
+            userMap.put(JsonKey.ROLES, list);
           }
 
           userMap = insertRecordToKeyCloak(userMap);
@@ -501,6 +500,13 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           try {
             response = cassandraOperation
                 .insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
+          } catch(Exception ex){
+            ProjectLogger.log("Exception occurred while bulk user upload in BulkUploadBackGroundJobActor:", ex);
+            userMap.remove(JsonKey.ID);
+            userMap.remove(JsonKey.PASSWORD);
+            userMap.put(JsonKey.ERROR_MSG, ex.getMessage());
+            failureUserReq.add(userMap);
+            continue;
           } finally {
             if (null == response) {
               ssoManager.removeUser(userMap);
@@ -528,6 +534,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         } catch(Exception ex) {
           ProjectLogger.log("Exception occurred while bulk user upload in BulkUploadBackGroundJobActor:", ex);
           userMap.remove(JsonKey.ID);
+          userMap.remove(JsonKey.PASSWORD);
           userMap.put(JsonKey.ERROR_MSG, ex.getMessage());
           failureUserReq.add(userMap);
         }
@@ -740,8 +747,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
        */
 
       if (userMap.containsKey(JsonKey.ROLES)) {
-        String[] roleList = (String[]) userMap.get(JsonKey.ROLES);
-        List<String> roles = new ArrayList<>(Arrays.asList(roleList));
+        List<String> roles = (List<String>) userMap.get(JsonKey.ROLES);
         if (!roles.contains(ProjectUtil.UserRole.PUBLIC.getValue())) {
           roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
           userMap.put(JsonKey.ROLES, roles);

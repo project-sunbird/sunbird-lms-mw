@@ -49,8 +49,7 @@ public class Util {
         // EkStep HttpClient headers init
         headers.put("content-type", "application/json");
         headers.put("accept", "application/json");
-       // SchedulerManager schedulerManager = new SchedulerManager();
-        //schedulerManager.schedule();
+        //SchedulerManager.getInstance();
     }
 
     /**
@@ -365,7 +364,7 @@ public class Util {
          search.setQuery((String) searchQueryMap.get(JsonKey.QUERY));
         }
         if(searchQueryMap.containsKey(JsonKey.FACETS)){
-         search.setFacets((List<String>) searchQueryMap.get(JsonKey.FACETS));
+            search.setFacets((List<Map<String , String>>) searchQueryMap.get(JsonKey.FACETS));
         }
         if(searchQueryMap.containsKey(JsonKey.FIELDS)){
             search.setFields((List<String>) searchQueryMap.get(JsonKey.FIELDS));

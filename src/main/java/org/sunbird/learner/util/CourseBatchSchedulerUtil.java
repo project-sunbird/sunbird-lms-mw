@@ -21,12 +21,16 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.actors.CourseEnrollmentActor;
 
 /**
+ * This class will update course batch count to EKStep.
+ * First it will get batch details from ES , then  collect old open/private 
+ * batch count value form EKStep then update cassandra db and EKStep course 
+ * instance count under EKStep.
  * @author Manzarul
  *
  */
 public class CourseBatchSchedulerUtil {
   private static  Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
-  private static Map<String,String> headerMap = new HashMap<>();
+  public static Map<String,String> headerMap = new HashMap<>();
   static {
     String header = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
     if (ProjectUtil.isStringNullOREmpty(header)) {

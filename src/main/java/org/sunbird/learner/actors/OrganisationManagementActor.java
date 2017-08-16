@@ -207,6 +207,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       if (ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ROOT_ORG_ID))) {
         req.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
       }
+      //adding one extra filed for tag.
+      req.put(JsonKey.HASH_TAG_ID, uniqueId);
       Response result =
           cassandraOperation.insertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), req);
       ProjectLogger.log("Org data saved into cassandra.");

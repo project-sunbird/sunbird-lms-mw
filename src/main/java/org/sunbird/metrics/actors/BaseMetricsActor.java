@@ -53,6 +53,9 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     Map<String, Object> dateMap = new HashMap<>();
     int days = getDaysByPeriod(period);
     Date endDate = new Date();
+    Calendar calendar = Calendar.getInstance();
+    calendar.add(Calendar.DATE, -1);
+    endDate = calendar.getTime();
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
     Calendar cal = Calendar.getInstance();
     cal.setTimeInMillis(endDate.getTime());
@@ -78,7 +81,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
         break;
       }
       case "5w": {
-        days = 36;
+        days = 35;
         break;
       }
     }
@@ -107,12 +110,15 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   protected List<Map<String,Object>> createBucketStructure(String periodStr) {
     int days = getDaysByPeriod(periodStr);
     Date date = new Date();
+    Calendar calendar = Calendar.getInstance();
+    calendar.add(Calendar.DATE, -1);
+    date = calendar.getTime();
     List<Map<String,Object>> bucket = new ArrayList<>();
-    for(int day = days; day > 0; day--){
+    for(int day = days-1; day >= 0; day--){
       Map<String, Object> bucketData = new LinkedHashMap<String, Object>();
       Calendar cal = Calendar.getInstance();
       cal.setTimeInMillis(date.getTime());
-      cal.add(Calendar.DATE, -(day-1));
+      cal.add(Calendar.DATE, -(day));
       bucketData.put("key", cal.getTimeInMillis());
       bucketData.put("key_name", new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime()));
       bucketData.put("value", 0);

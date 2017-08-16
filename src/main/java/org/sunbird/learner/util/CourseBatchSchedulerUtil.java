@@ -124,8 +124,10 @@ public class CourseBatchSchedulerUtil {
         CourseEnrollmentActor.getCourseObjectFromEkStep(courseId, headerMap);
     if(ekStepContent != null && ekStepContent.size()>0) {
        int val = (int) ekStepContent.getOrDefault(contentname, 0);
+       val = val +1;
       try {
-           HttpUtil.sendPostRequest("URL", "", headerMap) ;
+          String response = HttpUtil.sendPatchRequest("https://qa.ekstep.in/api/system/v3/content/update/"+courseId, "{\"request\": {\"content\": {\""+contentname+"\": "+val+"}}}", headerMap);
+         ProjectLogger.log("batch count update response=="+response + " " + courseId);
       } catch (IOException e) {
         ProjectLogger.log("Error while updating content value "+e.getMessage() ,e);
       }

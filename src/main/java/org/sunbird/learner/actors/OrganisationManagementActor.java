@@ -846,7 +846,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         try {
           backGroundActorRef.tell(usrResponse,self());
         } catch (Exception ex) {
-          ProjectLogger.log("Exception Occured during saving user to Es while joinUserOrganisation : ", ex);
+          ProjectLogger.log("Exception Occured during saving user to Es while removing memeber from Organisation : ", ex);
         }
       } else {
         ProjectLogger.log("no call for ES to save user");

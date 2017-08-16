@@ -4,7 +4,6 @@
 package org.sunbird.common.quartz.scheduler;
 
 import akka.actor.ActorRef;
-import akka.actor.Props;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -23,7 +22,6 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
-import org.sunbird.learner.actors.BackgroundJobManager;
 import org.sunbird.learner.actors.RequestRouterActor;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.EkStepRequestUtil;

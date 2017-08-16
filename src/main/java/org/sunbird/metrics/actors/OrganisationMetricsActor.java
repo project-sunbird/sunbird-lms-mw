@@ -3,6 +3,7 @@ package org.sunbird.metrics.actors;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -195,7 +196,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})
-  private String metricsOrgResponseGenerator(String periodStr, Map<String, Object> resultData) {
+  private String orgCreationResponseGenerator(String periodStr, Map<String, Object> resultData) {
     String dataSet = "creation";
     String result = null;
     Map<String, Object> responseMap = new HashMap<>();
@@ -429,7 +430,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         //String esResponse = getDataFromEkstep(request, JsonKey.EKSTEP_ES_METRICS_URL);
         aggregationMap = putAggregationMap(esResponse, aggregationMap, operation);
       }
-      String responseFormat = metricsOrgResponseGenerator(periodStr, aggregationMap);
+      String responseFormat = orgCreationResponseGenerator(periodStr, aggregationMap);
       Response response =
           metricsResponseGenerator(responseFormat, periodStr, getViewData(orgId, orgName));
       sender().tell(response, self());
@@ -469,11 +470,11 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       //TODO: get channel from org
       requestObject.put(JsonKey.CHANNEL, "");
       request.setRequest(requestObject);
-      String ekStepResponse  = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, request.toString());
-      sender().tell(ekStepResponse,self());
-      //Response response =
-          metricsResponseGenerator(null, periodStr, getViewData(orgId, orgName));
-      //sender().tell(response, self());
+      String requestStr = mapper.writeValueAsString(request);
+      String ekStepResponse  = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, requestStr);
+      String responseFormat = orgConsumptionResponseGenerator(periodStr, ekStepResponse);
+      Response response =
+          metricsResponseGenerator(responseFormat, periodStr, getViewData(orgId, orgName));
     } catch (ProjectCommonException e) {
       ProjectLogger.log("Some error occurs",e);
       sender().tell(e, self());
@@ -484,6 +485,42 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
           ResponseCode.internalError.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
+  }
+  
+  @SuppressWarnings("unchecked")
+  private String orgConsumptionResponseGenerator(String period, String ekstepResponse){
+    String result = "";
+    try {
+      Map<String, Object> resultData = mapper.readValue(ekstepResponse, Map.class);
+      resultData = (Map<String, Object>) resultData.get(JsonKey.RESULT);
+      List<Map<String,Object>> resultList = (List<Map<String, Object>>) resultData.get(JsonKey.METRICS);
+      List<Map<String,Object>> buckets = createBucketStructure(period);
+      List<Map<String,Object>> userBucket = new ArrayList<>();
+      List<Map<String,Object>> consumptionBucket = new ArrayList<>();
+      Map<String,Object> userData = new HashMap<>();
+      int index = buckets.size()-1;
+      for(Map<String,Object> res:resultList){
+        resultData = buckets.get(index);
+        userData = resultData;
+        String bucketDate = (String)resultData.get("key_name");
+        String metricsDate = String.valueOf(res.get("d_period"));
+        Date date = new SimpleDateFormat("yyyyMMdd").parse(metricsDate);
+        metricsDate = new SimpleDateFormat("yyyy-MM-dd").format(date);
+        if(metricsDate.equalsIgnoreCase(bucketDate)){
+          Long totalTimeSpent = (Long)res.get("m_total_ts");
+          Long totalSessions = (Long)res.get("m_total_sessions");
+          Long totalUsers = (Long)res.get("m_total_users_count");
+          Long value = (totalTimeSpent/totalSessions)/totalUsers;
+          resultData.put(JsonKey.VALUE, totalTimeSpent);
+          userData.put(JsonKey.VALUE, totalUsers);
+        }
+        consumptionBucket.add(resultData);
+        userBucket.add(userData);
+      }
+    }catch(Exception e){
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    return result;
   }
 
   private String validateOrg(String orgId) {

@@ -173,24 +173,7 @@ public class EsSyncActor extends UntypedAbstractActor {
     ProjectLogger.log("fetching user orga data started");
     List<Map<String, Object>> orgMap = getDetails(Util.dbInfoMap.get(JsonKey.USER_ORG_DB),userId,JsonKey.USER_ID);
     userMap.put(JsonKey.ORGANISATIONS, orgMap);
-    ProjectLogger.log("fetching user root org data started");
-    if(userMap.containsKey(JsonKey.ROOT_ORG_ID) && !ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.ROOT_ORG_ID))){
-      Map<String,Object> rootOrg = getDetailsById(Util.dbInfoMap.get(JsonKey.ORG_DB),(String)userMap.get(JsonKey.ROOT_ORG_ID));
-      userMap.put(JsonKey.ROOT_ORG, rootOrg);
-      if(null != rootOrg && rootOrg.containsKey(JsonKey.ADDRESS_ID) && 
-          !ProjectUtil.isStringNullOREmpty((String)rootOrg.get(JsonKey.ADDRESS_ID))){
-        rootOrg.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),(String)rootOrg.get(JsonKey.ADDRESS_ID)));
-      }
-    }
-    ProjectLogger.log("fetching user registered org data started");
-    if(userMap.containsKey(JsonKey.REGISTERED_ORG_ID) && !ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.REGISTERED_ORG_ID))){
-      Map<String,Object> regOrg = getDetailsById(Util.dbInfoMap.get(JsonKey.ORG_DB),(String)userMap.get(JsonKey.REGISTERED_ORG_ID));
-      userMap.put(JsonKey.REGISTERED_ORG, regOrg);
-      if(null != regOrg && regOrg.containsKey(JsonKey.ADDRESS_ID) && 
-          !ProjectUtil.isStringNullOREmpty((String)regOrg.get(JsonKey.ADDRESS_ID))){
-        regOrg.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),(String)regOrg.get(JsonKey.ADDRESS_ID)));
-      }
-    }
+    
     ProjectLogger.log("fetching user data completed");
     return userMap;
   }

@@ -105,11 +105,11 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
         break;
       }
       case "14d": {
-        days = "LAST_7_DAYS";
+        days = "LAST_14_DAYS";
         break;
       }
       case "5w": {
-        days = "LAST_7_DAYS";
+        days = "LAST_5_WEEKS";
         break;
       }
     }

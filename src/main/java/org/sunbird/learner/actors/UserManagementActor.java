@@ -1160,8 +1160,9 @@ public class UserManagementActor extends UntypedAbstractActor {
         List<String> roleGroup = (List) map.get(JsonKey.ROLE_GROUP_ID);
         List<Map<String, Object>> actionGroupListMap = new ArrayList<>();
         roleResponseMap.put(JsonKey.ACTION_GROUPS, actionGroupListMap);
-        Map<String, Object> subRoleResponseMap = new HashMap<>();
+        Map<String, Object> subRoleResponseMap = null;
         for (String val : roleGroup) {
+          subRoleResponseMap = new HashMap<>(); 
           Map<String, Object> subRoleMap = getSubRoleListMap(roleGroupMap, val);
           List<String> subRole = (List) subRoleMap.get(JsonKey.URL_ACTION_ID);
           List<Map<String, Object>> roleUrlResponList = new ArrayList<>();
@@ -1170,9 +1171,15 @@ public class UserManagementActor extends UntypedAbstractActor {
           for (String rolemap : subRole) {
             roleUrlResponList.add(getRoleAction(urlActionListMap, rolemap));
           }
-          subRoleResponseMap.put(JsonKey.ACTIONS, roleUrlResponList);
+          if(subRoleResponseMap.containsKey(JsonKey.ACTIONS)) {
+            List<Map<String, Object>>  listOfMap  = (List<Map<String, Object>> )subRoleResponseMap.get(JsonKey.ACTIONS);
+            listOfMap.addAll(roleUrlResponList);
+          } else {
+            subRoleResponseMap.put(JsonKey.ACTIONS, roleUrlResponList);
+          }
+          actionGroupListMap.add(subRoleResponseMap); 
         }
-        actionGroupListMap.add(subRoleResponseMap);
+        
         resposnemap.add(roleResponseMap);
       }
     }

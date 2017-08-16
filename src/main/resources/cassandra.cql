@@ -482,3 +482,10 @@ update sunbird.url_action set url=['/v1/org/suspend'] where id='suspendOrg';
 update sunbird.url_action set url=['/v1/user/block'] where id='suspendUser';
 update sunbird.url_action set url=['/v1/org/upload'] where id='orgupload';
 insert into sunbird.role (id,name,rolegroupid,status) values ('COURSE_MENTOR','COURSE_MENTOR',['COURSE_MENTOR'],1);
+
+// changes on Aug 16,2017
+ALTER TABLE sunbird.organisation ADD slug text;
+ALTER TABLE sunbird.organisation ADD hashTagId text;
+ALTER TABLE sunbird.organisation ADD theme text;
+ALTER TABLE sunbird.user_org ADD position text;
+ALTER TABLE sunbird.course_batch ADD hashTagId text;

@@ -428,6 +428,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     req.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
     req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     req.put(JsonKey.COURSE_ADDITIONAL_INFO ,getAdditionalCourseInfo(ekStepContent));
+    req.put(JsonKey.HASH_TAG_ID, uniqueId);
     Response result = cassandraOperation.insertRecord(dbInfo.getKeySpace(),
         dbInfo.getTableName(), req);
     result.put(JsonKey.BATCH_ID, uniqueId);

@@ -2,6 +2,7 @@ package org.sunbird.learner.actors;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
+import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -122,6 +123,7 @@ public class UtilityActor extends UntypedAbstractActor {
 
               updateDb.put(JsonKey.ID , (String)course.get(JsonKey.ID));
               updateDb.put(JsonKey.COURSE_PROGRESS , courseProgress);
+              updateDb.put(JsonKey.DATE_TIME , new Timestamp(new Date().getTime()));
               updateDb.put(JsonKey.LAST_READ_CONTENTID ,((Map<String,Object>)value.get("content")).get(JsonKey.CONTENT_ID));
               updateDb.put(JsonKey.LAST_READ_CONTENT_STATUS , (contentStateInfo.get((String)((Map<String,Object>)value.get("content")).get(JsonKey.ID))));
                try {

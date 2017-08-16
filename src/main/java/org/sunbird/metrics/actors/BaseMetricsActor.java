@@ -37,6 +37,15 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   private static ObjectMapper mapper = new ObjectMapper();
 
   protected abstract Map<String, Object> getViewData(String id, Object data);
+  public static final String startDate = "startDate";
+  public static final String endDate = "endDate";
+  public static final String startTimeMilis = "startTimeMilis";
+  public static final String endTimeMilis = "endTimeMilis";
+  public static final String LTE = "<=";
+  public static final String LT = "<";
+  public static final String GTE = ">=";
+  public static final String GT = ">";
+
 
   protected Map<String, Object> addSnapshot(String keyName, String name, Object value,
       String timeUnit) {

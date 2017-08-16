@@ -448,6 +448,7 @@ ALTER TABLE sunbird.organisation add provider text;
 COPY  sunbird.organisation (id,source) TO '/tmp/cql/source.csv';
 COPY  sunbird.organisation (id,provider) FROM '/tmp/cql/source.csv';
 ALTER TABLE sunbird.organisation DROP source;
+//Id is courseId
 CREATE TABLE IF NOT EXISTS sunbird.course_publish_status(id text,submitDate text,status int,PRIMARY KEY (id));
 
 // convert data type of participants from List to map -- Aug 7,2017
@@ -489,3 +490,4 @@ ALTER TABLE sunbird.organisation ADD hashTagId text;
 ALTER TABLE sunbird.organisation ADD theme text;
 ALTER TABLE sunbird.user_org ADD position text;
 ALTER TABLE sunbird.course_batch ADD hashTagId text;
+CREATE INDEX inx_cps_status ON sunbird.course_publish_status (status);

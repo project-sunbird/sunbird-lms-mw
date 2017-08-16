@@ -39,6 +39,7 @@ public class CourseBatchSchedulerUtil {
       header = JsonKey.BEARER+header;
     }
      headerMap.put(JsonKey.AUTHORIZATION, header);
+     headerMap.put("Content-Type", "application/json");
   }
   /**
    * 

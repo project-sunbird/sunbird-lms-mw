@@ -54,7 +54,7 @@ public class SchedulerManager {
       
       // 2- Create a trigger object that will define frequency of run.
       Trigger trigger = TriggerBuilder.newTrigger().withIdentity("schedulertrigger", identifier)
-          .withSchedule(SimpleScheduleBuilder.repeatMinutelyForever(2).repeatForever()).build();
+          .withSchedule(SimpleScheduleBuilder.repeatHourlyForever(2).repeatForever()).build();
       try {
          if (scheduler.checkExists(job.getKey())){
           scheduler.deleteJob(job.getKey());

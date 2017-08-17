@@ -105,6 +105,7 @@ public class CourseBatchSchedulerUtil {
   * @param value
   */
   public static void updateCourseBatchDbStatus(Map<String,Object> map,Boolean increment) {
+    ProjectLogger.log("updating course batch details start");
     CassandraOperation cassandraOperation = new CassandraOperationImpl();
     Util.DbInfo courseBatchDBInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
     try{
@@ -158,6 +159,7 @@ public class CourseBatchSchedulerUtil {
            val = val -1;
        }
       try {
+        ProjectLogger.log("updating content details to Ekstep start");
         String contentUpdateUrl = System.getenv(JsonKey.EKSTEP_CONTENT_UPDATE_URL);
         if(ProjectUtil.isStringNullOREmpty(contentUpdateUrl)){
           contentUpdateUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_UPDATE_URL);

@@ -7,14 +7,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
+import org.quartz.CronScheduleBuilder;
 import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
-import org.quartz.SimpleScheduleBuilder;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 import org.quartz.impl.StdSchedulerFactory;
+import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 
 
@@ -44,17 +45,28 @@ public class SchedulerManager {
     InputStream in = this.getClass().getClassLoader().getResourceAsStream(file);
     Properties configProp = new Properties();
     try {
-      Thread.sleep(240000);
+      //240000
+      Thread.sleep(1);
       configProp.load(in);
-       scheduler = new StdSchedulerFactory(configProp).getScheduler();
+      String host = System.getenv(JsonKey.SUNBIRD_PG_HOST);
+      String port =  System.getenv(JsonKey.SUNBIRD_PG_PORT);
+      String db = System.getenv(JsonKey.SUNBIRD_PG_DB);
+      String username = System.getenv(JsonKey.SUNBIRD_PG_USER);
+      String password = System.getenv(JsonKey.SUNBIRD_PG_PASSWORD);
+      ProjectLogger.log("Environment variable value for PostGress SQl= host, port,db,username,password " + host +" ," + port+","+db+","+username+","+password);
+      configProp.put("org.quartz.dataSource.MySqlDS.URL", "jdbc:postgresql://"+host+":"+port+"/"+db);
+      configProp.put("org.quartz.dataSource.MySqlDS.user", username);
+      configProp.put("org.quartz.dataSource.MySqlDS.password", password);
+     scheduler = new StdSchedulerFactory(configProp).getScheduler();
      String identifier = "NetOps-PC1502295457753";
    // 1- create a job and bind with class which is implementing Job
       // interface.
       JobDetail job = JobBuilder.newJob(ManageCourseBatchCount.class).requestRecovery(true).withIdentity("schedulerJob", identifier).build();
       
       // 2- Create a trigger object that will define frequency of run.
+      //This scheduler will run every day 11:30 PM
       Trigger trigger = TriggerBuilder.newTrigger().withIdentity("schedulertrigger", identifier)
-          .withSchedule(SimpleScheduleBuilder.repeatHourlyForever(2).repeatForever()).build();
+          .withSchedule(CronScheduleBuilder.cronSchedule("0 30 23 1/1 * ? *")).build();
       try {
          if (scheduler.checkExists(job.getKey())){
           scheduler.deleteJob(job.getKey());
@@ -65,15 +77,15 @@ public class SchedulerManager {
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);
       }
-      
       // add another job for verifying the bulk upload part.
       // 1- create a job and bind with class which is implementing Job
       // interface.
       JobDetail uploadVerifyJob = JobBuilder.newJob(UploadLookUpScheduler.class).requestRecovery(true).withIdentity("uploadVerifyScheduler", identifier).build();
       
       // 2- Create a trigger object that will define frequency of run.
+      //This will run every day 4:30 AM
       Trigger uploadTrigger = TriggerBuilder.newTrigger().withIdentity("uploadVerifyTrigger", identifier)
-          .withSchedule(SimpleScheduleBuilder.repeatMinutelyForever(3).repeatForever()).build();
+          .withSchedule(CronScheduleBuilder.cronSchedule("0 30 4 1/1 * ? *")).build();
       try {
          if (scheduler.checkExists(uploadVerifyJob.getKey())){
           scheduler.deleteJob(uploadVerifyJob.getKey());
@@ -91,8 +103,9 @@ public class SchedulerManager {
       JobDetail coursePublishedJob = JobBuilder.newJob(CoursePublishedUpdate.class).requestRecovery(true).withIdentity("coursePublishedScheduler", identifier).build();
       
       // 2- Create a trigger object that will define frequency of run.
+      //This job will run every hours.
       Trigger coursePublishedTrigger = TriggerBuilder.newTrigger().withIdentity("coursePublishedTrigger", identifier)
-          .withSchedule(SimpleScheduleBuilder.repeatHourlyForever(1).repeatForever()).build();
+          .withSchedule(CronScheduleBuilder.cronSchedule("0 0 0/1 1/1 * ? *")).build();
       try {
          if (scheduler.checkExists(coursePublishedJob.getKey())){
           scheduler.deleteJob(coursePublishedJob.getKey());

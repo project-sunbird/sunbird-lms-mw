@@ -45,8 +45,7 @@ public class SchedulerManager {
     InputStream in = this.getClass().getClassLoader().getResourceAsStream(file);
     Properties configProp = new Properties();
     try {
-      //240000
-      Thread.sleep(1);
+      Thread.sleep(240000);
       configProp.load(in);
       String host = System.getenv(JsonKey.SUNBIRD_PG_HOST);
       String port =  System.getenv(JsonKey.SUNBIRD_PG_PORT);

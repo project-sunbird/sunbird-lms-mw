@@ -210,7 +210,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       valueMap.put("course.progress.users_enrolled.count", userdataMap);
       valueMap.put("course.progress.course_progress_per_user.count", courseprogressdataMap);
 
-      responseMap.put("period", "7d");
+      responseMap.put("period", periodStr);
       responseMap.put("series", valueMap);
 
       Response response = new Response();
@@ -236,7 +236,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       valueMap.put("course.progress.users_enrolled.count", userdataMap);
       valueMap.put("course.progress.course_progress_per_user.count", courseprogressdataMap);
 
-      responseMap.put("period", "7d");
+      responseMap.put("period", periodStr);
       responseMap.put("series", valueMap);
 
       Response response = new Response();

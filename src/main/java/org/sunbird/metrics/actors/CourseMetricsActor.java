@@ -41,7 +41,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
           courseProgressMetrics(actorMessage);
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.COURSE_CREATION_METRICS.getValue())) {
-          courseConsumptionMetrics(actorMessage);
+          courseConsumptionMetricsMock(actorMessage);
         } else {
           ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
           ProjectCommonException exception =
@@ -247,7 +247,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void courseConsumptionMetrics(Request actorMessage) {
+  private void courseConsumptionMetricsMock(Request actorMessage) {
     Request request = new Request();
     String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
     String courseId = (String) actorMessage.getRequest().get(JsonKey.COURSE_ID);
@@ -317,6 +317,24 @@ public class CourseMetricsActor extends BaseMetricsActor {
     Response response = new Response();
     response.putAll(responseMap);
     sender().tell(response, self()); 
+  }
+  
+  @SuppressWarnings("unchecked")
+  private void courseConsumptionMetrics(Request actorMessage) {
+    ProjectLogger.log("In orgConsumptionMetrics api");
+    try {
+      String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
+      String courseId = (String) actorMessage.getRequest().get(JsonKey.COURSE_ID);
+    } catch (ProjectCommonException e) {
+      ProjectLogger.log("Some error occurs", e);
+      sender().tell(e, self());
+      return;
+    } catch (Exception e) {
+      ProjectLogger.log("Some error occurs", e);
+      throw new ProjectCommonException(ResponseCode.internalError.getErrorCode(),
+          ResponseCode.internalError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
   }
 
   private Map<String, Object> getViewData(String courseId){

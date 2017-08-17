@@ -24,6 +24,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -209,28 +210,47 @@ public class BackgroundJobManager extends UntypedAbstractActor {
   }
 
   private void insertCourseBatchInfoToEs(Response actorMessage) {
-    Map<String,Object> batch = (Map<String, Object>) actorMessage.get(JsonKey.BATCH);
+    Map<String, Object> batch =
+        (Map<String, Object>) actorMessage.get(JsonKey.BATCH);
+    // making call to register tag
+    registertag(
+        (String) batch.getOrDefault(JsonKey.HASH_TAG_ID,
+            (String) batch.get(JsonKey.ID)),
+        "{}", CourseBatchSchedulerUtil.headerMap);
     insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
-        ProjectUtil.EsType.course.getTypeName(),
-        (String) batch.get(JsonKey.ID), batch);
+        ProjectUtil.EsType.course.getTypeName(), (String) batch.get(JsonKey.ID),
+        batch);
   }
 
   @SuppressWarnings("unchecked")
   private void insertOrgInfoToEs(Response actorMessage) {
     ProjectLogger.log("Calling method to save inside Es==");
-    Map<String, Object> orgMap = (Map<String, Object>) actorMessage.get(JsonKey.ORGANISATION);
-    if(ProjectUtil.isNotNull(orgMap)) {
+    Map<String, Object> orgMap =
+        (Map<String, Object>) actorMessage.get(JsonKey.ORGANISATION);
+    if (ProjectUtil.isNotNull(orgMap)) {
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-      String id = (String)orgMap.get(JsonKey.ID);
-      Response orgResponse = cassandraOperation.getRecordById(orgDbInfo.getKeySpace() , orgDbInfo.getTableName() , id);
-      List<Map<String , Object>> orgList = (List<Map<String, Object>>) orgResponse.getResult().get(JsonKey.RESPONSE);
-      Map<String , Object> esMap = new HashMap<>();
-      if(!(orgList.isEmpty())) {
+      String id = (String) orgMap.get(JsonKey.ID);
+      Response orgResponse = cassandraOperation
+          .getRecordById(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), id);
+      List<Map<String, Object>> orgList =
+          (List<Map<String, Object>>) orgResponse.getResult()
+              .get(JsonKey.RESPONSE);
+      Map<String, Object> esMap = new HashMap<>();
+      if (!(orgList.isEmpty())) {
         esMap = orgList.get(0);
       }
-        insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName(),
-            id, esMap);
+      // Register the org into EKStep.
+      String hashOrgId = (String)esMap.getOrDefault(JsonKey.HASH_TAG_ID,"");
+      ProjectLogger.log("hashOrgId value is ==" + hashOrgId);
+      //Just check it if hashOrgId is null or empty then replace with org id.
+      if(ProjectUtil.isStringNullOREmpty(hashOrgId)) {
+        hashOrgId = id;
+      }
+      //making call to register tag
+      registertag(hashOrgId, "{}", CourseBatchSchedulerUtil.headerMap);
+      insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+          ProjectUtil.EsType.organisation.getTypeName(), id, esMap);
+
     }
   }
  
@@ -578,4 +598,34 @@ public class BackgroundJobManager extends UntypedAbstractActor {
         LoggerEnum.INFO.name());
     return false;
   }
+  
+  /**
+   * This method will make EkStep api call register the tag.
+   * @param tagId String unique tag id.
+   * @param body  String requested body
+   * @param header Map<String,String>
+   * @return String
+   */
+  private String registertag(String tagId,String body, Map<String,String> header) {
+    String tagStatus = "";
+    try {
+      ProjectLogger
+          .log("start call for registering the tag ==" + tagId);
+      tagStatus = HttpUtil.sendPostRequest(
+          PropertiesCache.getInstance()
+              .getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_BASE_URL)
+              + PropertiesCache.getInstance()
+                  .getProperty(JsonKey.EKSTEP_TAG_API_URL)
+              + "/" + tagId,
+              body, header);
+      ProjectLogger
+          .log("end call for tag registration id and status  ==" + tagId
+              + " " + tagStatus);
+    } catch (IOException e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+
+    return tagStatus;
+  }
+  
 }

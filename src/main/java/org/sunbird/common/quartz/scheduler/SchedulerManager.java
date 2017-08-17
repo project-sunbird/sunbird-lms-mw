@@ -44,6 +44,7 @@ public class SchedulerManager {
     InputStream in = this.getClass().getClassLoader().getResourceAsStream(file);
     Properties configProp = new Properties();
     try {
+      Thread.sleep(240000);
       configProp.load(in);
        scheduler = new StdSchedulerFactory(configProp).getScheduler();
      String identifier = "NetOps-PC1502295457753";
@@ -101,7 +102,7 @@ public class SchedulerManager {
       }  
       
       
-    } catch (IOException | SchedulerException e ) {
+    } catch (IOException | SchedulerException  | InterruptedException e ) {
       ProjectLogger.log("Error in properties cache", e);
     } finally {
         registerShutDownHook();

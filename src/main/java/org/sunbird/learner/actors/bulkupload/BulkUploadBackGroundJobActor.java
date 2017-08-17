@@ -442,6 +442,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
     concurrentHashMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     concurrentHashMap.put(JsonKey.CREATED_BY, dataMap.get(JsonKey.UPLOADED_BY));
+    concurrentHashMap.put(JsonKey.HASH_TAG_ID, uniqueId);
     try {
       Response result =
           cassandraOperation

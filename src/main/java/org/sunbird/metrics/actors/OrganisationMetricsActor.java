@@ -91,7 +91,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     Map<String, Object> viewData = new HashMap<>();
     orgData.put(JsonKey.ORG_ID, orgId);
     orgData.put(JsonKey.ORG_NAME, orgName);
-    viewData.put("org", orgData);
+    viewData.put(view, orgData);
     return viewData;
   }
 
@@ -103,19 +103,19 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     switch (operation) {
       case "Create": {
         operationMap.put("dateKey", "createdOn");
-        operationMap.put("status", "Draft");
+        operationMap.put("status", ContentStatus.Draft.name());
         operationMap.put("userActionKey", "createdBy");
         operationMap.put("contentCount", "required");
         break;
       }
       case "Review": {
         operationMap.put("dateKey", "lastSubmittedOn");
-        operationMap.put("status", "Review");
+        operationMap.put("status", ContentStatus.Review.name());
         break;
       }
       case "Publish": {
         operationMap.put("dateKey", "lastPublishedOn");
-        operationMap.put("status", "Live");
+        operationMap.put("status", ContentStatus.Live.name());
         operationMap.put("userActionKey", "lastPublishedBy");
         break;
       }
@@ -124,7 +124,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     builder.append("{\"request\":{\"rawQuery\":{\"query\":{\"filtered\":")
         .append("{\"query\":{\"bool\":{\"must\":[{\"query\":{\"range\":{\"")
         .append(operationMap.get("dateKey")).append("\":{\"gte\":\"")
-        .append(dateMap.get("startDate") + "\",\"lte\":\"" + dateMap.get("endDate") + "\"}}}}")
+        .append(dateMap.get(startDate) + "\",\"lte\":\"" + dateMap.get(endDate) + "\"}}}}")
         .append(",{\"bool\":{\"should\":[{\"match\":{\"contentType.raw\":\"Story\"}}")
         .append(",{\"match\":{\"contentType.raw\":\"Worksheet\"}}")
         .append(",{\"match\":{\"contentType.raw\":\"Game\"}}")
@@ -141,15 +141,15 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
           .append(operationMap.get("dateKey"))
           .append("\",\"interval\":\"1d\",\"format\":\"yyyy-MM-dd\"")
           .append(",\"time_zone\":\"+05:30\",\"extended_bounds\":{\"min\":")
-          .append(dateMap.get("startTimeMilis") + ",\"max\":")
-          .append(dateMap.get("endTimeMilis") + "}}},\"");
+          .append(dateMap.get(startTimeMilis) + ",\"max\":")
+          .append(dateMap.get(endTimeMilis) + "}}},\"");
     }
     builder.append("status\":{\"terms\":{\"field\":\"status.raw\",\"include\":[\"")
         .append(operationMap.get("status").toLowerCase() + "\"]},\"aggs\":{\"")
         .append(operationMap.get("dateKey") + "\":{\"date_histogram\":{\"field\":\"")
         .append(operationMap.get("dateKey") + "\",\"interval\":\"1d\",\"format\":")
         .append("\"yyyy-MM-dd\",\"time_zone\":\"+05:30\",\"extended_bounds\":{\"min\":")
-        .append(dateMap.get("startTimeMilis") + ",\"max\":").append(dateMap.get("endTimeMilis"))
+        .append(dateMap.get(startTimeMilis) + ",\"max\":").append(dateMap.get(endTimeMilis))
         .append("}}}}}");
     if (operationMap.containsKey("userActionKey")) {
       builder.append(",\"" + operationMap.get("userActionKey") + ".count\":")

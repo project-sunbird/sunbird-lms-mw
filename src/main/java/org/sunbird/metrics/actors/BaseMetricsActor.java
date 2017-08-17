@@ -45,6 +45,8 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   public static final String LT = "<";
   public static final String GTE = ">=";
   public static final String GT = ">";
+  public static final String KEY = "key";
+  public static final String KEYNAME = "key_name";
 
 
   protected Map<String, Object> addSnapshot(String keyName, String name, Object value,
@@ -61,20 +63,28 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   protected static Map<String, Object> getStartAndEndDate(String period) {
     Map<String, Object> dateMap = new HashMap<>();
     int days = getDaysByPeriod(period);
-    Date endDate = new Date();
+    Date endDateValue = new Date();
     Calendar calendar = Calendar.getInstance();
     calendar.add(Calendar.DATE, -1);
-    endDate = calendar.getTime();
+    calendar.set(Calendar.HOUR_OF_DAY,23);
+    calendar.set(Calendar.MINUTE, 59);
+    calendar.set(Calendar.SECOND, 59);
+    calendar.set(Calendar.MILLISECOND, 0);
+    endDateValue = calendar.getTime();
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
     Calendar cal = Calendar.getInstance();
-    cal.setTimeInMillis(endDate.getTime());
+    cal.setTimeInMillis(endDateValue.getTime());
     cal.add(Calendar.DATE, -(days-1));
+    cal.set(Calendar.HOUR_OF_DAY,0);
+    cal.set(Calendar.MINUTE, 0);
+    cal.set(Calendar.SECOND, 0);
+    cal.set(Calendar.MILLISECOND, 0);
     String startDateStr = sdf.format(cal.getTimeInMillis());
-    String endDateStr = sdf.format(endDate.getTime());
-    dateMap.put("startDate", startDateStr);
-    dateMap.put("endDate", endDateStr);
-    dateMap.put("startTimeMilis", cal.getTimeInMillis());
-    dateMap.put("endTimeMilis", endDate.getTime());
+    String endDateStr = sdf.format(endDateValue.getTime());
+    dateMap.put(startDate, startDateStr);
+    dateMap.put(endDate, endDateStr);
+    dateMap.put(startTimeMilis, cal.getTimeInMillis());
+    dateMap.put(endTimeMilis, endDateValue.getTime());
     return dateMap;
   }
 
@@ -93,6 +103,10 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
         days = 35;
         break;
       }
+    }
+    if(days == 0){
+      throw new ProjectCommonException(ResponseCode.invalidPeriod.getErrorCode(),
+            ResponseCode.invalidPeriod.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     return days;
   }
@@ -128,9 +142,9 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
       Calendar cal = Calendar.getInstance();
       cal.setTimeInMillis(date.getTime());
       cal.add(Calendar.DATE, -(day));
-      bucketData.put("key", cal.getTimeInMillis());
-      bucketData.put("key_name", new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime()));
-      bucketData.put("value", 0);
+      bucketData.put(KEY, cal.getTimeInMillis());
+      bucketData.put(KEYNAME, new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime()));
+      bucketData.put(JsonKey.VALUE, 0);
       bucket.add(bucketData);
     }
     return bucket;
@@ -202,9 +216,9 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     List<Map<String, Double>> aggKeyList = (List<Map<String, Double>>) aggKeyMap.get("buckets");
     for (Map aggKeyListMap : aggKeyList) {
       Map<String, Object> parentCountObject = new LinkedHashMap<String, Object>();
-      parentCountObject.put("key", aggKeyListMap.get("key"));
-      parentCountObject.put("key_name", aggKeyListMap.get("key_as_string"));
-      parentCountObject.put("value", aggKeyListMap.get("doc_count"));
+      parentCountObject.put(KEY, aggKeyListMap.get(KEY));
+      parentCountObject.put(KEYNAME, aggKeyListMap.get("key_as_string"));
+      parentCountObject.put(JsonKey.VALUE, aggKeyListMap.get("doc_count"));
       parentGroupList.add(parentCountObject);
     }
     return parentGroupList;

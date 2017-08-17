@@ -429,6 +429,8 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     req.put(JsonKey.COURSE_ADDITIONAL_INFO ,getAdditionalCourseInfo(ekStepContent));
     req.put(JsonKey.HASH_TAG_ID, uniqueId);
+    req.put(JsonKey.COUNTER_INCREMENT_STATUS, false);
+    req.put(JsonKey.COUNTER_DECREMENT_STATUS, false);
     Response result = cassandraOperation.insertRecord(dbInfo.getKeySpace(),
         dbInfo.getTableName(), req);
     result.put(JsonKey.BATCH_ID, uniqueId);
@@ -476,6 +478,8 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
         dbInfo.getTableName(), (String)req.get(JsonKey.ID));
     req.remove(JsonKey.IDENTIFIER);
     req.remove(JsonKey.STATUS);
+    req.remove(JsonKey.COUNTER_INCREMENT_STATUS);
+    req.remove(JsonKey.COUNTER_DECREMENT_STATUS);
     List<Map<String,Object>> resList = ((List<Map<String, Object>>) response.get(JsonKey.RESPONSE));
     if(null != resList && ! resList.isEmpty()){
       Map<String, Object> res = resList.get(0);

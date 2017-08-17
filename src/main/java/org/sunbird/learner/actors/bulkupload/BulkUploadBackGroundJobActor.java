@@ -492,11 +492,18 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             userMap.put(JsonKey.ROLES, list);
           }
 
+          if ( null != userMap.get(JsonKey.GRADE)) {
+            String[] userGrade = ((String) userMap.get(JsonKey.GRADE)).split(",");
+            List<String> list = new ArrayList<>(Arrays.asList(userGrade));
+            userMap.put(JsonKey.GRADE, list);
+          }
+          
           userMap = insertRecordToKeyCloak(userMap);
           Map<String,Object> tempMap = new HashMap<>();
           tempMap.putAll(userMap);
           tempMap.remove(JsonKey.EMAIL_VERIFIED);
           tempMap.remove(JsonKey.PHONE_VERIFIED);
+          tempMap.remove(JsonKey.POSITION);
           Response response = null;
           try {
             response = cassandraOperation
@@ -679,6 +686,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
     reqMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.REGISTERED_ORG_ID));
     reqMap.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
+    reqMap.put(JsonKey.POSITION, userMap.get(JsonKey.POSITION));
     List<String> roleList = new ArrayList<>();
     roleList.add(ProjectUtil.UserRole.CONTENT_CREATOR.getValue());
     reqMap.put(JsonKey.ROLES, roleList);

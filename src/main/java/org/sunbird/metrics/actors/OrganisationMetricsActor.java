@@ -459,8 +459,12 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
       Map<String, Object> orgData = validateOrg(orgId);
       if (null == orgData) {
-        throw new ProjectCommonException(ResponseCode.esError.getErrorCode(),
-            ResponseCode.esError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
+                ResponseCode.invalidOrgData.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+        sender().tell(exception, self());
+        return;
       }
       String orgName = (String) orgData.get(JsonKey.ORG_NAME);
       String channel = 
@@ -593,13 +597,18 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   }
 
   private Map<String, Object> validateOrg(String orgId) {
-    Map<String, Object> result =
-        ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName(), orgId);
-    if (null == result || result.isEmpty()) {
-      return null;
+    try {
+      Map<String, Object> result =
+          ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.organisation.getTypeName(), orgId);
+      if (null == result || result.isEmpty()) {
+        return null;
+      }
+      return result;
+    } catch (Exception e) {
+      throw new ProjectCommonException(ResponseCode.esError.getErrorCode(),
+          ResponseCode.esError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
     }
-    return result;
   }
 
 }

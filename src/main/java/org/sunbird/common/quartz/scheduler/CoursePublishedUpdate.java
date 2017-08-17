@@ -52,19 +52,23 @@ public class CoursePublishedUpdate implements Job {
   private static String requestData = "{\"request\":{\"filters\":{\"identifier\":dataVal},\"fields\":[\"status\"]}}";
   public void execute(JobExecutionContext ctx) throws JobExecutionException {
     System.out.println("Running Course published Scheduler Job at: " + Calendar.getInstance().getTime() + " triggered by: " + ctx.getJobDetail().toString());
-    
+    ProjectLogger.log("Fetching All unpublished course status.");
     List<String> courseListWithStatusAsDraft = getAllUnPublishedCourseStatusId();
     if(null != courseListWithStatusAsDraft && !courseListWithStatusAsDraft.isEmpty()){
+      ProjectLogger.log("Fetching All course details from ekstep.");
       List<String> ekStepResult = getAllPublishedCourseListFromEKStep(courseListWithStatusAsDraft);
       if(null != ekStepResult && !ekStepResult.isEmpty()){
+        ProjectLogger.log("update course status table.");
         updateCourseStatusTable(ekStepResult);
         for(String courseId : ekStepResult){
           try{
             Map<String,Object> map = new HashMap<>();
             map.put(JsonKey.COURSE_ID, courseId);
             map.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
+            ProjectLogger.log("Fetching participants list from Db");
             Response response = cassandraOperation.getRecordsByProperty(courseBatchDBInfo.getKeySpace(), courseBatchDBInfo.getTableName(), JsonKey.COURSE_ID,courseId);
             List<Map<String,Object>> batchList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+            ProjectLogger.log("Add participants to user course table");
             addUserToUserCourseTable(batchList);
           }catch(Exception ex){
             ProjectLogger.log(ex.getMessage(), ex);
@@ -76,6 +80,7 @@ public class CoursePublishedUpdate implements Job {
   
   
   private void addUserToUserCourseTable(List<Map<String, Object>> batchList) {
+    ProjectLogger.log("Adding participants to user course table started");
     Util.DbInfo courseEnrollmentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
     for(Map<String,Object> batch : batchList){
       Map<String,String> additionalCourseInfo = (Map<String, String>) batch.get(JsonKey.COURSE_ADDITIONAL_INFO);
@@ -112,10 +117,13 @@ public class CoursePublishedUpdate implements Job {
             }
           }
         }
+        ProjectLogger.log("Adding participants to user course table completed");
         Map<String,Object> updatedBatch = new HashMap<>();
         updatedBatch.put(JsonKey.ID, batch.get(JsonKey.ID));
         updatedBatch.put(JsonKey.PARTICIPANT, participants);
+        ProjectLogger.log("Updating participants to batch course table started");
         cassandraOperation.updateRecord(courseBatchDBInfo.getKeySpace(), courseBatchDBInfo.getTableName(), updatedBatch);
+        ProjectLogger.log("Updating participants to batch course table completed");
       }
     }
     
@@ -129,6 +137,7 @@ public class CoursePublishedUpdate implements Job {
   }
 
   private void updateCourseStatusTable(List<String> ekStepResult) {
+    ProjectLogger.log("Updating Course status to course status table started");
     Map<String,Object> map = null;
     for(String courseId : ekStepResult){
       map = new HashMap<>();
@@ -136,6 +145,7 @@ public class CoursePublishedUpdate implements Job {
       map.put(JsonKey.STATUS, ProjectUtil.CourseMgmtStatus.LIVE.ordinal());
       try{
         cassandraOperation.updateRecord(coursePublishDBInfo.getKeySpace(), coursePublishDBInfo.getTableName(), map);
+        ProjectLogger.log("Updating Course status to course status table completed");
       }catch(Exception ex){
         ProjectLogger.log(ex.getMessage(), ex);
       }
@@ -178,6 +188,7 @@ public class CoursePublishedUpdate implements Job {
    */
   private List<String> getAllPublishedCourseListFromEKStep(
       List<String> ids) {
+    ProjectLogger.log("fetching course details from Ekstep start");
     List<String> liveCourseIds = new ArrayList<>();
     StringBuilder identifier = new StringBuilder("[ ");
     for (int i = 0; i < ids.size(); i++) {
@@ -198,6 +209,7 @@ public class CoursePublishedUpdate implements Job {
           liveCourseIds.add((String) map.get(JsonKey.IDENTIFIER));
         }
       }
+      ProjectLogger.log("fetching course details from Ekstep completed");
     return liveCourseIds;
   }
   

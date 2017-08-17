@@ -1,5 +1,6 @@
 package org.sunbird.learner.actors.search;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +12,7 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
@@ -43,6 +45,11 @@ public class SearchHandlerActor extends UntypedAbstractActor {
 	               }
 	              ((Map<String,Object>)searchQueryMap.get(JsonKey.FILTERS)).remove(JsonKey.OBJECT_TYPE);
 	              SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
+									for(String type : types){
+										if(type.equalsIgnoreCase(EsType.user.getTypeName())){
+											searchDto.setExcludedFields(Arrays.asList(ProjectUtil.excludes));
+										}
+									}
                   Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
                   Response response = new Response();
                   if(result !=null) {

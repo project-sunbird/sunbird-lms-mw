@@ -52,7 +52,7 @@ public class Util {
         new Thread(new Runnable() {
           @Override
           public void run() {
-            //SchedulerManager.getInstance();
+            SchedulerManager.getInstance();
           }
         }).start();
        

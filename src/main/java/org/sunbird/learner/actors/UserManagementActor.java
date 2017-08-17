@@ -140,13 +140,15 @@ public class UserManagementActor extends UntypedAbstractActor {
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
         fetchRootAndRegisterOrganisation(result);
+        //having check for removing private filed from user , if call user and response 
+        //user data id is not same.
+        String requestedById = (String) actorMessage.getRequest().getOrDefault(JsonKey.REQUESTED_BY,"");
+        ProjectLogger.log("requested By and requested user id == " + requestedById +"  " + (String)map.get(JsonKey.USER_ID));
+        if(!(requestedById.equalsIgnoreCase((String)map.get(JsonKey.USER_ID)))){
+           result = removeUserPrivateField(result);
+        }
         Response response = new Response();
         if (null != result) {
-         /* if (!ProjectUtil.isStringNullOREmpty((String) result.get(JsonKey.USER_ID))) {
-            List<Map<String, Object>> organisations = getOrganisationDetailsByUserId(
-                (String) result.get(JsonKey.USER_ID));
-            result.put(JsonKey.ORGANISATIONS, organisations);
-          }*/
           response.put(JsonKey.RESPONSE, result);
         } else {
           result = new HashMap<>();
@@ -207,13 +209,15 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
 
     fetchRootAndRegisterOrganisation(result);
+    //having check for removing private filed from user , if call user and response 
+    //user data id is not same.
+    String requestedById = (String) actorMessage.getRequest().getOrDefault(JsonKey.REQUESTED_BY,"");
+    ProjectLogger.log("requested By and requested user id == " + requestedById +"  " + (String) userMap.get(JsonKey.USER_ID));
+    if(!(requestedById.equalsIgnoreCase((String) userMap.get(JsonKey.USER_ID)))){
+       result = removeUserPrivateField(result);
+    }
     Response response = new Response();
     if (null != result) {
-     /* if (!ProjectUtil.isStringNullOREmpty((String) result.get(JsonKey.USER_ID))) {
-        List<Map<String, Object>> organisations = getOrganisationDetailsByUserId(
-            (String) result.get(JsonKey.USER_ID));
-        result.put(JsonKey.ORGANISATIONS, organisations);
-      }*/
       response.put(JsonKey.RESPONSE, result);
     } else {
       result = new HashMap<>();
@@ -1810,5 +1814,18 @@ public class UserManagementActor extends UntypedAbstractActor {
     usrResponse.getResult().put(JsonKey.ID, userId);
     backGroundActorRef.tell(usrResponse,self());
   }
-
+ 
+  /**
+   * This method will remove user private field from response map
+   * @param responseMap Map<String,Object>
+   */
+  private Map<String,Object> removeUserPrivateField (Map<String,Object> responseMap) {
+    ProjectLogger.log("Start removing User private field==");
+      for (int i=0;i<ProjectUtil.excludes.length;i++) {
+            responseMap.remove(ProjectUtil.excludes[i]);
+      }
+      ProjectLogger.log("All private filed removed=");  
+    return responseMap;
+  }
+  
 }

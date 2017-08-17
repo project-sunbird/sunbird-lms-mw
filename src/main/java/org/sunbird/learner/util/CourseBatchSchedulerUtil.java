@@ -12,6 +12,7 @@ import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -29,7 +30,6 @@ import org.sunbird.learner.actors.CourseEnrollmentActor;
  *
  */
 public class CourseBatchSchedulerUtil {
-  private static  Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
   public static Map<String,String> headerMap = new HashMap<>();
   static {
     String header = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
@@ -64,7 +64,7 @@ public class CourseBatchSchedulerUtil {
         ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.course.getTypeName());
     if (responseMap != null && responseMap.size() > 0) {
-      Object val = responseMap.get(JsonKey.RESULT);
+      Object val = responseMap.get(JsonKey.CONTENT);
       if (val != null) {
         listOfMap = (List<Map<String, Object>>) val;
       } else {
@@ -84,7 +84,7 @@ public class CourseBatchSchedulerUtil {
         ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.course.getTypeName());
     if (responseMap != null && responseMap.size() > 0) {
-      Object val = responseMap.get(JsonKey.RESULT);
+      Object val = responseMap.get(JsonKey.CONTENT);
       if (val != null) {
         endBatchMap = (List<Map<String, Object>>) val;
       } else {
@@ -104,29 +104,68 @@ public class CourseBatchSchedulerUtil {
   *  
   * @param value
   */
-  public static void updateCourseBatchDbStatus(Map<String,Object> value) {
+  public static void updateCourseBatchDbStatus(Map<String,Object> map,Boolean increment) {
+    ProjectLogger.log("updating course batch details start");
     CassandraOperation cassandraOperation = new CassandraOperationImpl();
-    cassandraOperation.updateRecord(userdbInfo.getKeySpace(), userdbInfo.getTableName(), value);
+    Util.DbInfo courseBatchDBInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
+    try{
+      String response = doOperationInEkStepCourse((String)map.get(JsonKey.COURSE_ID),increment,(String)map.get(JsonKey.ENROLLMENT_TYPE));
+      if(response.equals(JsonKey.SUCCESS)){
+        boolean flag = updateDataIntoES(map);
+        if(flag){
+          cassandraOperation.updateRecord(courseBatchDBInfo.getKeySpace(), courseBatchDBInfo.getTableName(), map);
+        }
+      }else{
+        ProjectLogger.log("Ekstep content updatation failed.");
+      }
+    }catch(Exception e){
+      ProjectLogger.log("Exception occured while savin data to course batch db ", e);
+    }
   }
   
   /**
    * 
    * @param val
    */
-  public static void updateDateIntoES (Map<String,Object> val) {
-    ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.course.getTypeName(), (String)val.get(JsonKey.ID), val) ;
+  public static boolean updateDataIntoES (Map<String,Object> map) {
+    Boolean flag = false;
+    try{
+      flag =  ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(), 
+          ProjectUtil.EsType.course.getTypeName(), (String)map.get(JsonKey.ID), map) ;
+    }catch(Exception e){
+      ProjectLogger.log("Exception occured while saving course batch data to ES",e);
+    }
+    return flag;
   }
   
-  public static void doOperationInEkStepCourse (String contentname, String courseId, boolean increment) {
-    
+  public static String doOperationInEkStepCourse (String courseId, boolean increment,String enrollmentType ) {
+    String name = System.getenv("sunbird.installation") == null ? PropertiesCache.getInstance().getProperty(JsonKey.CONTENT_NAME) : System.getenv("sunbird.installation");
+    String contentName = "";
+    String response = "";
+    if(enrollmentType.equals(ProjectUtil.EnrolmentType.open.getVal())){
+      contentName = "c_"+name+"_open_batch_count";
+    }else{
+      contentName = "c_"+name+"_private_batch_count";
+    }
     //collect data from EKStep.
     Map<String, Object> ekStepContent =
         CourseEnrollmentActor.getCourseObjectFromEkStep(courseId, headerMap);
     if(ekStepContent != null && ekStepContent.size()>0) {
-       int val = (int) ekStepContent.getOrDefault(contentname, 0);
-       val = val +1;
+       int val = (int) ekStepContent.getOrDefault(contentName, 0);
+       if(increment){
+         val = val +1;
+       }else{
+         if(val != 0)
+           val = val -1;
+       }
       try {
-          String response = HttpUtil.sendPatchRequest("https://qa.ekstep.in/api/system/v3/content/update/"+courseId, "{\"request\": {\"content\": {\""+contentname+"\": "+val+"}}}", headerMap);
+        ProjectLogger.log("updating content details to Ekstep start");
+        String contentUpdateUrl = System.getenv(JsonKey.EKSTEP_CONTENT_UPDATE_URL);
+        if(ProjectUtil.isStringNullOREmpty(contentUpdateUrl)){
+          contentUpdateUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_UPDATE_URL);
+        }
+          response = HttpUtil.sendPatchRequest(contentUpdateUrl+courseId, 
+              "{\"request\": {\"content\": {\""+contentName+"\": "+val+"}}}", headerMap);
          ProjectLogger.log("batch count update response=="+response + " " + courseId);
       } catch (IOException e) {
         ProjectLogger.log("Error while updating content value "+e.getMessage() ,e);
@@ -134,8 +173,7 @@ public class CourseBatchSchedulerUtil {
     } else {
       ProjectLogger.log("EKstep content not found for course id==" + courseId);
     }
-    
-    
+    return response;
   }
   
 }

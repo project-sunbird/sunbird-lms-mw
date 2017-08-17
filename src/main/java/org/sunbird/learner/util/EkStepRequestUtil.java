@@ -46,6 +46,7 @@ public class EkStepRequestUtil {
 		    baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_BASE_URL);
 		  }
 		  headers.put(JsonKey.AUTHORIZATION, System.getenv(JsonKey.AUTHORIZATION));
+		  headers.put("Content-Type", "application/json");
 		  if(ProjectUtil.isStringNullOREmpty((String)headers.get(JsonKey.AUTHORIZATION))){ 
 		    headers.put(JsonKey.AUTHORIZATION, PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
 		  }

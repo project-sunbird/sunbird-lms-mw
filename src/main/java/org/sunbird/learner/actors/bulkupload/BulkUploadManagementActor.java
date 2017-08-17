@@ -427,7 +427,8 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
             JsonKey.PHONE,JsonKey.EMAIL,
             JsonKey.PASSWORD,JsonKey.USERNAME,
             JsonKey.PROVIDER,JsonKey.PHONE_VERIFIED,
-            JsonKey.EMAIL_VERIFIED,JsonKey.ROLES));
+            JsonKey.EMAIL_VERIFIED,JsonKey.ROLES,JsonKey.POSITION,
+            JsonKey.GRADE,JsonKey.LOCATION));
     
     for(String key : property){
       if(! properties.contains(key)){

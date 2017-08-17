@@ -54,13 +54,14 @@ public class SchedulerManager {
       
       // 2- Create a trigger object that will define frequency of run.
       Trigger trigger = TriggerBuilder.newTrigger().withIdentity("schedulertrigger", identifier)
-          .withSchedule(SimpleScheduleBuilder.repeatMinutelyForever(2).repeatForever()).build();
+          .withSchedule(SimpleScheduleBuilder.repeatHourlyForever(2).repeatForever()).build();
       try {
          if (scheduler.checkExists(job.getKey())){
           scheduler.deleteJob(job.getKey());
          }
           scheduler.scheduleJob(job, trigger);
           scheduler.start();
+          ProjectLogger.log("ManageCourseBatchCount schedular started");
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);
       }
@@ -79,6 +80,7 @@ public class SchedulerManager {
          }
           scheduler.scheduleJob(uploadVerifyJob, uploadTrigger);
           scheduler.start();
+          ProjectLogger.log("UploadLookUpScheduler schedular started");
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);
       }
@@ -97,6 +99,7 @@ public class SchedulerManager {
          }
           scheduler.scheduleJob(coursePublishedJob, coursePublishedTrigger);
           scheduler.start();
+          ProjectLogger.log("CoursePublishedUpdate schedular started");
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);
       }  

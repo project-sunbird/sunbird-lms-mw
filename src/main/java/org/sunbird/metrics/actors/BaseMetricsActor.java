@@ -47,7 +47,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   public static final String GT = ">";
   public static final String KEY = "key";
   public static final String KEYNAME = "key_name";
-
+  public static final String GROUP_ID = "group_id";
 
   protected Map<String, Object> addSnapshot(String keyName, String name, Object value,
       String timeUnit) {

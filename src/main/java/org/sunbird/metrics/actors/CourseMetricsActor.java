@@ -41,7 +41,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
           courseProgressMetrics(actorMessage);
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.COURSE_CREATION_METRICS.getValue())) {
-          courseConsumptionMetrics(actorMessage);
+          courseConsumptionMetricsMock(actorMessage);
         } else {
           ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
           ProjectCommonException exception =
@@ -66,11 +66,12 @@ public class CourseMetricsActor extends BaseMetricsActor {
   }
 
   private void courseProgressMetrics(Request actorMessage) {
+    ProjectLogger.log("OrganisationManagementActor-courseProgressMetrics called");
     Request request = new Request();
     String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
-    String courseId = (String) actorMessage.getRequest().get(JsonKey.COURSE_ID);
+    String batchId = (String) actorMessage.getRequest().get(JsonKey.COURSE_ID);
     //get start and end time ---
-    Map<String , Object> dateRange = getStartAndEndDate(periodStr);
+    Map<String , String> dateRangeFilter = new HashMap<>();
 
     request.setId(actorMessage.getId());
     request.setContext(actorMessage.getContext());
@@ -78,11 +79,14 @@ public class CourseMetricsActor extends BaseMetricsActor {
     requestMap.put(JsonKey.PERIOD, periodStr);
     Map<String, Object> filter = new HashMap<>();
     Map<String , String> aggs = new HashMap<>();
-    filter.put(JsonKey.COURSE_ID, courseId);
-    Map<String , String> dateRangeFilter = new HashMap<>();
-    dateRangeFilter.put(GTE , (String)dateRange.get(startDate));
-    dateRangeFilter.put(LTE , (String)dateRange.get(endDate));
-    filter.put(JsonKey.DATE_TIME , dateRangeFilter);
+    filter.put(JsonKey.BATCH_ID, batchId);
+
+    if(!("fromBegining".equalsIgnoreCase(periodStr))) {
+      Map<String, Object> dateRange = getStartAndEndDate(periodStr);
+      dateRangeFilter.put(GTE , (String)dateRange.get(startDate));
+      dateRangeFilter.put(LTE , (String)dateRange.get(endDate));
+      filter.put(JsonKey.DATE_TIME , dateRangeFilter);
+    }
 
     List<String> coursefields = new ArrayList<>();
     coursefields.add(JsonKey.USER_ID);
@@ -95,119 +99,155 @@ public class CourseMetricsActor extends BaseMetricsActor {
         coursefields), ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.usercourses.getTypeName());
     List<Map<String , Object>> esContent = (List<Map<String , Object>>)result.get(JsonKey.CONTENT);
 
-    List<String> userIds = new ArrayList<String>();
-    List<String> batchIds = new ArrayList<String>();
-    for(Map<String , Object> entry : esContent){
-      String userId = (String)entry.get(JsonKey.USER_ID);
-      userIds.add(userId);
-      String batchId = (String)entry.get(JsonKey.BATCH_ID);
-      batchIds.add(batchId);
-    }
+    if(!(esContent.isEmpty())) {
+      List<String> userIds = new ArrayList<String>();
 
-    Set<String> uniqueUserIds = new HashSet<String>(userIds);
-    Map<String, Object> userfilter = new HashMap<>();
-    userfilter.put(JsonKey.USER_ID , uniqueUserIds.stream().collect(Collectors.toList()));
-    List<String> userfields = new ArrayList<>();
-    userfields.add(JsonKey.USER_ID);
-    userfields.add(JsonKey.USERNAME);
-    userfields.add(JsonKey.REGISTERED_ORG_ID);
-    Map<String, Object> userresult = ElasticSearchUtil.complexSearch(createESRequest(userfilter , null , userfields), ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
-    List<Map<String , Object>> useresContent = (List<Map<String , Object>>)userresult.get(JsonKey.CONTENT);
-
-    Map<String , Map<String , Object>> userInfoCache = new HashMap<>();
-    Set<String> orgSet = new HashSet<>();
-
-    for(Map<String , Object> map : useresContent){
-      String userId = (String) map.get(JsonKey.USER_ID);
-      map.put("user", userId);
-      String registerdOrgId = (String) map.get(JsonKey.REGISTERED_ORG_ID);
-      if(isNotNull(registerdOrgId)) {
-        orgSet.add(registerdOrgId);
+      for (Map<String, Object> entry : esContent) {
+        String userId = (String) entry.get(JsonKey.USER_ID);
+        userIds.add(userId);
       }
-      userInfoCache.put(userId , new HashMap<String , Object>(map));
-      // remove the org info from user content bcoz it is not desired in the user info result
-      map.remove(JsonKey.REGISTERED_ORG_ID);
-      map.remove(JsonKey.USER_ID);
-    }
 
-    Map<String, Object> orgfilter = new HashMap<>();
-    orgfilter.put(JsonKey.ID , orgSet.stream().collect(Collectors.toList()));
-    List<String> orgfields = new ArrayList<>();
-    orgfields.add(JsonKey.ID);
-    orgfields.add(JsonKey.ORGANISATION_NAME);
-    Map<String, Object> orgresult = ElasticSearchUtil.complexSearch(createESRequest(orgfilter , null , orgfields), ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
-    List<Map<String , Object>> orgContent = (List<Map<String , Object>>)orgresult.get(JsonKey.CONTENT);
+      Set<String> uniqueUserIds = new HashSet<String>(userIds);
+      Map<String, Object> userfilter = new HashMap<>();
+      userfilter.put(JsonKey.USER_ID, uniqueUserIds.stream().collect(Collectors.toList()));
+      List<String> userfields = new ArrayList<>();
+      userfields.add(JsonKey.USER_ID);
+      userfields.add(JsonKey.USERNAME);
+      userfields.add(JsonKey.REGISTERED_ORG_ID);
+      Map<String, Object> userresult = ElasticSearchUtil
+          .complexSearch(createESRequest(userfilter, null, userfields),
+              ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+      List<Map<String, Object>> useresContent = (List<Map<String, Object>>) userresult
+          .get(JsonKey.CONTENT);
 
-    Map<String , String> orgInfoCache = new HashMap<>();
-    for(Map<String , Object> map : orgContent){
+      Map<String, Map<String, Object>> userInfoCache = new HashMap<>();
+      Set<String> orgSet = new HashSet<>();
 
-      String regOrgId = (String)map.get(JsonKey.ID);
-      String regOrgName = (String)map.get(JsonKey.ORGANISATION_NAME);
-      orgInfoCache.put(regOrgId,regOrgName);
-
-    }
-
-    Map<String , Object> batchFilter = new HashMap<>();
-    batchFilter.put(JsonKey.ID , new ArrayList<String>(new HashSet<String>(batchIds)));
-    Map<String, Object> batchresult = ElasticSearchUtil.complexSearch(createESRequest(batchFilter , null , null), ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.course.getTypeName());
-    List<Map<String , Object>> batchContent = (List<Map<String , Object>>)batchresult.get(JsonKey.CONTENT);
-
-    Map<String , Map<String , Object>> batchInfoCache = new HashMap<>();
-    for(Map<String , Object> map : batchContent){
-      String batchId = (String)map.get(JsonKey.ID);
-      batchInfoCache.put(batchId , map);
-    }
-
-
-    for(Map<String , Object> map : esContent){
-      String userId = (String) map.get(JsonKey.USER_ID);
-      map.put("user",userId);
-      map.put("enrolledOn" , map.get(JsonKey.COURSE_ENROLL_DATE));
-      map.put("lastAccessTime" , map.get(JsonKey.DATE_TIME));
-      if(isNotNull(userInfoCache.get(userId))) {
-        map.put(JsonKey.USERNAME, userInfoCache.get(userId).get(JsonKey.USERNAME));
-        map.put("org", orgInfoCache.get((String)userInfoCache.get(userId).get(JsonKey.REGISTERED_ORG_ID)));
-        if(isNotNull(batchInfoCache.get((String)map.get(JsonKey.BATCH_ID)))) {
-          map.put("batchEndsOn", batchInfoCache.get((String) map.get(JsonKey.BATCH_ID)).get(JsonKey.END_DATE));
+      for (Map<String, Object> map : useresContent) {
+        String userId = (String) map.get(JsonKey.USER_ID);
+        map.put("user", userId);
+        String registerdOrgId = (String) map.get(JsonKey.REGISTERED_ORG_ID);
+        if (isNotNull(registerdOrgId)) {
+          orgSet.add(registerdOrgId);
         }
-      }else{
-        map.put(JsonKey.USERNAME,null);
-        map.put("org",null);
-        map.put("batchEndsOn",null);
+        userInfoCache.put(userId, new HashMap<String, Object>(map));
+        // remove the org info from user content bcoz it is not desired in the user info result
+        map.remove(JsonKey.REGISTERED_ORG_ID);
+        map.remove(JsonKey.USER_ID);
       }
-      map.remove(JsonKey.DATE_TIME);
-      map.remove(JsonKey.COURSE_ENROLL_DATE);
-      map.remove(JsonKey.USER_ID);
+
+      Map<String, Object> orgfilter = new HashMap<>();
+      orgfilter.put(JsonKey.ID, orgSet.stream().collect(Collectors.toList()));
+      List<String> orgfields = new ArrayList<>();
+      orgfields.add(JsonKey.ID);
+      orgfields.add(JsonKey.ORGANISATION_NAME);
+      Map<String, Object> orgresult = ElasticSearchUtil
+          .complexSearch(createESRequest(orgfilter, null, orgfields),
+              ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
+      List<Map<String, Object>> orgContent = (List<Map<String, Object>>) orgresult
+          .get(JsonKey.CONTENT);
+
+      Map<String, String> orgInfoCache = new HashMap<>();
+      for (Map<String, Object> map : orgContent) {
+
+        String regOrgId = (String) map.get(JsonKey.ID);
+        String regOrgName = (String) map.get(JsonKey.ORGANISATION_NAME);
+        orgInfoCache.put(regOrgId, regOrgName);
+
+      }
+
+      Map<String, Object> batchFilter = new HashMap<>();
+      batchFilter.put(JsonKey.ID, batchId);
+      Map<String, Object> batchresult = ElasticSearchUtil
+          .complexSearch(createESRequest(batchFilter, null, null),
+              ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.course.getTypeName());
+      List<Map<String, Object>> batchContent = (List<Map<String, Object>>) batchresult
+          .get(JsonKey.CONTENT);
+
+      Map<String, Map<String, Object>> batchInfoCache = new HashMap<>();
+      for (Map<String, Object> map : batchContent) {
+        String id = (String) map.get(JsonKey.ID);
+        batchInfoCache.put(id, map);
+      }
+
+      for (Map<String, Object> map : esContent) {
+        String userId = (String) map.get(JsonKey.USER_ID);
+        map.put("user", userId);
+        map.put("enrolledOn", map.get(JsonKey.COURSE_ENROLL_DATE));
+        map.put("lastAccessTime", map.get(JsonKey.DATE_TIME));
+        if (isNotNull(userInfoCache.get(userId))) {
+          map.put(JsonKey.USERNAME, userInfoCache.get(userId).get(JsonKey.USERNAME));
+          map.put("org",
+              orgInfoCache.get((String) userInfoCache.get(userId).get(JsonKey.REGISTERED_ORG_ID)));
+          if (isNotNull(batchInfoCache.get((String) map.get(JsonKey.BATCH_ID)))) {
+            map.put("batchEndsOn",
+                batchInfoCache.get((String) map.get(JsonKey.BATCH_ID)).get(JsonKey.END_DATE));
+          }
+        } else {
+          map.put(JsonKey.USERNAME, null);
+          map.put("org", null);
+          map.put("batchEndsOn", null);
+        }
+        map.remove(JsonKey.DATE_TIME);
+        map.remove(JsonKey.COURSE_ENROLL_DATE);
+        map.remove(JsonKey.USER_ID);
+        map.remove(JsonKey.BATCH_ID);
+      }
+
+      Map<String, Object> responseMap = new LinkedHashMap<>();
+      Map<String, Object> userdataMap = new LinkedHashMap<>();
+      Map<String, Object> courseprogressdataMap = new LinkedHashMap<>();
+      Map<String, Object> valueMap = new LinkedHashMap<>();
+
+      userdataMap.put(JsonKey.NAME, "List of users enrolled for the course");
+      userdataMap.put("split", "content.sum(time_spent)");
+      userdataMap.put("buckets", useresContent);
+
+      courseprogressdataMap.put(JsonKey.NAME, "List of users enrolled for the course");
+      courseprogressdataMap.put("split", "content.sum(time_spent)");
+      courseprogressdataMap.put("buckets", esContent);
+
+      valueMap.put("course.progress.users_enrolled.count", userdataMap);
+      valueMap.put("course.progress.course_progress_per_user.count", courseprogressdataMap);
+
+      responseMap.put("period", "7d");
+      responseMap.put("series", valueMap);
+
+      Response response = new Response();
+      response.putAll(responseMap);
+      sender().tell(response, self());
+    }else{
+
+      ProjectLogger.log("OrganisationManagementActor-courseProgressMetrics-- Courses for bbatch is empty .");
+
+      Map<String, Object> responseMap = new LinkedHashMap<>();
+      Map<String, Object> userdataMap = new LinkedHashMap<>();
+      Map<String, Object> courseprogressdataMap = new LinkedHashMap<>();
+      Map<String, Object> valueMap = new LinkedHashMap<>();
+
+      userdataMap.put(JsonKey.NAME, "List of users enrolled for the course");
+      userdataMap.put("split", "content.sum(time_spent)");
+      userdataMap.put("buckets", new ArrayList());
+
+      courseprogressdataMap.put(JsonKey.NAME, "List of users enrolled for the course");
+      courseprogressdataMap.put("split", "content.sum(time_spent)");
+      courseprogressdataMap.put("buckets", esContent);
+
+      valueMap.put("course.progress.users_enrolled.count", userdataMap);
+      valueMap.put("course.progress.course_progress_per_user.count", courseprogressdataMap);
+
+      responseMap.put("period", "7d");
+      responseMap.put("series", valueMap);
+
+      Response response = new Response();
+      response.putAll(responseMap);
+      sender().tell(response, self());
+
     }
-
-    Map<String, Object> responseMap = new LinkedHashMap<>();
-    Map<String,Object> userdataMap = new LinkedHashMap<>();
-    Map<String,Object> courseprogressdataMap = new LinkedHashMap<>();
-    Map<String,Object> valueMap = new LinkedHashMap<>();
-
-
-
-    userdataMap.put(JsonKey.NAME , "List of users enrolled for the course");
-    userdataMap.put("split", "content.sum(time_spent)");
-    userdataMap.put("buckets" , useresContent);
-
-    courseprogressdataMap.put(JsonKey.NAME , "List of users enrolled for the course");
-    courseprogressdataMap.put("split", "content.sum(time_spent)");
-    courseprogressdataMap.put("buckets" , esContent);
-
-    valueMap.put("course.progress.users_enrolled.count" , userdataMap);
-    valueMap.put("course.progress.course_progress_per_user.count" ,courseprogressdataMap );
-
-    responseMap.put("period", "7d");
-    responseMap.put("series" , valueMap);
-
-    Response response = new Response();
-    response.putAll(responseMap);
-    sender().tell(response, self()); 
   }
 
   @SuppressWarnings("unchecked")
-  private void courseConsumptionMetrics(Request actorMessage) {
+  private void courseConsumptionMetricsMock(Request actorMessage) {
     Request request = new Request();
     String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
     String courseId = (String) actorMessage.getRequest().get(JsonKey.COURSE_ID);
@@ -277,6 +317,24 @@ public class CourseMetricsActor extends BaseMetricsActor {
     Response response = new Response();
     response.putAll(responseMap);
     sender().tell(response, self()); 
+  }
+  
+  @SuppressWarnings("unchecked")
+  private void courseConsumptionMetrics(Request actorMessage) {
+    ProjectLogger.log("In orgConsumptionMetrics api");
+    try {
+      String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
+      String courseId = (String) actorMessage.getRequest().get(JsonKey.COURSE_ID);
+    } catch (ProjectCommonException e) {
+      ProjectLogger.log("Some error occurs", e);
+      sender().tell(e, self());
+      return;
+    } catch (Exception e) {
+      ProjectLogger.log("Some error occurs", e);
+      throw new ProjectCommonException(ResponseCode.internalError.getErrorCode(),
+          ResponseCode.internalError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
   }
 
   private Map<String, Object> getViewData(String courseId){

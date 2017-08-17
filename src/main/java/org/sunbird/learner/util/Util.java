@@ -49,7 +49,13 @@ public class Util {
         // EkStep HttpClient headers init
         headers.put("content-type", "application/json");
         headers.put("accept", "application/json");
-        //SchedulerManager.getInstance();
+        new Thread(new Runnable() {
+          @Override
+          public void run() {
+            //SchedulerManager.getInstance();
+          }
+        }).start();
+       
     }
 
     /**

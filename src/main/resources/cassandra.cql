@@ -491,3 +491,5 @@ ALTER TABLE sunbird.organisation ADD theme text;
 ALTER TABLE sunbird.user_org ADD position text;
 ALTER TABLE sunbird.course_batch ADD hashTagId text;
 CREATE INDEX inx_cps_status ON sunbird.course_publish_status (status);
+ALTER TABLE sunbird.user ADD location text;
+ALTER TABLE sunbird.organisation ADD contactDetails map<text,text>;

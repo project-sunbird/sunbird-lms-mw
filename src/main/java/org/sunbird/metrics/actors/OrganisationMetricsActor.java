@@ -285,6 +285,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       Map<String, Object> seriesData = new LinkedHashMap<>();
       seriesData.put(JsonKey.NAME, "Content created by day");
       seriesData.put(JsonKey.SPLIT, "content.created_on");
+      seriesData.put(GROUP_ID, "content.count");
       if (null == bucket || bucket.isEmpty()) {
         bucket = createBucketStructure(periodStr);
       }
@@ -301,6 +302,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       seriesData = new LinkedHashMap<>();
       seriesData.put(JsonKey.NAME, "Draft");
       seriesData.put(JsonKey.SPLIT, "content.created_on");
+      seriesData.put(GROUP_ID, "content.count");
       seriesData.put("buckets", statusBucket);
       series.put("org.creation.content[@status=draft].count", seriesData);
 
@@ -312,6 +314,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       seriesData = new LinkedHashMap<>();
       seriesData.put(JsonKey.NAME, "Review");
       seriesData.put(JsonKey.SPLIT, "content.reviewed_on");
+      seriesData.put(GROUP_ID, "content.count");
       seriesData.put("buckets", statusBucket);
       series.put("org.creation.content[@status=review].count", seriesData);
 
@@ -323,6 +326,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       seriesData = new LinkedHashMap<>();
       seriesData.put(JsonKey.NAME, "Live");
       seriesData.put(JsonKey.SPLIT, "content.published_on");
+      seriesData.put(GROUP_ID, "content.count");
       seriesData.put("buckets", statusBucket);
       series.put("org.creation.content[@status=published].count", seriesData);
 
@@ -559,11 +563,13 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       seriesData.put(JsonKey.NAME, "Time spent by day");
       seriesData.put(JsonKey.SPLIT, "content.time_spent.user.count");
       seriesData.put(JsonKey.TIME_UNIT, "seconds");
+      seriesData.put(GROUP_ID, "timespent.sum");
       seriesData.put("buckets", consumptionBucket);
       series.put("org.consumption.content.time_spent.sum", seriesData);
       seriesData = new LinkedHashMap<>();
       seriesData.put(JsonKey.NAME, "Number of users by day");
       seriesData.put(JsonKey.SPLIT, "content.users.count");
+      seriesData.put(GROUP_ID, "users.count");
       seriesData.put("buckets", userBucket);
       series.put("org.consumption.content.users.count", seriesData);
 

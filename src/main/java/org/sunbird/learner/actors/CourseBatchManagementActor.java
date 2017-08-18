@@ -32,6 +32,7 @@ import org.sunbird.learner.util.Util;
 /**
  * This actor will handle course batch related operations.
  * @author Manzarul
+ * @author Amit Kumar
  */
 public class CourseBatchManagementActor extends UntypedAbstractActor {
 

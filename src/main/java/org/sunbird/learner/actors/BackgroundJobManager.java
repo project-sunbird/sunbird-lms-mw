@@ -416,7 +416,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
         ProjectLogger.log(e.getMessage(), e);
       }
       map.put(JsonKey.ORGANISATIONS, organisations); 
-      Util.removeAttributes(map, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY, JsonKey.ID));
+      Util.removeAttributes(map, Arrays.asList(JsonKey.PASSWORD));
     } else {
       ProjectLogger
           .log("User data not found to save to ES user Id : " + userId, LoggerEnum.INFO.name());

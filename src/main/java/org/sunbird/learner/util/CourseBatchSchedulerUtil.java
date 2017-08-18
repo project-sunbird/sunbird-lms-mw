@@ -139,7 +139,7 @@ public class CourseBatchSchedulerUtil {
   }
   
   public static String doOperationInEkStepCourse (String courseId, boolean increment,String enrollmentType ) {
-    String name = System.getenv("sunbird.installation") == null ? PropertiesCache.getInstance().getProperty(JsonKey.CONTENT_NAME) : System.getenv("sunbird.installation");
+    String name = System.getenv(JsonKey.SUNBIRD_INSTALLATION) == null ? PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_INSTALLATION) : System.getenv("sunbird.installation");
     String contentName = "";
     String response = "";
     if(enrollmentType.equals(ProjectUtil.EnrolmentType.open.getVal())){

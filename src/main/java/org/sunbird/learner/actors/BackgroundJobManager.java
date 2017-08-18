@@ -264,6 +264,11 @@ public class BackgroundJobManager extends UntypedAbstractActor {
 
   private boolean updateDataToElastic(String indexName, String typeName, String identifier,
       Map<String, Object> data) {
+    if(data.containsKey(JsonKey.CONTACT_DETAILS)) {
+       if ((data.get(JsonKey.CONTACT_DETAILS)) instanceof List) {
+        System.out.println("Contact details is instance of List"); 
+       }
+    }
     boolean response = ElasticSearchUtil.updateData(indexName, typeName, identifier, data);
     if (response) {
       return true;

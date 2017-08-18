@@ -450,11 +450,31 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     if (concurrentHashMap.containsKey(JsonKey.CHANNEL)){
        concurrentHashMap.put(JsonKey.SLUG, Slug.makeSlug((String)concurrentHashMap.getOrDefault(JsonKey.CHANNEL, ""), true));
     }
+    
+  //check contactDetail filed is coming or not. it will always come as list of map
+    List<Map<String,Object>> listOfMap = null;
+    if(concurrentHashMap.containsKey(JsonKey.CONTACT_DETAILS)) {
+       listOfMap = (List<Map<String,Object>>) concurrentHashMap.get(JsonKey.CONTACT_DETAILS);
+      if (listOfMap != null && listOfMap.size()>0) {
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+          concurrentHashMap.put(JsonKey.CONTACT_DETAILS, mapper.writeValueAsString(listOfMap));
+        } catch (IOException e) {
+          ProjectLogger.log(e.getMessage(), e);
+        }
+      }
+    }
     try {
       Response result =
           cassandraOperation
               .insertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), concurrentHashMap);
       Response orgResponse = new Response();
+      if(listOfMap !=null) {
+        concurrentHashMap.put(JsonKey.CONTACT_DETAILS, listOfMap);
+      }else {
+        listOfMap = new ArrayList<Map<String,Object>>();
+        concurrentHashMap.put(JsonKey.CONTACT_DETAILS, listOfMap);
+      }
       orgResponse.put(JsonKey.ORGANISATION, concurrentHashMap);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
       ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);

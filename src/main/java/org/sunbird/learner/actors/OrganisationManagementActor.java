@@ -6,6 +6,8 @@ import static org.sunbird.learner.util.Util.isNull;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
+
+import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,6 +31,8 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.Util;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * This actor will handle organisation related operation .
@@ -216,6 +220,19 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       if (req.containsKey(JsonKey.CHANNEL)){
         req.put(JsonKey.SLUG, Slug.makeSlug((String)req.getOrDefault(JsonKey.CHANNEL, ""), true));
       }
+      //check contactDetail filed is coming or not. it will always come as list of map
+      List<Map<String,Object>> listOfMap = null;
+      if(req.containsKey(JsonKey.CONTACT_DETAILS)) {
+         listOfMap = (List<Map<String,Object>>) req.get(JsonKey.CONTACT_DETAILS);
+        if (listOfMap != null && listOfMap.size()>0) {
+          ObjectMapper mapper = new ObjectMapper();
+          try {
+            req.put(JsonKey.CONTACT_DETAILS, mapper.writeValueAsString(listOfMap));
+          } catch (IOException e) {
+            ProjectLogger.log(e.getMessage(), e);
+          }
+        }
+      }
       Response result =
           cassandraOperation.insertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), req);
       ProjectLogger.log("Org data saved into cassandra.");
@@ -232,6 +249,12 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       Response orgResponse = new Response();
       if (null != addressReq) {
         req.put(JsonKey.ADDRESS, addressReq);
+      }
+      if(listOfMap !=null) {
+        req.put(JsonKey.CONTACT_DETAILS, listOfMap);
+      }else {
+        listOfMap = new ArrayList<Map<String,Object>>();
+        req.put(JsonKey.CONTACT_DETAILS, listOfMap);
       }
       orgResponse.put(JsonKey.ORGANISATION, req);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
@@ -525,6 +548,20 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       if (updateOrgDBO.containsKey(JsonKey.CHANNEL)){
         updateOrgDBO.put(JsonKey.SLUG, Slug.makeSlug((String)updateOrgDBO.getOrDefault(JsonKey.CHANNEL, ""), true));
       }
+      
+    //check contactDetail filed is coming or not. it will always come as list of map
+      List<Map<String,Object>> listOfMap =  null;
+      if(updateOrgDBO.containsKey(JsonKey.CONTACT_DETAILS)) {
+         listOfMap = (List<Map<String,Object>>) updateOrgDBO.get(JsonKey.CONTACT_DETAILS);
+        if (listOfMap != null && listOfMap.size()>0) {
+          ObjectMapper mapper = new ObjectMapper();
+          try {
+            updateOrgDBO.put(JsonKey.CONTACT_DETAILS, mapper.writeValueAsString(listOfMap));
+          } catch (IOException e) {
+            ProjectLogger.log(e.getMessage(), e);
+          }
+        }
+      }
       Response response = cassandraOperation.updateRecord(orgDbInfo.getKeySpace(),
           orgDbInfo.getTableName(), updateOrgDBO);
       response.getResult().put(JsonKey.ORGANISATION_ID, orgDBO.get(JsonKey.ID));
@@ -534,6 +571,12 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
       if (null != addressReq) {
         updateOrgDBO.put(JsonKey.ADDRESS, addressReq);
+      }
+      if(listOfMap !=null) {
+        updateOrgDBO.put(JsonKey.CONTACT_DETAILS, listOfMap);
+      }else {
+        listOfMap = new ArrayList<Map<String,Object>>();
+        updateOrgDBO.put(JsonKey.CONTACT_DETAILS, listOfMap);
       }
       orgResponse.put(JsonKey.ORGANISATION, updateOrgDBO);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());

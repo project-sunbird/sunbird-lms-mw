@@ -17,6 +17,7 @@ import org.quartz.TriggerBuilder;
 import org.quartz.impl.StdSchedulerFactory;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 
 
 /**
@@ -53,9 +54,15 @@ public class SchedulerManager {
       String username = System.getenv(JsonKey.SUNBIRD_PG_USER);
       String password = System.getenv(JsonKey.SUNBIRD_PG_PASSWORD);
       ProjectLogger.log("Environment variable value for PostGress SQl= host, port,db,username,password " + host +" ," + port+","+db+","+username+","+password);
+      if(!ProjectUtil.isStringNullOREmpty(host) && !ProjectUtil.isStringNullOREmpty(port) && !ProjectUtil.isStringNullOREmpty(db)
+          && !ProjectUtil.isStringNullOREmpty(username) && !ProjectUtil.isStringNullOREmpty(password) ){
+        ProjectLogger.log("Taking Postgres value from Environment variable...");
       configProp.put("org.quartz.dataSource.MySqlDS.URL", "jdbc:postgresql://"+host+":"+port+"/"+db);
       configProp.put("org.quartz.dataSource.MySqlDS.user", username);
       configProp.put("org.quartz.dataSource.MySqlDS.password", password);
+      } else {
+        ProjectLogger.log("Environment variable is not set for postgres SQl.");
+      }
      scheduler = new StdSchedulerFactory(configProp).getScheduler();
      String identifier = "NetOps-PC1502295457753";
    // 1- create a job and bind with class which is implementing Job
@@ -63,9 +70,10 @@ public class SchedulerManager {
       JobDetail job = JobBuilder.newJob(ManageCourseBatchCount.class).requestRecovery(true).withIdentity("schedulerJob", identifier).build();
       
       // 2- Create a trigger object that will define frequency of run.
-      //This scheduler will run every day 11:30 PM
+      //This scheduler will run every day 11:30 PM IN GMT and 6 PM on UTC.
+      //server time is set in UTC so all scheduler need to be manage based on that time only.
       Trigger trigger = TriggerBuilder.newTrigger().withIdentity("schedulertrigger", identifier)
-          .withSchedule(CronScheduleBuilder.cronSchedule("0 30 23 1/1 * ? *")).build();
+          .withSchedule(CronScheduleBuilder.cronSchedule("0 0 18 1/1 * ? *")).build();
       try {
          if (scheduler.checkExists(job.getKey())){
           scheduler.deleteJob(job.getKey());
@@ -82,9 +90,9 @@ public class SchedulerManager {
       JobDetail uploadVerifyJob = JobBuilder.newJob(UploadLookUpScheduler.class).requestRecovery(true).withIdentity("uploadVerifyScheduler", identifier).build();
       
       // 2- Create a trigger object that will define frequency of run.
-      //This will run every day 4:30 AM
+      //This will run every day 4:30 AM and in UTC 11 PM
       Trigger uploadTrigger = TriggerBuilder.newTrigger().withIdentity("uploadVerifyTrigger", identifier)
-          .withSchedule(CronScheduleBuilder.cronSchedule("0 30 4 1/1 * ? *")).build();
+          .withSchedule(CronScheduleBuilder.cronSchedule("0 0 23 1/1 * ? *")).build();
       try {
          if (scheduler.checkExists(uploadVerifyJob.getKey())){
           scheduler.deleteJob(uploadVerifyJob.getKey());

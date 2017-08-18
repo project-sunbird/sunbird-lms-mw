@@ -286,9 +286,13 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       Map aggKeyMap = (Map) resultData.get("createdOn");
       List<Map<String, Object>> bucket = getBucketData(aggKeyMap, periodStr);
       Map<String, Object> seriesData = new LinkedHashMap<>();
-      seriesData.put(JsonKey.NAME, "Content created by day");
+      if ("5w".equalsIgnoreCase(periodStr)) {
+        seriesData.put(JsonKey.NAME, "Content created by week");
+      } else {
+        seriesData.put(JsonKey.NAME, "Content created by day");
+      }
       seriesData.put(JsonKey.SPLIT, "content.created_on");
-      seriesData.put(GROUP_ID, "content.count");
+      seriesData.put(GROUP_ID, "org.content.count");
       if (null == bucket || bucket.isEmpty()) {
         bucket = createBucketStructure(periodStr);
       }
@@ -305,7 +309,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       seriesData = new LinkedHashMap<>();
       seriesData.put(JsonKey.NAME, "Draft");
       seriesData.put(JsonKey.SPLIT, "content.created_on");
-      seriesData.put(GROUP_ID, "content.count");
+      seriesData.put(GROUP_ID, "org.content.count");
       seriesData.put("buckets", statusBucket);
       series.put("org.creation.content[@status=draft].count", seriesData);
 
@@ -317,7 +321,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       seriesData = new LinkedHashMap<>();
       seriesData.put(JsonKey.NAME, "Review");
       seriesData.put(JsonKey.SPLIT, "content.reviewed_on");
-      seriesData.put(GROUP_ID, "content.count");
+      seriesData.put(GROUP_ID, "org.content.count");
       seriesData.put("buckets", statusBucket);
       series.put("org.creation.content[@status=review].count", seriesData);
 
@@ -329,7 +333,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       seriesData = new LinkedHashMap<>();
       seriesData.put(JsonKey.NAME, "Live");
       seriesData.put(JsonKey.SPLIT, "content.published_on");
-      seriesData.put(GROUP_ID, "content.count");
+      seriesData.put(GROUP_ID, "org.content.count");
       seriesData.put("buckets", statusBucket);
       series.put("org.creation.content[@status=published].count", seriesData);
 
@@ -343,79 +347,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     return result;
   }
 
-  @SuppressWarnings("unchecked")
-  /*private void orgConsumptionMetricsMock(Request actorMessage) {
-    Request request = new Request();
-    String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
-    String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
-    request.setId(actorMessage.getId());
-    request.setContext(actorMessage.getContext());
-    Map<String, Object> requestMap = new HashMap<>();
-    Map<String, Object> filter = new HashMap<>();
-    requestMap.put(JsonKey.PERIOD, periodStr);
-    filter.put(JsonKey.TAG, orgId);
-    request.setRequest(requestMap);
-    String requestStr;
-    Map<String, Object> resultData = new HashMap<>();
-    try {
-      requestStr = mapper.writeValueAsString(request);
-      String resp = getDataFromEkstep(requestStr, JsonKey.EKSTEP_METRICS_URL);
-      Map<String, Object> ekstepResponse = mapper.readValue(resp, Map.class);
-      resultData = (Map<String, Object>) ekstepResponse.get(JsonKey.RESULT);
-    } catch (JsonProcessingException e) {
-      ProjectLogger.log(e.getMessage(), e);
-    } catch (IOException e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-    Map<String, Object> responseMap = new LinkedHashMap<>();
-    Map<String, Object> snapshot = new LinkedHashMap<>();
-    Map<String, Object> dataMap = new HashMap<>();
-    dataMap.put(JsonKey.NAME, "Number of visits by users");
-    dataMap.put(VALUE, "345");
-    snapshot.put("org.consumption.content.session.count", dataMap);
-    dataMap = new LinkedHashMap<>();
-    dataMap.put(JsonKey.NAME, "Content consumption time");
-    dataMap.put(VALUE, "23400");
-    dataMap.put(JsonKey.TIME_UNIT, "seconds");
-    snapshot.put("org.consumption.content.time_spent.sum", dataMap);
-    dataMap = new LinkedHashMap<>();
-    dataMap.put(JsonKey.NAME, "Average time spent by user per visit");
-    dataMap.put(VALUE, "512");
-    dataMap.put(JsonKey.TIME_UNIT, "seconds");
-    snapshot.put("org.consumption.content.time_spent.average", dataMap);
-    dataMap = new LinkedHashMap<>();
-    List<Map<String, Object>> valueMap = new ArrayList<>();
-    List<Map<String, Object>> bucket = new ArrayList<>();
-    valueMap = (List<Map<String, Object>>) resultData.get("metrics");
-    try {
-      for (int count = 0; count < 7; count++) {
-        Map<String, Object> parentCountObject = new LinkedHashMap<String, Object>();
-        String value = "2017-07-2" + (count);
-        parentCountObject.put("key", new SimpleDateFormat("yyyy-MM-dd").parse(value).getTime());
-        parentCountObject.put("key_name", value);
-        parentCountObject.put("value", count * 8);
-        bucket.add(parentCountObject);
-      }
-    } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-    Map<String, Object> series = new HashMap<>();
-
-    Map<String, Object> seriesData = new LinkedHashMap<>();
-    seriesData.put(JsonKey.NAME, "Time spent by day");
-    seriesData.put(JsonKey.SPLIT, "content.session.start_time");
-    dataMap.put(JsonKey.TIME_UNIT, "seconds");
-    seriesData.put("buckets", bucket);
-    series.put("org.consumption.content.time_spent.sum", seriesData);
-    responseMap.putAll(getViewData(orgId, null));
-    responseMap.put(JsonKey.PERIOD, periodStr);
-    responseMap.put(JsonKey.SNAPSHOT, snapshot);
-    responseMap.put(JsonKey.SERIES, series);
-    Response response = new Response();
-    response.putAll(responseMap);
-    sender().tell(response, self());
-  }
-*/
 
   private void orgCreationMetrics(Request actorMessage) {
     ProjectLogger.log("In orgCreationMetrics api");
@@ -474,7 +405,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         return;
       }
       String orgName = (String) orgData.get(JsonKey.ORG_NAME);
-      String channel = 
+      String channel =
           (String) (orgData.get(JsonKey.CHANNEL) == null ? "" : orgData.get(JsonKey.CHANNEL));
       if (ProjectUtil.isStringNullOREmpty(orgName)) {
         ProjectCommonException exception =
@@ -532,11 +463,11 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         userData = resData;
         String bucketDate = "";
         String metricsDate = "";
-        if("5w".equalsIgnoreCase(period)){
-          bucketDate = (String) resData.get("key"); 
-          bucketDate = bucketDate.substring(bucketDate.length()-2, bucketDate.length());
+        if ("5w".equalsIgnoreCase(period)) {
+          bucketDate = (String) resData.get("key");
+          bucketDate = bucketDate.substring(bucketDate.length() - 2, bucketDate.length());
           metricsDate = String.valueOf(res.get("d_period"));
-          metricsDate = metricsDate.substring(metricsDate.length()-2,metricsDate.length());
+          metricsDate = metricsDate.substring(metricsDate.length() - 2, metricsDate.length());
         } else {
           bucketDate = (String) resData.get("key_name");
           metricsDate = String.valueOf(res.get("d_period"));
@@ -555,20 +486,28 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
           index++;
         }
       }
-      
+
       Map<String, Object> series = new HashMap<>();
 
       Map<String, Object> seriesData = new LinkedHashMap<>();
-      seriesData.put(JsonKey.NAME, "Time spent by day");
+      if ("5w".equalsIgnoreCase(period)) {
+        seriesData.put(JsonKey.NAME, "Time spent by week");
+      } else {
+        seriesData.put(JsonKey.NAME, "Time spent by day");
+      }
       seriesData.put(JsonKey.SPLIT, "content.time_spent.user.count");
       seriesData.put(JsonKey.TIME_UNIT, "seconds");
-      seriesData.put(GROUP_ID, "timespent.sum");
+      seriesData.put(GROUP_ID, "org.timespent.sum");
       seriesData.put("buckets", consumptionBucket);
       series.put("org.consumption.content.time_spent.sum", seriesData);
       seriesData = new LinkedHashMap<>();
-      seriesData.put(JsonKey.NAME, "Number of users by day");
+      if ("5w".equalsIgnoreCase(period)) {
+        seriesData.put(JsonKey.NAME, "Number of users by week");
+      } else {
+        seriesData.put(JsonKey.NAME, "Number of users by day");
+      }
       seriesData.put(JsonKey.SPLIT, "content.users.count");
-      seriesData.put(GROUP_ID, "users.count");
+      seriesData.put(GROUP_ID, "org.users.count");
       seriesData.put("buckets", userBucket);
       series.put("org.consumption.content.users.count", seriesData);
 

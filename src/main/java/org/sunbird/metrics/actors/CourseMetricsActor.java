@@ -34,7 +34,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class CourseMetricsActor extends BaseMetricsActor {
 
   ElasticSearchUtil elasticSearchUtil = new ElasticSearchUtil();
-  
+
   protected static final String CONTENT_ID = "content_id";
   protected static final String USER_ID = "user_id";
   private static ObjectMapper mapper = new ObjectMapper();
@@ -50,7 +50,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
           courseProgressMetrics(actorMessage);
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.COURSE_CREATION_METRICS.getValue())) {
-          courseConsumptionMetricsMock(actorMessage);
+          courseConsumptionMetrics(actorMessage);
         } else {
           ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
           ProjectCommonException exception =
@@ -328,7 +328,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     response.putAll(responseMap);
     sender().tell(response, self()); 
   }
-  
+
   private void courseConsumptionMetrics(Request actorMessage) {
     ProjectLogger.log("In courseConsumptionMetrics api");
     try {
@@ -341,13 +341,14 @@ public class CourseMetricsActor extends BaseMetricsActor {
       Map<String, Object> filterMap = new HashMap<>();
       filterMap.put(CONTENT_ID, courseId);
       requestObject.put(JsonKey.FILTER, filterMap);
-      // TODO: get channel from 
+      // TODO: get channel from
       String channel = "";
       requestObject.put(JsonKey.CHANNEL, channel);
       request.setRequest(requestObject);
       String requestStr = mapper.writeValueAsString(request);
       String ekStepResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, requestStr);
-      String responseFormat = courseConsumptionResponseGenerator(periodStr, ekStepResponse, courseId);
+      String responseFormat =
+          courseConsumptionResponseGenerator(periodStr, ekStepResponse, courseId);
       Response response =
           metricsResponseGenerator(responseFormat, periodStr, getViewData(courseId));
       sender().tell(response, self());
@@ -363,64 +364,69 @@ public class CourseMetricsActor extends BaseMetricsActor {
     }
   }
 
-  private Map<String, Object> getViewData(String courseId){
-    Map<String,Object> courseData = new HashMap<>();
-    Map<String,Object> viewData = new HashMap<>();
-    courseData.put(JsonKey.COURSE_ID,courseId);
+  private Map<String, Object> getViewData(String courseId) {
+    Map<String, Object> courseData = new HashMap<>();
+    Map<String, Object> viewData = new HashMap<>();
+    courseData.put(JsonKey.COURSE_ID, courseId);
     viewData.put(JsonKey.COURSE, courseData);
     return viewData;
   }
 
   private SearchDTO createESRequest(Map<String, Object> filters, Map<String, String> aggs,
-      List<String> fields){
+      List<String> fields) {
     SearchDTO searchDTO = new SearchDTO();
 
-    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS , filters);
-    if(isNotNull(aggs)) {
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
+    if (isNotNull(aggs)) {
       searchDTO.getFacets().add(aggs);
     }
-    if(isNotNull(fields)){
+    if (isNotNull(fields)) {
       searchDTO.setFields(fields);
     }
     return searchDTO;
   }
-  
+
   @SuppressWarnings("unchecked")
-  private Map<String,Object> getCourseCompletedData(String periodStr, String courseId){
-    Map<String , Object> dateRange = getStartAndEndDate(periodStr);
+  private Map<String, Object> getCourseCompletedData(String periodStr, String courseId) {
+    Map<String, Object> dateRange = getStartAndEndDate(periodStr);
     Map<String, Object> filter = new HashMap<>();
     Map<String, Object> resultMap = new HashMap<>();
     filter.put(JsonKey.COURSE_ID, courseId);
-    Map<String , String> dateRangeFilter = new HashMap<>();
-    dateRangeFilter.put(GTE , (String)dateRange.get(startDate));
-    dateRangeFilter.put(LTE , (String)dateRange.get(endDate));
-    filter.put(JsonKey.DATE_TIME , dateRangeFilter);
+    Map<String, String> dateRangeFilter = new HashMap<>();
+    dateRangeFilter.put(GTE, (String) dateRange.get(startDate));
+    dateRangeFilter.put(LTE, (String) dateRange.get(endDate));
+    filter.put(JsonKey.DATE_TIME, dateRangeFilter);
+    filter.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.COMPLETED.getValue());
 
     List<String> coursefields = new ArrayList<>();
     coursefields.add(JsonKey.USER_ID);
     coursefields.add(JsonKey.PROGRESS);
-    coursefields.add(JsonKey.COURSE_ENROLL_DATE);
-    coursefields.add(JsonKey.BATCH_ID);
-    coursefields.add(JsonKey.DATE_TIME);
+    coursefields.add(JsonKey.STATUS);
 
-    Map<String, Object> result = ElasticSearchUtil.complexSearch(createESRequest(filter , null,
-        coursefields), ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.usercourses.getTypeName());
-    List<Map<String , Object>> esContent = (List<Map<String , Object>>)result.get(JsonKey.CONTENT);
-    
+    Map<String, Object> result =
+        ElasticSearchUtil.complexSearch(createESRequest(filter, null, coursefields),
+            ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.usercourses.getTypeName());
+    List<Map<String, Object>> esContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+
     List<String> userIds = new ArrayList<String>();
     Double timeConsumed = 0D;
-    for(Map<String , Object> entry : esContent){
-      String userId = (String)entry.get(JsonKey.USER_ID);
+    for (Map<String, Object> entry : esContent) {
+      String userId = (String) entry.get(JsonKey.USER_ID);
       timeConsumed = timeConsumed + getMetricsForUser(courseId, userId, periodStr);
       userIds.add(userId);
     }
-    resultMap.put("user_count", userIds.size());
-    resultMap.put("avg_time_course_completed", timeConsumed/(userIds.size()));
+    Integer users_count = userIds.size();
+    resultMap.put("user_count", users_count);
+    if (0 == users_count) {
+      resultMap.put("avg_time_course_completed", 0);
+    } else {
+      resultMap.put("avg_time_course_completed", timeConsumed / users_count);
+    }
     return resultMap;
   }
 
   @SuppressWarnings("unchecked")
-  private Double getMetricsForUser(String courseId, String userId, String periodStr){
+  private Double getMetricsForUser(String courseId, String userId, String periodStr) {
     Double userTimeConsumed = 0D;
     Map<String, Object> requestObject = new HashMap<>();
     Request request = new Request();
@@ -429,7 +435,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     filterMap.put(CONTENT_ID, courseId);
     filterMap.put(USER_ID, userId);
     requestObject.put(JsonKey.FILTER, filterMap);
-    // TODO: get channel from 
+    // TODO: get channel from
     String channel = "";
     requestObject.put(JsonKey.CHANNEL, channel);
     request.setRequest(requestObject);
@@ -440,7 +446,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       resultData = (Map<String, Object>) resultData.get(JsonKey.RESULT);
       userTimeConsumed = (Double) resultData.get("m_total_ts");
     } catch (Exception e) {
-     ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log(e.getMessage(), e);
     }
     return userTimeConsumed;
   }
@@ -449,9 +455,10 @@ public class CourseMetricsActor extends BaseMetricsActor {
   protected Map<String, Object> getViewData(String id, Object data) {
     return null;
   }
-  
+
   @SuppressWarnings("unchecked")
-  private String courseConsumptionResponseGenerator(String period, String ekstepResponse, String courseId) {
+  private String courseConsumptionResponseGenerator(String period, String ekstepResponse,
+      String courseId) {
     String result = "";
     try {
       Map<String, Object> resultData = mapper.readValue(ekstepResponse, Map.class);
@@ -470,11 +477,11 @@ public class CourseMetricsActor extends BaseMetricsActor {
         userData = resData;
         String bucketDate = "";
         String metricsDate = "";
-        if("5w".equalsIgnoreCase(period)){
-          bucketDate = (String) resData.get("key"); 
-          bucketDate = bucketDate.substring(bucketDate.length()-2, bucketDate.length());
+        if ("5w".equalsIgnoreCase(period)) {
+          bucketDate = (String) resData.get("key");
+          bucketDate = bucketDate.substring(bucketDate.length() - 2, bucketDate.length());
           metricsDate = String.valueOf(res.get("d_period"));
-          metricsDate = metricsDate.substring(metricsDate.length()-2,metricsDate.length());
+          metricsDate = metricsDate.substring(metricsDate.length() - 2, metricsDate.length());
         } else {
           bucketDate = (String) resData.get("key_name");
           metricsDate = String.valueOf(res.get("d_period"));
@@ -493,20 +500,24 @@ public class CourseMetricsActor extends BaseMetricsActor {
           index++;
         }
       }
-      
+
       Map<String, Object> series = new HashMap<>();
 
       Map<String, Object> seriesData = new LinkedHashMap<>();
       seriesData.put(JsonKey.NAME, "Timespent for content consumption");
       seriesData.put(JsonKey.SPLIT, "content.sum(time_spent)");
       seriesData.put(JsonKey.TIME_UNIT, "seconds");
-      seriesData.put(GROUP_ID, "timespent.sum");
+      seriesData.put(GROUP_ID, "course.timespent.sum");
       seriesData.put("buckets", consumptionBucket);
       series.put("course.consumption.time_spent", seriesData);
       seriesData = new LinkedHashMap<>();
-      seriesData.put(JsonKey.NAME, "Number of users by day");
+      if ("5w".equalsIgnoreCase(period)) {
+        seriesData.put(JsonKey.NAME, "Number of users by week");
+      } else {
+        seriesData.put(JsonKey.NAME, "Number of users by day");
+      }
       seriesData.put(JsonKey.SPLIT, "content.users.count");
-      seriesData.put(GROUP_ID, "users.count");
+      seriesData.put(GROUP_ID, "course.users.count");
       seriesData.put("buckets", userBucket);
       series.put("course.consumption.content.users.count", seriesData);
 
@@ -516,6 +527,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       Map<String, Object> dataMap = new HashMap<>();
       dataMap.put(JsonKey.NAME, "Total time of Content consumption");
       dataMap.put(VALUE, resultData.get("m_total_ts"));
+      dataMap.put(JsonKey.TIME_UNIT, "seconds");
       snapshot.put("course.consumption.time_spent.count", dataMap);
       dataMap = new LinkedHashMap<>();
       dataMap.put(JsonKey.NAME, "User access course over time");
@@ -531,7 +543,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       dataMap.put(VALUE, courseCompletedData.get("avg_time_course_completed"));
       dataMap.put(JsonKey.TIME_UNIT, "seconds");
       snapshot.put("course.consumption.time_spent_completion_count", dataMap);
-      
+
       Map<String, Object> responseMap = new HashMap<>();
       responseMap.put(JsonKey.SNAPSHOT, snapshot);
       responseMap.put(JsonKey.SERIES, series);

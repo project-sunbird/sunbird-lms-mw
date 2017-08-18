@@ -97,7 +97,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
   private String getQueryRequest(String periodStr, String orgId, String operation) {
     ProjectLogger.log("orgId " + orgId);
-    Map<String, Object> dateMap = getStartAndEndDate(periodStr);
+    //Map<String, Object> dateMap = getStartAndEndDate(periodStr);
+    Map<String, Object> dateMap = getStartAndEndDateForWeek(periodStr);
     Map<String, String> operationMap = new LinkedHashMap<>();
     ProjectLogger.log("period" + dateMap);
     switch (operation) {
@@ -139,7 +140,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     if (operationMap.containsValue("createdOn")) {
       builder.append(operationMap.get("dateKey") + "\":{\"date_histogram\":{\"field\":\"")
           .append(operationMap.get("dateKey"))
-          .append("\",\"interval\":\"1d\",\"format\":\"yyyy-MM-dd\"")
+          .append("\",\"interval\":\"" + dateMap.get(INTERVAL) + "\",\"format\":\"")
+          .append(dateMap.get(FORMAT) + "\"")
           .append(",\"time_zone\":\"+05:30\",\"extended_bounds\":{\"min\":")
           .append(dateMap.get(startTimeMilis) + ",\"max\":")
           .append(dateMap.get(endTimeMilis) + "}}},\"");
@@ -147,8 +149,9 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     builder.append("status\":{\"terms\":{\"field\":\"status.raw\",\"include\":[\"")
         .append(operationMap.get("status").toLowerCase() + "\"]},\"aggs\":{\"")
         .append(operationMap.get("dateKey") + "\":{\"date_histogram\":{\"field\":\"")
-        .append(operationMap.get("dateKey") + "\",\"interval\":\"1d\",\"format\":")
-        .append("\"yyyy-MM-dd\",\"time_zone\":\"+05:30\",\"extended_bounds\":{\"min\":")
+        .append(operationMap.get("dateKey") + "\",\"interval\":\"" + dateMap.get(INTERVAL))
+        .append("\",\"format\":\"" + dateMap.get(FORMAT))
+        .append("\",\"time_zone\":\"+05:30\",\"extended_bounds\":{\"min\":")
         .append(dateMap.get(startTimeMilis) + ",\"max\":").append(dateMap.get(endTimeMilis))
         .append("}}}}}");
     if (operationMap.containsKey("userActionKey")) {
@@ -206,9 +209,9 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       dataMap.put(JsonKey.NAME, "Number of content created");
       Map<String, Object> contentData = (Map<String, Object>) resultData.get("total_content_count");
       if (null != contentData && !contentData.isEmpty()) {
-        dataMap.put(JsonKey.VALUE, contentData.get(JsonKey.VALUE));
+        dataMap.put(VALUE, contentData.get(VALUE));
       } else {
-        dataMap.put(JsonKey.VALUE, 0);
+        dataMap.put(VALUE, 0);
       }
       snapshot.put("org.creation.content.count", dataMap);
       dataMap = new HashMap<>();
@@ -216,7 +219,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       if (null != resultData.get("createdBy.count")) {
         dataMap.putAll((Map<String, Object>) resultData.get("createdBy.count"));
       } else {
-        dataMap.put(JsonKey.VALUE, 0);
+        dataMap.put(VALUE, 0);
       }
       snapshot.put("org.creation.authors.count", dataMap);
       dataMap = new HashMap<>();
@@ -224,7 +227,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       if (null != resultData.get("lastPublishedBy.count")) {
         dataMap.putAll((Map<String, Object>) resultData.get("lastPublishedBy.count"));
       } else {
-        dataMap.put(JsonKey.VALUE, 0);
+        dataMap.put(VALUE, 0);
       }
       snapshot.put("org.creation.reviewers.count", dataMap);
       dataMap = new HashMap<>();
@@ -266,22 +269,22 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
       dataMap.put(JsonKey.NAME, "Number of content items created");
       value = statusValueMap.get("draft");
-      dataMap.put(JsonKey.VALUE, value);
+      dataMap.put(VALUE, value);
       snapshot.put("org.creation.content[@status=draft].count", dataMap);
       dataMap = new HashMap<>();
       dataMap.put(JsonKey.NAME, "Number of content items reviewed");
       value = statusValueMap.get("review");
-      dataMap.put(JsonKey.VALUE, value);
+      dataMap.put(VALUE, value);
       snapshot.put("org.creation.content[@status=review].count", dataMap);
       dataMap = new HashMap<>();
       value = statusValueMap.get("live");
       dataMap.put(JsonKey.NAME, "Number of content items published");
-      dataMap.put(JsonKey.VALUE, value);
+      dataMap.put(VALUE, value);
       snapshot.put("org.creation.content[@status=published].count", dataMap);
 
       Map<String, Object> series = new LinkedHashMap<>();
       Map aggKeyMap = (Map) resultData.get("createdOn");
-      List<Map<String, Object>> bucket = getBucketData(aggKeyMap);
+      List<Map<String, Object>> bucket = getBucketData(aggKeyMap, periodStr);
       Map<String, Object> seriesData = new LinkedHashMap<>();
       seriesData.put(JsonKey.NAME, "Content created by day");
       seriesData.put(JsonKey.SPLIT, "content.created_on");
@@ -295,7 +298,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       Map<String, Object> statusList = new HashMap();
       List<Map<String, Object>> statusBucket = new ArrayList<>();
       statusList = (Map<String, Object>) statusValueMap.get("draftBucket");
-      statusBucket = getBucketData(statusList);
+      statusBucket = getBucketData(statusList, periodStr);
       if (null == statusBucket || statusBucket.isEmpty()) {
         statusBucket = createBucketStructure(periodStr);
       }
@@ -307,7 +310,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       series.put("org.creation.content[@status=draft].count", seriesData);
 
       statusList = (Map<String, Object>) statusValueMap.get("reviewBucket");
-      statusBucket = getBucketData(statusList);
+      statusBucket = getBucketData(statusList, periodStr);
       if (null == statusBucket || statusBucket.isEmpty()) {
         statusBucket = createBucketStructure(periodStr);
       }
@@ -319,7 +322,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       series.put("org.creation.content[@status=review].count", seriesData);
 
       statusList = (Map<String, Object>) statusValueMap.get("liveBucket");
-      statusBucket = getBucketData(statusList);
+      statusBucket = getBucketData(statusList, periodStr);
       if (null == statusBucket || statusBucket.isEmpty()) {
         statusBucket = createBucketStructure(periodStr);
       }
@@ -368,16 +371,16 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     Map<String, Object> snapshot = new LinkedHashMap<>();
     Map<String, Object> dataMap = new HashMap<>();
     dataMap.put(JsonKey.NAME, "Number of visits by users");
-    dataMap.put(JsonKey.VALUE, "345");
+    dataMap.put(VALUE, "345");
     snapshot.put("org.consumption.content.session.count", dataMap);
     dataMap = new LinkedHashMap<>();
     dataMap.put(JsonKey.NAME, "Content consumption time");
-    dataMap.put(JsonKey.VALUE, "23400");
+    dataMap.put(VALUE, "23400");
     dataMap.put(JsonKey.TIME_UNIT, "seconds");
     snapshot.put("org.consumption.content.time_spent.sum", dataMap);
     dataMap = new LinkedHashMap<>();
     dataMap.put(JsonKey.NAME, "Average time spent by user per visit");
-    dataMap.put(JsonKey.VALUE, "512");
+    dataMap.put(VALUE, "512");
     dataMap.put(JsonKey.TIME_UNIT, "seconds");
     snapshot.put("org.consumption.content.time_spent.average", dataMap);
     dataMap = new LinkedHashMap<>();
@@ -527,15 +530,24 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       for (Map<String, Object> res : resultList) {
         resData = buckets.get(index);
         userData = resData;
-        String bucketDate = (String) resData.get("key_name");
-        String metricsDate = String.valueOf(res.get("d_period"));
-        Date date = new SimpleDateFormat("yyyyMMdd").parse(metricsDate);
-        metricsDate = new SimpleDateFormat("yyyy-MM-dd").format(date);
+        String bucketDate = "";
+        String metricsDate = "";
+        if("5w".equalsIgnoreCase(period)){
+          bucketDate = (String) resData.get("key"); 
+          bucketDate = bucketDate.substring(bucketDate.length()-2, bucketDate.length());
+          metricsDate = String.valueOf(res.get("d_period"));
+          metricsDate = metricsDate.substring(metricsDate.length()-2,metricsDate.length());
+        } else {
+          bucketDate = (String) resData.get("key_name");
+          metricsDate = String.valueOf(res.get("d_period"));
+          Date date = new SimpleDateFormat("yyyyMMdd").parse(metricsDate);
+          metricsDate = new SimpleDateFormat("yyyy-MM-dd").format(date);
+        }
         if (metricsDate.equalsIgnoreCase(bucketDate)) {
           Double totalTimeSpent = (Double) res.get("m_total_ts");
           Integer totalUsers = (Integer) res.get("m_total_users_count");
-          resData.put(JsonKey.VALUE, totalTimeSpent);
-          userData.put(JsonKey.VALUE, totalUsers);
+          resData.put(VALUE, totalTimeSpent);
+          userData.put(VALUE, totalUsers);
         }
         consumptionBucket.add(resData);
         userBucket.add(userData);
@@ -544,19 +556,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         }
       }
       
-      if(consumptionBucket.size()<buckets.size()){
-        int indexCon = consumptionBucket.size();
-        while(indexCon != buckets.size()){
-          consumptionBucket.add(indexCon+1, buckets.get(indexCon));
-        }
-      }
-     
-      if(userBucket.size()<buckets.size()){
-        int indexUser = userBucket.size();
-        while(indexUser != buckets.size()){
-          userBucket.add(indexUser+1, buckets.get(indexUser));
-        }
-      }
       Map<String, Object> series = new HashMap<>();
 
       Map<String, Object> seriesData = new LinkedHashMap<>();
@@ -577,16 +576,16 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       Map<String, Object> snapshot = new LinkedHashMap<>();
       Map<String, Object> dataMap = new HashMap<>();
       dataMap.put(JsonKey.NAME, "Number of visits by users");
-      dataMap.put(JsonKey.VALUE, resultData.get("m_total_users_count"));
+      dataMap.put(VALUE, resultData.get("m_total_users_count"));
       snapshot.put("org.consumption.content.session.count", dataMap);
       dataMap = new LinkedHashMap<>();
       dataMap.put(JsonKey.NAME, "Content consumption time");
-      dataMap.put(JsonKey.VALUE, resultData.get("m_total_ts"));
+      dataMap.put(VALUE, resultData.get("m_total_ts"));
       dataMap.put(JsonKey.TIME_UNIT, "seconds");
       snapshot.put("org.consumption.content.time_spent.sum", dataMap);
       dataMap = new LinkedHashMap<>();
       dataMap.put(JsonKey.NAME, "Average time spent by user per visit");
-      dataMap.put(JsonKey.VALUE, resultData.get("m_avg_ts_session"));
+      dataMap.put(VALUE, resultData.get("m_avg_ts_session"));
       dataMap.put(JsonKey.TIME_UNIT, "seconds");
       snapshot.put("org.consumption.content.time_spent.average", dataMap);
       Map<String, Object> responseMap = new HashMap<>();

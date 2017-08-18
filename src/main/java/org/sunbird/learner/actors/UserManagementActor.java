@@ -213,7 +213,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     //user data id is not same.
     String requestedById = (String) actorMessage.getRequest().getOrDefault(JsonKey.REQUESTED_BY,"");
     ProjectLogger.log("requested By and requested user id == " + requestedById +"  " + (String) userMap.get(JsonKey.USER_ID));
-    if(!(requestedById.equalsIgnoreCase((String) userMap.get(JsonKey.USER_ID)))){
+    if(!((String) userMap.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById)){
        result = removeUserPrivateField(result);
     }
     Response response = new Response();

@@ -23,6 +23,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.Slug;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
@@ -209,6 +210,12 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       }
       //adding one extra filed for tag.
       req.put(JsonKey.HASH_TAG_ID, uniqueId);
+      //if channel is available then make slug for channel.
+      //remove the slug key if coming from user input
+      req.remove(JsonKey.SLUG);
+      if (req.containsKey(JsonKey.CHANNEL)){
+        req.put(JsonKey.SLUG, Slug.makeSlug((String)req.getOrDefault(JsonKey.CHANNEL, ""), true));
+      }
       Response result =
           cassandraOperation.insertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), req);
       ProjectLogger.log("Org data saved into cassandra.");
@@ -511,7 +518,13 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         upsertOrgMap((String) orgDBO.get(JsonKey.ID), parentOrg,
             (String) req.get(JsonKey.ROOT_ORG_ID), actorMessage.getEnv(), relation);
       }
-
+      
+    //if channel is available then make slug for channel.
+    //remove the slug key if coming from user input
+      updateOrgDBO.remove(JsonKey.SLUG);
+      if (updateOrgDBO.containsKey(JsonKey.CHANNEL)){
+        updateOrgDBO.put(JsonKey.SLUG, Slug.makeSlug((String)updateOrgDBO.getOrDefault(JsonKey.CHANNEL, ""), true));
+      }
       Response response = cassandraOperation.updateRecord(orgDbInfo.getKeySpace(),
           orgDbInfo.getTableName(), updateOrgDBO);
       response.getResult().put(JsonKey.ORGANISATION_ID, orgDBO.get(JsonKey.ID));

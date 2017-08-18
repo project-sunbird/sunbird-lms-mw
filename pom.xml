@@ -218,7 +218,17 @@
                         <mainClass>org.sunbird.learner.Application</mainClass>
                     </configuration>
                 </plugin>
-
+             
+		         <!-- adding to exclude test cases -->    
+		     <plugin>
+		    <groupId>org.apache.maven.plugins</groupId>
+		    <artifactId>maven-surefire-plugin</artifactId>
+		    <version>2.19.1</version>
+		    <configuration>
+		        <skipTests>true</skipTests>
+		    </configuration>
+		</plugin>
+             
             </plugins>
         </pluginManagement>
     </build>

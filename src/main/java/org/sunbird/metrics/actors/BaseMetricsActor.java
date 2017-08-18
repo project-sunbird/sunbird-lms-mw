@@ -218,6 +218,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
          int week = cal.get(Calendar.WEEK_OF_YEAR);
          key = cal.get(Calendar.YEAR)+ ""+ week;
          date = keyName.toLowerCase().split("to")[1];
+         date = date.trim();
          dateValue = new SimpleDateFormat("yyyy-MM-dd").parse(date);
          cal.setTime(dateValue);
          cal.add(Calendar.DATE, +1);
@@ -286,6 +287,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   }
 
   public static String makePostRequest(String url, String body) throws Exception {
+    ProjectLogger.log("Request to Ekstep"+ body);
     String baseSearchUrl = System.getenv(JsonKey.EKSTEP_METRICS_URL);
     if (ProjectUtil.isStringNullOREmpty(baseSearchUrl)) {
       baseSearchUrl =
@@ -315,6 +317,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     while ((line = rd.readLine()) != null) {
       result.append(line);
     }
+    ProjectLogger.log("Response from Ekstep"+ response.toString());
     return result.toString();
   }
   
@@ -379,7 +382,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     Calendar cal = Calendar.getInstance();
     cal.setTime(date);
     cal.get(Calendar.DAY_OF_WEEK);
-    buffer.append(sdf.format(cal.getTime())).append("To");
+    buffer.append(sdf.format(cal.getTime())).append(" To ");
     cal.add(Calendar.DATE,+6);
     buffer.append(sdf.format(cal.getTime()));
     return buffer.toString();

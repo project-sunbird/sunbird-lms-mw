@@ -26,6 +26,7 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.Slug;
 import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
@@ -443,6 +444,12 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     concurrentHashMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     concurrentHashMap.put(JsonKey.CREATED_BY, dataMap.get(JsonKey.UPLOADED_BY));
     concurrentHashMap.put(JsonKey.HASH_TAG_ID, uniqueId);
+  //if channel is available then make slug for channel.
+   //Remove the slug key if coming form user input.
+    concurrentHashMap.remove(JsonKey.SLUG);
+    if (concurrentHashMap.containsKey(JsonKey.CHANNEL)){
+       concurrentHashMap.put(JsonKey.SLUG, Slug.makeSlug((String)concurrentHashMap.getOrDefault(JsonKey.CHANNEL, ""), true));
+    }
     try {
       Response result =
           cassandraOperation

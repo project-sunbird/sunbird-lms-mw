@@ -1,6 +1,9 @@
 package org.sunbird.learner.actors;
 
 import akka.actor.UntypedAbstractActor;
+
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -238,6 +241,20 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       Map<String, Object> esMap = new HashMap<>();
       if (!(orgList.isEmpty())) {
         esMap = orgList.get(0);
+         String contactDetails = (String)esMap.get(JsonKey.CONTACT_DETAILS);
+         if(!ProjectUtil.isStringNullOREmpty(contactDetails)) {
+           ObjectMapper mapper = new ObjectMapper();
+           Object[] arr ;
+          try {
+            arr = mapper.readValue(contactDetails, Object[].class);
+            esMap.put(JsonKey.CONTACT_DETAILS, arr);
+          } catch (IOException e) {
+            esMap.put(JsonKey.CONTACT_DETAILS, new Object[]{});
+            ProjectLogger.log(e.getMessage(), e);
+          } 
+         }else {
+           esMap.put(JsonKey.CONTACT_DETAILS, new Object[]{}); 
+         }
       }
       // Register the org into EKStep.
       String hashOrgId = (String)esMap.getOrDefault(JsonKey.HASH_TAG_ID,"");
@@ -264,11 +281,6 @@ public class BackgroundJobManager extends UntypedAbstractActor {
 
   private boolean updateDataToElastic(String indexName, String typeName, String identifier,
       Map<String, Object> data) {
-    if(data.containsKey(JsonKey.CONTACT_DETAILS)) {
-       if ((data.get(JsonKey.CONTACT_DETAILS)) instanceof List) {
-        System.out.println("Contact details is instance of List"); 
-       }
-    }
     boolean response = ElasticSearchUtil.updateData(indexName, typeName, identifier, data);
     if (response) {
       return true;

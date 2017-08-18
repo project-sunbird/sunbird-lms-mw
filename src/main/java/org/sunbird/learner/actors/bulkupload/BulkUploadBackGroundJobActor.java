@@ -512,7 +512,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       String errMsg = validateUser(userMap);
       if(errMsg.equalsIgnoreCase(JsonKey.SUCCESS)){
         try{
-
+          //this role is part of organization
           if ( null != userMap.get(JsonKey.ROLES)) {
             String[] userRole = ((String) userMap.get(JsonKey.ROLES)).split(",");
             List<String> list = new ArrayList<>(Arrays.asList(userRole));
@@ -525,12 +525,29 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             userMap.put(JsonKey.GRADE, list);
           }
           
+          if ( null != userMap.get(JsonKey.SUBJECT)) {
+            String[] userGrade = ((String) userMap.get(JsonKey.SUBJECT)).split(",");
+            List<String> list = new ArrayList<>(Arrays.asList(userGrade));
+            userMap.put(JsonKey.SUBJECT, list);
+          }
+          
+          if ( null != userMap.get(JsonKey.LANGUAGE)) {
+            String[] userGrade = ((String) userMap.get(JsonKey.LANGUAGE)).split(",");
+            List<String> list = new ArrayList<>(Arrays.asList(userGrade));
+            userMap.put(JsonKey.LANGUAGE, list);
+          }
           userMap = insertRecordToKeyCloak(userMap);
           Map<String,Object> tempMap = new HashMap<>();
           tempMap.putAll(userMap);
           tempMap.remove(JsonKey.EMAIL_VERIFIED);
           tempMap.remove(JsonKey.PHONE_VERIFIED);
           tempMap.remove(JsonKey.POSITION);
+          //Add only PUBLIC role to user
+          List<String> list = new ArrayList<>();
+          list.add(JsonKey.PUBLIC);
+          tempMap.put(JsonKey.ROLES, list);
+          //convert userName,provide,loginId,externalId.. value to lowercase
+          updateMapSomeValueTOLowerCase(tempMap);
           Response response = null;
           try {
             response = cassandraOperation
@@ -553,6 +570,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           tempMap.remove(JsonKey.CREATED_DATE);
           tempMap.remove(JsonKey.CREATED_BY);
           tempMap.remove(JsonKey.ID);
+          tempMap.put(JsonKey.PASSWORD,"*****");
           successUserReq.add(tempMap);
           //insert details to user_org table
           insertRecordToUserOrgTable(userMap);
@@ -714,8 +732,10 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     reqMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.REGISTERED_ORG_ID));
     reqMap.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
     reqMap.put(JsonKey.POSITION, userMap.get(JsonKey.POSITION));
-    List<String> roleList = new ArrayList<>();
-    roleList.add(ProjectUtil.UserRole.CONTENT_CREATOR.getValue());
+    List<String> roleList = (List<String>) userMap.get(JsonKey.ROLES);
+    if(!roleList.contains(ProjectUtil.UserRole.CONTENT_CREATOR.getValue())){
+      roleList.add(ProjectUtil.UserRole.CONTENT_CREATOR.getValue());
+    }
     reqMap.put(JsonKey.ROLES, roleList);
 
     try {
@@ -857,6 +877,38 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     String courseId = (String) req.get(JsonKey.COURSE_ID);
     String batchId = (String) req.get(JsonKey.BATCH_ID);
     return OneWayHashing.encryptVal(userId + JsonKey.PRIMARY_KEY_DELIMETER + courseId+JsonKey.PRIMARY_KEY_DELIMETER+batchId);
+
+  }
+  
+  /**
+   * This method will make some requested key value as lower case.  
+   * @param reqObj Request
+   */
+  public static void updateMapSomeValueTOLowerCase(Map<String, Object> map) {
+    if (map.get(JsonKey.SOURCE) != null) {
+      map.put(JsonKey.SOURCE,
+          ((String) map.get(JsonKey.SOURCE)).toLowerCase());
+    }
+    if (map.get(JsonKey.EXTERNAL_ID) != null) {
+      map.put(JsonKey.EXTERNAL_ID,
+          ((String) map.get(JsonKey.EXTERNAL_ID))
+              .toLowerCase());
+    }
+    if (map.get(JsonKey.USERNAME) != null) {
+      map.put(JsonKey.USERNAME,
+          ((String) map.get(JsonKey.USERNAME)).toLowerCase());
+    }
+    if (map.get(JsonKey.USER_NAME) != null) {
+      map.put(JsonKey.USER_NAME,
+          ((String) map.get(JsonKey.USER_NAME)).toLowerCase());
+    }
+    if (map.get(JsonKey.PROVIDER) != null) {
+      map.put(JsonKey.PROVIDER,
+          ((String) map.get(JsonKey.PROVIDER)).toLowerCase());
+    }if (map.get(JsonKey.LOGIN_ID) != null) {
+      map.put(JsonKey.LOGIN_ID,
+          ((String) map.get(JsonKey.LOGIN_ID)).toLowerCase());
+    }
 
   }
   

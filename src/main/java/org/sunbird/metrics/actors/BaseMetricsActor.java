@@ -286,6 +286,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   }
 
   public static String makePostRequest(String url, String body) throws Exception {
+    ProjectLogger.log("Request to Ekstep"+ body);
     String baseSearchUrl = System.getenv(JsonKey.EKSTEP_METRICS_URL);
     if (ProjectUtil.isStringNullOREmpty(baseSearchUrl)) {
       baseSearchUrl =
@@ -315,6 +316,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     while ((line = rd.readLine()) != null) {
       result.append(line);
     }
+    ProjectLogger.log("Response from Ekstep"+ response.toString());
     return result.toString();
   }
   

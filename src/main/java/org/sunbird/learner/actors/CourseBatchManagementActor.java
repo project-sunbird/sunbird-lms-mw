@@ -443,7 +443,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
 
     req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     req.put(JsonKey.COURSE_ADDITIONAL_INFO ,getAdditionalCourseInfo(ekStepContent));
-    req.put(JsonKey.HASHTAG_ID, uniqueId);
+    req.put(JsonKey.HASH_TAG_ID, uniqueId);
     req.put(JsonKey.COUNTER_INCREMENT_STATUS, false);
     req.put(JsonKey.COUNTER_DECREMENT_STATUS, false);
 

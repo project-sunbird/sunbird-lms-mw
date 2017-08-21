@@ -732,6 +732,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     reqMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.REGISTERED_ORG_ID));
     reqMap.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
     reqMap.put(JsonKey.POSITION, userMap.get(JsonKey.POSITION));
+    reqMap.put(JsonKey.IS_DELETED, false);
     List<String> roleList = (List<String>) userMap.get(JsonKey.ROLES);
     if(!roleList.contains(ProjectUtil.UserRole.CONTENT_CREATOR.getValue())){
       roleList.add(ProjectUtil.UserRole.CONTENT_CREATOR.getValue());

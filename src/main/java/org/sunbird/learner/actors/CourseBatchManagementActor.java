@@ -23,6 +23,7 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
 import org.sunbird.common.models.util.ProjectUtil.Status;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
@@ -365,11 +366,13 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
    */
   @SuppressWarnings("unchecked")
   private void createCourseBatch(Request actorMessage) {
+
     Map<String, Object> req =
         (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
     Map<String, String> headers =
         (Map<String, String>) actorMessage.getRequest().get(JsonKey.HEADER);
     String courseId = (String) req.get(JsonKey.COURSE_ID);
+    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     Map<String, Object> ekStepContent =
         CourseEnrollmentActor.getCourseObjectFromEkStep(courseId, headers);
     if (null == ekStepContent || ekStepContent.size() == 0) {
@@ -426,12 +429,24 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     req.put(JsonKey.COURSE_ID, courseId);
     req.put(JsonKey.COURSE_CREATOR, courseCreator);
     req.put(JsonKey.CREATED_BY, createdBy);
-    req.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
+    try{
+      Date todaydate = format.parse((String)format.format(new Date()));
+      Date  requestedStartDate = format.parse((String)req.get(JsonKey.START_DATE));
+      if(todaydate.compareTo(requestedStartDate)==0){
+        req.put(JsonKey.STATUS , ProgressStatus.STARTED.getValue());
+      }else {
+        req.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
+      }
+    } catch (ParseException e) {
+      ProjectLogger.log("Exception occured while parsing date in CourseBatchManagementActor ", e);
+    }
+
     req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     req.put(JsonKey.COURSE_ADDITIONAL_INFO ,getAdditionalCourseInfo(ekStepContent));
-    req.put(JsonKey.HASH_TAG_ID, uniqueId);
+    req.put(JsonKey.HASHTAG_ID, uniqueId);
     req.put(JsonKey.COUNTER_INCREMENT_STATUS, false);
     req.put(JsonKey.COUNTER_DECREMENT_STATUS, false);
+
     Response result = cassandraOperation.insertRecord(dbInfo.getKeySpace(),
         dbInfo.getTableName(), req);
     result.put(JsonKey.BATCH_ID, uniqueId);
@@ -488,8 +503,10 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
       if(req.containsKey(JsonKey.START_DATE)){
         Date dbBatchStartDate = null;
         Date todaydate = null;
+        Date requestedStartDate = null;
         try {
           dbBatchStartDate = format.parse((String)res.get(JsonKey.START_DATE));
+          requestedStartDate = format.parse((String)req.get(JsonKey.START_DATE));
           todaydate = format.parse((String)format.format(new Date()));
           Calendar cal1 = Calendar.getInstance();
           Calendar cal2 = Calendar.getInstance();
@@ -503,6 +520,8 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
               ResponseCode.courseBatchStartPassedDateError.getErrorCode(),
               ResponseCode.courseBatchStartPassedDateError.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
+        }else if(todaydate.compareTo(requestedStartDate)==0){
+          req.put(JsonKey.STATUS , ProgressStatus.STARTED.getValue());
         }
       }
 

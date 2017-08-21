@@ -415,8 +415,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             if(isNotNull(esResult) && esResult.containsKey(JsonKey.CONTENT) && isNotNull(esResult.get(JsonKey.CONTENT)) && ((List)esResult.get(JsonKey.CONTENT)).size()>0){
 
               Map<String , Object> esContent = ((List<Map<String, Object>>)esResult.get(JsonKey.CONTENT)).get(0);
-              concurrentHashMap.put(JsonKey.ROOT_ORG_ID , esContent.get(JsonKey.ORGANISATION_NAME));
-              channelToRootOrgCache.put((String)concurrentHashMap.get(JsonKey.CHANNEL) , (String)esContent.get(JsonKey.ORGANISATION_NAME));
+              concurrentHashMap.put(JsonKey.ROOT_ORG_ID , esContent.get(JsonKey.ID));
+              channelToRootOrgCache.put((String)concurrentHashMap.get(JsonKey.CHANNEL) , (String)esContent.get(JsonKey.ID));
 
             }else{
               concurrentHashMap.put(JsonKey.ERROR_MSG , "This is not root org and No Root Org id exist for channel  "+concurrentHashMap.get(JsonKey.CHANNEL));

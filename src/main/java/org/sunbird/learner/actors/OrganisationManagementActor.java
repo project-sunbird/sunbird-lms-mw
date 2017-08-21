@@ -128,6 +128,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
       }
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+      boolean isChannelVerified = false;
       // combination of source and external id should be unique ...
       if (req.containsKey(JsonKey.PROVIDER) || req.containsKey(JsonKey.EXTERNAL_ID)) {
         if (isNull(req.get(JsonKey.PROVIDER)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
@@ -141,6 +142,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         }
         validateChannelIdForRootOrg(req);
         if (req.containsKey(JsonKey.CHANNEL)) {
+          isChannelVerified = true;
           if (!req.containsKey(JsonKey.IS_ROOT_ORG) || !(Boolean) req.get(JsonKey.IS_ROOT_ORG)) {
             String rootOrgId =  getRootOrgIdFromChannel((String)req.get(JsonKey.CHANNEL));
             if(!ProjectUtil.isStringNullOREmpty(rootOrgId) ){
@@ -179,6 +181,32 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
               ResponseCode.sourceAndExternalIdAlreadyExist.getErrorCode(),
               ResponseCode.sourceAndExternalIdAlreadyExist.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
+          sender().tell(exception, self());
+          return;
+        }
+      }
+      //TODO need to optimize the code
+      if (req.containsKey(JsonKey.CHANNEL) && !isChannelVerified) {
+        if (!req.containsKey(JsonKey.IS_ROOT_ORG) || !(Boolean) req.get(JsonKey.IS_ROOT_ORG)) {
+          String rootOrgId =  getRootOrgIdFromChannel((String)req.get(JsonKey.CHANNEL));
+          if(!ProjectUtil.isStringNullOREmpty(rootOrgId) ){
+             req.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+          }else {
+            ProjectLogger.log("Invalid channel id.");
+            ProjectCommonException exception =
+                new ProjectCommonException(ResponseCode.invalidChannel.getErrorCode(),
+                    ResponseCode.invalidChannel.getErrorMessage(),
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;  
+          }
+          //req.remove(JsonKey.CHANNEL);
+        } else if (!validateChannelForUniqueness((String) req.get(JsonKey.CHANNEL))) {
+          ProjectLogger.log("Channel validation failed");
+          ProjectCommonException exception =
+              new ProjectCommonException(ResponseCode.channelUniquenessInvalid.getErrorCode(),
+                  ResponseCode.channelUniquenessInvalid.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
           sender().tell(exception, self());
           return;
         }

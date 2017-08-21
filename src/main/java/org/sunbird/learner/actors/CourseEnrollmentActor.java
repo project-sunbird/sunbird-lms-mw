@@ -54,11 +54,23 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
         if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.ENROLL_COURSE.getValue())) {
           Util.DbInfo courseEnrollmentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
+          Util.DbInfo batchDbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
           Map<String, Object> req = actorMessage.getRequest();
           String addedBy = (String) req.get(JsonKey.REQUESTED_BY);
           Map<String, Object> courseMap = (Map<String, Object>) req.get(JsonKey.COURSE);
+          
           if(ProjectUtil.isNull(courseMap.get(JsonKey.BATCH_ID))) {
             courseMap.put(JsonKey.BATCH_ID, DEFAULT_BATCH_ID);
+          }else{
+            Response response = cassandraOperation.getRecordById(batchDbInfo.getKeySpace(), batchDbInfo.getTableName(),
+                (String)courseMap.get(JsonKey.BATCH_ID));
+            List<Map<String,Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+            if(responseList.isEmpty()){
+              throw new ProjectCommonException(
+                  ResponseCode.invalidCourseBatchId.getErrorCode(),
+                  ResponseCode.invalidCourseBatchId.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
+            }
           }
           //check whether user already enroll  for course
           Response dbResult = cassandraOperation.getRecordById(courseEnrollmentdbInfo.getKeySpace(),

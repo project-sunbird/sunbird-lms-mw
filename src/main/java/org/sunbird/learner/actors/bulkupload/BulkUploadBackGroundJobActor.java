@@ -17,6 +17,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import org.json.JSONObject;
+import org.json.simple.JSONArray;
+import org.json.simple.parser.ParseException;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
@@ -40,6 +43,7 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
+import org.json.simple.parser.JSONParser;
 
 public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
@@ -339,6 +343,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
     Map<String , Object> concurrentHashMap = map;
     Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+    Object[] orgContactList=null;
+    String contactDetails=null;
 
     if (isNull(concurrentHashMap.get(JsonKey.ORGANISATION_NAME)) || ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.ORGANISATION_NAME))) {
         ProjectLogger.log("orgName is mandatory for org creation.");
@@ -354,6 +360,23 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         concurrentHashMap.put(JsonKey.ERROR_MSG , "Source and external ids both should exist.");
         failureList.add(concurrentHashMap);
         return;
+      }
+
+      if (concurrentHashMap.containsKey(JsonKey.CONTACT_DETAILS) && !ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.CONTACT_DETAILS))) {
+
+        contactDetails = (String) concurrentHashMap.get(JsonKey.CONTACT_DETAILS);
+        JSONParser parser = new JSONParser();
+        try {
+          JSONArray json = (JSONArray) parser.parse(contactDetails);
+          ObjectMapper mapper = new ObjectMapper();
+          orgContactList = mapper.readValue(contactDetails, Object[].class);
+
+        } catch (IOException | ParseException ex) {
+          ProjectLogger.log("Unable to parse Org contact Details - OrgBBulkUpload.",ex);
+          concurrentHashMap.put(JsonKey.ERROR_MSG , "Unable to parse Org contact Details - OrgBBulkUpload.");
+          failureList.add(concurrentHashMap);
+          return;
+        }
       }
 
       Map<String, Object> dbMap = new HashMap<>();
@@ -444,37 +467,26 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     concurrentHashMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     concurrentHashMap.put(JsonKey.CREATED_BY, dataMap.get(JsonKey.UPLOADED_BY));
     concurrentHashMap.put(JsonKey.HASH_TAG_ID, uniqueId);
-  //if channel is available then make slug for channel.
    //Remove the slug key if coming form user input.
     concurrentHashMap.remove(JsonKey.SLUG);
     if (concurrentHashMap.containsKey(JsonKey.CHANNEL)){
        concurrentHashMap.put(JsonKey.SLUG, Slug.makeSlug((String)concurrentHashMap.getOrDefault(JsonKey.CHANNEL, ""), true));
     }
-    
-  //check contactDetail filed is coming or not. it will always come as list of map
-    List<Map<String,Object>> listOfMap = null;
-    if(concurrentHashMap.containsKey(JsonKey.CONTACT_DETAILS)) {
-       listOfMap = (List<Map<String,Object>>) concurrentHashMap.get(JsonKey.CONTACT_DETAILS);
-      if (listOfMap != null && listOfMap.size()>0) {
-        ObjectMapper mapper = new ObjectMapper();
-        try {
-          concurrentHashMap.put(JsonKey.CONTACT_DETAILS, mapper.writeValueAsString(listOfMap));
-        } catch (IOException e) {
-          ProjectLogger.log(e.getMessage(), e);
-        }
-      }
-    }
+    concurrentHashMap.put(JsonKey.CONTACT_DETAILS , contactDetails);
+
     try {
       Response result =
           cassandraOperation
               .insertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), concurrentHashMap);
       Response orgResponse = new Response();
-      if(listOfMap !=null) {
-        concurrentHashMap.put(JsonKey.CONTACT_DETAILS, listOfMap);
-      }else {
-        listOfMap = new ArrayList<Map<String,Object>>();
-        concurrentHashMap.put(JsonKey.CONTACT_DETAILS, listOfMap);
+
+      // sending the org contact as List if it is null simply remove from map
+      if(isNotNull(orgContactList)){
+      concurrentHashMap.put(JsonKey.CONTACT_DETAILS , Arrays.asList(orgContactList));
+      }else{
+        concurrentHashMap.remove(JsonKey.CONTACT_DETAILS);
       }
+
       orgResponse.put(JsonKey.ORGANISATION, concurrentHashMap);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
       ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
@@ -881,7 +893,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   
   /**
    * This method will make some requested key value as lower case.  
-   * @param reqObj Request
+   * @param map Request
    */
   public static void updateMapSomeValueTOLowerCase(Map<String, Object> map) {
     if (map.get(JsonKey.SOURCE) != null) {

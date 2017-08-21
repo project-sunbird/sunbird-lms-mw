@@ -292,12 +292,12 @@ ALTER TABLE sunbird.user ADD roles List<text>;
  
  
  CREATE TABLE IF NOT EXISTS sunbird.role_group(id text, name text, PRIMARY KEY (id));
- insert into sunbird.role_group (id,name) values ('SYSTEM_ADMINISTRATION','SYSTEM_ADMINISTRATION');
- insert into sunbird.role_group (id,name) values ('ORG_MANAGEMENT','ORG_MANAGEMENT');
- insert into sunbird.role_group (id,name) values ('MEMBERSHIP_MANAGEMENT','MEMBERSHIP_MANAGEMENT');
- insert into sunbird.role_group (id,name) values ('CONTENT_CREATION','CONTENT_CREATION');
- insert into sunbird.role_group (id,name) values ('CONTENT_CURATION','CONTENT_CURATION');
- insert into sunbird.role_group (id,name) values ('CONTENT_REVIEW','CONTENT_REVIEW');
+ insert into sunbird.role_group (id,name) values ('SYSTEM_ADMINISTRATION','System Administration');
+ insert into sunbird.role_group (id,name) values ('ORG_MANAGEMENT','Org Management');
+ insert into sunbird.role_group (id,name) values ('MEMBERSHIP_MANAGEMENT','Membership Management');
+ insert into sunbird.role_group (id,name) values ('CONTENT_CREATION','Content Creation');
+ insert into sunbird.role_group (id,name) values ('CONTENT_CURATION','Content Curation');
+ insert into sunbird.role_group (id,name) values ('CONTENT_REVIEW','Content Review');
  drop table sunbird.role;
 CREATE TABLE IF NOT EXISTS sunbird.role(id text, name text,roleGroupId List<text>,status int, PRIMARY KEY (id));
 CREATE INDEX inx_ro_master_name ON sunbird.role(name);
@@ -494,7 +494,7 @@ CREATE INDEX inx_cps_status ON sunbird.course_publish_status (status);
 ALTER TABLE sunbird.user ADD location text;
 ALTER TABLE sunbird.organisation ADD contactDetails map<text,text>;
 insert into sunbird.role_group (id,name) values ('FLAG_REVIEWER ','Flag Reviewer');
-insert into sunbird.url_action (id,name) values ('flagReview','flagReview');
+insert into sunbird.url_action (id,name) values ('FLAG_REVIEWER','flag Review');
 insert into sunbird.role (id,name,rolegroupid,status) values ('FLAG_REVIEWER','Flag Reviewer',['FLAG_REVIEWER'],1);
 update sunbird.role_group set url_action_ids=['flagReview'] where id='FLAG_REVIEWER';
 ALTER TABLE sunbird.organisation DROP contactdetails;

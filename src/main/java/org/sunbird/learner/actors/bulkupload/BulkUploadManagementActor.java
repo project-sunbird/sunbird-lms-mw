@@ -1,5 +1,7 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import static org.sunbird.learner.util.Util.isNotNull;
+
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
@@ -16,14 +18,18 @@ import java.util.List;
 import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.EsIndex;
+import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
@@ -176,7 +182,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     //save csv file to db
-    uploadCsvToDB(batchList,processId,null,JsonKey.BATCH,(String)req.get(JsonKey.REQUESTED_BY));
+    uploadCsvToDB(batchList,processId,null,JsonKey.BATCH,(String)req.get(JsonKey.REQUESTED_BY),null);
     
   }
 
@@ -227,7 +233,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     //save csv file to db
-    uploadCsvToDB(orgList,processId,null,JsonKey.ORGANISATION,(String)req.get(JsonKey.REQUESTED_BY));
+    uploadCsvToDB(orgList,processId,null,JsonKey.ORGANISATION,(String)req.get(JsonKey.REQUESTED_BY),null);
   }
 
   private void validateOrgProperty(String[] property) {
@@ -272,6 +278,41 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
       } else{
         orgId = (String) responseList.get(0).get(JsonKey.ID);
       }
+    
+    
+    //validate root org id
+
+    String rootOrgId = "";
+    Map<String,Object> orgMap = responseList.get(0);
+    boolean isRootOrg = false;
+    if(!ProjectUtil.isStringNullOREmpty((String)orgMap.get(JsonKey.IS_ROOT_ORG))){
+      isRootOrg = (boolean) orgMap.get(JsonKey.IS_ROOT_ORG);
+    }else{
+      isRootOrg = false;
+    }
+    if(isRootOrg){
+      rootOrgId = orgId;
+    }else{
+      String channel = (String) orgMap.get(JsonKey.CHANNEL);
+      if(!ProjectUtil.isStringNullOREmpty( channel)){
+        Map<String,Object> filters = new HashMap<>();
+        filters.put(JsonKey.CHANNEL, channel);
+        filters.put(JsonKey.IS_ROOT_ORG, true);
+        Map<String , Object> esResult = elasticSearchComplexSearch(filters, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
+        if(isNotNull(esResult) && esResult.containsKey(JsonKey.CONTENT) && isNotNull(esResult.get(JsonKey.CONTENT)) && !(((List<String>)esResult.get(JsonKey.CONTENT)).isEmpty())){
+            Map<String , Object> esContent = ((List<Map<String, Object>>)esResult.get(JsonKey.CONTENT)).get(0);
+            rootOrgId =  (String) esContent.get(JsonKey.ID);
+        }else{
+          throw  new ProjectCommonException(
+              ResponseCode.invalidOrgData.getErrorCode(),
+              ProjectUtil.formatMessage(ResponseCode.invalidRootOrgData.getErrorMessage(),channel ),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
+      }else{
+        rootOrgId = JsonKey.DEFAULT_ROOT_ORG_ID;
+      }
+    }
+  //--------------------------------------------------
     File file = new File("bulk.csv");
     FileOutputStream fos = null;
     try {
@@ -311,10 +352,10 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     //save csv file to db
-    uploadCsvToDB(userList,processId,orgId,JsonKey.USER,(String)req.get(JsonKey.REQUESTED_BY));
+    uploadCsvToDB(userList,processId,orgId,JsonKey.USER,(String)req.get(JsonKey.REQUESTED_BY),rootOrgId);
   }
 
-  private void uploadCsvToDB(List<String[]> dataList, String processId, String orgId, String objectType, String requestedBy) {
+  private void uploadCsvToDB(List<String[]> dataList, String processId, String orgId, String objectType, String requestedBy,String rootOrgId) {
     List<Map<String,Object>> dataMapList = new ArrayList<>();
     if (dataList.size() > 1) {
       try{
@@ -329,7 +370,8 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
               dataMap.put(columnArr[j], value);
            }
           if(!ProjectUtil.isStringNullOREmpty(objectType) && objectType.equalsIgnoreCase(JsonKey.USER)){
-            dataMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
+            dataMap.put(JsonKey.REGISTERED_ORG_ID, orgId.trim());
+            dataMap.put(JsonKey.ROOT_ORG_ID, rootOrgId.trim());
           }
           dataMapList.add(dataMap);
         }
@@ -456,5 +498,14 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
     
   }
   
+  private Map<String , Object> elasticSearchComplexSearch(Map<String , Object> filters , String index , String type) {
+
+    SearchDTO searchDTO = new SearchDTO();
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS , filters);
+
+    return ElasticSearchUtil.complexSearch(searchDTO , index,type);
+
+  }
+
  
 }

@@ -22,6 +22,8 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.EsIndex;
+import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.Status;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
@@ -754,10 +756,66 @@ public class UserManagementActor extends UntypedAbstractActor {
         ProjectCommonException exception = new ProjectCommonException(
             ResponseCode.userAlreadyExist.getErrorCode(),
             ResponseCode.userAlreadyExist.getErrorMessage(),
-            ResponseCode.SERVER_ERROR.getResponseCode());
+            ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
         return;
       }
+    }
+    //validate root org and reg org
+    userMap.put(JsonKey.ROOT_ORG_ID,JsonKey.DEFAULT_ROOT_ORG_ID);
+    if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.REGISTERED_ORG_ID))) {
+      Response orgResponse = null;
+      try {
+        orgResponse = cassandraOperation.getRecordById(orgDb.getKeySpace(), orgDb.getTableName(),
+            (String) userMap.get(JsonKey.REGISTERED_ORG_ID));
+      } catch (Exception e) {
+        ProjectLogger.log("Exception occured while verifying regOrgId during create user : ", e);
+        throw new ProjectCommonException(
+            ResponseCode.invalidOrgId.getErrorCode(),
+            ResponseCode.invalidOrgId.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+      List<Map<String,Object>> responseList = (List<Map<String, Object>>) orgResponse.get(JsonKey.RESPONSE);
+      String rootOrgId = "";
+      if(null != responseList && !(responseList.isEmpty())){
+       String orgId = (String) responseList.get(0).get(JsonKey.ID);
+       Map<String,Object> orgMap = responseList.get(0);
+      boolean isRootOrg = false;
+      if(!ProjectUtil.isStringNullOREmpty((String)orgMap.get(JsonKey.IS_ROOT_ORG))){
+        isRootOrg = (boolean) orgMap.get(JsonKey.IS_ROOT_ORG);
+      }else{
+        isRootOrg = false;
+      }
+      if(isRootOrg){
+        rootOrgId = orgId;
+      }else{
+        String channel = (String) orgMap.get(JsonKey.CHANNEL);
+        if(!ProjectUtil.isStringNullOREmpty( channel)){
+          Map<String,Object> filters = new HashMap<>();
+          filters.put(JsonKey.CHANNEL, channel);
+          filters.put(JsonKey.IS_ROOT_ORG, true);
+          Map<String , Object> esResult = elasticSearchComplexSearch(filters, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
+          if(isNotNull(esResult) && esResult.containsKey(JsonKey.CONTENT) && isNotNull(esResult.get(JsonKey.CONTENT)) && !(((List<String>)esResult.get(JsonKey.CONTENT)).isEmpty())){
+              Map<String , Object> esContent = ((List<Map<String, Object>>)esResult.get(JsonKey.CONTENT)).get(0);
+              rootOrgId =  (String) esContent.get(JsonKey.ID);
+          }else{
+            throw  new ProjectCommonException(
+                ResponseCode.invalidRootOrgData.getErrorCode(),
+                ProjectUtil.formatMessage(ResponseCode.invalidRootOrgData.getErrorMessage(),channel ),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+          }
+        }else{
+          rootOrgId = JsonKey.DEFAULT_ROOT_ORG_ID;
+        }
+      }
+      userMap.put(JsonKey.ROOT_ORG_ID,rootOrgId);
+     }else{
+       throw new ProjectCommonException(
+           ResponseCode.invalidOrgId.getErrorCode(),
+           ResponseCode.invalidOrgId.getErrorMessage(),
+           ResponseCode.CLIENT_ERROR.getResponseCode());
+     }
+    //--------------------------------------------------
     }
     SSOManager ssoManager = new KeyCloakServiceImpl();
     if (isSSOEnabled) {
@@ -787,9 +845,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 
     userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
-    if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.ROOT_ORG_ID))) {
-      userMap.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
-    }
+    
     if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PASSWORD))) {
       userMap
           .put(JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
@@ -911,6 +967,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     List<String> roleList = new ArrayList<>();
     roleList.add(ProjectUtil.UserRole.CONTENT_CREATOR.getValue());
     reqMap.put(JsonKey.ROLES, roleList);
+    reqMap.put(JsonKey.IS_DELETED, false);
 
     try {
       cassandraOperation.insertRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), reqMap);
@@ -1826,6 +1883,15 @@ public class UserManagementActor extends UntypedAbstractActor {
       }
       ProjectLogger.log("All private filed removed=");  
     return responseMap;
+  }
+  
+  private Map<String , Object> elasticSearchComplexSearch(Map<String , Object> filters , String index , String type) {
+
+    SearchDTO searchDTO = new SearchDTO();
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS , filters);
+
+    return ElasticSearchUtil.complexSearch(searchDTO , index,type);
+
   }
   
 }

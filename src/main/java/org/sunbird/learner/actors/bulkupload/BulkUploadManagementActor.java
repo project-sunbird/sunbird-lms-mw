@@ -304,7 +304,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
             rootOrgId =  (String) esContent.get(JsonKey.ID);
         }else{
           throw  new ProjectCommonException(
-              ResponseCode.invalidOrgData.getErrorCode(),
+              ResponseCode.invalidRootOrgData.getErrorCode(),
               ProjectUtil.formatMessage(ResponseCode.invalidRootOrgData.getErrorMessage(),channel ),
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }

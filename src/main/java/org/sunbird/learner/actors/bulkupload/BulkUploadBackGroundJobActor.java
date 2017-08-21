@@ -365,6 +365,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       if (concurrentHashMap.containsKey(JsonKey.CONTACT_DETAILS) && !ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.CONTACT_DETAILS))) {
 
         contactDetails = (String) concurrentHashMap.get(JsonKey.CONTACT_DETAILS);
+        contactDetails = contactDetails.replaceAll("'","\"");
         JSONParser parser = new JSONParser();
         try {
           JSONArray json = (JSONArray) parser.parse(contactDetails);
@@ -483,8 +484,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       // sending the org contact as List if it is null simply remove from map
       if(isNotNull(orgContactList)){
       concurrentHashMap.put(JsonKey.CONTACT_DETAILS , Arrays.asList(orgContactList));
-      }else{
-        concurrentHashMap.remove(JsonKey.CONTACT_DETAILS);
       }
 
       orgResponse.put(JsonKey.ORGANISATION, concurrentHashMap);

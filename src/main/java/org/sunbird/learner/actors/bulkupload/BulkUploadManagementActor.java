@@ -241,7 +241,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
         Arrays.asList(JsonKey.ORGANISATION_NAME, JsonKey.CHANNEL,
             JsonKey.IS_ROOT_ORG,JsonKey.PROVIDER,
             JsonKey.EXTERNAL_ID,JsonKey.DESCRIPTION , JsonKey.HOME_URL , JsonKey.ORG_CODE
-        , JsonKey.ORG_TYPE , JsonKey.PREFERRED_LANGUAGE ,JsonKey.THEME ));
+        , JsonKey.ORG_TYPE , JsonKey.PREFERRED_LANGUAGE ,JsonKey.THEME ,JsonKey.CONTACT_DETAILS));
 
     for(String key : property){
       if(! properties.contains(key)){

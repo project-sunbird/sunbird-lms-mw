@@ -18,6 +18,7 @@ import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
@@ -38,7 +39,7 @@ public class UploadLookUpScheduler implements Job {
   public void execute(JobExecutionContext ctx) throws JobExecutionException {
     System.out.println("Upload verify is running..");
     ProjectLogger.log("Running Upload Scheduler Job at: " + Calendar.getInstance().getTime() +
-        " triggered by: " + ctx.getJobDetail().toString());
+        " triggered by: " + ctx.getJobDetail().toString(),LoggerEnum.INFO.name());
     Util.DbInfo  bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     CassandraOperation cassandraOperation = new CassandraOperationImpl();
     List<Map<String,Object>> result = null;
@@ -46,7 +47,7 @@ public class UploadLookUpScheduler implements Job {
     Response res = cassandraOperation.getRecordsByProperty(bulkDb.getKeySpace(), bulkDb.getTableName(),
                           JsonKey.STATUS, ProjectUtil.BulkProcessStatus.NEW.getValue());
     result = ((List<Map<String,Object>>)res.get(JsonKey.RESPONSE));
-    ProjectLogger.log("Total No. of record in Bulk_upload_process table with status as NEW are : :"+result.size());
+    ProjectLogger.log("Total No. of record in Bulk_upload_process table with status as NEW are : :"+result.size(),LoggerEnum.INFO.name());
     if(!result.isEmpty()){
       process(result);
     }
@@ -54,7 +55,7 @@ public class UploadLookUpScheduler implements Job {
     res = cassandraOperation.getRecordsByProperty(bulkDb.getKeySpace(), bulkDb.getTableName(),
                           JsonKey.STATUS, ProjectUtil.BulkProcessStatus.IN_PROGRESS.getValue());
     result = ((List<Map<String,Object>>)res.get(JsonKey.RESPONSE));
-    ProjectLogger.log("Total No. of record in Bulk_upload_process table with status as IN_PROGRESS are : :"+result.size());
+    ProjectLogger.log("Total No. of record in Bulk_upload_process table with status as IN_PROGRESS are : :"+result.size(),LoggerEnum.INFO.name());
     if(null != result){
       Iterator<Map<String, Object>> itr = result.iterator();
       while(itr.hasNext()){
@@ -74,7 +75,7 @@ public class UploadLookUpScheduler implements Job {
       }
       if(!result.isEmpty()){
         ProjectLogger.log("Total No. of record in Bulk_upload_process table with status as IN_PROGRESS "
-            + "with diff bw start time and current time greater than 5Hr are : :"+result.size());
+            + "with diff bw start time and current time greater than 5Hr are : :"+result.size(),LoggerEnum.INFO.name());
         process(result);
       }
     }

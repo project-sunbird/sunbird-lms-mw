@@ -15,6 +15,7 @@ import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
@@ -51,7 +52,7 @@ public class CourseBatchSchedulerUtil {
   public static Map<String, Object> getBatchDetailsFromES(String startDate,
       String endDate) {
     ProjectLogger.log("method call start to collect get course batch data -"
-        + startDate + " " + endDate);
+        + startDate + " " + endDate,LoggerEnum.INFO.name());
     Map<String, Object> response = new HashMap<>();
     SearchDTO dto = new SearchDTO();
     Map<String, Object> map = new HashMap<>();
@@ -69,11 +70,11 @@ public class CourseBatchSchedulerUtil {
         listOfMap = (List<Map<String, Object>>) val;
       } else {
         ProjectLogger
-            .log("No data found for start date course batch===" + startDate);
+            .log("No data found for start date course batch===" + startDate,LoggerEnum.INFO.name());
       }
     } else {
       ProjectLogger
-          .log("No data found for start date course batch===" + startDate);
+          .log("No data found for start date course batch===" + startDate,LoggerEnum.INFO.name());
     }
     response.put(JsonKey.START_DATE, listOfMap);
     map.clear();
@@ -89,14 +90,14 @@ public class CourseBatchSchedulerUtil {
         endBatchMap = (List<Map<String, Object>>) val;
       } else {
         ProjectLogger
-            .log("No data found for end date course batch===" + endDate);
+            .log("No data found for end date course batch===" + endDate,LoggerEnum.INFO.name());
       }
     } else {
-      ProjectLogger.log("No data found for end date course batch===" + endDate);
+      ProjectLogger.log("No data found for end date course batch===" + endDate,LoggerEnum.INFO.name());
     }
     response.put(JsonKey.END_DATE, endBatchMap);
     ProjectLogger.log("method call end to collect get course batch data -"
-        + startDate + " " + endDate);
+        + startDate + " " + endDate,LoggerEnum.INFO.name());
     return response;
   }
   
@@ -105,7 +106,7 @@ public class CourseBatchSchedulerUtil {
   * @param value
   */
   public static void updateCourseBatchDbStatus(Map<String,Object> map,Boolean increment) {
-    ProjectLogger.log("updating course batch details start");
+    ProjectLogger.log("updating course batch details start",LoggerEnum.INFO.name());
     CassandraOperation cassandraOperation = new CassandraOperationImpl();
     Util.DbInfo courseBatchDBInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
     try{
@@ -116,7 +117,7 @@ public class CourseBatchSchedulerUtil {
           cassandraOperation.updateRecord(courseBatchDBInfo.getKeySpace(), courseBatchDBInfo.getTableName(), map);
         }
       }else{
-        ProjectLogger.log("Ekstep content updatation failed.");
+        ProjectLogger.log("Ekstep content updatation failed.",LoggerEnum.INFO.name());
       }
     }catch(Exception e){
       ProjectLogger.log("Exception occured while savin data to course batch db ", e);
@@ -159,19 +160,19 @@ public class CourseBatchSchedulerUtil {
            val = val -1;
        }
       try {
-        ProjectLogger.log("updating content details to Ekstep start");
+        ProjectLogger.log("updating content details to Ekstep start",LoggerEnum.INFO.name());
         String contentUpdateUrl = System.getenv(JsonKey.EKSTEP_CONTENT_UPDATE_URL);
         if(ProjectUtil.isStringNullOREmpty(contentUpdateUrl)){
           contentUpdateUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_UPDATE_URL);
         }
           response = HttpUtil.sendPatchRequest(contentUpdateUrl+courseId, 
               "{\"request\": {\"content\": {\""+contentName+"\": "+val+"}}}", headerMap);
-         ProjectLogger.log("batch count update response=="+response + " " + courseId);
+         ProjectLogger.log("batch count update response=="+response + " " + courseId,LoggerEnum.INFO.name());
       } catch (IOException e) {
         ProjectLogger.log("Error while updating content value "+e.getMessage() ,e);
       }
     } else {
-      ProjectLogger.log("EKstep content not found for course id==" + courseId);
+      ProjectLogger.log("EKstep content not found for course id==" + courseId,LoggerEnum.INFO.name());
     }
     return response;
   }

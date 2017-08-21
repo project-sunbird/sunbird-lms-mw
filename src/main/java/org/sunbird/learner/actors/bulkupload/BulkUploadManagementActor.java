@@ -300,7 +300,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
         Map<String , Object> esResult = elasticSearchComplexSearch(filters, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
         if(isNotNull(esResult) && esResult.containsKey(JsonKey.CONTENT) && isNotNull(esResult.get(JsonKey.CONTENT)) && !(((List<String>)esResult.get(JsonKey.CONTENT)).isEmpty())){
             Map<String , Object> esContent = ((List<Map<String, Object>>)esResult.get(JsonKey.CONTENT)).get(0);
-            rootOrgId =  (String) esContent.get(JsonKey.ORGANISATION_ID);
+            rootOrgId =  (String) esContent.get(JsonKey.ID);
         }else{
           throw  new ProjectCommonException(
               ResponseCode.invalidOrgData.getErrorCode(),

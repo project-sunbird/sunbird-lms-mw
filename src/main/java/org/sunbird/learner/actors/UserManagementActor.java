@@ -133,7 +133,14 @@ public class UserManagementActor extends UntypedAbstractActor {
       Map<String,Object> map = ((List<Map<String,Object>>)resultFrLoginId.get(JsonKey.RESPONSE)).get(0);
       Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), 
           ProjectUtil.EsType.user.getTypeName(), (String)map.get(JsonKey.USER_ID));
-
+       
+      if (result == null || result.size()==0) {
+        throw new ProjectCommonException(
+            ResponseCode.userNotFound.getErrorCode(),
+            ResponseCode.userNotFound.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+      
       //check whether is_deletd true or false
       if(ProjectUtil.isNotNull(result) && result.containsKey(JsonKey.IS_DELETED) && ProjectUtil.isNotNull(result.get(JsonKey.IS_DELETED))&&(Boolean)result.get(JsonKey.IS_DELETED)){
         throw new ProjectCommonException(
@@ -202,6 +209,12 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> result = ElasticSearchUtil
         .getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.user.getTypeName(), (String) userMap.get(JsonKey.USER_ID));
+    //check user found or not
+    if (result == null || result.size() == 0) {
+      throw new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(),
+          ResponseCode.userNotFound.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
     //check whether is_deletd true or false
     if(ProjectUtil.isNotNull(result) && result.containsKey(JsonKey.IS_DELETED) && ProjectUtil.isNotNull(result.get(JsonKey.IS_DELETED))&&(Boolean)result.get(JsonKey.IS_DELETED)){
       throw new ProjectCommonException(

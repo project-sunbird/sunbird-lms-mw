@@ -74,7 +74,7 @@ public class SchedulerManager {
       //This scheduler will run every day 11:30 PM IN GMT and 6 PM on UTC.
       //server time is set in UTC so all scheduler need to be manage based on that time only.
       Trigger trigger = TriggerBuilder.newTrigger().withIdentity("schedulertrigger", identifier)
-          .withSchedule(CronScheduleBuilder.cronSchedule("0 0 18 1/1 * ? *")).build();
+          .withSchedule(CronScheduleBuilder.cronSchedule("0 0/30 * 1/1 * ? *")).build();
       try {
          if (scheduler.checkExists(job.getKey())){
           scheduler.deleteJob(job.getKey());

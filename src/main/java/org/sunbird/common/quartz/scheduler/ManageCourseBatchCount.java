@@ -44,20 +44,28 @@ public class ManageCourseBatchCount implements Job {
        if (null != data.get(JsonKey.START_DATE)) {
          List<Map<String,Object>> listMap = (List<Map<String,Object>>) data.get(JsonKey.START_DATE);
          for (Map<String, Object> map : listMap) {
-           Map<String,Object> weakMap = new WeakHashMap<>(map);
+           Map<String,Object> weakMap = new WeakHashMap<>();
+           weakMap.put(JsonKey.ID,(String) map.get(JsonKey.ID));
+           weakMap.put(JsonKey.COURSE_ID,(String) map.get(JsonKey.COURSE_ID));
+           weakMap.put(JsonKey.ENROLLMENT_TYPE,(String) map.get(JsonKey.ENROLLMENT_TYPE));
            weakMap.put(JsonKey.COUNTER_INCREMENT_STATUS, true);
            weakMap.put(JsonKey.COUNT_INCREMENT_DATE, ProjectUtil.getFormattedDate());
            weakMap.put(JsonKey.STATUS,ProjectUtil.ProgressStatus.STARTED.getValue());
+           weakMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
            CourseBatchSchedulerUtil.updateCourseBatchDbStatus(weakMap,true);
         } 
        }
        if (null != data.get(JsonKey.END_DATE)) {
          List<Map<String,Object>> listMap = (List<Map<String,Object>>) data.get(JsonKey.END_DATE);
          for (Map<String, Object> map : listMap) {
-           Map<String,Object> weakMap = new WeakHashMap<>(map);
+           Map<String,Object> weakMap = new WeakHashMap<>();
+           weakMap.put(JsonKey.ID,(String) map.get(JsonKey.ID));
+           weakMap.put(JsonKey.ENROLLMENT_TYPE,(String) map.get(JsonKey.ENROLLMENT_TYPE));
+           weakMap.put(JsonKey.COURSE_ID,(String) map.get(JsonKey.COURSE_ID));
            weakMap.put(JsonKey.COUNTER_DECREMENT_STATUS, true);
            weakMap.put(JsonKey.COUNT_DECREMENT_DATE, ProjectUtil.getFormattedDate());
            weakMap.put(JsonKey.STATUS,ProjectUtil.ProgressStatus.COMPLETED.getValue());
+           weakMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
            CourseBatchSchedulerUtil.updateCourseBatchDbStatus(weakMap,false);
         } 
        }

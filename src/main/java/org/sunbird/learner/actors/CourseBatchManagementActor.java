@@ -429,6 +429,8 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     req.put(JsonKey.COURSE_ID, courseId);
     req.put(JsonKey.COURSE_CREATOR, courseCreator);
     req.put(JsonKey.CREATED_BY, createdBy);
+    req.put(JsonKey.COUNTER_DECREMENT_STATUS, false);
+    req.put(JsonKey.COUNTER_INCREMENT_STATUS, false);
     try{
       Date todaydate = format.parse((String)format.format(new Date()));
       Date  requestedStartDate = format.parse((String)req.get(JsonKey.START_DATE));

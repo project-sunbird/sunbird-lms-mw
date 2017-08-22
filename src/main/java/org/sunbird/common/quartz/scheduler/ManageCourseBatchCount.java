@@ -47,6 +47,7 @@ public class ManageCourseBatchCount implements Job {
            weakMap.put(JsonKey.COUNTER_INCREMENT_STATUS, true);
            weakMap.put(JsonKey.COUNT_INCREMENT_DATE, ProjectUtil.getFormattedDate());
            weakMap.put(JsonKey.STATUS,ProjectUtil.ProgressStatus.STARTED.getValue());
+           weakMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
            CourseBatchSchedulerUtil.updateCourseBatchDbStatus(weakMap,true);
         } 
        }
@@ -57,6 +58,7 @@ public class ManageCourseBatchCount implements Job {
            weakMap.put(JsonKey.COUNTER_DECREMENT_STATUS, true);
            weakMap.put(JsonKey.COUNT_DECREMENT_DATE, ProjectUtil.getFormattedDate());
            weakMap.put(JsonKey.STATUS,ProjectUtil.ProgressStatus.COMPLETED.getValue());
+           weakMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
            CourseBatchSchedulerUtil.updateCourseBatchDbStatus(weakMap,false);
         } 
        }

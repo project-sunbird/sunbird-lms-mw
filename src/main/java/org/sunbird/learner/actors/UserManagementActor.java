@@ -424,6 +424,8 @@ public class UserManagementActor extends UntypedAbstractActor {
     userMap.remove(JsonKey.STATUS);
     userMap.remove(JsonKey.PROVIDER);
     userMap.remove(JsonKey.USERNAME);
+    userMap.remove(JsonKey.REGISTERED_ORG_ID);
+    userMap.remove(JsonKey.ROOT_ORG_ID);
        
     boolean isSSOEnabled = Boolean
         .parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));

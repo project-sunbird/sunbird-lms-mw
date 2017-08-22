@@ -197,6 +197,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.GET_BULK_OP_STATUS.getValue(), bulkUploadManagementActor);
         routerMap.put(ActorOperations.ORG_CREATION_METRICS.getValue(), organisationMetricsRouter);
         routerMap.put(ActorOperations.ORG_CONSUMPTION_METRICS.getValue(), organisationMetricsRouter);
+        routerMap.put(ActorOperations.ORG_CREATION_METRICS_DOWNLOAD.getValue(), organisationMetricsRouter);
+        routerMap.put(ActorOperations.ORG_CONSUMPTION_METRICS_DOWNLOAD.getValue(), organisationMetricsRouter);
         routerMap.put(ActorOperations.COURSE_PROGRESS_METRICS.getValue(), courseMetricsRouter);
         routerMap.put(ActorOperations.COURSE_CREATION_METRICS.getValue(), courseMetricsRouter);
         routerMap.put(ActorOperations.USER_CREATION_METRICS.getValue(), userMetricsRouter);

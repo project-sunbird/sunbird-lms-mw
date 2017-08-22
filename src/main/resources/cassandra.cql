@@ -499,3 +499,9 @@ insert into sunbird.role (id,name,rolegroupid,status) values ('FLAG_REVIEWER','F
 update sunbird.role_group set url_action_ids=['flagReview'] where id='FLAG_REVIEWER';
 ALTER TABLE sunbird.organisation DROP contactdetails;
 ALTER TABLE sunbird.organisation ADD contactdetail text;
+insert into sunbird.role_group (id,name) values ('COURSE_ADMIN','Course Admin');
+update sunbird.role_group set url_action_ids=['courseAdmin'] where id='COURSE_ADMIN';
+insert into sunbird.role (id,name,rolegroupid,status) values ('COURSE_ADMIN','Course Admin',['COURSE_ADMIN'],1);
+insert into sunbird.role_group (id,name) values ('COURSE_CREATOR','Course Creator');
+update sunbird.role_group set url_action_ids=['courseCreator'] where id='COURSE_CREATOR';
+insert into sunbird.role (id,name,rolegroupid,status) values ('COURSE_CREATOR','Course Creator',['COURSE_CREATOR'],1);

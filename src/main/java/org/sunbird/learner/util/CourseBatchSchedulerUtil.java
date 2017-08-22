@@ -132,12 +132,13 @@ public class CourseBatchSchedulerUtil {
    * @param val
    */
   public static boolean updateDataIntoES (Map<String,Object> map) {
-    Boolean flag = false;
+    Boolean flag = true;
     try{
-      flag =  ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(), 
+      flag = ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(), 
           ProjectUtil.EsType.course.getTypeName(), (String)map.get(JsonKey.ID), map) ;
     }catch(Exception e){
       ProjectLogger.log("Exception occured while saving course batch data to ES",e);
+      flag = false;
     }
     return flag;
   }

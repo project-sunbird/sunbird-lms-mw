@@ -353,31 +353,13 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         return;
     }
 
-    if (concurrentHashMap.containsKey(JsonKey.PROVIDER) || concurrentHashMap.containsKey(JsonKey.EXTERNAL_ID)) {
+    if (isNotNull((String)concurrentHashMap.get(JsonKey.PROVIDER)) || isNotNull((String)concurrentHashMap.get(JsonKey.EXTERNAL_ID))) {
       if (isNull(concurrentHashMap.get(JsonKey.PROVIDER)) || isNull(
           concurrentHashMap.get(JsonKey.EXTERNAL_ID))) {
         ProjectLogger.log("Source and external ids both should exist.");
         concurrentHashMap.put(JsonKey.ERROR_MSG , "Source and external ids both should exist.");
         failureList.add(concurrentHashMap);
         return;
-      }
-
-      if (concurrentHashMap.containsKey(JsonKey.CONTACT_DETAILS) && !ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.CONTACT_DETAILS))) {
-
-        contactDetails = (String) concurrentHashMap.get(JsonKey.CONTACT_DETAILS);
-        contactDetails = contactDetails.replaceAll("'","\"");
-        JSONParser parser = new JSONParser();
-        try {
-          JSONArray json = (JSONArray) parser.parse(contactDetails);
-          ObjectMapper mapper = new ObjectMapper();
-          orgContactList = mapper.readValue(contactDetails, Object[].class);
-
-        } catch (IOException | ParseException ex) {
-          ProjectLogger.log("Unable to parse Org contact Details - OrgBBulkUpload.",ex);
-          concurrentHashMap.put(JsonKey.ERROR_MSG , "Unable to parse Org contact Details - OrgBBulkUpload.");
-          failureList.add(concurrentHashMap);
-          return;
-        }
       }
 
       Map<String, Object> dbMap = new HashMap<>();
@@ -391,6 +373,24 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             + concurrentHashMap.get(JsonKey.EXTERNAL_ID));
         concurrentHashMap.put(JsonKey.ERROR_MSG , "Org exist with Provider " + concurrentHashMap.get(JsonKey.PROVIDER) + " , External Id "
             + concurrentHashMap.get(JsonKey.EXTERNAL_ID));
+        failureList.add(concurrentHashMap);
+        return;
+      }
+    }
+
+    if (concurrentHashMap.containsKey(JsonKey.CONTACT_DETAILS) && !ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.CONTACT_DETAILS))) {
+
+      contactDetails = (String) concurrentHashMap.get(JsonKey.CONTACT_DETAILS);
+      contactDetails = contactDetails.replaceAll("'","\"");
+      JSONParser parser = new JSONParser();
+      try {
+        JSONArray json = (JSONArray) parser.parse(contactDetails);
+        ObjectMapper mapper = new ObjectMapper();
+        orgContactList = mapper.readValue(contactDetails, Object[].class);
+
+      } catch (IOException | ParseException ex) {
+        ProjectLogger.log("Unable to parse Org contact Details - OrgBBulkUpload.",ex);
+        concurrentHashMap.put(JsonKey.ERROR_MSG , "Unable to parse Org contact Details - OrgBBulkUpload.");
         failureList.add(concurrentHashMap);
         return;
       }

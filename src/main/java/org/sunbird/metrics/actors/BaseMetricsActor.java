@@ -1,5 +1,7 @@
 package org.sunbird.metrics.actors;
 
+import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -28,6 +30,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -66,13 +69,13 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     return snapshot;
   }
 
-  protected static Map<String, Object> getStartAndEndDate(String period) {
+  protected static Map<String, Object> getStartAndEndDateForDay(String period) {
     Map<String, Object> dateMap = new HashMap<>();
     int days = getDaysByPeriod(period);
     Date endDateValue = new Date();
     Calendar calendar = Calendar.getInstance();
     calendar.add(Calendar.DATE, -1);
-    calendar.set(Calendar.HOUR_OF_DAY,23);
+    calendar.set(Calendar.HOUR_OF_DAY, 23);
     calendar.set(Calendar.MINUTE, 59);
     calendar.set(Calendar.SECOND, 59);
     calendar.set(Calendar.MILLISECOND, 0);
@@ -80,13 +83,15 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
     Calendar cal = Calendar.getInstance();
     cal.setTimeInMillis(endDateValue.getTime());
-    cal.add(Calendar.DATE, -(days-1));
-    cal.set(Calendar.HOUR_OF_DAY,0);
+    cal.add(Calendar.DATE, -(days - 1));
+    cal.set(Calendar.HOUR_OF_DAY, 0);
     cal.set(Calendar.MINUTE, 0);
     cal.set(Calendar.SECOND, 0);
     cal.set(Calendar.MILLISECOND, 0);
     String startDateStr = sdf.format(cal.getTimeInMillis());
     String endDateStr = sdf.format(endDateValue.getTime());
+    dateMap.put(INTERVAL, "1d");
+    dateMap.put(FORMAT, "yyyy-MM-dd");
     dateMap.put(startDate, startDateStr);
     dateMap.put(endDate, endDateStr);
     dateMap.put(startTimeMilis, cal.getTimeInMillis());
@@ -94,42 +99,36 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     return dateMap;
   }
 
+  protected static Map<String,Object> getStartAndEndDate(String period){
+    if("5w".equalsIgnoreCase(period)){
+      return getStartAndEndDateForWeek(period);
+    }else {
+      return getStartAndEndDateForDay(period);
+    }
+  }
+
   protected static Map<String, Object> getStartAndEndDateForWeek(String period) {
     Map<String, Object> dateMap = new HashMap<>();
     Map<String, Integer> periodMap = getDaysByPeriodStr(period);
-    Date endDateValue = new Date();
     Calendar calendar = Calendar.getInstance();
-    calendar.add(Calendar.DATE, -1);
-    calendar.set(Calendar.HOUR_OF_DAY,23);
-    calendar.set(Calendar.MINUTE, 59);
-    calendar.set(Calendar.SECOND, 59);
-    calendar.set(Calendar.MILLISECOND, 0);
-    endDateValue = calendar.getTime();
+    int firstDayOfWeek = calendar.getFirstDayOfWeek();        
+    calendar.add(Calendar.DATE, -(calendar.get(Calendar.DAY_OF_WEEK)-firstDayOfWeek));
+    calendar.add(Calendar.WEEK_OF_YEAR, 1);
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-    Calendar cal = Calendar.getInstance();
-    cal.setTimeInMillis(endDateValue.getTime());
-    if(Calendar.DATE == periodMap.get(KEY)){
-      cal.add(periodMap.get(KEY), -(periodMap.get(VALUE)- 1));
-      dateMap.put(INTERVAL, "1d");
-      dateMap.put(FORMAT, "yyyy-MM-dd");
-    } else { 
-      cal.add(periodMap.get(KEY), -(periodMap.get(VALUE)));
-      if(cal.getFirstDayOfWeek() < cal.get(Calendar.DAY_OF_WEEK)){
-        cal.add(Calendar.DATE, cal.get(Calendar.DAY_OF_WEEK)+ 1);
-      }
-      dateMap.put(INTERVAL, "1w");
-      dateMap.put(FORMAT, "yyyy-ww");
-    }
-    cal.set(Calendar.HOUR_OF_DAY,0);
-    cal.set(Calendar.MINUTE, 0);
-    cal.set(Calendar.SECOND, 0);
-    cal.set(Calendar.MILLISECOND, 0);
-    String startDateStr = sdf.format(cal.getTimeInMillis());
-    String endDateStr = sdf.format(endDateValue.getTime());
-    dateMap.put(startDate, startDateStr);
+    String endDateStr = sdf.format(calendar.getTime());
     dateMap.put(endDate, endDateStr);
-    dateMap.put(startTimeMilis, cal.getTimeInMillis());
-    dateMap.put(endTimeMilis, endDateValue.getTime());
+    dateMap.put(endTimeMilis, calendar.getTimeInMillis());
+    calendar.add(periodMap.get(KEY), -(periodMap.get(VALUE)));
+    calendar.add(Calendar.DATE, 1);
+    calendar.set(Calendar.HOUR_OF_DAY,0);
+    calendar.set(Calendar.MINUTE, 0);
+    calendar.set(Calendar.SECOND, 0);
+    calendar.set(Calendar.MILLISECOND, 0);
+    dateMap.put(INTERVAL, "1w");
+    dateMap.put(FORMAT, "yyyy-ww");
+    String startDateStr = sdf.format(calendar.getTime());
+    dateMap.put(startDate, startDateStr);
+    dateMap.put(startTimeMilis, calendar.getTimeInMillis());
     return dateMap;
   }
   
@@ -151,7 +150,8 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     }
     if(days == 0){
       throw new ProjectCommonException(ResponseCode.invalidPeriod.getErrorCode(),
-            ResponseCode.invalidPeriod.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+          ResponseCode.invalidPeriod.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     return days;
   }
@@ -160,24 +160,25 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     Map<String, Integer> dayPeriod = new HashMap<>();
     switch (period) {
       case "7d": {
-        dayPeriod.put(KEY,Calendar.DATE);
+        dayPeriod.put(KEY, Calendar.DATE);
         dayPeriod.put(VALUE, 7);
         break;
       }
       case "14d": {
-        dayPeriod.put(KEY,Calendar.DATE);
+        dayPeriod.put(KEY, Calendar.DATE);
         dayPeriod.put(VALUE, 14);
         break;
       }
       case "5w": {
-        dayPeriod.put(KEY,Calendar.WEEK_OF_YEAR);
+        dayPeriod.put(KEY, Calendar.WEEK_OF_YEAR);
         dayPeriod.put(VALUE, 5);
         break;
       }
     }
-    if(dayPeriod.isEmpty()){
+    if (dayPeriod.isEmpty()) {
       throw new ProjectCommonException(ResponseCode.invalidPeriod.getErrorCode(),
-            ResponseCode.invalidPeriod.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+          ResponseCode.invalidPeriod.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     return dayPeriod;
   }
@@ -201,28 +202,28 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     return days;
   }
   
-  protected List<Map<String,Object>> createBucketStrForWeek(String periodStr) {
+  protected List<Map<String, Object>> createBucketStrForWeek(String periodStr) {
     Map<String, Object> periodMap = getStartAndEndDateForWeek(periodStr);
     String date = (String) periodMap.get(startDate);
-    List<Map<String,Object>> bucket = new ArrayList<>();
+    List<Map<String, Object>> bucket = new ArrayList<>();
     Calendar cal = Calendar.getInstance();
-    for(int day = 0; day < 5; day++){
-      Map<String, Object> bucketData = new LinkedHashMap<String, Object>(); 
+    for (int day = 0; day < 5; day++) {
+      Map<String, Object> bucketData = new LinkedHashMap<String, Object>();
       String keyName = "";
       String key = "";
       Date dateValue = null;
       try {
-         keyName = formatKeyNameString(date);
-         dateValue = new SimpleDateFormat("yyyy-MM-dd").parse(date);
-         cal.setTime(dateValue);
-         int week = cal.get(Calendar.WEEK_OF_YEAR);
-         key = cal.get(Calendar.YEAR)+ ""+ week;
-         date = keyName.toLowerCase().split("to")[1];
-         date = date.trim();
-         dateValue = new SimpleDateFormat("yyyy-MM-dd").parse(date);
-         cal.setTime(dateValue);
-         cal.add(Calendar.DATE, +1);
-         date = new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime());
+        keyName = formatKeyNameString(date);
+        dateValue = new SimpleDateFormat("yyyy-MM-dd").parse(date);
+        cal.setTime(dateValue);
+        int week = cal.get(Calendar.WEEK_OF_YEAR);
+        key = cal.get(Calendar.YEAR) + "" + week;
+        date = keyName.toLowerCase().split("to")[1];
+        date = date.trim();
+        dateValue = new SimpleDateFormat("yyyy-MM-dd").parse(date);
+        cal.setTime(dateValue);
+        cal.add(Calendar.DATE, +1);
+        date = new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime());
       } catch (ParseException e) {
         ProjectLogger.log(e.getMessage(), e);
       }
@@ -234,22 +235,22 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     return bucket;
   }
 
-  protected List<Map<String,Object>> createBucketStructure(String periodStr) {
-    if("5w".equalsIgnoreCase(periodStr)){
+  protected List<Map<String, Object>> createBucketStructure(String periodStr) {
+    if ("5w".equalsIgnoreCase(periodStr)) {
       return createBucketStrForWeek(periodStr);
-    }else {
+    } else {
       return createBucketStructureDays(periodStr);
     }
   }
 
-  protected List<Map<String,Object>> createBucketStructureDays(String periodStr) {
+  protected List<Map<String, Object>> createBucketStructureDays(String periodStr) {
     int days = getDaysByPeriod(periodStr);
     Date date = new Date();
     Calendar calendar = Calendar.getInstance();
     calendar.add(Calendar.DATE, -1);
     date = calendar.getTime();
-    List<Map<String,Object>> bucket = new ArrayList<>();
-    for(int day = days-1; day >= 0; day--){
+    List<Map<String, Object>> bucket = new ArrayList<>();
+    for (int day = days - 1; day >= 0; day--) {
       Map<String, Object> bucketData = new LinkedHashMap<String, Object>();
       Calendar cal = Calendar.getInstance();
       cal.setTimeInMillis(date.getTime());
@@ -268,8 +269,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     try {
       String baseSearchUrl = System.getenv(JsonKey.EKSTEP_METRICS_URL);
       if (ProjectUtil.isStringNullOREmpty(baseSearchUrl)) {
-        baseSearchUrl =
-            PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_METRICS_URL);
+        baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_METRICS_URL);
       }
       headers.put(JsonKey.AUTHORIZATION, System.getenv(JsonKey.AUTHORIZATION));
       if (ProjectUtil.isStringNullOREmpty((String) headers.get(JsonKey.AUTHORIZATION))) {
@@ -287,14 +287,13 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   }
 
   public static String makePostRequest(String url, String body) throws Exception {
-    ProjectLogger.log("Request to Ekstep"+ body);
+    ProjectLogger.log("Request to Ekstep" + body);
     String baseSearchUrl = System.getenv(JsonKey.EKSTEP_METRICS_URL);
     if (ProjectUtil.isStringNullOREmpty(baseSearchUrl)) {
-      baseSearchUrl =
-          PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_METRICS_URL);
+      baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_METRICS_URL);
     }
     String authKey = System.getenv(JsonKey.AUTHORIZATION);
-    if(ProjectUtil.isStringNullOREmpty(authKey)){
+    if (ProjectUtil.isStringNullOREmpty(authKey)) {
       authKey = JsonKey.BEARER
           + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_METRICS_AUTHORIZATION);
     }
@@ -353,7 +352,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     List<Map<String, Double>> aggKeyList = (List<Map<String, Double>>) aggKeyMap.get("buckets");
     for (Map aggKeyListMap : aggKeyList) {
       Map<String, Object> parentCountObject = new LinkedHashMap<String, Object>();
-      parentCountObject.put(KEY, formatKeyString((String)aggKeyListMap.get("key_as_string")));
+      parentCountObject.put(KEY, formatKeyString((String) aggKeyListMap.get("key_as_string")));
       parentCountObject.put(KEYNAME, formatKeyNameString(aggKeyListMap.get(KEY)));
       parentCountObject.put(VALUE, aggKeyListMap.get("doc_count"));
       parentGroupList.add(parentCountObject);
@@ -361,7 +360,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     return parentGroupList;
   }
   
-  protected String formatKeyString(String key){
+  protected String formatKeyString(String key) {
     return StringUtils.remove(key, "-");
   }
   
@@ -383,7 +382,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     cal.setTime(date);
     cal.get(Calendar.DAY_OF_WEEK);
     buffer.append(sdf.format(cal.getTime())).append(" To ");
-    cal.add(Calendar.DATE,+6);
+    cal.add(Calendar.DATE, +6);
     buffer.append(sdf.format(cal.getTime()));
     return buffer.toString();
   }
@@ -408,6 +407,20 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     }
     response.putAll(responseData);
     return response;
+  }
+  
+  protected SearchDTO createESRequest(Map<String, Object> filters, Map<String, String> aggs,
+      List<String> fields) {
+    SearchDTO searchDTO = new SearchDTO();
+
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
+    if (isNotNull(aggs)) {
+      searchDTO.getFacets().add(aggs);
+    }
+    if (isNotNull(fields)) {
+      searchDTO.setFields(fields);
+    }
+    return searchDTO;
   }
 
 }

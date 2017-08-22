@@ -121,8 +121,8 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
       }
     }else{
       throw new ProjectCommonException(
-          ResponseCode.internalError.getErrorCode(),
-          ResponseCode.internalError.getErrorMessage(),
+          ResponseCode.invalidProcessId.getErrorCode(),
+          ResponseCode.invalidProcessId.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
     
@@ -264,8 +264,8 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
           (String) req.get(JsonKey.ORGANISATION_ID));
     }else{
       Map<String,Object> map = new HashMap<>();
-      map.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
-      map.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
+      map.put(JsonKey.EXTERNAL_ID, ((String)req.get(JsonKey.EXTERNAL_ID)).toLowerCase());
+      map.put(JsonKey.PROVIDER, ((String)req.get(JsonKey.PROVIDER)).toLowerCase());
       response = cassandraOperation.getRecordsByProperties(orgDb.getKeySpace(), orgDb.getTableName(), map);
     }
     List<Map<String,Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
@@ -506,6 +506,5 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
     return ElasticSearchUtil.complexSearch(searchDTO , index,type);
 
   }
-
  
 }

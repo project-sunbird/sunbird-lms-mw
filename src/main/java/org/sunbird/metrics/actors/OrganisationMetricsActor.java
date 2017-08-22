@@ -9,16 +9,22 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
+import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
+//import org.sunbird.common.helper.ExcelFileUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.learner.util.Util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,6 +34,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   private static ObjectMapper mapper = new ObjectMapper();
   private static final String view = "org";
   private static List<String> operationList = new ArrayList<>();
+  private CassandraOperation cassandraOperation = new CassandraOperationImpl();
 
   protected enum ContentStatus {
     Draft("Create"), Review("Review"), Live("Publish");
@@ -62,7 +69,13 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.ORG_CONSUMPTION_METRICS.getValue())) {
           orgConsumptionMetrics(actorMessage);
-        } else {
+        } /*else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.ORG_CREATION_METRICS_DOWNLOAD.getValue())) {
+          orgCreationMetricsExcel(actorMessage);
+        } else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.ORG_CONSUMPTION_METRICS_DOWNLOAD.getValue())) {
+          orgConsumptionMetricsExcel(actorMessage);
+        }*/ else {
           ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
           ProjectCommonException exception =
               new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
@@ -97,8 +110,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
   private String getQueryRequest(String periodStr, String orgId, String operation) {
     ProjectLogger.log("orgId " + orgId);
-    //Map<String, Object> dateMap = getStartAndEndDate(periodStr);
-    Map<String, Object> dateMap = getStartAndEndDateForWeek(periodStr);
+    Map<String, Object> dateMap = getStartAndEndDate(periodStr);
     Map<String, String> operationMap = new LinkedHashMap<>();
     ProjectLogger.log("period" + dateMap);
     switch (operation) {
@@ -355,8 +367,12 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
       Map<String, Object> orgData = validateOrg(orgId);
       if (null == orgData) {
-        throw new ProjectCommonException(ResponseCode.esError.getErrorCode(),
-            ResponseCode.esError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
+                ResponseCode.invalidOrgData.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+        sender().tell(exception, self());
+        return;
       }
       String orgName = (String) orgData.get(JsonKey.ORG_NAME);
       if (ProjectUtil.isStringNullOREmpty(orgName)) {
@@ -555,4 +571,300 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
+  private void orgCreationMetricsExcel(Request actorMessage) {
+    ProjectLogger.log("In orgCreationMetricsExcel api");
+    try {
+      String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
+      
+        /*Map<String, Object> orgData = validateOrg(orgId); if (null == orgData) { throw new
+       ProjectCommonException(ResponseCode.esError.getErrorCode(),
+        ResponseCode.esError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode()); }
+        String orgName = (String) orgData.get(JsonKey.ORG_NAME); if
+        (ProjectUtil.isStringNullOREmpty(orgName)) { ProjectCommonException exception = new
+        ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
+        ResponseCode.invalidOrgData.getErrorMessage(),
+        ResponseCode.CLIENT_ERROR.getResponseCode()); sender().tell(exception, self()); return; }*/
+       
+      String orgName = "";
+      List<Object> headers = new ArrayList<>();
+      headers.add("userId");
+      headers.add("userName");
+      headers.add("userCreatedOn");
+      headers.add("contentCreatedOn");
+      headers.add("contentLastUpdatedOn");
+      headers.add("contentLastStatus");
+      headers.add("contentLastPublishedBy");
+      headers.add("contentCreationTimeSpent");
+      headers.add("contentCreationTotalSessions");
+      headers.add("contentCreationAvgTimePerSession");
+      headers.add("contentCreatedFor");
+      headers.add("contentName");
+      headers.add("contentType");
+      headers.add("contentSize");
+      headers.add("contentConceptsCovered");
+      headers.add("contentDomain");
+      headers.add("contentTagsCount");
+      headers.add("contentLanguage");
+      headers.add("contentLastPublishedOn");
+      headers.add("contentReviewedOn");
+      List<List<Object>> csvRecords = new ArrayList<>();
+      csvRecords.add(headers);
+      for (String operation : operationList) {
+        String requestStr = getRequestObject(operation, actorMessage);
+        String ekStepResponse = makePostRequest(JsonKey.EKSTEP_CONTNET_SEARCH_URL, requestStr);
+        List<Map<String, Object>> ekstepData = getDataFromResponse(ekStepResponse, headers);
+        //List<Map<String, Object>> userData = getUserDetailsFromES(ekstepData);
+        csvRecords = generateDataList(ekstepData, headers);
+      }
+
+
+      //ExcelFileUtil.writeToFile("/data/test", csvRecords);
+      Response response = new Response();
+      sender().tell(response, self());
+    } catch (ProjectCommonException e) {
+      ProjectLogger.log("Some error occurs", e);
+      sender().tell(e, self());
+      return;
+    } catch (Exception e) {
+      ProjectLogger.log("Some error occurs", e);
+      throw new ProjectCommonException(ResponseCode.internalError.getErrorCode(),
+          ResponseCode.internalError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void orgConsumptionMetricsExcel(Request actorMessage) {
+    ProjectLogger.log("In orgConsumptionMetricsExcel api");
+    try {
+      String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
+      String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
+      Map<String, Object> orgData = validateOrg(orgId);
+      if (null == orgData) {
+        throw new ProjectCommonException(ResponseCode.esError.getErrorCode(),
+            ResponseCode.esError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+      }
+      String orgName = (String) orgData.get(JsonKey.ORG_NAME);
+      if (ProjectUtil.isStringNullOREmpty(orgName)) {
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
+                ResponseCode.invalidOrgData.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+        sender().tell(exception, self());
+        return;
+      }
+      List<Object> headers = new ArrayList<>();
+      headers.add("userId");
+      headers.add("userName");
+      headers.add("userCreatedOn");
+      headers.add("totalNumberOfVisitsByUser");
+      headers.add("totalTimeSpentOnConsumingContent");
+      headers.add("totalPiecesOfContentConsumed");
+      headers.add("avgTimeSpentPerVisit");
+      List<List<Object>> csvRecords = new ArrayList<>();
+      csvRecords.add(headers);
+      for (String operation : operationList) {
+        String request = getQueryRequest(periodStr, orgId, operation);
+        String esResponse = makePostRequest(JsonKey.EKSTEP_ES_METRICS_API_URL, request);
+        List<Map<String, Object>> ekstepData = getDataFromResponse(esResponse, headers);
+        
+         /*Map<String,Object> userData = getUserDetailsFromES(ekstepData); List<Object>
+         csvDataRecords = generateDataList(ekstepData); csvRecords.add(csvDataRecords);*/
+         
+      }
+
+      /*ExcelFileUtil.writeToCSVFile("", csvRecords);*/
+      Response response = new Response();
+      sender().tell(response, self());
+    } catch (ProjectCommonException e) {
+      ProjectLogger.log("Some error occurs", e);
+      sender().tell(e, self());
+      return;
+    } catch (Exception e) {
+      ProjectLogger.log("Some error occurs", e);
+      throw new ProjectCommonException(ResponseCode.internalError.getErrorCode(),
+          ResponseCode.internalError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
+  }
+
+  private List<List<Object>> generateDataList(List<Map<String, Object>> aggregationMap, List<Object> headers) {
+    List<List<Object>> result = new ArrayList<>();
+    for (Map<String, Object> data : aggregationMap) {
+      List<Object> dataResult = new ArrayList<>();
+      for(Object header:headers){
+         dataResult.add(data.get(header));
+      }
+      result.add(dataResult);
+    }
+    return result;
+  }
+
+  private List<Map<String, Object>> getUserDetailsFromES(List<Map<String, Object>> ekstepData) {
+    List<String> coursefields = new ArrayList<>();
+    List<Map<String, Object>> userResult = new ArrayList<>();
+    coursefields.add(JsonKey.USER_ID);
+    coursefields.add(JsonKey.USER_NAME);
+    coursefields.add(JsonKey.CREATED_DATE);
+    String userId = "";
+    Map<String, Object> data = new HashMap<>();
+    for (Map<String, Object> userData : ekstepData) {
+      if (userData.containsKey("createdBy")) {
+        userId = (String) userData.get("createdBy");
+      } else if (userData.containsKey("lastPublishedBy")) {
+        userId = (String) userData.get("lastPublishedBy");
+      } else if (userData.containsKey("lastSubmittedBy")) {
+        userId = (String) userData.get("lastSubmittedBy");
+      }
+      Map<String, Object> filter = new HashMap<>();
+      filter.put(JsonKey.IDENTIFIER, userId);
+      try {
+        Map<String, Object> result =
+            ElasticSearchUtil.complexSearch(createESRequest(filter, null, coursefields),
+                ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+        if (null != result && !result.isEmpty()) {
+          data.putAll(result);
+          data.putAll(userData);
+          userResult.add(data);
+        }
+      } catch (Exception e) {
+        throw new ProjectCommonException(ResponseCode.esError.getErrorCode(),
+            ResponseCode.esError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+      }
+
+    }
+    return userResult;
+  }
+
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  private Map<String, Object> getUserDetails(String orgId) {
+    Map<String, Object> resultMap = new HashMap<>();
+    List<String> users = new ArrayList<>();
+    Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+    Map<String, Object> requestData = new HashMap<String, Object>();
+    requestData.put(JsonKey.ORGANISATION_ID, orgId);
+    Response result = cassandraOperation.getRecordsByProperties(userOrgDbInfo.getKeySpace(),
+        userOrgDbInfo.getTableName(), requestData);
+    List list = (List) result.get(JsonKey.RESPONSE);
+    if (list.size() > 0) {
+      for (Object data : list) {
+        Map<String, Object> dataMap = (Map<String, Object>) data;
+        users.add((String) dataMap.get(JsonKey.USER_ID));
+      }
+      // resultMap = getUserDetailsFromES(users);
+    }
+    return resultMap;
+  }
+
+  private String getRequestObject(String operation, Request actorMessage) {
+    Request request = new Request();
+
+    String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
+    String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
+    Map<String, Object> dateMap = getStartAndEndDate(periodStr);
+    Map<String, String> operationMap = new LinkedHashMap<>();
+    switch (operation) {
+      case "Create": {
+        operationMap.put("dateKey", "createdOn");
+        operationMap.put("status", ContentStatus.Draft.name());
+        break;
+      }
+      case "Review": {
+        operationMap.put("dateKey", "lastSubmittedOn");
+        operationMap.put("status", ContentStatus.Review.name());
+        break;
+      }
+      case "Publish": {
+        operationMap.put("dateKey", "lastPublishedOn");
+        operationMap.put("status", ContentStatus.Live.name());
+        break;
+      }
+    }
+    Map<String, Object> requestObject = new HashMap<>();
+    Map<String, Object> filterMap = new HashMap<>();
+    List<String> fields = new ArrayList<>();
+    Map<String, Object> dateValue = new HashMap<>();
+    dateValue.put("min", dateMap.get(startDate));
+    dateValue.put("max", dateMap.get(endDate));
+    filterMap.put(operationMap.get("dateKey"), dateValue);
+    List<String> contentType = new ArrayList<>();
+    contentType.add("Story");
+    contentType.add("Worksheet");
+    contentType.add("Game");
+    contentType.add("Collection");
+    contentType.add("TextBook");
+    contentType.add("TextBookUnit");
+    contentType.add("Course");
+    contentType.add("CourseUnit");
+    filterMap.put("contentType", contentType);
+    filterMap.put("createdFor", orgId);
+    filterMap.put(JsonKey.STATUS, operationMap.get(JsonKey.STATUS));
+    requestObject.put(JsonKey.FILTERS, filterMap);
+    fields.add("createdBy");
+    fields.add("createdFor");
+    fields.add("createdOn");
+    fields.add("lastUpdatedOn");
+    fields.add("status");
+    fields.add("lastPublishedBy");
+    fields.add("name");
+    fields.add("contentType");
+    fields.add("size");
+    fields.add("concepts");
+    fields.add("domain");
+    fields.add("tags");
+    fields.add("language");
+    fields.add("lastPublishedOn");
+    fields.add("lastSubmittedOn");
+    requestObject.put(JsonKey.FIELDS, fields);
+    request.setRequest(requestObject);
+    String requestStr = "";
+    try {
+      requestStr = mapper.writeValueAsString(request);
+    } catch (JsonProcessingException e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    return requestStr;
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<Map<String, Object>> getDataFromResponse(String responseData, List<Object> headers) {
+    List<Map<String, Object>> result = new ArrayList<>();
+    try {
+      Map<String, Object> resultData = mapper.readValue(responseData, Map.class);
+      resultData = (Map<String, Object>) resultData.get(JsonKey.RESULT);
+      List<Map<String, Object>> resultList =
+          (List<Map<String, Object>>) resultData.get(JsonKey.CONTENT);
+      for (Map<String, Object> content : resultList) {
+        Map<String, Object> data = new HashMap<>();
+        for(String header: content.keySet()){
+          String headerName = StringUtils.capitalize(header);
+          headerName = "content"+headerName; 
+          if(headers.contains(headerName)){
+            data.put(headerName, content.get(header));
+          }else {
+            data.put(header,content.get(header));
+          }
+        }
+        result.add(content);
+      }
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    return result;
+  }
+
+  private List<String> getUserIds(List<Map<String, Object>> data) {
+    List<String> result = new ArrayList<>();
+    for (Map<String, Object> userData : data) {
+      if (userData.containsKey("createdBy")) {
+        result.add((String) userData.get("createdBy"));
+      } else if (userData.containsKey("lastPublishedBy")) {
+        result.add((String) userData.get("lastPublishedBy"));
+      } else if (userData.containsKey("lastSubmittedBy")) {
+        result.add((String) userData.get("lastSubmittedBy"));
+      }
+    }
+    return result;
+  }
 }

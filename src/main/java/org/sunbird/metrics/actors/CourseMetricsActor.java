@@ -26,8 +26,6 @@ import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 
-import org.sunbird.dto.SearchDTO;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -372,19 +370,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     return viewData;
   }
 
-  private SearchDTO createESRequest(Map<String, Object> filters, Map<String, String> aggs,
-      List<String> fields) {
-    SearchDTO searchDTO = new SearchDTO();
-
-    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
-    if (isNotNull(aggs)) {
-      searchDTO.getFacets().add(aggs);
-    }
-    if (isNotNull(fields)) {
-      searchDTO.setFields(fields);
-    }
-    return searchDTO;
-  }
+  
 
   @SuppressWarnings("unchecked")
   private Map<String, Object> getCourseCompletedData(String periodStr, String courseId) {

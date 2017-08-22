@@ -222,13 +222,15 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     Util.DbInfo coursePublishdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
     Response response = cassandraOperation.getRecordById(coursePublishdbInfo.getKeySpace() , coursePublishdbInfo.getTableName() , courseId)  ;
     List<Map<String , Object>> resultList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    if(resultList.isEmpty()){
-      return false;
-    }
-    Map<String, Object> publishStatus = resultList.get(0);
+    if(!ProjectUtil.CourseMgmtStatus.LIVE.getValue().equalsIgnoreCase(additionalCourseInfo.get(JsonKey.STATUS))){
+      if(resultList.isEmpty()){
+        return false;
+      }
+      Map<String, Object> publishStatus = resultList.get(0);
 
-    if(Status.ACTIVE.getValue() != (Integer)publishStatus.get(JsonKey.STATUS)){
-      return false;
+      if(Status.ACTIVE.getValue() != (Integer)publishStatus.get(JsonKey.STATUS)){
+        return false;
+      }
     }
 
     Boolean flag = false;
@@ -480,6 +482,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
       courseMap.put(JsonKey.LEAF_NODE_COUNT,
           ((Integer) ekStepContent.get(JsonKey.LEAF_NODE_COUNT)).toString());
     }
+    courseMap.put(JsonKey.STATUS, (String)ekStepContent.getOrDefault(JsonKey.STATUS,""));
     return courseMap;
   }
 
@@ -498,6 +501,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     req.remove(JsonKey.STATUS);
     req.remove(JsonKey.COUNTER_INCREMENT_STATUS);
     req.remove(JsonKey.COUNTER_DECREMENT_STATUS);
+    req.remove(JsonKey.PARTICIPANT);
     List<Map<String,Object>> resList = ((List<Map<String, Object>>) response.get(JsonKey.RESPONSE));
     if(null != resList && ! resList.isEmpty()){
       Map<String, Object> res = resList.get(0);

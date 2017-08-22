@@ -1250,6 +1250,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
     updateUserOrgDBO.put(JsonKey.IS_APPROVED, true);
     updateUserOrgDBO.put(JsonKey.IS_REJECTED, false);
+    updateUserOrgDBO.put(JsonKey.IS_DELETED, false);
     updateUserOrgDBO.put(JsonKey.ROLES, roles);
 
     response = cassandraOperation.updateRecord(userOrgDbInfo.getKeySpace(),

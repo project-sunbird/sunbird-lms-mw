@@ -414,7 +414,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       try {
         Map<String, Object> reqMap = new HashMap<>();
          reqMap.put(JsonKey.USER_ID, userId);
-         //reqMap.put(JsonKey.IS_DELETED, false);
+         reqMap.put(JsonKey.IS_DELETED, false);
         Util.DbInfo orgUsrDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
          Response result = cassandraOperation
              .getRecordsByProperties(orgUsrDbInfo.getKeySpace(), orgUsrDbInfo.getTableName(), reqMap);

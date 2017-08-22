@@ -17,6 +17,7 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.util.Util;
@@ -119,7 +120,24 @@ public class UtilityActor extends UntypedAbstractActor {
               if(ProjectUtil.isNotNull(course.get(JsonKey.COURSE_PROGRESS))) {
                   courseProgress = (Integer) course.get(JsonKey.COURSE_PROGRESS);
               }
-              courseProgress = courseProgress+(Integer)value.get("progress");
+
+                courseProgress = courseProgress+(Integer)value.get("progress");
+              // update status on basis of leaf node count and progress ---
+
+                if(course.containsKey(JsonKey.LEAF_NODE_COUNT) && ProjectUtil.isNotNull(course.get(JsonKey.LEAF_NODE_COUNT))){
+                  Integer leafNodeCount = (Integer) course.get(JsonKey.LEAF_NODE_COUNT);
+                  if(0==leafNodeCount){
+                      updateDb.put(JsonKey.STATUS , ProjectUtil.ProgressStatus.STARTED.getValue());
+                  }else{
+                      if(leafNodeCount > courseProgress){
+                          updateDb.put(JsonKey.STATUS , ProgressStatus.STARTED.getValue());
+                      }else{
+                          updateDb.put(JsonKey.STATUS , ProgressStatus.COMPLETED.getValue());
+                      }
+                  }
+                }else if(ProjectUtil.isNull(course.get(JsonKey.LEAF_NODE_COUNT))){
+                    updateDb.put(JsonKey.STATUS , ProjectUtil.ProgressStatus.STARTED.getValue());
+                }
 
               updateDb.put(JsonKey.ID , (String)course.get(JsonKey.ID));
               updateDb.put(JsonKey.COURSE_PROGRESS , courseProgress);

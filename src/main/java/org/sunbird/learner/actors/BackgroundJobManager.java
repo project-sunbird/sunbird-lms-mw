@@ -6,8 +6,10 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -26,6 +28,7 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.Util;
@@ -215,6 +218,12 @@ public class BackgroundJobManager extends UntypedAbstractActor {
   private void insertCourseBatchInfoToEs(Response actorMessage) {
     Map<String, Object> batch =
         (Map<String, Object>) actorMessage.get(JsonKey.BATCH);
+    Map<String,String> map = (Map<String, String>) batch.get(JsonKey.COURSE_ADDITIONAL_INFO);
+    String status = map.get(JsonKey.STATUS);
+    if(ProjectUtil.CourseMgmtStatus.LIVE.getValue().equalsIgnoreCase(status)){
+      ProjectLogger.log("Course is live.");
+     // enrollParticipants(batch);
+    }
     // making call to register tag
     registertag(
         (String) batch.getOrDefault(JsonKey.HASH_TAG_ID,
@@ -223,6 +232,63 @@ public class BackgroundJobManager extends UntypedAbstractActor {
     insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.course.getTypeName(), (String) batch.get(JsonKey.ID),
         batch);
+  }
+
+  private void enrollParticipants(Map<String, Object> batch) {
+    Util.DbInfo courseBatchDBInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
+    Util.DbInfo courseEnrollmentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
+    Map<String,String> additionalCourseInfo = (Map<String, String>) batch.get(JsonKey.COURSE_ADDITIONAL_INFO);
+    Map<String,Boolean> participants = (Map<String, Boolean>) batch.get(JsonKey.PARTICIPANT);
+    for(Map.Entry<String,Boolean> entry : participants.entrySet()){
+      if(!entry.getValue()){
+        Map<String , Object> userCourses = new HashMap<>();
+        userCourses.put(JsonKey.USER_ID , entry.getKey());
+        userCourses.put(JsonKey.BATCH_ID , batch.get(JsonKey.ID));
+        userCourses.put(JsonKey.COURSE_ID , batch.get(JsonKey.COURSE_ID));
+        userCourses.put(JsonKey.ID , generatePrimaryKey(userCourses));
+        userCourses.put(JsonKey.CONTENT_ID, batch.get(JsonKey.COURSE_ID));
+        userCourses.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
+        userCourses.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
+        userCourses.put(JsonKey.STATUS, (int)batch.get(JsonKey.STATUS));
+        userCourses.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
+        userCourses.put(JsonKey.COURSE_PROGRESS, 0);
+        userCourses.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.APP_ICON));
+        userCourses.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.NAME));
+        userCourses.put(JsonKey.DESCRIPTION, additionalCourseInfo.get(JsonKey.DESCRIPTION));
+        if(ProjectUtil.isStringNullOREmpty(additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT))){
+          userCourses.put(JsonKey.LEAF_NODE_COUNT, additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT));
+        }
+        try {
+          cassandraOperation
+              .insertRecord(courseEnrollmentdbInfo.getKeySpace(), courseEnrollmentdbInfo.getTableName(),
+                  userCourses);
+          insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.usercourses.getTypeName(),
+              (String) batch.get(JsonKey.ID), userCourses);
+          //update participant map value as true
+          entry.setValue(true);
+        }catch(Exception ex) {
+          ProjectLogger.log("INSERT RECORD TO USER COURSES EXCEPTION ",ex);
+        }
+      }
+    }
+    ProjectLogger.log("Adding participants to user course table completed");
+    Map<String,Object> updatedBatch = new HashMap<>();
+    updatedBatch.put(JsonKey.ID, batch.get(JsonKey.ID));
+    updatedBatch.put(JsonKey.PARTICIPANT, participants);
+    ProjectLogger.log("Updating participants to batch course table started");
+    cassandraOperation.updateRecord(courseBatchDBInfo.getKeySpace(), courseBatchDBInfo.getTableName(), updatedBatch);
+    ProjectLogger.log("Updating participants to batch course table completed");
+  
+    
+  }
+  
+  private String generatePrimaryKey(Map<String, Object> req) {
+    String userId = (String) req.get(JsonKey.USER_ID);
+    String courseId = (String) req.get(JsonKey.COURSE_ID);
+    String batchId = (String) req.get(JsonKey.BATCH_ID);
+    return OneWayHashing.encryptVal(userId + JsonKey.PRIMARY_KEY_DELIMETER + courseId+JsonKey.PRIMARY_KEY_DELIMETER+batchId);
+
   }
 
   @SuppressWarnings("unchecked")
@@ -414,7 +480,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       try {
         Map<String, Object> reqMap = new HashMap<>();
          reqMap.put(JsonKey.USER_ID, userId);
-         //reqMap.put(JsonKey.IS_DELETED, false);
+         reqMap.put(JsonKey.IS_DELETED, false);
         Util.DbInfo orgUsrDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
          Response result = cassandraOperation
              .getRecordsByProperties(orgUsrDbInfo.getKeySpace(), orgUsrDbInfo.getTableName(), reqMap);

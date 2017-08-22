@@ -132,7 +132,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       // combination of source and external id should be unique ...
       if (req.containsKey(JsonKey.PROVIDER) || req.containsKey(JsonKey.EXTERNAL_ID)) {
         if (isNull(req.get(JsonKey.PROVIDER)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
-          ProjectLogger.log("Source and external ids are unique.");
+          ProjectLogger.log("Source and external ids should exist.");
           ProjectCommonException exception =
               new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
                   ResponseCode.invalidRequestData.getErrorMessage(),

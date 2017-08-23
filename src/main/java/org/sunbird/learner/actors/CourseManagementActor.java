@@ -126,11 +126,17 @@ public class CourseManagementActor extends UntypedAbstractActor {
         (Map<String, String>) actorMessage.getRequest().get(JsonKey.HEADER);
     String resposne = null;
     try {
+      
+      String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
+      if(ProjectUtil.isStringNullOREmpty(ekStepBaseUrl)) {
+        ekStepBaseUrl = PropertiesCache.getInstance()
+            .getProperty(JsonKey.EKSTEP_BASE_URL);
+      }
+      
       resposne = HttpUtil.sendPostRequest(
-          PropertiesCache.getInstance()
-              .getProperty("ekstep.course.publish.base.url")
+          ekStepBaseUrl
               + PropertiesCache.getInstance()
-                  .getProperty("ekstep.course.publish.url")
+                  .getProperty(JsonKey.EKSTEP_COURSE_PUBLISH_URL)
               + "/" + (String) req.get(JsonKey.COURSE_ID),
           coursePublishedBody.replace("userId", updatedBy), headers);
     } catch (IOException e) {

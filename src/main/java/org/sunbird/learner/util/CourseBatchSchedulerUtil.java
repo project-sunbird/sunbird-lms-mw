@@ -166,11 +166,11 @@ public class CourseBatchSchedulerUtil {
        }
       try {
         ProjectLogger.log("updating content details to Ekstep start",LoggerEnum.INFO.name());
-        String contentUpdateUrl = System.getenv(JsonKey.EKSTEP_CONTENT_UPDATE_URL);
-        if(ProjectUtil.isStringNullOREmpty(contentUpdateUrl)){
-          contentUpdateUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_UPDATE_URL);
+        String contentUpdateBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
+        if(ProjectUtil.isStringNullOREmpty(contentUpdateBaseUrl)){
+          contentUpdateBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
         }
-          response = HttpUtil.sendPatchRequest(contentUpdateUrl+courseId, 
+          response = HttpUtil.sendPatchRequest(contentUpdateBaseUrl+PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_UPDATE_URL)+courseId, 
               "{\"request\": {\"content\": {\""+contentName+"\": "+val+"}}}", headerMap);
          ProjectLogger.log("batch count update response=="+response + " " + courseId,LoggerEnum.INFO.name());
       } catch (IOException e) {

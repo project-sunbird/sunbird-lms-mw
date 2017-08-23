@@ -420,9 +420,9 @@ public class Util {
         JSONObject jObject;
         ObjectMapper mapper = new ObjectMapper();
         try {
-          String baseSearchUrl = System.getenv(JsonKey.EKSTEP_CONTENT_SEARCH_BASE_URL);
+          String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
           if(ProjectUtil.isStringNullOREmpty(baseSearchUrl)){
-            baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_BASE_URL);
+            baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
           }
           headers.put(JsonKey.AUTHORIZATION, System.getenv(JsonKey.AUTHORIZATION));
           if(ProjectUtil.isStringNullOREmpty((String)headers.get(JsonKey.AUTHORIZATION))){

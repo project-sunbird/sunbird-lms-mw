@@ -41,6 +41,7 @@
     21. sunbird_pg_user: postgres db user name
     22. sunbird_pg_password: postgress db password 
     23. sunbird_installation
+    24. ekstep_api_base_url
 2. Actor configuration: Actor configuration is provided via [application.conf](https://github.com/ekstep/sunbird-mw/blob/alpha2/actors/learner-actor/src/main/resources/application.conf) file. The project is bundled with default application.conf file which runs 5 instances of each actor with hostname as "127.0.0.1" and on the port "8088". This configuration can be overrided by providing a custom application.conf file:
     1. hostname: the hostname on the which the akka actors will be listening
     2. port: port on which the akka actors will be listening

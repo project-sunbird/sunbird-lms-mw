@@ -131,41 +131,11 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       boolean isChannelVerified = false;
       // combination of source and external id should be unique ...
       if (req.containsKey(JsonKey.PROVIDER) || req.containsKey(JsonKey.EXTERNAL_ID)) {
-        if (isNull(req.get(JsonKey.PROVIDER)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
-          ProjectLogger.log("Source and external ids should exist.");
-          ProjectCommonException exception =
-              new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-                  ResponseCode.invalidRequestData.getErrorMessage(),
-                  ResponseCode.CLIENT_ERROR.getResponseCode());
-          sender().tell(exception, self());
-          return;
-        }
+        validateExternalIdAndProvider((String)req.get(JsonKey.PROVIDER), (String)req.get(JsonKey.EXTERNAL_ID));
         validateChannelIdForRootOrg(req);
         if (req.containsKey(JsonKey.CHANNEL)) {
           isChannelVerified = true;
-          if (!req.containsKey(JsonKey.IS_ROOT_ORG) || !(Boolean) req.get(JsonKey.IS_ROOT_ORG)) {
-            String rootOrgId =  getRootOrgIdFromChannel((String)req.get(JsonKey.CHANNEL));
-            if(!ProjectUtil.isStringNullOREmpty(rootOrgId) ){
-               req.put(JsonKey.ROOT_ORG_ID, rootOrgId);
-            }else {
-              ProjectLogger.log("Invalid channel id.");
-              ProjectCommonException exception =
-                  new ProjectCommonException(ResponseCode.invalidChannel.getErrorCode(),
-                      ResponseCode.invalidChannel.getErrorMessage(),
-                      ResponseCode.CLIENT_ERROR.getResponseCode());
-              sender().tell(exception, self());
-              return;  
-            }
-            //req.remove(JsonKey.CHANNEL);
-          } else if (!validateChannelForUniqueness((String) req.get(JsonKey.CHANNEL))) {
-            ProjectLogger.log("Channel validation failed");
-            ProjectCommonException exception =
-                new ProjectCommonException(ResponseCode.channelUniquenessInvalid.getErrorCode(),
-                    ResponseCode.channelUniquenessInvalid.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
-            sender().tell(exception, self());
-            return;
-          }
+          validateChannel(req);
         }
 
         Map<String, Object> dbMap = new HashMap<String, Object>();
@@ -185,31 +155,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           return;
         }
       }
-      //TODO need to optimize the code
       if (req.containsKey(JsonKey.CHANNEL) && !isChannelVerified) {
-        if (!req.containsKey(JsonKey.IS_ROOT_ORG) || !(Boolean) req.get(JsonKey.IS_ROOT_ORG)) {
-          String rootOrgId =  getRootOrgIdFromChannel((String)req.get(JsonKey.CHANNEL));
-          if(!ProjectUtil.isStringNullOREmpty(rootOrgId) ){
-             req.put(JsonKey.ROOT_ORG_ID, rootOrgId);
-          }else {
-            ProjectLogger.log("Invalid channel id.");
-            ProjectCommonException exception =
-                new ProjectCommonException(ResponseCode.invalidChannel.getErrorCode(),
-                    ResponseCode.invalidChannel.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
-            sender().tell(exception, self());
-            return;  
-          }
-          //req.remove(JsonKey.CHANNEL);
-        } else if (!validateChannelForUniqueness((String) req.get(JsonKey.CHANNEL))) {
-          ProjectLogger.log("Channel validation failed");
-          ProjectCommonException exception =
-              new ProjectCommonException(ResponseCode.channelUniquenessInvalid.getErrorCode(),
-                  ResponseCode.channelUniquenessInvalid.getErrorMessage(),
-                  ResponseCode.CLIENT_ERROR.getResponseCode());
-          sender().tell(exception, self());
-          return;
-        }
+        validateChannel(req);
       }
 
       String relation = (String) req.get(JsonKey.RELATION);
@@ -462,15 +409,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       // validate if Source and external id is in request , it should not already exist in DataBase
       // .....
       if (req.containsKey(JsonKey.PROVIDER) || req.containsKey(JsonKey.EXTERNAL_ID)) {
-        if (isNull(req.get(JsonKey.PROVIDER)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
-          ProjectCommonException exception =
-              new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-                  ResponseCode.invalidRequestData.getErrorMessage(),
-                  ResponseCode.CLIENT_ERROR.getResponseCode());
-          sender().tell(exception, self());
-          return;
-        }
-
+        validateExternalIdAndProvider((String)req.get(JsonKey.EXTERNAL_ID), (String)req.get(JsonKey.PROVIDER));
         Map<String, Object> dbMap = new HashMap<String, Object>();
         dbMap.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
         dbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
@@ -1809,5 +1748,53 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     return null;
 
   }
-    
+  
+  /**
+   * 
+   * @param externalId
+   * @param provider
+   */
+  private void validateExternalIdAndProvider(String externalId,
+      String provider) {
+    if (ProjectUtil.isStringNullOREmpty(externalId)
+        || ProjectUtil.isStringNullOREmpty(provider)) {
+      ProjectLogger.log("Source and external ids should exist.");
+      throw new ProjectCommonException(
+          ResponseCode.sourceAndExternalIdValidationError.getErrorCode(),
+          ResponseCode.sourceAndExternalIdValidationError.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+
+  }
+  
+  /**
+   * This method will do the channel uniqueness validation
+   * @param req
+   */
+  private void validateChannel(Map<String, Object> req) {
+    if (!req.containsKey(JsonKey.IS_ROOT_ORG)
+        || !(Boolean) req.get(JsonKey.IS_ROOT_ORG)) {
+      String rootOrgId =
+          getRootOrgIdFromChannel((String) req.get(JsonKey.CHANNEL));
+      if (!ProjectUtil.isStringNullOREmpty(rootOrgId)) {
+        req.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+      } else {
+        ProjectLogger.log("Invalid channel id.");
+        throw new ProjectCommonException(
+            ResponseCode.invalidChannel.getErrorCode(),
+            ResponseCode.invalidChannel.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    } else if (!validateChannelForUniqueness(
+        (String) req.get(JsonKey.CHANNEL))) {
+      ProjectLogger.log("Channel validation failed");
+      throw new ProjectCommonException(
+          ResponseCode.channelUniquenessInvalid.getErrorCode(),
+          ResponseCode.channelUniquenessInvalid.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+
+  }
+  
+  
   }

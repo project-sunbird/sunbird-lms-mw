@@ -85,7 +85,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     Calendar cal = Calendar.getInstance();
     cal.setTimeInMillis(endDateValue.getTime());
     cal.setTimeZone(TimeZone.getTimeZone("GMT"));
-    cal.add(Calendar.DATE, -(days - 1));
+    cal.add(Calendar.DATE, -(days));
     cal.add(Calendar.SECOND, +1);
     String startDateStr = sdf.format(cal.getTimeInMillis());
     String endDateStr = sdf.format(endDateValue.getTime());
@@ -267,14 +267,14 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     Map<String, String> headers = new HashMap<>();
     String response = null;
     try {
-      String baseSearchUrl = System.getenv(JsonKey.EKSTEP_METRICS_URL);
+      String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
       if (ProjectUtil.isStringNullOREmpty(baseSearchUrl)) {
-        baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_METRICS_URL);
+        baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
       }
       headers.put(JsonKey.AUTHORIZATION, System.getenv(JsonKey.AUTHORIZATION));
       if (ProjectUtil.isStringNullOREmpty((String) headers.get(JsonKey.AUTHORIZATION))) {
         headers.put(JsonKey.AUTHORIZATION, JsonKey.BEARER
-            + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_METRICS_AUTHORIZATION));
+            + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
         headers.put("Content_Type", "application/json; charset=utf-8");
       }
       response = HttpUtil.sendPostRequest(
@@ -288,14 +288,14 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
 
   public static String makePostRequest(String url, String body) throws Exception {
     ProjectLogger.log("Request to Ekstep" + body);
-    String baseSearchUrl = System.getenv(JsonKey.EKSTEP_METRICS_URL);
+    String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
     if (ProjectUtil.isStringNullOREmpty(baseSearchUrl)) {
-      baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_METRICS_URL);
+      baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
     }
     String authKey = System.getenv(JsonKey.AUTHORIZATION);
     if (ProjectUtil.isStringNullOREmpty(authKey)) {
       authKey = JsonKey.BEARER
-          + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_METRICS_AUTHORIZATION);
+          + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION);
     }
     HttpClient client = HttpClientBuilder.create().build();
     HttpPost post = new HttpPost(baseSearchUrl + PropertiesCache.getInstance().getProperty(url));

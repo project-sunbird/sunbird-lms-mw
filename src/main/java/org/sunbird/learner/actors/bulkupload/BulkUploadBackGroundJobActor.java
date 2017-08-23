@@ -228,15 +228,16 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     Util.DbInfo coursePublishdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
     Response response = cassandraOperation.getRecordById(coursePublishdbInfo.getKeySpace() , coursePublishdbInfo.getTableName() , courseId)  ;
     List<Map<String , Object>> resultList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    if(resultList.isEmpty()){
-      return false;
-    }
-    Map<String, Object> publishStatus = resultList.get(0);
+    if(!ProjectUtil.CourseMgmtStatus.LIVE.getValue().equalsIgnoreCase(additionalCourseInfo.get(JsonKey.STATUS))){
+      if(resultList.isEmpty()){
+        return false;
+      }
+      Map<String, Object> publishStatus = resultList.get(0);
 
-    if(Status.ACTIVE.getValue() != (Integer)publishStatus.get(JsonKey.STATUS)){
-      return false;
+      if(Status.ACTIVE.getValue() != (Integer)publishStatus.get(JsonKey.STATUS)){
+        return false;
+      }
     }
-
     Boolean flag = false;
     Map<String , Object> userCourses = new HashMap<>();
     userCourses.put(JsonKey.USER_ID , userId);

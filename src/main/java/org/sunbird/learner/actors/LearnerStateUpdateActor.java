@@ -61,6 +61,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
         Response response = new Response();
         if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ADD_CONTENT.getValue())) {
           Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
+          Util.DbInfo batchdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
           String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
           List<Map<String, Object>> requestedcontentList = (List<Map<String, Object>>) actorMessage
               .getRequest().get(JsonKey.CONTENTS);
@@ -73,6 +74,30 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
           if (!(contentList.isEmpty())) {
             for (Map<String, Object> map : contentList) {
               //replace the course id (equivalent to Ekstep content id) with One way hashing of userId#courseId , bcoz in cassndra we are saving course id as userId#courseId
+
+              String batchId = (String) map.get(JsonKey.BATCH_ID);
+              boolean flag = true;
+
+              // code to validate the whether request for valid batch range(start and end date)
+              if(!(ProjectUtil.isStringNullOREmpty(batchId))) {
+                Response batchResponse =cassandraOperation
+                    .getRecordById(batchdbInfo.getKeySpace(), batchdbInfo.getTableName(), batchId);
+                List<Map<String , Object>> batches = (List<Map<String, Object>>) batchResponse.getResult()
+                    .get(JsonKey.RESPONSE);
+                if(batches.isEmpty()){
+                  flag = false;
+                }else{
+                  Map<String , Object> batchInfo = batches.get(0);
+                  flag = validateBatchRange(batchInfo);
+                }
+
+                if(!flag){
+                  response.getResult().put((String) map.get(JsonKey.CONTENT_ID), "BATCH NOT STARTED OR BATCH CLOSED");
+                  contentList.remove(map);
+                  continue;
+                }
+
+              }
               map.putIfAbsent(JsonKey.COURSE_ID, JsonKey.NOT_AVAILABLE);
               preOperation(map, userId, contentStatusHolder);
               map.put(JsonKey.USER_ID, userId);
@@ -111,6 +136,41 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, ActorRef.noSender());
     }
+  }
+
+  private boolean validateBatchRange(Map<String, Object> batchInfo) {
+
+    String start = (String) batchInfo.get(JsonKey.START_DATE);
+    String end = (String) batchInfo.get(JsonKey.END_DATE);
+
+    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+    Date todaydate = null;
+    Date  startDate = null;
+    Date endDate = null;
+
+    try {
+      todaydate = format.parse((String)format.format(new Date()));
+      startDate = format.parse(start);
+      endDate = null;
+      if(!(ProjectUtil.isStringNullOREmpty(end))){
+        endDate = format.parse(end);
+      }
+    } catch (ParseException e) {
+      e.printStackTrace();
+      ProjectLogger.log("Date parse exception while parsing batch start and end date" , e);
+      return false;
+    }
+
+    if(todaydate.compareTo(startDate)<0){
+      return false;
+    }
+
+    if(null != endDate && todaydate.compareTo(endDate)>0){
+      return false;
+    }
+
+    return true;
+
   }
 
   /**

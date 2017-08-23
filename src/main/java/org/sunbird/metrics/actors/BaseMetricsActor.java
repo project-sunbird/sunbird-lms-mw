@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 
 import org.apache.commons.codec.Charsets;
 import org.apache.commons.lang3.StringUtils;
@@ -74,6 +75,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     int days = getDaysByPeriod(period);
     Date endDateValue = new Date();
     Calendar calendar = Calendar.getInstance();
+    calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
     calendar.add(Calendar.DATE, -1);
     calendar.set(Calendar.HOUR_OF_DAY, 23);
     calendar.set(Calendar.MINUTE, 59);
@@ -83,6 +85,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
     Calendar cal = Calendar.getInstance();
     cal.setTimeInMillis(endDateValue.getTime());
+    calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
     cal.add(Calendar.DATE, -(days - 1));
     cal.set(Calendar.HOUR_OF_DAY, 0);
     cal.set(Calendar.MINUTE, 0);
@@ -111,6 +114,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     Map<String, Object> dateMap = new HashMap<>();
     Map<String, Integer> periodMap = getDaysByPeriodStr(period);
     Calendar calendar = Calendar.getInstance();
+    calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
     int firstDayOfWeek = calendar.getFirstDayOfWeek();        
     calendar.add(Calendar.DATE, -(calendar.get(Calendar.DAY_OF_WEEK)-firstDayOfWeek));
     calendar.add(Calendar.WEEK_OF_YEAR, 1);

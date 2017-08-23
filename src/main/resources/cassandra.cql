@@ -494,7 +494,6 @@ CREATE INDEX inx_cps_status ON sunbird.course_publish_status (status);
 ALTER TABLE sunbird.user ADD location text;
 ALTER TABLE sunbird.organisation ADD contactDetails map<text,text>;
 insert into sunbird.role_group (id,name) values ('FLAG_REVIEWER ','Flag Reviewer');
-insert into sunbird.url_action (id,name) values ('FLAG_REVIEWER','flag Review');
 insert into sunbird.role (id,name,rolegroupid,status) values ('FLAG_REVIEWER','Flag Reviewer',['FLAG_REVIEWER'],1);
 update sunbird.role_group set url_action_ids=['flagReview'] where id='FLAG_REVIEWER';
 ALTER TABLE sunbird.organisation DROP contactdetails;
@@ -505,3 +504,5 @@ insert into sunbird.role (id,name,rolegroupid,status) values ('COURSE_ADMIN','Co
 insert into sunbird.role_group (id,name) values ('COURSE_CREATOR','Course Creator');
 update sunbird.role_group set url_action_ids=['courseCreator'] where id='COURSE_CREATOR';
 insert into sunbird.role (id,name,rolegroupid,status) values ('COURSE_CREATOR','Course Creator',['COURSE_CREATOR'],1);
+DELETE FROM url_action where id='FLAG_REVIEWER';
+update sunbird.role_group set name='Flag Reviewer' where id='FLAG_REVIEWER';

@@ -14,6 +14,7 @@ import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
@@ -37,7 +38,7 @@ public class ManageCourseBatchCount implements Job {
     today = format.format(cal.getTime());
     cal.add(Calendar.DATE, -1);
     yesterDay = format.format(cal.getTime());
-    ProjectLogger.log("start date and end date is ==" + today +"  "+ yesterDay);
+    ProjectLogger.log("start date and end date is ==" + today +"  "+ yesterDay,LoggerEnum.INFO.name());
     Map<String,Object> data =  CourseBatchSchedulerUtil.getBatchDetailsFromES(today, yesterDay);
     if(data != null && data.size()>0) {
        if (null != data.get(JsonKey.START_DATE)) {
@@ -69,7 +70,7 @@ public class ManageCourseBatchCount implements Job {
         } 
        }
     } else {
-      ProjectLogger.log("No data found in Elasticsearch for course batch update.");
+      ProjectLogger.log("No data found in Elasticsearch for course batch update.",LoggerEnum.INFO.name());
     }
     
     

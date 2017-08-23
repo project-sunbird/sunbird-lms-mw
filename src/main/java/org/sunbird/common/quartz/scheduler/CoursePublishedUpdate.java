@@ -19,6 +19,7 @@ import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
@@ -51,24 +52,23 @@ public class CoursePublishedUpdate implements Job {
   
   private static String requestData = "{\"request\":{\"filters\":{\"identifier\":dataVal},\"fields\":[\"status\"]}}";
   public void execute(JobExecutionContext ctx) throws JobExecutionException {
-    System.out.println("Running Course published Scheduler Job at: " + Calendar.getInstance().getTime() + " triggered by: " + ctx.getJobDetail().toString());
-    ProjectLogger.log("Fetching All unpublished course status.");
+    ProjectLogger.log("Fetching All unpublished course status.",LoggerEnum.INFO.name());
     List<String> courseListWithStatusAsDraft = getAllUnPublishedCourseStatusId();
     if(null != courseListWithStatusAsDraft && !courseListWithStatusAsDraft.isEmpty()){
-      ProjectLogger.log("Fetching All course details from ekstep.");
+      ProjectLogger.log("Fetching All course details from ekstep.",LoggerEnum.INFO.name());
       List<String> ekStepResult = getAllPublishedCourseListFromEKStep(courseListWithStatusAsDraft);
       if(null != ekStepResult && !ekStepResult.isEmpty()){
-        ProjectLogger.log("update course status table.");
+        ProjectLogger.log("update course status table.",LoggerEnum.INFO.name());
         updateCourseStatusTable(ekStepResult);
         for(String courseId : ekStepResult){
           try{
             Map<String,Object> map = new HashMap<>();
             map.put(JsonKey.COURSE_ID, courseId);
             map.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
-            ProjectLogger.log("Fetching participants list from Db");
+            ProjectLogger.log("Fetching participants list from Db",LoggerEnum.INFO.name());
             Response response = cassandraOperation.getRecordsByProperty(courseBatchDBInfo.getKeySpace(), courseBatchDBInfo.getTableName(), JsonKey.COURSE_ID,courseId);
             List<Map<String,Object>> batchList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-            ProjectLogger.log("Add participants to user course table");
+            ProjectLogger.log("Add participants to user course table",LoggerEnum.INFO.name());
             addUserToUserCourseTable(batchList);
           }catch(Exception ex){
             ProjectLogger.log(ex.getMessage(), ex);
@@ -80,7 +80,7 @@ public class CoursePublishedUpdate implements Job {
   
   
   private void addUserToUserCourseTable(List<Map<String, Object>> batchList) {
-    ProjectLogger.log("Adding participants to user course table started");
+    ProjectLogger.log("Adding participants to user course table started",LoggerEnum.INFO.name());
     Util.DbInfo courseEnrollmentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
     for(Map<String,Object> batch : batchList){
       Map<String,String> additionalCourseInfo = (Map<String, String>) batch.get(JsonKey.COURSE_ADDITIONAL_INFO);
@@ -117,13 +117,13 @@ public class CoursePublishedUpdate implements Job {
             }
           }
         }
-        ProjectLogger.log("Adding participants to user course table completed");
+        ProjectLogger.log("Adding participants to user course table completed",LoggerEnum.INFO.name());
         Map<String,Object> updatedBatch = new HashMap<>();
         updatedBatch.put(JsonKey.ID, batch.get(JsonKey.ID));
         updatedBatch.put(JsonKey.PARTICIPANT, participants);
-        ProjectLogger.log("Updating participants to batch course table started");
+        ProjectLogger.log("Updating participants to batch course table started",LoggerEnum.INFO.name());
         cassandraOperation.updateRecord(courseBatchDBInfo.getKeySpace(), courseBatchDBInfo.getTableName(), updatedBatch);
-        ProjectLogger.log("Updating participants to batch course table completed");
+        ProjectLogger.log("Updating participants to batch course table completed",LoggerEnum.INFO.name());
       }
     }
     
@@ -137,7 +137,7 @@ public class CoursePublishedUpdate implements Job {
   }
 
   private void updateCourseStatusTable(List<String> ekStepResult) {
-    ProjectLogger.log("Updating Course status to course status table started");
+    ProjectLogger.log("Updating Course status to course status table started",LoggerEnum.INFO.name());
     Map<String,Object> map = null;
     for(String courseId : ekStepResult){
       map = new HashMap<>();
@@ -145,7 +145,7 @@ public class CoursePublishedUpdate implements Job {
       map.put(JsonKey.STATUS, ProjectUtil.CourseMgmtStatus.LIVE.ordinal());
       try{
         cassandraOperation.updateRecord(coursePublishDBInfo.getKeySpace(), coursePublishDBInfo.getTableName(), map);
-        ProjectLogger.log("Updating Course status to course status table completed");
+        ProjectLogger.log("Updating Course status to course status table completed",LoggerEnum.INFO.name());
       }catch(Exception ex){
         ProjectLogger.log(ex.getMessage(), ex);
       }
@@ -160,7 +160,7 @@ public class CoursePublishedUpdate implements Job {
    * @return List<String>
    */
   private List<String> getAllUnPublishedCourseStatusId() {
-    ProjectLogger.log("start of calling get unpublished course status==");
+    ProjectLogger.log("start of calling get unpublished course status==",LoggerEnum.INFO.name());
     List<String> ids = new ArrayList<>();
     Response response = cassandraOperation.getRecordsByProperty(
         coursePublishDBInfo.getKeySpace(), coursePublishDBInfo.getTableName(),
@@ -176,7 +176,7 @@ public class CoursePublishedUpdate implements Job {
         }
       }
     }
-    ProjectLogger.log("end of calling get unpublished course status==" + ids);
+    ProjectLogger.log("end of calling get unpublished course status==" + ids,LoggerEnum.INFO.name());
     return ids;
   }
   
@@ -209,7 +209,7 @@ public class CoursePublishedUpdate implements Job {
           liveCourseIds.add((String) map.get(JsonKey.IDENTIFIER));
         }
       }
-      ProjectLogger.log("fetching course details from Ekstep completed");
+      ProjectLogger.log("fetching course details from Ekstep completed",LoggerEnum.INFO.name());
     return liveCourseIds;
   }
   

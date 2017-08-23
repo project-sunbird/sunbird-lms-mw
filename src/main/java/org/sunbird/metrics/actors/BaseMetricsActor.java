@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 
 import org.apache.commons.codec.Charsets;
 import org.apache.commons.lang3.StringUtils;
@@ -72,22 +73,20 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   protected static Map<String, Object> getStartAndEndDateForDay(String period) {
     Map<String, Object> dateMap = new HashMap<>();
     int days = getDaysByPeriod(period);
-    Date endDateValue = new Date();
+    Date endDateValue = null;
     Calendar calendar = Calendar.getInstance();
+    calendar.setTimeZone(TimeZone.getTimeZone("GMT"));
+    calendar.set(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH),23,59,59);
     calendar.add(Calendar.DATE, -1);
-    calendar.set(Calendar.HOUR_OF_DAY, 23);
-    calendar.set(Calendar.MINUTE, 59);
-    calendar.set(Calendar.SECOND, 59);
-    calendar.set(Calendar.MILLISECOND, 0);
+    calendar.add(Calendar.HOUR,-5);
+    calendar.add(Calendar.MINUTE, -30);
     endDateValue = calendar.getTime();
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
     Calendar cal = Calendar.getInstance();
     cal.setTimeInMillis(endDateValue.getTime());
-    cal.add(Calendar.DATE, -(days - 1));
-    cal.set(Calendar.HOUR_OF_DAY, 0);
-    cal.set(Calendar.MINUTE, 0);
-    cal.set(Calendar.SECOND, 0);
-    cal.set(Calendar.MILLISECOND, 0);
+    cal.setTimeZone(TimeZone.getTimeZone("GMT"));
+    cal.add(Calendar.DATE, -(days));
+    cal.add(Calendar.SECOND, +1);
     String startDateStr = sdf.format(cal.getTimeInMillis());
     String endDateStr = sdf.format(endDateValue.getTime());
     dateMap.put(INTERVAL, "1d");
@@ -111,6 +110,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     Map<String, Object> dateMap = new HashMap<>();
     Map<String, Integer> periodMap = getDaysByPeriodStr(period);
     Calendar calendar = Calendar.getInstance();
+    calendar.setTimeZone(TimeZone.getTimeZone("GMT"));
     int firstDayOfWeek = calendar.getFirstDayOfWeek();        
     calendar.add(Calendar.DATE, -(calendar.get(Calendar.DAY_OF_WEEK)-firstDayOfWeek));
     calendar.add(Calendar.WEEK_OF_YEAR, 1);

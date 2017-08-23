@@ -16,6 +16,7 @@ import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 import org.quartz.impl.StdSchedulerFactory;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 
@@ -53,15 +54,15 @@ public class SchedulerManager {
       String db = System.getenv(JsonKey.SUNBIRD_PG_DB);
       String username = System.getenv(JsonKey.SUNBIRD_PG_USER);
       String password = System.getenv(JsonKey.SUNBIRD_PG_PASSWORD);
-      ProjectLogger.log("Environment variable value for PostGress SQl= host, port,db,username,password " + host +" ," + port+","+db+","+username+","+password);
+      ProjectLogger.log("Environment variable value for PostGress SQl= host, port,db,username,password " + host +" ," + port+","+db+","+username+","+password ,LoggerEnum.INFO.name());
       if(!ProjectUtil.isStringNullOREmpty(host) && !ProjectUtil.isStringNullOREmpty(port) && !ProjectUtil.isStringNullOREmpty(db)
           && !ProjectUtil.isStringNullOREmpty(username) && !ProjectUtil.isStringNullOREmpty(password) ){
-        ProjectLogger.log("Taking Postgres value from Environment variable...");
+        ProjectLogger.log("Taking Postgres value from Environment variable...",LoggerEnum.INFO.name());
       configProp.put("org.quartz.dataSource.MySqlDS.URL", "jdbc:postgresql://"+host+":"+port+"/"+db);
       configProp.put("org.quartz.dataSource.MySqlDS.user", username);
       configProp.put("org.quartz.dataSource.MySqlDS.password", password);
       } else {
-        ProjectLogger.log("Environment variable is not set for postgres SQl.");
+        ProjectLogger.log("Environment variable is not set for postgres SQl.",LoggerEnum.INFO.name());
       }
      scheduler = new StdSchedulerFactory(configProp).getScheduler();
      String identifier = "NetOps-PC1502295457753";
@@ -73,14 +74,14 @@ public class SchedulerManager {
       //This scheduler will run every day 11:30 PM IN GMT and 6 PM on UTC.
       //server time is set in UTC so all scheduler need to be manage based on that time only.
       Trigger trigger = TriggerBuilder.newTrigger().withIdentity("schedulertrigger", identifier)
-          .withSchedule(CronScheduleBuilder.cronSchedule("0 0/30 * 1/1 * ? *")).build();
+          .withSchedule(CronScheduleBuilder.cronSchedule("0 0 0/4 1/1 * ? *")).build();
       try {
          if (scheduler.checkExists(job.getKey())){
           scheduler.deleteJob(job.getKey());
          }
           scheduler.scheduleJob(job, trigger);
           scheduler.start();
-          ProjectLogger.log("ManageCourseBatchCount schedular started");
+          ProjectLogger.log("ManageCourseBatchCount schedular started",LoggerEnum.INFO.name());
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);
       }
@@ -99,7 +100,7 @@ public class SchedulerManager {
          }
           scheduler.scheduleJob(uploadVerifyJob, uploadTrigger);
           scheduler.start();
-          ProjectLogger.log("UploadLookUpScheduler schedular started");
+          ProjectLogger.log("UploadLookUpScheduler schedular started",LoggerEnum.INFO.name());
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);
       }
@@ -119,7 +120,7 @@ public class SchedulerManager {
          }
           scheduler.scheduleJob(coursePublishedJob, coursePublishedTrigger);
           scheduler.start();
-          ProjectLogger.log("CoursePublishedUpdate schedular started");
+          ProjectLogger.log("CoursePublishedUpdate schedular started",LoggerEnum.INFO.name());
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);
       }  

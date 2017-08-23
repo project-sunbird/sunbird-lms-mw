@@ -1,9 +1,5 @@
 package org.sunbird.learner.actors;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
-import akka.actor.UntypedAbstractActor;
-
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -21,6 +17,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
@@ -29,6 +26,10 @@ import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.Util;
+
+import akka.actor.ActorRef;
+import akka.actor.Props;
+import akka.actor.UntypedAbstractActor;
 
 /**
  * This actor will handle course batch related operations.
@@ -165,7 +166,10 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     Map<String , Boolean> participants = (Map<String , Boolean>)courseBatchObject.get(JsonKey.PARTICIPANT);
     // check whether can update user or not
     List<String> userIds = (List<String>)req.get(JsonKey.USER_IDs);
-
+    if(participants == null) {
+      participants = new HashMap<>();
+    }
+    
     for(String userId : userIds) {
       if (!(participants.containsKey(userId))) {
         Response dbResponse = cassandraOperation
@@ -222,15 +226,16 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     Util.DbInfo coursePublishdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
     Response response = cassandraOperation.getRecordById(coursePublishdbInfo.getKeySpace() , coursePublishdbInfo.getTableName() , courseId)  ;
     List<Map<String , Object>> resultList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    if(resultList.isEmpty()){
-      return false;
-    }
-    Map<String, Object> publishStatus = resultList.get(0);
+    if(!ProjectUtil.CourseMgmtStatus.LIVE.getValue().equalsIgnoreCase(additionalCourseInfo.get(JsonKey.STATUS))){
+      if(resultList.isEmpty()){
+        return false;
+      }
+      Map<String, Object> publishStatus = resultList.get(0);
 
-    if(Status.ACTIVE.getValue() != (Integer)publishStatus.get(JsonKey.STATUS)){
-      return false;
+      if(Status.ACTIVE.getValue() != (Integer)publishStatus.get(JsonKey.STATUS)){
+        return false;
+      }
     }
-
     Boolean flag = false;
     Map<String , Object> userCourses = new HashMap<>();
     userCourses.put(JsonKey.USER_ID , userId);
@@ -243,12 +248,13 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     userCourses.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
     userCourses.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
     userCourses.put(JsonKey.COURSE_PROGRESS, 0);
-    userCourses.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.APP_ICON));
-    userCourses.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.NAME));
+    userCourses.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.COURSE_LOGO_URL));
+    userCourses.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.COURSE_NAME));
     userCourses.put(JsonKey.DESCRIPTION, additionalCourseInfo.get(JsonKey.DESCRIPTION));
-    if(ProjectUtil.isStringNullOREmpty(additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT))){
-      userCourses.put(JsonKey.LEAF_NODE_COUNT, additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT));
+    if(!ProjectUtil.isStringNullOREmpty(additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT))){
+      userCourses.put(JsonKey.LEAF_NODE_COUNT, Integer.parseInt(""+additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT)));
     }
+    userCourses.put(JsonKey.TOC_URL, additionalCourseInfo.get(JsonKey.TOC_URL));
     try {
       cassandraOperation
           .insertRecord(courseEnrollmentdbInfo.getKeySpace(), courseEnrollmentdbInfo.getTableName(),
@@ -451,6 +457,9 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
 
     Response result = cassandraOperation.insertRecord(dbInfo.getKeySpace(),
         dbInfo.getTableName(), req);
+    ProjectLogger.log("Course Batch data saving to ES started-- for Id  " + uniqueId, LoggerEnum.INFO.name());
+    String esResponse = ElasticSearchUtil.createData(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.course.getTypeName(), uniqueId, req);
+    ProjectLogger.log("Course Batch data saving to ES Completed -- for Id " + uniqueId +" with response ==" + esResponse, LoggerEnum.INFO.name());
     result.put(JsonKey.BATCH_ID, uniqueId);
     sender().tell(result, self());
 
@@ -474,12 +483,15 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
   private Map<String,String> getAdditionalCourseInfo(Map<String, Object> ekStepContent) {
 
     Map<String , String> courseMap = new HashMap<>();
-    courseMap.put(JsonKey.COURSE_LOGO_URL, (String)ekStepContent.getOrDefault(JsonKey.APP_ICON, ""));
-    courseMap.put(JsonKey.COURSE_NAME, (String)ekStepContent.getOrDefault(JsonKey.DESCRIPTION,""));
+    courseMap.put(JsonKey.COURSE_LOGO_URL, (String)ekStepContent.getOrDefault(JsonKey.APP_ICON, "")!=null ?(String)ekStepContent.getOrDefault(JsonKey.APP_ICON, ""):"");
+    courseMap.put(JsonKey.COURSE_NAME, (String)ekStepContent.getOrDefault(JsonKey.NAME,"") !=null?(String)ekStepContent.getOrDefault(JsonKey.NAME,""):"" );
+    courseMap.put(JsonKey.DESCRIPTION, (String)ekStepContent.getOrDefault(JsonKey.DESCRIPTION,"") !=null ?(String)ekStepContent.getOrDefault(JsonKey.DESCRIPTION,""):"");
+    courseMap.put(JsonKey.TOC_URL, (String)ekStepContent.getOrDefault("toc_url","") !=null ?(String)ekStepContent.getOrDefault("toc_url",""):"");
     if(ProjectUtil.isNotNull(ekStepContent.get(JsonKey.LEAF_NODE_COUNT))) {
       courseMap.put(JsonKey.LEAF_NODE_COUNT,
           ((Integer) ekStepContent.get(JsonKey.LEAF_NODE_COUNT)).toString());
     }
+    courseMap.put(JsonKey.STATUS, (String)ekStepContent.getOrDefault(JsonKey.STATUS,""));
     return courseMap;
   }
 
@@ -498,6 +510,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     req.remove(JsonKey.STATUS);
     req.remove(JsonKey.COUNTER_INCREMENT_STATUS);
     req.remove(JsonKey.COUNTER_DECREMENT_STATUS);
+    req.remove(JsonKey.PARTICIPANT);
     List<Map<String,Object>> resList = ((List<Map<String, Object>>) response.get(JsonKey.RESPONSE));
     if(null != resList && ! resList.isEmpty()){
       Map<String, Object> res = resList.get(0);
@@ -551,6 +564,8 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
                       ResponseCode.invalidOrgId.getErrorCode(),
                       ResponseCode.invalidOrgId.getErrorMessage(),
                       ResponseCode.CLIENT_ERROR.getResponseCode());
+                }else {
+                  dbValueCreatedFor.add(orgId);
                 }
               }
             }

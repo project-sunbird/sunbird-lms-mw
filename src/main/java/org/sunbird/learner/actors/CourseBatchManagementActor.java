@@ -236,7 +236,6 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
         return false;
       }
     }
-
     Boolean flag = false;
     Map<String , Object> userCourses = new HashMap<>();
     userCourses.put(JsonKey.USER_ID , userId);
@@ -249,12 +248,13 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     userCourses.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
     userCourses.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
     userCourses.put(JsonKey.COURSE_PROGRESS, 0);
-    userCourses.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.APP_ICON));
-    userCourses.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.NAME));
+    userCourses.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.COURSE_LOGO_URL));
+    userCourses.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.COURSE_NAME));
     userCourses.put(JsonKey.DESCRIPTION, additionalCourseInfo.get(JsonKey.DESCRIPTION));
     if(ProjectUtil.isStringNullOREmpty(additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT))){
       userCourses.put(JsonKey.LEAF_NODE_COUNT, additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT));
     }
+    userCourses.put(JsonKey.TOC_URL, additionalCourseInfo.get(JsonKey.TOC_URL));
     try {
       cassandraOperation
           .insertRecord(courseEnrollmentdbInfo.getKeySpace(), courseEnrollmentdbInfo.getTableName(),
@@ -483,8 +483,10 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
   private Map<String,String> getAdditionalCourseInfo(Map<String, Object> ekStepContent) {
 
     Map<String , String> courseMap = new HashMap<>();
-    courseMap.put(JsonKey.COURSE_LOGO_URL, (String)ekStepContent.getOrDefault(JsonKey.APP_ICON, ""));
-    courseMap.put(JsonKey.COURSE_NAME, (String)ekStepContent.getOrDefault(JsonKey.DESCRIPTION,""));
+    courseMap.put(JsonKey.COURSE_LOGO_URL, (String)ekStepContent.getOrDefault(JsonKey.APP_ICON, "")!=null ?(String)ekStepContent.getOrDefault(JsonKey.APP_ICON, ""):"");
+    courseMap.put(JsonKey.COURSE_NAME, (String)ekStepContent.getOrDefault(JsonKey.NAME,"") !=null?(String)ekStepContent.getOrDefault(JsonKey.NAME,""):"" );
+    courseMap.put(JsonKey.DESCRIPTION, (String)ekStepContent.getOrDefault(JsonKey.DESCRIPTION,"") !=null ?(String)ekStepContent.getOrDefault(JsonKey.DESCRIPTION,""):"");
+    courseMap.put(JsonKey.TOC_URL, (String)ekStepContent.getOrDefault("toc_url","") !=null ?(String)ekStepContent.getOrDefault("toc_url",""):"");
     if(ProjectUtil.isNotNull(ekStepContent.get(JsonKey.LEAF_NODE_COUNT))) {
       courseMap.put(JsonKey.LEAF_NODE_COUNT,
           ((Integer) ekStepContent.get(JsonKey.LEAF_NODE_COUNT)).toString());

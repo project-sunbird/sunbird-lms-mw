@@ -85,7 +85,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     Calendar cal = Calendar.getInstance();
     cal.setTimeInMillis(endDateValue.getTime());
     cal.setTimeZone(TimeZone.getTimeZone("GMT"));
-    cal.add(Calendar.DATE, -(days - 1));
+    cal.add(Calendar.DATE, -(days));
     cal.add(Calendar.SECOND, +1);
     String startDateStr = sdf.format(cal.getTimeInMillis());
     String endDateStr = sdf.format(endDateValue.getTime());

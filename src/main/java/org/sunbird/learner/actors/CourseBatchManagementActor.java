@@ -1,9 +1,5 @@
 package org.sunbird.learner.actors;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
-import akka.actor.UntypedAbstractActor;
-
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -21,6 +17,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
@@ -29,6 +26,10 @@ import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.Util;
+
+import akka.actor.ActorRef;
+import akka.actor.Props;
+import akka.actor.UntypedAbstractActor;
 
 /**
  * This actor will handle course batch related operations.
@@ -165,7 +166,10 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     Map<String , Boolean> participants = (Map<String , Boolean>)courseBatchObject.get(JsonKey.PARTICIPANT);
     // check whether can update user or not
     List<String> userIds = (List<String>)req.get(JsonKey.USER_IDs);
-
+    if(participants == null) {
+      participants = new HashMap<>();
+    }
+    
     for(String userId : userIds) {
       if (!(participants.containsKey(userId))) {
         Response dbResponse = cassandraOperation
@@ -451,6 +455,9 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
 
     Response result = cassandraOperation.insertRecord(dbInfo.getKeySpace(),
         dbInfo.getTableName(), req);
+    ProjectLogger.log("Course Batch data saving to ES started-- for Id  " + uniqueId, LoggerEnum.INFO.name());
+    String esResponse = ElasticSearchUtil.createData(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.course.getTypeName(), uniqueId, req);
+    ProjectLogger.log("Course Batch data saving to ES Completed -- for Id " + uniqueId +" with response ==" + esResponse, LoggerEnum.INFO.name());
     result.put(JsonKey.BATCH_ID, uniqueId);
     sender().tell(result, self());
 
@@ -551,6 +558,8 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
                       ResponseCode.invalidOrgId.getErrorCode(),
                       ResponseCode.invalidOrgId.getErrorMessage(),
                       ResponseCode.CLIENT_ERROR.getResponseCode());
+                }else {
+                  dbValueCreatedFor.add(orgId);
                 }
               }
             }

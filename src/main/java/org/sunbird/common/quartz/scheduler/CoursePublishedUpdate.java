@@ -86,6 +86,9 @@ public class CoursePublishedUpdate implements Job {
       Map<String,String> additionalCourseInfo = (Map<String, String>) batch.get(JsonKey.COURSE_ADDITIONAL_INFO);
       if((int)batch.get(JsonKey.STATUS) != ProjectUtil.ProgressStatus.COMPLETED.getValue()){
         Map<String,Boolean> participants = (Map<String, Boolean>) batch.get(JsonKey.PARTICIPANT);
+        if(participants == null) {
+          participants = new HashMap<>();
+        }
         for(Map.Entry<String,Boolean> entry : participants.entrySet()){
           if(!entry.getValue()){
             Map<String , Object> userCourses = new HashMap<>();
@@ -96,15 +99,16 @@ public class CoursePublishedUpdate implements Job {
             userCourses.put(JsonKey.CONTENT_ID, batch.get(JsonKey.COURSE_ID));
             userCourses.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
             userCourses.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
-            userCourses.put(JsonKey.STATUS, (int)batch.get(JsonKey.STATUS));
+            userCourses.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
             userCourses.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
             userCourses.put(JsonKey.COURSE_PROGRESS, 0);
-            userCourses.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.APP_ICON));
-            userCourses.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.NAME));
+            userCourses.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.COURSE_LOGO_URL));
+            userCourses.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.COURSE_NAME));
             userCourses.put(JsonKey.DESCRIPTION, additionalCourseInfo.get(JsonKey.DESCRIPTION));
-            if(ProjectUtil.isStringNullOREmpty(additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT))){
-              userCourses.put(JsonKey.LEAF_NODE_COUNT, additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT));
+            if(!ProjectUtil.isStringNullOREmpty(additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT))){
+              userCourses.put(JsonKey.LEAF_NODE_COUNT, Integer.parseInt(""+additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT)));
             }
+            userCourses.put(JsonKey.TOC_URL, additionalCourseInfo.get(JsonKey.TOC_URL));
             try {
               cassandraOperation
                   .insertRecord(courseEnrollmentdbInfo.getKeySpace(), courseEnrollmentdbInfo.getTableName(),

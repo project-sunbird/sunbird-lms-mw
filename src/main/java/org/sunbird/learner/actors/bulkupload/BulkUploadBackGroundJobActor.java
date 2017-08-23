@@ -160,6 +160,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     Map<String,Object> map = null;
     List<String> createdFor = (List<String>)courseBatchObject.get(JsonKey.COURSE_CREATED_FOR);
     Map<String , Boolean> participants = (Map<String , Boolean>)courseBatchObject.get(JsonKey.PARTICIPANT);
+    if(participants == null) {
+      participants = new HashMap<>();
+    }
     // check whether can update user or not
     for(String userId : userIds) {
       if (!(participants.containsKey(userId))) {
@@ -246,12 +249,13 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     userCourses.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
     userCourses.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
     userCourses.put(JsonKey.COURSE_PROGRESS, 0);
-    userCourses.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.APP_ICON));
-    userCourses.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.NAME));
+    userCourses.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.COURSE_LOGO_URL));
+    userCourses.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.COURSE_NAME));
     userCourses.put(JsonKey.DESCRIPTION, additionalCourseInfo.get(JsonKey.DESCRIPTION));
-    if(ProjectUtil.isStringNullOREmpty(additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT))){
-      userCourses.put(JsonKey.LEAF_NODE_COUNT, additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT));
+    if(!ProjectUtil.isStringNullOREmpty(additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT))){
+      userCourses.put(JsonKey.LEAF_NODE_COUNT, Integer.parseInt(""+additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT)));
     }
+    userCourses.put(JsonKey.TOC_URL, additionalCourseInfo.get(JsonKey.TOC_URL));
     try {
       cassandraOperation
           .insertRecord(courseEnrollmentdbInfo.getKeySpace(), courseEnrollmentdbInfo.getTableName(),

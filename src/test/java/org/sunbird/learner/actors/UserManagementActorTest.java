@@ -15,11 +15,9 @@ import java.util.Map;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -28,6 +26,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
@@ -40,7 +39,7 @@ import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
 public class UserManagementActorTest {
 
   static ActorSystem system;
-  static CassandraOperation operation = new CassandraOperationImpl();
+  static CassandraOperation operation = ServiceFactory.getInstance();
   static PropertiesCache cach = PropertiesCache.getInstance();
   final static Props props = Props.create(UserManagementActor.class);
   final static Props orgProps = Props.create(OrganisationManagementActor.class);

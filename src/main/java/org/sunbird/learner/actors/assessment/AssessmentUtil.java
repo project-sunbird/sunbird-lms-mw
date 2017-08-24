@@ -4,15 +4,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.services.impl.DefaultAssessmentEvaluator;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -22,7 +21,7 @@ import org.sunbird.learner.util.Util;
  */
 public class AssessmentUtil{
   
-	private CassandraOperation cassandraOperation = new CassandraOperationImpl();
+	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	
 	Util.DbInfo assmntEvalDbInfo = Util.dbInfoMap.get(JsonKey.ASSESSMENT_EVAL_DB);
 	Util.DbInfo assmntItemDbInfo = Util.dbInfoMap.get(JsonKey.ASSESSMENT_ITEM_DB);

@@ -1,17 +1,15 @@
 package org.sunbird.learner.actors;
 
-import java.sql.DriverManager;
-import java.util.Date;
-import java.util.HashMap;
-
-
-import static org.junit.Assert.assertEquals;
+import static akka.testkit.JavaTestKit.duration;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
+import java.util.HashMap;
 import java.util.Map;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -23,23 +21,15 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
-
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.testkit.TestActorRef;
-import static akka.testkit.JavaTestKit.duration;
-import static org.mockito.Matchers.anyObject;
-import static org.powermock.api.mockito.PowerMockito.when;
 
 /**
  * @author arvind
@@ -54,7 +44,7 @@ public class CourseEnrollmentActorTest {
   static ActorSystem system;
   final static  Props props = Props.create(CourseEnrollmentActor.class);
   static Util.DbInfo userCoursesdbInfo = null;
-  private static CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static String batchId="115";
 
   @BeforeClass

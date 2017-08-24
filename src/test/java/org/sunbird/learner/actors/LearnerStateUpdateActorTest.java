@@ -3,8 +3,12 @@ package org.sunbird.learner.actors;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
-import akka.testkit.TestActorRef;
 import akka.testkit.javadsl.TestKit;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -12,7 +16,6 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -20,13 +23,8 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * @author  arvind
@@ -39,7 +37,7 @@ public class LearnerStateUpdateActorTest {
     static String userId = "user121gama";
     static String courseId = "alpha01crs";
     private static final String contentId = "cont3544TeBukGame";
-    private static CassandraOperation cassandraOperation = new CassandraOperationImpl();
+    private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     private static Util.DbInfo contentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
     private static Util.DbInfo coursedbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
     private static final String batchId = "220";

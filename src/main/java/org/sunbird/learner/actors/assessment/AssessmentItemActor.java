@@ -1,13 +1,12 @@
 package org.sunbird.learner.actors.assessment;
 
+import akka.actor.UntypedAbstractActor;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -16,9 +15,8 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-
-import akka.actor.UntypedAbstractActor;
 
 /***
  * this class will handle all operation for Assessment
@@ -27,7 +25,7 @@ import akka.actor.UntypedAbstractActor;
  */
 public class AssessmentItemActor extends UntypedAbstractActor {
 
-	private CassandraOperation cassandraOperation = new CassandraOperationImpl();
+	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private Util.DbInfo assmntItemDbInfo = Util.dbInfoMap.get(JsonKey.ASSESSMENT_ITEM_DB);
 	
 	@Override

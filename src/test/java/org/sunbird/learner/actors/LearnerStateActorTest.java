@@ -1,28 +1,29 @@
 package org.sunbird.learner.actors;
 
+import static akka.testkit.JavaTestKit.duration;
+
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.TestActorRef;
 import akka.testkit.javadsl.TestKit;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-
-import java.util.*;
-
-import static akka.testkit.JavaTestKit.duration;
 
 /**
  * @author  arvind
@@ -32,7 +33,7 @@ public class LearnerStateActorTest {
     static ActorSystem system;
     final static Props props = Props.create(LearnerStateActor.class);
     static TestActorRef<LearnerStateActor> ref;
-    private static CassandraOperation cassandraOperation = new CassandraOperationImpl();
+    private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     private static Util.DbInfo contentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
     private static Util.DbInfo coursedbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
     static String userId = "user121gama";

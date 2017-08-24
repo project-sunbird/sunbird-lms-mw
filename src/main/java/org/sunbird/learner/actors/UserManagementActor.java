@@ -44,6 +44,7 @@ import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
 public class UserManagementActor extends UntypedAbstractActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private SSOManager ssoManager = new KeyCloakServiceImpl();
   
   private ActorRef backGroundActorRef;
 
@@ -717,7 +718,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   private void UpdateKeyCloakUserBase(Map<String, Object> userMap) {
     try {
-      SSOManager ssoManager = new KeyCloakServiceImpl();
+      
       String userId = ssoManager.updateUser(userMap);
       if (!(!ProjectUtil.isStringNullOREmpty(userId) && userId.equalsIgnoreCase(JsonKey.SUCCESS))) {
         throw new ProjectCommonException(
@@ -832,7 +833,6 @@ public class UserManagementActor extends UntypedAbstractActor {
      }
     //--------------------------------------------------
     }
-    SSOManager ssoManager = new KeyCloakServiceImpl();
     if (isSSOEnabled) {
       try {
         String userId = ssoManager.createUser(userMap);
@@ -1674,7 +1674,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     boolean isSSOEnabled = Boolean
         .parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
     if (isSSOEnabled) {
-      SSOManager ssoManager = new KeyCloakServiceImpl();
       ssoManager.deactivateUser(dbMap);
     }
     //soft delete from cassandra--
@@ -1871,7 +1870,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     boolean isSSOEnabled = Boolean
         .parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
     if (isSSOEnabled) {
-      SSOManager ssoManager = new KeyCloakServiceImpl();
       ssoManager.activateUser(dbMap);
     }
     //Activate user from cassandra-

@@ -17,11 +17,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-import org.json.JSONObject;
 import org.json.simple.JSONArray;
+import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -29,21 +28,21 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.Slug;
 import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.Status;
+import org.sunbird.common.models.util.Slug;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.BackgroundJobManager;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
-import org.json.simple.parser.JSONParser;
 
 public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
@@ -53,7 +52,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   public BulkUploadBackGroundJobActor() {
     backGroundActorRef = getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
    }
-  private CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private SSOManager ssoManager = new KeyCloakServiceImpl();
   @Override
   public void onReceive(Object message) throws Throwable {

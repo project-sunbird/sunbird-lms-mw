@@ -8,7 +8,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -18,6 +17,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
 
@@ -30,7 +30,7 @@ import org.sunbird.learner.util.Util;
 public class CourseEnrollmentActor extends UntypedAbstractActor {
 
   private static String EKSTEP_COURSE_SEARCH_QUERY = "{\"request\": {\"filters\":{\"contentType\": [\"Course\"], \"objectType\": [\"Content\"], \"identifier\": \"COURSE_ID_PLACEHOLDER\", \"status\": \"Live\"},\"limit\": 1}}";
-  private CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   private ActorRef backGroundActorRef;
   private static final String DEFAULT_BATCH_ID ="1";

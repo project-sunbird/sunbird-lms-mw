@@ -10,7 +10,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.Constants;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -22,6 +21,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -31,7 +31,7 @@ import org.sunbird.learner.util.Util;
  */
 public class CourseManagementActor extends UntypedAbstractActor {
 
-  private CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo dbInfo = null;
   private String coursePublishedBody = "{\"request\":{\"content\":{\"lastPublishedBy\": \"userId\"}}}";
   private ActorRef backGroundActorRef;

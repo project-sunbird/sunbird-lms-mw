@@ -2,6 +2,9 @@ package org.sunbird.learner.actors;
 
 import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 
+import akka.actor.ActorRef;
+import akka.actor.Props;
+import akka.actor.UntypedAbstractActor;
 import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.text.ParseException;
@@ -10,10 +13,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -23,11 +24,8 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-
-import akka.actor.ActorRef;
-import akka.actor.Props;
-import akka.actor.UntypedAbstractActor;
 
 /**
  * This actor to handle learner's state update operation .
@@ -39,7 +37,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
 
   private final String CONTENT_STATE_INFO = "contentStateInfo";
   private SimpleDateFormat sdf = ProjectUtil.format;
-  private CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ActorRef utilityActorRef;
 
   public LearnerStateUpdateActor() {

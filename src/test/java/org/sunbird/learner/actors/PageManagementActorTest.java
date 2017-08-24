@@ -8,26 +8,25 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * @author Amit Kumar.
@@ -37,7 +36,7 @@ import java.util.Map;
 public class PageManagementActorTest {
 
     static ActorSystem system;
-    static CassandraOperation operation= new CassandraOperationImpl();
+    static CassandraOperation operation= ServiceFactory.getInstance();
     static PropertiesCache cach = PropertiesCache.getInstance();
     final static Props props = Props.create(PageManagementActor.class);
     static Util.DbInfo pageMgmntDbInfo = null;

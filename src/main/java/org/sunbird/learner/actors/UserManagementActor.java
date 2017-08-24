@@ -13,7 +13,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.Constants;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -30,6 +29,7 @@ import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.services.sso.SSOManager;
@@ -43,7 +43,7 @@ import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
  */
 public class UserManagementActor extends UntypedAbstractActor {
 
-  private CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   
   private ActorRef backGroundActorRef;
 

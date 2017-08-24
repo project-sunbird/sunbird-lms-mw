@@ -1,21 +1,6 @@
 package org.sunbird.learner.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
-import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
-import org.sunbird.common.quartz.scheduler.SchedulerManager;
-import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.dto.SearchDTO;
-import org.sunbird.helper.CassandraConnectionManager;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
@@ -25,6 +10,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.HttpUtil;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
+import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.quartz.scheduler.SchedulerManager;
+import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
+import org.sunbird.helper.CassandraConnectionManager;
+import org.sunbird.helper.ServiceFactory;
 
 
 /**
@@ -466,7 +469,7 @@ public class Util {
      */
     @SuppressWarnings("unchecked")
     public static String getUserNamebyUserId(String userId) {
-        CassandraOperation cassandraOperation = new CassandraOperationImpl();
+        CassandraOperation cassandraOperation = ServiceFactory.getInstance();
         Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
         Response result = cassandraOperation.getRecordById(userdbInfo.getKeySpace(), userdbInfo.getTableName(), userId);
         List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);

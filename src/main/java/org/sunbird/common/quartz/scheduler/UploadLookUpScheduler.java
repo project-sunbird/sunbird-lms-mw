@@ -14,7 +14,6 @@ import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -22,6 +21,7 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.RequestRouterActor;
 import org.sunbird.learner.util.Util;
 
@@ -41,7 +41,7 @@ public class UploadLookUpScheduler implements Job {
     ProjectLogger.log("Running Upload Scheduler Job at: " + Calendar.getInstance().getTime() +
         " triggered by: " + ctx.getJobDetail().toString(),LoggerEnum.INFO.name());
     Util.DbInfo  bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
-    CassandraOperation cassandraOperation = new CassandraOperationImpl();
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     List<Map<String,Object>> result = null;
     //get List of process with status as New
     Response res = cassandraOperation.getRecordsByProperty(bulkDb.getKeySpace(), bulkDb.getTableName(),

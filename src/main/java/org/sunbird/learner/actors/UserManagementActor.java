@@ -796,7 +796,7 @@ public class UserManagementActor extends UntypedAbstractActor {
        String orgId = (String) responseList.get(0).get(JsonKey.ID);
        Map<String,Object> orgMap = responseList.get(0);
       boolean isRootOrg = false;
-      if(!ProjectUtil.isStringNullOREmpty((String)orgMap.get(JsonKey.IS_ROOT_ORG))){
+      if(null != orgMap.get(JsonKey.IS_ROOT_ORG)){
         isRootOrg = (boolean) orgMap.get(JsonKey.IS_ROOT_ORG);
       }else{
         isRootOrg = false;

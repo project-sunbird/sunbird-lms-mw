@@ -6,7 +6,6 @@ package org.sunbird.common.quartz.scheduler;
 import akka.actor.ActorRef;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -15,7 +14,6 @@ import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -23,6 +21,7 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.RequestRouterActor;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.EkStepRequestUtil;
@@ -48,7 +47,7 @@ public class CoursePublishedUpdate implements Job {
   
   private static  Util.DbInfo coursePublishDBInfo = Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
   private Util.DbInfo courseBatchDBInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
-  static CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   
   private static String requestData = "{\"request\":{\"filters\":{\"identifier\":dataVal},\"fields\":[\"status\"]}}";
   public void execute(JobExecutionContext ctx) throws JobExecutionException {

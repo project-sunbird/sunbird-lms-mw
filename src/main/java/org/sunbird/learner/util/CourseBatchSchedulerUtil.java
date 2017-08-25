@@ -8,11 +8,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
-import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -20,6 +17,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.dto.SearchDTO;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.CourseEnrollmentActor;
 
 /**
@@ -111,7 +109,7 @@ public class CourseBatchSchedulerUtil {
   */
   public static void updateCourseBatchDbStatus(Map<String,Object> map,Boolean increment) {
     ProjectLogger.log("updating course batch details start",LoggerEnum.INFO.name());
-    CassandraOperation cassandraOperation = new CassandraOperationImpl();
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Util.DbInfo courseBatchDBInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
     try{
       String response = doOperationInEkStepCourse((String)map.get(JsonKey.COURSE_ID),increment,(String)map.get(JsonKey.ENROLLMENT_TYPE));

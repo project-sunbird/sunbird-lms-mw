@@ -6,12 +6,11 @@ package org.sunbird.learner.util;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.helper.ServiceFactory;
 
 /**
  * This class will handle the data cache.
@@ -24,7 +23,7 @@ public class DataCacheHandler implements Runnable{
 	 */
 	private static Map<String, Map<String,Object>> pageMap = new ConcurrentHashMap<>();
 	private static Map<String, Map<String,Object>> sectionMap = new ConcurrentHashMap<>();
-	CassandraOperation cassandraOperation = new CassandraOperationImpl();
+	CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	
 	@Override
 	public void run() {

@@ -13,7 +13,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.Constants;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -30,6 +29,7 @@ import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.services.sso.SSOManager;
@@ -43,7 +43,8 @@ import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
  */
 public class UserManagementActor extends UntypedAbstractActor {
 
-  private CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private SSOManager ssoManager = new KeyCloakServiceImpl();
   
   private ActorRef backGroundActorRef;
 
@@ -717,7 +718,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   private void UpdateKeyCloakUserBase(Map<String, Object> userMap) {
     try {
-      SSOManager ssoManager = new KeyCloakServiceImpl();
+      
       String userId = ssoManager.updateUser(userMap);
       if (!(!ProjectUtil.isStringNullOREmpty(userId) && userId.equalsIgnoreCase(JsonKey.SUCCESS))) {
         throw new ProjectCommonException(
@@ -796,7 +797,7 @@ public class UserManagementActor extends UntypedAbstractActor {
        String orgId = (String) responseList.get(0).get(JsonKey.ID);
        Map<String,Object> orgMap = responseList.get(0);
       boolean isRootOrg = false;
-      if(!ProjectUtil.isStringNullOREmpty((String)orgMap.get(JsonKey.IS_ROOT_ORG))){
+      if(null != orgMap.get(JsonKey.IS_ROOT_ORG)){
         isRootOrg = (boolean) orgMap.get(JsonKey.IS_ROOT_ORG);
       }else{
         isRootOrg = false;
@@ -832,7 +833,6 @@ public class UserManagementActor extends UntypedAbstractActor {
      }
     //--------------------------------------------------
     }
-    SSOManager ssoManager = new KeyCloakServiceImpl();
     if (isSSOEnabled) {
       try {
         String userId = ssoManager.createUser(userMap);
@@ -1674,7 +1674,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     boolean isSSOEnabled = Boolean
         .parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
     if (isSSOEnabled) {
-      SSOManager ssoManager = new KeyCloakServiceImpl();
       ssoManager.deactivateUser(dbMap);
     }
     //soft delete from cassandra--
@@ -1871,7 +1870,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     boolean isSSOEnabled = Boolean
         .parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
     if (isSSOEnabled) {
-      SSOManager ssoManager = new KeyCloakServiceImpl();
       ssoManager.activateUser(dbMap);
     }
     //Activate user from cassandra-

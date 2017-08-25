@@ -1,9 +1,6 @@
 package org.sunbird.learner.actors;
 
 import akka.actor.UntypedAbstractActor;
-
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.sql.Timestamp;
@@ -17,7 +14,6 @@ import java.util.Map;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -30,6 +26,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.Util;
 
@@ -51,7 +48,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
     headerMap.put("accept", "application/json");
   }
 
-  private CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   @Override
   public void onReceive(Object message) throws Throwable {

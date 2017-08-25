@@ -203,6 +203,11 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.COURSE_CREATION_METRICS.getValue(), courseMetricsRouter);
         routerMap.put(ActorOperations.USER_CREATION_METRICS.getValue(), userMetricsRouter);
         routerMap.put(ActorOperations.USER_CONSUMPTION_METRICS.getValue(), userMetricsRouter);
+
+        routerMap.put(ActorOperations.ORG_CREATION_METRICS_REPORT.getValue(), organisationMetricsRouter);
+        routerMap.put(ActorOperations.ORG_CONSUMPTION_METRICS_REPORT.getValue(), organisationMetricsRouter);
+        routerMap.put(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue(), courseMetricsRouter);
+        routerMap.put(ActorOperations.COURSE_CREATION_METRICS_REPORT.getValue(), courseMetricsRouter);
         
         routerMap.put(ActorOperations.SYNC.getValue(), esSyncActor);
     }

@@ -61,7 +61,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   public void onReceive(Object message) throws Throwable {
     if (message instanceof Request) {
       try {
-        ProjectLogger.log("OrganisationManagementActor-onReceive called");
+        ProjectLogger.log("OrganisationMetricsActor-onReceive called");
         Request actorMessage = (Request) message;
         if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.ORG_CREATION_METRICS.getValue())) {
@@ -69,6 +69,12 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.ORG_CONSUMPTION_METRICS.getValue())) {
           orgConsumptionMetrics(actorMessage);
+        }else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.ORG_CREATION_METRICS_REPORT.getValue())) {
+          orgCreationMetricsReport(actorMessage);
+        }else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.ORG_CONSUMPTION_METRICS_REPORT.getValue())) {
+          orgConsumptionMetricsReport(actorMessage);
         } /*else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.ORG_CREATION_METRICS_DOWNLOAD.getValue())) {
           orgCreationMetricsExcel(actorMessage);
@@ -96,6 +102,30 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
               ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
     }
+  }
+
+  private void orgConsumptionMetricsReport(Request actorMessage) {
+
+    ProjectLogger.log("OrganisationMetricsActor-orgConsumptionMetricsReport called");
+    Request request = new Request();
+    String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
+
+
+    Response response = new Response();
+    response.getResult().put(JsonKey.PROCESS_ID , 121);
+    sender().tell(response, self());
+  }
+
+  private void orgCreationMetricsReport(Request actorMessage) {
+
+    ProjectLogger.log("OrganisationMetricsActor-orgCreationMetricsReport called");
+    Request request = new Request();
+    String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
+
+
+    Response response = new Response();
+    response.getResult().put(JsonKey.PROCESS_ID , 121);
+    sender().tell(response, self());
   }
 
   @Override

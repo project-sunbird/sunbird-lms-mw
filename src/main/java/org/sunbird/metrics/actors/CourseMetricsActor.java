@@ -41,7 +41,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
   public void onReceive(Object message) throws Throwable {
     if (message instanceof Request) {
       try {
-        ProjectLogger.log("OrganisationManagementActor-onReceive called");
+        ProjectLogger.log("CourseMetricsActor-onReceive called");
         Request actorMessage = (Request) message;
         if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.COURSE_PROGRESS_METRICS.getValue())) {
@@ -49,6 +49,12 @@ public class CourseMetricsActor extends BaseMetricsActor {
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.COURSE_CREATION_METRICS.getValue())) {
           courseConsumptionMetrics(actorMessage);
+        }else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue())) {
+          courseProgressMetricsReport(actorMessage);
+        }else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.COURSE_CREATION_METRICS_REPORT.getValue())) {
+          courseConsumptionMetricsReport(actorMessage);
         } else {
           ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
           ProjectCommonException exception =
@@ -72,9 +78,34 @@ public class CourseMetricsActor extends BaseMetricsActor {
     }
   }
 
+  private void courseConsumptionMetricsReport(Request actorMessage) {
+
+    ProjectLogger.log("CourseMetricsActor-courseProgressMetrics called");
+    Request request = new Request();
+    String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
+    String batchId = (String) actorMessage.getRequest().get(JsonKey.COURSE_ID);
+
+    Response response = new Response();
+    response.getResult().put(JsonKey.PROCESS_ID , 121);
+    sender().tell(response, self());
+  }
+
+  private void courseProgressMetricsReport(Request actorMessage) {
+
+    ProjectLogger.log("CourseMetricsActor-courseProgressMetrics called");
+    Request request = new Request();
+    String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
+    String batchId = (String) actorMessage.getRequest().get(JsonKey.COURSE_ID);
+
+      Response response = new Response();
+      response.getResult().put(JsonKey.PROCESS_ID , 121);
+      sender().tell(response, self());
+
+  }
+
   @SuppressWarnings("unchecked")
   private void courseProgressMetrics(Request actorMessage) {
-    ProjectLogger.log("OrganisationManagementActor-courseProgressMetrics called");
+    ProjectLogger.log("CourseMetricsActor-courseProgressMetrics called");
     Request request = new Request();
     String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
     String batchId = (String) actorMessage.getRequest().get(JsonKey.COURSE_ID);
@@ -226,7 +257,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       sender().tell(response, self());
     }else{
 
-      ProjectLogger.log("OrganisationManagementActor-courseProgressMetrics-- Courses for bbatch is empty .");
+      ProjectLogger.log("CourseMetricsActor-courseProgressMetrics-- Courses for batch is empty .");
 
       Map<String, Object> responseMap = new LinkedHashMap<>();
       Map<String, Object> userdataMap = new LinkedHashMap<>();

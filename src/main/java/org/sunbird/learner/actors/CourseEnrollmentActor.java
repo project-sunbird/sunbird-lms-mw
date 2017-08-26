@@ -99,6 +99,7 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
             sender().tell(exception, self());
             return;
           } else {
+        	Timestamp ts = new Timestamp(new Date().getTime());
             courseMap.put(JsonKey.COURSE_LOGO_URL, ekStepContent.get(JsonKey.APP_ICON));
             courseMap.put(JsonKey.CONTENT_ID, courseId);
             courseMap.put(JsonKey.COURSE_NAME, ekStepContent.get(JsonKey.NAME));
@@ -107,13 +108,15 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
             courseMap.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
             courseMap.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
             courseMap.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
-            courseMap.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
+            courseMap.put(JsonKey.DATE_TIME, ts);
             courseMap.put(JsonKey.ID, generateUserCoursesPrimaryKey(courseMap));
             courseMap.put(JsonKey.COURSE_PROGRESS, 0);
             courseMap.put(JsonKey.LEAF_NODE_COUNT, ekStepContent.get(JsonKey.LEAF_NODE_COUNT));
             Response result = cassandraOperation.insertRecord(courseEnrollmentdbInfo.getKeySpace(),
                 courseEnrollmentdbInfo.getTableName(), courseMap);
             sender().tell(result, self());
+            // TODO: for some reason, ES indexing is failing with Timestamp value. need to check and correct it.
+            courseMap.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
             insertUserCoursesToES(courseMap);
             return;
             }

@@ -235,6 +235,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
       }
     }
     Boolean flag = false;
+    Timestamp ts = new Timestamp(new Date().getTime());
     Map<String , Object> userCourses = new HashMap<>();
     userCourses.put(JsonKey.USER_ID , userId);
     userCourses.put(JsonKey.BATCH_ID , batchId);
@@ -244,7 +245,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     userCourses.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
     userCourses.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
     userCourses.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
-    userCourses.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
+    userCourses.put(JsonKey.DATE_TIME, ts);
     userCourses.put(JsonKey.COURSE_PROGRESS, 0);
     userCourses.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.COURSE_LOGO_URL));
     userCourses.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.COURSE_NAME));
@@ -257,6 +258,8 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
       cassandraOperation
           .insertRecord(courseEnrollmentdbInfo.getKeySpace(), courseEnrollmentdbInfo.getTableName(),
               userCourses);
+      // TODO: for some reason, ES indexing is failing with Timestamp value. need to check and correct it.
+      userCourses.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
       insertUserCoursesToES(userCourses);
       flag = true;
     }catch(Exception ex) {

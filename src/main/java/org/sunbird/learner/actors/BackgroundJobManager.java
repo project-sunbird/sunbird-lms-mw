@@ -238,6 +238,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
     Map<String,Boolean> participants = (Map<String, Boolean>) batch.get(JsonKey.PARTICIPANT);
     for(Map.Entry<String,Boolean> entry : participants.entrySet()){
       if(!entry.getValue()){
+    	Timestamp ts = new Timestamp(new Date().getTime());
         Map<String , Object> userCourses = new HashMap<>();
         userCourses.put(JsonKey.USER_ID , entry.getKey());
         userCourses.put(JsonKey.BATCH_ID , batch.get(JsonKey.ID));
@@ -247,7 +248,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
         userCourses.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
         userCourses.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
         userCourses.put(JsonKey.STATUS, (int)batch.get(JsonKey.STATUS));
-        userCourses.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
+        userCourses.put(JsonKey.DATE_TIME, ts);
         userCourses.put(JsonKey.COURSE_PROGRESS, 0);
         userCourses.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.APP_ICON));
         userCourses.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.NAME));
@@ -259,6 +260,8 @@ public class BackgroundJobManager extends UntypedAbstractActor {
           cassandraOperation
               .insertRecord(courseEnrollmentdbInfo.getKeySpace(), courseEnrollmentdbInfo.getTableName(),
                   userCourses);
+          // TODO: for some reason, ES indexing is failing with Timestamp value. need to check and correct it.
+          userCourses.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
           insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
               ProjectUtil.EsType.usercourses.getTypeName(),
               (String) batch.get(JsonKey.ID), userCourses);

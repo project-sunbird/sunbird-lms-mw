@@ -12,6 +12,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.assessment.AssessmentItemActor;
 import org.sunbird.learner.actors.bulkupload.BulkUploadBackGroundJobActor;
 import org.sunbird.learner.actors.bulkupload.BulkUploadManagementActor;
+import org.sunbird.learner.actors.fileuploadservice.FileUploadServiceActor;
 import org.sunbird.learner.actors.recommend.RecommendorActor;
 import org.sunbird.learner.actors.search.CourseSearchActor;
 import org.sunbird.learner.actors.search.SearchHandlerActor;
@@ -56,6 +57,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private ActorRef courseMetricsRouter;
     private ActorRef userMetricsRouter;
     private ActorRef esSyncActor;
+    private ActorRef fileUploadServiceActor;
     public static ActorRef schedularActor;
     private ExecutionContext ec;
     Map<String, ActorRef> routerMap = new HashMap<>();
@@ -80,6 +82,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private static final String USER_METRICS_ROUTER = "userMetricsRouter";
     private static final String ES_SYNC_ROUTER = "esSyncActor";
     private static final String SCHEDULAR_ACTOR = "schedularActor";
+    private static final String FILE_UPLOAD_ACTOR = "fileUploadActor";
     /**
      * constructor to initialize router actor with child actor pool
      */
@@ -124,6 +127,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
             USER_METRICS_ROUTER);
         esSyncActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(EsSyncActor.class)),
             ES_SYNC_ROUTER);
+        fileUploadServiceActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(FileUploadServiceActor.class)),
+            FILE_UPLOAD_ACTOR);
         schedularActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(SchedularActor.class)),
             SCHEDULAR_ACTOR);
         ec = getContext().dispatcher();
@@ -210,6 +215,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.COURSE_CREATION_METRICS_REPORT.getValue(), courseMetricsRouter);
         
         routerMap.put(ActorOperations.SYNC.getValue(), esSyncActor);
+        routerMap.put(ActorOperations.FILE_STORAGE_SERVICE.getValue(), fileUploadServiceActor);
     }
 
 

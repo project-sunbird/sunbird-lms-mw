@@ -68,6 +68,14 @@ public class FileUploadServiceActor  extends UntypedAbstractActor {
       fos.write( (byte[]) req.get(JsonKey.FILE));
 
       CloudService service = (CloudService) CloudServiceFactory.get("Azure");
+      if(null == service){
+        ProjectLogger.log("The cloud service is not available");
+        ProjectCommonException exception = new ProjectCommonException(
+            ResponseCode.invalidRequestData.getErrorCode(),
+            ResponseCode.invalidRequestData.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+        sender().tell(exception, self());
+      }
       String container = (String)req.get(JsonKey.CONTAINER);
       avatarUrl = service.uploadFile(container , file);
     } catch (IOException e) {

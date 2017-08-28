@@ -51,6 +51,9 @@ public class EmailServiceActor extends UntypedAbstractActor {
     Map<String, Object> request =
         (Map<String, Object>) actorMessage.getRequest().get(JsonKey.EMAIL_REQUEST);
     List<String> emails = (List<String>) request.get(JsonKey.RECIPIENT_EMAILS);
+    if(null == emails){
+      emails = new ArrayList<>();
+    }
     checkEmailValidity(emails.toArray(new String[emails.size()]));
     List<String> emailIds = new ArrayList<>(emails);
     if(null != request.get(JsonKey.RECIPIENT_USERIDS)){

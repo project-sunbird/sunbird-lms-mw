@@ -2,7 +2,6 @@ package org.sunbird.learner.actors.notificationservice;
 
 import akka.actor.UntypedAbstractActor;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +50,9 @@ public class EmailServiceActor extends UntypedAbstractActor {
     Map<String, Object> request =
         (Map<String, Object>) actorMessage.getRequest().get(JsonKey.EMAIL_REQUEST);
     List<String> emails = (List<String>) request.get(JsonKey.RECIPIENT_EMAILS);
+    if(null == emails){
+      emails = new ArrayList<>();
+    }
     checkEmailValidity(emails.toArray(new String[emails.size()]));
     List<String> emailIds = new ArrayList<>(emails);
     if(null != request.get(JsonKey.RECIPIENT_USERIDS)){

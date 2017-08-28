@@ -33,7 +33,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.services.sso.SSOManager;
-import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
+import org.sunbird.services.sso.SSOServiceFactory;
 
 /**
  * This actor will handle course enrollment operation .
@@ -44,7 +44,7 @@ import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
 public class UserManagementActor extends UntypedAbstractActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private SSOManager ssoManager = new KeyCloakServiceImpl();
+  private SSOManager ssoManager = SSOServiceFactory.getInstance();
   
   private ActorRef backGroundActorRef;
 

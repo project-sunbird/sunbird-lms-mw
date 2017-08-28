@@ -22,6 +22,7 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
+import org.sunbird.common.models.util.mail.SendMail;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.quartz.scheduler.SchedulerManager;
 import org.sunbird.common.responsecode.ResponseCode;

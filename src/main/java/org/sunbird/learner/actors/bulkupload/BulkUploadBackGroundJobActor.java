@@ -42,7 +42,7 @@ import org.sunbird.learner.actors.BackgroundJobManager;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.services.sso.SSOManager;
-import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
+import org.sunbird.services.sso.SSOServiceFactory;
 
 public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
@@ -53,7 +53,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     backGroundActorRef = getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
    }
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private SSOManager ssoManager = new KeyCloakServiceImpl();
+  private SSOManager ssoManager = SSOServiceFactory.getInstance();
   @Override
   public void onReceive(Object message) throws Throwable {
     if (message instanceof Request) {

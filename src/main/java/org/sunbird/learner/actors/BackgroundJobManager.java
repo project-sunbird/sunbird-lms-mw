@@ -226,6 +226,12 @@ public class BackgroundJobManager extends UntypedAbstractActor {
         (String) batch.getOrDefault(JsonKey.HASH_TAG_ID,
             (String) batch.get(JsonKey.ID)),
         "{}", CourseBatchSchedulerUtil.headerMap);
+    //register tag for course 
+    registertag(
+        (String) batch.getOrDefault(JsonKey.COURSE_ID,
+            (String) batch.get(JsonKey.COURSE_ID)),
+        "{}", CourseBatchSchedulerUtil.headerMap);
+    
    /* insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.course.getTypeName(), (String) batch.get(JsonKey.ID),
         batch);*/

@@ -55,7 +55,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
         Request actorMessage = (Request) message;
         if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.BULK_UPLOAD.getValue())) {
           upload(actorMessage);
-        }if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_BULK_OP_STATUS.getValue())) {
+        }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_BULK_OP_STATUS.getValue())) {
           getUploadStatus(actorMessage);
         }else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
@@ -139,7 +139,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
     }else if(((String)req.get(JsonKey.OBJECT_TYPE)).equals(JsonKey.BATCH)){
       processBulkBatchEnrollment(req,processId);
     }
-    
+
   }
 
   private void processBulkBatchEnrollment(Map<String, Object> req, String processId) {

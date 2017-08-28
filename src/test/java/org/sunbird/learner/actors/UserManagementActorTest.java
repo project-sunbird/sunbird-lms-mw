@@ -29,7 +29,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.services.sso.SSOManager;
-import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
+import org.sunbird.services.sso.SSOServiceFactory;
 
 /**
  * @author Amit Kumar
@@ -471,7 +471,7 @@ public class UserManagementActorTest {
 
   @AfterClass
   public static void deleteUser() {
-    SSOManager ssoManager = new KeyCloakServiceImpl();
+    SSOManager ssoManager = SSOServiceFactory.getInstance();
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.USER_ID, userId);
     ssoManager.removeUser(innerMap);

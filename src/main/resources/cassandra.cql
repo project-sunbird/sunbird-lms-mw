@@ -512,3 +512,4 @@ CREATE TABLE IF NOT EXISTS sunbird.user_badge(id text, createdDate text, created
  CREATE INDEX inx_usr_badg ON sunbird.user_badge (badgeTypeId);
  insert into sunbird.badge (id,name,description,isactive) values ('0123206539020943360','President''s Gold Medal','Gold medal provided by President',true);
  CREATE INDEX inx_usr_badg_receiverid ON sunbird.user_badge (receiverid);
+CREATE INDEX inx_uei_externalIdValue ON sunbird.user_external_identity (externalIdValue);

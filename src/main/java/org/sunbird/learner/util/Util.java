@@ -111,6 +111,8 @@ public class Util {
       dbInfoMap.put(JsonKey.BULK_OP_DB , getDbInfoObject(KEY_SPACE_NAME , "bulk_upload_process"));
       dbInfoMap.put(JsonKey.COURSE_BATCH_DB, getDbInfoObject(KEY_SPACE_NAME , "course_batch"));
       dbInfoMap.put(JsonKey.COURSE_PUBLISHED_STATUS, getDbInfoObject(KEY_SPACE_NAME , "course_publish_status"));
+      dbInfoMap.put(JsonKey.BADGES_DB, getDbInfoObject(KEY_SPACE_NAME , "badge"));
+      dbInfoMap.put(JsonKey.USER_BADGES_DB, getDbInfoObject(KEY_SPACE_NAME , "user_badge"));
     }
     
     

@@ -10,6 +10,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.assessment.AssessmentItemActor;
+import org.sunbird.learner.actors.badges.BadgesActor;
 import org.sunbird.learner.actors.bulkupload.BulkUploadBackGroundJobActor;
 import org.sunbird.learner.actors.bulkupload.BulkUploadManagementActor;
 import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
@@ -61,6 +62,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private ActorRef emailServiceActor;
     private ActorRef fileUploadServiceActor;
     public static ActorRef schedularActor;
+    private ActorRef badgesActor;
     private ExecutionContext ec;
     Map<String, ActorRef> routerMap = new HashMap<>();
     private static final int WAIT_TIME_VALUE = 9;
@@ -86,6 +88,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private static final String SCHEDULAR_ACTOR = "schedularActor";
     private static final String EMAIL_SERVICE_ACTOR =  "emailServiceActor";
     private static final String FILE_UPLOAD_ACTOR = "fileUploadActor";
+    private static final String BADGES_ACTOR = "badgesActor";
     /**
      * constructor to initialize router actor with child actor pool
      */
@@ -136,6 +139,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
             SCHEDULAR_ACTOR);
         emailServiceActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(EmailServiceActor.class)),
             EMAIL_SERVICE_ACTOR);
+        badgesActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(BadgesActor.class)),
+            BADGES_ACTOR);
         ec = getContext().dispatcher();
         initializeRouterMap();
     }
@@ -223,6 +228,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
         
         routerMap.put(ActorOperations.SYNC.getValue(), esSyncActor);
         routerMap.put(ActorOperations.FILE_STORAGE_SERVICE.getValue(), fileUploadServiceActor);
+        routerMap.put(ActorOperations.GET_ALL_BADGE.getValue(), badgesActor);
+        routerMap.put(ActorOperations.ADD_USER_BADGE.getValue(), badgesActor);
     }
 
 

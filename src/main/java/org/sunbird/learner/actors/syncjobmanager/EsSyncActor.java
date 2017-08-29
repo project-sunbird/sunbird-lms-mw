@@ -20,6 +20,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.BackgroundJobManager;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
@@ -174,6 +175,10 @@ public class EsSyncActor extends UntypedAbstractActor {
     List<Map<String, Object>> orgMap = getDetails(Util.dbInfoMap.get(JsonKey.USER_ORG_DB),userId,JsonKey.USER_ID);
     userMap.put(JsonKey.ORGANISATIONS, orgMap);
     
+    ProjectLogger.log("fetching user Badge data  started");
+    List<Map<String, Object>> badgesMap = getDetails(Util.dbInfoMap.get(JsonKey.USER_BADGES_DB),userId,JsonKey.RECEIVER_ID);
+    badgesMap = BackgroundJobManager.removeDataFromMap(badgesMap);
+    userMap.put(JsonKey.BADGES, badgesMap);
     ProjectLogger.log("fetching user data completed");
     return userMap;
   }

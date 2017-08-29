@@ -718,7 +718,6 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   private void UpdateKeyCloakUserBase(Map<String, Object> userMap) {
     try {
-      
       String userId = ssoManager.updateUser(userMap);
       if (!(!ProjectUtil.isStringNullOREmpty(userId) && userId.equalsIgnoreCase(JsonKey.SUCCESS))) {
         throw new ProjectCommonException(
@@ -1106,8 +1105,10 @@ public class UserManagementActor extends UntypedAbstractActor {
       map.put(JsonKey.IS_VERIFIED, true);
 
       reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.USERNAME));
-
-      updateUserExtIdentity(map, usrExtIdDb);
+      List<Map<String,Object>> mapList = checkDataUserExtTable(map);
+      if(mapList.isEmpty()){
+        updateUserExtIdentity(map, usrExtIdDb,JsonKey.INSERT);
+      }
     }
     if (requestMap.containsKey(JsonKey.PHONE) && !(ProjectUtil
         .isStringNullOREmpty((String) requestMap.get(JsonKey.PHONE)))) {
@@ -1121,8 +1122,13 @@ public class UserManagementActor extends UntypedAbstractActor {
         map.put(JsonKey.IS_VERIFIED, true);
       }
       reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.PHONE));
-
-      updateUserExtIdentity(map, usrExtIdDb);
+      List<Map<String,Object>> mapList = checkDataUserExtTable(map);
+      if(mapList.isEmpty()){
+        updateUserExtIdentity(map, usrExtIdDb,JsonKey.INSERT);
+      }else{
+        map.put(JsonKey.ID, mapList.get(0).get(JsonKey.ID));
+        updateUserExtIdentity(map, usrExtIdDb,JsonKey.UPDATE);
+      }
     }
     if (requestMap.containsKey(JsonKey.EMAIL) && !(ProjectUtil
         .isStringNullOREmpty((String) requestMap.get(JsonKey.EMAIL)))) {
@@ -1135,8 +1141,13 @@ public class UserManagementActor extends UntypedAbstractActor {
         map.put(JsonKey.IS_VERIFIED, true);
       }
       reqMap.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EMAIL));
-
-      updateUserExtIdentity(map, usrExtIdDb);
+      List<Map<String,Object>> mapList = checkDataUserExtTable(map);
+      if(mapList.isEmpty()){
+        updateUserExtIdentity(map, usrExtIdDb,JsonKey.INSERT);
+      }else{
+        map.put(JsonKey.ID, mapList.get(0).get(JsonKey.ID));
+        updateUserExtIdentity(map, usrExtIdDb,JsonKey.UPDATE);
+      }
     }
     if (requestMap.containsKey(JsonKey.AADHAAR_NO) && !(ProjectUtil
         .isStringNullOREmpty((String) requestMap.get(JsonKey.AADHAAR_NO)))) {
@@ -1145,14 +1156,23 @@ public class UserManagementActor extends UntypedAbstractActor {
       map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.AADHAAR_NO));
 
       reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.AADHAAR_NO));
-
-      updateUserExtIdentity(map, usrExtIdDb);
+      List<Map<String,Object>> mapList = checkDataUserExtTable(map);
+      if(mapList.isEmpty()){
+        updateUserExtIdentity(map, usrExtIdDb,JsonKey.INSERT);
+      }else{
+        map.put(JsonKey.ID, mapList.get(0).get(JsonKey.ID));
+        updateUserExtIdentity(map, usrExtIdDb,JsonKey.UPDATE);
+      }
     }
   }
 
-  private void updateUserExtIdentity(Map<String, Object> map, DbInfo usrExtIdDb) {
+  private void updateUserExtIdentity(Map<String, Object> map, DbInfo usrExtIdDb,String opType) {
     try {
-      cassandraOperation.insertRecord(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), map);
+      if(JsonKey.INSERT.equalsIgnoreCase(opType)){
+        cassandraOperation.insertRecord(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), map);
+      }else{
+        cassandraOperation.updateRecord(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), map);
+      }
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
@@ -1905,6 +1925,24 @@ public class UserManagementActor extends UntypedAbstractActor {
 
     return ElasticSearchUtil.complexSearch(searchDTO , index,type);
 
+  }
+  
+  private List<Map<String, Object>> checkDataUserExtTable(Map<String, Object> map) {
+    Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
+    Map<String, Object> reqMap = new HashMap<>();
+    reqMap.put(JsonKey.USER_ID, map.get(JsonKey.USER_ID));
+    reqMap.put(JsonKey.EXTERNAL_ID_VALUE, map.get(JsonKey.EXTERNAL_ID_VALUE));
+    Response response = null;
+    List<Map<String, Object>> responseList = new ArrayList<>();
+    try{
+      response = cassandraOperation.getRecordsByProperties(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), reqMap);
+    } catch (Exception ex){
+      ProjectLogger.log("Exception Occured while fetching data from user Ext Table in bulk upload", ex);
+    }
+    if(null != response){
+      responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    }
+    return responseList;
   }
   
 }

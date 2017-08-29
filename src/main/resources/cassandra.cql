@@ -505,3 +505,5 @@ insert into sunbird.role (id,name,rolegroupid,status) values ('COURSE_ADMIN','Co
 insert into sunbird.role_group (id,name) values ('COURSE_CREATOR','Course Creator');
 update sunbird.role_group set url_action_ids=['courseCreator'] where id='COURSE_CREATOR';
 insert into sunbird.role (id,name,rolegroupid,status) values ('COURSE_CREATOR','Course Creator',['COURSE_CREATOR'],1);
+
+CREATE INDEX inx_uei_externalIdValue ON sunbird.user_external_identity (externalIdValue);

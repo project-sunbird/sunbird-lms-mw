@@ -33,6 +33,11 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
+/**
+ * This actor will handle bulk upload operation .
+ *
+ * @author Amit Kumar
+ */
 public class BulkUploadManagementActor extends UntypedAbstractActor {
 
   private static final String CSV_FILE_EXTENSION = ".csv";

@@ -440,7 +440,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     userMap.remove(JsonKey.USERNAME);
     userMap.remove(JsonKey.REGISTERED_ORG_ID);
     userMap.remove(JsonKey.ROOT_ORG_ID);
-       
+    userMap.remove(JsonKey.LOGIN_ID);   
     boolean isSSOEnabled = Boolean
         .parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
     if (isSSOEnabled) {
@@ -805,6 +805,9 @@ public class UserManagementActor extends UntypedAbstractActor {
         rootOrgId = orgId;
       }else{
         String channel = (String) orgMap.get(JsonKey.CHANNEL);
+        if(ProjectUtil.isStringNullOREmpty(channel)){
+          channel = (String) orgMap.get(JsonKey.PROVIDER);
+        }
         if(!ProjectUtil.isStringNullOREmpty( channel)){
           Map<String,Object> filters = new HashMap<>();
           filters.put(JsonKey.CHANNEL, channel);

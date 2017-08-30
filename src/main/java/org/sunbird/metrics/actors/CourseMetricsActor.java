@@ -43,7 +43,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
   ElasticSearchUtil elasticSearchUtil = new ElasticSearchUtil();
 
   protected static final String CONTENT_ID = "content_id";
-  protected static final String USER_ID = "user_id";
   private static ObjectMapper mapper = new ObjectMapper();
   private ActorRef backGroundActorRef;
   private static final String DEFAULT_BATCH_ID ="1";

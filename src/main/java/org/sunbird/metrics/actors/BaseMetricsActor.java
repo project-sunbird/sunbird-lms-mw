@@ -57,6 +57,9 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   public static final String VALUE = "value";
   public static final String INTERVAL = "interval";
   public static final String FORMAT = "format";
+  protected static final String USER_ID = "user_id";
+  protected static final String folderPath = "/data/";
+  protected static final String FILENAMESEPARATOR = "_";
   
 
   protected Map<String, Object> addSnapshot(String keyName, String name, Object value,
@@ -263,7 +266,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     return bucket;
   }
 
-  protected String getDataFromEkstep(String request, String apiUrl) {
+  protected static String postDataEkstep(String apiUrl, String request) {
     Map<String, String> headers = new HashMap<>();
     String response = null;
     try {
@@ -273,8 +276,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
       }
       headers.put(JsonKey.AUTHORIZATION, System.getenv(JsonKey.AUTHORIZATION));
       if (ProjectUtil.isStringNullOREmpty((String) headers.get(JsonKey.AUTHORIZATION))) {
-        headers.put(JsonKey.AUTHORIZATION, JsonKey.BEARER
-            + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
+        headers.put(JsonKey.AUTHORIZATION, PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
         headers.put("Content_Type", "application/json; charset=utf-8");
       }
       response = HttpUtil.sendPostRequest(
@@ -282,6 +284,35 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
 
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
+      throw new ProjectCommonException(ResponseCode.unableToConnect.getErrorCode(),
+          ResponseCode.unableToConnect.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
+    return response;
+  }
+
+  protected static String getDataFromEkstep(String apiUrl) {
+    Map<String, String> headers = new HashMap<>();
+    String response = null;
+    try {
+      String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
+      if (ProjectUtil.isStringNullOREmpty(baseSearchUrl)) {
+        baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
+      }
+      headers.put(JsonKey.AUTHORIZATION, System.getenv(JsonKey.AUTHORIZATION));
+      if (ProjectUtil.isStringNullOREmpty((String) headers.get(JsonKey.AUTHORIZATION))) {
+        headers.put(JsonKey.AUTHORIZATION, 
+            PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
+        headers.put("Content_Type", "application/json; charset=utf-8");
+      }
+      response = HttpUtil.sendGetRequest(
+          baseSearchUrl + apiUrl , headers);
+
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+      throw new ProjectCommonException(ResponseCode.unableToConnect.getErrorCode(),
+          ResponseCode.unableToConnect.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
     }
     return response;
   }

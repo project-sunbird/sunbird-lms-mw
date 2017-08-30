@@ -139,9 +139,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           //now if any org has same channel value as provider and that 
           //org is rootOrg then set that root orgid with current orgId.
           if (req.containsKey(JsonKey.PROVIDER)) {
-            req.put(JsonKey.CHANNEL, req.get(JsonKey.PROVIDER));
-            isChannelVerified = true;
-            validateChannel(req);
+             String rootOrgId = getRootOrgIdFromChannel((String)req.get(JsonKey.PROVIDER));
+             if(!ProjectUtil.isStringNullOREmpty(rootOrgId)) {
+               req.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+             }
           }
         }
 

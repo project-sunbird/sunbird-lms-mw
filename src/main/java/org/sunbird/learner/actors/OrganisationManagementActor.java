@@ -134,6 +134,15 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         if (req.containsKey(JsonKey.CHANNEL)) {
           isChannelVerified = true;
           validateChannel(req);
+        }else {
+          //if Channel value is not coming then check for provider
+          //now if any org has same channel value as provider and that 
+          //org is rootOrg then set that root orgid with current orgId.
+          if (req.containsKey(JsonKey.PROVIDER)) {
+            req.put(JsonKey.CHANNEL, req.get(JsonKey.PROVIDER));
+            isChannelVerified = true;
+            validateChannel(req);
+          }
         }
 
         Map<String, Object> dbMap = new HashMap<String, Object>();
@@ -430,11 +439,20 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         }
       }
       validateChannelIdForRootOrg(req);
+      //
+      boolean channelAdded = false;
+      if(!req.containsKey(JsonKey.CHANNEL)) {
+          if(req.containsKey(JsonKey.PROVIDER)) {
+            //then make provider as channel to fetch root org id.
+            req.put(JsonKey.CHANNEL, req.get(JsonKey.PROVIDER));
+            channelAdded = true;
+          }
+      }
       if (req.containsKey(JsonKey.CHANNEL)) {
         if (!req.containsKey(JsonKey.IS_ROOT_ORG) || !(Boolean) req.get(JsonKey.IS_ROOT_ORG)) {
           String rootOrgId =  getRootOrgIdFromChannel((String)req.get(JsonKey.CHANNEL));
-          if(!ProjectUtil.isStringNullOREmpty(rootOrgId) ){
-             req.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+          if(!ProjectUtil.isStringNullOREmpty(rootOrgId) || channelAdded){
+             req.put(JsonKey.ROOT_ORG_ID, rootOrgId.equals("")?JsonKey.DEFAULT_ROOT_ORG_ID:rootOrgId);
           }else {
             ProjectLogger.log("Invalid channel id.");
             ProjectCommonException exception =
@@ -445,7 +463,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
             return;  
           }
          // req.remove(JsonKey.CHANNEL);
-        } else if (!validateChannelForUniquenessForUpdate((String) req.get(JsonKey.CHANNEL),
+        } else if (!channelAdded && !validateChannelForUniquenessForUpdate((String) req.get(JsonKey.CHANNEL),
             (String) req.get(JsonKey.ORGANISATION_ID))) {
           ProjectLogger.log("Channel validation failed");
           ProjectCommonException exception =
@@ -455,6 +473,11 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           sender().tell(exception, self());
           return;
         }
+      }
+      //if channel is not coming and we added it from provider to collect the rootOrgId then
+      //remove channel
+      if(channelAdded) {
+        req.remove(JsonKey.CHANNEL);
       }
       Map<String, Object> addressReq = null;
       if (null != actorMessage.getRequest().get(JsonKey.ADDRESS)) {
@@ -1398,15 +1421,15 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       if (!(list.isEmpty())) {
         parentOrgDBO = list.get(0);
       }
-      if (!ProjectUtil.isStringNullOREmpty((String) parentOrgDBO.get(JsonKey.ROOT_ORG))) {
-        String parentRootOrg = parentOrgDBO.get(JsonKey.ROOT_ORG).toString();
-        if (null != request.get(JsonKey.ROOT_ORG)) {
-          if (null != request.get(JsonKey.ROOT_ORG)
-              && !parentRootOrg.equalsIgnoreCase(request.get(JsonKey.ROOT_ORG).toString())) {
+      if (!ProjectUtil.isStringNullOREmpty((String) parentOrgDBO.get(JsonKey.ROOT_ORG_ID))) {
+        String parentRootOrg = (String)parentOrgDBO.get(JsonKey.ROOT_ORG_ID);
+        if (null != request.get(JsonKey.ROOT_ORG_ID) && !parentRootOrg.equalsIgnoreCase(request.get(JsonKey.ROOT_ORG).toString())) {
             throw new ProjectCommonException(ResponseCode.invalidRootOrganisationId.getErrorCode(),
                 ResponseCode.invalidRootOrganisationId.getErrorMessage(),
                 ResponseCode.CLIENT_ERROR.getResponseCode());
-          }
+        }else {
+          //set the parent root org to this organisation.
+          request.put(JsonKey.ROOT_ORG_ID, parentRootOrg);  
         }
       }
     }

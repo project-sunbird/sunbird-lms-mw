@@ -2,6 +2,9 @@ package org.sunbird.metrics.actors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -10,29 +13,30 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.commons.lang3.StringUtils;
-import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
-//import org.sunbird.common.helper.ExcelFileUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.ExcelFileUtil;
+import org.sunbird.common.models.util.FileUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
+import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.Util;
 
 public class OrganisationMetricsActor extends BaseMetricsActor {
 
   private static ObjectMapper mapper = new ObjectMapper();
   private static final String view = "org";
   private static List<String> operationList = new ArrayList<>();
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static Map<String, String> conceptsList = new HashMap<>();
+  private static FileUtil fileUtil = new ExcelFileUtil();
 
   protected enum ContentStatus {
     Draft("Create"), Review("Review"), Live("Publish");
@@ -67,17 +71,17 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.ORG_CONSUMPTION_METRICS.getValue())) {
           orgConsumptionMetrics(actorMessage);
-        }else if (actorMessage.getOperation()
+        } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.ORG_CREATION_METRICS_REPORT.getValue())) {
           orgCreationMetricsReport(actorMessage);
-        }else if (actorMessage.getOperation()
+        } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.ORG_CONSUMPTION_METRICS_REPORT.getValue())) {
           orgConsumptionMetricsReport(actorMessage);
         } /*else if (actorMessage.getOperation()
-            .equalsIgnoreCase(ActorOperations.ORG_CREATION_METRICS_DOWNLOAD.getValue())) {
+            .equalsIgnoreCase(ActorOperations.ORG_CREATION_METRICS_REPORT.getValue())) {
           orgCreationMetricsExcel(actorMessage);
         } else if (actorMessage.getOperation()
-            .equalsIgnoreCase(ActorOperations.ORG_CONSUMPTION_METRICS_DOWNLOAD.getValue())) {
+            .equalsIgnoreCase(ActorOperations.ORG_CONSUMPTION_METRICS_REPORT.getValue())) {
           orgConsumptionMetricsExcel(actorMessage);
         }*/ else {
           ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
@@ -110,7 +114,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
 
     Response response = new Response();
-    response.getResult().put(JsonKey.PROCESS_ID , 121);
+    response.getResult().put(JsonKey.PROCESS_ID, 121);
     sender().tell(response, self());
   }
 
@@ -122,7 +126,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
 
     Response response = new Response();
-    response.getResult().put(JsonKey.PROCESS_ID , 121);
+    response.getResult().put(JsonKey.PROCESS_ID, 121);
     sender().tell(response, self());
   }
 
@@ -240,7 +244,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
   @SuppressWarnings({"unchecked", "rawtypes"})
   private String orgCreationResponseGenerator(String periodStr, Map<String, Object> resultData) {
-    String dataSet = "creation";
+    // String dataSet = "creation";
     String result = null;
     Map<String, Object> responseMap = new HashMap<>();
     try {
@@ -451,6 +455,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       String orgName = (String) orgData.get(JsonKey.ORG_NAME);
       String channel =
           (String) (orgData.get(JsonKey.CHANNEL) == null ? "" : orgData.get(JsonKey.CHANNEL));
+      String orgHashId = (String) orgData.get(JsonKey.HASH_TAG_ID);
       if (ProjectUtil.isStringNullOREmpty(orgName)) {
         ProjectCommonException exception =
             new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
@@ -459,17 +464,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         sender().tell(exception, self());
         return;
       }
-      Request request = new Request();
-      request.setId(actorMessage.getId());
-      Map<String, Object> requestObject = new HashMap<>();
-      requestObject.put(JsonKey.PERIOD, getEkstepPeriod(periodStr));
-      Map<String, Object> filterMap = new HashMap<>();
-      filterMap.put(JsonKey.TAG, orgId);
-      requestObject.put(JsonKey.FILTER, filterMap);
-      // TODO: get channel from org
-      requestObject.put(JsonKey.CHANNEL, channel);
-      request.setRequest(requestObject);
-      String requestStr = mapper.writeValueAsString(request);
+      String requestStr = getOrgMetricsRequest(actorMessage, periodStr, orgHashId, null, channel);
       String ekStepResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, requestStr);
       String responseFormat = orgConsumptionResponseGenerator(periodStr, ekStepResponse);
       Response response =
@@ -485,6 +480,24 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
           ResponseCode.internalError.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
+  }
+
+  private String getOrgMetricsRequest(Request actorMessage, String periodStr, String orgHashId,
+      String userId, String channel) throws JsonProcessingException {
+    Request request = new Request();
+    request.setId(actorMessage.getId());
+    Map<String, Object> requestObject = new HashMap<>();
+    requestObject.put(JsonKey.PERIOD, getEkstepPeriod(periodStr));
+    Map<String, Object> filterMap = new HashMap<>();
+    filterMap.put(JsonKey.TAG, orgHashId);
+    if (!ProjectUtil.isStringNullOREmpty(userId)) {
+      filterMap.put(USER_ID, userId);
+    }
+    requestObject.put(JsonKey.FILTER, filterMap);
+    requestObject.put(JsonKey.CHANNEL, channel);
+    request.setRequest(requestObject);
+    String requestStr = mapper.writeValueAsString(request);
+    return requestStr;
   }
 
   @SuppressWarnings("unchecked")
@@ -592,6 +605,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       if (null == result || result.isEmpty()) {
         return null;
       }
+      ProjectLogger.log(result.toString());
       return result;
     } catch (Exception e) {
       throw new ProjectCommonException(ResponseCode.esError.getErrorCode(),
@@ -599,55 +613,52 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private void orgCreationMetricsExcel(Request actorMessage) {
     ProjectLogger.log("In orgCreationMetricsExcel api");
     try {
       String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
-      
-        /*Map<String, Object> orgData = validateOrg(orgId); if (null == orgData) { throw new
-       ProjectCommonException(ResponseCode.esError.getErrorCode(),
-        ResponseCode.esError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode()); }
-        String orgName = (String) orgData.get(JsonKey.ORG_NAME); if
-        (ProjectUtil.isStringNullOREmpty(orgName)) { ProjectCommonException exception = new
-        ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
-        ResponseCode.invalidOrgData.getErrorMessage(),
-        ResponseCode.CLIENT_ERROR.getResponseCode()); sender().tell(exception, self()); return; }*/
-       
-      String orgName = "";
+      String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
+
+      Map<String, Object> orgData = validateOrg(orgId);
+      if (null == orgData) {
+        throw new ProjectCommonException(ResponseCode.esError.getErrorCode(),
+            ResponseCode.esError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+      }
       List<Object> headers = new ArrayList<>();
+      headers.add("contentCreatedFor");
       headers.add("userId");
       headers.add("userName");
       headers.add("userCreatedOn");
-      headers.add("contentCreatedOn");
-      headers.add("contentLastUpdatedOn");
-      headers.add("contentLastStatus");
-      headers.add("contentLastPublishedBy");
-      headers.add("contentCreationTimeSpent");
-      headers.add("contentCreationTotalSessions");
-      headers.add("contentCreationAvgTimePerSession");
-      headers.add("contentCreatedFor");
       headers.add("contentName");
       headers.add("contentType");
+      headers.add("contentLanguage");
       headers.add("contentSize");
+      headers.add("contentCreatedOn");
+      headers.add("contentLastPublishedOn");
+      headers.add("contentReviewedOn");
+      headers.add("contentLastUpdatedOn");
+      headers.add("contentLastUpdatedStatus");
+      headers.add("contentLastPublishedBy");
       headers.add("contentConceptsCovered");
       headers.add("contentDomain");
       headers.add("contentTagsCount");
-      headers.add("contentLanguage");
-      headers.add("contentLastPublishedOn");
-      headers.add("contentReviewedOn");
+      headers.add("contentCreationTimeSpent");
+      headers.add("contentCreationTotalSessions");
+      headers.add("contentCreationAvgTimePerSession");
       List<List<Object>> csvRecords = new ArrayList<>();
       csvRecords.add(headers);
       for (String operation : operationList) {
         String requestStr = getRequestObject(operation, actorMessage);
         String ekStepResponse = makePostRequest(JsonKey.EKSTEP_CONTNET_SEARCH_URL, requestStr);
-        List<Map<String, Object>> ekstepData = getDataFromResponse(ekStepResponse, headers);
-        //List<Map<String, Object>> userData = getUserDetailsFromES(ekstepData);
-        csvRecords = generateDataList(ekstepData, headers);
+        List<Map<String, Object>> ekstepData = getDataFromResponse(ekStepResponse, headers, orgId);
+        List<Map<String, Object>> userData = getUserDetailsFromES(ekstepData);
+        csvRecords.addAll(generateDataList(userData, headers));
       }
 
-
-      //ExcelFileUtil.writeToFile("/data/test", csvRecords);
+      String fileName =
+          "CreationReport_" + orgId + FILENAMESEPARATOR + System.currentTimeMillis() + FILENAMESEPARATOR + periodStr;
+      fileName = folderPath + fileName;
+      File file = fileUtil.writeToFile(fileName, csvRecords);
       Response response = new Response();
       sender().tell(response, self());
     } catch (ProjectCommonException e) {
@@ -670,11 +681,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
       Map<String, Object> orgData = validateOrg(orgId);
       if (null == orgData) {
-        throw new ProjectCommonException(ResponseCode.esError.getErrorCode(),
-            ResponseCode.esError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
-      }
-      String orgName = (String) orgData.get(JsonKey.ORG_NAME);
-      if (ProjectUtil.isStringNullOREmpty(orgName)) {
         ProjectCommonException exception =
             new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
                 ResponseCode.invalidOrgData.getErrorMessage(),
@@ -682,6 +688,10 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         sender().tell(exception, self());
         return;
       }
+      String orgHashId = (String) orgData.get(JsonKey.HASH_TAG_ID);
+      String channel =
+          (String) (orgData.get(JsonKey.CHANNEL) == null ? "" : orgData.get(JsonKey.CHANNEL));
+
       List<Object> headers = new ArrayList<>();
       headers.add("userId");
       headers.add("userName");
@@ -690,19 +700,23 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       headers.add("totalTimeSpentOnConsumingContent");
       headers.add("totalPiecesOfContentConsumed");
       headers.add("avgTimeSpentPerVisit");
+      List<Map<String, Object>> consumptionData = new ArrayList<>();
+      List<Map<String, Object>> usersData = getUserDetailsUsingOrg(orgId);
+      for (Map<String, Object> userData : usersData) {
+        String request = getOrgMetricsRequest(actorMessage, periodStr, orgHashId,
+            (String) userData.get(JsonKey.ID), channel);
+        String esResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, request);
+        Map<String, Object> ekstepData =
+            getConsumptionDataFromResponse(esResponse, userData, (List<String>) (Object) headers);
+        consumptionData.add(ekstepData);
+      }
       List<List<Object>> csvRecords = new ArrayList<>();
       csvRecords.add(headers);
-      for (String operation : operationList) {
-        String request = getQueryRequest(periodStr, orgId, operation);
-        String esResponse = makePostRequest(JsonKey.EKSTEP_ES_METRICS_API_URL, request);
-        List<Map<String, Object>> ekstepData = getDataFromResponse(esResponse, headers);
-        
-         /*Map<String,Object> userData = getUserDetailsFromES(ekstepData); List<Object>
-         csvDataRecords = generateDataList(ekstepData); csvRecords.add(csvDataRecords);*/
-         
-      }
-
-      /*ExcelFileUtil.writeToCSVFile("", csvRecords);*/
+      csvRecords.addAll(generateDataList(consumptionData, headers));
+      String fileName =
+          "ConsumptionReport_" + orgId + FILENAMESEPARATOR + System.currentTimeMillis() + FILENAMESEPARATOR + periodStr;
+      fileName = folderPath + fileName;
+      File file = fileUtil.writeToFile(fileName, csvRecords);
       Response response = new Response();
       sender().tell(response, self());
     } catch (ProjectCommonException e) {
@@ -717,18 +731,20 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     }
   }
 
-  private List<List<Object>> generateDataList(List<Map<String, Object>> aggregationMap, List<Object> headers) {
+  private List<List<Object>> generateDataList(List<Map<String, Object>> aggregationMap,
+      List<Object> headers) {
     List<List<Object>> result = new ArrayList<>();
     for (Map<String, Object> data : aggregationMap) {
       List<Object> dataResult = new ArrayList<>();
-      for(Object header:headers){
-         dataResult.add(data.get(header));
+      for (Object header : headers) {
+        dataResult.add(data.get(header));
       }
       result.add(dataResult);
     }
     return result;
   }
 
+  @SuppressWarnings("unchecked")
   private List<Map<String, Object>> getUserDetailsFromES(List<Map<String, Object>> ekstepData) {
     List<String> coursefields = new ArrayList<>();
     List<Map<String, Object>> userResult = new ArrayList<>();
@@ -736,14 +752,12 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     coursefields.add(JsonKey.USER_NAME);
     coursefields.add(JsonKey.CREATED_DATE);
     String userId = "";
-    Map<String, Object> data = new HashMap<>();
     for (Map<String, Object> userData : ekstepData) {
-      if (userData.containsKey("createdBy")) {
-        userId = (String) userData.get("createdBy");
-      } else if (userData.containsKey("lastPublishedBy")) {
-        userId = (String) userData.get("lastPublishedBy");
-      } else if (userData.containsKey("lastSubmittedBy")) {
-        userId = (String) userData.get("lastSubmittedBy");
+      Map<String, Object> data = new HashMap<>();
+      if (userData.containsKey("userId")) {
+        userId = (String) userData.get("userId");
+      } else {
+        return ekstepData;
       }
       Map<String, Object> filter = new HashMap<>();
       filter.put(JsonKey.IDENTIFIER, userId);
@@ -752,7 +766,13 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
             ElasticSearchUtil.complexSearch(createESRequest(filter, null, coursefields),
                 ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
         if (null != result && !result.isEmpty()) {
-          data.putAll(result);
+          List<Map<String, Object>> resultList =
+              (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+          if (null != resultList && !resultList.isEmpty()) {
+            for (Map<String, Object> dataObject : resultList) {
+              data.putAll(dataObject);
+            }
+          }
           data.putAll(userData);
           userResult.add(data);
         }
@@ -765,25 +785,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     return userResult;
   }
 
-  @SuppressWarnings({"unchecked", "rawtypes"})
-  private Map<String, Object> getUserDetails(String orgId) {
-    Map<String, Object> resultMap = new HashMap<>();
-    List<String> users = new ArrayList<>();
-    Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
-    Map<String, Object> requestData = new HashMap<String, Object>();
-    requestData.put(JsonKey.ORGANISATION_ID, orgId);
-    Response result = cassandraOperation.getRecordsByProperties(userOrgDbInfo.getKeySpace(),
-        userOrgDbInfo.getTableName(), requestData);
-    List list = (List) result.get(JsonKey.RESPONSE);
-    if (list.size() > 0) {
-      for (Object data : list) {
-        Map<String, Object> dataMap = (Map<String, Object>) data;
-        users.add((String) dataMap.get(JsonKey.USER_ID));
-      }
-      // resultMap = getUserDetailsFromES(users);
-    }
-    return resultMap;
-  }
 
   private String getRequestObject(String operation, Request actorMessage) {
     Request request = new Request();
@@ -844,6 +845,9 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     fields.add("language");
     fields.add("lastPublishedOn");
     fields.add("lastSubmittedOn");
+    fields.add("me_creationTimespent");
+    fields.add("me_creationSessions");
+    fields.add("me_avgCreationTsPerSession");
     requestObject.put(JsonKey.FIELDS, fields);
     request.setRequest(requestObject);
     String requestStr = "";
@@ -856,7 +860,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   }
 
   @SuppressWarnings("unchecked")
-  private List<Map<String, Object>> getDataFromResponse(String responseData, List<Object> headers) {
+  private List<Map<String, Object>> getDataFromResponse(String responseData, List<Object> headers, String orgId) {
     List<Map<String, Object>> result = new ArrayList<>();
     try {
       Map<String, Object> resultData = mapper.readValue(responseData, Map.class);
@@ -865,16 +869,33 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
           (List<Map<String, Object>>) resultData.get(JsonKey.CONTENT);
       for (Map<String, Object> content : resultList) {
         Map<String, Object> data = new HashMap<>();
-        for(String header: content.keySet()){
+        for (String header : content.keySet()) {
           String headerName = StringUtils.capitalize(header);
-          headerName = "content"+headerName; 
-          if(headers.contains(headerName)){
+          headerName = "content" + headerName;
+          if (headers.contains(headerName)) {
             data.put(headerName, content.get(header));
-          }else {
-            data.put(header,content.get(header));
+          } else if ("status".equalsIgnoreCase(header)) {
+            data.put("contentLastUpdatedStatus", content.get(header));
+          } else if ("contentType".equalsIgnoreCase(header)) {
+            data.put(header, content.get(header));
+          } else if ("concepts".equalsIgnoreCase(header)) {
+            List<String> concepts = getConcepts((List<String>) content.get(header));
+            data.put("contentConceptsCovered", concepts);
+          } else if ("tags".equalsIgnoreCase(header)) {
+            List<String> tags = (List<String>) content.get(header);
+            data.put("contentTagsCount", tags.size());
+          }else if("lastSubmittedOn".equals(header)){
+            data.put("contentReviewedOn", content.get(header));
           }
+          if("createdFor".equalsIgnoreCase(header)){
+            data.put(headerName, orgId);
+          }
+          if ("createdBy".equalsIgnoreCase(header) || "lastPublishedBy".equalsIgnoreCase(header)) {
+            data.put("userId", content.get(header));
+          }
+          
         }
-        result.add(content);
+        result.add(data);
       }
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
@@ -882,17 +903,97 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     return result;
   }
 
-  private List<String> getUserIds(List<Map<String, Object>> data) {
+  private static List<String> getConcepts(List<String> data) {
     List<String> result = new ArrayList<>();
-    for (Map<String, Object> userData : data) {
-      if (userData.containsKey("createdBy")) {
-        result.add((String) userData.get("createdBy"));
-      } else if (userData.containsKey("lastPublishedBy")) {
-        result.add((String) userData.get("lastPublishedBy"));
-      } else if (userData.containsKey("lastSubmittedBy")) {
-        result.add((String) userData.get("lastSubmittedBy"));
-      }
+    for (String concept : data) {
+      String conceptName = getConcept(concept);
+      result.add(conceptName);
     }
     return result;
+  }
+
+  private static String getConcept(String data) {
+    if (null == conceptsList || conceptsList.isEmpty()) {
+      conceptList();
+    }
+    return conceptsList.get(data);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Map<String, String> conceptList() {
+    List<String> domains = new ArrayList<>();
+    domains.add("numeracy");
+    domains.add("literacy");
+    domains.add("science");
+
+    for (String domain : domains) {
+      String url = PropertiesCache.getInstance().getProperty((JsonKey.EKSTEP_CONCEPT_URL));
+      url = StringUtils.replace(url, "{domain}", domain);
+      String resposne = getDataFromEkstep(url);
+      try {
+        Map<String, Object> responseMap = mapper.readValue(resposne, Map.class);
+        responseMap = (Map<String, Object>) responseMap.get(JsonKey.RESULT);
+        List<Map<String, Object>> conceptData =
+            (List<Map<String, Object>>) responseMap.get("concepts");
+        for (Map<String, Object> concept : conceptData) {
+          String id = (String) concept.get(JsonKey.IDENTIFIER);
+          String name = (String) concept.get(JsonKey.NAME);
+          conceptsList.put(id, name);
+        }
+      } catch (IOException e) {
+        ProjectLogger.log(e.getMessage(), e);
+      }
+    }
+    return conceptsList;
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> getConsumptionDataFromResponse(String responseData,
+      Map<String, Object> userData, List<String> headers) {
+    Map<String, Object> resultMap = new HashMap<>();
+    try {
+      Map<String, Object> resultData = mapper.readValue(responseData, Map.class);
+      resultData = (Map<String, Object>) resultData.get(JsonKey.RESULT);
+      Map<String, Object> result = (Map<String, Object>) resultData.get(JsonKey.SUMMARY);
+      resultMap.put(headers.get(0), userData.get(JsonKey.ID));
+      resultMap.put(headers.get(1), userData.get(JsonKey.USERNAME));
+      resultMap.put(headers.get(2), userData.get(JsonKey.CREATED_DATE));
+      resultMap.put(headers.get(3), result.get("m_total_sessions"));
+      resultMap.put(headers.get(4), result.get("m_total_ts"));
+      resultMap.put(headers.get(5), result.get("m_total_content_count"));
+      resultMap.put(headers.get(6), result.get("m_avg_ts_session"));
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    return resultMap;
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<Map<String, Object>> getUserDetailsUsingOrg(String orgId) {
+    List<String> coursefields = new ArrayList<>();
+    List<Map<String, Object>> userResult = new ArrayList<>();
+    coursefields.add(JsonKey.USER_ID);
+    coursefields.add(JsonKey.USER_NAME);
+    coursefields.add(JsonKey.CREATED_DATE);
+    Map<String, Object> filter = new HashMap<>();
+    filter.put("organisations.organisationId", orgId);
+    try {
+      Map<String, Object> result =
+          ElasticSearchUtil.complexSearch(createESRequest(filter, null, coursefields),
+              ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+      if (null != result && !result.isEmpty()) {
+        List<Map<String, Object>> resultList =
+            (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+        if (null != resultList && !resultList.isEmpty()) {
+          for (Map<String, Object> dataObject : resultList) {
+            userResult.add(dataObject);
+          }
+        }
+      }
+      return userResult;
+    } catch (Exception e) {
+      throw new ProjectCommonException(ResponseCode.esError.getErrorCode(),
+          ResponseCode.esError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+    }
   }
 }

@@ -13,6 +13,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.ExcelFileUtil;
+import org.sunbird.common.models.util.FileUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
@@ -32,6 +33,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
 
   Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static FileUtil fileUtil = new ExcelFileUtil();
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -86,7 +88,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
         dbReqMap);
 
     List<List<Object>> finalList = (List<List<Object>>) map.get(JsonKey.DATA);
-    File file = ExcelFileUtil.writeToFile("File-"+requestId,finalList);
+    File file = fileUtil.writeToFile("File-"+requestId,finalList);
 
     // TODO: going to upload file , save this info into the DB ...
     dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.UPLOADING_FILE.getValue());

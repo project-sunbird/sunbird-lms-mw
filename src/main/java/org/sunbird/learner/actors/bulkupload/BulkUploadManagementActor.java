@@ -299,9 +299,6 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
       rootOrgId = orgId;
     }else{
       String channel = (String) orgMap.get(JsonKey.CHANNEL);
-      if(ProjectUtil.isStringNullOREmpty(channel)){
-        channel = (String) orgMap.get(JsonKey.PROVIDER);
-      }
       if(!ProjectUtil.isStringNullOREmpty( channel)){
         Map<String,Object> filters = new HashMap<>();
         filters.put(JsonKey.CHANNEL, channel);

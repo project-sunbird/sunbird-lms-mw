@@ -21,6 +21,7 @@ import org.sunbird.learner.actors.search.CourseSearchActor;
 import org.sunbird.learner.actors.search.SearchHandlerActor;
 import org.sunbird.learner.actors.syncjobmanager.EsSyncActor;
 import org.sunbird.metrics.actors.CourseMetricsActor;
+import org.sunbird.metrics.actors.MetricsBackGroundJobActor;
 import org.sunbird.metrics.actors.OrganisationMetricsActor;
 import org.sunbird.metrics.actors.UserMetricsActor;
 
@@ -62,6 +63,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private ActorRef esSyncActor;
     private ActorRef emailServiceActor;
     private ActorRef fileUploadServiceActor;
+    private ActorRef metricsBackGroungJobActor;
     public static ActorRef schedularActor;
     private ActorRef badgesActor;
     private ExecutionContext ec;
@@ -89,6 +91,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private static final String SCHEDULAR_ACTOR = "schedularActor";
     private static final String EMAIL_SERVICE_ACTOR =  "emailServiceActor";
     private static final String FILE_UPLOAD_ACTOR = "fileUploadActor";
+    private static final String METRICS_ACKGROUNG_JOB__ACTOR= "metricsBackGroungJobActor";
     private static final String BADGES_ACTOR = "badgesActor";
     /**
      * constructor to initialize router actor with child actor pool
@@ -140,6 +143,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
             SCHEDULAR_ACTOR);
         emailServiceActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(EmailServiceActor.class)),
             EMAIL_SERVICE_ACTOR);
+        metricsBackGroungJobActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(MetricsBackGroundJobActor.class)),
+            METRICS_ACKGROUNG_JOB__ACTOR);
+
         badgesActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(BadgesActor.class)),
             BADGES_ACTOR);
         ec = getContext().dispatcher();
@@ -229,6 +235,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
         
         routerMap.put(ActorOperations.SYNC.getValue(), esSyncActor);
         routerMap.put(ActorOperations.FILE_STORAGE_SERVICE.getValue(), fileUploadServiceActor);
+        routerMap.put(ActorOperations.FILE_UPLOAD_AND_SEND_MAIL.getValue(), metricsBackGroungJobActor);
         routerMap.put(ActorOperations.GET_ALL_BADGE.getValue(), badgesActor);
         routerMap.put(ActorOperations.ADD_USER_BADGE.getValue(), badgesActor);
     }

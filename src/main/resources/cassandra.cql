@@ -504,6 +504,17 @@ insert into sunbird.role (id,name,rolegroupid,status) values ('COURSE_ADMIN','Co
 insert into sunbird.role_group (id,name) values ('COURSE_CREATOR','Course Creator');
 update sunbird.role_group set url_action_ids=['courseCreator'] where id='COURSE_CREATOR';
 insert into sunbird.role (id,name,rolegroupid,status) values ('COURSE_CREATOR','Course Creator',['COURSE_CREATOR'],1);
+
+
+// Table for tracking report status -- Aug 29, 2017
+
+CREATE TABLE IF NOT EXISTS sunbird.report_tracking(id text, status int,type text,createdDate text,userId text,uploadedDate text,email text,fileUrl text,emailTryCount int, PRIMARY KEY (id));
+CREATE INDEX inx_report_tracking_status ON sunbird.report_tracking(status);
+CREATE INDEX inx_report_tracking_userId ON sunbird.report_tracking(userId);
+ALTER TABLE sunbird.report_tracking ADD firstName text;
+ALTER TABLE sunbird.report_tracking ADD batchId text;
+ALTER TABLE sunbird.report_tracking ADD period text;
+ALTER TABLE sunbird.report_tracking ADD data text;
 DELETE FROM url_action where id='FLAG_REVIEWER';
 update sunbird.role_group set name='Flag Reviewer' where id='FLAG_REVIEWER';
 //changes on Aug 29,2017

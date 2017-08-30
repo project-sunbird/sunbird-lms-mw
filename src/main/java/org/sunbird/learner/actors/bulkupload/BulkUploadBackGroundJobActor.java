@@ -44,6 +44,11 @@ import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 
+/**
+ * This actor will handle bulk upload operation .
+ *
+ * @author Amit Kumar
+ */
 public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
   private ActorRef backGroundActorRef;
@@ -238,6 +243,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       }
     }
     Boolean flag = false;
+    Timestamp ts = new Timestamp(new Date().getTime());
     Map<String , Object> userCourses = new HashMap<>();
     userCourses.put(JsonKey.USER_ID , userId);
     userCourses.put(JsonKey.BATCH_ID , batchId);
@@ -247,7 +253,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     userCourses.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
     userCourses.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
     userCourses.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
-    userCourses.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
+    userCourses.put(JsonKey.DATE_TIME, ts);
     userCourses.put(JsonKey.COURSE_PROGRESS, 0);
     userCourses.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.COURSE_LOGO_URL));
     userCourses.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.COURSE_NAME));
@@ -260,6 +266,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       cassandraOperation
           .insertRecord(courseEnrollmentdbInfo.getKeySpace(), courseEnrollmentdbInfo.getTableName(),
               userCourses);
+      // TODO: for some reason, ES indexing is failing with Timestamp value. need to check and correct it.
+      userCourses.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
       insertUserCoursesToES(userCourses);
       flag = true;
     }catch(Exception ex) {
@@ -551,32 +559,57 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             List<String> list = new ArrayList<>(Arrays.asList(userGrade));
             userMap.put(JsonKey.LANGUAGE, list);
           }
+          //convert userName,provide,loginId,externalId.. value to lowercase
+          updateMapSomeValueTOLowerCase(userMap);
           userMap = insertRecordToKeyCloak(userMap);
           Map<String,Object> tempMap = new HashMap<>();
           tempMap.putAll(userMap);
           tempMap.remove(JsonKey.EMAIL_VERIFIED);
           tempMap.remove(JsonKey.PHONE_VERIFIED);
           tempMap.remove(JsonKey.POSITION);
-          //Add only PUBLIC role to user
-          List<String> list = new ArrayList<>();
-          list.add(JsonKey.PUBLIC);
-          tempMap.put(JsonKey.ROLES, list);
-          //convert userName,provide,loginId,externalId.. value to lowercase
-          updateMapSomeValueTOLowerCase(tempMap);
+      
           Response response = null;
-          try {
-            response = cassandraOperation
-                .insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
-          } catch(Exception ex){
-            ProjectLogger.log("Exception occurred while bulk user upload in BulkUploadBackGroundJobActor:", ex);
-            userMap.remove(JsonKey.ID);
-            userMap.remove(JsonKey.PASSWORD);
-            userMap.put(JsonKey.ERROR_MSG, ex.getMessage());
-            failureUserReq.add(userMap);
-            continue;
-          } finally {
-            if (null == response) {
-              ssoManager.removeUser(userMap);
+          if(null == tempMap.get(JsonKey.OPERATION)){
+            //insert user record
+            //Add only PUBLIC role to user
+            List<String> list = new ArrayList<>();
+            list.add(JsonKey.PUBLIC);
+            tempMap.put(JsonKey.ROLES, list);
+           
+            try {
+              response = cassandraOperation
+                  .insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
+            } catch(Exception ex){
+              ProjectLogger.log("Exception occurred while bulk user upload in BulkUploadBackGroundJobActor:", ex);
+              userMap.remove(JsonKey.ID);
+              userMap.remove(JsonKey.PASSWORD);
+              userMap.put(JsonKey.ERROR_MSG, ex.getMessage()+" ,user insertion failed.");
+              failureUserReq.add(userMap);
+              continue;
+            } finally {
+              if (null == response) {
+                ssoManager.removeUser(userMap);
+              }
+            }
+            //insert details to user_org table
+            insertRecordToUserOrgTable(userMap);
+            
+          }else {
+            //update user record
+            tempMap.remove(JsonKey.OPERATION);
+            tempMap.remove(JsonKey.REGISTERED_ORG_ID);
+            tempMap.remove(JsonKey.ROOT_ORG_ID);
+            tempMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+            try {
+              response = cassandraOperation
+                  .updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
+            } catch (Exception ex) {
+              ProjectLogger.log("Exception occurred while bulk user upload in BulkUploadBackGroundJobActor:", ex);
+              userMap.remove(JsonKey.ID);
+              userMap.remove(JsonKey.PASSWORD);
+              userMap.put(JsonKey.ERROR_MSG, ex.getMessage()+" ,user updation failed.");
+              failureUserReq.add(userMap);
+              continue;
             }
           }
           //save successfully created user data 
@@ -587,8 +620,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           tempMap.remove(JsonKey.ID);
           tempMap.put(JsonKey.PASSWORD,"*****");
           successUserReq.add(tempMap);
-          //insert details to user_org table
-          insertRecordToUserOrgTable(userMap);
+         
           //insert details to user Ext Identity table
           insertRecordToUserExtTable(userMap);
           //update elastic search
@@ -686,8 +718,10 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       map.put(JsonKey.IS_VERIFIED, true);
 
       reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.USERNAME));
-
-      updateUserExtIdentity(map, usrExtIdDb);
+      List<Map<String,Object>> mapList = checkDataUserExtTable(map);
+      if(mapList.isEmpty()){
+        updateUserExtIdentity(map, usrExtIdDb,JsonKey.INSERT);
+      }
     }
     if (requestMap.containsKey(JsonKey.PHONE) && !(ProjectUtil
         .isStringNullOREmpty((String) requestMap.get(JsonKey.PHONE)))) {
@@ -701,8 +735,13 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         map.put(JsonKey.IS_VERIFIED, true);
       }
       reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.PHONE));
-
-      updateUserExtIdentity(map, usrExtIdDb);
+      List<Map<String,Object>> mapList = checkDataUserExtTable(map);
+      if(mapList.isEmpty()){
+        updateUserExtIdentity(map, usrExtIdDb,JsonKey.INSERT);
+      }else{
+        map.put(JsonKey.ID, mapList.get(0).get(JsonKey.ID));
+        updateUserExtIdentity(map, usrExtIdDb,JsonKey.UPDATE);
+      } 
     }
     if (requestMap.containsKey(JsonKey.EMAIL) && !(ProjectUtil
         .isStringNullOREmpty((String) requestMap.get(JsonKey.EMAIL)))) {
@@ -715,24 +754,56 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         map.put(JsonKey.IS_VERIFIED, true);
       }
       reqMap.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EMAIL));
-
-      updateUserExtIdentity(map, usrExtIdDb);
+      List<Map<String,Object>> mapList = checkDataUserExtTable(map);
+      if(mapList.isEmpty()){
+        updateUserExtIdentity(map, usrExtIdDb,JsonKey.INSERT);
+      }else{
+        map.put(JsonKey.ID, mapList.get(0).get(JsonKey.ID));
+        updateUserExtIdentity(map, usrExtIdDb,JsonKey.UPDATE);
+      }
     }
     if (requestMap.containsKey(JsonKey.AADHAAR_NO) && !(ProjectUtil
         .isStringNullOREmpty((String) requestMap.get(JsonKey.AADHAAR_NO)))) {
       map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
       map.put(JsonKey.EXTERNAL_ID, JsonKey.AADHAAR_NO);
       map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.AADHAAR_NO));
-
+      map.put(JsonKey.IS_VERIFIED, false);
       reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.AADHAAR_NO));
-
-      updateUserExtIdentity(map, usrExtIdDb);
+      List<Map<String,Object>> mapList = checkDataUserExtTable(map);
+      if(mapList.isEmpty()){
+        updateUserExtIdentity(map, usrExtIdDb,JsonKey.INSERT);
+      }else{
+        map.put(JsonKey.ID, mapList.get(0).get(JsonKey.ID));
+        updateUserExtIdentity(map, usrExtIdDb,JsonKey.UPDATE);
+      }
     }
   }
   
-  private void updateUserExtIdentity(Map<String, Object> map, DbInfo usrExtIdDb) {
+  private List<Map<String, Object>> checkDataUserExtTable(Map<String, Object> map) {
+    Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
+    Map<String, Object> reqMap = new HashMap<>();
+    reqMap.put(JsonKey.USER_ID, map.get(JsonKey.USER_ID));
+    reqMap.put(JsonKey.EXTERNAL_ID_VALUE, map.get(JsonKey.EXTERNAL_ID_VALUE));
+    Response response = null;
+    List<Map<String, Object>> responseList = new ArrayList<>();
+    try{
+      response = cassandraOperation.getRecordsByProperties(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), reqMap);
+    } catch (Exception ex){
+      ProjectLogger.log("Exception Occured while fetching data from user Ext Table in bulk upload", ex);
+    }
+    if(null != response){
+      responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    }
+    return responseList;
+  }
+
+  private void updateUserExtIdentity(Map<String, Object> map, DbInfo usrExtIdDb, String opType) {
     try {
-      cassandraOperation.insertRecord(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), map);
+      if(JsonKey.INSERT.equalsIgnoreCase(opType)){
+        cassandraOperation.insertRecord(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), map);
+      }else{
+        cassandraOperation.updateRecord(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), map);
+      }
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
@@ -779,55 +850,63 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       Response resultFrUserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),
           usrDbInfo.getTableName(), JsonKey.LOGIN_ID, loginId);
       if (!(((List<Map<String, Object>>) resultFrUserName.get(JsonKey.RESPONSE)).isEmpty())) {
-        throw new ProjectCommonException(
-            ResponseCode.userAlreadyExist.getErrorCode(),
-            ResponseCode.userAlreadyExist.getErrorMessage(),
-            ResponseCode.SERVER_ERROR.getResponseCode());
-      }
-    }
-    
-      try {
-        String userId = ssoManager.createUser(userMap);
-        if (!ProjectUtil.isStringNullOREmpty(userId)) {
-          userMap.put(JsonKey.USER_ID, userId);
-          userMap.put(JsonKey.ID, userId);
+        //user exist 
+        Map<String,Object> map = ((List<Map<String, Object>>) resultFrUserName.get(JsonKey.RESPONSE)).get(0);
+        userMap.put(JsonKey.ID,map.get(JsonKey.ID));
+        userMap.put(JsonKey.USER_ID, map.get(JsonKey.ID));
+        userMap.put(JsonKey.OPERATION, JsonKey.UPDATE);
+        if(userMap.get(JsonKey.REGISTERED_ORG_ID).equals(map.get(JsonKey.REGISTERED_ORG_ID))){
+          UpdateKeyCloakUserBase(userMap);
         } else {
           throw new ProjectCommonException(
-              ResponseCode.userRegUnSuccessfull.getErrorCode(),
-              ResponseCode.userRegUnSuccessfull.getErrorMessage(),
-              ResponseCode.SERVER_ERROR.getResponseCode());
+              ResponseCode.userRegOrgError.getErrorCode(),
+              ResponseCode.userRegOrgError.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
         }
-      } catch (Exception exception) {
-        ProjectLogger.log("Exception occured while creating user in keycloak ", exception);
-        throw exception;
+        
+      } else{
+        //user doesn't exist
+          try {
+            String userId = ssoManager.createUser(userMap);
+            if (!ProjectUtil.isStringNullOREmpty(userId)) {
+              userMap.put(JsonKey.USER_ID, userId);
+              userMap.put(JsonKey.ID, userId);
+            } else {
+              throw new ProjectCommonException(
+                  ResponseCode.userRegUnSuccessfull.getErrorCode(),
+                  ResponseCode.userRegUnSuccessfull.getErrorMessage(),
+                  ResponseCode.SERVER_ERROR.getResponseCode());
+            }
+          } catch (Exception exception) {
+            ProjectLogger.log("Exception occured while creating user in keycloak ", exception);
+            throw exception;
+          }
+          userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+          userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
+          /**
+           * set role as PUBLIC by default if role is empty in request body.
+           * And if roles are coming in request body, then check for PUBLIC role , if not
+           * present then add PUBLIC role to the list
+           *
+           */
+
+          if (userMap.containsKey(JsonKey.ROLES)) {
+            List<String> roles = (List<String>) userMap.get(JsonKey.ROLES);
+            if (!roles.contains(ProjectUtil.UserRole.PUBLIC.getValue())) {
+              roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
+              userMap.put(JsonKey.ROLES, roles);
+            }
+          } else {
+            List<String> roles = new ArrayList<>();
+            roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
+            userMap.put(JsonKey.ROLES, roles);
+          }
       }
-      
-      userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-      userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
-      
+    }
       if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PASSWORD))) {
         userMap
             .put(JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
       }
-      /**
-       * set role as PUBLIC by default if role is empty in request body.
-       * And if roles are coming in request body, then check for PUBLIC role , if not
-       * present then add PUBLIC role to the list
-       *
-       */
-
-      if (userMap.containsKey(JsonKey.ROLES)) {
-        List<String> roles = (List<String>) userMap.get(JsonKey.ROLES);
-        if (!roles.contains(ProjectUtil.UserRole.PUBLIC.getValue())) {
-          roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
-          userMap.put(JsonKey.ROLES, roles);
-        }
-      } else {
-        List<String> roles = new ArrayList<>();
-        roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
-        userMap.put(JsonKey.ROLES, roles);
-      }
-
       return userMap;
     }
 
@@ -924,6 +1003,25 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           ((String) map.get(JsonKey.LOGIN_ID)).toLowerCase());
     }
 
+  }
+  
+  private void UpdateKeyCloakUserBase(Map<String, Object> userMap) {
+    try {
+      
+      String userId = ssoManager.updateUser(userMap);
+      if (!(!ProjectUtil.isStringNullOREmpty(userId) && userId.equalsIgnoreCase(JsonKey.SUCCESS))) {
+        throw new ProjectCommonException(
+            ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
+            ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
+            ResponseCode.SERVER_ERROR.getResponseCode());
+      }
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+      throw new ProjectCommonException(
+          ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
+          ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
   }
   
 }

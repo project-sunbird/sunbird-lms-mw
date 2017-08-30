@@ -136,14 +136,16 @@ public class UtilityActor extends UntypedAbstractActor {
                 }else if(ProjectUtil.isNull(course.get(JsonKey.LEAF_NODE_COUNT))){
                     updateDb.put(JsonKey.STATUS , ProjectUtil.ProgressStatus.STARTED.getValue());
                 }
-
+              Timestamp ts = new Timestamp(new Date().getTime());
               updateDb.put(JsonKey.ID , (String)course.get(JsonKey.ID));
               updateDb.put(JsonKey.COURSE_PROGRESS , courseProgress);
-              updateDb.put(JsonKey.DATE_TIME , new Timestamp(new Date().getTime()));
+              updateDb.put(JsonKey.DATE_TIME , ts);
               updateDb.put(JsonKey.LAST_READ_CONTENTID ,((Map<String,Object>)value.get("content")).get(JsonKey.CONTENT_ID));
               updateDb.put(JsonKey.LAST_READ_CONTENT_STATUS , (contentStateInfo.get((String)((Map<String,Object>)value.get("content")).get(JsonKey.ID))));
                try {
                   cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), updateDb);
+                  // TODO: for some reason, ES indexing is failing with Timestamp value. need to check and correct it.
+                  updateDb.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
                   updateUserCoursesToES(updateDb);
               }catch(Exception ex){
                   ProjectLogger.log(ex.getMessage(), ex);
@@ -153,7 +155,6 @@ public class UtilityActor extends UntypedAbstractActor {
         }
 
     }
-
 
     private Map<String , Object> getLatestContent(Map<String , Object> current , Map<String , Object> next){
         if(current.get(JsonKey.LAST_ACCESS_TIME) == null && next.get(JsonKey.LAST_ACCESS_TIME) == null){

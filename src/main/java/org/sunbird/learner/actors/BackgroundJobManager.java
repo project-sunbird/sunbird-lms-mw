@@ -29,6 +29,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.Util;
+import org.sunbird.learner.util.Util.DbInfo;
 
 /**
  * This class will handle all the background job.
@@ -108,6 +109,8 @@ public class BackgroundJobManager extends UntypedAbstractActor {
           .equalsIgnoreCase(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue())) {
         insertUserCourseInfoToEs(actorMessage);
 
+      }else if (requestedOperation.equalsIgnoreCase(ActorOperations.ADD_USER_BADGE_BKG.getValue())){
+         addBadgeToUserprofile (actorMessage);
       }else {
         ProjectLogger.log("UNSUPPORTED OPERATION");
         ProjectCommonException exception = new ProjectCommonException(
@@ -119,6 +122,48 @@ public class BackgroundJobManager extends UntypedAbstractActor {
     } else {
       ProjectLogger.log("UNSUPPORTED MESSAGE FOR BACKGROUND JOB MANAGER");
     }
+  }
+
+  
+  /**
+   * @param actorMessage
+   */
+  private void addBadgeToUserprofile(Response actorMessage) {
+     Map<String,Object> userBadgeMap = actorMessage.getResult();
+     userBadgeMap.remove(JsonKey.OPERATION);
+     DbInfo userbadge = Util.dbInfoMap.get(JsonKey.USER_BADGES_DB);
+     Response response = cassandraOperation.getRecordsByProperties(userbadge.getKeySpace(), userbadge.getTableName(), userBadgeMap);
+     if(response != null && response.get(JsonKey.RESPONSE) != null) {
+       List<Map<String,Object>> badgesList = (List<Map<String,Object>>)response.get(JsonKey.RESPONSE);
+       if (badgesList != null && badgesList.size()>0) {
+         badgesList= removeDataFromMap(badgesList);
+         Map<String,Object> map = new HashMap<>();
+         map.put(JsonKey.BADGES, badgesList);
+       boolean updateResponse = updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+           ProjectUtil.EsType.user.getTypeName(),
+           (String)userBadgeMap.get(JsonKey.RECEIVER_ID), map);
+       ProjectLogger.log("User badge update response==" + updateResponse);
+       }
+     }else {
+       ProjectLogger.log("No data found user badges to sync with user===" , LoggerEnum.INFO.name());
+     }
+  }
+
+  
+  
+  public static List<Map<String, Object>> removeDataFromMap(
+      List<Map<String, Object>> listOfMap) {
+    List<Map<String, Object>> list = new ArrayList<>();
+    for (Map<String, Object> map : listOfMap) {
+      Map<String, Object> innermap = new HashMap<>();
+      innermap.put(JsonKey.ID, map.get(JsonKey.ID));
+      innermap.put(JsonKey.BADGE_TYPE_ID, map.get(JsonKey.BADGE_TYPE_ID));
+      innermap.put(JsonKey.RECEIVER_ID, map.get(JsonKey.RECEIVER_ID));
+      innermap.put(JsonKey.CREATED_DATE, map.get(JsonKey.CREATED_DATE));
+      innermap.put(JsonKey.CREATED_BY, map.get(JsonKey.CREATED_BY));
+      list.add(innermap);
+    }
+    return list;
   }
 
   private void updateUserRoleToEs(Response actorMessage) {
@@ -244,6 +289,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
     Map<String,Boolean> participants = (Map<String, Boolean>) batch.get(JsonKey.PARTICIPANT);
     for(Map.Entry<String,Boolean> entry : participants.entrySet()){
       if(!entry.getValue()){
+    	Timestamp ts = new Timestamp(new Date().getTime());
         Map<String , Object> userCourses = new HashMap<>();
         userCourses.put(JsonKey.USER_ID , entry.getKey());
         userCourses.put(JsonKey.BATCH_ID , batch.get(JsonKey.ID));
@@ -253,7 +299,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
         userCourses.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
         userCourses.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
         userCourses.put(JsonKey.STATUS, (int)batch.get(JsonKey.STATUS));
-        userCourses.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
+        userCourses.put(JsonKey.DATE_TIME, ts);
         userCourses.put(JsonKey.COURSE_PROGRESS, 0);
         userCourses.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.APP_ICON));
         userCourses.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.NAME));
@@ -265,6 +311,8 @@ public class BackgroundJobManager extends UntypedAbstractActor {
           cassandraOperation
               .insertRecord(courseEnrollmentdbInfo.getKeySpace(), courseEnrollmentdbInfo.getTableName(),
                   userCourses);
+          // TODO: for some reason, ES indexing is failing with Timestamp value. need to check and correct it.
+          userCourses.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
           insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
               ProjectUtil.EsType.usercourses.getTypeName(),
               (String) batch.get(JsonKey.ID), userCourses);
@@ -372,7 +420,6 @@ public class BackgroundJobManager extends UntypedAbstractActor {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
     Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
-    Util.DbInfo userOrgDb = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Response response = null;
     List<Map<String, Object>> list = null;
     try {

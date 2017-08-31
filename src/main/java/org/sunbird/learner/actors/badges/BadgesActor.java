@@ -3,7 +3,6 @@
  */
 package org.sunbird.learner.actors.badges;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -14,11 +13,9 @@ import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -58,6 +55,12 @@ public class BadgesActor  extends UntypedAbstractActor {
                   saveUserBadges(actorMessage);
               } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.HEALTH_CHECK.getValue())) {
                  checkAllComponentHealth(actorMessage); 
+              } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ACTOR.getValue())) {
+                actorhealthCheck(actorMessage);
+              }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ES.getValue())) {
+                esHealthCheck(actorMessage);
+              }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CASSANDRA.getValue())) {
+                cassandraHealthCheck(actorMessage);
               }
               
               else {
@@ -84,6 +87,83 @@ public class BadgesActor  extends UntypedAbstractActor {
   }
 
   /**
+   * @param actorMessage
+   */
+  private void cassandraHealthCheck(Request actorMessage) {
+    Map<String, Object> finalResponseMap = new HashMap<>();
+    List<Map<String, Object>> responseList = new ArrayList<>();
+    boolean isallHealthy = false;
+    responseList.add(ProjectUtil.createCheckResponse(JsonKey.LEARNER_SERVICE, false, null));
+    responseList.add(
+        ProjectUtil.createCheckResponse(JsonKey.ACTOR_SERVICE, false, null));
+    try {
+      cassandraOperation.getAllRecords(badgesDbInfo.getKeySpace(), badgesDbInfo.getTableName());
+     responseList.add(ProjectUtil.createCheckResponse(JsonKey.CASSANDRA_SERVICE, false, null));
+   } catch (Exception e) {
+     responseList.add(ProjectUtil.createCheckResponse(JsonKey.CASSANDRA_SERVICE, true, e));
+     isallHealthy = false;
+   }
+    finalResponseMap.put(JsonKey.CHECKS, responseList);
+    finalResponseMap.put(JsonKey.NAME, "cassandra health check api");
+    if (isallHealthy) {
+      finalResponseMap.put(JsonKey.Healthy, true);
+    } else {
+      finalResponseMap.put(JsonKey.Healthy, false);
+    }
+    Response response = new Response();
+    response.getResult().put(JsonKey.RESPONSE, finalResponseMap);
+    sender().tell(response, self()); 
+   }
+  /**
+   * @param actorMessage
+   */
+  private void esHealthCheck(Request actorMessage) {
+    // check the elastic search
+    boolean isallHealthy = true;
+    Map<String, Object> finalResponseMap = new HashMap<>();
+    List<Map<String, Object>> responseList = new ArrayList<>();
+    responseList.add(
+        ProjectUtil.createCheckResponse(JsonKey.ACTOR_SERVICE, false, null));
+    try {
+      ElasticSearchUtil.getDataByIdentifier(
+          ProjectUtil.EsIndex.sunbird.getIndexName(),
+          ProjectUtil.EsType.organisation.getTypeName(), "1001");
+      responseList.add(
+          ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, false, null));
+    } catch (Exception e) {
+      responseList
+          .add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, true, e));
+      isallHealthy = false;
+    }
+    finalResponseMap.put(JsonKey.CHECKS, responseList);
+    finalResponseMap.put(JsonKey.NAME, "ES health check api");
+    if (isallHealthy) {
+      finalResponseMap.put(JsonKey.Healthy, true);
+    } else {
+      finalResponseMap.put(JsonKey.Healthy, false);
+    }
+    Response response = new Response();
+    response.getResult().put(JsonKey.RESPONSE, finalResponseMap);
+    sender().tell(response, self());
+  }
+  
+  /**
+   * @param actorMessage
+   */
+  private void actorhealthCheck(Request actorMessage) {
+    Map<String, Object> finalResponseMap = new HashMap<>();
+    List<Map<String, Object>> responseList = new ArrayList<>();
+    responseList.add(ProjectUtil.createCheckResponse(JsonKey.LEARNER_SERVICE, false, null));
+    responseList.add(
+        ProjectUtil.createCheckResponse(JsonKey.ACTOR_SERVICE, false, null));
+    finalResponseMap.put(JsonKey.CHECKS, responseList);
+    finalResponseMap.put(JsonKey.NAME, "Actor health check api");
+    finalResponseMap.put(JsonKey.Healthy, true);
+    Response response = new Response();
+    response.getResult().put(JsonKey.RESPONSE, finalResponseMap);
+    sender().tell(response, self());
+  }
+  /**
    * 
    */
   private void checkAllComponentHealth(Request actorMessage) {
@@ -109,7 +189,7 @@ public class BadgesActor  extends UntypedAbstractActor {
     }
    //check EKStep Util.
     try {
-       registertag("testtag1233", "{}", CourseBatchSchedulerUtil.headerMap);
+       ProjectUtil.registertag("testtag1233", "{}", CourseBatchSchedulerUtil.headerMap);
        responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE, false, null));
     } catch (Exception e){
       responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE, true, null));
@@ -196,35 +276,4 @@ public class BadgesActor  extends UntypedAbstractActor {
     }
 
   }
-
-  /**
-   * This method will make EkStep api call register the tag.
-   * @param tagId String unique tag id.
-   * @param body  String requested body
-   * @param header Map<String,String>
-   * @return String
-   * @throws IOException 
-   */
-  private String registertag(String tagId,String body, Map<String,String> header) throws IOException {
-    String tagStatus = "";
-    try {
-      ProjectLogger
-          .log("start call for registering the tag ==" + tagId);
-      tagStatus = HttpUtil.sendPostRequest(
-          PropertiesCache.getInstance()
-              .getProperty(JsonKey.EKSTEP_BASE_URL)
-              + PropertiesCache.getInstance()
-                  .getProperty(JsonKey.EKSTEP_TAG_API_URL)
-              + "/" + tagId,
-              body, header);
-      ProjectLogger
-          .log("end call for tag registration id and status  ==" + tagId
-              + " " + tagStatus);
-    } catch (IOException e) {
-        throw e;
-    }
-    return tagStatus;
-  }
-  
-
 }

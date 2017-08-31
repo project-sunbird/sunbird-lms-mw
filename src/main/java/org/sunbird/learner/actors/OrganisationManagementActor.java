@@ -230,6 +230,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           }
         }
       }
+      if(ProjectUtil.isNull(req.get(JsonKey.IS_ROOT_ORG))){
+        req.put(JsonKey.IS_ROOT_ORG , false);
+      }
       Response result =
           cassandraOperation.insertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), req);
       ProjectLogger.log("Org data saved into cassandra.");

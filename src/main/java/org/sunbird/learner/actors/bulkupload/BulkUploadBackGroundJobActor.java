@@ -911,7 +911,10 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
 
   private String validateUser(Map<String,Object> map) {
-    if (map.get(JsonKey.USERNAME) == null) {
+    if (map.get(JsonKey.EMAIL) == null || (ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.EMAIL)))) {
+      return ResponseCode.emailRequired.getErrorMessage();
+      }
+    if (map.get(JsonKey.USERNAME) == null || (ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.USERNAME)))) {
         return ResponseCode.userNameRequired.getErrorMessage();
     }
     if (map.get(JsonKey.FIRST_NAME) == null

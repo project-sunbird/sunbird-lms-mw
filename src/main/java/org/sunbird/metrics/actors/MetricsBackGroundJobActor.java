@@ -138,6 +138,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
       //TODO: throw exception here ...
     }
     Map<String , Object> reportDbInfo = responseList.get(0);
+
     Map<String , Object> dbReqMap = new HashMap<>();
     dbReqMap.put(JsonKey.ID , requestId);
 
@@ -197,7 +198,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     dbReqMap.put(JsonKey.FILE_URL , storageUrl);
     dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
     //TODO : remove below comment later ...
-    //dbReqMap.put(JsonKey.DATA, null);
+    dbReqMap.put(JsonKey.DATA, null);
     dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.UPLOADING_FILE_SUCCESS.getValue());
     cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
         dbReqMap);

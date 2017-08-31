@@ -46,7 +46,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
   private static ObjectMapper mapper = new ObjectMapper();
   private ActorRef backGroundActorRef;
   private static final String DEFAULT_BATCH_ID ="1";
-  SimpleDateFormat format = ProjectUtil.format;
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   public CourseMetricsActor() {
@@ -234,7 +233,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     requestDbInfo.put(JsonKey.USER_ID, requestedBy);
     requestDbInfo.put(JsonKey.FIRST_NAME, requestedByInfo.get(JsonKey.FIRST_NAME));
     requestDbInfo.put(JsonKey.STATUS, ReportTrackingStatus.NEW.getValue());
-    requestDbInfo.put(JsonKey.BATCH_ID , batchId);
+    requestDbInfo.put(JsonKey.RESOURCE_ID , batchId);
     requestDbInfo.put(JsonKey.PERIOD , periodStr);
     requestDbInfo.put(JsonKey.CREATED_DATE , format.format(new Date()));
     requestDbInfo.put(JsonKey.UPDATED_DATE , format.format(new Date()));

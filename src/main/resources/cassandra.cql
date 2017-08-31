@@ -531,3 +531,7 @@ CREATE INDEX inx_uei_externalIdValue ON sunbird.user_external_identity (external
 ALTER TABLE sunbird.report_tracking ADD tryCount int;
 ALTER TABLE sunbird.report_tracking DROP emailTryCount;
 ALTER TABLE sunbird.report_tracking ADD updatedDate text;
+
+//Changes on Aug 31st 2017
+ALTER TABLE sunbird.report_tracking DROP batchId;
+ALTER TABLE sunbird.report_tracking ADD resourceId text;

@@ -3,6 +3,8 @@ package org.sunbird.metrics.actors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import akka.actor.ActorRef;
+
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -15,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
+import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -25,10 +28,14 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
+import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.Util;
 
 public class OrganisationMetricsActor extends BaseMetricsActor {
 
@@ -37,6 +44,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   private static List<String> operationList = new ArrayList<>();
   private static Map<String, String> conceptsList = new HashMap<>();
   private static FileUtil fileUtil = new ExcelFileUtil();
+  private ActorRef backGroundActorRef;
 
   protected enum ContentStatus {
     Draft("Create"), Review("Review"), Live("Publish");
@@ -77,13 +85,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.ORG_CONSUMPTION_METRICS_REPORT.getValue())) {
           orgConsumptionMetricsReport(actorMessage);
-        } /*else if (actorMessage.getOperation()
-            .equalsIgnoreCase(ActorOperations.ORG_CREATION_METRICS_REPORT.getValue())) {
-          orgCreationMetricsExcel(actorMessage);
-        } else if (actorMessage.getOperation()
-            .equalsIgnoreCase(ActorOperations.ORG_CONSUMPTION_METRICS_REPORT.getValue())) {
-          orgConsumptionMetricsExcel(actorMessage);
-        }*/ else {
+        } else {
           ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
           ProjectCommonException exception =
               new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
@@ -107,27 +109,91 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   }
 
   private void orgConsumptionMetricsReport(Request actorMessage) {
-
     ProjectLogger.log("OrganisationMetricsActor-orgConsumptionMetricsReport called");
-    Request request = new Request();
-    String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
-
-
+    String data = getJsonString(orgConsumptionMetricsExcel(actorMessage));
+    String requestId = createReportTrackingEntry(actorMessage, data);
     Response response = new Response();
-    response.getResult().put(JsonKey.PROCESS_ID, 121);
+    response.put(JsonKey.REQUEST_ID , requestId);
     sender().tell(response, self());
+    
+ // assign the back ground task to background job actor ...
+    Request backGroundRequest = new Request();
+    backGroundRequest.setOperation(ActorOperations.FILE_UPLOAD_AND_SEND_MAIL.getValue());
+
+    Map<String , Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.REQUEST_ID , requestId);
+    innerMap.put(JsonKey.DATA , data);
+
+    backGroundRequest.setRequest(innerMap);
+    backGroundActorRef.tell(backGroundRequest , self());
+    return;
+  }
+
+  private String createReportTrackingEntry(Request actorMessage, String data) {
+    String requestedBy = (String) actorMessage.get(JsonKey.REQUESTED_BY);
+    String orgId = (String) actorMessage.get(JsonKey.ORG_ID);
+    String period = (String) actorMessage.get(JsonKey.PERIOD);
+
+    Map<String , Object> requestedByInfo = ElasticSearchUtil.getDataByIdentifier(EsIndex.sunbird.getIndexName() , EsType.user.getTypeName() ,requestedBy);
+    if(ProjectUtil.isNull(requestedByInfo) || ProjectUtil.isStringNullOREmpty((String)requestedByInfo.get(JsonKey.FIRST_NAME))){
+      throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+          ResponseCode.invalidRequestData.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+
+    Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
+    String requestId = ProjectUtil.getUniqueIdFromTimestamp(1);
+
+    Map<String , Object> requestDbInfo = new HashMap<>();
+    requestDbInfo.put(JsonKey.ID , requestId);
+    requestDbInfo.put(JsonKey.USER_ID, requestedBy);
+    requestDbInfo.put(JsonKey.FIRST_NAME, requestedByInfo.get(JsonKey.FIRST_NAME));
+    requestDbInfo.put(JsonKey.STATUS, ReportTrackingStatus.NEW.getValue());
+    requestDbInfo.put(JsonKey.RESOURCE_ID , orgId);
+    requestDbInfo.put(JsonKey.PERIOD , period);
+    requestDbInfo.put(JsonKey.CREATED_DATE , format.format(new Date()));
+    requestDbInfo.put(JsonKey.UPDATED_DATE , format.format(new Date()));
+    requestDbInfo.put(JsonKey.EMAIL, requestedByInfo.get(JsonKey.EMAIL));
+    requestDbInfo.put(JsonKey.DATA, data);
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    cassandraOperation.insertRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
+        requestDbInfo);
+    
+    return requestId;
+  }
+
+  private String getJsonString(Object requestObject) {
+    ObjectMapper mapper = new ObjectMapper();
+    String data = "";
+    try {
+      data = mapper.writeValueAsString(requestObject);
+    } catch (JsonProcessingException e) {
+      throw new ProjectCommonException(ResponseCode.invalidJsonData.getErrorCode(),
+          ResponseCode.invalidJsonData.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
+    return data;
   }
 
   private void orgCreationMetricsReport(Request actorMessage) {
-
     ProjectLogger.log("OrganisationMetricsActor-orgCreationMetricsReport called");
-    Request request = new Request();
-    String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
-
-
+    String data = getJsonString(orgCreationMetricsExcel(actorMessage));
+    String requestId = createReportTrackingEntry(actorMessage, data);
     Response response = new Response();
-    response.getResult().put(JsonKey.PROCESS_ID, 121);
+    response.put(JsonKey.REQUEST_ID , requestId);
     sender().tell(response, self());
+    
+ // assign the back ground task to background job actor ...
+    Request backGroundRequest = new Request();
+    backGroundRequest.setOperation(ActorOperations.FILE_UPLOAD_AND_SEND_MAIL.getValue());
+
+    Map<String , Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.REQUEST_ID , requestId);
+    innerMap.put(JsonKey.DATA , data);
+
+    backGroundRequest.setRequest(innerMap);
+    backGroundActorRef.tell(backGroundRequest , self());
+    return;
   }
 
   @Override
@@ -613,7 +679,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     }
   }
 
-  private void orgCreationMetricsExcel(Request actorMessage) {
+  private List<List<Object>> orgCreationMetricsExcel(Request actorMessage) {
     ProjectLogger.log("In orgCreationMetricsExcel api");
     try {
       String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
@@ -658,13 +724,9 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       String fileName =
           "CreationReport_" + orgId + FILENAMESEPARATOR + System.currentTimeMillis() + FILENAMESEPARATOR + periodStr;
       fileName = folderPath + fileName;
-      File file = fileUtil.writeToFile(fileName, csvRecords);
-      Response response = new Response();
-      sender().tell(response, self());
+      return csvRecords;
     } catch (ProjectCommonException e) {
-      ProjectLogger.log("Some error occurs", e);
-      sender().tell(e, self());
-      return;
+      throw e;
     } catch (Exception e) {
       ProjectLogger.log("Some error occurs", e);
       throw new ProjectCommonException(ResponseCode.internalError.getErrorCode(),
@@ -674,19 +736,16 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void orgConsumptionMetricsExcel(Request actorMessage) {
+  private List<List<Object>> orgConsumptionMetricsExcel(Request actorMessage) {
     ProjectLogger.log("In orgConsumptionMetricsExcel api");
     try {
       String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
       String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
       Map<String, Object> orgData = validateOrg(orgId);
       if (null == orgData) {
-        ProjectCommonException exception =
-            new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
+        throw new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
                 ResponseCode.invalidOrgData.getErrorMessage(),
                 ResponseCode.CLIENT_ERROR.getResponseCode());
-        sender().tell(exception, self());
-        return;
       }
       String orgHashId = (String) orgData.get(JsonKey.HASH_TAG_ID);
       String channel =
@@ -716,13 +775,9 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       String fileName =
           "ConsumptionReport_" + orgId + FILENAMESEPARATOR + System.currentTimeMillis() + FILENAMESEPARATOR + periodStr;
       fileName = folderPath + fileName;
-      File file = fileUtil.writeToFile(fileName, csvRecords);
-      Response response = new Response();
-      sender().tell(response, self());
+      return csvRecords;
     } catch (ProjectCommonException e) {
-      ProjectLogger.log("Some error occurs", e);
-      sender().tell(e, self());
-      return;
+      throw e;
     } catch (Exception e) {
       ProjectLogger.log("Some error occurs", e);
       throw new ProjectCommonException(ResponseCode.internalError.getErrorCode(),

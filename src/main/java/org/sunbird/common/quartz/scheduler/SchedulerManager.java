@@ -123,11 +123,35 @@ public class SchedulerManager {
           ProjectLogger.log("CoursePublishedUpdate schedular started",LoggerEnum.INFO.name());
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);
-      }  
-      
-      
-    } catch (IOException | SchedulerException  | InterruptedException e ) {
+      }
+
+
+
+      // add another job for verifying the course published details from EKStep.
+      // 1- create a job and bind with class which is implementing Job
+      // interface.
+      JobDetail metricsReportJob = JobBuilder.newJob(MetricsReportJob.class).requestRecovery(true).withIdentity("metricsReportJob", identifier).build();
+
+      // 2- Create a trigger object that will define frequency of run.
+      //This job will run every hours.
+      Trigger metricsReportRetryTrigger = TriggerBuilder.newTrigger().withIdentity("metricsReportRetryTrigger", identifier)
+          .withSchedule(CronScheduleBuilder.cronSchedule("0 0/59 * 1/1 * ? *")).build();
+      try {
+        if (scheduler.checkExists(metricsReportJob.getKey())){
+          scheduler.deleteJob(metricsReportJob.getKey());
+        }
+        scheduler.scheduleJob(metricsReportJob, metricsReportRetryTrigger);
+        scheduler.start();
+        ProjectLogger.log("MetricsReportJob schedular started",LoggerEnum.INFO.name());
+      } catch (Exception e) {
+        ProjectLogger.log(e.getMessage(), e);
+        e.printStackTrace();
+      }
+
+
+    } catch (Exception e ) {
       ProjectLogger.log("Error in properties cache", e);
+      e.printStackTrace();
     } finally {
         registerShutDownHook();
     }

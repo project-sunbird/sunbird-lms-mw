@@ -515,6 +515,9 @@ ALTER TABLE sunbird.report_tracking ADD firstName text;
 ALTER TABLE sunbird.report_tracking ADD batchId text;
 ALTER TABLE sunbird.report_tracking ADD period text;
 ALTER TABLE sunbird.report_tracking ADD data text;
+
+
+
 DELETE FROM url_action where id='FLAG_REVIEWER';
 update sunbird.role_group set name='Flag Reviewer' where id='FLAG_REVIEWER';
 //changes on Aug 29,2017
@@ -524,3 +527,7 @@ CREATE TABLE IF NOT EXISTS sunbird.user_badge(id text, createdDate text, created
  insert into sunbird.badge (id,name,description,isactive) values ('0123206539020943360','President''s Gold Medal','Gold medal provided by President',true);
  CREATE INDEX inx_usr_badg_receiverid ON sunbird.user_badge (receiverid);
 CREATE INDEX inx_uei_externalIdValue ON sunbird.user_external_identity (externalIdValue);
+
+ALTER TABLE sunbird.report_tracking ADD tryCount int;
+ALTER TABLE sunbird.report_tracking DROP emailTryCount;
+ALTER TABLE sunbird.report_tracking ADD updatedDate text;

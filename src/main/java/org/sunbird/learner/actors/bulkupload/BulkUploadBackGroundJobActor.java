@@ -381,12 +381,31 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           orgDbInfo.getTableName(), dbMap);
       List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
       if (!(list.isEmpty())) {
-        ProjectLogger.log("Org exist with Provider " + concurrentHashMap.get(JsonKey.PROVIDER) + " , External Id "
-            + concurrentHashMap.get(JsonKey.EXTERNAL_ID));
-        concurrentHashMap.put(JsonKey.ERROR_MSG , "Org exist with Provider " + concurrentHashMap.get(JsonKey.PROVIDER) + " , External Id "
-            + concurrentHashMap.get(JsonKey.EXTERNAL_ID));
-        failureList.add(concurrentHashMap);
-        return;
+
+        Map<String , Object> orgResult = list.get(0);
+
+        if(ProjectUtil.isNotNull(concurrentHashMap.get(JsonKey.IS_ROOT_ORG))){
+          boolean isRootOrg = Boolean.parseBoolean((String)concurrentHashMap.get(JsonKey.IS_ROOT_ORG));
+          boolean dbRootOrg = (boolean)orgResult.get(JsonKey.IS_ROOT_ORG);
+          if(isRootOrg != dbRootOrg){
+            ProjectLogger.log("Can not update isRootorg value ");
+            concurrentHashMap.put(JsonKey.ERROR_MSG , "Can not update isRootorg value ");
+            failureList.add(concurrentHashMap);
+            return;
+          }
+        }
+        if(ProjectUtil.isNotNull(concurrentHashMap.get(JsonKey.CHANNEL))){
+          String  channel = ((String)concurrentHashMap.get(JsonKey.CHANNEL));
+          String dbChannel = (String)orgResult.get(JsonKey.CHANNEL);
+          if(!(channel.equalsIgnoreCase(dbChannel))){
+            ProjectLogger.log("Can not update is Channel value ");
+            concurrentHashMap.put(JsonKey.ERROR_MSG , "Can not update channel value ");
+            failureList.add(concurrentHashMap);
+            return;
+          }
+        }
+        concurrentHashMap.put(JsonKey.ID , orgResult.get(JsonKey.ID));
+
       }
     }
 
@@ -429,16 +448,16 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
           Map<String , Object> esResult = elasticSearchComplexSearch(filters, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
           if(isNotNull(esResult) && esResult.containsKey(JsonKey.CONTENT) && isNotNull(esResult.get(JsonKey.CONTENT)) && ((List)esResult.get(JsonKey.CONTENT)).size()>0){
-            concurrentHashMap.put(JsonKey.ERROR_MSG , "Root Org already exist for Channel "+concurrentHashMap.get(JsonKey.CHANNEL));
-            failureList.add(concurrentHashMap);
-            return;
+
+            List<Map<String , Object>> contentList = (List<Map<String, Object>>) esResult.get(JsonKey.CONTENT);
+            concurrentHashMap.put(JsonKey.ID , contentList.get(0).get(JsonKey.ID));
           }
         concurrentHashMap.put(JsonKey.ROOT_ORG_ID , JsonKey.DEFAULT_ROOT_ORG_ID);
         channelToRootOrgCache.put((String)concurrentHashMap.get(JsonKey.CHANNEL) , (String)concurrentHashMap.get(JsonKey.ORGANISATION_NAME));
 
     }else{
 
-        if(concurrentHashMap.containsKey(JsonKey.CHANNEL) && isNotNull(JsonKey.CHANNEL)){
+        if(concurrentHashMap.containsKey(JsonKey.CHANNEL) && !(ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.CHANNEL)))){
           String channel = (String)concurrentHashMap.get(JsonKey.CHANNEL);
           if(channelToRootOrgCache.containsKey(channel)){
             concurrentHashMap.put(JsonKey.ROOT_ORG_ID , channelToRootOrgCache.get(channel));
@@ -460,6 +479,16 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
               return;
             }
           }
+        }else if(concurrentHashMap.containsKey(JsonKey.PROVIDER) && !(ProjectUtil.isStringNullOREmpty(JsonKey.PROVIDER))){
+          String rootOrgId = Util.getRootOrgIdFromChannel(
+              (String) concurrentHashMap.get(JsonKey.PROVIDER));
+
+          if(!(ProjectUtil.isStringNullOREmpty(rootOrgId))){
+            concurrentHashMap.put(JsonKey.ROOT_ORG_ID , rootOrgId);
+          }else{
+            concurrentHashMap.put(JsonKey.ROOT_ORG_ID , JsonKey.DEFAULT_ROOT_ORG_ID);
+          }
+
         }else{
           concurrentHashMap.put(JsonKey.ROOT_ORG_ID , JsonKey.DEFAULT_ROOT_ORG_ID);
         }
@@ -467,7 +496,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       }
 
     String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(1);
-    concurrentHashMap.put(JsonKey.ID, uniqueId);
+      if(ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.ID))) {
+        concurrentHashMap.put(JsonKey.ID, uniqueId);
+      }
     concurrentHashMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     concurrentHashMap.put(JsonKey.STATUS, ProjectUtil.OrgStatus.ACTIVE.getValue());
     // allow lower case values for source and externalId to the database
@@ -487,10 +518,13 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
     concurrentHashMap.put(JsonKey.CONTACT_DETAILS , contactDetails);
 
+    if(ProjectUtil.isNull(concurrentHashMap.get(JsonKey.IS_ROOT_ORG))){
+      concurrentHashMap.put(JsonKey.IS_ROOT_ORG , false);
+    }
     try {
       Response result =
           cassandraOperation
-              .insertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), concurrentHashMap);
+              .upsertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), concurrentHashMap);
       Response orgResponse = new Response();
 
       // sending the org contact as List if it is null simply remove from map
@@ -911,7 +945,10 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
 
   private String validateUser(Map<String,Object> map) {
-    if (map.get(JsonKey.USERNAME) == null) {
+    if (map.get(JsonKey.EMAIL) == null || (ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.EMAIL)))) {
+      return ResponseCode.emailRequired.getErrorMessage();
+      }
+    if (map.get(JsonKey.USERNAME) == null || (ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.USERNAME)))) {
         return ResponseCode.userNameRequired.getErrorMessage();
     }
     if (map.get(JsonKey.FIRST_NAME) == null

@@ -46,7 +46,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
   private static ObjectMapper mapper = new ObjectMapper();
   private ActorRef backGroundActorRef;
   private static final String DEFAULT_BATCH_ID ="1";
-  SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+  SimpleDateFormat format = ProjectUtil.format;
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   public CourseMetricsActor() {
@@ -229,7 +229,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     String requestId = ProjectUtil.getUniqueIdFromTimestamp(1);
 
-
     Map<String , Object> requestDbInfo = new HashMap<>();
     requestDbInfo.put(JsonKey.ID , requestId);
     requestDbInfo.put(JsonKey.USER_ID, requestedBy);
@@ -237,7 +236,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
     requestDbInfo.put(JsonKey.STATUS, ReportTrackingStatus.NEW.getValue());
     requestDbInfo.put(JsonKey.BATCH_ID , batchId);
     requestDbInfo.put(JsonKey.PERIOD , periodStr);
-    requestDbInfo.put(JsonKey.CREATED_DATE , (String)format.format(new Date()));
+    requestDbInfo.put(JsonKey.CREATED_DATE , format.format(new Date()));
+    requestDbInfo.put(JsonKey.UPDATED_DATE , format.format(new Date()));
     requestDbInfo.put(JsonKey.EMAIL, requestedByInfo.get(JsonKey.EMAIL));
 
     ObjectMapper mapper= new ObjectMapper();
@@ -264,6 +264,9 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     backGroundRequest.setRequest(innerMap);
     backGroundActorRef.tell(backGroundRequest , self());
+  }
+
+  private void assignTaskToBackGround(List<List<Object>> finalList) {
   }
 
   @SuppressWarnings("unchecked")

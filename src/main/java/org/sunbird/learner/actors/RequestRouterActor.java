@@ -238,6 +238,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.FILE_UPLOAD_AND_SEND_MAIL.getValue(), metricsBackGroungJobActor);
         routerMap.put(ActorOperations.GET_ALL_BADGE.getValue(), badgesActor);
         routerMap.put(ActorOperations.ADD_USER_BADGE.getValue(), badgesActor);
+        routerMap.put(ActorOperations.HEALTH_CHECK.getValue(), badgesActor);
     }
 
 

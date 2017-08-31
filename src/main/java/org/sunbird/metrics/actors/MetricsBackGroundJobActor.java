@@ -4,6 +4,8 @@ import akka.actor.UntypedAbstractActor;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +34,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
 
   Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  SimpleDateFormat format = ProjectUtil.format;
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -39,30 +42,85 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     {
 
       if (message instanceof Request) {
-        ProjectLogger.log("BackgroundJobManager  onReceive called");
+        try {
+          ProjectLogger.log("BackgroundJobManager  onReceive called");
 
-        Request actorMessage = (Request) message;
-        String requestedOperation = actorMessage.getOperation();
-        ProjectLogger.log("Operation name is ==" + requestedOperation);
-        if (requestedOperation.equalsIgnoreCase(ActorOperations.FILE_UPLOAD_AND_SEND_MAIL.getValue())) {
-          fileUploadAndSendMail(actorMessage);
-        } else if (requestedOperation
-            .equalsIgnoreCase(ActorOperations.UPDATE_USER_COUNT.getValue())) {
-         // updateUserCount(actorMessage);
+          Request actorMessage = (Request) message;
+          String requestedOperation = actorMessage.getOperation();
+          ProjectLogger.log("Operation name is ==" + requestedOperation);
+          if (requestedOperation
+              .equalsIgnoreCase(ActorOperations.FILE_UPLOAD_AND_SEND_MAIL.getValue())) {
+            fileUploadAndSendMail(actorMessage);
+          } else if (requestedOperation
+              .equalsIgnoreCase(ActorOperations.SEND_MAIL.getValue())) {
+            sendMail(actorMessage);
 
-        } else {
-          ProjectLogger.log("UNSUPPORTED OPERATION");
-          ProjectCommonException exception = new ProjectCommonException(
-              ResponseCode.invalidOperationName.getErrorCode(),
-              ResponseCode.invalidOperationName.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-          ProjectLogger.log("UnSupported operation in Background Job Manager", exception);
+          } else {
+            ProjectCommonException exception = new ProjectCommonException(
+                ResponseCode.invalidOperationName.getErrorCode(),
+                ResponseCode.invalidOperationName.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+            ProjectLogger.log("UnSupported operation in Background Job Manager", exception);
+          }
+        }catch (Exception ex){
+          ProjectLogger.log(ex.getMessage(), ex);
         }
       } else {
         ProjectLogger.log("UNSUPPORTED MESSAGE FOR BACKGROUND JOB MANAGER");
       }
     }
 
+  }
+
+  private void sendMail(Request request) {
+
+    Map<String , Object> map = request.getRequest();
+    String requestId = (String)map.get(JsonKey.REQUEST_ID);
+
+    //TODO: fetch the DB details from database on basis of requestId ....
+    Response response = cassandraOperation.getRecordById(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
+        requestId);
+    List<Map<String,Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if(responseList.isEmpty()){
+      //TODO: throw exception here ...
+    }
+
+    Map<String , Object> reportDbInfo = responseList.get(0);
+    Map<String , Object> dbReqMap = new HashMap<>();
+    dbReqMap.put(JsonKey.ID , requestId);
+
+    if(processMailSending(reportDbInfo)){
+      dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.SENDING_MAIL_SUCCESS.getValue());
+      dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
+      cassandraOperation
+          .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
+              dbReqMap);
+    }else{
+      increasetryCount(reportDbInfo);
+      if((Integer)reportDbInfo.get(JsonKey.TRY_COUNT)>3){
+        dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.FAILED.getValue());
+        dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
+        cassandraOperation
+            .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
+                dbReqMap);
+      }else{
+        dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
+        cassandraOperation
+            .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
+                dbReqMap);
+      }
+    }
+
+
+  }
+
+  private void increasetryCount(Map<String, Object> map) {
+    if(null == map.get(JsonKey.TRY_COUNT)){
+      map.put(JsonKey.TRY_COUNT , 0);
+    }else{
+      Integer tryCount = (Integer) map.get(JsonKey.TRY_COUNT);
+      map.put(JsonKey.TRY_COUNT , tryCount+1);
+    }
   }
 
   private void fileUploadAndSendMail(Request request) throws IOException {
@@ -82,13 +140,26 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     dbReqMap.put(JsonKey.ID , requestId);
 
     dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.GENERATING_FILE.getValue());
+    dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
     cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
         dbReqMap);
 
     List<List<Object>> finalList = (List<List<Object>>) map.get(JsonKey.DATA);
-    File file = ExcelFileUtil.writeToFile("File-"+requestId,finalList);
+    File file = null;
+    try {
+      file = ExcelFileUtil.writeToFile("File-" + requestId, finalList);
+    }catch(Exception ex){
+      ProjectLogger.log("PROCESS FAILED WHILE CONVERTING THE DATA TO FILE .", ex);
+      // update DB as status failed since unable to convert data to file
+      dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
+      dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.FAILED.getValue());
+      cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
+          dbReqMap);
+      throw ex;
+    }
 
     // TODO: going to upload file , save this info into the DB ...
+    dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
     dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.UPLOADING_FILE.getValue());
     cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
         dbReqMap);
@@ -100,6 +171,19 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
 
     } catch (IOException e) {
       ProjectLogger.log("Error occured while uploading file on storage for requset "+requestId, e);
+      increasetryCount(reportDbInfo);
+      if((Integer)reportDbInfo.get(JsonKey.TRY_COUNT)>3){
+        dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.FAILED.getValue());
+        dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
+        cassandraOperation
+            .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
+                dbReqMap);
+      }else{
+        dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
+        cassandraOperation
+            .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
+                dbReqMap);
+      }
       throw e;
     }finally {
       if(ProjectUtil.isNotNull(file)){
@@ -109,19 +193,38 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
 
     reportDbInfo.put(JsonKey.FILE_URL , storageUrl);
     dbReqMap.put(JsonKey.FILE_URL , storageUrl);
+    dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
+    //TODO : remove below comment later ...
+    //dbReqMap.put(JsonKey.DATA, null);
     dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.UPLOADING_FILE_SUCCESS.getValue());
     cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
         dbReqMap);
 
     dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.SENDING_MAIL.getValue());
+    dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
     cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
         dbReqMap);
 
     if(processMailSending(reportDbInfo)){
       dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.SENDING_MAIL_SUCCESS.getValue());
+      dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
       cassandraOperation
           .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
               dbReqMap);
+    }else{
+      increasetryCount(reportDbInfo);
+      if((Integer)reportDbInfo.get(JsonKey.TRY_COUNT)>3){
+        dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.FAILED.getValue());
+        dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
+        cassandraOperation
+            .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
+                dbReqMap);
+      }else{
+        dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
+        cassandraOperation
+            .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
+                dbReqMap);
+      }
     }
   }
 

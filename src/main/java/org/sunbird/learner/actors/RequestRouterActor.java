@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -270,7 +271,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
      * @return boolean
      */
     private boolean route(ActorRef router, Request message) {
-
+      long startTime = System.currentTimeMillis();
+      ProjectLogger.log("Actor Service Call start  for  api ==" + message.getOperation()  +" start time " +startTime, LoggerEnum.PERF_LOG);
         Timeout timeout = new Timeout(Duration.create(WAIT_TIME_VALUE, TimeUnit.SECONDS));
         Future<Object> future = Patterns.ask(router, message, timeout);
         ActorRef parent = sender();
@@ -278,6 +280,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
             @Override
             public void onComplete(Throwable failure, Object result) {
                 if (failure != null) {
+                  ProjectLogger.log("Actor Service Call Ended on Failure for  api ==" + message.getOperation()  +" end time " +System.currentTimeMillis() +"  Time taken " + (System.currentTimeMillis()-startTime), LoggerEnum.PERF_LOG);
                     //We got a failure, handle it here
                     ProjectLogger.log(failure.getMessage(), failure);
                     if(failure instanceof ProjectCommonException){
@@ -289,6 +292,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
                 } else {
                     ProjectLogger.log("PARENT RESULT IS " + result);
                     // We got a result, handle it
+                    ProjectLogger.log("Actor Service Call Ended on Success for  api ==" + message.getOperation()  +" end time " +System.currentTimeMillis() +"  Time taken " + (System.currentTimeMillis()-startTime), LoggerEnum.PERF_LOG);
                     parent.tell(result, ActorRef.noSender());
                 }
             }

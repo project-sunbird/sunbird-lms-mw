@@ -14,6 +14,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.HttpUtil;
@@ -21,6 +22,8 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.EsIndex;
+import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
 import org.sunbird.common.models.util.mail.SendMail;
 import org.sunbird.common.models.util.PropertiesCache;
@@ -481,5 +484,32 @@ public class Util {
             return (String) (list.get(0).get(JsonKey.USERNAME));
         }
         return null;
+    }
+    
+    public static String getRootOrgIdFromChannel(String channel) {
+      if (!ProjectUtil.isStringNullOREmpty(channel)) {
+        Map<String, Object> filters = new HashMap<>();
+        filters.put(JsonKey.CHANNEL, channel);
+        filters.put(JsonKey.IS_ROOT_ORG, true);
+        Map<String, Object> esResult = elasticSearchComplexSearch(filters,
+            EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
+        if (isNotNull(esResult) && esResult.containsKey(JsonKey.CONTENT)
+            && isNotNull(esResult.get(JsonKey.CONTENT))
+            && ((List) esResult.get(JsonKey.CONTENT)).size() > 0) {
+          Map<String, Object> esContent =
+              ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
+          return (String) esContent.getOrDefault(JsonKey.ID, "");
+        }
+      }
+      return "";
+    }
+    
+    private static Map<String , Object> elasticSearchComplexSearch(Map<String , Object> filters , String index , String type) {
+
+      SearchDTO searchDTO = new SearchDTO();
+      searchDTO.getAdditionalProperties().put(JsonKey.FILTERS , filters);
+
+      return ElasticSearchUtil.complexSearch(searchDTO , index,type);
+
     }
 }

@@ -15,6 +15,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.ExcelFileUtil;
+import org.sunbird.common.models.util.FileUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
@@ -34,6 +35,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
 
   Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static FileUtil fileUtil = new ExcelFileUtil();
   SimpleDateFormat format = ProjectUtil.format;
 
   @Override
@@ -147,7 +149,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     List<List<Object>> finalList = (List<List<Object>>) map.get(JsonKey.DATA);
     File file = null;
     try {
-      file = ExcelFileUtil.writeToFile("File-" + requestId, finalList);
+      file = fileUtil.writeToFile("File-"+requestId,finalList);
     }catch(Exception ex){
       ProjectLogger.log("PROCESS FAILED WHILE CONVERTING THE DATA TO FILE .", ex);
       // update DB as status failed since unable to convert data to file

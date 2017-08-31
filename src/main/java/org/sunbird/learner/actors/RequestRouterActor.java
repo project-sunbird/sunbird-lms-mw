@@ -62,7 +62,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private ActorRef esSyncActor;
     private ActorRef emailServiceActor;
     private ActorRef fileUploadServiceActor;
-    private ActorRef metricsBackGroungJobActor;
+    public static ActorRef metricsBackGroungJobActor;
     public static ActorRef schedularActor;
     private ActorRef badgesActor;
     private ExecutionContext ec;

@@ -239,6 +239,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.GET_ALL_BADGE.getValue(), badgesActor);
         routerMap.put(ActorOperations.ADD_USER_BADGE.getValue(), badgesActor);
         routerMap.put(ActorOperations.HEALTH_CHECK.getValue(), badgesActor);
+        routerMap.put(ActorOperations.ACTOR.getValue(), badgesActor);
+        routerMap.put(ActorOperations.ES.getValue(), badgesActor);
+        routerMap.put(ActorOperations.CASSANDRA.getValue(), badgesActor);
     }
 
 

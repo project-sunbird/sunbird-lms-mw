@@ -48,6 +48,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
   private ActorRef backGroundActorRef;
   private static final String DEFAULT_BATCH_ID ="1";
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private Util.DbInfo batchDbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
 
   public CourseMetricsActor() {
     backGroundActorRef = getContext().actorOf(Props.create(MetricsBackGroundJobActor.class), "metricsBackGroundJobActor");
@@ -279,6 +280,29 @@ public class CourseMetricsActor extends BaseMetricsActor {
     Request request = new Request();
     String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
     String batchId = (String) actorMessage.getRequest().get(JsonKey.COURSE_ID);
+    if(ProjectUtil.isStringNullOREmpty(batchId)){
+      ProjectLogger.log("CourseMetricsActor-courseProgressMetrics-- batch is not valid .");
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidCourseBatchId.getErrorCode(),
+              ResponseCode.invalidCourseBatchId.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return ;
+    }
+
+    //check batch exist in db or not
+    Response courseBatchResult = cassandraOperation.getRecordById(batchDbInfo.getKeySpace(), batchDbInfo.getTableName(),
+        batchId);
+    List<Map<String, Object>> batchList = (List<Map<String, Object>>) courseBatchResult.get(JsonKey.RESPONSE);
+    if ((batchList.isEmpty())) {
+      ProjectLogger.log("CourseMetricsActor-courseProgressMetrics-- batch is not valid .");
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidCourseBatchId.getErrorCode(),
+              ResponseCode.invalidCourseBatchId.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return ;
+    }
     //get start and end time ---
     Map<String , String> dateRangeFilter = new HashMap<>();
 
@@ -427,12 +451,30 @@ public class CourseMetricsActor extends BaseMetricsActor {
       sender().tell(response, self());
     }else{
 
-      ProjectLogger.log("CourseMetricsActor-courseProgressMetrics-- batch is not valid .");
-      ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.invalidCourseBatchId.getErrorCode(),
-              ResponseCode.invalidCourseBatchId.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+      ProjectLogger.log("CourseMetricsActor-courseProgressMetrics-- Courses for batch is empty .");
+
+      Map<String, Object> responseMap = new LinkedHashMap<>();
+      Map<String, Object> userdataMap = new LinkedHashMap<>();
+      Map<String, Object> courseprogressdataMap = new LinkedHashMap<>();
+      Map<String, Object> valueMap = new LinkedHashMap<>();
+
+      userdataMap.put(JsonKey.NAME, "List of users enrolled for the course");
+      userdataMap.put("split", "content.sum(time_spent)");
+      userdataMap.put("buckets", new ArrayList());
+
+      courseprogressdataMap.put(JsonKey.NAME, "List of users enrolled for the course");
+      courseprogressdataMap.put("split", "content.sum(time_spent)");
+      courseprogressdataMap.put("buckets", esContent);
+
+      valueMap.put("course.progress.users_enrolled.count", userdataMap);
+      valueMap.put("course.progress.course_progress_per_user.count", courseprogressdataMap);
+
+      responseMap.put("period", periodStr);
+      responseMap.put("series", valueMap);
+
+      Response response = new Response();
+      response.putAll(responseMap);
+      sender().tell(response, self());
 
     }
   }

@@ -365,49 +365,13 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         return;
     }
 
-    if (isNotNull((String)concurrentHashMap.get(JsonKey.PROVIDER)) || isNotNull((String)concurrentHashMap.get(JsonKey.EXTERNAL_ID))) {
-      if (isNull(concurrentHashMap.get(JsonKey.PROVIDER)) || isNull(
-          concurrentHashMap.get(JsonKey.EXTERNAL_ID))) {
-        ProjectLogger.log("Source and external ids both should exist.");
-        concurrentHashMap.put(JsonKey.ERROR_MSG , "Source and external ids both should exist.");
-        failureList.add(concurrentHashMap);
-        return;
-      }
-
-      Map<String, Object> dbMap = new HashMap<>();
-      dbMap.put(JsonKey.PROVIDER, concurrentHashMap.get(JsonKey.PROVIDER));
-      dbMap.put(JsonKey.EXTERNAL_ID, concurrentHashMap.get(JsonKey.EXTERNAL_ID));
-      Response result = cassandraOperation.getRecordsByProperties(orgDbInfo.getKeySpace(),
-          orgDbInfo.getTableName(), dbMap);
-      List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-      if (!(list.isEmpty())) {
-
-        Map<String , Object> orgResult = list.get(0);
-
-        if(ProjectUtil.isNotNull(concurrentHashMap.get(JsonKey.IS_ROOT_ORG))){
-          boolean isRootOrg = Boolean.parseBoolean((String)concurrentHashMap.get(JsonKey.IS_ROOT_ORG));
-          boolean dbRootOrg = (boolean)orgResult.get(JsonKey.IS_ROOT_ORG);
-          if(isRootOrg != dbRootOrg){
-            ProjectLogger.log("Can not update isRootorg value ");
-            concurrentHashMap.put(JsonKey.ERROR_MSG , "Can not update isRootorg value ");
-            failureList.add(concurrentHashMap);
-            return;
-          }
-        }
-        if(ProjectUtil.isNotNull(concurrentHashMap.get(JsonKey.CHANNEL))){
-          String  channel = ((String)concurrentHashMap.get(JsonKey.CHANNEL));
-          String dbChannel = (String)orgResult.get(JsonKey.CHANNEL);
-          if(!(channel.equalsIgnoreCase(dbChannel))){
-            ProjectLogger.log("Can not update is Channel value ");
-            concurrentHashMap.put(JsonKey.ERROR_MSG , "Can not update channel value ");
-            failureList.add(concurrentHashMap);
-            return;
-          }
-        }
-        concurrentHashMap.put(JsonKey.ID , orgResult.get(JsonKey.ID));
-
-      }
+    Boolean isRootOrg ;
+    if(isNotNull(concurrentHashMap.get(JsonKey.IS_ROOT_ORG))){
+      isRootOrg = new Boolean((String)concurrentHashMap.get(JsonKey.IS_ROOT_ORG));
+    }else{
+      isRootOrg=false;
     }
+    concurrentHashMap.put(JsonKey.IS_ROOT_ORG , isRootOrg);
 
     if (concurrentHashMap.containsKey(JsonKey.CONTACT_DETAILS) && !ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.CONTACT_DETAILS))) {
 
@@ -427,13 +391,67 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       }
     }
 
-    Boolean isRootOrg ;
-    if(isNotNull(concurrentHashMap.get(JsonKey.IS_ROOT_ORG))){
-      isRootOrg = new Boolean((String)concurrentHashMap.get(JsonKey.IS_ROOT_ORG));
-    }else{
-      isRootOrg=false;
+    if (isNotNull((String)concurrentHashMap.get(JsonKey.PROVIDER)) || isNotNull((String)concurrentHashMap.get(JsonKey.EXTERNAL_ID))) {
+      if (isNull(concurrentHashMap.get(JsonKey.PROVIDER)) || isNull(
+          concurrentHashMap.get(JsonKey.EXTERNAL_ID))) {
+        ProjectLogger.log("Source and external ids both should exist.");
+        concurrentHashMap.put(JsonKey.ERROR_MSG , "Source and external ids both should exist.");
+        failureList.add(concurrentHashMap);
+        return;
+      }
+
+      Map<String, Object> dbMap = new HashMap<>();
+      dbMap.put(JsonKey.PROVIDER, concurrentHashMap.get(JsonKey.PROVIDER));
+      dbMap.put(JsonKey.EXTERNAL_ID, concurrentHashMap.get(JsonKey.EXTERNAL_ID));
+      Response result = cassandraOperation.getRecordsByProperties(orgDbInfo.getKeySpace(),
+          orgDbInfo.getTableName(), dbMap);
+      List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      if (!(list.isEmpty())) {
+
+        Map<String , Object> orgResult = list.get(0);
+
+          boolean dbRootOrg = (boolean)orgResult.get(JsonKey.IS_ROOT_ORG);
+          if(isRootOrg != dbRootOrg){
+            ProjectLogger.log("Can not update isRootorg value ");
+            concurrentHashMap.put(JsonKey.ERROR_MSG , "Can not update isRootorg value ");
+            failureList.add(concurrentHashMap);
+            return;
+          }
+
+          if(! compareStrings((String)concurrentHashMap.get(JsonKey.CHANNEL) ,(String)orgResult.get(JsonKey.CHANNEL))){
+            ProjectLogger.log("Can not update is Channel value ");
+            concurrentHashMap.put(JsonKey.ERROR_MSG , "Can not update channel value ");
+            failureList.add(concurrentHashMap);
+            return;
+        }
+        concurrentHashMap.put(JsonKey.ID , orgResult.get(JsonKey.ID));
+
+        try {
+          cassandraOperation
+                  .upsertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), concurrentHashMap);
+          Response orgResponse = new Response();
+
+          // sending the org contact as List if it is null simply remove from map
+          if(isNotNull(orgContactList)){
+            concurrentHashMap.put(JsonKey.CONTACT_DETAILS , Arrays.asList(orgContactList));
+          }
+
+          orgResponse.put(JsonKey.ORGANISATION, concurrentHashMap);
+          orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
+          ProjectLogger.log("Calling background job to save org data into ES" + orgResult.get(JsonKey.ID));
+          backGroundActorRef.tell(orgResponse, self());
+          successList.add(concurrentHashMap);
+          return ;
+        }catch(Exception ex){
+
+          ProjectLogger.log("Exception occurs  " ,ex);
+          concurrentHashMap.put(JsonKey.ERROR_MSG , ex.getMessage());
+          failureList.add(concurrentHashMap);
+          return;
+        }
+      }
     }
-    concurrentHashMap.put(JsonKey.IS_ROOT_ORG , isRootOrg);
+
       if(isRootOrg){
         if(isNull(concurrentHashMap.get(JsonKey.CHANNEL))) {
           concurrentHashMap.put(JsonKey.ERROR_MSG , "Channel is mandatory for root org ");
@@ -447,10 +465,52 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           filters.put(JsonKey.IS_ROOT_ORG , true);
 
           Map<String , Object> esResult = elasticSearchComplexSearch(filters, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
+
+          // if for root org true for this channel means simply update the existing record ...
           if(isNotNull(esResult) && esResult.containsKey(JsonKey.CONTENT) && isNotNull(esResult.get(JsonKey.CONTENT)) && ((List)esResult.get(JsonKey.CONTENT)).size()>0){
 
             List<Map<String , Object>> contentList = (List<Map<String, Object>>) esResult.get(JsonKey.CONTENT);
+            Map<String , Object> rootOrgInfo = contentList.get(0);
             concurrentHashMap.put(JsonKey.ID , contentList.get(0).get(JsonKey.ID));
+
+            if(! compareStrings((String)concurrentHashMap.get(JsonKey.EXTERNAL_ID) , (String)rootOrgInfo.get(JsonKey.EXTERNAL_ID))){
+                ProjectLogger.log("Can not update is External Id ");
+                concurrentHashMap.put(JsonKey.ERROR_MSG , "Can not update External Id ");
+                failureList.add(concurrentHashMap);
+                return;
+            }
+
+            if( !compareStrings((String)concurrentHashMap.get(JsonKey.PROVIDER) , (String)rootOrgInfo.get(JsonKey.PROVIDER))){
+                ProjectLogger.log("Can not update is Provider ");
+                concurrentHashMap.put(JsonKey.ERROR_MSG , "Can not update Provider ");
+                failureList.add(concurrentHashMap);
+                return;
+            }
+
+            try {
+              cassandraOperation
+                  .upsertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), concurrentHashMap);
+              Response orgResponse = new Response();
+
+              // sending the org contact as List if it is null simply remove from map
+              if(isNotNull(orgContactList)){
+                concurrentHashMap.put(JsonKey.CONTACT_DETAILS , Arrays.asList(orgContactList));
+              }
+
+              orgResponse.put(JsonKey.ORGANISATION, concurrentHashMap);
+              orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
+              ProjectLogger.log("Calling background job to save org data into ES" + contentList.get(0).get(JsonKey.ID));
+              backGroundActorRef.tell(orgResponse, self());
+              successList.add(concurrentHashMap);
+              return ;
+            }catch(Exception ex){
+
+              ProjectLogger.log("Exception occurs  " ,ex);
+              concurrentHashMap.put(JsonKey.ERROR_MSG , ex.getMessage());
+              failureList.add(concurrentHashMap);
+              return;
+            }
+
           }
         concurrentHashMap.put(JsonKey.ROOT_ORG_ID , JsonKey.DEFAULT_ROOT_ORG_ID);
         channelToRootOrgCache.put((String)concurrentHashMap.get(JsonKey.CHANNEL) , (String)concurrentHashMap.get(JsonKey.ORGANISATION_NAME));
@@ -756,8 +816,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     if (requestMap.containsKey(JsonKey.USERNAME) && !(ProjectUtil
         .isStringNullOREmpty((String) requestMap.get(JsonKey.USERNAME)))) {
       map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-      map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.USERNAME));
-      map.put(JsonKey.EXTERNAL_ID_VALUE, JsonKey.USERNAME);
+      map.put(JsonKey.EXTERNAL_ID, JsonKey.USERNAME);
+      map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.USERNAME));
       map.put(JsonKey.IS_VERIFIED, true);
 
       reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.USERNAME));
@@ -1053,6 +1113,18 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
+  }
+
+  // method will compare two strings and return true id both are same otherwise false ...
+  private boolean compareStrings(String first , String second){
+
+    if(isNull(first) && isNull(second)) {
+      return true;
+    }
+    if((isNull(first) && isNotNull(second))||(isNull(second) && isNotNull(first))){
+      return false;
+    }
+    return first.equalsIgnoreCase(second);
   }
   
 }

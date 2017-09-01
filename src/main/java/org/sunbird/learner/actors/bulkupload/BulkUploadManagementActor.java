@@ -476,7 +476,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
             JsonKey.PASSWORD,JsonKey.USERNAME,
             JsonKey.PROVIDER,JsonKey.PHONE_VERIFIED,
             JsonKey.EMAIL_VERIFIED,JsonKey.ROLES,JsonKey.POSITION,
-            JsonKey.GRADE,JsonKey.LOCATION,JsonKey.AADHAAR_NO,
+            JsonKey.GRADE,JsonKey.LOCATION,
             JsonKey.DOB,JsonKey.GENDER,JsonKey.LANGUAGE,
             JsonKey.PROFILE_SUMMARY,JsonKey.SUBJECT));
     

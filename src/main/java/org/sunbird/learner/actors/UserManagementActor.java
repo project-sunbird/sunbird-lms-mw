@@ -1176,21 +1176,6 @@ public class UserManagementActor extends UntypedAbstractActor {
         updateUserExtIdentity(map, usrExtIdDb,JsonKey.UPDATE);
       }
     }
-    if (requestMap.containsKey(JsonKey.AADHAAR_NO) && !(ProjectUtil
-        .isStringNullOREmpty((String) requestMap.get(JsonKey.AADHAAR_NO)))) {
-      map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-      map.put(JsonKey.EXTERNAL_ID, JsonKey.AADHAAR_NO);
-      map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.AADHAAR_NO));
-
-      reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.AADHAAR_NO));
-      List<Map<String,Object>> mapList = checkDataUserExtTable(map);
-      if(mapList.isEmpty()){
-        updateUserExtIdentity(map, usrExtIdDb,JsonKey.INSERT);
-      }else{
-        map.put(JsonKey.ID, mapList.get(0).get(JsonKey.ID));
-        updateUserExtIdentity(map, usrExtIdDb,JsonKey.UPDATE);
-      }
-    }
   }
 
   private void updateUserExtIdentity(Map<String, Object> map, DbInfo usrExtIdDb,String opType) {

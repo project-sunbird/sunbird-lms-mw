@@ -138,6 +138,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
       //TODO: throw exception here ...
     }
     Map<String , Object> reportDbInfo = responseList.get(0);
+    String fileFormat = (String) reportDbInfo.get(JsonKey.FORMAT);
 
     Map<String , Object> dbReqMap = new HashMap<>();
     dbReqMap.put(JsonKey.ID , requestId);

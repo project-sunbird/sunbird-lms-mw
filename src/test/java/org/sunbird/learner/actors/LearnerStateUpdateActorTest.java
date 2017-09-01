@@ -5,7 +5,10 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import java.math.BigInteger;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,13 +43,31 @@ public class LearnerStateUpdateActorTest {
     private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     private static Util.DbInfo contentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
     private static Util.DbInfo coursedbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
-    private static final String batchId = "220";
+    private static final String batchId = "220j2536h37841hc3u";
+    private static Util.DbInfo batchdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
 
     @BeforeClass
     public static void setUp() {
         system = ActorSystem.create("system");
         Util.checkCassandraDbConnections();
         insertCourse();
+        insertBatch();
+    }
+
+    private static void insertBatch() {
+
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+        Map<String , Object> batchMap = new HashMap<String , Object>();
+        batchMap.put(JsonKey.ID , batchId);
+        batchMap.put(JsonKey.COURSE_ID , courseId);
+        batchMap.put(JsonKey.CREATED_DATE , (String)format.format(new Date()));
+        batchMap.put(JsonKey.START_DATE , (String)format.format(new Date()));
+        Calendar now =  Calendar.getInstance();
+        now.add(Calendar.DAY_OF_MONTH, 5);
+        Date after5Days = now.getTime();
+        batchMap.put(JsonKey.END_DATE , (String)format.format(after5Days));
+
+        cassandraOperation.insertRecord(batchdbInfo.getKeySpace() , batchdbInfo.getTableName() , batchMap);
     }
 
     private static void insertCourse() {
@@ -187,15 +208,15 @@ public class LearnerStateUpdateActorTest {
     private Map<String , Object> createContent(){
 
         Map<String , Object> content = new HashMap<String , Object>();
-        String key = userId + JsonKey.PRIMARY_KEY_DELIMETER + contentId + JsonKey.PRIMARY_KEY_DELIMETER
-            + courseId;
+       /* String key = userId + JsonKey.PRIMARY_KEY_DELIMETER + contentId + JsonKey.PRIMARY_KEY_DELIMETER
+            + courseId+JsonKey.PRIMARY_KEY_DELIMETER+batchId;*/
         content.put(JsonKey.LAST_ACCESS_TIME , ProjectUtil.getFormattedDate());
         content.put(JsonKey.COMPLETED_COUNT , "0");
         content.put(JsonKey.STATUS , "1");
         content.put(JsonKey.LAST_UPDATED_TIME , ProjectUtil.getFormattedDate());
         content.put(JsonKey.LAST_COMPLETED_TIME , ProjectUtil.getFormattedDate());
-        String id = OneWayHashing.encryptVal(key);
-        content.put(JsonKey.ID , id);
+       // String id = OneWayHashing.encryptVal(key);
+        //content.put(JsonKey.ID , id);
         content.put(JsonKey.COURSE_ID , courseId);
         content.put(JsonKey.USER_ID , userId);
         content.put(JsonKey.CONTENT_ID , contentId);
@@ -213,6 +234,7 @@ public class LearnerStateUpdateActorTest {
             + courseId+JsonKey.PRIMARY_KEY_DELIMETER+batchId;
         String contentid = OneWayHashing.encryptVal(key);
         cassandraOperation.deleteRecord(contentdbInfo.getKeySpace() , contentdbInfo.getTableName(),contentid);
+        cassandraOperation.deleteRecord(batchdbInfo.getKeySpace(), batchdbInfo.getTableName() , batchId);
 
     }
 

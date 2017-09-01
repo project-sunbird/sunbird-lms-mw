@@ -535,3 +535,6 @@ ALTER TABLE sunbird.report_tracking ADD updatedDate text;
 //Changes on Aug 31st 2017
 ALTER TABLE sunbird.report_tracking DROP batchId;
 ALTER TABLE sunbird.report_tracking ADD resourceId text;
+
+// adding fileFormat for dashboard metrics report tracking -- Sep 1,2017
+ALTER TABLE sunbird.report_tracking ADD format text;

@@ -40,6 +40,7 @@ import org.sunbird.learner.util.Util;
 
 public class CourseMetricsActor extends BaseMetricsActor {
 
+  private static final Object COURSE_PROGRESS_REPORT = " Course Prgoress Report" ;
   ElasticSearchUtil elasticSearchUtil = new ElasticSearchUtil();
 
   protected static final String CONTENT_ID = "content_id";
@@ -123,6 +124,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     Request request = new Request();
     List<List<Object>> finalList = null;
     String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
+    String fileFormat = (String) actorMessage.getRequest().get(JsonKey.FORMAT);
     String batchId = (String) actorMessage.getRequest().get(JsonKey.BATCH_ID);
     //get start and end time ---
     Map<String , String> dateRangeFilter = new HashMap<>();
@@ -167,6 +169,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       List<String> userfields = new ArrayList<>();
       userfields.add(JsonKey.USER_ID);
       userfields.add(JsonKey.USERNAME);
+      userfields.add(JsonKey.FIRST_NAME);
       userfields.add(JsonKey.LOGIN_ID);
       userfields.add(JsonKey.CREATED_DATE);
       userfields.add(JsonKey.LANGUAGE);
@@ -206,7 +209,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
         Map<String , Object> userMap = userInfoCache.get(map.get(JsonKey.USER_ID));
         if(isNotNull(userMap)) {
           list.add(userMap.get(JsonKey.LOGIN_ID));
-          list.add(userMap.get(JsonKey.NAME));
+          list.add(userMap.get(JsonKey.FIRST_NAME));
           list.add(userMap.get(JsonKey.CREATED_DATE));
           list.add(userMap.get(JsonKey.LANGUAGE));
           list.add(userMap.get(JsonKey.SUBJECT));
@@ -238,6 +241,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
     requestDbInfo.put(JsonKey.CREATED_DATE , format.format(new Date()));
     requestDbInfo.put(JsonKey.UPDATED_DATE , format.format(new Date()));
     requestDbInfo.put(JsonKey.EMAIL, requestedByInfo.get(JsonKey.EMAIL));
+    requestDbInfo.put(JsonKey.TYPE , COURSE_PROGRESS_REPORT);
+    requestDbInfo.put(JsonKey.FORMAT , fileFormat);
 
     ObjectMapper mapper= new ObjectMapper();
     try {

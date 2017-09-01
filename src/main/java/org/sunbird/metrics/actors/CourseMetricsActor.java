@@ -516,7 +516,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
         sender().tell(exception, self());
       }
       
-      String channel = (String)rootOrgData.get(JsonKey.HASH_TAG_ID);
+      String channel = (String)rootOrgData.get(JsonKey.HASHTAGID);
       ProjectLogger.log("Channel" + channel);
       requestObject.put(JsonKey.CHANNEL, channel);
       request.setRequest(requestObject);

@@ -1,11 +1,5 @@
 package org.sunbird.metrics.actors;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import akka.actor.ActorRef;
-
-import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -22,8 +16,6 @@ import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.ExcelFileUtil;
-import org.sunbird.common.models.util.FileUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -37,14 +29,23 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import akka.actor.ActorRef;
+import akka.actor.Props;
+
 public class OrganisationMetricsActor extends BaseMetricsActor {
 
   private static ObjectMapper mapper = new ObjectMapper();
   private static final String view = "org";
   private static List<String> operationList = new ArrayList<>();
   private static Map<String, String> conceptsList = new HashMap<>();
-  private static FileUtil fileUtil = new ExcelFileUtil();
   private ActorRef backGroundActorRef;
+  
+  public OrganisationMetricsActor() {
+    backGroundActorRef = getContext().actorOf(Props.create(MetricsBackGroundJobActor.class), "metricsBackGroundJobActor");
+  }
 
   protected enum ContentStatus {
     Draft("Create"), Review("Review"), Live("Publish");
@@ -110,11 +111,20 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
   private void orgConsumptionMetricsReport(Request actorMessage) {
     ProjectLogger.log("OrganisationMetricsActor-orgConsumptionMetricsReport called");
-    String data = getJsonString(orgConsumptionMetricsExcel(actorMessage));
-    String requestId = createReportTrackingEntry(actorMessage, data);
+    List<List<Object>> data = orgConsumptionMetricsData(actorMessage);
+    String dataStr = getJsonString(data);
+    String requestId = createReportTrackingEntry(actorMessage, dataStr);
+
     Response response = new Response();
     response.put(JsonKey.REQUEST_ID , requestId);
     sender().tell(response, self());
+    
+ // assign the back ground task to background job actor ...
+    String orgId = (String) actorMessage.get(JsonKey.ORG_ID);
+    String period = (String) actorMessage.get(JsonKey.PERIOD);
+    String fileName =
+        "ConsumptionReport_" + orgId + FILENAMESEPARATOR + System.currentTimeMillis() + FILENAMESEPARATOR + period;
+    fileName = folderPath + fileName;
     
  // assign the back ground task to background job actor ...
     Request backGroundRequest = new Request();
@@ -123,6 +133,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     Map<String , Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.REQUEST_ID , requestId);
     innerMap.put(JsonKey.DATA , data);
+    innerMap.put(JsonKey.FILE_NAME, fileName);
 
     backGroundRequest.setRequest(innerMap);
     backGroundActorRef.tell(backGroundRequest , self());
@@ -177,11 +188,18 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
   private void orgCreationMetricsReport(Request actorMessage) {
     ProjectLogger.log("OrganisationMetricsActor-orgCreationMetricsReport called");
-    String data = getJsonString(orgCreationMetricsExcel(actorMessage));
-    String requestId = createReportTrackingEntry(actorMessage, data);
+    List<List<Object>> data = orgCreationMetricsData(actorMessage);
+    String dataStr = getJsonString(data);
+    String requestId = createReportTrackingEntry(actorMessage, dataStr);
     Response response = new Response();
     response.put(JsonKey.REQUEST_ID , requestId);
     sender().tell(response, self());
+    
+    String orgId = (String) actorMessage.get(JsonKey.ORG_ID);
+    String period = (String) actorMessage.get(JsonKey.PERIOD);
+    String fileName =
+        "CreationReport_" + orgId + FILENAMESEPARATOR + System.currentTimeMillis() + FILENAMESEPARATOR + period;
+    fileName = folderPath + fileName;
     
  // assign the back ground task to background job actor ...
     Request backGroundRequest = new Request();
@@ -190,6 +208,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     Map<String , Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.REQUEST_ID , requestId);
     innerMap.put(JsonKey.DATA , data);
+    innerMap.put(JsonKey.FILE_NAME, fileName);
 
     backGroundRequest.setRequest(innerMap);
     backGroundActorRef.tell(backGroundRequest , self());
@@ -679,16 +698,14 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     }
   }
 
-  private List<List<Object>> orgCreationMetricsExcel(Request actorMessage) {
+  private List<List<Object>> orgCreationMetricsData(Request actorMessage) {
     ProjectLogger.log("In orgCreationMetricsExcel api");
     try {
       String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
-      String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
-
       Map<String, Object> orgData = validateOrg(orgId);
       if (null == orgData) {
-        throw new ProjectCommonException(ResponseCode.esError.getErrorCode(),
-            ResponseCode.esError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+        throw new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
+            ResponseCode.invalidOrgData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
       }
       List<Object> headers = new ArrayList<>();
       headers.add("contentCreatedFor");
@@ -720,10 +737,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         List<Map<String, Object>> userData = getUserDetailsFromES(ekstepData);
         csvRecords.addAll(generateDataList(userData, headers));
       }
-
-      String fileName =
-          "CreationReport_" + orgId + FILENAMESEPARATOR + System.currentTimeMillis() + FILENAMESEPARATOR + periodStr;
-      fileName = folderPath + fileName;
       return csvRecords;
     } catch (ProjectCommonException e) {
       throw e;
@@ -736,7 +749,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   }
 
   @SuppressWarnings("unchecked")
-  private List<List<Object>> orgConsumptionMetricsExcel(Request actorMessage) {
+  private List<List<Object>> orgConsumptionMetricsData(Request actorMessage) {
     ProjectLogger.log("In orgConsumptionMetricsExcel api");
     try {
       String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
@@ -772,9 +785,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       List<List<Object>> csvRecords = new ArrayList<>();
       csvRecords.add(headers);
       csvRecords.addAll(generateDataList(consumptionData, headers));
-      String fileName =
-          "ConsumptionReport_" + orgId + FILENAMESEPARATOR + System.currentTimeMillis() + FILENAMESEPARATOR + periodStr;
-      fileName = folderPath + fileName;
       return csvRecords;
     } catch (ProjectCommonException e) {
       throw e;

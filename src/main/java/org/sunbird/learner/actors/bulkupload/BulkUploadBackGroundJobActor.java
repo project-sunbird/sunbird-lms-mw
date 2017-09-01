@@ -633,6 +633,15 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           if ( null != userMap.get(JsonKey.ROLES)) {
             String[] userRole = ((String) userMap.get(JsonKey.ROLES)).split(",");
             List<String> list = new ArrayList<>(Arrays.asList(userRole));
+          //validating roles
+            if(null != list && !list.isEmpty()){
+              String msg = Util.validateRoles(list);
+              if(!msg.equalsIgnoreCase(JsonKey.SUCCESS)){
+                userMap.put(JsonKey.ERROR_MSG, msg);
+                failureUserReq.add(userMap);
+                continue;
+              }
+            }
             userMap.put(JsonKey.ROLES, list);
           }
 
@@ -795,7 +804,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     Map<String, Object> map = new HashMap<>();
     Map<String, Object> reqMap = new HashMap<>();
     reqMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
-      /* update table for userName,phone,email,Aadhar No
+      /* update table for userName,phone,email
        * for each of these parameter insert a record into db
        * for username update isVerified as true
        * and for others param this will be false
@@ -848,21 +857,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         map.put(JsonKey.IS_VERIFIED, true);
       }
       reqMap.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EMAIL));
-      List<Map<String,Object>> mapList = checkDataUserExtTable(map);
-      if(mapList.isEmpty()){
-        updateUserExtIdentity(map, usrExtIdDb,JsonKey.INSERT);
-      }else{
-        map.put(JsonKey.ID, mapList.get(0).get(JsonKey.ID));
-        updateUserExtIdentity(map, usrExtIdDb,JsonKey.UPDATE);
-      }
-    }
-    if (requestMap.containsKey(JsonKey.AADHAAR_NO) && !(ProjectUtil
-        .isStringNullOREmpty((String) requestMap.get(JsonKey.AADHAAR_NO)))) {
-      map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-      map.put(JsonKey.EXTERNAL_ID, JsonKey.AADHAAR_NO);
-      map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.AADHAAR_NO));
-      map.put(JsonKey.IS_VERIFIED, false);
-      reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.AADHAAR_NO));
       List<Map<String,Object>> mapList = checkDataUserExtTable(map);
       if(mapList.isEmpty()){
         updateUserExtIdentity(map, usrExtIdDb,JsonKey.INSERT);

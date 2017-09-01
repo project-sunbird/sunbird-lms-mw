@@ -125,11 +125,10 @@ public class BadgesActor  extends UntypedAbstractActor {
     responseList.add(
         ProjectUtil.createCheckResponse(JsonKey.ACTOR_SERVICE, false, null));
     try {
-      ElasticSearchUtil.getDataByIdentifier(
-          ProjectUtil.EsIndex.sunbird.getIndexName(),
-          ProjectUtil.EsType.organisation.getTypeName(), "1001");
+       boolean esResponse = ElasticSearchUtil.healthCheck();
       responseList.add(
-          ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, false, null));
+          ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, esResponse, null));
+      isallHealthy = esResponse;
     } catch (Exception e) {
       responseList
           .add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, true, e));
@@ -181,8 +180,9 @@ public class BadgesActor  extends UntypedAbstractActor {
     }
     //check the elastic search 
     try {
-        ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName(), "1001");
-        responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, false, null));
+        boolean response = ElasticSearchUtil.healthCheck();
+        responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, response, null));
+        isallHealthy = response;
     } catch (Exception e) {
       responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, true, e));
       isallHealthy = false;

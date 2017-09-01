@@ -434,6 +434,17 @@ public class UserManagementActor extends UntypedAbstractActor {
     if (null != userMap.get(JsonKey.EMAIL)) {
       checkForEmailAndUserNameUniqueness(userMap, usrDbInfo);
     }
+    //validating roles
+    if(null != userMap.get(JsonKey.ROLES) && !((List<String>) userMap.get(JsonKey.ROLES)).isEmpty()){
+      List<String> roles = (List<String>) userMap.get(JsonKey.ROLES);
+      String msg = Util.validateRoles(roles);
+      if(!msg.equalsIgnoreCase(JsonKey.SUCCESS)){
+        throw new ProjectCommonException(
+            ResponseCode.invalidRole.getErrorCode(),
+            ResponseCode.invalidRole.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
     //not allowing user to update the status,provider,userName
     userMap.remove(JsonKey.STATUS);
     userMap.remove(JsonKey.PROVIDER);
@@ -838,6 +849,34 @@ public class UserManagementActor extends UntypedAbstractActor {
          userMap.put(JsonKey.ROOT_ORG_ID,rootOrgId);
        }
     }
+    
+    /**
+     * set role as PUBLIC by default if role is empty in request body.
+     * And if roles are coming in request body, then check for PUBLIC role , if not
+     * present then add PUBLIC role to the list
+     *
+     */
+
+    if (userMap.containsKey(JsonKey.ROLES)) {
+      List<String> roles = (List<String>) userMap.get(JsonKey.ROLES);
+      String msg = Util.validateRoles(roles);
+      if(!msg.equalsIgnoreCase(JsonKey.SUCCESS)){
+        throw new ProjectCommonException(
+            ResponseCode.invalidRole.getErrorCode(),
+            ResponseCode.invalidRole.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+      if (!roles.contains(ProjectUtil.UserRole.PUBLIC.getValue())) {
+        roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
+        userMap.put(JsonKey.ROLES, roles);
+      }
+    } else {
+      List<String> roles = new ArrayList<>();
+      roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
+      userMap.put(JsonKey.ROLES, roles);
+    }
+    ProjectLogger.log("User roles is===" + userMap.get(JsonKey.ROLES));
+    
     if (isSSOEnabled) {
       try {
         String userId = ssoManager.createUser(userMap);
@@ -870,25 +909,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       userMap
           .put(JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
     }
-    /**
-     * set role as PUBLIC by default if role is empty in request body.
-     * And if roles are coming in request body, then check for PUBLIC role , if not
-     * present then add PUBLIC role to the list
-     *
-     */
-
-    if (userMap.containsKey(JsonKey.ROLES)) {
-      List<String> roles = (List<String>) userMap.get(JsonKey.ROLES);
-      if (!roles.contains(ProjectUtil.UserRole.PUBLIC.getValue())) {
-        roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
-        userMap.put(JsonKey.ROLES, roles);
-      }
-    } else {
-      List<String> roles = new ArrayList<>();
-      roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
-      userMap.put(JsonKey.ROLES, roles);
-    }
-    ProjectLogger.log("User roles is===" + userMap.get(JsonKey.ROLES));
+    
     requestMap = new HashMap<>();
     requestMap.putAll(userMap);
     removeUnwanted(requestMap);
@@ -1147,21 +1168,6 @@ public class UserManagementActor extends UntypedAbstractActor {
         map.put(JsonKey.IS_VERIFIED, true);
       }
       reqMap.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EMAIL));
-      List<Map<String,Object>> mapList = checkDataUserExtTable(map);
-      if(mapList.isEmpty()){
-        updateUserExtIdentity(map, usrExtIdDb,JsonKey.INSERT);
-      }else{
-        map.put(JsonKey.ID, mapList.get(0).get(JsonKey.ID));
-        updateUserExtIdentity(map, usrExtIdDb,JsonKey.UPDATE);
-      }
-    }
-    if (requestMap.containsKey(JsonKey.AADHAAR_NO) && !(ProjectUtil
-        .isStringNullOREmpty((String) requestMap.get(JsonKey.AADHAAR_NO)))) {
-      map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-      map.put(JsonKey.EXTERNAL_ID, JsonKey.AADHAAR_NO);
-      map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.AADHAAR_NO));
-
-      reqMap.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.AADHAAR_NO));
       List<Map<String,Object>> mapList = checkDataUserExtTable(map);
       if(mapList.isEmpty()){
         updateUserExtIdentity(map, usrExtIdDb,JsonKey.INSERT);
@@ -1799,6 +1805,15 @@ public class UserManagementActor extends UntypedAbstractActor {
        }
        tempMap.put(JsonKey.ID, list.get(0).get(JsonKey.ID));
        tempMap.put(JsonKey.ROLES, requestMap.get(JsonKey.ROLES));
+       if(null != requestMap.get(JsonKey.ROLES) && !((List<String>)requestMap.get(JsonKey.ROLES)).isEmpty()){
+         String msg = Util.validateRoles((List<String>)requestMap.get(JsonKey.ROLES));
+         if(!msg.equalsIgnoreCase(JsonKey.SUCCESS)){
+           throw new ProjectCommonException(
+               ResponseCode.invalidRole.getErrorCode(),
+               ResponseCode.invalidRole.getErrorMessage(),
+               ResponseCode.CLIENT_ERROR.getResponseCode());
+         }
+       }
        response = cassandraOperation.updateRecord(userOrgDb.getKeySpace(), userOrgDb.getTableName(), tempMap);
        sender().tell(response,self());
        if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
@@ -1814,6 +1829,15 @@ public class UserManagementActor extends UntypedAbstractActor {
        tempMap.remove(JsonKey.ORGANISATION_ID);
        tempMap.put(JsonKey.ID, requestMap.get(JsonKey.USER_ID));
        tempMap.put(JsonKey.ROLES, requestMap.get(JsonKey.ROLES));
+       if(null != requestMap.get(JsonKey.ROLES) && !((List<String>)requestMap.get(JsonKey.ROLES)).isEmpty()){
+         String msg = Util.validateRoles((List<String>)requestMap.get(JsonKey.ROLES));
+         if(!msg.equalsIgnoreCase(JsonKey.SUCCESS)){
+           throw new ProjectCommonException(
+               ResponseCode.invalidRole.getErrorCode(),
+               ResponseCode.invalidRole.getErrorMessage(),
+               ResponseCode.CLIENT_ERROR.getResponseCode());
+         }
+       }
         Response response = cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
        ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(), (String)requestMap.get(JsonKey.USER_ID), tempMap);
        sender().tell(response,self());

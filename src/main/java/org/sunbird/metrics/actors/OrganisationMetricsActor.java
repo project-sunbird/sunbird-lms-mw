@@ -335,7 +335,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     try {
       Map<String, Object> snapshot = new LinkedHashMap<>();
       Map<String, Object> dataMap = new HashMap<>();
-      dataMap.put(JsonKey.NAME, "Number of content created");
+      dataMap.put(JsonKey.NAME, "Number of contents created");
       Map<String, Object> contentData = (Map<String, Object>) resultData.get("total_content_count");
       if (null != contentData && !contentData.isEmpty()) {
         dataMap.put(VALUE, contentData.get(VALUE));
@@ -415,10 +415,10 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       Map aggKeyMap = (Map) resultData.get("createdOn");
       List<Map<String, Object>> bucket = getBucketData(aggKeyMap, periodStr);
       Map<String, Object> seriesData = new LinkedHashMap<>();
-      if ("5w".equalsIgnoreCase(periodStr)) {
-        seriesData.put(JsonKey.NAME, "Content created by week");
+    /*  if ("5w".equalsIgnoreCase(periodStr)) {
+        seriesData.put(JsonKey.NAME, "Content created per week");
       } else {
-        seriesData.put(JsonKey.NAME, "Content created by day");
+        seriesData.put(JsonKey.NAME, "Content created per day");
       }
       seriesData.put(JsonKey.SPLIT, "content.created_on");
       seriesData.put(GROUP_ID, "org.content.count");
@@ -426,7 +426,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         bucket = createBucketStructure(periodStr);
       }
       seriesData.put("buckets", bucket);
-      series.put("org.creation.content.created_on.count", seriesData);
+      series.put("org.creation.content.created_on.count", seriesData);*/
 
       Map<String, Object> statusList = new HashMap();
       List<Map<String, Object>> statusBucket = new ArrayList<>();
@@ -538,10 +538,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         return;
       }
       String orgName = (String) orgData.get(JsonKey.ORG_NAME);
-      String channel =
-          (String) (orgData.get(JsonKey.CHANNEL) == null ? "" : orgData.get(JsonKey.CHANNEL));
       String orgHashId = (String) orgData.get(JsonKey.HASH_TAG_ID);
-      if (ProjectUtil.isStringNullOREmpty(orgName)) {
+      if (ProjectUtil.isStringNullOREmpty(orgName)|| ProjectUtil.isStringNullOREmpty(orgHashId)) {
         ProjectCommonException exception =
             new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
                 ResponseCode.invalidOrgData.getErrorMessage(),
@@ -549,6 +547,17 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         sender().tell(exception, self());
         return;
       }
+      String orgRootId = (String)orgData.get(JsonKey.ROOT_ORG_ID);
+      Map<String, Object> rootOrgData = validateOrg(orgRootId);
+      if(null == rootOrgData || rootOrgData.isEmpty()){
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.invalidRootOrgData.getErrorCode(),
+                ResponseCode.invalidRootOrgData.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+        sender().tell(exception, self());
+        return;
+      }
+      String channel = (String) rootOrgData.get(JsonKey.HASH_TAG_ID);
       String requestStr = getOrgMetricsRequest(actorMessage, periodStr, orgHashId, null, channel);
       String ekStepResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, requestStr);
       String responseFormat = orgConsumptionResponseGenerator(periodStr, ekStepResponse);
@@ -644,9 +653,9 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       series.put("org.consumption.content.time_spent.sum", seriesData);
       seriesData = new LinkedHashMap<>();
       if ("5w".equalsIgnoreCase(period)) {
-        seriesData.put(JsonKey.NAME, "Number of users by week");
+        seriesData.put(JsonKey.NAME, "Number of users per week");
       } else {
-        seriesData.put(JsonKey.NAME, "Number of users by day");
+        seriesData.put(JsonKey.NAME, "Number of users per day");
       }
       seriesData.put(JsonKey.SPLIT, "content.users.count");
       seriesData.put(GROUP_ID, "org.users.count");

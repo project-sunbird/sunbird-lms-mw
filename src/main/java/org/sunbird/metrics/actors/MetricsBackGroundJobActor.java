@@ -1,14 +1,13 @@
 package org.sunbird.metrics.actors;
 
-import akka.actor.UntypedAbstractActor;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.velocity.VelocityContext;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -28,6 +27,8 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
+import akka.actor.UntypedAbstractActor;
+
 /**
  * Created by arvind on 28/8/17.
  */
@@ -40,8 +41,6 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
 
   @Override
   public void onReceive(Object message) throws Throwable {
-
-    {
 
       if (message instanceof Request) {
         try {
@@ -70,10 +69,9 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
       } else {
         ProjectLogger.log("UNSUPPORTED MESSAGE FOR BACKGROUND JOB MANAGER");
       }
-    }
-
   }
 
+  @SuppressWarnings("unchecked")
   private void sendMail(Request request) {
 
     Map<String , Object> map = request.getRequest();
@@ -125,6 +123,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void fileUploadAndSendMail(Request request) throws IOException {
 
     Map<String , Object> map = request.getRequest();
@@ -148,9 +147,13 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
         dbReqMap);
 
     List<List<Object>> finalList = (List<List<Object>>) map.get(JsonKey.DATA);
+    String fileName = (String) map.get(JsonKey.FILE_NAME);
+    if (ProjectUtil.isStringNullOREmpty(fileName)) {
+      fileName = "File-" + requestId;
+    }
     File file = null;
     try {
-      file = fileUtil.writeToFile("File-"+requestId,finalList);
+      file = fileUtil.writeToFile(fileName,finalList);
     }catch(Exception ex){
       ProjectLogger.log("PROCESS FAILED WHILE CONVERTING THE DATA TO FILE .", ex);
       // update DB as status failed since unable to convert data to file
@@ -236,7 +239,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     Map<String , Object> templateMap = new HashMap<>();
     templateMap.put("downloadUrl", reportDbInfo.get(JsonKey.FILE_URL));
     templateMap.put("name",reportDbInfo.get(JsonKey.FIRST_NAME));
-    templateMap.put("body", "COURSE PROGRESS FOR BATCH "+reportDbInfo.get(JsonKey.BATCH_ID)+"for Period  "+reportDbInfo.get(JsonKey.PERIOD)+" Requested date : "+reportDbInfo.get(JsonKey.CREATED_DATE));
+    templateMap.put("body", "Please Find Attached Report for "+reportDbInfo.get(JsonKey.RESOURCE_ID)+" for the Period  "+reportDbInfo.get(JsonKey.PERIOD)+" as requested on : "+reportDbInfo.get(JsonKey.CREATED_DATE));
     templateMap.put("thanks", "Thanks.");
 
     ProjectUtil.getContext(templateMap);
@@ -244,9 +247,9 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     VelocityContext context = new VelocityContext();
     context.put("downloadUrl", reportDbInfo.get(JsonKey.FILE_URL));
     context.put("name",reportDbInfo.get(JsonKey.FIRST_NAME));
-    context.put("body", "COURSE PROGRESS FOR BATCH "+reportDbInfo.get(JsonKey.BATCH_ID)+"for Period  "+reportDbInfo.get(JsonKey.PERIOD)+" Requested date : "+reportDbInfo.get(JsonKey.CREATED_DATE));
+    context.put("body", "Please Find Attached Report for "+reportDbInfo.get(JsonKey.RESOURCE_ID)+" for the Period  "+reportDbInfo.get(JsonKey.PERIOD)+" as requested on : "+reportDbInfo.get(JsonKey.CREATED_DATE));
     context.put("thanks", "Thanks.");
-    return SendMail.sendMail(new String[]{(String)reportDbInfo.get(JsonKey.EMAIL)},"COURSE PROGRESS FOR BATCH "+reportDbInfo.get(JsonKey.BATCH_ID) ,context,ProjectUtil.getTemplate("defaultTemplate"));
+    return SendMail.sendMail(new String[]{(String)reportDbInfo.get(JsonKey.EMAIL)},"Report for "+reportDbInfo.get(JsonKey.RESOURCE_ID) ,context,ProjectUtil.getTemplate("defaultTemplate"));
   }
 
   private String processFileUpload(File file, String container)

@@ -539,7 +539,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       }
       String orgName = (String) orgData.get(JsonKey.ORG_NAME);
       String orgHashId = (String) orgData.get(JsonKey.HASH_TAG_ID);
-      if (ProjectUtil.isStringNullOREmpty(orgName) && ProjectUtil.isStringNullOREmpty(orgHashId)) {
+      ProjectLogger.log("orgId" + orgHashId);
+      if (ProjectUtil.isStringNullOREmpty(orgName) || ProjectUtil.isStringNullOREmpty(orgHashId)) {
         ProjectCommonException exception =
             new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
                 ResponseCode.invalidOrgData.getErrorMessage(),
@@ -558,6 +559,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         return;
       }
       String channel = (String) rootOrgData.get(JsonKey.HASH_TAG_ID);
+      ProjectLogger.log("channel" + channel);
       String requestStr = getOrgMetricsRequest(actorMessage, periodStr, orgHashId, null, channel);
       String ekStepResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, requestStr);
       String responseFormat = orgConsumptionResponseGenerator(periodStr, ekStepResponse);

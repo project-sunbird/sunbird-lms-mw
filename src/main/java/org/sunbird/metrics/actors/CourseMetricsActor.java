@@ -479,84 +479,13 @@ public class CourseMetricsActor extends BaseMetricsActor {
     }
   }
 
-  @SuppressWarnings("unchecked")
-  private void courseConsumptionMetricsMock(Request actorMessage) {
-    Request request = new Request();
-    String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
-    String courseId = (String) actorMessage.getRequest().get(JsonKey.COURSE_ID);
-    request.setId(actorMessage.getId());
-    request.setContext(actorMessage.getContext());
-    Map<String, Object> requestMap = new HashMap<>();
-    Map<String, Object> filter = new HashMap<>();
-    requestMap.put(JsonKey.PERIOD, periodStr);
-    filter.put(JsonKey.TAG, courseId);
-    //requestMap.put(JsonKey.CHANNEL, getChannel());
-    request.setRequest(requestMap);
-    Map<String,Object> resultData = new HashMap<>();
-   /* try {
-      //requestStr = mapper.writeValueAsString(request);
-      //String resp = getDataFromEkstep(requestStr);
-      //Map<String,Object> ekstepResponse = mapper.readValue(resp, Map.class);
-      //resultData = (Map<String,Object>) ekstepResponse.get(JsonKey.RESULT);
-    } catch (JsonProcessingException e) {
-     ProjectLogger.log(e.getMessage(),e);
-    } catch (IOException e) {
-      ProjectLogger.log(e.getMessage(),e);
-    }*/
-    Map<String, Object> responseMap = new LinkedHashMap<>();
-    Map<String,Object> snapshot = new LinkedHashMap<>();
-    Map<String,Object> dataMap = new HashMap<>();
-    dataMap.put(JsonKey.NAME, "Total time of Content consumption" );
-    dataMap.put(VALUE,"345");
-    snapshot.put("course.consumption.time_spent.count", dataMap);
-    dataMap = new LinkedHashMap<>();
-    dataMap.put(JsonKey.NAME, "User access course over time" );
-    dataMap.put(VALUE,"213");
-    snapshot.put("course.consumption.time_per_user", dataMap);
-    dataMap = new LinkedHashMap<>();
-    dataMap.put(JsonKey.NAME, "Total users completed the course" );
-    dataMap.put(VALUE,"512");
-    snapshot.put("course.consumption.users_completed", dataMap);
-    dataMap = new LinkedHashMap<>();
-    dataMap.put(JsonKey.NAME, "Average time per user for course completion" );
-    dataMap.put(VALUE,"512");
-    snapshot.put("course.consumption.time_spent_completion_count", dataMap);
-    List<Map<String,Object>> valueMap = new ArrayList<>();
-    List<Map<String, Object>> bucket = new ArrayList<>();
-    valueMap = (List<Map<String,Object>>) resultData.get("metrics");
-    try {
-      for(int count=0;count<7;count++){
-        Map<String, Object> parentCountObject = new LinkedHashMap<String, Object>();
-        String value = "2017-07-2"+(count);
-        parentCountObject.put("key", new SimpleDateFormat("yyyy-MM-dd").parse(value).getTime());
-        parentCountObject.put("key_name", value);
-        parentCountObject.put("value", count*8);
-        bucket.add(parentCountObject);
-      }
-    }catch(Exception e){
-      ProjectLogger.log(e.getMessage(), e);
-    }
-    Map<String, Object> series = new HashMap<>();
-    
-    Map<String,Object> seriesData = new LinkedHashMap<>();
-    seriesData.put(JsonKey.NAME, "Timespent for content consumption");
-    seriesData.put(JsonKey.SPLIT, "content.sum(time_spent)");
-    seriesData.put("buckets", bucket);
-    series.put("course.consumption.time_spent", seriesData);
-    responseMap.putAll(getViewData(courseId));
-    responseMap.put(JsonKey.PERIOD, periodStr);
-    responseMap.put(JsonKey.SNAPSHOT, snapshot);
-    responseMap.put(JsonKey.SERIES, series);
-    Response response = new Response();
-    response.putAll(responseMap);
-    sender().tell(response, self()); 
-  }
-
   private void courseConsumptionMetrics(Request actorMessage) {
     ProjectLogger.log("In courseConsumptionMetrics api");
     try {
       String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
       String courseId = (String) actorMessage.getRequest().get(JsonKey.COURSE_ID);
+      String requestedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
+      
       Request request = new Request();
       request.setId(actorMessage.getId());
       Map<String, Object> requestObject = new HashMap<>();
@@ -564,8 +493,31 @@ public class CourseMetricsActor extends BaseMetricsActor {
       Map<String, Object> filterMap = new HashMap<>();
       filterMap.put(CONTENT_ID, courseId);
       requestObject.put(JsonKey.FILTER, filterMap);
-      // TODO: get channel from
-      String channel = "";
+      
+      
+      Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(EsIndex.sunbird.getIndexName() , EsType.user.getTypeName() ,requestedBy);
+      if(null==result || result.isEmpty()){
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.unAuthorised.getErrorCode(),
+                ResponseCode.unAuthorised.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+        sender().tell(exception, self());
+      }
+      
+      String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
+      Map<String, Object> rootOrgData =
+          ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.organisation.getTypeName(), rootOrgId);
+      if(null == rootOrgData || rootOrgData.isEmpty()){
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.invalidData.getErrorCode(),
+                ResponseCode.invalidData.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+        sender().tell(exception, self());
+      }
+      
+      String channel = (String)rootOrgData.get(JsonKey.HASH_TAG_ID);
+      ProjectLogger.log("Channel" + channel);
       requestObject.put(JsonKey.CHANNEL, channel);
       request.setRequest(requestObject);
       String requestStr = mapper.writeValueAsString(request);

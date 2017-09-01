@@ -47,6 +47,8 @@ public class EmailServiceActor extends UntypedAbstractActor {
 
   private void sendMail(Request actorMessage) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    boolean isSingleUser = false;
+    String name = null;
     Map<String, Object> request =
         (Map<String, Object>) actorMessage.getRequest().get(JsonKey.EMAIL_REQUEST);
     List<String> emails = (List<String>) request.get(JsonKey.RECIPIENT_EMAILS);
@@ -78,10 +80,15 @@ public class EmailServiceActor extends UntypedAbstractActor {
       }else{
         for(Map<String,Object> map : respMapList){
           emailIds.add((String)map.get(JsonKey.EMAIL));
+          name = (String) map.get(JsonKey.FIRST_NAME);
         }
       }
     }
    }
+    if(emailIds.size()>1) {
+      name = "All";
+    }
+    request.put(JsonKey.NAME, name);
     SendMail.sendMail(emailIds.toArray(new String[emailIds.size()]), (String)request.get(JsonKey.SUBJECT), ProjectUtil.getContext(request), ProjectUtil.getTemplate(""));
     Response res =  new Response();
     res.put(JsonKey.RESPONSE, JsonKey.SUCCESS);

@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.commons.lang.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -87,6 +89,11 @@ public class EmailServiceActor extends UntypedAbstractActor {
    }
     if(emailIds.size()>1) {
       name = "All";
+    }
+    if(ProjectUtil.isStringNullOREmpty(name)) {
+      name = "Hi";
+    } else {
+      name = "Hi "+ StringUtils.capitalize(name);
     }
     request.put(JsonKey.NAME, name);
     SendMail.sendMail(emailIds.toArray(new String[emailIds.size()]), (String)request.get(JsonKey.SUBJECT), ProjectUtil.getContext(request), ProjectUtil.getTemplate(""));

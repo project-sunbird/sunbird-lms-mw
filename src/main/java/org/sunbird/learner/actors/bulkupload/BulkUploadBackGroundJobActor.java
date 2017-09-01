@@ -573,6 +573,15 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           if ( null != userMap.get(JsonKey.ROLES)) {
             String[] userRole = ((String) userMap.get(JsonKey.ROLES)).split(",");
             List<String> list = new ArrayList<>(Arrays.asList(userRole));
+          //validating roles
+            if(null != list && !list.isEmpty()){
+              String msg = Util.validateRoles(list);
+              if(!msg.equalsIgnoreCase(JsonKey.SUCCESS)){
+                userMap.put(JsonKey.ERROR_MSG, msg);
+                failureUserReq.add(userMap);
+                continue;
+              }
+            }
             userMap.put(JsonKey.ROLES, list);
           }
 

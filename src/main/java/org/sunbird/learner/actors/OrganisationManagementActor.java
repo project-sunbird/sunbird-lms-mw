@@ -661,6 +661,15 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
     if (isNotNull(usrOrgData.get(JsonKey.ROLES))) {
       roles.addAll((List<String>) usrOrgData.get(JsonKey.ROLES));
+      if(!((List<String>) usrOrgData.get(JsonKey.ROLES)).isEmpty()){
+        String msg = Util.validateRoles((List<String>) usrOrgData.get(JsonKey.ROLES));
+        if(!msg.equalsIgnoreCase(JsonKey.SUCCESS)){
+          throw new ProjectCommonException(
+              ResponseCode.invalidRole.getErrorCode(),
+              ResponseCode.invalidRole.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
+      }
     }
     if (isNotNull(usrOrgData.get(JsonKey.ROLE))) {
       String role = usrOrgData.get(JsonKey.ROLE).toString();

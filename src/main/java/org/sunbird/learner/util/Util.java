@@ -512,4 +512,18 @@ public class Util {
       return ElasticSearchUtil.complexSearch(searchDTO , index,type);
 
     }
+    
+    public static String validateRoles(List<String> roleList){
+      Map<String,Object> roleMap = DataCacheHandler.getRoleMap();
+      if(null != roleMap && !roleMap.isEmpty()){
+        for (String role : roleList){
+          if(null == roleMap.get(role)){
+            return role+" is not a valid role.";
+          }
+        }
+      }else{
+        ProjectLogger.log("Roles are not cached.Please Cache it.");
+      }
+      return JsonKey.SUCCESS;
+    }
 }

@@ -23,6 +23,7 @@ public class DataCacheHandler implements Runnable{
 	 */
 	private static Map<String, Map<String,Object>> pageMap = new ConcurrentHashMap<>();
 	private static Map<String, Map<String,Object>> sectionMap = new ConcurrentHashMap<>();
+	private static Map<String, Object> roleMap = new ConcurrentHashMap<>();
 	CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	
 	@Override
@@ -30,9 +31,20 @@ public class DataCacheHandler implements Runnable{
 		ProjectLogger.log("Data cache started..");
 		cache(pageMap,"page_management");
 		cache(sectionMap,"page_section");
+		roleCache(roleMap);
 	}
 
-	@SuppressWarnings("unchecked")
+	private void roleCache(Map<String, Object> roleMap) {
+	  Response response = cassandraOperation.getAllRecords(Util.getProperty("db.keyspace"), JsonKey.ROLE_GROUP);
+	  List<Map<String, Object>> responseList = (List<Map<String, Object>>)response.get(JsonKey.RESPONSE);
+	  if(null != responseList && !responseList.isEmpty()){
+        for(Map<String, Object> resultMap:responseList){
+          roleMap.put((String)resultMap.get(JsonKey.ID), resultMap.get(JsonKey.NAME));
+          }
+       }
+    }
+
+  @SuppressWarnings("unchecked")
 	private void cache(Map<String, Map<String, Object>> map,String tableName) {
 		try{
 			Response response = cassandraOperation.getAllRecords(Util.getProperty("db.keyspace"), tableName);
@@ -78,6 +90,20 @@ public class DataCacheHandler implements Runnable{
    */
   public static void setSectionMap(Map<String, Map<String, Object>> sectionMap) {
     DataCacheHandler.sectionMap = sectionMap;
+  }
+
+  /**
+   * @return the roleMap
+   */
+  public static Map<String, Object> getRoleMap() {
+    return roleMap;
+  }
+
+  /**
+   * @param roleMap the roleMap to set
+   */
+  public static void setRoleMap(Map<String, Object> roleMap) {
+    DataCacheHandler.roleMap = roleMap;
   }
 
 }

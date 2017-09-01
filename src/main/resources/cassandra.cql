@@ -538,3 +538,7 @@ ALTER TABLE sunbird.report_tracking ADD resourceId text;
 
 // adding fileFormat for dashboard metrics report tracking -- Sep 1,2017
 ALTER TABLE sunbird.report_tracking ADD format text;
+insert into sunbird.role_group (id,name) values ('PUBLIC','Public');
+update sunbird.role_group set url_action_ids=['public'] where id='PUBLIC';
+insert into sunbird.role (id,name,rolegroupid,status) values ('PUBLIC','Public',['PUBLIC'],1);
+ ALTER TABLE sunbird.user DROP aadhaarno;

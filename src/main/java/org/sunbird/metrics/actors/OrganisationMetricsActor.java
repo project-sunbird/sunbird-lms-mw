@@ -558,7 +558,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         sender().tell(exception, self());
         return;
       }
-      String channel = (String) rootOrgData.get(JsonKey.HASH_TAG_ID);
+      String channel = (String) rootOrgData.get(JsonKey.HASHTAGID);
       ProjectLogger.log("channel" + channel);
       String requestStr = getOrgMetricsRequest(actorMessage, periodStr, orgHashId, null, channel);
       String ekStepResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, requestStr);
@@ -771,7 +771,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
                 ResponseCode.invalidOrgData.getErrorMessage(),
                 ResponseCode.CLIENT_ERROR.getResponseCode());
       }
-      String orgHashId = (String) orgData.get(JsonKey.HASH_TAG_ID);
+      String orgHashId = (String) orgData.get(JsonKey.HASHTAGID);
       String channel =
           (String) (orgData.get(JsonKey.CHANNEL) == null ? "" : orgData.get(JsonKey.CHANNEL));
 

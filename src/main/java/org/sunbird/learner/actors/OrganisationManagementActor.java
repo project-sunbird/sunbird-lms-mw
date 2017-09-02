@@ -695,9 +695,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       sender().tell(exception, self());
       return;
     }
-    if (!roles.contains(ProjectUtil.UserRole.CONTENT_CREATOR.getValue())) {
-      roles.add(ProjectUtil.UserRole.CONTENT_CREATOR.getValue());
-    }
     if (!roles.isEmpty())
       usrOrgData.put(JsonKey.ROLES, roles);
     // check org exist or not

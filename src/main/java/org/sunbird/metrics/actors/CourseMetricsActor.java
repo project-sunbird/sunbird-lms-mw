@@ -720,11 +720,13 @@ public class CourseMetricsActor extends BaseMetricsActor {
       snapshot.put("course.consumption.time_per_user", dataMap);
       dataMap = new LinkedHashMap<>();
       dataMap.put(JsonKey.NAME, "Total users completed the course");
-      dataMap.put(VALUE, courseCompletedData.get("user_count"));
+      int userCount = courseCompletedData.get("user_count") == null ? 0 :(Integer)courseCompletedData.get("user_count");
+      dataMap.put(VALUE, userCount);
       snapshot.put("course.consumption.users_completed", dataMap);
       dataMap = new LinkedHashMap<>();
       dataMap.put(JsonKey.NAME, "Average time per user for course completion");
-      dataMap.put(VALUE, courseCompletedData.get("avg_time_course_completed"));
+      int avgTime = courseCompletedData.get("avg_time_course_completed") == null ? 0 :(Integer)courseCompletedData.get("avg_time_course_completed");
+      dataMap.put(VALUE, avgTime);
       dataMap.put(JsonKey.TIME_UNIT, "seconds");
       snapshot.put("course.consumption.time_spent_completion_count", dataMap);
 

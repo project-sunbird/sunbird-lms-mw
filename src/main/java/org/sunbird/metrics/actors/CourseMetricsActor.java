@@ -610,6 +610,11 @@ public class CourseMetricsActor extends BaseMetricsActor {
     filterMap.put(CONTENT_ID, courseId);
     filterMap.put(USER_ID, userId);
     requestObject.put(JsonKey.FILTER, filterMap);
+    if(null == channel || channel.isEmpty()){
+      throw new ProjectCommonException(ResponseCode.noDataForConsumption.getErrorCode(),
+          ResponseCode.noDataForConsumption.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
     requestObject.put(JsonKey.CHANNEL, channel);
     request.setRequest(requestObject);
     try {
@@ -693,8 +698,12 @@ public class CourseMetricsActor extends BaseMetricsActor {
       seriesData.put(GROUP_ID, "course.users.count");
       seriesData.put("buckets", userBucket);
       series.put("course.consumption.content.users.count", seriesData);
-
-      Map<String, Object> courseCompletedData = getCourseCompletedData(period, courseId, channel);
+      Map<String, Object> courseCompletedData = new HashMap<>();
+      try {
+       courseCompletedData = getCourseCompletedData(period, courseId, channel);
+      }catch (Exception e) {
+        ProjectLogger.log("Error occurred", e);
+      }
       resultData = (Map<String, Object>) resultData.get(JsonKey.SUMMARY);
       Map<String, Object> snapshot = new LinkedHashMap<>();
       Map<String, Object> dataMap = new HashMap<>();

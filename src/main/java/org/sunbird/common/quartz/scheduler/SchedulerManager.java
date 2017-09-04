@@ -133,9 +133,9 @@ public class SchedulerManager {
       JobDetail metricsReportJob = JobBuilder.newJob(MetricsReportJob.class).requestRecovery(true).withIdentity("metricsReportJob", identifier).build();
 
       // 2- Create a trigger object that will define frequency of run.
-      //This job will run every hours.
+      //This job will run every day 11:30 PM IN GMT and 6 PM on UTC.
       Trigger metricsReportRetryTrigger = TriggerBuilder.newTrigger().withIdentity("metricsReportRetryTrigger", identifier)
-          .withSchedule(CronScheduleBuilder.cronSchedule("0 0/59 * 1/1 * ? *")).build();
+          .withSchedule(CronScheduleBuilder.cronSchedule("0 0 0/4 1/1 * ? *")).build();
       try {
         if (scheduler.checkExists(metricsReportJob.getKey())){
           scheduler.deleteJob(metricsReportJob.getKey());

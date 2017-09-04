@@ -540,13 +540,16 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       String orgName = (String) orgData.get(JsonKey.ORG_NAME);
       String orgHashId = (String) orgData.get(JsonKey.HASHTAGID);
       ProjectLogger.log("orgId" + orgHashId);
-      if (ProjectUtil.isStringNullOREmpty(orgName) || ProjectUtil.isStringNullOREmpty(orgHashId)) {
+      if (ProjectUtil.isStringNullOREmpty(orgName)) {
         ProjectCommonException exception =
             new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
                 ResponseCode.invalidOrgData.getErrorMessage(),
                 ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
         return;
+      }
+      if(ProjectUtil.isStringNullOREmpty(orgHashId)){
+        orgHashId = orgId;
       }
       String orgRootId = (String)orgData.get(JsonKey.ROOT_ORG_ID);
       if(ProjectUtil.isStringNullOREmpty(orgRootId)){

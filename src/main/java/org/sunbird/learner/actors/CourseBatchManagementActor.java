@@ -512,6 +512,8 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     req.remove(JsonKey.COUNTER_INCREMENT_STATUS);
     req.remove(JsonKey.COUNTER_DECREMENT_STATUS);
     req.remove(JsonKey.PARTICIPANT);
+    req.remove(JsonKey.HASH_TAG_ID);
+    req.remove(JsonKey.HASHTAGID);
     List<Map<String,Object>> resList = ((List<Map<String, Object>>) response.get(JsonKey.RESPONSE));
     if(null != resList && ! resList.isEmpty()){
       Map<String, Object> res = resList.get(0);

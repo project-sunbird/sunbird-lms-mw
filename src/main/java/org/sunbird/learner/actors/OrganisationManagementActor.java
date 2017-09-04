@@ -548,7 +548,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           upsertAddress(addressReq);
         }
       }
-
+      updateOrgDBO.remove(JsonKey.HASHTAGID);
+      updateOrgDBO.remove(JsonKey.HASH_TAG_ID);
       if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
         updateOrgDBO.put(JsonKey.UPDATED_BY, updatedBy);
       }

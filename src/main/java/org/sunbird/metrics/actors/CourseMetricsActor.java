@@ -81,7 +81,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
           sender().tell(exception, self());
         }
       } catch (Exception ex) {
-        ProjectLogger.log(ex.getMessage(), ex);
+        ProjectLogger.log("Error occured", ex);
         sender().tell(ex, self());
       }
     } else {
@@ -530,7 +530,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       String requestStr = mapper.writeValueAsString(request);
       String ekStepResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, requestStr);
       String responseFormat =
-          courseConsumptionResponseGenerator(periodStr, ekStepResponse, courseId);
+          courseConsumptionResponseGenerator(periodStr, ekStepResponse, courseId, channel);
       Response response =
           metricsResponseGenerator(responseFormat, periodStr, getViewData(courseId));
       sender().tell(response, self());
@@ -557,7 +557,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
   
 
   @SuppressWarnings("unchecked")
-  private Map<String, Object> getCourseCompletedData(String periodStr, String courseId) {
+  private Map<String, Object> getCourseCompletedData(String periodStr, String courseId, String channel) {
     Map<String, Object> dateRange = getStartAndEndDate(periodStr);
     Map<String, Object> filter = new HashMap<>();
     Map<String, Object> resultMap = new HashMap<>();
@@ -576,13 +576,18 @@ public class CourseMetricsActor extends BaseMetricsActor {
     Map<String, Object> result =
         ElasticSearchUtil.complexSearch(createESRequest(filter, null, coursefields),
             ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.usercourses.getTypeName());
+    if(null==result || result.isEmpty()){
+      throw new ProjectCommonException(ResponseCode.noDataForConsumption.getErrorCode(),
+          ResponseCode.noDataForConsumption.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
     List<Map<String, Object>> esContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
 
     List<String> userIds = new ArrayList<String>();
     Double timeConsumed = 0D;
     for (Map<String, Object> entry : esContent) {
       String userId = (String) entry.get(JsonKey.USER_ID);
-      timeConsumed = timeConsumed + getMetricsForUser(courseId, userId, periodStr);
+      timeConsumed = timeConsumed + getMetricsForUser(courseId, userId, periodStr, channel);
       userIds.add(userId);
     }
     Integer users_count = userIds.size();
@@ -596,7 +601,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
   }
 
   @SuppressWarnings("unchecked")
-  private Double getMetricsForUser(String courseId, String userId, String periodStr) {
+  private Double getMetricsForUser(String courseId, String userId, String periodStr, String channel) {
     Double userTimeConsumed = 0D;
     Map<String, Object> requestObject = new HashMap<>();
     Request request = new Request();
@@ -605,8 +610,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
     filterMap.put(CONTENT_ID, courseId);
     filterMap.put(USER_ID, userId);
     requestObject.put(JsonKey.FILTER, filterMap);
-    // TODO: get channel from
-    String channel = "";
     requestObject.put(JsonKey.CHANNEL, channel);
     request.setRequest(requestObject);
     try {
@@ -616,7 +619,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       resultData = (Map<String, Object>) resultData.get(JsonKey.RESULT);
       userTimeConsumed = (Double) resultData.get("m_total_ts");
     } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log("Error occured", e);
     }
     return userTimeConsumed;
   }
@@ -628,7 +631,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
   @SuppressWarnings("unchecked")
   private String courseConsumptionResponseGenerator(String period, String ekstepResponse,
-      String courseId) {
+      String courseId, String channel) {
     String result = "";
     try {
       Map<String, Object> resultData = mapper.readValue(ekstepResponse, Map.class);
@@ -691,7 +694,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       seriesData.put("buckets", userBucket);
       series.put("course.consumption.content.users.count", seriesData);
 
-      Map<String, Object> courseCompletedData = getCourseCompletedData(period, courseId);
+      Map<String, Object> courseCompletedData = getCourseCompletedData(period, courseId, channel);
       resultData = (Map<String, Object>) resultData.get(JsonKey.SUMMARY);
       Map<String, Object> snapshot = new LinkedHashMap<>();
       Map<String, Object> dataMap = new HashMap<>();
@@ -719,9 +722,9 @@ public class CourseMetricsActor extends BaseMetricsActor {
       responseMap.put(JsonKey.SERIES, series);
       result = mapper.writeValueAsString(responseMap);
     } catch (JsonProcessingException e) {
-      ProjectLogger.log(e.getMessage());
+      ProjectLogger.log("Error occured", e);
     } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log("Error occured", e);
     }
     return result;
   }

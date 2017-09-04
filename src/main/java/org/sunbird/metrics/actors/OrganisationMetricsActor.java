@@ -471,7 +471,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
       result = mapper.writeValueAsString(responseMap);
     } catch (JsonProcessingException e) {
-      ProjectLogger.log(e.getMessage());
+      ProjectLogger.log("Error occured", e);
     }
     return result;
   }
@@ -689,9 +689,9 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
       result = mapper.writeValueAsString(responseMap);
     } catch (JsonProcessingException e) {
-      ProjectLogger.log(e.getMessage());
+      ProjectLogger.log("Error occured",e);
     } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log("Error occured", e);
     }
     return result;
   }
@@ -704,10 +704,10 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       if (null == result || result.isEmpty()) {
         return null;
       }
-      ProjectLogger.log(result.toString());
+      ProjectLogger.log("Result:"+result.toString());
       return result;
     } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(),e);
+      ProjectLogger.log("Error occured",e);
       throw new ProjectCommonException(ResponseCode.esError.getErrorCode(),
           ResponseCode.esError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
     }
@@ -934,7 +934,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     try {
       requestStr = mapper.writeValueAsString(request);
     } catch (JsonProcessingException e) {
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log("Error occured", e);
     }
     return requestStr;
   }
@@ -978,7 +978,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         result.add(data);
       }
     } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log("Error occured", e);
     }
     return result;
   }
@@ -1021,7 +1021,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
           conceptsList.put(id, name);
         }
       } catch (IOException e) {
-        ProjectLogger.log(e.getMessage(), e);
+        ProjectLogger.log("Error occured", e);
       }
     }
     return conceptsList;
@@ -1043,7 +1043,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       resultMap.put(headers.get(5), result.get("m_total_content_count"));
       resultMap.put(headers.get(6), result.get("m_avg_ts_session"));
     } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log("Error occured", e);
     }
     return resultMap;
   }

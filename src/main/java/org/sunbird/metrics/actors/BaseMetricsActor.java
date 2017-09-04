@@ -229,7 +229,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
         cal.add(Calendar.DATE, +1);
         date = new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime());
       } catch (ParseException e) {
-        ProjectLogger.log(e.getMessage(), e);
+        ProjectLogger.log("Error occured", e);
       }
       bucketData.put(KEY, key);
       bucketData.put(KEYNAME, keyName);
@@ -284,7 +284,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
           baseSearchUrl + PropertiesCache.getInstance().getProperty(apiUrl), request, headers);
 
     } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log("Error occured", e);
       throw new ProjectCommonException(ResponseCode.unableToConnect.getErrorCode(),
           ResponseCode.unableToConnect.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
@@ -310,7 +310,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
           baseSearchUrl + apiUrl , headers);
 
     } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log("Error occured", e);
       throw new ProjectCommonException(ResponseCode.unableToConnect.getErrorCode(),
           ResponseCode.unableToConnect.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
@@ -405,7 +405,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
       try {
         date = new SimpleDateFormat("yyyy-MM-dd").parse((String) keyName);
       } catch (Exception e) {
-        ProjectLogger.log(e.getMessage());
+        ProjectLogger.log("Error occured", e);
       }
     }
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
@@ -431,10 +431,10 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
       responseData.put(JsonKey.SNAPSHOT, esData.get(JsonKey.SNAPSHOT));
       responseData.put(JsonKey.SERIES, esData.get(JsonKey.SERIES));
     } catch (JsonProcessingException e) {
-      ProjectLogger.log(e.getMessage());
+      ProjectLogger.log("Error occured", e);
       // throw new ProjectCommonException("", "", ResponseCode.SERVER_ERROR.getResponseCode());
     } catch (IOException e) {
-      ProjectLogger.log(e.getMessage());
+      ProjectLogger.log("Error occured", e);
       // throw new ProjectCommonException("", "", ResponseCode.SERVER_ERROR.getResponseCode());
     }
     response.putAll(responseData);

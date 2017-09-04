@@ -505,6 +505,13 @@ public class CourseMetricsActor extends BaseMetricsActor {
       }
       
       String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
+      if(ProjectUtil.isStringNullOREmpty(rootOrgId)){
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.noDataForConsumption.getErrorCode(),
+                ResponseCode.noDataForConsumption.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+        sender().tell(exception, self());
+      }
       Map<String, Object> rootOrgData =
           ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
               ProjectUtil.EsType.organisation.getTypeName(), rootOrgId);

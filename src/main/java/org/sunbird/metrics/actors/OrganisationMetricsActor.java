@@ -549,6 +549,9 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         return;
       }
       String orgRootId = (String)orgData.get(JsonKey.ROOT_ORG_ID);
+      if(ProjectUtil.isStringNullOREmpty(orgRootId)){
+        orgRootId = orgId;
+      }
       Map<String, Object> rootOrgData = validateOrg(orgRootId);
       if(null == rootOrgData || rootOrgData.isEmpty()){
         ProjectCommonException exception =
@@ -704,6 +707,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       ProjectLogger.log(result.toString());
       return result;
     } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(),e);
       throw new ProjectCommonException(ResponseCode.esError.getErrorCode(),
           ResponseCode.esError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
     }

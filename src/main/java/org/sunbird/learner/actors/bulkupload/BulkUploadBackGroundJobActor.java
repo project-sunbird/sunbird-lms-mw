@@ -978,7 +978,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
            *
            */
 
-          if (userMap.containsKey(JsonKey.ROLES)) {
+          if (null != userMap.get(JsonKey.ROLES)) {
             List<String> roles = (List<String>) userMap.get(JsonKey.ROLES);
             if (!roles.contains(ProjectUtil.UserRole.PUBLIC.getValue())) {
               roles.add(ProjectUtil.UserRole.PUBLIC.getValue());

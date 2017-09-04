@@ -552,6 +552,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       if(ProjectUtil.isStringNullOREmpty(orgRootId)){
         orgRootId = orgId;
       }
+      ProjectLogger.log("RootOrgId " + orgRootId);
       Map<String, Object> rootOrgData = validateOrg(orgRootId);
       if(null == rootOrgData || rootOrgData.isEmpty()){
         ProjectCommonException exception =

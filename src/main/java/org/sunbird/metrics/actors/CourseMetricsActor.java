@@ -610,6 +610,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     filterMap.put(CONTENT_ID, courseId);
     filterMap.put(USER_ID, userId);
     requestObject.put(JsonKey.FILTER, filterMap);
+    ProjectLogger.log("Channel for Course"+ channel);
     if(null == channel || channel.isEmpty()){
       throw new ProjectCommonException(ResponseCode.noDataForConsumption.getErrorCode(),
           ResponseCode.noDataForConsumption.getErrorMessage(),
@@ -704,6 +705,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       }catch (Exception e) {
         ProjectLogger.log("Error occurred", e);
       }
+      ProjectLogger.log("Course completed Data"+ courseCompletedData);
       resultData = (Map<String, Object>) resultData.get(JsonKey.SUMMARY);
       Map<String, Object> snapshot = new LinkedHashMap<>();
       Map<String, Object> dataMap = new HashMap<>();

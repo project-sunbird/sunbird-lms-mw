@@ -238,18 +238,12 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
   private boolean processMailSending(Map<String, Object> reportDbInfo) {
 
     Map<String , Object> templateMap = new HashMap<>();
-    templateMap.put("downloadUrl", reportDbInfo.get(JsonKey.FILE_URL));
-    templateMap.put("name",reportDbInfo.get(JsonKey.FIRST_NAME));
-    templateMap.put("body", "Please Find Attached Report for "+reportDbInfo.get(JsonKey.RESOURCE_ID)+" for the Period  "+reportDbInfo.get(JsonKey.PERIOD)+" as requested on : "+reportDbInfo.get(JsonKey.CREATED_DATE));
-    templateMap.put("thanks", "Thanks.");
-
-    ProjectUtil.getContext(templateMap);
-
-    VelocityContext context = new VelocityContext();
-    context.put("downloadUrl", reportDbInfo.get(JsonKey.FILE_URL));
-    context.put("name",reportDbInfo.get(JsonKey.FIRST_NAME));
-    context.put("body", "Please Find Attached Report for "+reportDbInfo.get(JsonKey.RESOURCE_ID)+" for the Period  "+reportDbInfo.get(JsonKey.PERIOD)+" as requested on : "+reportDbInfo.get(JsonKey.CREATED_DATE));
-    context.put("thanks", "Thanks.");
+    templateMap.put(JsonKey.DOWNLOAD_URL, reportDbInfo.get(JsonKey.FILE_URL));
+    templateMap.put(JsonKey.NAME,reportDbInfo.get(JsonKey.FIRST_NAME));
+    templateMap.put(JsonKey.BODY, "Please Find Attached Report for "+reportDbInfo.get(JsonKey.RESOURCE_ID)+" for the Period  "+reportDbInfo.get(JsonKey.PERIOD)+" as requested on : "+reportDbInfo.get(JsonKey.CREATED_DATE));
+    templateMap.put(JsonKey.ACTION_NAME, "Download");
+    VelocityContext context = ProjectUtil.getContext(templateMap);
+    
     return SendMail.sendMail(new String[]{(String)reportDbInfo.get(JsonKey.EMAIL)},"Report for "+reportDbInfo.get(JsonKey.RESOURCE_ID) ,context,ProjectUtil.getTemplate("defaultTemplate"));
   }
 

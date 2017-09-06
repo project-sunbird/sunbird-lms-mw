@@ -166,10 +166,10 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     }
 
     // TODO: going to upload file , save this info into the DB ...
-    dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
+    /*dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
     dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.UPLOADING_FILE.getValue());
     cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-        dbReqMap);
+        dbReqMap);*/
 
     String storageUrl=null;
     try {
@@ -186,6 +186,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
             .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
                 dbReqMap);
       }else{
+        dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.UPLOADING_FILE.getValue());
         dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
         cassandraOperation
             .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
@@ -207,10 +208,10 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
         dbReqMap);
 
-    dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.SENDING_MAIL.getValue());
+    /*dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.SENDING_MAIL.getValue());
     dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
     cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-        dbReqMap);
+        dbReqMap);*/
 
     if(processMailSending(reportDbInfo)){
       dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.SENDING_MAIL_SUCCESS.getValue());
@@ -227,6 +228,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
             .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
                 dbReqMap);
       }else{
+        dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.SENDING_MAIL.getValue());
         dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
         cassandraOperation
             .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),

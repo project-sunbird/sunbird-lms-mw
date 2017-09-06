@@ -445,8 +445,8 @@ ALTER TABLE sunbird.course_batch DROP lastupdatedon;
 ALTER TABLE sunbird.course_batch ADD updatedDate text;
 
 ALTER TABLE sunbird.organisation add provider text;
-COPY  sunbird.organisation (id,source) TO '/tmp/cql/source.csv';
-COPY  sunbird.organisation (id,provider) FROM '/tmp/cql/source.csv';
+//COPY  sunbird.organisation (id,source) TO '/tmp/cql/source.csv';
+//COPY  sunbird.organisation (id,provider) FROM '/tmp/cql/source.csv';
 ALTER TABLE sunbird.organisation DROP source;
 //Id is courseId
 CREATE TABLE IF NOT EXISTS sunbird.course_publish_status(id text,submitDate text,status int,PRIMARY KEY (id));
@@ -542,3 +542,4 @@ insert into sunbird.role_group (id,name) values ('PUBLIC','Public');
 update sunbird.role_group set url_action_ids=['public'] where id='PUBLIC';
 insert into sunbird.role (id,name,rolegroupid,status) values ('PUBLIC','Public',['PUBLIC'],1);
  ALTER TABLE sunbird.user DROP aadhaarno;
+update organisation set channel='ROOT_ORG' where id='ORG_001';

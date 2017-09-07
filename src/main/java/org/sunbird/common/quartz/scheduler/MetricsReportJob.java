@@ -73,7 +73,7 @@ public class MetricsReportJob implements Job {
             List<List<Object>> data = mapper.readValue(jsonString, typeReference);
             // assign the back ground task to background job actor ...
             Request backGroundRequest = new Request();
-            backGroundRequest.setOperation(ActorOperations.FILE_UPLOAD_AND_SEND_MAIL.getValue());
+            backGroundRequest.setOperation(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue());
 
             Map<String, Object> innerMap = new HashMap<>();
             innerMap.put(JsonKey.REQUEST_ID, map.get(JsonKey.ID));

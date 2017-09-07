@@ -25,10 +25,10 @@ import org.sunbird.common.models.util.mail.SendMail;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.RequestRouterActor;
 import org.sunbird.learner.util.Util;
 
 import akka.actor.ActorRef;
-import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
 
 /**
@@ -40,15 +40,8 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static FileUtil fileUtil = new ExcelFileUtil();
   SimpleDateFormat format = ProjectUtil.format;
-  private ActorRef courseMetricsActor;
-  private ActorRef orgMetricsActor;
-  private ActorRef backGroundActorRef;
-  
-  public MetricsBackGroundJobActor(){
-    orgMetricsActor = getContext().actorOf(Props.create(OrganisationMetricsActor.class), "orgMetricsActor");
-    courseMetricsActor = getContext().actorOf(Props.create(CourseMetricsActor.class), "courseMetricsActor");
-    backGroundActorRef = getContext().actorOf(Props.create(MetricsBackGroundJobActor.class), "metricsBackGroundJobActor");
-  }
+  private ActorRef courseMetricsActor = RequestRouterActor.courseMetricsRouter;
+  private ActorRef orgMetricsActor = RequestRouterActor.organisationMetricsRouter;
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -85,37 +78,21 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
       }
   }
   
-  @SuppressWarnings("unchecked")
   private void processData(Request actorMessage) {
     String operation = (String) actorMessage.getRequest().get(JsonKey.REQUEST);
-    String requestId = (String) actorMessage.getRequestId();
-    Response response = cassandraOperation.getRecordById(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-        requestId);
-    List<Map<String,Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    if(responseList.isEmpty()){
-      //TODO:
-    }
-    Map<String , Object> reportDbInfo = responseList.get(0);
+    String requestId = (String) actorMessage.getRequest().get(JsonKey.REQUEST_ID);
     Request metricsRequest = new Request();
-    metricsRequest.setRequest_id(requestId); 
+    Map<String,Object> request = new HashMap<>();
+    request.put(JsonKey.REQUEST_ID, requestId);
     if(JsonKey.OrgCreation.equalsIgnoreCase(operation)){
-      Map<String,Object> request = new HashMap<>();
-      request.put(JsonKey.ORG_ID, reportDbInfo.get(JsonKey.RESOURCE_ID));
-      request.put(JsonKey.PERIOD, reportDbInfo.get(JsonKey.PERIOD));
       metricsRequest.setOperation(ActorOperations.ORG_CREATION_METRICS_DATA.getValue());
       metricsRequest.setRequest(request);
       orgMetricsActor.tell(metricsRequest, self());
     }else if(JsonKey.OrgConsumption.equalsIgnoreCase(operation)){
-      Map<String,Object> request = new HashMap<>();
-      request.put(JsonKey.ORG_ID, reportDbInfo.get(JsonKey.RESOURCE_ID));
-      request.put(JsonKey.PERIOD, reportDbInfo.get(JsonKey.PERIOD));
       metricsRequest.setOperation(ActorOperations.ORG_CONSUMPTION_METRICS_DATA.getValue());
       metricsRequest.setRequest(request);
       orgMetricsActor.tell(metricsRequest, self());
     }else if(JsonKey.CourseProgress.equalsIgnoreCase(operation)) {
-      Map<String,Object> request = new HashMap<>();
-      request.put(JsonKey.COURSE_ID, reportDbInfo.get(JsonKey.RESOURCE_ID));
-      request.put(JsonKey.PERIOD, reportDbInfo.get(JsonKey.PERIOD));
       metricsRequest.setOperation(ActorOperations.COURSE_CREATION_METRICS.getValue());
       metricsRequest.setRequest(request);
       courseMetricsActor.tell(metricsRequest, self());
@@ -266,7 +243,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     innerMap.put(JsonKey.REQUEST_ID , requestId);
     
     backGroundRequest.setRequest(innerMap);
-    backGroundActorRef.tell(backGroundRequest , self());
+    self().tell(backGroundRequest , self());
     return;
     /*dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.SENDING_MAIL.getValue());
     dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));

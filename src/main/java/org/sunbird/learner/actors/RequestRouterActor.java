@@ -57,14 +57,14 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private ActorRef bulkUploadManagementActor;
     private ActorRef bulkUploadBackGroundJobActor;
     private ActorRef courseBatchActor;
-    private ActorRef organisationMetricsRouter;
-    private ActorRef courseMetricsRouter;
     private ActorRef userMetricsRouter;
     private ActorRef esSyncActor;
     private ActorRef emailServiceActor;
     private ActorRef fileUploadServiceActor;
     public static ActorRef metricsBackGroungJobActor;
     public static ActorRef schedularActor;
+    public static ActorRef organisationMetricsRouter;
+    public static ActorRef courseMetricsRouter;
     private ActorRef badgesActor;
     private ExecutionContext ec;
     Map<String, ActorRef> routerMap = new HashMap<>();

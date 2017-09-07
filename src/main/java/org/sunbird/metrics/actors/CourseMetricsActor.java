@@ -49,9 +49,11 @@ public class CourseMetricsActor extends BaseMetricsActor {
   private static final String DEFAULT_BATCH_ID ="1";
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo batchDbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
+  Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
 
   public CourseMetricsActor() {
-    backGroundActorRef = getContext().actorOf(Props.create(MetricsBackGroundJobActor.class), "metricsBackGroundJobActor");
+      backGroundActorRef = getContext()
+          .actorOf(Props.create(MetricsBackGroundJobActor.class), "metricsBackGroundJobActor");
   }
 
   @Override
@@ -73,10 +75,9 @@ public class CourseMetricsActor extends BaseMetricsActor {
             .equalsIgnoreCase(ActorOperations.COURSE_CREATION_METRICS_REPORT.getValue())) {
           courseConsumptionMetricsReport(actorMessage);
         }else if (actorMessage.getOperation()
-            .equalsIgnoreCase(ActorOperations.COURSE_PROGRESS_METRICS_REPORT_DATA_GENERATION.getValue())) {
-          courseConsumptionMetricsReport(actorMessage);
-        }
-        else {
+            .equalsIgnoreCase(ActorOperations.COURSE_PROGRESS_METRICS_DATA.getValue())) {
+          courseProgressMetricsData(actorMessage);
+        } else {
           ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
           ProjectCommonException exception =
               new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
@@ -99,6 +100,189 @@ public class CourseMetricsActor extends BaseMetricsActor {
     }
   }
 
+  private void courseProgressMetricsData(Request actorMessage) {
+
+    ProjectLogger.log("CourseMetricsActor-courseProgressMetrics called");
+
+    /*String requestedBy = (String) actorMessage.get(JsonKey.REQUESTED_BY);
+
+    Map<String , Object> requestedByInfo = ElasticSearchUtil.getDataByIdentifier(EsIndex.sunbird.getIndexName() , EsType.user.getTypeName() ,requestedBy);
+    if(ProjectUtil.isNull(requestedByInfo) || ProjectUtil.isStringNullOREmpty((String)requestedByInfo.get(JsonKey.FIRST_NAME))){
+      throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+          ResponseCode.invalidRequestData.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }*/
+
+    Map<String , Object> req = actorMessage.getRequest();
+    String requestId = (String)req.get(JsonKey.REQUEST_ID);
+
+    //TODO: fetch the DB details from database on basis of requestId ....
+    Response response = cassandraOperation.getRecordById(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
+        requestId);
+    List<Map<String,Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if(responseList.isEmpty()){
+      //TODO: throw exception here ...
+    }
+
+    Map<String , Object> reportDbInfo = responseList.get(0);
+
+    Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
+
+    //Request request = new Request();
+    List<List<Object>> finalList = null;
+    String periodStr = (String) reportDbInfo.get(JsonKey.PERIOD);
+    String fileFormat = (String) reportDbInfo.get(JsonKey.FORMAT);
+    String batchId = (String) reportDbInfo.get(JsonKey.RESOURCE_ID);
+    //get start and end time ---
+    Map<String , String> dateRangeFilter = new HashMap<>();
+
+    //request.setId(actorMessage.getId());
+    //request.setContext(actorMessage.getContext());
+    Map<String, Object> requestMap = new HashMap<>();
+    requestMap.put(JsonKey.PERIOD, periodStr);
+    Map<String, Object> filter = new HashMap<>();
+    Map<String , String> aggs = new HashMap<>();
+    filter.put(JsonKey.BATCH_ID, batchId);
+
+    if(!("fromBegining".equalsIgnoreCase(periodStr))) {
+      Map<String, Object> dateRange = getStartAndEndDate(periodStr);
+      dateRangeFilter.put(GTE , (String)dateRange.get(startDate));
+      dateRangeFilter.put(LTE , (String)dateRange.get(endDate));
+      filter.put(JsonKey.DATE_TIME , dateRangeFilter);
+    }
+
+    List<String> coursefields = new ArrayList<>();
+    coursefields.add(JsonKey.USER_ID);
+    coursefields.add(JsonKey.PROGRESS);
+    //coursefields.add(JsonKey.COURSE_ENROLL_DATE);
+    coursefields.add(JsonKey.BATCH_ID);
+    //coursefields.add(JsonKey.DATE_TIME);
+
+    Map<String, Object> result = ElasticSearchUtil.complexSearch(createESRequest(filter , null,
+        coursefields), ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.usercourses.getTypeName());
+    List<Map<String , Object>> userCoursesContent = (List<Map<String , Object>>)result.get(JsonKey.CONTENT);
+
+    if(!(userCoursesContent.isEmpty())) {
+      List<String> userIds = new ArrayList<String>();
+
+      for (Map<String, Object> entry : userCoursesContent) {
+        String userId = (String) entry.get(JsonKey.USER_ID);
+        userIds.add(userId);
+      }
+
+      Set<String> uniqueUserIds = new HashSet<String>(userIds);
+      Map<String, Object> userfilter = new HashMap<>();
+      userfilter.put(JsonKey.USER_ID, uniqueUserIds.stream().collect(Collectors.toList()));
+      List<String> userfields = new ArrayList<>();
+      userfields.add(JsonKey.USER_ID);
+      userfields.add(JsonKey.USERNAME);
+      userfields.add(JsonKey.FIRST_NAME);
+      userfields.add(JsonKey.LOGIN_ID);
+      userfields.add(JsonKey.CREATED_DATE);
+      userfields.add(JsonKey.LANGUAGE);
+      userfields.add(JsonKey.SUBJECT);
+      userfields.add(JsonKey.GRADE);
+      userfields.add(JsonKey.GENDER);
+
+      //userfields.add(JsonKey.REGISTERED_ORG_ID);
+      Map<String, Object> userresult = ElasticSearchUtil
+          .complexSearch(createESRequest(userfilter, null, userfields),
+              ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+      List<Map<String, Object>> useresContent = (List<Map<String, Object>>) userresult
+          .get(JsonKey.CONTENT);
+
+      Map<String, Map<String, Object>> userInfoCache = new HashMap<>();
+      Set<String> orgSet = new HashSet<>();
+
+      for (Map<String, Object> map : useresContent) {
+        String userId = (String) map.get(JsonKey.USER_ID);
+        map.put("user", userId);
+        userInfoCache.put(userId, new HashMap<String, Object>(map));
+        // remove the org info from user content bcoz it is not desired in the user info result
+        map.remove(JsonKey.REGISTERED_ORG_ID);
+        map.remove(JsonKey.USER_ID);
+      }
+
+
+      List<Object> columnNames = Arrays.asList(JsonKey.LOGIN_ID , JsonKey.NAME , JsonKey.CREATED_DATE , JsonKey.LANGUAGE
+          ,JsonKey.SUBJECT , JsonKey.GRADE , JsonKey.PROGRESS);
+
+      finalList = new ArrayList<>();
+
+      finalList.add(columnNames);
+
+      for(Map<String , Object> map : userCoursesContent){
+        List<Object> list = new ArrayList<>();
+        Map<String , Object> userMap = userInfoCache.get(map.get(JsonKey.USER_ID));
+        if(isNotNull(userMap)) {
+          list.add(userMap.get(JsonKey.LOGIN_ID));
+          list.add(userMap.get(JsonKey.FIRST_NAME));
+          list.add(userMap.get(JsonKey.CREATED_DATE));
+          list.add(userMap.get(JsonKey.LANGUAGE));
+          list.add(userMap.get(JsonKey.SUBJECT));
+          list.add(userMap.get(JsonKey.GRADE));
+          list.add(map.get(JsonKey.PROGRESS));
+        }else{
+          list.add(null);
+          list.add(null);
+          list.add(null);
+          list.add(null);
+          list.add(null);
+          list.add(null);
+          list.add(map.get(JsonKey.PROGRESS));
+        }
+        finalList.add(list);
+      }
+
+    }
+
+    //String requestId = ProjectUtil.getUniqueIdFromTimestamp(1);
+
+    Map<String , Object> requestDbInfo = new HashMap<>();
+    requestDbInfo.put(JsonKey.ID , requestId);
+    //requestDbInfo.put(JsonKey.USER_ID, requestedBy);
+    //requestDbInfo.put(JsonKey.FIRST_NAME, requestedByInfo.get(JsonKey.FIRST_NAME));
+    requestDbInfo.put(JsonKey.STATUS, ReportTrackingStatus.GENERATING_DATA.getValue());
+    //requestDbInfo.put(JsonKey.RESOURCE_ID , batchId);
+    //requestDbInfo.put(JsonKey.PERIOD , periodStr);
+    //requestDbInfo.put(JsonKey.CREATED_DATE , format.format(new Date()));
+    requestDbInfo.put(JsonKey.UPDATED_DATE , format.format(new Date()));
+   // requestDbInfo.put(JsonKey.EMAIL, requestedByInfo.get(JsonKey.EMAIL));
+    //requestDbInfo.put(JsonKey.TYPE , COURSE_PROGRESS_REPORT);
+    //requestDbInfo.put(JsonKey.FORMAT , fileFormat);
+
+    ObjectMapper mapper= new ObjectMapper();
+    try {
+      String data = mapper.writeValueAsString(finalList);
+      requestDbInfo.put(JsonKey.DATA , data);
+    } catch (JsonProcessingException e) {
+      e.printStackTrace();
+    }
+    cassandraOperation.insertRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
+        requestDbInfo);
+
+    Request backGroundRequest = new Request();
+    backGroundRequest.setOperation(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue());
+    backGroundRequest.getRequest().put(JsonKey.DATA , finalList);
+    backGroundRequest.getRequest().put(JsonKey.REQUEST_ID , requestId);
+    sender().tell(backGroundRequest, self());
+
+
+    /*Response response = new Response();
+    response.put(JsonKey.REQUEST_ID , requestId);
+    sender().tell(response, self());
+
+    // assign the back ground task to background job actor ...
+
+
+    Map<String , Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.REQUEST_ID , requestId);
+    innerMap.put(JsonKey.DATA , finalList);
+
+    backGroundRequest.setRequest(innerMap);
+    backGroundActorRef.tell(backGroundRequest , self());*/
+  }
+
   private void courseConsumptionMetricsReport(Request actorMessage) {
 
     ProjectLogger.log("CourseMetricsActor-courseProgressMetrics called");
@@ -119,14 +303,14 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     Map<String , Object> requestedByInfo = ElasticSearchUtil.getDataByIdentifier(EsIndex.sunbird.getIndexName() , EsType.user.getTypeName() ,requestedBy);
     if(ProjectUtil.isNull(requestedByInfo) || ProjectUtil.isStringNullOREmpty((String)requestedByInfo.get(JsonKey.FIRST_NAME))){
-      throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-          ResponseCode.invalidRequestData.getErrorMessage(),
+      throw new ProjectCommonException(ResponseCode.invalidUserId.getErrorCode(),
+          ResponseCode.invalidUserId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
     Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
 
-    Request request = new Request();
+    /*Request request = new Request();
     List<List<Object>> finalList = null;
     String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
     String fileFormat = (String) actorMessage.getRequest().get(JsonKey.FORMAT);
@@ -232,9 +416,13 @@ public class CourseMetricsActor extends BaseMetricsActor {
         finalList.add(list);
       }
 
-    }
+    }*/
 
     String requestId = ProjectUtil.getUniqueIdFromTimestamp(1);
+
+    String batchId = (String) actorMessage.getRequest().get(JsonKey.BATCH_ID);
+    String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
+    String fileFormat = (String) actorMessage.getRequest().get(JsonKey.FORMAT);
 
     Map<String , Object> requestDbInfo = new HashMap<>();
     requestDbInfo.put(JsonKey.ID , requestId);
@@ -249,13 +437,13 @@ public class CourseMetricsActor extends BaseMetricsActor {
     requestDbInfo.put(JsonKey.TYPE , COURSE_PROGRESS_REPORT);
     requestDbInfo.put(JsonKey.FORMAT , fileFormat);
 
-    ObjectMapper mapper= new ObjectMapper();
+    /*ObjectMapper mapper= new ObjectMapper();
     try {
       String data = mapper.writeValueAsString(finalList);
       requestDbInfo.put(JsonKey.DATA , data);
     } catch (JsonProcessingException e) {
       e.printStackTrace();
-    }
+    }*/
     cassandraOperation.insertRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
         requestDbInfo);
 
@@ -265,13 +453,15 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     // assign the back ground task to background job actor ...
     Request backGroundRequest = new Request();
-    backGroundRequest.setOperation(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue());
+    backGroundRequest.setOperation(ActorOperations.PROCESS_DATA.getValue());
+    backGroundRequest.getRequest().put(JsonKey.REQUEST , JsonKey.CourseProgress);
+    backGroundRequest.getRequest().put(JsonKey.REQUEST_ID , requestId);
 
-    Map<String , Object> innerMap = new HashMap<>();
+    /*Map<String , Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.REQUEST_ID , requestId);
-    innerMap.put(JsonKey.DATA , finalList);
+    //innerMap.put(JsonKey.DATA , finalList);
 
-    backGroundRequest.setRequest(innerMap);
+    backGroundRequest.setRequest(innerMap);*/
     backGroundActorRef.tell(backGroundRequest , self());
   }
 

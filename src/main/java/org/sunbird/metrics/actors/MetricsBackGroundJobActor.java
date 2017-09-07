@@ -31,6 +31,7 @@ import org.sunbird.common.models.util.mail.SendMail;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.RequestRouterActor;
 import org.sunbird.learner.util.Util;
 
 import akka.actor.ActorRef;
@@ -48,14 +49,25 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static FileUtil fileUtil = new ExcelFileUtil();
   SimpleDateFormat format = ProjectUtil.format;
-  private ActorRef courseMetricsActor;
-  private ActorRef orgMetricsActor;
   private ActorRef backGroundActorRef;
 
+  private ActorRef courseMetricsActor = RequestRouterActor.courseMetricsRouter;
+  private ActorRef orgMetricsActor = RequestRouterActor.organisationMetricsRouter;
+
   public MetricsBackGroundJobActor(){
-    orgMetricsActor = getContext().actorOf(Props.create(OrganisationMetricsActor.class), "orgMetricsActor");
-    courseMetricsActor = getContext().actorOf(Props.create(CourseMetricsActor.class), "courseMetricsActor");
-    backGroundActorRef = getContext().actorOf(Props.create(MetricsBackGroundJobActor.class), "metricsBackGroundJobActor");
+    /*if(null == orgMetricsActor ) {
+      orgMetricsActor = getContext()
+          .actorOf(Props.create(OrganisationMetricsActor.class), "orgMetricsActor");
+    }
+    if(null == courseMetricsActor) {
+      courseMetricsActor = getContext()
+          .actorOf(Props.create(CourseMetricsActor.class), "courseMetricsRouter");
+    }
+    if(null == backGroundActorRef) {
+      backGroundActorRef = self();
+    }*/
+
+    backGroundActorRef = self();
   }
 
   @Override
@@ -96,7 +108,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
   @SuppressWarnings("unchecked")
   private void processData(Request actorMessage) {
     String operation = (String) actorMessage.getRequest().get(JsonKey.REQUEST);
-    String requestId = (String) actorMessage.getRequestId();
+    String requestId = (String) actorMessage.getRequest().get(JsonKey.REQUEST_ID);
     Response response = cassandraOperation.getRecordById(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
         requestId);
     List<Map<String,Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
@@ -122,9 +134,9 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
       orgMetricsActor.tell(metricsRequest, self());
     }else if(JsonKey.CourseProgress.equalsIgnoreCase(operation)) {
       Map<String,Object> request = new HashMap<>();
-      request.put(JsonKey.COURSE_ID, reportDbInfo.get(JsonKey.RESOURCE_ID));
-      request.put(JsonKey.PERIOD, reportDbInfo.get(JsonKey.PERIOD));
-      metricsRequest.setOperation(ActorOperations.COURSE_CREATION_METRICS.getValue());
+      request.put(JsonKey.REQUEST_ID, (String)actorMessage.getRequest().get(JsonKey.REQUEST_ID));
+      //request.put(JsonKey.PERIOD, reportDbInfo.get(JsonKey.PERIOD));
+      metricsRequest.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_DATA.getValue());
       metricsRequest.setRequest(request);
       courseMetricsActor.tell(metricsRequest, self());
     }
@@ -164,6 +176,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
             .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
                 dbReqMap);
       }else{
+        dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.SENDING_MAIL.getValue());
         dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
         cassandraOperation
             .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),

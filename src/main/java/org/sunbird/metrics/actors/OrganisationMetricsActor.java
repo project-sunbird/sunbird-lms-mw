@@ -178,13 +178,15 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   private void saveData(List<List<Object>> data, String requestId){
     Map<String , Object> dbReqMap = new HashMap<>();
     dbReqMap.put(JsonKey.ID , requestId);
-    dbReqMap.put(JsonKey.DATA, data);
+    String dataStr = getJsonString(data);
+    dbReqMap.put(JsonKey.DATA, dataStr);
     dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.GENERATING_DATA.getValue());
     dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
     
     cassandraOperation
     .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
         dbReqMap);
+    return;
   }
 
   private String getJsonString(Object requestObject) {
@@ -615,16 +617,15 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       resultData = (Map<String, Object>) resultData.get(JsonKey.RESULT);
       List<Map<String, Object>> resultList =
           (List<Map<String, Object>>) resultData.get(JsonKey.METRICS);
-      List<Map<String, Object>> buckets = createBucketStructure(period);
-      List<Map<String, Object>> userBucket = new ArrayList<>();
-      List<Map<String, Object>> consumptionBucket = new ArrayList<>();
+      List<Map<String, Object>> userBucket = createBucketStructure(period);
+      List<Map<String, Object>> consumptionBucket = createBucketStructure(period);
       Map<String, Object> userData = new HashMap<>();
       int index = 0;
       Collections.reverse(resultList);
       Map<String, Object> resData = new HashMap<>();
       for (Map<String, Object> res : resultList) {
-        resData = buckets.get(index);
-        userData = resData;
+        resData = consumptionBucket.get(index);
+        userData = userBucket.get(index);
         String bucketDate = "";
         String metricsDate = "";
         if ("5w".equalsIgnoreCase(period)) {
@@ -644,9 +645,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
           resData.put(VALUE, totalTimeSpent);
           userData.put(VALUE, totalUsers);
         }
-        consumptionBucket.add(resData);
-        userBucket.add(userData);
-        if (index < buckets.size()) {
+        if (index < consumptionBucket.size() && index < userBucket.size()) {
           index++;
         }
       }
@@ -720,11 +719,26 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
           ResponseCode.esError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
     }
   }
+  
+  @SuppressWarnings("unchecked")
+  private Map<String,Object> getData(String requestId){
+    Response response = cassandraOperation
+    .getRecordById(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
+        requestId);
+    List<Map<String,Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if(responseList.isEmpty()){
+     return new HashMap<>();
+    }
+    return responseList.get(0);
+    
+  }
 
   private void orgCreationMetricsData(Request actorMessage) {
     ProjectLogger.log("In orgCreationMetricsExcel api");
     try {
-      String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
+      String requestId = (String) actorMessage.getRequest().get(JsonKey.REQUEST_ID);
+      Map<String,Object> requestData = getData(requestId);
+      String orgId = (String)requestData.get(JsonKey.RESOURCE_ID);
       List<Object> headers = new ArrayList<>();
       headers.add("contentCreatedFor");
       headers.add("userId");
@@ -749,16 +763,16 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       List<List<Object>> csvRecords = new ArrayList<>();
       csvRecords.add(headers);
       for (String operation : operationList) {
-        String requestStr = getRequestObject(operation, actorMessage);
+        String requestStr = getRequestObject(operation, requestId);
         String ekStepResponse = makePostRequest(JsonKey.EKSTEP_CONTNET_SEARCH_URL, requestStr);
         List<Map<String, Object>> ekstepData = getDataFromResponse(ekStepResponse, headers, orgId);
         List<Map<String, Object>> userData = getUserDetailsFromES(ekstepData);
         csvRecords.addAll(generateDataList(userData, headers));
       }
-      String period = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
+      String period = (String) requestData.get(JsonKey.PERIOD);
       String fileName =
           "CreationReport_" + orgId + FILENAMESEPARATOR + System.currentTimeMillis() + FILENAMESEPARATOR + period;      
-      String requestId = (String) actorMessage.getRequestId();
+      
       saveData(csvRecords, requestId);
       Request backGroundRequest = new Request();
       backGroundRequest.setOperation(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue());
@@ -766,7 +780,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       Map<String , Object> innerMap = new HashMap<>();
       innerMap.put(JsonKey.REQUEST_ID , requestId);
       innerMap.put(JsonKey.FILE_NAME, fileName);
-      
+      innerMap.put(JsonKey.DATA, csvRecords);
       backGroundRequest.setRequest(innerMap);
       backGroundActorRef.tell(backGroundRequest , self());  
     } catch (Exception e) {
@@ -783,8 +797,10 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   private void orgConsumptionMetricsData(Request actorMessage) {
     ProjectLogger.log("In orgConsumptionMetricsExcel api");
     try {
-      String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
-      String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
+      String requestId = (String) actorMessage.getRequest().get(JsonKey.REQUEST_ID);
+      Map<String,Object> requestData = new HashMap<>(); 
+      String periodStr = (String) requestData.get(JsonKey.PERIOD);
+      String orgId = (String) requestData.get(JsonKey.ORG_ID);
       Map<String, Object> orgData = validateOrg(orgId);
       if (null == orgData) {
         throw new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
@@ -817,7 +833,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       csvRecords.add(headers);
       csvRecords.addAll(generateDataList(consumptionData, headers));
       
-      String requestId = (String) actorMessage.getRequestId();
       String fileName =
           "ConsumptionReport" + orgId + FILENAMESEPARATOR + System.currentTimeMillis() + FILENAMESEPARATOR + periodStr;      
       saveData(csvRecords, requestId);
@@ -827,7 +842,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       Map<String , Object> innerMap = new HashMap<>();
       innerMap.put(JsonKey.REQUEST_ID , requestId);
       innerMap.put(JsonKey.FILE_NAME, fileName);
-      
+      innerMap.put(JsonKey.DATA, csvRecords);
       backGroundRequest.setRequest(innerMap);
       backGroundActorRef.tell(backGroundRequest , self());
     } catch (Exception e) {
@@ -895,11 +910,11 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   }
 
 
-  private String getRequestObject(String operation, Request actorMessage) {
+  private String getRequestObject(String operation, String requestId) {
     Request request = new Request();
-
-    String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
-    String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
+    Map<String,Object> requestedData = getData(requestId);
+    String orgId = (String) requestedData.get(JsonKey.RESOURCE_ID);
+    String periodStr = (String) requestedData.get(JsonKey.PERIOD);
     Map<String, Object> dateMap = getStartAndEndDate(periodStr);
     Map<String, String> operationMap = new LinkedHashMap<>();
     switch (operation) {

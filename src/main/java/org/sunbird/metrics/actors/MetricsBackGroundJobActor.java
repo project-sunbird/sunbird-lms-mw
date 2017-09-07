@@ -1,8 +1,5 @@
 package org.sunbird.metrics.actors;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
-import akka.pattern.Patterns;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -10,9 +7,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import akka.util.Timeout;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.velocity.VelocityContext;
 import org.sunbird.cassandra.CassandraOperation;
@@ -35,10 +29,7 @@ import org.sunbird.learner.actors.RequestRouterActor;
 import org.sunbird.learner.util.Util;
 
 import akka.actor.ActorRef;
-import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
 
 /**
  * Created by arvind on 28/8/17.
@@ -49,26 +40,8 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static FileUtil fileUtil = new ExcelFileUtil();
   SimpleDateFormat format = ProjectUtil.format;
-  private ActorRef backGroundActorRef;
-
   private ActorRef courseMetricsActor = RequestRouterActor.courseMetricsRouter;
   private ActorRef orgMetricsActor = RequestRouterActor.organisationMetricsRouter;
-
-  public MetricsBackGroundJobActor(){
-    /*if(null == orgMetricsActor ) {
-      orgMetricsActor = getContext()
-          .actorOf(Props.create(OrganisationMetricsActor.class), "orgMetricsActor");
-    }
-    if(null == courseMetricsActor) {
-      courseMetricsActor = getContext()
-          .actorOf(Props.create(CourseMetricsActor.class), "courseMetricsRouter");
-    }
-    if(null == backGroundActorRef) {
-      backGroundActorRef = self();
-    }*/
-
-    backGroundActorRef = self();
-  }
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -105,44 +78,28 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
       }
   }
 
-  @SuppressWarnings("unchecked")
   private void processData(Request actorMessage) {
     String operation = (String) actorMessage.getRequest().get(JsonKey.REQUEST);
     String requestId = (String) actorMessage.getRequest().get(JsonKey.REQUEST_ID);
-    Response response = cassandraOperation.getRecordById(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-        requestId);
-    List<Map<String,Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    if(responseList.isEmpty()){
-      //TODO:
-    }
-    Map<String , Object> reportDbInfo = responseList.get(0);
     Request metricsRequest = new Request();
-    metricsRequest.setRequest_id(requestId);
+    Map<String,Object> request = new HashMap<>();
+    request.put(JsonKey.REQUEST_ID, requestId);
     if(JsonKey.OrgCreation.equalsIgnoreCase(operation)){
-      Map<String,Object> request = new HashMap<>();
-      request.put(JsonKey.ORG_ID, reportDbInfo.get(JsonKey.RESOURCE_ID));
-      request.put(JsonKey.PERIOD, reportDbInfo.get(JsonKey.PERIOD));
       metricsRequest.setOperation(ActorOperations.ORG_CREATION_METRICS_DATA.getValue());
       metricsRequest.setRequest(request);
       orgMetricsActor.tell(metricsRequest, self());
     }else if(JsonKey.OrgConsumption.equalsIgnoreCase(operation)){
-      Map<String,Object> request = new HashMap<>();
-      request.put(JsonKey.ORG_ID, reportDbInfo.get(JsonKey.RESOURCE_ID));
-      request.put(JsonKey.PERIOD, reportDbInfo.get(JsonKey.PERIOD));
       metricsRequest.setOperation(ActorOperations.ORG_CONSUMPTION_METRICS_DATA.getValue());
       metricsRequest.setRequest(request);
       orgMetricsActor.tell(metricsRequest, self());
     }else if(JsonKey.CourseProgress.equalsIgnoreCase(operation)) {
-      Map<String,Object> request = new HashMap<>();
-      request.put(JsonKey.REQUEST_ID, (String)actorMessage.getRequest().get(JsonKey.REQUEST_ID));
-      //request.put(JsonKey.PERIOD, reportDbInfo.get(JsonKey.PERIOD));
       metricsRequest.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_DATA.getValue());
       metricsRequest.setRequest(request);
       courseMetricsActor.tell(metricsRequest, self());
     }
     return;
   }
-
+  
   @SuppressWarnings("unchecked")
   private void sendMail(Request request) {
 
@@ -280,15 +237,15 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.UPLOADING_FILE_SUCCESS.getValue());
     cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
         dbReqMap);
-
+    
     Request backGroundRequest = new Request();
     backGroundRequest.setOperation(ActorOperations.SEND_MAIL.getValue());
 
     Map<String , Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.REQUEST_ID , requestId);
-
+    
     backGroundRequest.setRequest(innerMap);
-    backGroundActorRef.tell(backGroundRequest , self());
+    self().tell(backGroundRequest , self());
     return;
     /*dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.SENDING_MAIL.getValue());
     dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
@@ -327,7 +284,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     templateMap.put(JsonKey.BODY, "Please Find Attached Report for "+reportDbInfo.get(JsonKey.RESOURCE_ID)+" for the Period  "+reportDbInfo.get(JsonKey.PERIOD)+" as requested on : "+reportDbInfo.get(JsonKey.CREATED_DATE));
     templateMap.put(JsonKey.ACTION_NAME, "Download");
     VelocityContext context = ProjectUtil.getContext(templateMap);
-
+    
     return SendMail.sendMail(new String[]{(String)reportDbInfo.get(JsonKey.EMAIL)},"Report for "+reportDbInfo.get(JsonKey.RESOURCE_ID) ,context,ProjectUtil.getTemplate("defaultTemplate"));
   }
 

@@ -72,7 +72,11 @@ public class CourseMetricsActor extends BaseMetricsActor {
         }else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.COURSE_CREATION_METRICS_REPORT.getValue())) {
           courseConsumptionMetricsReport(actorMessage);
-        } else {
+        }else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.COURSE_PROGRESS_METRICS_REPORT_DATA_GENERATION.getValue())) {
+          courseConsumptionMetricsReport(actorMessage);
+        }
+        else {
           ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
           ProjectCommonException exception =
               new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),

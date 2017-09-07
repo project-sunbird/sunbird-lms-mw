@@ -1,5 +1,8 @@
 package org.sunbird.metrics.actors;
 
+import akka.actor.ActorRef;
+import akka.actor.Props;
+import akka.pattern.Patterns;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -7,6 +10,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import akka.util.Timeout;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.velocity.VelocityContext;
 import org.sunbird.cassandra.CassandraOperation;
@@ -28,6 +34,8 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
 import akka.actor.UntypedAbstractActor;
+import scala.concurrent.Await;
+import scala.concurrent.Future;
 
 /**
  * Created by arvind on 28/8/17.
@@ -38,6 +46,12 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static FileUtil fileUtil = new ExcelFileUtil();
   SimpleDateFormat format = ProjectUtil.format;
+  private ActorRef courseMetricsActorRef;
+
+  public MetricsBackGroundJobActor() {
+    courseMetricsActorRef = getContext().actorOf(Props.create(CourseMetricsActor.class), "courseMetricsActor");
+
+  }
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -69,6 +83,18 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
       } else {
         ProjectLogger.log("UNSUPPORTED MESSAGE FOR BACKGROUND JOB MANAGER");
       }
+  }
+
+  private void processCourseProgressReport(Request actorMessage) {
+
+    final Timeout timeout = new Timeout(5, TimeUnit.SECONDS);
+    final Future<Object> future = Patterns.ask(courseMetricsActorRef, null, timeout);
+    try {
+      final String result = (String) Await.result(future, timeout.duration());
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
   }
 
   @SuppressWarnings("unchecked")

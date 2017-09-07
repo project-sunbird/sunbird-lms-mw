@@ -219,8 +219,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.GET_BULK_OP_STATUS.getValue(), bulkUploadManagementActor);
         routerMap.put(ActorOperations.ORG_CREATION_METRICS.getValue(), organisationMetricsRouter);
         routerMap.put(ActorOperations.ORG_CONSUMPTION_METRICS.getValue(), organisationMetricsRouter);
-        routerMap.put(ActorOperations.ORG_CREATION_METRICS_DOWNLOAD.getValue(), organisationMetricsRouter);
-        routerMap.put(ActorOperations.ORG_CONSUMPTION_METRICS_DOWNLOAD.getValue(), organisationMetricsRouter);
+        routerMap.put(ActorOperations.ORG_CREATION_METRICS_DATA.getValue(), organisationMetricsRouter);
+        routerMap.put(ActorOperations.ORG_CONSUMPTION_METRICS_DATA.getValue(), organisationMetricsRouter);
         routerMap.put(ActorOperations.COURSE_PROGRESS_METRICS.getValue(), courseMetricsRouter);
         routerMap.put(ActorOperations.COURSE_CREATION_METRICS.getValue(), courseMetricsRouter);
         routerMap.put(ActorOperations.USER_CREATION_METRICS.getValue(), userMetricsRouter);
@@ -235,7 +235,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
         
         routerMap.put(ActorOperations.SYNC.getValue(), esSyncActor);
         routerMap.put(ActorOperations.FILE_STORAGE_SERVICE.getValue(), fileUploadServiceActor);
-        routerMap.put(ActorOperations.FILE_UPLOAD_AND_SEND_MAIL.getValue(), metricsBackGroungJobActor);
+        routerMap.put(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue(), metricsBackGroungJobActor);
         routerMap.put(ActorOperations.GET_ALL_BADGE.getValue(), badgesActor);
         routerMap.put(ActorOperations.ADD_USER_BADGE.getValue(), badgesActor);
         routerMap.put(ActorOperations.HEALTH_CHECK.getValue(), badgesActor);

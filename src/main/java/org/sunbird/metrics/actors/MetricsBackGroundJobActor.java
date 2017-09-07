@@ -27,6 +27,8 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
+import akka.actor.ActorRef;
+import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
 
 /**
@@ -38,6 +40,15 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static FileUtil fileUtil = new ExcelFileUtil();
   SimpleDateFormat format = ProjectUtil.format;
+  private ActorRef courseMetricsActor;
+  private ActorRef orgMetricsActor;
+  private ActorRef backGroundActorRef;
+  
+  public MetricsBackGroundJobActor(){
+    orgMetricsActor = getContext().actorOf(Props.create(OrganisationMetricsActor.class), "orgMetricsActor");
+    courseMetricsActor = getContext().actorOf(Props.create(CourseMetricsActor.class), "courseMetricsActor");
+    backGroundActorRef = getContext().actorOf(Props.create(MetricsBackGroundJobActor.class), "metricsBackGroundJobActor");
+  }
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -50,8 +61,11 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
           String requestedOperation = actorMessage.getOperation();
           ProjectLogger.log("Operation name is ==" + requestedOperation);
           if (requestedOperation
-              .equalsIgnoreCase(ActorOperations.FILE_UPLOAD_AND_SEND_MAIL.getValue())) {
-            fileUploadAndSendMail(actorMessage);
+              .equalsIgnoreCase(ActorOperations.PROCESS_DATA.getValue())) {
+            processData(actorMessage);
+          } else if (requestedOperation
+              .equalsIgnoreCase(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue())) {
+            fileGenerationAndUpload(actorMessage);
           } else if (requestedOperation
               .equalsIgnoreCase(ActorOperations.SEND_MAIL.getValue())) {
             sendMail(actorMessage);
@@ -70,7 +84,45 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
         ProjectLogger.log("UNSUPPORTED MESSAGE FOR BACKGROUND JOB MANAGER");
       }
   }
-
+  
+  @SuppressWarnings("unchecked")
+  private void processData(Request actorMessage) {
+    String operation = (String) actorMessage.getRequest().get(JsonKey.REQUEST);
+    String requestId = (String) actorMessage.getRequestId();
+    Response response = cassandraOperation.getRecordById(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
+        requestId);
+    List<Map<String,Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if(responseList.isEmpty()){
+      //TODO:
+    }
+    Map<String , Object> reportDbInfo = responseList.get(0);
+    Request metricsRequest = new Request();
+    metricsRequest.setRequest_id(requestId); 
+    if(JsonKey.OrgCreation.equalsIgnoreCase(operation)){
+      Map<String,Object> request = new HashMap<>();
+      request.put(JsonKey.ORG_ID, reportDbInfo.get(JsonKey.RESOURCE_ID));
+      request.put(JsonKey.PERIOD, reportDbInfo.get(JsonKey.PERIOD));
+      metricsRequest.setOperation(ActorOperations.ORG_CREATION_METRICS_DATA.getValue());
+      metricsRequest.setRequest(request);
+      orgMetricsActor.tell(metricsRequest, self());
+    }else if(JsonKey.OrgConsumption.equalsIgnoreCase(operation)){
+      Map<String,Object> request = new HashMap<>();
+      request.put(JsonKey.ORG_ID, reportDbInfo.get(JsonKey.RESOURCE_ID));
+      request.put(JsonKey.PERIOD, reportDbInfo.get(JsonKey.PERIOD));
+      metricsRequest.setOperation(ActorOperations.ORG_CONSUMPTION_METRICS_DATA.getValue());
+      metricsRequest.setRequest(request);
+      orgMetricsActor.tell(metricsRequest, self());
+    }else if(JsonKey.CourseProgress.equalsIgnoreCase(operation)) {
+      Map<String,Object> request = new HashMap<>();
+      request.put(JsonKey.COURSE_ID, reportDbInfo.get(JsonKey.RESOURCE_ID));
+      request.put(JsonKey.PERIOD, reportDbInfo.get(JsonKey.PERIOD));
+      metricsRequest.setOperation(ActorOperations.COURSE_CREATION_METRICS.getValue());
+      metricsRequest.setRequest(request);
+      courseMetricsActor.tell(metricsRequest, self());
+    }
+    return;
+  }
+  
   @SuppressWarnings("unchecked")
   private void sendMail(Request request) {
 
@@ -124,7 +176,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void fileUploadAndSendMail(Request request) throws IOException {
+  private void fileGenerationAndUpload(Request request) throws IOException {
 
     Map<String , Object> map = request.getRequest();
     String requestId = (String)map.get(JsonKey.REQUEST_ID);
@@ -142,10 +194,10 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     Map<String , Object> dbReqMap = new HashMap<>();
     dbReqMap.put(JsonKey.ID , requestId);
 
-    dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.GENERATING_FILE.getValue());
+    /*dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.UPLOADING_FILE.getValue());
     dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
     cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-        dbReqMap);
+        dbReqMap);*/
 
     List<List<Object>> finalList = (List<List<Object>>) map.get(JsonKey.DATA);
     String fileName = (String) map.get(JsonKey.FILE_NAME);
@@ -206,8 +258,17 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.UPLOADING_FILE_SUCCESS.getValue());
     cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
         dbReqMap);
+    
+    Request backGroundRequest = new Request();
+    backGroundRequest.setOperation(ActorOperations.SEND_MAIL.getValue());
 
-    dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.SENDING_MAIL.getValue());
+    Map<String , Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.REQUEST_ID , requestId);
+    
+    backGroundRequest.setRequest(innerMap);
+    backGroundActorRef.tell(backGroundRequest , self());
+    return;
+    /*dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.SENDING_MAIL.getValue());
     dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
     cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
         dbReqMap);
@@ -232,7 +293,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
             .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
                 dbReqMap);
       }
-    }
+    }*/
   }
 
   private boolean processMailSending(Map<String, Object> reportDbInfo) {

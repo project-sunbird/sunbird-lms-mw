@@ -265,7 +265,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     // assign the back ground task to background job actor ...
     Request backGroundRequest = new Request();
-    backGroundRequest.setOperation(ActorOperations.FILE_UPLOAD_AND_SEND_MAIL.getValue());
+    backGroundRequest.setOperation(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue());
 
     Map<String , Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.REQUEST_ID , requestId);
@@ -495,7 +495,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       Map<String, Object> requestObject = new HashMap<>();
       requestObject.put(JsonKey.PERIOD, getEkstepPeriod(periodStr));
       Map<String, Object> filterMap = new HashMap<>();
-      filterMap.put(CONTENT_ID, courseId);
+      filterMap.put(JsonKey.TAG, courseId);
       requestObject.put(JsonKey.FILTER, filterMap);
       
       
@@ -720,7 +720,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
       dataMap = new LinkedHashMap<>();
       dataMap.put(JsonKey.NAME, "User access course over time");
       dataMap.put(VALUE, resultData.get("m_total_users_count"));
-      dataMap.put(JsonKey.TIME_UNIT, "seconds");
       snapshot.put("course.consumption.time_per_user", dataMap);
       dataMap = new LinkedHashMap<>();
       dataMap.put(JsonKey.NAME, "Total users completed the course");

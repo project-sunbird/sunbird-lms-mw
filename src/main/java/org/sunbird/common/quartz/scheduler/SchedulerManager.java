@@ -3,7 +3,6 @@
  */
 package org.sunbird.common.quartz.scheduler;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
@@ -19,6 +18,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.PropertiesCache;
 
 
 /**
@@ -74,7 +74,7 @@ public class SchedulerManager {
       //This scheduler will run every day 11:30 PM IN GMT and 6 PM on UTC.
       //server time is set in UTC so all scheduler need to be manage based on that time only.
       Trigger trigger = TriggerBuilder.newTrigger().withIdentity("schedulertrigger", identifier)
-          .withSchedule(CronScheduleBuilder.cronSchedule("0 0 0/4 1/1 * ? *")).build();
+          .withSchedule(CronScheduleBuilder.cronSchedule(PropertiesCache.getInstance().getProperty("quartz_course_batch_timer"))).build();
       try {
          if (scheduler.checkExists(job.getKey())){
           scheduler.deleteJob(job.getKey());
@@ -93,7 +93,7 @@ public class SchedulerManager {
       // 2- Create a trigger object that will define frequency of run.
       //This will run every day 4:30 AM and in UTC 11 PM
       Trigger uploadTrigger = TriggerBuilder.newTrigger().withIdentity("uploadVerifyTrigger", identifier)
-          .withSchedule(CronScheduleBuilder.cronSchedule("0 0 23 1/1 * ? *")).build();
+          .withSchedule(CronScheduleBuilder.cronSchedule(PropertiesCache.getInstance().getProperty("quartz_upload_timer"))).build();
       try {
          if (scheduler.checkExists(uploadVerifyJob.getKey())){
           scheduler.deleteJob(uploadVerifyJob.getKey());
@@ -113,7 +113,7 @@ public class SchedulerManager {
       // 2- Create a trigger object that will define frequency of run.
       //This job will run every hours.
       Trigger coursePublishedTrigger = TriggerBuilder.newTrigger().withIdentity("coursePublishedTrigger", identifier)
-          .withSchedule(CronScheduleBuilder.cronSchedule("0 0 0/1 1/1 * ? *")).build();
+          .withSchedule(CronScheduleBuilder.cronSchedule(PropertiesCache.getInstance().getProperty("quartz_course_publish_timer"))).build();
       try {
          if (scheduler.checkExists(coursePublishedJob.getKey())){
           scheduler.deleteJob(coursePublishedJob.getKey());
@@ -135,7 +135,7 @@ public class SchedulerManager {
       // 2- Create a trigger object that will define frequency of run.
       //This job will run every day 11:30 PM IN GMT and 6 PM on UTC.
       Trigger metricsReportRetryTrigger = TriggerBuilder.newTrigger().withIdentity("metricsReportRetryTrigger", identifier)
-          .withSchedule(CronScheduleBuilder.cronSchedule("0 0 0/4 1/1 * ? *")).build();
+          .withSchedule(CronScheduleBuilder.cronSchedule(PropertiesCache.getInstance().getProperty("quartz_matrix_report_timer"))).build();
       try {
         if (scheduler.checkExists(metricsReportJob.getKey())){
           scheduler.deleteJob(metricsReportJob.getKey());

@@ -384,8 +384,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         orgContactList = mapper.readValue(contactDetails, Object[].class);
 
       } catch (IOException | ParseException ex) {
-        ProjectLogger.log("Unable to parse Org contact Details - OrgBBulkUpload.",ex);
-        concurrentHashMap.put(JsonKey.ERROR_MSG , "Unable to parse Org contact Details - OrgBBulkUpload.");
+        ProjectLogger.log("Unable to parse Org contact Details - OrgBulkUpload.",ex);
+        concurrentHashMap.put(JsonKey.ERROR_MSG , "Unable to parse Org contact Details - OrgBulkUpload.");
         failureList.add(concurrentHashMap);
         return;
       }

@@ -548,11 +548,12 @@ public class CourseMetricsActor extends BaseMetricsActor {
       String channel = (String)rootOrgData.get(JsonKey.HASHTAGID);
       ProjectLogger.log("Channel" + channel);
       
-      String responseFormat = (String) cache.getData(JsonKey.CourseConsumption, courseId, periodStr);
+      String responseFormat = getCourseConsumptionData(periodStr, courseId, requestObject, channel);
+     /* String responseFormat = (String) cache.getData(JsonKey.CourseConsumption, courseId, periodStr);
       if(ProjectUtil.isStringNullOREmpty(responseFormat)){
         responseFormat = getCourseConsumptionData(periodStr, courseId, requestObject, channel);
         cache.setData(JsonKey.CourseConsumption, courseId, periodStr, responseFormat);
-      }   
+      }   */
       Response response =
           metricsResponseGenerator(responseFormat, periodStr, getViewData(courseId));
       sender().tell(response, self());

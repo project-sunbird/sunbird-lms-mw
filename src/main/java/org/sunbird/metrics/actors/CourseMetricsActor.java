@@ -1,6 +1,7 @@
 package org.sunbird.metrics.actors;
 
 import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
+import static org.sunbird.common.models.util.ProjectUtil.isNull;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
@@ -274,11 +275,33 @@ public class CourseMetricsActor extends BaseMetricsActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
+    String batchId = (String) actorMessage.getRequest().get(JsonKey.BATCH_ID);
+    if(ProjectUtil.isStringNullOREmpty(batchId)){
+      ProjectLogger.log("CourseMetricsActor-courseProgressMetrics-- batch is not valid .");
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidCourseBatchId.getErrorCode(),
+              ResponseCode.invalidCourseBatchId.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return ;
+    }
+
+    //check batch exist in ES or not
+    Map<String , Object> courseBatchResult = ElasticSearchUtil.getDataByIdentifier(EsIndex.sunbird.getIndexName() , EsType.course.getTypeName() , batchId);
+    if (isNull(courseBatchResult) || courseBatchResult.size()==0) {
+      ProjectLogger.log("CourseMetricsActor-courseProgressMetrics-- batch is not valid .");
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidCourseBatchId.getErrorCode(),
+              ResponseCode.invalidCourseBatchId.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return ;
+    }
+
     Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
 
     String requestId = ProjectUtil.getUniqueIdFromTimestamp(1);
 
-    String batchId = (String) actorMessage.getRequest().get(JsonKey.BATCH_ID);
     String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
     String fileFormat = (String) actorMessage.getRequest().get(JsonKey.FORMAT);
 
@@ -318,7 +341,17 @@ public class CourseMetricsActor extends BaseMetricsActor {
     ProjectLogger.log("CourseMetricsActor-courseProgressMetrics called");
     Request request = new Request();
     String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
-    String batchId = (String) actorMessage.getRequest().get(JsonKey.COURSE_ID);
+    String batchId = (String) actorMessage.getRequest().get(JsonKey.BATCH_ID);
+
+    String requestedBy = (String) actorMessage.get(JsonKey.REQUESTED_BY);
+
+    Map<String , Object> requestedByInfo = ElasticSearchUtil.getDataByIdentifier(EsIndex.sunbird.getIndexName() , EsType.user.getTypeName() ,requestedBy);
+    if(ProjectUtil.isNull(requestedByInfo) || ProjectUtil.isStringNullOREmpty((String)requestedByInfo.get(JsonKey.FIRST_NAME))){
+      throw new ProjectCommonException(ResponseCode.invalidUserId.getErrorCode(),
+          ResponseCode.invalidUserId.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+
     if(ProjectUtil.isStringNullOREmpty(batchId)){
       ProjectLogger.log("CourseMetricsActor-courseProgressMetrics-- batch is not valid .");
       ProjectCommonException exception =
@@ -329,11 +362,9 @@ public class CourseMetricsActor extends BaseMetricsActor {
       return ;
     }
 
-    //check batch exist in db or not
-    Response courseBatchResult = cassandraOperation.getRecordById(batchDbInfo.getKeySpace(), batchDbInfo.getTableName(),
-        batchId);
-    List<Map<String, Object>> batchList = (List<Map<String, Object>>) courseBatchResult.get(JsonKey.RESPONSE);
-    if ((batchList.isEmpty())) {
+    //check batch exist in ES or not
+    Map<String , Object> courseBatchResult = ElasticSearchUtil.getDataByIdentifier(EsIndex.sunbird.getIndexName() , EsType.course.getTypeName() , batchId);
+    if (isNull(courseBatchResult) || courseBatchResult.size()==0) {
       ProjectLogger.log("CourseMetricsActor-courseProgressMetrics-- batch is not valid .");
       ProjectCommonException exception =
           new ProjectCommonException(ResponseCode.invalidCourseBatchId.getErrorCode(),

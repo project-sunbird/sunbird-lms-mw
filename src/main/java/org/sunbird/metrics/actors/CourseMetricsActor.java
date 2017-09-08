@@ -105,27 +105,28 @@ public class CourseMetricsActor extends BaseMetricsActor {
     Map<String , Object> req = actorMessage.getRequest();
     String requestId = (String)req.get(JsonKey.REQUEST_ID);
 
-    //TODO: fetch the DB details from database on basis of requestId ....
+    //fetch the DB details from database on basis of requestId ....
     Response response = cassandraOperation.getRecordById(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
         requestId);
     List<Map<String,Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if(responseList.isEmpty()){
-      //TODO: throw exception here ...
+      ProjectLogger.log("Invalid data");
+      throw new ProjectCommonException(
+          ResponseCode.invalidRequestData.getErrorCode(),
+          ResponseCode.invalidRequestData.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
     Map<String , Object> reportDbInfo = responseList.get(0);
 
     Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
 
-    //Request request = new Request();
     List<List<Object>> finalList = null;
     String periodStr = (String) reportDbInfo.get(JsonKey.PERIOD);
     String batchId = (String) reportDbInfo.get(JsonKey.RESOURCE_ID);
     //get start and end time ---
     Map<String , String> dateRangeFilter = new HashMap<>();
 
-    //request.setId(actorMessage.getId());
-    //request.setContext(actorMessage.getContext());
     Map<String, Object> requestMap = new HashMap<>();
     requestMap.put(JsonKey.PERIOD, periodStr);
     Map<String, Object> filter = new HashMap<>();
@@ -142,9 +143,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     List<String> coursefields = new ArrayList<>();
     coursefields.add(JsonKey.USER_ID);
     coursefields.add(JsonKey.PROGRESS);
-    //coursefields.add(JsonKey.COURSE_ENROLL_DATE);
     coursefields.add(JsonKey.BATCH_ID);
-    //coursefields.add(JsonKey.DATE_TIME);
 
     Map<String, Object> result = ElasticSearchUtil.complexSearch(createESRequest(filter , null,
         coursefields), ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.usercourses.getTypeName());
@@ -172,7 +171,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
       userfields.add(JsonKey.GRADE);
       userfields.add(JsonKey.GENDER);
 
-      //userfields.add(JsonKey.REGISTERED_ORG_ID);
       Map<String, Object> userresult = ElasticSearchUtil
           .complexSearch(createESRequest(userfilter, null, userfields),
               ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());

@@ -106,12 +106,16 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     Map<String , Object> map = request.getRequest();
     String requestId = (String)map.get(JsonKey.REQUEST_ID);
 
-    //TODO: fetch the DB details from database on basis of requestId ....
+    //fetch the DB details from database on basis of requestId ....
     Response response = cassandraOperation.getRecordById(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
         requestId);
     List<Map<String,Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if(responseList.isEmpty()){
-      //TODO: throw exception here ...
+      ProjectLogger.log("Invalid data");
+      throw new ProjectCommonException(
+          ResponseCode.invalidRequestData.getErrorCode(),
+          ResponseCode.invalidRequestData.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
     Map<String , Object> reportDbInfo = responseList.get(0);
@@ -159,12 +163,15 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     Map<String , Object> map = request.getRequest();
     String requestId = (String)map.get(JsonKey.REQUEST_ID);
 
-    //TODO: fetch the DB details from database on basis of requestId ....
     Response response = cassandraOperation.getRecordById(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
         requestId);
     List<Map<String,Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if(responseList.isEmpty()){
-      //TODO: throw exception here ...
+      ProjectLogger.log("Invalid data");
+      throw new ProjectCommonException(
+          ResponseCode.invalidRequestData.getErrorCode(),
+          ResponseCode.invalidRequestData.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     Map<String , Object> reportDbInfo = responseList.get(0);
     String fileFormat = (String) reportDbInfo.get(JsonKey.FORMAT);    
@@ -172,11 +179,6 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
 
     Map<String , Object> dbReqMap = new HashMap<>();
     dbReqMap.put(JsonKey.ID , requestId);
-
-    /*dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.UPLOADING_FILE.getValue());
-    dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
-    cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-        dbReqMap);*/
 
     List<List<Object>> finalList = (List<List<Object>>) map.get(JsonKey.DATA);
     String fileName = (String) map.get(JsonKey.FILE_NAME);
@@ -196,16 +198,10 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
       throw ex;
     }
 
-    // TODO: going to upload file , save this info into the DB ...
-    /*dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
-    dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.UPLOADING_FILE.getValue());
-    cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-        dbReqMap);*/
-
     String storageUrl=null;
     try {
+      //TODO : confirm the container name ...
       storageUrl = processFileUpload(file ,"testContainer");
-      //TODO : once upload success update the state in DB along with storage url and then next move to send mail...
 
     } catch (IOException e) {
       ProjectLogger.log("Error occured while uploading file on storage for requset "+requestId, e);
@@ -233,7 +229,6 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     reportDbInfo.put(JsonKey.FILE_URL , storageUrl);
     dbReqMap.put(JsonKey.FILE_URL , storageUrl);
     dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
-    //TODO : remove below comment later ...
     dbReqMap.put(JsonKey.DATA, null);
     dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.UPLOADING_FILE_SUCCESS.getValue());
     cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
@@ -248,33 +243,6 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     backGroundRequest.setRequest(innerMap);
     self().tell(backGroundRequest , self());
     return;
-    /*dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.SENDING_MAIL.getValue());
-    dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
-    cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-        dbReqMap);
-
-    if(processMailSending(reportDbInfo)){
-      dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.SENDING_MAIL_SUCCESS.getValue());
-      dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
-      cassandraOperation
-          .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-              dbReqMap);
-    }else{
-      increasetryCount(reportDbInfo);
-      if((Integer)reportDbInfo.get(JsonKey.TRY_COUNT)>3){
-        dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.FAILED.getValue());
-        dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
-        cassandraOperation
-            .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-                dbReqMap);
-      }else{
-        dbReqMap.put(JsonKey.STATUS , ReportTrackingStatus.SENDING_MAIL.getValue());
-        dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
-        cassandraOperation
-            .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-                dbReqMap);
-      }
-    }*/
   }
 
   private boolean processMailSending(Map<String, Object> reportDbInfo) {
@@ -306,7 +274,6 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
             ResponseCode.invalidRequestData.getErrorCode(),
             ResponseCode.invalidRequestData.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
-        //sender().tell(exception, self());
       }
       storageUrl = service.uploadFile(container , file);
     } catch (Exception e) {

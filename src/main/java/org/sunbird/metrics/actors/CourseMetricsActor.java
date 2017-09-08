@@ -716,16 +716,15 @@ public class CourseMetricsActor extends BaseMetricsActor {
       resultData = (Map<String, Object>) resultData.get(JsonKey.RESULT);
       List<Map<String, Object>> resultList =
           (List<Map<String, Object>>) resultData.get(JsonKey.METRICS);
-      List<Map<String, Object>> buckets = createBucketStructure(period);
-      List<Map<String, Object>> userBucket = new ArrayList<>();
-      List<Map<String, Object>> consumptionBucket = new ArrayList<>();
+      List<Map<String, Object>> userBucket = createBucketStructure(period);
+      List<Map<String, Object>> consumptionBucket = createBucketStructure(period);
       Map<String, Object> userData = new HashMap<>();
       int index = 0;
       Collections.reverse(resultList);
       Map<String, Object> resData = new HashMap<>();
       for (Map<String, Object> res : resultList) {
-        resData = buckets.get(index);
-        userData = resData;
+        resData = consumptionBucket.get(index);
+        userData = userBucket.get(index);
         String bucketDate = "";
         String metricsDate = "";
         if ("5w".equalsIgnoreCase(period)) {
@@ -745,9 +744,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
           resData.put(VALUE, totalTimeSpent);
           userData.put(VALUE, totalUsers);
         }
-        consumptionBucket.add(resData);
-        userBucket.add(userData);
-        if (index < buckets.size()) {
+        if (index < consumptionBucket.size() && index < userBucket.size()) {
           index++;
         }
       }

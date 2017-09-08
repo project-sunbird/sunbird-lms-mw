@@ -509,12 +509,12 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         return;
       }
       
-      Map<String, Object> aggregationMap =
-          (Map<String, Object>) cache.getData(JsonKey.OrgCreation, orgId, periodStr);
+      Map<String, Object> aggregationMap = getOrgCreationData(periodStr, orgId);
+      /*Map<String, Object> aggregationMap = (Map<String, Object>) cache.getData(JsonKey.OrgCreation, orgId, periodStr);
       if (null == aggregationMap || aggregationMap.isEmpty()) {
         aggregationMap = getOrgCreationData(periodStr, orgId);
         cache.setData(JsonKey.OrgCreation, orgId, periodStr, aggregationMap);
-      }
+      }*/
       String responseFormat = orgCreationResponseGenerator(periodStr, aggregationMap);
       Response response =
           metricsResponseGenerator(responseFormat, periodStr, getViewData(orgId, orgName));
@@ -586,11 +586,12 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       }
       String channel = (String) rootOrgData.get(JsonKey.HASHTAGID);
       ProjectLogger.log("channel" + channel);
-      String responseFormat = (String) cache.getData(JsonKey.OrgConsumption, orgId, periodStr);
+      String responseFormat = getOrgConsumptionData(actorMessage, periodStr, orgHashId, channel);
+      /*String responseFormat = (String) cache.getData(JsonKey.OrgConsumption, orgId, periodStr);
       if(ProjectUtil.isStringNullOREmpty(responseFormat)){
         responseFormat = getOrgConsumptionData(actorMessage, periodStr, orgHashId, channel);
         cache.setData(JsonKey.OrgConsumption, orgId, periodStr, responseFormat);
-      }
+      }*/
       Response response =
           metricsResponseGenerator(responseFormat, periodStr, getViewData(orgId, orgName));
       sender().tell(response, self());

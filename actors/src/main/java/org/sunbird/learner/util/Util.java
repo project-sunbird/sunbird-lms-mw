@@ -1,20 +1,6 @@
 package org.sunbird.learner.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
-import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
-import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.dto.SearchDTO;
-import org.sunbird.helper.CassandraConnectionManager;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
@@ -24,6 +10,27 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.HttpUtil;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.EsIndex;
+import org.sunbird.common.models.util.ProjectUtil.EsType;
+import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
+import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.quartz.scheduler.SchedulerManager;
+import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
+import org.sunbird.helper.CassandraConnectionManager;
+import org.sunbird.helper.ServiceFactory;
 
 
 /**
@@ -48,6 +55,13 @@ public class Util {
         // EkStep HttpClient headers init
         headers.put("content-type", "application/json");
         headers.put("accept", "application/json");
+        new Thread(new Runnable() {
+          @Override
+          public void run() {
+            SchedulerManager.getInstance();
+          }
+        }).start();
+       
     }
 
     /**
@@ -99,6 +113,9 @@ public class Util {
       dbInfoMap.put(JsonKey.BULK_OP_DB , getDbInfoObject(KEY_SPACE_NAME , "bulk_upload_process"));
       dbInfoMap.put(JsonKey.COURSE_BATCH_DB, getDbInfoObject(KEY_SPACE_NAME , "course_batch"));
       dbInfoMap.put(JsonKey.COURSE_PUBLISHED_STATUS, getDbInfoObject(KEY_SPACE_NAME , "course_publish_status"));
+      dbInfoMap.put(JsonKey.REPORT_TRACKING_DB ,getDbInfoObject(KEY_SPACE_NAME , "report_tracking"));
+      dbInfoMap.put(JsonKey.BADGES_DB, getDbInfoObject(KEY_SPACE_NAME , "badge"));
+      dbInfoMap.put(JsonKey.USER_BADGES_DB, getDbInfoObject(KEY_SPACE_NAME , "user_badge"));
     }
     
     
@@ -362,7 +379,7 @@ public class Util {
          search.setQuery((String) searchQueryMap.get(JsonKey.QUERY));
         }
         if(searchQueryMap.containsKey(JsonKey.FACETS)){
-         search.setFacets((List<String>) searchQueryMap.get(JsonKey.FACETS));
+            search.setFacets((List<Map<String , String>>) searchQueryMap.get(JsonKey.FACETS));
         }
         if(searchQueryMap.containsKey(JsonKey.FIELDS)){
             search.setFields((List<String>) searchQueryMap.get(JsonKey.FIELDS));
@@ -412,9 +429,9 @@ public class Util {
         JSONObject jObject;
         ObjectMapper mapper = new ObjectMapper();
         try {
-          String baseSearchUrl = System.getenv(JsonKey.EKSTEP_CONTENT_SEARCH_BASE_URL);
+          String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
           if(ProjectUtil.isStringNullOREmpty(baseSearchUrl)){
-            baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_BASE_URL);
+            baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
           }
           headers.put(JsonKey.AUTHORIZATION, System.getenv(JsonKey.AUTHORIZATION));
           if(ProjectUtil.isStringNullOREmpty((String)headers.get(JsonKey.AUTHORIZATION))){
@@ -458,7 +475,7 @@ public class Util {
      */
     @SuppressWarnings("unchecked")
     public static String getUserNamebyUserId(String userId) {
-        CassandraOperation cassandraOperation = new CassandraOperationImpl();
+        CassandraOperation cassandraOperation = ServiceFactory.getInstance();
         Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
         Response result = cassandraOperation.getRecordById(userdbInfo.getKeySpace(), userdbInfo.getTableName(), userId);
         List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
@@ -466,5 +483,46 @@ public class Util {
             return (String) (list.get(0).get(JsonKey.USERNAME));
         }
         return null;
+    }
+    
+    public static String getRootOrgIdFromChannel(String channel) {
+      if (!ProjectUtil.isStringNullOREmpty(channel)) {
+        Map<String, Object> filters = new HashMap<>();
+        filters.put(JsonKey.CHANNEL, channel);
+        filters.put(JsonKey.IS_ROOT_ORG, true);
+        Map<String, Object> esResult = elasticSearchComplexSearch(filters,
+            EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
+        if (isNotNull(esResult) && esResult.containsKey(JsonKey.CONTENT)
+            && isNotNull(esResult.get(JsonKey.CONTENT))
+            && ((List) esResult.get(JsonKey.CONTENT)).size() > 0) {
+          Map<String, Object> esContent =
+              ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
+          return (String) esContent.getOrDefault(JsonKey.ID, "");
+        }
+      }
+      return "";
+    }
+    
+    private static Map<String , Object> elasticSearchComplexSearch(Map<String , Object> filters , String index , String type) {
+
+      SearchDTO searchDTO = new SearchDTO();
+      searchDTO.getAdditionalProperties().put(JsonKey.FILTERS , filters);
+
+      return ElasticSearchUtil.complexSearch(searchDTO , index,type);
+
+    }
+    
+    public static String validateRoles(List<String> roleList){
+      Map<String,Object> roleMap = DataCacheHandler.getRoleMap();
+      if(null != roleMap && !roleMap.isEmpty()){
+        for (String role : roleList){
+          if(null == roleMap.get(role)){
+            return role+" is not a valid role.";
+          }
+        }
+      }else{
+        ProjectLogger.log("Roles are not cached.Please Cache it.");
+      }
+      return JsonKey.SUCCESS;
     }
 }

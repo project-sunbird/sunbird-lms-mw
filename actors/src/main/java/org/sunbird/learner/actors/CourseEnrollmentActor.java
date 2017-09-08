@@ -8,7 +8,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -18,6 +17,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
 
@@ -30,9 +30,10 @@ import org.sunbird.learner.util.Util;
 public class CourseEnrollmentActor extends UntypedAbstractActor {
 
   private static String EKSTEP_COURSE_SEARCH_QUERY = "{\"request\": {\"filters\":{\"contentType\": [\"Course\"], \"objectType\": [\"Content\"], \"identifier\": \"COURSE_ID_PLACEHOLDER\", \"status\": \"Live\"},\"limit\": 1}}";
-  private CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   private ActorRef backGroundActorRef;
+  private static final String DEFAULT_BATCH_ID ="1";
 
   public CourseEnrollmentActor() {
     backGroundActorRef = getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
@@ -53,12 +54,27 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
         if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.ENROLL_COURSE.getValue())) {
           Util.DbInfo courseEnrollmentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
+          Util.DbInfo batchDbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
           Map<String, Object> req = actorMessage.getRequest();
           String addedBy = (String) req.get(JsonKey.REQUESTED_BY);
           Map<String, Object> courseMap = (Map<String, Object>) req.get(JsonKey.COURSE);
+          
+          if(ProjectUtil.isNull(courseMap.get(JsonKey.BATCH_ID))) {
+            courseMap.put(JsonKey.BATCH_ID, DEFAULT_BATCH_ID);
+          }else{
+            Response response = cassandraOperation.getRecordById(batchDbInfo.getKeySpace(), batchDbInfo.getTableName(),
+                (String)courseMap.get(JsonKey.BATCH_ID));
+            List<Map<String,Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+            if(responseList.isEmpty()){
+              throw new ProjectCommonException(
+                  ResponseCode.invalidCourseBatchId.getErrorCode(),
+                  ResponseCode.invalidCourseBatchId.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
+            }
+          }
           //check whether user already enroll  for course
           Response dbResult = cassandraOperation.getRecordById(courseEnrollmentdbInfo.getKeySpace(),
-              courseEnrollmentdbInfo.getTableName() , generatePrimaryKey(courseMap));
+              courseEnrollmentdbInfo.getTableName() , generateUserCoursesPrimaryKey(courseMap));
           List<Map<String , Object>> dbList = (List<Map<String, Object>>) dbResult.get(JsonKey.RESPONSE);
           if(!dbList.isEmpty()){
             ProjectLogger.log("User Already Enrolled Course ");
@@ -83,22 +99,25 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
             sender().tell(exception, self());
             return;
           } else {
+        	Timestamp ts = new Timestamp(new Date().getTime());
             courseMap.put(JsonKey.COURSE_LOGO_URL, ekStepContent.get(JsonKey.APP_ICON));
             courseMap.put(JsonKey.CONTENT_ID, courseId);
             courseMap.put(JsonKey.COURSE_NAME, ekStepContent.get(JsonKey.NAME));
             courseMap.put(JsonKey.DESCRIPTION, ekStepContent.get(JsonKey.DESCRIPTION));
-            courseMap.put(JsonKey.BATCH_ID, "1");
             courseMap.put(JsonKey.ADDED_BY, addedBy);
             courseMap.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
             courseMap.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
             courseMap.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
-            courseMap.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
-            courseMap.put(JsonKey.ID, generatePrimaryKey(courseMap));
+            courseMap.put(JsonKey.DATE_TIME, ts);
+            courseMap.put(JsonKey.ID, generateUserCoursesPrimaryKey(courseMap));
             courseMap.put(JsonKey.COURSE_PROGRESS, 0);
             courseMap.put(JsonKey.LEAF_NODE_COUNT, ekStepContent.get(JsonKey.LEAF_NODE_COUNT));
             Response result = cassandraOperation.insertRecord(courseEnrollmentdbInfo.getKeySpace(),
                 courseEnrollmentdbInfo.getTableName(), courseMap);
             sender().tell(result, self());
+            // TODO: for some reason, ES indexing is failing with Timestamp value. need to check and correct it.
+            courseMap.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
+            insertUserCoursesToES(courseMap);
             return;
             }
         } else {
@@ -121,6 +140,17 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
           ResponseCode.invalidRequestData.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
+    }
+  }
+
+  private void insertUserCoursesToES(Map<String, Object> courseMap) {
+    Response response = new Response();
+    response.put(JsonKey.OPERATION, ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue());
+    response.put(JsonKey.USER_COURSES, courseMap);
+    try{
+      backGroundActorRef.tell(response,self());
+    }catch(Exception ex){
+      ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
     }
   }
 
@@ -148,23 +178,24 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
    * @param req Map<String , Object>
    * @return String encrypted value
    */
-  private String generatePrimaryKey(Map<String, Object> req) {
+  private String generateUserCoursesPrimaryKey(Map<String, Object> req) {
     String userId = (String) req.get(JsonKey.USER_ID);
     String courseId = (String) req.get(JsonKey.COURSE_ID);
-    return OneWayHashing.encryptVal(userId + JsonKey.PRIMARY_KEY_DELIMETER + courseId);
+    String batchId = (String) req.get(JsonKey.BATCH_ID);
+    return OneWayHashing.encryptVal(userId + JsonKey.PRIMARY_KEY_DELIMETER + courseId+JsonKey.PRIMARY_KEY_DELIMETER+batchId);
   }
 
   /**
    * This method will call the background job manager and update course enroll user count.
    *
-   * @param ooperation String (operation name)
+   * @param operation String (operation name)
    * @param courseData Object
    * @param innerOperation String
    */
   @SuppressWarnings("unused")
-  private void updateCoursemanagement(String ooperation, Object courseData, String innerOperation) {
+  private void updateCoursemanagement(String operation, Object courseData, String innerOperation) {
     Response userCountresponse = new Response();
-    userCountresponse.put(JsonKey.OPERATION, ooperation);
+    userCountresponse.put(JsonKey.OPERATION, operation);
     userCountresponse.put(JsonKey.COURSE_ID, courseData);
     userCountresponse.getResult().put(JsonKey.OPERATION, innerOperation);
     try{

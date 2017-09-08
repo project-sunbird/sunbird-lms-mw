@@ -15,11 +15,9 @@ import java.util.Map;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -28,9 +26,10 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.services.sso.SSOManager;
-import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
+import org.sunbird.services.sso.SSOServiceFactory;
 
 /**
  * @author Amit Kumar
@@ -40,7 +39,7 @@ import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
 public class UserManagementActorTest {
 
   static ActorSystem system;
-  static CassandraOperation operation = new CassandraOperationImpl();
+  static CassandraOperation operation = ServiceFactory.getInstance();
   static PropertiesCache cach = PropertiesCache.getInstance();
   final static Props props = Props.create(UserManagementActor.class);
   final static Props orgProps = Props.create(OrganisationManagementActor.class);
@@ -80,14 +79,14 @@ public class UserManagementActorTest {
     reqObj.setOperation(ActorOperations.CREATE_ORG.getValue());
     HashMap<String, Object> innerMap = new HashMap<>();
     Map<String, Object> orgMap = new HashMap<String, Object>();
-    orgMap.put(JsonKey.ORGANISATION_NAME, "DUMMY");
+    orgMap.put(JsonKey.ORGANISATION_NAME, "DUMMY_ORG");
     orgMap.put(JsonKey.DESCRIPTION, "Central Board of Secondary Education");
-    orgMap.put(JsonKey.ORG_CODE, "DUMMY");
+    orgMap.put(JsonKey.ORG_CODE, "DUMMY_ORG");
     innerMap.put(JsonKey.ORGANISATION, orgMap);
 
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    Response resp = probe.expectMsgClass(duration("100 second"), Response.class);
+    Response resp = probe.expectMsgClass(duration("200 second"), Response.class);
     orgId = (String) resp.getResult().get(JsonKey.ORGANISATION_ID);
     try {
       Thread.sleep(3000);
@@ -105,8 +104,8 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_2017");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_2017@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_2018");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_2018@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
     innerMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
@@ -115,7 +114,7 @@ public class UserManagementActorTest {
     reqObj.setRequest(request);
 
     subject.tell(reqObj, probe.getRef());
-    Response response = probe.expectMsgClass(duration("100 second"), Response.class);
+    Response response = probe.expectMsgClass(duration("200 second"), Response.class);
     userId = (String) response.get(JsonKey.USER_ID);
     innerMap.put(JsonKey.ID, userId);
   }
@@ -135,7 +134,7 @@ public class UserManagementActorTest {
     reqObj.setRequest(request);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("100 second"), Response.class);
+    probe.expectMsgClass(duration("200 second"), Response.class);
   }
 
   @Test
@@ -159,7 +158,7 @@ public class UserManagementActorTest {
     reqObj.setRequest(request);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("100 second"), Response.class);
+    probe.expectMsgClass(duration("200 second"), Response.class);
 
 
   }
@@ -196,7 +195,7 @@ public class UserManagementActorTest {
     reqObj.setRequest(request);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("100 second"), Response.class);
+    probe.expectMsgClass(duration("200 second"), Response.class);
   }
 
   @Test
@@ -231,7 +230,7 @@ public class UserManagementActorTest {
     reqObj.setRequest(request);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("100 second"), Response.class);
+    probe.expectMsgClass(duration("200 second"), Response.class);
 
   }
 
@@ -265,7 +264,7 @@ public class UserManagementActorTest {
     reqObj.setRequest(request);
 
     subject.tell(reqObj, probe.getRef());
-    Response userResponse = probe.expectMsgClass(duration("100 second"), Response.class);
+    Response userResponse = probe.expectMsgClass(duration("200 second"), Response.class);
     Map<String, Object> result = (Map<String, Object>) (userResponse.getResult());
     Map<String, Object> response = (Map<String, Object>) result.get(JsonKey.RESPONSE);
     assertEquals("user_last_name_frice", response.get("lastName"));
@@ -300,7 +299,7 @@ public class UserManagementActorTest {
     reqObj.setRequest(request);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("100 second"), Response.class);
+    probe.expectMsgClass(duration("200 second"), Response.class);
 
   }
 
@@ -326,7 +325,7 @@ public class UserManagementActorTest {
     reqObj.setRequest(request);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("100 second"), Response.class);
+    probe.expectMsgClass(duration("200 second"), Response.class);
 
 
   }
@@ -353,7 +352,7 @@ public class UserManagementActorTest {
     reqObj.setRequest(request);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("100 second"), Response.class);
+    probe.expectMsgClass(duration("200 second"), Response.class);
 
   }
 
@@ -370,13 +369,13 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.LOGIN_ID, "sunbird_dummy_user_2017@BLR");
+    innerMap.put(JsonKey.LOGIN_ID, "sunbird_dummy_user_2018@BLR");
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
 
     subject.tell(reqObj, probe.getRef());
-    Response userResponse = probe.expectMsgClass(duration("100 second"), Response.class);
+    Response userResponse = probe.expectMsgClass(duration("200 second"), Response.class);
     Map<String, Object> result = (Map<String, Object>) (userResponse.getResult());
     Map<String, Object> response = (Map<String, Object>) result.get(JsonKey.RESPONSE);
     assertEquals("city1",
@@ -398,16 +397,16 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.LOGIN_ID, "sunbird_dummy_user_2017@BLR");
+    innerMap.put(JsonKey.LOGIN_ID, "sunbird_dummy_user_2018@BLR");
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
 
     subject.tell(reqObj, probe.getRef());
-    Response userResponse = probe.expectMsgClass(duration("100 second"), Response.class);
+    Response userResponse = probe.expectMsgClass(duration("200 second"), Response.class);
     Map<String, Object> result = (Map<String, Object>) (userResponse.getResult());
     Map<String, Object> response = (Map<String, Object>) result.get(JsonKey.RESPONSE);
-    assertEquals("DUMMY", ((Map<String, Object>) response.get(JsonKey.REGISTERED_ORG))
+    assertEquals("DUMMY_ORG", ((Map<String, Object>) response.get(JsonKey.REGISTERED_ORG))
         .get(JsonKey.ORGANISATION_NAME));
   }
 
@@ -426,7 +425,6 @@ public class UserManagementActorTest {
     userOrgId =
         (String) ((Map<String, Object>) ((((List<Map<String, Object>>) result.get(JsonKey.RESPONSE))
             .get(0)))).get(JsonKey.ID);
-    System.out.println("userOrgId " + userOrgId);
   }
 
   @Test
@@ -439,7 +437,7 @@ public class UserManagementActorTest {
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_201");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_2017@gmail.com");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_2018@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
     Map<String, Object> request = new HashMap<String, Object>();
@@ -447,7 +445,7 @@ public class UserManagementActorTest {
     reqObj.setRequest(request);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
   }
 
   @Test
@@ -459,8 +457,8 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_2017");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_2017@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_2018");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_2018@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
     Map<String, Object> request = new HashMap<String, Object>();
@@ -468,12 +466,12 @@ public class UserManagementActorTest {
     reqObj.setRequest(request);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
   }
 
   @AfterClass
   public static void deleteUser() {
-    SSOManager ssoManager = new KeyCloakServiceImpl();
+    SSOManager ssoManager = SSOServiceFactory.getInstance();
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.USER_ID, userId);
     ssoManager.removeUser(innerMap);

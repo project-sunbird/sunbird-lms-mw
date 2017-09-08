@@ -1,17 +1,18 @@
 package org.sunbird.learner.actors;
 
-import java.sql.DriverManager;
-import java.util.Date;
-import java.util.HashMap;
-
-
-import static org.junit.Assert.assertEquals;
+import static akka.testkit.JavaTestKit.duration;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -23,23 +24,15 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
-
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.testkit.TestActorRef;
-import static akka.testkit.JavaTestKit.duration;
-import static org.mockito.Matchers.anyObject;
-import static org.powermock.api.mockito.PowerMockito.when;
 
 /**
  * @author arvind
@@ -54,7 +47,10 @@ public class CourseEnrollmentActorTest {
   static ActorSystem system;
   final static  Props props = Props.create(CourseEnrollmentActor.class);
   static Util.DbInfo userCoursesdbInfo = null;
-  private static CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static String batchId="115zguf934fy80fui";
+  private static final String courseId = "do_212282810555342848180";
+  private static Util.DbInfo batchdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
 
   @BeforeClass
   public static void setUp() {
@@ -62,6 +58,24 @@ public class CourseEnrollmentActorTest {
     Util.checkCassandraDbConnections();
     userCoursesdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
     //PowerMockito.mockStatic(EkStepRequestUtil.class);
+    insertBatch();
+  }
+
+  private static void insertBatch() {
+
+    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+    Map<String , Object> batchMap = new HashMap<String , Object>();
+    batchMap.put(JsonKey.ID , batchId);
+    batchMap.put(JsonKey.STATUS , 1);
+    batchMap.put(JsonKey.COURSE_ID , courseId);
+    batchMap.put(JsonKey.CREATED_DATE , (String)format.format(new Date()));
+    batchMap.put(JsonKey.START_DATE , (String)format.format(new Date()));
+    Calendar now =  Calendar.getInstance();
+    now.add(Calendar.DAY_OF_MONTH, 5);
+    Date after5Days = now.getTime();
+    batchMap.put(JsonKey.END_DATE , (String)format.format(after5Days));
+
+    cassandraOperation.insertRecord(batchdbInfo.getKeySpace() , batchdbInfo.getTableName() , batchMap);
   }
 
   @Test
@@ -82,6 +96,7 @@ public class CourseEnrollmentActorTest {
     reqObj.setRequest_id("1");
     reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
     reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
+    reqObj.put(JsonKey.BATCH_ID,batchId);
     reqObj.put(JsonKey.USER_ID, "USR");
     HashMap<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.COURSE, reqObj.getRequest());
@@ -97,12 +112,6 @@ public class CourseEnrollmentActorTest {
 
     subject.tell(reqObj, probe.getRef());
     probe.expectMsgClass(duration("100 second"),Response.class);
-    try {
-      Thread.sleep(3000);
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    }
-
 
   }
 
@@ -116,6 +125,7 @@ public class CourseEnrollmentActorTest {
     reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
     reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
     reqObj.put(JsonKey.USER_ID, "USR");
+    reqObj.put(JsonKey.BATCH_ID,batchId);
     HashMap<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.COURSE, reqObj.getRequest());
     innerMap.put(JsonKey.USER_ID, "USR");
@@ -140,6 +150,7 @@ public class CourseEnrollmentActorTest {
     reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
     reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
     reqObj.put(JsonKey.USER_ID, "USR");
+    reqObj.put(JsonKey.BATCH_ID,batchId);
     HashMap<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.COURSE, reqObj.getRequest());
     innerMap.put(JsonKey.USER_ID, "USR");
@@ -182,6 +193,8 @@ public class CourseEnrollmentActorTest {
 
   @AfterClass
   public static void destroy(){
-    cassandraOperation.deleteRecord(userCoursesdbInfo.getKeySpace(), userCoursesdbInfo.getTableName(), OneWayHashing.encryptVal("USR"+ JsonKey.PRIMARY_KEY_DELIMETER+"do_212282810555342848180"));
+
+    cassandraOperation.deleteRecord(userCoursesdbInfo.getKeySpace(), userCoursesdbInfo.getTableName(), OneWayHashing.encryptVal("USR"+ JsonKey.PRIMARY_KEY_DELIMETER+"do_212282810555342848180"+JsonKey.PRIMARY_KEY_DELIMETER+batchId));
+    cassandraOperation.deleteRecord(batchdbInfo.getKeySpace(), batchdbInfo.getTableName(), batchId);
   }
 }

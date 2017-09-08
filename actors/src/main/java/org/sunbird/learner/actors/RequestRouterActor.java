@@ -6,16 +6,22 @@ import java.util.concurrent.TimeUnit;
 
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.assessment.AssessmentItemActor;
+import org.sunbird.learner.actors.badges.BadgesActor;
 import org.sunbird.learner.actors.bulkupload.BulkUploadBackGroundJobActor;
 import org.sunbird.learner.actors.bulkupload.BulkUploadManagementActor;
+import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
+import org.sunbird.learner.actors.fileuploadservice.FileUploadServiceActor;
 import org.sunbird.learner.actors.recommend.RecommendorActor;
 import org.sunbird.learner.actors.search.CourseSearchActor;
 import org.sunbird.learner.actors.search.SearchHandlerActor;
+import org.sunbird.learner.actors.syncjobmanager.EsSyncActor;
 import org.sunbird.metrics.actors.CourseMetricsActor;
+import org.sunbird.metrics.actors.MetricsBackGroundJobActor;
 import org.sunbird.metrics.actors.OrganisationMetricsActor;
 import org.sunbird.metrics.actors.UserMetricsActor;
 
@@ -51,9 +57,15 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private ActorRef bulkUploadManagementActor;
     private ActorRef bulkUploadBackGroundJobActor;
     private ActorRef courseBatchActor;
-    private ActorRef organisationMetricsRouter;
-    private ActorRef courseMetricsRouter;
     private ActorRef userMetricsRouter;
+    private ActorRef esSyncActor;
+    private ActorRef emailServiceActor;
+    private ActorRef fileUploadServiceActor;
+    public static ActorRef metricsBackGroungJobActor;
+    public static ActorRef schedularActor;
+    public static ActorRef organisationMetricsRouter;
+    public static ActorRef courseMetricsRouter;
+    private ActorRef badgesActor;
     private ExecutionContext ec;
     Map<String, ActorRef> routerMap = new HashMap<>();
     private static final int WAIT_TIME_VALUE = 9;
@@ -75,6 +87,12 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private static final String ORGANISATION_METRICS_ROUTER = "organisationMetricsRouter";
     private static final String COURSE_METRICS_ROUTER = "courseMetricsRouter";
     private static final String USER_METRICS_ROUTER = "userMetricsRouter";
+    private static final String ES_SYNC_ROUTER = "esSyncActor";
+    private static final String SCHEDULAR_ACTOR = "schedularActor";
+    private static final String EMAIL_SERVICE_ACTOR =  "emailServiceActor";
+    private static final String FILE_UPLOAD_ACTOR = "fileUploadActor";
+    private static final String METRICS_ACKGROUNG_JOB__ACTOR= "metricsBackGroungJobActor";
+    private static final String BADGES_ACTOR = "badgesActor";
     /**
      * constructor to initialize router actor with child actor pool
      */
@@ -117,6 +135,19 @@ public class RequestRouterActor extends UntypedAbstractActor {
             COURSE_METRICS_ROUTER);
         userMetricsRouter=getContext().actorOf(FromConfig.getInstance().props(Props.create(UserMetricsActor.class)),
             USER_METRICS_ROUTER);
+        esSyncActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(EsSyncActor.class)),
+            ES_SYNC_ROUTER);
+        fileUploadServiceActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(FileUploadServiceActor.class)),
+            FILE_UPLOAD_ACTOR);
+        schedularActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(SchedularActor.class)),
+            SCHEDULAR_ACTOR);
+        emailServiceActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(EmailServiceActor.class)),
+            EMAIL_SERVICE_ACTOR);
+        metricsBackGroungJobActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(MetricsBackGroundJobActor.class)),
+            METRICS_ACKGROUNG_JOB__ACTOR);
+
+        badgesActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(BadgesActor.class)),
+            BADGES_ACTOR);
         ec = getContext().dispatcher();
         initializeRouterMap();
     }
@@ -188,17 +219,35 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.GET_BULK_OP_STATUS.getValue(), bulkUploadManagementActor);
         routerMap.put(ActorOperations.ORG_CREATION_METRICS.getValue(), organisationMetricsRouter);
         routerMap.put(ActorOperations.ORG_CONSUMPTION_METRICS.getValue(), organisationMetricsRouter);
+        routerMap.put(ActorOperations.ORG_CREATION_METRICS_DATA.getValue(), organisationMetricsRouter);
+        routerMap.put(ActorOperations.ORG_CONSUMPTION_METRICS_DATA.getValue(), organisationMetricsRouter);
         routerMap.put(ActorOperations.COURSE_PROGRESS_METRICS.getValue(), courseMetricsRouter);
         routerMap.put(ActorOperations.COURSE_CREATION_METRICS.getValue(), courseMetricsRouter);
         routerMap.put(ActorOperations.USER_CREATION_METRICS.getValue(), userMetricsRouter);
         routerMap.put(ActorOperations.USER_CONSUMPTION_METRICS.getValue(), userMetricsRouter);
+
+        routerMap.put(ActorOperations.ORG_CREATION_METRICS_REPORT.getValue(), organisationMetricsRouter);
+        routerMap.put(ActorOperations.ORG_CONSUMPTION_METRICS_REPORT.getValue(), organisationMetricsRouter);
+        routerMap.put(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue(), courseMetricsRouter);
+        routerMap.put(ActorOperations.COURSE_CREATION_METRICS_REPORT.getValue(), courseMetricsRouter);
+        
+        routerMap.put(ActorOperations.EMAIL_SERVICE.getValue(), emailServiceActor);
+        
+        routerMap.put(ActorOperations.SYNC.getValue(), esSyncActor);
+        routerMap.put(ActorOperations.FILE_STORAGE_SERVICE.getValue(), fileUploadServiceActor);
+        routerMap.put(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue(), metricsBackGroungJobActor);
+        routerMap.put(ActorOperations.GET_ALL_BADGE.getValue(), badgesActor);
+        routerMap.put(ActorOperations.ADD_USER_BADGE.getValue(), badgesActor);
+        routerMap.put(ActorOperations.HEALTH_CHECK.getValue(), badgesActor);
+        routerMap.put(ActorOperations.ACTOR.getValue(), badgesActor);
+        routerMap.put(ActorOperations.ES.getValue(), badgesActor);
+        routerMap.put(ActorOperations.CASSANDRA.getValue(), badgesActor);
     }
 
 
     @Override
     public void onReceive(Object message) throws Exception {
         if (message instanceof Request) {
-        	System.out.println("Received actor message....");
             ProjectLogger.log("Actor selector onReceive called");
             Request actorMessage = (Request) message;
             org.sunbird.common.request.ExecutionContext.setRequestId(actorMessage.getRequestId());
@@ -226,7 +275,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
      * @return boolean
      */
     private boolean route(ActorRef router, Request message) {
-
+      long startTime = System.currentTimeMillis();
+      ProjectLogger.log("Actor Service Call start  for  api ==" + message.getOperation()  +" start time " +startTime, LoggerEnum.PERF_LOG);
         Timeout timeout = new Timeout(Duration.create(WAIT_TIME_VALUE, TimeUnit.SECONDS));
         Future<Object> future = Patterns.ask(router, message, timeout);
         ActorRef parent = sender();
@@ -234,6 +284,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
             @Override
             public void onComplete(Throwable failure, Object result) {
                 if (failure != null) {
+                  ProjectLogger.log("Actor Service Call Ended on Failure for  api ==" + message.getOperation()  +" end time " +System.currentTimeMillis() +"  Time taken " + (System.currentTimeMillis()-startTime), LoggerEnum.PERF_LOG);
                     //We got a failure, handle it here
                     ProjectLogger.log(failure.getMessage(), failure);
                     if(failure instanceof ProjectCommonException){
@@ -245,6 +296,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
                 } else {
                     ProjectLogger.log("PARENT RESULT IS " + result);
                     // We got a result, handle it
+                    ProjectLogger.log("Actor Service Call Ended on Success for  api ==" + message.getOperation()  +" end time " +System.currentTimeMillis() +"  Time taken " + (System.currentTimeMillis()-startTime), LoggerEnum.PERF_LOG);
                     parent.tell(result, ActorRef.noSender());
                 }
             }

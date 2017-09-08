@@ -3,7 +3,6 @@ package org.sunbird.learner.actors;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,7 +10,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.Constants;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -23,7 +21,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.learner.util.EkStepRequestUtil;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -33,7 +31,7 @@ import org.sunbird.learner.util.Util;
  */
 public class CourseManagementActor extends UntypedAbstractActor {
 
-  private CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo dbInfo = null;
   private String coursePublishedBody = "{\"request\":{\"content\":{\"lastPublishedBy\": \"userId\"}}}";
   private ActorRef backGroundActorRef;
@@ -128,11 +126,17 @@ public class CourseManagementActor extends UntypedAbstractActor {
         (Map<String, String>) actorMessage.getRequest().get(JsonKey.HEADER);
     String resposne = null;
     try {
+      
+      String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
+      if(ProjectUtil.isStringNullOREmpty(ekStepBaseUrl)) {
+        ekStepBaseUrl = PropertiesCache.getInstance()
+            .getProperty(JsonKey.EKSTEP_BASE_URL);
+      }
+      
       resposne = HttpUtil.sendPostRequest(
-          PropertiesCache.getInstance()
-              .getProperty("ekstep.course.publish.base.url")
+          ekStepBaseUrl
               + PropertiesCache.getInstance()
-                  .getProperty("ekstep.course.publish.url")
+                  .getProperty(JsonKey.EKSTEP_COURSE_PUBLISH_URL)
               + "/" + (String) req.get(JsonKey.COURSE_ID),
           coursePublishedBody.replace("userId", updatedBy), headers);
     } catch (IOException e) {
@@ -143,7 +147,7 @@ public class CourseManagementActor extends UntypedAbstractActor {
     ProjectLogger.log("Resposne for Course published==" + resposne);
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.ID, (String) req.get(JsonKey.COURSE_ID));
-    map.put(JsonKey.STATUS, 0);
+    map.put(JsonKey.STATUS, ProjectUtil.CourseMgmtStatus.DRAFT.ordinal());
     map.put(JsonKey.SUBMIT_DATE, ProjectUtil.getFormattedDate());
     Response result = cassandraOperation.insertRecord(dbInfo.getKeySpace(),
         dbInfo.getTableName(), map);

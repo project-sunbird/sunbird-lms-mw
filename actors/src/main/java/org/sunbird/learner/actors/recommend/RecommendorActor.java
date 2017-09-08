@@ -1,5 +1,8 @@
 package org.sunbird.learner.actors.recommend;
 
+import akka.actor.UntypedAbstractActor;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -7,9 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -17,12 +18,8 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import akka.actor.UntypedAbstractActor;
 
 /**
  * Class to perform the recommended operations like recommended courses etc.
@@ -30,7 +27,7 @@ import akka.actor.UntypedAbstractActor;
  */
 public class RecommendorActor extends UntypedAbstractActor {
 
-    private CassandraOperation cassandraOperation = new CassandraOperationImpl();
+    private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
     /**
      * @param message

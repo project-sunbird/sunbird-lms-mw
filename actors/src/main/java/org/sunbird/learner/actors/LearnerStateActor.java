@@ -3,22 +3,24 @@ package org.sunbird.learner.actors;
 
 import akka.actor.ActorRef;
 import akka.actor.UntypedAbstractActor;
-
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -29,7 +31,7 @@ import org.sunbird.learner.util.Util;
  */
 public class LearnerStateActor extends UntypedAbstractActor {
 
-  private CassandraOperation cassandraOperation = new CassandraOperationImpl();
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   /**
    * Receives the actor message and perform the operation like get course , get content etc.
@@ -42,15 +44,22 @@ public class LearnerStateActor extends UntypedAbstractActor {
       try {
         ProjectLogger.log("LearnerStateActor onReceive called");
         Request actorMessage = (Request) message;
+        Response response = new Response();
         if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_COURSE.getValue())) {
           String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
 
-          Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
-          Response result = cassandraOperation
-              .getRecordsByProperty(dbInfo.getKeySpace(), dbInfo.getTableName(), JsonKey.USER_ID,
-                  userId);
-          removeUnwantedProperties(result);
-          sender().tell(result, self());
+          Map<String , Object> filter = new HashMap<>();
+          filter.put(JsonKey.USER_ID , userId);
+
+          SearchDTO searchDto = new SearchDTO();
+          searchDto.getAdditionalProperties().put(JsonKey.FILTERS , filter);
+
+          //SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
+          Map<String, Object> result = ElasticSearchUtil
+              .complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.usercourses.getTypeName());
+
+          response.put(JsonKey.RESPONSE , result.get(JsonKey.CONTENT));
+          sender().tell(response, self());
 
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.GET_CONTENT.getValue())) {

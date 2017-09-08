@@ -27,14 +27,26 @@
     7. sunbird_es_cluster (optional): name of the elasticsearch cluster
     8. sunbird_learner_actor_host: host running for learner actor
     9. sunbird_learner_actor_port: port on which learner actor is running.
-    10.sunbird_sso_url: url for keycloak server
-    11.sunbird_sso_realm: keycloak realm name
-    12.sunbird_sso_username: keycloak user name
-    13.sunbird_sso_password: keycloak password
-    14.sunbird_sso_client_id: key cloak client id
-    15.sunbird_sso_client_secret : keycloak client secret (not mandatory)
-    16.ekstep_content_search_base_url : provide base url for EkStep content search
-    17.ekstep_authorization : provide authorization for value for content search
+    10. sunbird_sso_url: url for keycloak server
+    11. sunbird_sso_realm: keycloak realm name
+    12. sunbird_sso_username: keycloak user name
+    13. sunbird_sso_password: keycloak password
+    14. sunbird_sso_client_id: key cloak client id
+    15. sunbird_sso_client_secret : keycloak client secret (not mandatory)
+    16. ekstep_content_search_base_url : provide base url for EkStep content search
+    17. ekstep_authorization : provide authorization for value for content search
+    18. sunbird_pg_host: postgres host name or ip
+    19. sunbird_pg_port: postgres port number
+    20. sunbird_pg_db: postgres db name
+    21. sunbird_pg_user: postgres db user name
+    22. sunbird_pg_password: postgress db password 
+    23. sunbird_installation
+    24. ekstep_api_base_url
+    25. sunbird_mail_server_host
+    26. sunbird_mail_server_port
+    27. sunbird_mail_server_username
+    28. sunbird_mail_server_password
+    29. sunbird_mail_server_from_email
 2. Actor configuration: Actor configuration is provided via [application.conf](https://github.com/ekstep/sunbird-mw/blob/alpha2/actors/learner-actor/src/main/resources/application.conf) file. The project is bundled with default application.conf file which runs 5 instances of each actor with hostname as "127.0.0.1" and on the port "8088". This configuration can be overrided by providing a custom application.conf file:
     1. hostname: the hostname on the which the akka actors will be listening
     2. port: port on which the akka actors will be listening

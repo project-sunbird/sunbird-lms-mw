@@ -41,13 +41,14 @@ public class EkStepRequestUtil {
 		JSONObject data;
 		JSONObject jObject;
 		try {
-		  String baseSearchUrl = System.getenv(JsonKey.EKSTEP_CONTENT_SEARCH_BASE_URL);
+		  String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
 		  if(ProjectUtil.isStringNullOREmpty(baseSearchUrl)){
-		    baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_BASE_URL);
+		    baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
 		  }
 		  headers.put(JsonKey.AUTHORIZATION, System.getenv(JsonKey.AUTHORIZATION));
+		  headers.put("Content-Type", "application/json");
 		  if(ProjectUtil.isStringNullOREmpty((String)headers.get(JsonKey.AUTHORIZATION))){ 
-		    headers.put(JsonKey.AUTHORIZATION, JsonKey.BEARER+PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
+		    headers.put(JsonKey.AUTHORIZATION, PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
 		  }
 			response = HttpUtil.sendPostRequest(baseSearchUrl+
 					PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTNET_SEARCH_URL), params, headers);

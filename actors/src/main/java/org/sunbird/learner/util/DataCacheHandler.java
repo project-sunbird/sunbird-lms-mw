@@ -6,12 +6,11 @@ package org.sunbird.learner.util;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.helper.ServiceFactory;
 
 /**
  * This class will handle the data cache.
@@ -24,16 +23,35 @@ public class DataCacheHandler implements Runnable{
 	 */
 	private static Map<String, Map<String,Object>> pageMap = new ConcurrentHashMap<>();
 	private static Map<String, Map<String,Object>> sectionMap = new ConcurrentHashMap<>();
-	CassandraOperation cassandraOperation = new CassandraOperationImpl();
+	private static Map<String, Object> roleMap = new ConcurrentHashMap<>();
+	CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	
 	@Override
 	public void run() {
 		ProjectLogger.log("Data cache started..");
 		cache(pageMap,"page_management");
 		cache(sectionMap,"page_section");
+		roleCache(roleMap);
 	}
 
-	@SuppressWarnings("unchecked")
+	private void roleCache(Map<String, Object> roleMap) {
+	  Response response = cassandraOperation.getAllRecords(Util.getProperty("db.keyspace"), JsonKey.ROLE_GROUP);
+	  List<Map<String, Object>> responseList = (List<Map<String, Object>>)response.get(JsonKey.RESPONSE);
+	  if(null != responseList && !responseList.isEmpty()){
+        for(Map<String, Object> resultMap:responseList){
+          roleMap.put((String)resultMap.get(JsonKey.ID), resultMap.get(JsonKey.ID));
+          }
+       }
+	  Response response2 = cassandraOperation.getAllRecords(Util.getProperty("db.keyspace"), JsonKey.ROLE);
+      List<Map<String, Object>> responseList2 = (List<Map<String, Object>>)response2.get(JsonKey.RESPONSE);
+      if(null != responseList2 && !responseList2.isEmpty()){
+        for(Map<String, Object> resultMap2:responseList2){
+          roleMap.put((String)resultMap2.get(JsonKey.ID), resultMap2.get(JsonKey.ID));
+          }
+       }
+    }
+
+  @SuppressWarnings("unchecked")
 	private void cache(Map<String, Map<String, Object>> map,String tableName) {
 		try{
 			Response response = cassandraOperation.getAllRecords(Util.getProperty("db.keyspace"), tableName);
@@ -79,6 +97,20 @@ public class DataCacheHandler implements Runnable{
    */
   public static void setSectionMap(Map<String, Map<String, Object>> sectionMap) {
     DataCacheHandler.sectionMap = sectionMap;
+  }
+
+  /**
+   * @return the roleMap
+   */
+  public static Map<String, Object> getRoleMap() {
+    return roleMap;
+  }
+
+  /**
+   * @param roleMap the roleMap to set
+   */
+  public static void setRoleMap(Map<String, Object> roleMap) {
+    DataCacheHandler.roleMap = roleMap;
   }
 
 }

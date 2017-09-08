@@ -2,8 +2,6 @@ package org.sunbird.metrics.actors;
 
 import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,9 +12,9 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import java.util.Set;
 import java.util.stream.Collectors;
+
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -31,12 +29,14 @@ import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.Util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.BackgroundJobManager;
-import org.sunbird.learner.util.Util;
+
+import akka.actor.ActorRef;
+import akka.actor.Props;
 
 public class CourseMetricsActor extends BaseMetricsActor {
 
@@ -46,7 +46,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
   protected static final String CONTENT_ID = "content_id";
   private static ObjectMapper mapper = new ObjectMapper();
   private ActorRef backGroundActorRef;
-  private static final String DEFAULT_BATCH_ID ="1";
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo batchDbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
   Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
@@ -68,13 +67,10 @@ public class CourseMetricsActor extends BaseMetricsActor {
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.COURSE_CREATION_METRICS.getValue())) {
           courseConsumptionMetrics(actorMessage);
-        }else if (actorMessage.getOperation()
+        } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue())) {
           courseProgressMetricsReport(actorMessage);
-        }else if (actorMessage.getOperation()
-            .equalsIgnoreCase(ActorOperations.COURSE_CREATION_METRICS_REPORT.getValue())) {
-          courseConsumptionMetricsReport(actorMessage);
-        }else if (actorMessage.getOperation()
+        } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.COURSE_PROGRESS_METRICS_DATA.getValue())) {
           courseProgressMetricsData(actorMessage);
         } else {
@@ -100,6 +96,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void courseProgressMetricsData(Request actorMessage) {
 
     ProjectLogger.log("CourseMetricsActor-courseProgressMetrics called");
@@ -122,7 +119,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
     //Request request = new Request();
     List<List<Object>> finalList = null;
     String periodStr = (String) reportDbInfo.get(JsonKey.PERIOD);
-    String fileFormat = (String) reportDbInfo.get(JsonKey.FORMAT);
     String batchId = (String) reportDbInfo.get(JsonKey.RESOURCE_ID);
     //get start and end time ---
     Map<String , String> dateRangeFilter = new HashMap<>();
@@ -249,17 +245,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
     sender().tell(backGroundRequest, self());
   }
 
-  private void courseConsumptionMetricsReport(Request actorMessage) {
-
-    ProjectLogger.log("CourseMetricsActor-courseProgressMetrics called");
-    Request request = new Request();
-    String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
-    String batchId = (String) actorMessage.getRequest().get(JsonKey.COURSE_ID);
-
-    Response response = new Response();
-    response.getResult().put(JsonKey.PROCESS_ID , 121);
-    sender().tell(response, self());
-  }
 
   private void courseProgressMetricsReport(Request actorMessage) {
 
@@ -499,7 +484,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
       userdataMap.put(JsonKey.NAME, "List of users enrolled for the course");
       userdataMap.put("split", "content.sum(time_spent)");
-      userdataMap.put("buckets", new ArrayList());
+      userdataMap.put("buckets", new ArrayList<>());
 
       courseprogressdataMap.put(JsonKey.NAME, "List of users enrolled for the course");
       courseprogressdataMap.put("split", "content.sum(time_spent)");
@@ -525,8 +510,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
       String courseId = (String) actorMessage.getRequest().get(JsonKey.COURSE_ID);
       String requestedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
       
-      Request request = new Request();
-      request.setId(actorMessage.getId());
       Map<String, Object> requestObject = new HashMap<>();
       requestObject.put(JsonKey.PERIOD, getEkstepPeriod(periodStr));
       Map<String, Object> filterMap = new HashMap<>();
@@ -564,12 +547,12 @@ public class CourseMetricsActor extends BaseMetricsActor {
       
       String channel = (String)rootOrgData.get(JsonKey.HASHTAGID);
       ProjectLogger.log("Channel" + channel);
-      requestObject.put(JsonKey.CHANNEL, channel);
-      request.setRequest(requestObject);
-      String requestStr = mapper.writeValueAsString(request);
-      String ekStepResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, requestStr);
-      String responseFormat =
-          courseConsumptionResponseGenerator(periodStr, ekStepResponse, courseId, channel);
+      
+      String responseFormat = (String) cache.getData(JsonKey.CourseConsumption, courseId, periodStr);
+      if(ProjectUtil.isStringNullOREmpty(responseFormat)){
+        responseFormat = getCourseConsumptionData(periodStr, courseId, requestObject, channel);
+        cache.setData(JsonKey.CourseConsumption, courseId, periodStr, responseFormat);
+      }   
       Response response =
           metricsResponseGenerator(responseFormat, periodStr, getViewData(courseId));
       sender().tell(response, self());
@@ -583,6 +566,26 @@ public class CourseMetricsActor extends BaseMetricsActor {
           ResponseCode.internalError.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
+  }
+
+  private String getCourseConsumptionData(String periodStr, String courseId,
+      Map<String, Object> requestObject, String channel){
+    Request request = new Request();
+    requestObject.put(JsonKey.CHANNEL, channel);
+    request.setRequest(requestObject);
+    String responseFormat = "";
+    try {
+    String requestStr = mapper.writeValueAsString(request);
+    String ekStepResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, requestStr);
+    responseFormat =
+        courseConsumptionResponseGenerator(periodStr, ekStepResponse, courseId, channel);
+    } catch (Exception e) {
+      ProjectLogger.log("Error occurred", e);
+      throw new ProjectCommonException(ResponseCode.internalError.getErrorCode(),
+          ResponseCode.internalError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
+    return responseFormat;
   }
 
   private Map<String, Object> getViewData(String courseId) {

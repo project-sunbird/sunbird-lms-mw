@@ -38,7 +38,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
 
   Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static FileUtil fileUtil = new ExcelFileUtil();
+  private static FileUtil fileUtil;
   SimpleDateFormat format = ProjectUtil.format;
   private ActorRef courseMetricsActor = RequestRouterActor.courseMetricsRouter;
   private ActorRef orgMetricsActor = RequestRouterActor.organisationMetricsRouter;
@@ -167,7 +167,8 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
       //TODO: throw exception here ...
     }
     Map<String , Object> reportDbInfo = responseList.get(0);
-    String fileFormat = (String) reportDbInfo.get(JsonKey.FORMAT);
+    String fileFormat = (String) reportDbInfo.get(JsonKey.FORMAT);    
+    fileUtil = FileUtil.getFileUtil(fileFormat);
 
     Map<String , Object> dbReqMap = new HashMap<>();
     dbReqMap.put(JsonKey.ID , requestId);
@@ -278,14 +279,19 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
 
   private boolean processMailSending(Map<String, Object> reportDbInfo) {
 
-    Map<String , Object> templateMap = new HashMap<>();
+    Map<String, Object> templateMap = new HashMap<>();
     templateMap.put(JsonKey.DOWNLOAD_URL, reportDbInfo.get(JsonKey.FILE_URL));
-    templateMap.put(JsonKey.NAME,reportDbInfo.get(JsonKey.FIRST_NAME));
-    templateMap.put(JsonKey.BODY, "Please Find Attached Report for "+reportDbInfo.get(JsonKey.RESOURCE_ID)+" for the Period  "+reportDbInfo.get(JsonKey.PERIOD)+" as requested on : "+reportDbInfo.get(JsonKey.CREATED_DATE));
+    templateMap.put(JsonKey.NAME, reportDbInfo.get(JsonKey.FIRST_NAME));
+    templateMap.put(JsonKey.BODY,
+        "Please Find Attached Report for " + reportDbInfo.get(JsonKey.RESOURCE_ID)
+            + " for the Period  " + reportDbInfo.get(JsonKey.PERIOD) + " as requested on : "
+            + reportDbInfo.get(JsonKey.CREATED_DATE));
     templateMap.put(JsonKey.ACTION_NAME, "Download");
     VelocityContext context = ProjectUtil.getContext(templateMap);
-    
-    return SendMail.sendMail(new String[]{(String)reportDbInfo.get(JsonKey.EMAIL)},"Report for "+reportDbInfo.get(JsonKey.RESOURCE_ID) ,context,ProjectUtil.getTemplate("defaultTemplate"));
+
+    return SendMail.sendMail(new String[] {(String) reportDbInfo.get(JsonKey.EMAIL)},
+        reportDbInfo.get(JsonKey.TYPE) + " for " + reportDbInfo.get(JsonKey.RESOURCE_ID), context,
+        ProjectUtil.getTemplate("defaultTemplate"));
   }
 
   private String processFileUpload(File file, String container)

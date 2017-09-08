@@ -168,6 +168,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     requestDbInfo.put(JsonKey.CREATED_DATE , format.format(new Date()));
     requestDbInfo.put(JsonKey.UPDATED_DATE , format.format(new Date()));
     requestDbInfo.put(JsonKey.EMAIL, requestedByInfo.get(JsonKey.EMAIL));
+    requestDbInfo.put(JsonKey.FORMAT, actorMessage.get(JsonKey.FORMAT));
    
     cassandraOperation.insertRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
         requestDbInfo);
@@ -175,14 +176,14 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     return requestId;
   }
   
-  private void saveData(List<List<Object>> data, String requestId){
+  private void saveData(List<List<Object>> data, String requestId, String type){
     Map<String , Object> dbReqMap = new HashMap<>();
     dbReqMap.put(JsonKey.ID , requestId);
     String dataStr = getJsonString(data);
     dbReqMap.put(JsonKey.DATA, dataStr);
     dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.GENERATING_DATA.getValue());
     dbReqMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
-    
+    dbReqMap.put(JsonKey.TYPE, type);
     cassandraOperation
     .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
         dbReqMap);
@@ -418,8 +419,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       snapshot.put("org.creation.content[@status=published].count", dataMap);
 
       Map<String, Object> series = new LinkedHashMap<>();
-      Map aggKeyMap = (Map) resultData.get("createdOn");
-      List<Map<String, Object>> bucket = getBucketData(aggKeyMap, periodStr);
+      //Map aggKeyMap = (Map) resultData.get("createdOn");
+      //List<Map<String, Object>> bucket = getBucketData(aggKeyMap, periodStr);
       Map<String, Object> seriesData = new LinkedHashMap<>();
     /*  if ("5w".equalsIgnoreCase(periodStr)) {
         seriesData.put(JsonKey.NAME, "Content created per week");
@@ -483,6 +484,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   }
 
 
+  @SuppressWarnings("unchecked")
   private void orgCreationMetrics(Request actorMessage) {
     ProjectLogger.log("In orgCreationMetrics api");
     try {
@@ -506,12 +508,12 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         sender().tell(exception, self());
         return;
       }
-      Map<String, Object> aggregationMap = new HashMap<>();
-      for (String operation : operationList) {
-        String request = getQueryRequest(periodStr, orgId, operation);
-        String esResponse = makePostRequest(JsonKey.EKSTEP_ES_METRICS_API_URL, request);
-        // String esResponse = getDataFromEkstep(request, JsonKey.EKSTEP_ES_METRICS_URL);
-        aggregationMap = putAggregationMap(esResponse, aggregationMap, operation);
+      
+      Map<String, Object> aggregationMap =
+          (Map<String, Object>) cache.getData(JsonKey.OrgCreation, orgId, periodStr);
+      if (null == aggregationMap || aggregationMap.isEmpty()) {
+        aggregationMap = getOrgCreationData(periodStr, orgId);
+        cache.setData(JsonKey.OrgCreation, orgId, periodStr, aggregationMap);
       }
       String responseFormat = orgCreationResponseGenerator(periodStr, aggregationMap);
       Response response =
@@ -527,6 +529,17 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
           ResponseCode.internalError.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
+  }
+
+  private Map<String, Object> getOrgCreationData(String periodStr, String orgId) throws Exception {
+    Map<String, Object> aggregationMap = new HashMap<>();
+    for (String operation : operationList) {
+      String request = getQueryRequest(periodStr, orgId, operation);
+      String esResponse = makePostRequest(JsonKey.EKSTEP_ES_METRICS_API_URL, request);
+      // String esResponse = getDataFromEkstep(request, JsonKey.EKSTEP_ES_METRICS_URL);
+      aggregationMap = putAggregationMap(esResponse, aggregationMap, operation);
+    }
+    return aggregationMap;
   }
 
   private void orgConsumptionMetrics(Request actorMessage) {
@@ -573,9 +586,11 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       }
       String channel = (String) rootOrgData.get(JsonKey.HASHTAGID);
       ProjectLogger.log("channel" + channel);
-      String requestStr = getOrgMetricsRequest(actorMessage, periodStr, orgHashId, null, channel);
-      String ekStepResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, requestStr);
-      String responseFormat = orgConsumptionResponseGenerator(periodStr, ekStepResponse);
+      String responseFormat = (String) cache.getData(JsonKey.OrgConsumption, orgId, periodStr);
+      if(ProjectUtil.isStringNullOREmpty(responseFormat)){
+        responseFormat = getOrgConsumptionData(actorMessage, periodStr, orgHashId, channel);
+        cache.setData(JsonKey.OrgConsumption, orgId, periodStr, responseFormat);
+      }
       Response response =
           metricsResponseGenerator(responseFormat, periodStr, getViewData(orgId, orgName));
       sender().tell(response, self());
@@ -589,6 +604,14 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
           ResponseCode.internalError.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
+  }
+
+  private String getOrgConsumptionData(Request actorMessage, String periodStr, String orgHashId,
+      String channel) throws JsonProcessingException, Exception {
+    String requestStr = getOrgMetricsRequest(actorMessage, periodStr, orgHashId, null, channel);
+    String ekStepResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, requestStr);
+    String responseFormat = orgConsumptionResponseGenerator(periodStr, ekStepResponse);
+    return responseFormat;
   }
 
   private String getOrgMetricsRequest(Request actorMessage, String periodStr, String orgHashId,
@@ -749,8 +772,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       headers.add("contentLanguage");
       headers.add("contentSize");
       headers.add("contentCreatedOn");
-      headers.add("contentLastPublishedOn");
       headers.add("contentReviewedOn");
+      headers.add("contentLastPublishedOn");
       headers.add("contentLastUpdatedOn");
       headers.add("contentLastUpdatedStatus");
       headers.add("contentLastPublishedBy");
@@ -770,10 +793,10 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         csvRecords.addAll(generateDataList(userData, headers));
       }
       String period = (String) requestData.get(JsonKey.PERIOD);
-      String fileName =
-          "CreationReport_" + orgId + FILENAMESEPARATOR + System.currentTimeMillis() + FILENAMESEPARATOR + period;      
-      
-      saveData(csvRecords, requestId);
+      String fileName = "CreationReport" + FILENAMESEPARATOR + orgId + FILENAMESEPARATOR
+          + System.currentTimeMillis() + FILENAMESEPARATOR + period;
+
+      saveData(csvRecords, requestId, "Creation Report");
       Request backGroundRequest = new Request();
       backGroundRequest.setOperation(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue());
 
@@ -798,9 +821,9 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     ProjectLogger.log("In orgConsumptionMetricsExcel api");
     try {
       String requestId = (String) actorMessage.getRequest().get(JsonKey.REQUEST_ID);
-      Map<String,Object> requestData = new HashMap<>(); 
+      Map<String,Object> requestData = getData(requestId); 
       String periodStr = (String) requestData.get(JsonKey.PERIOD);
-      String orgId = (String) requestData.get(JsonKey.ORG_ID);
+      String orgId = (String) requestData.get(JsonKey.RESOURCE_ID);
       Map<String, Object> orgData = validateOrg(orgId);
       if (null == orgData) {
         throw new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
@@ -833,9 +856,9 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       csvRecords.add(headers);
       csvRecords.addAll(generateDataList(consumptionData, headers));
       
-      String fileName =
-          "ConsumptionReport" + orgId + FILENAMESEPARATOR + System.currentTimeMillis() + FILENAMESEPARATOR + periodStr;      
-      saveData(csvRecords, requestId);
+      String fileName = "ConsumptionReport" + FILENAMESEPARATOR + orgId + FILENAMESEPARATOR
+          + System.currentTimeMillis() + FILENAMESEPARATOR + periodStr;
+      saveData(csvRecords, requestId, "Consumption Report");
       Request backGroundRequest = new Request();
       backGroundRequest.setOperation(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue());
 

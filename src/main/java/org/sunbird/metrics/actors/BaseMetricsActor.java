@@ -60,6 +60,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   protected static final String USER_ID = "user_id";
   protected static final String folderPath = "/data/";
   protected static final String FILENAMESEPARATOR = "_";
+  protected static final MetricsCache cache = new MetricsCache();
   SimpleDateFormat format = ProjectUtil.format;
   
 

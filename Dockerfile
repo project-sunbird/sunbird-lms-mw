@@ -5,7 +5,7 @@ RUN apk update \
     && apk add curl \
     && adduser -u 1001 -h /home/sunbird/ -D sunbird \
     && mkdir -p /home/sunbird/learner
-COPY ./learner-actors/actors/learner-actor/target/learner-actor-1.0-SNAPSHOT.jar	 /home/sunbird/learner/
+COPY ./learner-actors/actors/target/learner-actor-1.0-SNAPSHOT.jar	 /home/sunbird/learner/
 RUN chown -R sunbird:sunbird /home/sunbird
 EXPOSE 8088
 USER sunbird

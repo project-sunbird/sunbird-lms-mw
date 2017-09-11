@@ -13,9 +13,7 @@ node('build-slave') {
       stage('Build'){
         env.NODE_ENV = "build"
         print "Environment will be : ${env.NODE_ENV}"
-        sh ('mkdir learner-actors')
-        sh('mv actors/ sunbird-common/ learner-actors')
-         dir ('learner-actors/actors') {
+        dir ('actors') {
         sh 'mvn clean install -DskipTests=true'
          }
 
@@ -32,7 +30,6 @@ node('build-slave') {
         sh './metadata.sh > metadata.json'      
         sh 'cat metadata.json'
         archive includes: "metadata.json"
-        cleanWs()
       }
       }
     catch (err) {

@@ -17,7 +17,7 @@ node('build-slave') {
 
         print "Environment will be : ${env.NODE_ENV}"
         sh ('mkdir learner-actors')
-        sh(m'v actors/ sunbird-common/ learner-actors')
+        sh('mv actors/ sunbird-common/ learner-actors')
          dir ('learner-actors/actors') {
         sh 'mvn clean install -DskipTests=true'
          }

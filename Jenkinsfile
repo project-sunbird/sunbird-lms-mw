@@ -12,7 +12,7 @@ node('build-slave') {
        }
 
       stage('Build'){
-
+        cleanWs()
         env.NODE_ENV = "build"
 
         print "Environment will be : ${env.NODE_ENV}"

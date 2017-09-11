@@ -5,16 +5,14 @@ node('build-slave') {
    currentBuild.result = "SUCCESS"
 
    try {
-
+          
       stage('Checkout'){
-
+         cleanWs()   
          checkout scm
        }
 
       stage('Build'){
-        cleanWs()
         env.NODE_ENV = "build"
-
         print "Environment will be : ${env.NODE_ENV}"
         sh ('mkdir learner-actors')
         sh('mv actors/ sunbird-common/ learner-actors')

@@ -7,7 +7,6 @@ node('build-slave') {
    try {
           
       stage('Checkout'){
-         cleanWs()   
          checkout scm
        }
 

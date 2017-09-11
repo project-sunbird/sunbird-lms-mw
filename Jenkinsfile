@@ -35,6 +35,7 @@ node('build-slave') {
         sh './metadata.sh > metadata.json'      
         sh 'cat metadata.json'
         archive includes: "metadata.json"
+        cleanWs()
       }
       }
     catch (err) {

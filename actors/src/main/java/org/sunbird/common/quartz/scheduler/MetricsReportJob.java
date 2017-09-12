@@ -1,7 +1,6 @@
 package org.sunbird.common.quartz.scheduler;
 
 import akka.actor.ActorRef;
-import akka.actor.Props;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -21,13 +20,13 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.RequestRouterActor;
 import org.sunbird.learner.util.Util;
-import org.sunbird.metrics.actors.MetricsBackGroundJobActor;
 
 /**
  * Created by arvind on 30/8/17.
@@ -39,11 +38,11 @@ public class MetricsReportJob implements Job {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ActorRef backGroundActorRef = RequestRouterActor.metricsBackGroungJobActor;
   SimpleDateFormat format = ProjectUtil.format;
-
+  private int time = -30;
 
   @Override
   public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
-    System.out.println("METRICS JOB TRIGGERED #############-----------");
+    ProjectLogger.log("METRICS JOB TRIGGERED #############-----------");
     performReportJob();
   }
 
@@ -51,7 +50,6 @@ public class MetricsReportJob implements Job {
 
     ObjectMapper mapper = new ObjectMapper();
 
-    Map<String, Object> dbMap = new HashMap<>();
     Response response = cassandraOperation.getRecordsByProperty(reportTrackingdbInfo.getKeySpace(),
         reportTrackingdbInfo.getTableName(), JsonKey.STATUS,
         ReportTrackingStatus.UPLOADING_FILE.getValue());
@@ -60,7 +58,7 @@ public class MetricsReportJob implements Job {
     if (!(dbResult.isEmpty())) {
       // TODO: perform logic here 1. the updated date value should be older than 30 minutes then pick that one
       Calendar now = Calendar.getInstance();
-      now.add(Calendar.MINUTE, -30);
+      now.add(Calendar.MINUTE, time);
       Date thirtyMinutesBefore = now.getTime();
       for (Map<String, Object> map : dbResult) {
         String updatedDate = (String) map.get(JsonKey.UPDATED_DATE);
@@ -83,13 +81,13 @@ public class MetricsReportJob implements Job {
             backGroundActorRef.tell(backGroundRequest, null);
           }
         } catch (ParseException e) {
-          e.printStackTrace();
+          ProjectLogger.log(e.getMessage(),e);
         } catch (JsonParseException e) {
-          e.printStackTrace();
+          ProjectLogger.log(e.getMessage(),e);
         } catch (JsonMappingException e) {
-          e.printStackTrace();
+          ProjectLogger.log(e.getMessage(),e);
         } catch (IOException e) {
-          e.printStackTrace();
+          ProjectLogger.log(e.getMessage(),e);
         }
       }
     }
@@ -102,7 +100,7 @@ public class MetricsReportJob implements Job {
     if (!(dbResult.isEmpty())) {
       // TODO: perform logic here 1. the updated value should be older than 30 minutes then pick that one
       Calendar now = Calendar.getInstance();
-      now.add(Calendar.MINUTE, -30);
+      now.add(Calendar.MINUTE, time);
       Date thirtyMinutesBefore = now.getTime();
       for (Map<String, Object> map : dbResult) {
         String updatedDate = (String) map.get(JsonKey.UPDATED_DATE);
@@ -122,7 +120,7 @@ public class MetricsReportJob implements Job {
           }
 
         } catch (ParseException e) {
-          e.printStackTrace();
+          ProjectLogger.log(e.getMessage(),e);
         }
 
       }

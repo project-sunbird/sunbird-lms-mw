@@ -5,7 +5,6 @@ package org.sunbird.common.quartz.scheduler;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -26,7 +25,7 @@ import org.sunbird.learner.util.CourseBatchSchedulerUtil;
  */
 public class ManageCourseBatchCount implements Job {
   public void execute(JobExecutionContext ctx) throws JobExecutionException {
-    System.out.println("Executing at: " + Calendar.getInstance().getTime() + " triggered by: " + ctx.getJobDetail().toString());
+    ProjectLogger.log("Executing at: " + Calendar.getInstance().getTime() + " triggered by: " + ctx.getJobDetail().toString());
     //Collect all those batches from ES whose start date is today and countIncrementStatus value is false.
     //and all those batches whose end date was yesterday and countDecrementStatus value is false.
     //update the countIncrement or decrement status value as true , countIncrement or decrement date as today date.

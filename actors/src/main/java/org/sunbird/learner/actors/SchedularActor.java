@@ -37,6 +37,7 @@ public class SchedularActor extends UntypedAbstractActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void schedule(Request request) {
     List<Map<String, Object>> result = (List<Map<String, Object>>) request.get(JsonKey.DATA);
     for(Map<String,Object> map : result){

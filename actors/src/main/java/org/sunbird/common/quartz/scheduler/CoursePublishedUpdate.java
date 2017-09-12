@@ -50,6 +50,7 @@ public class CoursePublishedUpdate implements Job {
   static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   
   private static String requestData = "{\"request\":{\"filters\":{\"identifier\":dataVal},\"fields\":[\"status\"]}}";
+  @SuppressWarnings("unchecked")
   public void execute(JobExecutionContext ctx) throws JobExecutionException {
     ProjectLogger.log("Fetching All unpublished course status.",LoggerEnum.INFO.name());
     List<String> courseListWithStatusAsDraft = getAllUnPublishedCourseStatusId();
@@ -78,6 +79,7 @@ public class CoursePublishedUpdate implements Job {
   }
   
   
+  @SuppressWarnings("unchecked")
   private void addUserToUserCourseTable(List<Map<String, Object>> batchList) {
     ProjectLogger.log("Adding participants to user course table started",LoggerEnum.INFO.name());
     Util.DbInfo courseEnrollmentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
@@ -165,6 +167,7 @@ public class CoursePublishedUpdate implements Job {
    * back as live.
    * @return List<String>
    */
+  @SuppressWarnings("unchecked")
   private List<String> getAllUnPublishedCourseStatusId() {
     ProjectLogger.log("start of calling get unpublished course status==",LoggerEnum.INFO.name());
     List<String> ids = new ArrayList<>();
@@ -192,6 +195,7 @@ public class CoursePublishedUpdate implements Job {
    * @param ids List<String>
    * @return  List<String>
    */
+  @SuppressWarnings("unchecked")
   private List<String> getAllPublishedCourseListFromEKStep(
       List<String> ids) {
     ProjectLogger.log("fetching course details from Ekstep start");

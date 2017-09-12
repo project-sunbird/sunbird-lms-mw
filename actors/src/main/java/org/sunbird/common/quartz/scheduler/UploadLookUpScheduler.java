@@ -37,7 +37,6 @@ public class UploadLookUpScheduler implements Job {
   private ActorRef schedularActorRef = RequestRouterActor.schedularActor;
 
   public void execute(JobExecutionContext ctx) throws JobExecutionException {
-    System.out.println("Upload verify is running..");
     ProjectLogger.log("Running Upload Scheduler Job at: " + Calendar.getInstance().getTime() +
         " triggered by: " + ctx.getJobDetail().toString(),LoggerEnum.INFO.name());
     Util.DbInfo  bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);

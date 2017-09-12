@@ -35,7 +35,6 @@ public class UtilityActor extends UntypedAbstractActor {
     private final String CONTENT_STATE_INFO= "contentStateInfo";
     SimpleDateFormat sdf = ProjectUtil.format;
     private ActorRef backGroundActorRef;
-    private static final String DEFAULT_BATCH_ID ="1";
 
     public UtilityActor() {
         backGroundActorRef = getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");

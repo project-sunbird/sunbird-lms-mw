@@ -52,7 +52,7 @@
 
 ## Build
 1. Clone the repository "sunbird-lms-mw"
-1. Run "git submodule foreach git pull origin master" to pull the latest sunbird-common submodule.
+1. Run "git submodule foreach git pull origin master" to pull the latest sunbird-utils submodule.
 2. Run "mvn clean install" to build the actors.
 3. The build file is a executable jar file "learner-actor-1.0-SNAPSHOT.jar" generated in "sunbird-lms-mw/actors/target" folder
 

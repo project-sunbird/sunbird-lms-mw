@@ -955,7 +955,11 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       } else{
         //user doesn't exist
           try {
-            String userId = ssoManager.createUser(userMap);
+            String userId =  "";
+            userMap.put(JsonKey.BULK_USER_UPLOAD, true);
+            Map<String,String> userKeyClaokResp = ssoManager.createUser(userMap);
+            userMap.remove(JsonKey.BULK_USER_UPLOAD);
+            userId = userKeyClaokResp.get(JsonKey.USER_ID);
             if (!ProjectUtil.isStringNullOREmpty(userId)) {
               userMap.put(JsonKey.USER_ID, userId);
               userMap.put(JsonKey.ID, userId);

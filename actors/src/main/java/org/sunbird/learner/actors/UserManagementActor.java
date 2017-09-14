@@ -876,10 +876,13 @@ public class UserManagementActor extends UntypedAbstractActor {
       userMap.put(JsonKey.ROLES, roles);
     }
     ProjectLogger.log("User roles is===" + userMap.get(JsonKey.ROLES));
-    
+    String accessToken = "";
     if (isSSOEnabled) {
       try {
-        String userId = ssoManager.createUser(userMap);
+        String userId = "";
+        Map<String,String> responseMap = ssoManager.createUser(userMap);
+         userId = responseMap.get(JsonKey.USER_ID);
+         accessToken = responseMap.get(JsonKey.ACCESSTOKEN);
         if (!ProjectUtil.isStringNullOREmpty(userId)) {
           userMap.put(JsonKey.USER_ID, userId);
           userMap.put(JsonKey.ID, userId);
@@ -977,6 +980,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
 
     ProjectLogger.log("User created successfully.....");
+    response.put(JsonKey.ACCESSTOKEN, accessToken);
     sender().tell(response, self());
 
    

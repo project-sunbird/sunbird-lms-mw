@@ -47,8 +47,8 @@
     27. sunbird_mail_server_username
     28. sunbird_mail_server_password
     29. sunbird_mail_server_from_email
-    30. sunbird_account_name : account name for azure file upload container.
-    31. sunbird_account_key : azure account key
+    30. sunbird_account_name : account name of azure blob storage.
+    31. sunbird_account_key : azure blob storage account key
 
 ## Build
 1. Clone the repository "sunbird-lms-mw"

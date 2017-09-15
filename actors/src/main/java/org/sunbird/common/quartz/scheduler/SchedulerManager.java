@@ -43,28 +43,23 @@ public class SchedulerManager {
    * This method will register the quartz scheduler job.
    */
   private  void schedule() {
-    
-    InputStream in = this.getClass().getClassLoader().getResourceAsStream(file);
-    Properties configProp = new Properties();
     try {
-      Thread.sleep(240000);
-      configProp.load(in);
-      String host = System.getenv(JsonKey.SUNBIRD_PG_HOST);
-      String port =  System.getenv(JsonKey.SUNBIRD_PG_PORT);
-      String db = System.getenv(JsonKey.SUNBIRD_PG_DB);
-      String username = System.getenv(JsonKey.SUNBIRD_PG_USER);
-      String password = System.getenv(JsonKey.SUNBIRD_PG_PASSWORD);
-      ProjectLogger.log("Environment variable value for PostGress SQl= host, port,db,username,password " + host +" ," + port+","+db+","+username+","+password ,LoggerEnum.INFO.name());
-      if(!ProjectUtil.isStringNullOREmpty(host) && !ProjectUtil.isStringNullOREmpty(port) && !ProjectUtil.isStringNullOREmpty(db)
-          && !ProjectUtil.isStringNullOREmpty(username) && !ProjectUtil.isStringNullOREmpty(password) ){
-        ProjectLogger.log("Taking Postgres value from Environment variable...",LoggerEnum.INFO.name());
-      configProp.put("org.quartz.dataSource.MySqlDS.URL", "jdbc:postgresql://"+host+":"+port+"/"+db);
-      configProp.put("org.quartz.dataSource.MySqlDS.user", username);
-      configProp.put("org.quartz.dataSource.MySqlDS.password", password);
-      } else {
-        ProjectLogger.log("Environment variable is not set for postgres SQl.",LoggerEnum.INFO.name());
+      Thread.sleep(1);
+      boolean isEmbedded = false;
+      Properties configProp = null;
+      String embeddVal = System.getenv(JsonKey.SUNBIRD_QUARTZ_MODE);
+      if(JsonKey.EMBEDDED.equalsIgnoreCase(embeddVal)) {
+        isEmbedded = true;
+      }else {
+        configProp = setUpClusterMode();
       }
-     scheduler = new StdSchedulerFactory(configProp).getScheduler();
+      if(!isEmbedded && configProp !=null){
+        ProjectLogger.log("Quartz scheduler is running in cluster mode."); 
+       scheduler = new StdSchedulerFactory(configProp).getScheduler();
+      } else {
+        ProjectLogger.log("Quartz scheduler is running in embedded mode."); 
+       scheduler = new StdSchedulerFactory().getScheduler();
+      }
      String identifier = "NetOps-PC1502295457753";
    // 1- create a job and bind with class which is implementing Job
       // interface.
@@ -157,6 +152,42 @@ public class SchedulerManager {
     }
   }
   
+  /**
+   * This method will do the Quartz scheduler set up in cluster mode.
+   * @return Properties
+   * @throws Exception
+   */
+  public Properties setUpClusterMode() throws Exception {
+    Properties configProp = new Properties();
+    InputStream in = this.getClass().getClassLoader().getResourceAsStream(file);
+    String host = System.getenv(JsonKey.SUNBIRD_PG_HOST);
+    String port = System.getenv(JsonKey.SUNBIRD_PG_PORT);
+    String db = System.getenv(JsonKey.SUNBIRD_PG_DB);
+    String username = System.getenv(JsonKey.SUNBIRD_PG_USER);
+    String password = System.getenv(JsonKey.SUNBIRD_PG_PASSWORD);
+    ProjectLogger.log(
+        "Environment variable value for PostGress SQl= host, port,db,username,password "
+            + host + " ," + port + "," + db + "," + username + "," + password,
+        LoggerEnum.INFO.name());
+    if (!ProjectUtil.isStringNullOREmpty(host)
+        && !ProjectUtil.isStringNullOREmpty(port)
+        && !ProjectUtil.isStringNullOREmpty(db)
+        && !ProjectUtil.isStringNullOREmpty(username)
+        && !ProjectUtil.isStringNullOREmpty(password)) {
+      ProjectLogger.log("Taking Postgres value from Environment variable...",
+          LoggerEnum.INFO.name());
+      configProp.load(in);
+      configProp.put("org.quartz.dataSource.MySqlDS.URL",
+          "jdbc:postgresql://" + host + ":" + port + "/" + db);
+      configProp.put("org.quartz.dataSource.MySqlDS.user", username);
+      configProp.put("org.quartz.dataSource.MySqlDS.password", password);
+    } else {
+      ProjectLogger.log("Environment variable is not set for postgres SQl.",
+          LoggerEnum.INFO.name());
+      configProp = null;
+    }
+    return configProp;
+  }
   
   public static SchedulerManager getInstance () {
      if(schedulerManager != null) {

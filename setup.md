@@ -49,6 +49,7 @@
     29. sunbird_mail_server_from_email
     30. sunbird_account_name : account name of azure blob storage.
     31. sunbird_account_key : azure blob storage account key
+    32. sunbird_quartz_mode: put this value {"embedded" to run quartz without any data base, "any other value" to run with postgres db }
 
 ## Build
 1. Clone the repository "sunbird-lms-mw"

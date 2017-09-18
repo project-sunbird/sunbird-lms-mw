@@ -1,6 +1,7 @@
 package org.sunbird.learner.actors;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.Assert;
@@ -12,8 +13,12 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.util.Util;
+
+import static akka.testkit.JavaTestKit.duration;
+import static org.junit.Assert.assertEquals;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -29,6 +34,13 @@ public class OrganisationManagementActorTest {
     static ActorSystem system;
     final static Props props = Props.create(OrganisationManagementActor.class);
     final static Props propsUser = Props.create(UserManagementActor.class);
+    @BeforeClass
+    public static void setUp() {
+        system = ActorSystem.create("system");
+        Util.checkCassandraDbConnections();
+        //OrganisationManagementActorTest.createOrgForId();
+       //OrganisationManagementActorTest.createUserForId();
+    }
    /* public static String orgId = "";
     public static String usrId = "123";//TODO:change while committing
     public static String parentOrgId = "";
@@ -592,5 +604,17 @@ public class OrganisationManagementActorTest {
     
     public void deleteOrgBySourceAndExternalId(){
       
+    }
+    
+    @Test
+    public void TestOrgTypeList() {
+      TestKit probe = new TestKit(system);
+      ActorRef subject = system.actorOf(props);
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.GET_ORG_TYPE_LIST.getValue());
+      reqObj.setRequest_id(ExecutionContext.getRequestId());
+      reqObj.setEnv(1);
+      subject.tell(reqObj, probe.getRef());
+      probe.expectMsgClass(Response.class);
     }
 }

@@ -13,13 +13,13 @@ node('build-slave') {
       stage('Build'){
         env.NODE_ENV = "build"
         print "Environment will be : ${env.NODE_ENV}"
-        sh 'sudo mvn clean install -DskipTests=true'
+        sh('git submodule foreach git pull origin master')
+        sh('sudo mvn clean install -DskipTests=true')
          sh('chmod 777 ./build.sh')
          sh('./build.sh')
       }
 
       stage('Publish'){
-
         echo 'Push to Repo'
         sh 'ls -al ~/'
         sh('chmod 777 ./dockerPushToRepo.sh')

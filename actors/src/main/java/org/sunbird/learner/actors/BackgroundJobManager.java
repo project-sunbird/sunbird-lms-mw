@@ -111,7 +111,13 @@ public class BackgroundJobManager extends UntypedAbstractActor {
 
       }else if (requestedOperation.equalsIgnoreCase(ActorOperations.ADD_USER_BADGE_BKG.getValue())){
          addBadgeToUserprofile (actorMessage);
-      }else {
+      } else if (requestedOperation
+              .equalsIgnoreCase(ActorOperations.INSERT_USER_NOTES_ES.getValue())) {
+        insertUserNotesToEs(actorMessage);
+      } else if (requestedOperation
+            .equalsIgnoreCase(ActorOperations.UPDATE_USER_NOTES_ES.getValue())) {
+        updateUserNotesToEs(actorMessage);
+      } else {
         ProjectLogger.log("UNSUPPORTED OPERATION");
         ProjectCommonException exception = new ProjectCommonException(
             ResponseCode.invalidOperationName.getErrorCode(),
@@ -765,6 +771,26 @@ public class BackgroundJobManager extends UntypedAbstractActor {
     }
 
     return tagStatus;
+  }
+  
+  @SuppressWarnings("unchecked")
+  private void insertUserNotesToEs(Response actorMessage) {
+    ProjectLogger.log("Calling method to save inside Es==");
+    Map<String, Object> noteMap =
+        (Map<String, Object>) actorMessage.get(JsonKey.NOTE);
+    if (ProjectUtil.isNotNull(noteMap)) {
+      String id = (String) noteMap.get(JsonKey.ID);
+      insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+          ProjectUtil.EsType.usernotes.getTypeName(), id, noteMap);
+    }
+  }
+  
+  @SuppressWarnings("unchecked")
+  private void updateUserNotesToEs(Response actorMessage) {
+    Map<String, Object> noteMap = (Map<String, Object>) actorMessage.get(JsonKey.NOTE);
+    updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.usernotes.getTypeName(),
+        (String) noteMap.get(JsonKey.ID), noteMap);
   }
   
 }

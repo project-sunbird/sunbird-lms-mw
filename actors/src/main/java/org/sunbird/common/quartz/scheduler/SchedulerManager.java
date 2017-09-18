@@ -19,6 +19,7 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.metrics.actors.MetricsJobScheduler;
 
 
 /**
@@ -141,6 +142,26 @@ public class SchedulerManager {
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);
         e.printStackTrace();
+      }
+      
+   // add another job for verifying the course published details from EKStep.
+      // 1- create a job and bind with class which is implementing Job
+      // interface.
+      JobDetail metricsJob = JobBuilder.newJob(MetricsJobScheduler.class).requestRecovery(true).withIdentity("metricsJob", identifier).build();
+
+      // 2- Create a trigger object that will define frequency of run.
+      //This job will run every 4 hours everyday.
+      Trigger metricsTrigger = TriggerBuilder.newTrigger().withIdentity("metricsTrigger", identifier)
+          .withSchedule(CronScheduleBuilder.cronSchedule(PropertiesCache.getInstance().getProperty("quartz_metrics_timer"))).build();
+      try {
+        if (scheduler.checkExists(metricsJob.getKey())){
+          scheduler.deleteJob(metricsJob.getKey());
+        }
+        scheduler.scheduleJob(metricsJob, metricsTrigger);
+        scheduler.start();
+        ProjectLogger.log("MetricsJob schedular started",LoggerEnum.INFO.name());
+      } catch (Exception e) {
+        ProjectLogger.log("Error occured", e);
       }
 
 

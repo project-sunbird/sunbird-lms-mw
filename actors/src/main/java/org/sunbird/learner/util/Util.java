@@ -116,6 +116,7 @@ public class Util {
       dbInfoMap.put(JsonKey.REPORT_TRACKING_DB ,getDbInfoObject(KEY_SPACE_NAME , "report_tracking"));
       dbInfoMap.put(JsonKey.BADGES_DB, getDbInfoObject(KEY_SPACE_NAME , "badge"));
       dbInfoMap.put(JsonKey.USER_BADGES_DB, getDbInfoObject(KEY_SPACE_NAME , "user_badge"));
+      dbInfoMap.put(JsonKey.USER_NOTES_DB, getDbInfoObject(KEY_SPACE_NAME, "user_notes"));
     }
     
     

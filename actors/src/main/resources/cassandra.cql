@@ -543,3 +543,9 @@ update sunbird.role_group set url_action_ids=['public'] where id='PUBLIC';
 insert into sunbird.role (id,name,rolegroupid,status) values ('PUBLIC','Public',['PUBLIC'],1);
  ALTER TABLE sunbird.user DROP aadhaarno;
 update organisation set channel='ROOT_ORG' where id='ORG_001';
+
+// Sept 18th 2017
+ALTER TABLE sunbird.org_type ADD createdDate text;
+ALTER TABLE sunbird.org_type ADD createdBy text;
+ALTER TABLE sunbird.org_type ADD updatedDate text;
+ALTER TABLE sunbird.org_type ADD updatedBy text;

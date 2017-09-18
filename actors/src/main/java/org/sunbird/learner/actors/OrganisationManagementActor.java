@@ -85,10 +85,16 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.REMOVE_MEMBER_ORGANISATION.getValue())) {
           removeMemberOrganisation(actorMessage);
-        } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.DOWNLOAD_ORGS.getValue())) {
-            getOrgsData(actorMessage);
-        }
-        else {
+        } else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.GET_ORG_TYPE_LIST.getValue())) {
+            getOrgTypeList(actorMessage);
+        } else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.CREATE_ORG_TYPE.getValue())) {
+            createOrgType(actorMessage);
+        } else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.UPDATE_ORG_TYPE.getValue())) {
+            updateOrgType(actorMessage);
+        } else {
           ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
           ProjectCommonException exception =
               new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
@@ -111,6 +117,84 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
   }
 
+
+  private void updateOrgType(Request actorMessage) {
+    ProjectLogger.log("updateOrgType method call start");
+    try {
+      Util.DbInfo orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
+      Map<String, Object> request = actorMessage.getRequest();
+      Response result = cassandraOperation.getRecordsByProperty(orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName(), JsonKey.NAME, request.get(JsonKey.NAME));
+      List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      if (!(list.isEmpty())) {
+        Map<String, Object> map = list.get(0);
+          if(!(((String)map.get(JsonKey.ID)).equals((String)request.get(JsonKey.ID)))){
+            ProjectCommonException exception = new ProjectCommonException(
+                ResponseCode.orgTypeAlreadyExist.getErrorCode(),
+                ResponseCode.orgTypeAlreadyExist.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;
+          } 
+        }
+      
+      request.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+      Response response = cassandraOperation.updateRecord(orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName(), request);
+      sender().tell(response, self());
+    }catch (Exception e){
+      ProjectLogger.log("Exception Occurred while updating data to orgType table :: ", e);
+      sender().tell(e, self());
+    }
+  }
+
+  private void createOrgType(Request actorMessage) {
+    ProjectLogger.log("createOrgType method call start");
+    try {
+      Util.DbInfo orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
+      Map<String, Object> request = actorMessage.getRequest();
+      Response result = cassandraOperation.getAllRecords(orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName());
+      List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      if (!(list.isEmpty())) {
+        for(Map<String, Object> map : list){
+          if(((String)map.get(JsonKey.NAME)).equalsIgnoreCase((String)request.get(JsonKey.NAME))){
+            ProjectCommonException exception = new ProjectCommonException(
+                ResponseCode.orgTypeAlreadyExist.getErrorCode(),
+                ResponseCode.orgTypeAlreadyExist.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;
+          } 
+        }
+      }
+      request.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+      request.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv()));
+      Response response = cassandraOperation.insertRecord(orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName(), request);
+      sender().tell(response, self());
+    }catch (Exception e){
+      ProjectLogger.log("Exception Occurred while inserting data to orgType table :: ", e);
+      sender().tell(e, self());
+    }
+  }
+
+  private void getOrgTypeList(Request actorMessage) {
+    ProjectLogger.log("getOrgTypeList method call start");
+    try {
+      Util.DbInfo orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
+      Response response = cassandraOperation.getAllRecords(orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName());
+      List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+      if (!(list.isEmpty())) {
+        for(Map<String, Object> map : list){
+          map.remove(JsonKey.CREATED_BY);
+          map.remove(JsonKey.CREATED_DATE);
+          map.remove(JsonKey.UPDATED_BY);
+          map.remove(JsonKey.UPDATED_DATE);
+        }
+      }
+      sender().tell(response, self());
+    }catch (Exception e){
+      ProjectLogger.log("Exception Occurred while fetching orgType List :: ", e);
+      sender().tell(e, self());
+    }
+  }
 
   /**
    * Method to create an organisation .

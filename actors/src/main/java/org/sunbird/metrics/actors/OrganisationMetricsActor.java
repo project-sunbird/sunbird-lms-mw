@@ -509,12 +509,12 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         return;
       }
       
-      Map<String, Object> aggregationMap = getOrgCreationData(periodStr, orgId);
-      /*Map<String, Object> aggregationMap = (Map<String, Object>) cache.getData(JsonKey.OrgCreation, orgId, periodStr);
+      //Map<String, Object> aggregationMap = getOrgCreationData(periodStr, orgId);
+      Map<String, Object> aggregationMap = (Map<String, Object>) cache.getData(JsonKey.OrgCreation, orgId, periodStr);
       if (null == aggregationMap || aggregationMap.isEmpty()) {
         aggregationMap = getOrgCreationData(periodStr, orgId);
         cache.setData(JsonKey.OrgCreation, orgId, periodStr, aggregationMap);
-      }*/
+      }
       String responseFormat = orgCreationResponseGenerator(periodStr, aggregationMap);
       Response response =
           metricsResponseGenerator(responseFormat, periodStr, getViewData(orgId, orgName));
@@ -586,12 +586,12 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       }
       String channel = (String) rootOrgData.get(JsonKey.HASHTAGID);
       ProjectLogger.log("channel" + channel);
-      String responseFormat = getOrgConsumptionData(actorMessage, periodStr, orgHashId, channel);
-      /*String responseFormat = (String) cache.getData(JsonKey.OrgConsumption, orgId, periodStr);
+      //String responseFormat = getOrgConsumptionData(actorMessage, periodStr, orgHashId, channel);
+      String responseFormat = (String) cache.getData(JsonKey.OrgConsumption, orgId, periodStr);
       if(ProjectUtil.isStringNullOREmpty(responseFormat)){
         responseFormat = getOrgConsumptionData(actorMessage, periodStr, orgHashId, channel);
         cache.setData(JsonKey.OrgConsumption, orgId, periodStr, responseFormat);
-      }*/
+      }
       Response response =
           metricsResponseGenerator(responseFormat, periodStr, getViewData(orgId, orgName));
       sender().tell(response, self());
@@ -897,7 +897,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     List<String> coursefields = new ArrayList<>();
     List<Map<String, Object>> userResult = new ArrayList<>();
     coursefields.add(JsonKey.USER_ID);
-    coursefields.add(JsonKey.USER_NAME);
+    coursefields.add(JsonKey.USERNAME);
     coursefields.add(JsonKey.CREATED_DATE);
     String userId = "";
     for (Map<String, Object> userData : ekstepData) {
@@ -1069,11 +1069,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
   @SuppressWarnings("unchecked")
   private static Map<String, String> conceptList() {
-    List<String> domains = new ArrayList<>();
-    domains.add("numeracy");
-    domains.add("literacy");
-    domains.add("science");
-
+	List<String> domains = getDomains();
     for (String domain : domains) {
       String url = PropertiesCache.getInstance().getProperty((JsonKey.EKSTEP_CONCEPT_URL));
       url = StringUtils.replace(url, "{domain}", domain);
@@ -1144,4 +1140,25 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
           ResponseCode.esError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
     }
   }
+  
+  @SuppressWarnings("unchecked")
+  private static List<String> getDomains(){
+    String domainUrl = PropertiesCache.getInstance().getProperty((JsonKey.EKSTEP_DOMAIN_URL));
+    String resposne = getDataFromEkstep(domainUrl);
+    List<String> domainList = new ArrayList<>();
+    try {
+      Map<String, Object> responseMap = mapper.readValue(resposne, Map.class);
+      responseMap = (Map<String, Object>) responseMap.get(JsonKey.RESULT);
+      List<Map<String, Object>> domainData =
+          (List<Map<String, Object>>) responseMap.get("domains");
+      for (Map<String, Object> domain : domainData) {
+        String id = (String) domain.get(JsonKey.IDENTIFIER);
+        domainList.add(id);
+      }
+    } catch (IOException e) {
+      ProjectLogger.log("Error occured", e);
+    }
+    return domainList;
+  }
+
 }

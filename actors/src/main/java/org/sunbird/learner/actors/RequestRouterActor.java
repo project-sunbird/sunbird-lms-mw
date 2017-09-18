@@ -61,6 +61,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private ActorRef esSyncActor;
     private ActorRef emailServiceActor;
     private ActorRef fileUploadServiceActor;
+    private ActorRef notesActor;
     public static ActorRef metricsBackGroungJobActor;
     public static ActorRef schedularActor;
     public static ActorRef organisationMetricsRouter;
@@ -93,6 +94,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private static final String FILE_UPLOAD_ACTOR = "fileUploadActor";
     private static final String METRICS_ACKGROUNG_JOB__ACTOR= "metricsBackGroungJobActor";
     private static final String BADGES_ACTOR = "badgesActor";
+    private static final String NOTES_ACTOR = "notesActor";
     /**
      * constructor to initialize router actor with child actor pool
      */
@@ -148,6 +150,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
 
         badgesActor=getContext().actorOf(FromConfig.getInstance().props(Props.create(BadgesActor.class)),
             BADGES_ACTOR);
+        notesActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(NotesManagementActor.class)),
+                NOTES_ACTOR);
         ec = getContext().dispatcher();
         initializeRouterMap();
     }
@@ -245,6 +249,13 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.ACTOR.getValue(), badgesActor);
         routerMap.put(ActorOperations.ES.getValue(), badgesActor);
         routerMap.put(ActorOperations.CASSANDRA.getValue(), badgesActor);
+        
+        routerMap.put(ActorOperations.CREATE_NOTE.getValue(), notesActor);
+        routerMap.put(ActorOperations.GET_NOTE.getValue(), notesActor);
+        routerMap.put(ActorOperations.SEARCH_NOTE.getValue(), notesActor);
+        routerMap.put(ActorOperations.UPDATE_NOTE.getValue(), notesActor);
+        routerMap.put(ActorOperations.DELETE_NOTE.getValue(), notesActor);
+
     }
 
 

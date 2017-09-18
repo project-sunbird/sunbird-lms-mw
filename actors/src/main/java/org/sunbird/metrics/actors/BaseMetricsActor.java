@@ -203,6 +203,11 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
         days = "LAST_5_WEEKS";
         break;
       }
+      default : {
+          throw new ProjectCommonException(ResponseCode.invalidPeriod.getErrorCode(),
+              ResponseCode.invalidPeriod.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
     }
     return days;
   }

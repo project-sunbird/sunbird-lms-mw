@@ -184,10 +184,16 @@ public class NotesManagementActor extends UntypedAbstractActor {
     
     request.put(JsonKey.FILTERS, filters);
     Response response = new Response();
-    Map<String,Object> result = getElasticSearchData(request);
+    Map<String, Object> result = getElasticSearchData(request);
+    if (!result.isEmpty() && ((Long) result.get(JsonKey.COUNT) == 0)) {
+      ProjectCommonException exception = new ProjectCommonException(
+          ResponseCode.invalidNoteId.getErrorCode(), ResponseCode.invalidNoteId.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
     response.put(JsonKey.RESPONSE, result);
     sender().tell(response, self());
-   
     } catch(Exception e){
       ProjectLogger.log("Error occured", e);
       sender().tell(e, self());
@@ -280,7 +286,7 @@ public class NotesManagementActor extends UntypedAbstractActor {
 
     if (!ProjectUtil.isStringNullOREmpty(userId)) {
       Map<String, Object> data = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId);
-      if(!data.isEmpty()){
+      if(null!= data && !data.isEmpty()){
         result = true;
       }
     }

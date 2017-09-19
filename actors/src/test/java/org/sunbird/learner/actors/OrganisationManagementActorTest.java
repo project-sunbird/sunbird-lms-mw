@@ -3,10 +3,14 @@ package org.sunbird.learner.actors;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
+import org.junit.runners.MethodSorters;
+import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -15,7 +19,10 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+import org.sunbird.services.sso.SSOManager;
+import org.sunbird.services.sso.SSOServiceFactory;
 
 import static akka.testkit.JavaTestKit.duration;
 import static org.junit.Assert.assertEquals;
@@ -28,12 +35,18 @@ import akka.testkit.javadsl.TestKit;
 /**
  * @author arvind.
  */
+
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class OrganisationManagementActorTest {
 
 
     static ActorSystem system;
+    static CassandraOperation operation = ServiceFactory.getInstance();
     final static Props props = Props.create(OrganisationManagementActor.class);
     final static Props propsUser = Props.create(UserManagementActor.class);
+    static Util.DbInfo orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
+    private static String orgTypeId1 = "";
+    private static String orgTypeId2 = "";
     @BeforeClass
     public static void setUp() {
         system = ActorSystem.create("system");
@@ -607,7 +620,66 @@ public class OrganisationManagementActorTest {
     }
     
     @Test
-    public void TestOrgTypeList() {
+    public void TestAACreateOrgType() {
+      TestKit probe = new TestKit(system);
+      ActorRef subject = system.actorOf(props);
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.CREATE_ORG_TYPE.getValue());
+      reqObj.setRequest_id(ExecutionContext.getRequestId());
+      reqObj.setEnv(1);
+      reqObj.getRequest().put(JsonKey.NAME, "ORG_TYPE_TEST5");
+      subject.tell(reqObj, probe.getRef());
+      Response response = probe.expectMsgClass(Response.class);
+      assertEquals("SUCCESS", response.getResult().get(JsonKey.RESPONSE));
+      
+      Request req = new Request();
+      req.setOperation(ActorOperations.GET_ORG_TYPE_LIST.getValue());
+      req.setRequest_id(ExecutionContext.getRequestId());
+      req.setEnv(1);
+      subject.tell(req, probe.getRef());
+      Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+      List<Map<String,Object>> resMapList = (List<Map<String, Object>>) res.getResult().get(JsonKey.RESPONSE);
+      if(null != resMapList && !resMapList.isEmpty()){
+        for(Map<String,Object> map : resMapList){
+          String name = (String) map.get(JsonKey.NAME);
+          if(null != name && "ORG_TYPE_TEST5".equalsIgnoreCase(name)){
+            orgTypeId1 = (String) map.get(JsonKey.ID);
+          }
+        }
+      }
+    }
+    
+    @Test
+    public void TestACreateOrgType() {
+      TestKit probe = new TestKit(system);
+      ActorRef subject = system.actorOf(props);
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.CREATE_ORG_TYPE.getValue());
+      reqObj.setRequest_id(ExecutionContext.getRequestId());
+      reqObj.setEnv(1);
+      reqObj.getRequest().put(JsonKey.NAME, "ORG_TYPE_TES");
+      subject.tell(reqObj, probe.getRef());
+      Response response = probe.expectMsgClass(Response.class);
+      assertEquals("SUCCESS", response.getResult().get(JsonKey.RESPONSE));
+      
+      Request req = new Request();
+      req.setOperation(ActorOperations.GET_ORG_TYPE_LIST.getValue());
+      req.setRequest_id(ExecutionContext.getRequestId());
+      req.setEnv(1);
+      subject.tell(req, probe.getRef());
+      Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+      List<Map<String,Object>> resMapList = (List<Map<String, Object>>) res.getResult().get(JsonKey.RESPONSE);
+      if(null != resMapList && !resMapList.isEmpty()){
+        for(Map<String,Object> map : resMapList){
+          String name = (String) map.get(JsonKey.NAME);
+          if(null != name && "ORG_TYPE_TES".equalsIgnoreCase(name)){
+            orgTypeId2 = (String) map.get(JsonKey.ID);
+          }
+        }
+      }
+    }
+    @Test
+    public void TestBOrgTypeList() {
       TestKit probe = new TestKit(system);
       ActorRef subject = system.actorOf(props);
       Request reqObj = new Request();
@@ -615,6 +687,71 @@ public class OrganisationManagementActorTest {
       reqObj.setRequest_id(ExecutionContext.getRequestId());
       reqObj.setEnv(1);
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(Response.class);
+      probe.expectMsgClass(duration("200 second"), Response.class);
+    }
+    
+    @Test
+    public void TestCCreateOrgTypeWithSameName() {
+      TestKit probe = new TestKit(system);
+      ActorRef subject = system.actorOf(props);
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.CREATE_ORG_TYPE.getValue());
+      reqObj.setRequest_id(ExecutionContext.getRequestId());
+      reqObj.setEnv(1);
+      reqObj.getRequest().put(JsonKey.NAME, "ORG_TYPE_TES");
+      subject.tell(reqObj, probe.getRef());
+      probe.expectMsgClass(ProjectCommonException.class);
+    }
+    @Test
+    public void TestDUpdateOrgType() {
+      TestKit probe = new TestKit(system);
+      ActorRef subject = system.actorOf(props);
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.UPDATE_ORG_TYPE.getValue());
+      reqObj.setRequest_id(ExecutionContext.getRequestId());
+      reqObj.setEnv(1);
+      reqObj.getRequest().put(JsonKey.NAME, "ORG_TYP_TEST1");
+      reqObj.getRequest().put(JsonKey.ID, orgTypeId2);
+      subject.tell(reqObj, probe.getRef());
+      Response response = probe.expectMsgClass(Response.class);
+      assertEquals("SUCCESS", response.getResult().get(JsonKey.RESPONSE));
+    }
+    
+    @Test
+    public void TestEUpdateOrgTypeWithExistingName() {
+      TestKit probe = new TestKit(system);
+      ActorRef subject = system.actorOf(props);
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.UPDATE_ORG_TYPE.getValue());
+      reqObj.setRequest_id(ExecutionContext.getRequestId());
+      reqObj.setEnv(1);
+      reqObj.getRequest().put(JsonKey.NAME, "ORG_TYPE_TEST5");
+      reqObj.getRequest().put(JsonKey.ID, orgTypeId2);
+      subject.tell(reqObj, probe.getRef());
+      ProjectCommonException response = probe.expectMsgClass(duration("200 second"),ProjectCommonException.class);
+    }
+    
+    @Test
+    public void TestFUpdateOrgTypeWithWrongId() {
+      TestKit probe = new TestKit(system);
+      ActorRef subject = system.actorOf(props);
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.UPDATE_ORG_TYPE.getValue());
+      reqObj.setRequest_id(ExecutionContext.getRequestId());
+      reqObj.setEnv(1);
+      reqObj.getRequest().put(JsonKey.NAME, "ORG_TYPE5");
+      String id = orgTypeId2+"1";
+      reqObj.getRequest().put(JsonKey.ID, id);
+      subject.tell(reqObj, probe.getRef());
+      Response response = probe.expectMsgClass(duration("200 second"),Response.class);
+      assertEquals("FAILURE", response.getResult().get(JsonKey.RESPONSE));
+    }
+    
+    
+    @AfterClass
+    public static void delete() {
+      CassandraOperation operation = ServiceFactory.getInstance();
+      operation.deleteRecord(orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName(), orgTypeId1);
+      operation.deleteRecord(orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName(), orgTypeId2);
     }
 }

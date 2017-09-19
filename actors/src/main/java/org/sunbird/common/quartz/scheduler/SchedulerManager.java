@@ -45,7 +45,7 @@ public class SchedulerManager {
    */
   private  void schedule() {
     try {
-      Thread.sleep(1);
+      Thread.sleep(240000);
       boolean isEmbedded = false;
       Properties configProp = null;
       String embeddVal = System.getenv(JsonKey.SUNBIRD_QUARTZ_MODE);

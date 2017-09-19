@@ -47,7 +47,7 @@ public class NotesManagementActorTest {
   private static String noteId = "";
   private static CassandraOperation operation = ServiceFactory.getInstance();
   
-  /*@BeforeClass
+  @BeforeClass
   public static void setUp() {
     system = ActorSystem.create("system");
     ref = TestActorRef.create(system, props, "testActor");
@@ -117,27 +117,23 @@ public class NotesManagementActorTest {
     actorMessage.setOperation(ActorOperations.CREATE_NOTE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    try {
-      Thread.sleep(5000);
-    } catch (InterruptedException e) {
-      ProjectLogger.log("error occurred", e);
-    }
     ProjectCommonException res = probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
     if(null != res){
       Assert.assertEquals(ResponseMessage.Key.INVALID_USER_ID, res.getMessage());
     }
   }
   
-  @SuppressWarnings("deprecation")
+  @SuppressWarnings({"deprecation", "unchecked"})
   @Test
   public void test3GetNoteSuccess(){
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      ProjectLogger.log("error occurred", e);
-    }
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
+    
+    try {
+      Thread.sleep(3000);
+    } catch (InterruptedException e) {
+      ProjectLogger.log("Error", e);
+    }
 
     Request actorMessage = new Request();
     Map<String, Object> request = new HashMap<>();
@@ -148,18 +144,16 @@ public class NotesManagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"),Response.class);
-    System.out.println(res.getResult());
-    Assert.assertTrue((Integer)res.getResult().get(JsonKey.COUNT) > 0);
+    if(null!=res && null!= res.getResult()){
+      Map<String,Object> response = (Map<String, Object>) res.getResult().get(JsonKey.RESPONSE);
+      Long count = (Long) response.get(JsonKey.COUNT);
+     Assert.assertTrue(count > 0);
+    }
   }
   
   @SuppressWarnings("deprecation")
   @Test
   public void test4GetNoteException(){
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      ProjectLogger.log("error occurred", e);
-    }
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -175,17 +169,11 @@ public class NotesManagementActorTest {
     if(null != res){
       Assert.assertEquals("Invalid note id", res.getMessage());
     }
-    System.out.println(res.getMessage());
   }
   
   @SuppressWarnings("deprecation")
   @Test
   public void test5UpdateNoteSuccess(){
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      ProjectLogger.log("error occurred", e);
-    }
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -208,11 +196,6 @@ public class NotesManagementActorTest {
   @SuppressWarnings("deprecation")
   @Test
   public void test6UpdateNoteException(){
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      ProjectLogger.log("error occurred", e);
-    }
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -231,17 +214,11 @@ public class NotesManagementActorTest {
     if(null != res){
       Assert.assertEquals("Invalid note id", res.getMessage());
     }
-    System.out.println(res.getMessage());
   }
   
-  @SuppressWarnings("deprecation")
+  @SuppressWarnings({"deprecation", "unchecked"})
   @Test
   public void test7SearchNoteSuccess(){
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      ProjectLogger.log("error occurred", e);
-    }
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -260,18 +237,16 @@ public class NotesManagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"),Response.class);
-    noteId = (String)res.getResult().get(JsonKey.ID);
-    Assert.assertTrue(!ProjectUtil.isStringNullOREmpty(noteId));
+    if(null!= res && null!= res.getResult()){
+       Map<String,Object> response = (Map<String, Object>) res.getResult().get(JsonKey.RESPONSE);
+       Long count = (Long) response.get(JsonKey.COUNT);
+	  Assert.assertTrue(count > 0);
+    }
   }
   
   @SuppressWarnings("deprecation")
   @Test
   public void test8DeleteNoteSuccess(){
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      ProjectLogger.log("error occurred", e);
-    }
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -285,17 +260,12 @@ public class NotesManagementActorTest {
     subject.tell(actorMessage, probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"),Response.class);
 
-    Assert.assertEquals("200", res.getResponseCode().getResponseCode());
+    Assert.assertEquals(200, res.getResponseCode().getResponseCode());
   }
   
   @SuppressWarnings("deprecation")
   @Test
   public void test9DeleteNoteException(){
-    try {
-      Thread.sleep(1000);
-    } catch (InterruptedException e) {
-      ProjectLogger.log("error occurred", e);
-    }
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -316,9 +286,9 @@ public class NotesManagementActorTest {
   @AfterClass
   public static void destroy(){
 
-    operation.deleteRecord(usernotesDB.getKeySpace(), usernotesDB.getTableName(), userId);
+    operation.deleteRecord(usernotesDB.getKeySpace(), usernotesDB.getTableName(), noteId);
 
     ElasticSearchUtil.removeData(EsIndex.sunbird.getIndexName(),EsType.user.getTypeName() , userId);
     ElasticSearchUtil.removeData(EsIndex.sunbird.getIndexName(),EsType.usernotes.getTypeName() , noteId);
-  }*/
+  }
 }

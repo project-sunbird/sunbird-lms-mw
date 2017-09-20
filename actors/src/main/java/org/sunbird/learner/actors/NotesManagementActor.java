@@ -27,10 +27,8 @@ import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
 
 /**
- * 
  * This class provides API's to create, update, get and delete
  * user note
- *
  */
 public class NotesManagementActor extends UntypedAbstractActor {
   
@@ -42,6 +40,9 @@ public class NotesManagementActor extends UntypedAbstractActor {
     backGroundActorRef = getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
    }
 
+  /**
+   * Receives the actor message and perform the operation for user note
+   */
   @Override
   public void onReceive(Object message) throws Throwable {
     if (message instanceof Request) {
@@ -131,7 +132,11 @@ public class NotesManagementActor extends UntypedAbstractActor {
       return;
     }
   }
-
+  
+  /**
+   * Method to update the tags, title and note details of the user note
+   * @param Request containing noteId and requestedBy
+   */
   @SuppressWarnings("unchecked")
   private void updateNote(Request actorMessage) {
     ProjectLogger.log("Update Note method call start");
@@ -173,7 +178,11 @@ public class NotesManagementActor extends UntypedAbstractActor {
       return;
     }
   }
-
+  
+  /**
+   * Method to get the note for the given note Id of the user
+   * @param Request containing noteId and requestedBy
+   */
   private void getNote(Request actorMessage) {
     ProjectLogger.log("Update Note method call start");
     try {
@@ -201,6 +210,10 @@ public class NotesManagementActor extends UntypedAbstractActor {
     }
   }
 
+  /**
+   * Method to search the note for the given request 
+   * @param Request containing search parameters
+   */
   private void searchNote(Request actorMessage) {
     ProjectLogger.log("Update Note method call start");
     try {
@@ -215,7 +228,12 @@ public class NotesManagementActor extends UntypedAbstractActor {
       return;
     }
   }
-
+ 
+  /**
+   * Method to get note data from ElasticSearch
+   * @param searchQueryMap
+   * @return Map<String, Object> - note data 
+   */
   @SuppressWarnings("unchecked")
   private Map<String, Object> getElasticSearchData(Map<String, Object> searchQueryMap) {
     Map<String, Object> filters = new HashMap<>();
@@ -248,6 +266,11 @@ public class NotesManagementActor extends UntypedAbstractActor {
     return result;
   }
   
+  /**
+   * Method to mark the note as deleted 
+   * [Soft Delete i.e to set the isDeleted field to true]
+   * @param actorMessage
+   */
   private void deleteNote(Request actorMessage) {
     ProjectLogger.log("Delete Note method call start");
     try {
@@ -281,6 +304,11 @@ public class NotesManagementActor extends UntypedAbstractActor {
     }
   }
   
+  /**
+   * Method to validate User based on userId from ElasticSearch Data
+   * @param userId
+   * @return true if user data is present in ES else false
+   */
   private Boolean validUser(String userId){
     Boolean result = false;
 
@@ -292,7 +320,11 @@ public class NotesManagementActor extends UntypedAbstractActor {
     }
     return result;
   }
-  
+  /**
+   * Method to validate note using noteId 
+   * @param noteId
+   * @return true if note exists in Cassandra else false
+   */
   private Boolean noteIdExists(String noteId){
     Boolean result = false;
       List<Map<String,Object>> list = getNoteRecordById(noteId);
@@ -302,6 +334,11 @@ public class NotesManagementActor extends UntypedAbstractActor {
     return result;
   }
 
+  /**
+   * Method to get Note details using note Id
+   * @param noteId
+   * @return Note data as List<Map<String, Object>>
+   */
   @SuppressWarnings("unchecked")
   private List<Map<String, Object>> getNoteRecordById(String noteId){
     List<Map<String, Object>> list = new ArrayList<Map<String,Object>>();

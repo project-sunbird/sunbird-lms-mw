@@ -34,6 +34,10 @@ import akka.actor.Props;
 import akka.testkit.TestActorRef;
 import akka.testkit.javadsl.TestKit;
 
+/**
+ * Test class to validate the note operations
+ *
+ */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class NotesManagementActorTest {
   
@@ -54,7 +58,9 @@ public class NotesManagementActorTest {
     Util.checkCassandraDbConnections();
     insertUserDataToES();
   }
-
+  /**
+   * Method to insert User data to ElasticSearch
+   */
   private static void insertUserDataToES(){
     Map<String , Object> userMap = new HashMap<>();
     userMap.put(JsonKey.USER_ID , userId);
@@ -65,6 +71,10 @@ public class NotesManagementActorTest {
     ElasticSearchUtil.createData(EsIndex.sunbird.getIndexName(),EsType.user.getTypeName() , userId , userMap);
   }
 
+  /**
+   * Method to test create Note when data is valid.
+   * Expected to create note without exception
+   */
   @SuppressWarnings("deprecation")
   @Test
   public void test1CreateNoteSuccess(){
@@ -94,6 +104,10 @@ public class NotesManagementActorTest {
     Assert.assertTrue(!ProjectUtil.isStringNullOREmpty(noteId));
   }
   
+  /**
+   * Method to test create Note when data is invalid.
+   * Expected to throw exception
+   */
   @SuppressWarnings("deprecation")
   @Test
   public void test2CreateNoteException(){
@@ -123,6 +137,10 @@ public class NotesManagementActorTest {
     }
   }
   
+  /**
+   * Method to test get Note when noteId is valid.
+   * Expected to get note details for the given noteId
+   */
   @SuppressWarnings({"deprecation", "unchecked"})
   @Test
   public void test3GetNoteSuccess(){
@@ -151,6 +169,10 @@ public class NotesManagementActorTest {
     }
   }
   
+  /**
+   * Method to test get Note when noteId is invalid.
+   * Expected to get exception
+   */
   @SuppressWarnings("deprecation")
   @Test
   public void test4GetNoteException(){
@@ -171,6 +193,10 @@ public class NotesManagementActorTest {
     }
   }
   
+  /**
+   * Method to test update Note when data is valid.
+   * Expected to update note with the given data
+   */
   @SuppressWarnings("deprecation")
   @Test
   public void test5UpdateNoteSuccess(){
@@ -193,6 +219,10 @@ public class NotesManagementActorTest {
     Assert.assertTrue(!ProjectUtil.isStringNullOREmpty(noteId));
   }
   
+  /**
+   * Method to test update Note when data is invalid.
+   * Expected to throw exception
+   */
   @SuppressWarnings("deprecation")
   @Test
   public void test6UpdateNoteException(){
@@ -216,6 +246,10 @@ public class NotesManagementActorTest {
     }
   }
   
+  /**
+   * Method to test search Note when data is valid.
+   * Expected to return note data for the search request
+   */
   @SuppressWarnings({"deprecation", "unchecked"})
   @Test
   public void test7SearchNoteSuccess(){
@@ -244,6 +278,10 @@ public class NotesManagementActorTest {
     }
   }
   
+  /**
+   * Method to test delete Note when data is valid.
+   * Expected to mark note as deleted and send success message
+   */
   @SuppressWarnings("deprecation")
   @Test
   public void test8DeleteNoteSuccess(){
@@ -263,6 +301,10 @@ public class NotesManagementActorTest {
     Assert.assertEquals(200, res.getResponseCode().getResponseCode());
   }
   
+  /**
+   * Method to test delete Note when data is invalid.
+   * Expected to throw exception
+   */
   @SuppressWarnings("deprecation")
   @Test
   public void test9DeleteNoteException(){
@@ -285,9 +327,9 @@ public class NotesManagementActorTest {
   
   @AfterClass
   public static void destroy(){
-
+    //Delete note data from cassandra
     operation.deleteRecord(usernotesDB.getKeySpace(), usernotesDB.getTableName(), noteId);
-
+    //Delete user and note data from ElasticSearch
     ElasticSearchUtil.removeData(EsIndex.sunbird.getIndexName(),EsType.user.getTypeName() , userId);
     ElasticSearchUtil.removeData(EsIndex.sunbird.getIndexName(),EsType.usernotes.getTypeName() , noteId);
   }

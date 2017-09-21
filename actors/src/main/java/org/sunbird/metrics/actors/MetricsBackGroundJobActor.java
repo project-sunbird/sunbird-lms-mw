@@ -79,6 +79,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
   }
 
   private void processData(Request actorMessage) {
+	ProjectLogger.log("In processData for metrics report");
     String operation = (String) actorMessage.getRequest().get(JsonKey.REQUEST);
     String requestId = (String) actorMessage.getRequest().get(JsonKey.REQUEST_ID);
     Request metricsRequest = new Request();
@@ -102,7 +103,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
   
   @SuppressWarnings("unchecked")
   private void sendMail(Request request) {
-
+    ProjectLogger.log("In sendMail for metrics Report");
     Map<String , Object> map = request.getRequest();
     String requestId = (String)map.get(JsonKey.REQUEST_ID);
 
@@ -159,7 +160,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
 
   @SuppressWarnings("unchecked")
   private void fileGenerationAndUpload(Request request) throws IOException {
-
+    ProjectLogger.log("In fileGeneration and Upload");
     Map<String , Object> map = request.getRequest();
     String requestId = (String)map.get(JsonKey.REQUEST_ID);
 

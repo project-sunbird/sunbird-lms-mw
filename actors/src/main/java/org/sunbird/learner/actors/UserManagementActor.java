@@ -271,6 +271,21 @@ public class UserManagementActor extends UntypedAbstractActor {
       sender().tell(exception, self());
       return;
     }
+    if(null != actorMessage.getRequest().get(JsonKey.FIELDS)){
+    	String requestFields = (String)actorMessage.getRequest().get(JsonKey.FIELDS);
+    	if(!ProjectUtil.isStringNullOREmpty(requestFields)){
+    		if(requestFields.contains(JsonKey.COMPLETENESS)){
+    			result.put(JsonKey.COMPLETENESS, 70);
+        	} 
+    		if(requestFields.contains(JsonKey.MISSING_FIELDS)){
+        		List<String> missingFields = new ArrayList<>();
+        		missingFields.add("skills");
+        		missingFields.add("education");
+        		result.put(JsonKey.MISSING_FIELDS, missingFields);
+        	}
+    	}
+    		
+    }
     Response response = new Response();
     if (null != result) {
       result.put(JsonKey.LAST_LOGIN_TIME, System.currentTimeMillis());

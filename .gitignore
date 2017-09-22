@@ -13,6 +13,8 @@ dist
 /.project
 /.settings
 /.target/
-.gitignore
 /bin/
 /logs
+.settings
+.classpath
+.project

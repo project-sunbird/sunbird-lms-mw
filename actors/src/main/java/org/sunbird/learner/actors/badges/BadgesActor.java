@@ -13,9 +13,11 @@ import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -189,8 +191,24 @@ public class BadgesActor  extends UntypedAbstractActor {
     }
    //check EKStep Util.
     try {
-       ProjectUtil.registertag("testtag1233", "{}", CourseBatchSchedulerUtil.headerMap);
+    	String body = "{\"request\":{\"filters\":{\"identifier\":\"test\"}}}";
+   	 Map<String, String> headers = new HashMap<>();
+   	 headers.put(JsonKey.AUTHORIZATION, System.getenv(JsonKey.AUTHORIZATION));
+        if (ProjectUtil.isStringNullOREmpty((String) headers.get(JsonKey.AUTHORIZATION))) {
+          headers.put(JsonKey.AUTHORIZATION, 
+              PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
+          headers.put("Content_Type", "application/json; charset=utf-8");
+        }
+   	 String response =
+   	          HttpUtil.sendPostRequest(PropertiesCache.getInstance()
+   	                  .getProperty(JsonKey.EKSTEP_BASE_URL)
+   	                  + PropertiesCache.getInstance()
+   	                      .getProperty(JsonKey.EKSTEP_CONTNET_SEARCH_URL), body, headers);
+   	 if(response.contains("OK")){ 
        responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE, false, null));
+   	 } else {
+   		responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE, true, null)); 
+   	 }
     } catch (Exception e){
       responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE, true, null));
       isallHealthy = false;

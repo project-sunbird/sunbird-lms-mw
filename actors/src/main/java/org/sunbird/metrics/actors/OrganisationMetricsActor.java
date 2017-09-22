@@ -139,6 +139,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   }
 
   private String createReportTrackingEntry(Request actorMessage) {
+	ProjectLogger.log("Create Report Tracking Entry");
     String requestedBy = (String) actorMessage.get(JsonKey.REQUESTED_BY);
     String orgId = (String) actorMessage.get(JsonKey.ORG_ID);
     String period = (String) actorMessage.get(JsonKey.PERIOD);

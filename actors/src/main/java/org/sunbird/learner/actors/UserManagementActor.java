@@ -270,6 +270,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
     Response response = new Response();
     if (null != result) {
+      result.put(JsonKey.LAST_LOGIN_TIME, System.currentTimeMillis());
       response.put(JsonKey.RESPONSE, result);
     } else {
       result = new HashMap<>();

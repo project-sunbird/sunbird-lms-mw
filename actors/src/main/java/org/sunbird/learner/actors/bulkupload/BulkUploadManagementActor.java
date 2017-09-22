@@ -26,6 +26,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
+import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
@@ -43,8 +44,10 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
   private static final String CSV_FILE_EXTENSION = ".csv";
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   Util.DbInfo  bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
-
   private ActorRef bulkUploadBackGroundJobActorRef;
+  int userDataSize = 0;
+  int orgDataSize = 0;
+  int batchDataSize = 0;
 
   public BulkUploadManagementActor() {
     bulkUploadBackGroundJobActorRef = getContext().actorOf(Props.create(BulkUploadBackGroundJobActor.class), 
@@ -166,10 +169,15 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
     
     List<String[]> batchList = parseCsvFile(file);
     if (null != batchList ) {
-        if (batchList.size() > 201) {
+     
+      if(null != PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_BATCH_DATA_SIZE)){
+        batchDataSize = (Integer.parseInt(PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_BATCH_DATA_SIZE)));
+        ProjectLogger.log("bulk upload batch data size read from config file "+batchDataSize);
+      }
+        if (batchDataSize > 0 && batchList.size() > batchDataSize) {
           throw  new ProjectCommonException(
               ResponseCode.dataSizeError.getErrorCode(),
-              ResponseCode.dataSizeError.getErrorMessage(),
+              ProjectUtil.formatMessage(ResponseCode.dataSizeError.getErrorMessage(),batchDataSize),
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
         if(!batchList.isEmpty()){
@@ -217,10 +225,14 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
       }
     }
     if (null != orgList ) {
-      if (orgList.size() > 201) {
+      if(null != PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_ORG_DATA_SIZE)){
+        orgDataSize = (Integer.parseInt(PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_ORG_DATA_SIZE)));
+        ProjectLogger.log("bulk upload org data size read from config file "+orgDataSize);
+      }
+      if (orgDataSize > 0 && orgList.size() > orgDataSize) {
         throw  new ProjectCommonException(
             ResponseCode.dataSizeError.getErrorCode(),
-            ResponseCode.dataSizeError.getErrorMessage(),
+            ProjectUtil.formatMessage(ResponseCode.dataSizeError.getErrorMessage(),orgDataSize),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
       if(!orgList.isEmpty()){
@@ -229,13 +241,13 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
       }else{
         throw  new ProjectCommonException(
             ResponseCode.dataSizeError.getErrorCode(),
-            ResponseCode.dataSizeError.getErrorMessage(),
+            ProjectUtil.formatMessage(ResponseCode.dataSizeError.getErrorMessage(),orgDataSize),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
     }else{
       throw new ProjectCommonException(
           ResponseCode.dataSizeError.getErrorCode(),
-          ResponseCode.dataSizeError.getErrorMessage(),
+          ProjectUtil.formatMessage(ResponseCode.dataSizeError.getErrorMessage(),orgDataSize),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     //save csv file to db
@@ -336,10 +348,15 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
     
     List<String[]> userList = parseCsvFile(file);
     if (null != userList ) {
-        if (userList.size() > 201) {
+      if(null != PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_USER_DATA_SIZE)){
+        userDataSize = (Integer.parseInt(PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_USER_DATA_SIZE)));
+        
+        ProjectLogger.log("bulk upload user data size read from config file "+userDataSize);
+      }
+        if (userDataSize > 0 && userList.size() > userDataSize) {
           throw  new ProjectCommonException(
               ResponseCode.dataSizeError.getErrorCode(),
-              ResponseCode.dataSizeError.getErrorMessage(),
+              ProjectUtil.formatMessage(ResponseCode.dataSizeError.getErrorMessage(),userDataSize),
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
         if(!userList.isEmpty()){

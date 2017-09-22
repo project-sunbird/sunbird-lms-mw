@@ -38,7 +38,7 @@ import org.sunbird.learner.util.Util.DbInfo;
  *
  * @author Amit Kumar
  */
-public class BulkUploadManagementActor extends UntypedAbstractActor {
+public class BulkUploadManagementActor extends UntypedAbstractActor { 
 
   private static final String CSV_FILE_EXTENSION = ".csv";
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -137,6 +137,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
   private void upload(Request actorMessage) throws IOException {
     String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.DATA);
+    req.put(JsonKey.CREATED_BY, req.get("X-Authenticated-Userid"));
     if(((String)req.get(JsonKey.OBJECT_TYPE)).equals(JsonKey.USER)){
       processBulkUserUpload(req,processId);
     }else if(((String)req.get(JsonKey.OBJECT_TYPE)).equals(JsonKey.ORGANISATION)){
@@ -357,7 +358,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     //save csv file to db
-    uploadCsvToDB(userList,processId,orgId,JsonKey.USER,(String)req.get(JsonKey.REQUESTED_BY),rootOrgId);
+    uploadCsvToDB(userList,processId,orgId,JsonKey.USER,(String)req.get(JsonKey.CREATED_BY),rootOrgId);
   }
 
   private void uploadCsvToDB(List<String[]> dataList, String processId, String orgId, String objectType, String requestedBy,String rootOrgId) {

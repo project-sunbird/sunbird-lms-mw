@@ -33,12 +33,14 @@ import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.Status;
 import org.sunbird.common.models.util.Slug;
+import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.BackgroundJobManager;
+import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.services.sso.SSOManager;
@@ -49,10 +51,11 @@ import org.sunbird.services.sso.SSOServiceFactory;
  *
  * @author Amit Kumar
  */
-public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
+public class BulkUploadBackGroundJobActor extends UntypedAbstractActor { 
 
   private ActorRef backGroundActorRef;
-  Util.DbInfo  bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
+  Util.DbInfo  bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB); 
+  private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
 
   public BulkUploadBackGroundJobActor() {
     backGroundActorRef = getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
@@ -93,7 +96,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         ProjectLogger.log("Exception occurred while converting json String to List in BulkUploadBackGroundJobActor : ", e);
       }
       if(((String)dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.USER)){
-        processUserInfo(jsonList,processId);
+        processUserInfo(jsonList,processId,(String)dataMap.get(JsonKey.UPLOADED_BY));
       }else if(((String)dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.ORGANISATION)){
         CopyOnWriteArrayList<Map<String,Object>> orgList = new CopyOnWriteArrayList<>(jsonList);
         processOrgInfo(orgList , dataMap);
@@ -617,7 +620,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   }
 
 
-  private void processUserInfo(List<Map<String, Object>> dataMapList, String processId) {
+  private void processUserInfo(List<Map<String, Object>> dataMapList, String processId, String updatedBy) {
     //update status from NEW to INProgress
     updateStatusForProcessing(processId);
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
@@ -678,7 +681,16 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             List<String> list = new ArrayList<>();
             list.add(JsonKey.PUBLIC);
             tempMap.put(JsonKey.ROLES, list);
-           
+            try {
+              UserUtility.encryptUserData(tempMap);
+            } catch (Exception ex) {
+              ProjectLogger.log("Exception occurred while bulk user upload in BulkUploadBackGroundJobActor during data encryption :", ex);
+              throw new ProjectCommonException(
+                  ResponseCode.userDataEncryptionError.getErrorCode(),
+                  ResponseCode.userDataEncryptionError.getErrorMessage(),
+                  ResponseCode.SERVER_ERROR.getResponseCode());
+            }
+            tempMap.put(JsonKey.CREATED_BY, updatedBy);
             try {
               response = cassandraOperation
                   .insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
@@ -702,7 +714,17 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             tempMap.remove(JsonKey.OPERATION);
             tempMap.remove(JsonKey.REGISTERED_ORG_ID);
             tempMap.remove(JsonKey.ROOT_ORG_ID);
+            tempMap.put(JsonKey.UPDATED_BY, updatedBy);
             tempMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+            try {
+              UserUtility.encryptUserData(tempMap);
+            } catch (Exception ex) {
+              ProjectLogger.log("Exception occurred while bulk user upload in BulkUploadBackGroundJobActor during data encryption :", ex);
+              throw new ProjectCommonException(
+                  ResponseCode.userDataEncryptionError.getErrorCode(),
+                  ResponseCode.userDataEncryptionError.getErrorMessage(),
+                  ResponseCode.SERVER_ERROR.getResponseCode());
+            }
             try {
               response = cassandraOperation
                   .updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
@@ -934,7 +956,16 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
    
     if (null != userMap.get(JsonKey.LOGIN_ID)) {
-      String loginId = (String) userMap.get(JsonKey.LOGIN_ID);
+      String loginId = "";
+      try {
+        loginId = encryptionService.encryptData((String) userMap.get(JsonKey.LOGIN_ID));
+      } catch (Exception ex) {
+            ProjectLogger.log("Exception occurred while bulk user upload in BulkUploadBackGroundJobActor during encryption of loginId:", ex);
+            throw new ProjectCommonException(
+            ResponseCode.userDataEncryptionError.getErrorCode(),
+            ResponseCode.userDataEncryptionError.getErrorMessage(),
+            ResponseCode.SERVER_ERROR.getResponseCode());
+      }
       Response resultFrUserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),
           usrDbInfo.getTableName(), JsonKey.LOGIN_ID, loginId);
       if (!(((List<Map<String, Object>>) resultFrUserName.get(JsonKey.RESPONSE)).isEmpty())) {

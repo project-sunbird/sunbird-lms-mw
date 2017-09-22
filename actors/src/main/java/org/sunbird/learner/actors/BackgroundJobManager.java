@@ -24,7 +24,10 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.datasecurity.DataMaskingService;
+import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
+import org.sunbird.common.models.util.datasecurity.impl.DefaultEncryptionServivceImpl;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
@@ -426,6 +429,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
     Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
+    EncryptionService service = new DefaultEncryptionServivceImpl();
     Response response = null;
     List<Map<String, Object>> list = null;
     try {
@@ -444,9 +448,10 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       list = null;
       try {
         ProjectLogger.log("collecting user address operation user Id : " + userId);
+        String encUserId = service.encryptData(userId);
         addrResponse = cassandraOperation
             .getRecordsByProperty(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(),
-                JsonKey.USER_ID, userId);
+                JsonKey.USER_ID, encUserId);
         list = (List<Map<String, Object>>) addrResponse.getResult().get(JsonKey.RESPONSE);
         ProjectLogger.log("collecting user address operation completed user Id : " + userId);
       } catch (Exception e) {
@@ -564,6 +569,16 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       ProjectLogger.log("saving started user to es userId : " + userId, LoggerEnum.INFO.name());
       Map<String, Object> map = ((List<Map<String, Object>>) response.getResult()
           .get(JsonKey.RESPONSE)).get(0);
+      
+      //save masked email and phone number
+      DataMaskingService maskingServiceervice = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(null);
+      if(!ProjectUtil.isStringNullOREmpty((String)map.get(JsonKey.PHONE))){
+        map.put(JsonKey.MASKED_PHONE, maskingServiceervice.maskPhone((String)map.get(JsonKey.PHONE)));
+      }
+      if(!ProjectUtil.isStringNullOREmpty((String)map.get(JsonKey.EMAIL))){
+        map.put(JsonKey.MASKED_EMAIL, maskingServiceervice.maskEmail((String)map.get(JsonKey.EMAIL)));
+      }
+      
       insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
           ProjectUtil.EsType.user.getTypeName(),
           userId, map);

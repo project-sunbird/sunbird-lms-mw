@@ -17,6 +17,7 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -24,6 +25,11 @@ import org.sunbird.learner.actors.BackgroundJobManager;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
+/**
+ * This class is used to sync the ElasticSearch and DB.
+ * @author Amit Kumar
+ *
+ */
 public class EsSyncActor extends UntypedAbstractActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -179,6 +185,15 @@ public class EsSyncActor extends UntypedAbstractActor {
     List<Map<String, Object>> badgesMap = getDetails(Util.dbInfoMap.get(JsonKey.USER_BADGES_DB),userId,JsonKey.RECEIVER_ID);
     badgesMap = BackgroundJobManager.removeDataFromMap(badgesMap);
     userMap.put(JsonKey.BADGES, badgesMap);
+    
+  //save masked email and phone number
+    DataMaskingService maskingServiceervice = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(null);
+    if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PHONE))){
+      userMap.put(JsonKey.MASKED_PHONE, maskingServiceervice.maskPhone((String)userMap.get(JsonKey.PHONE)));
+    }
+    if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.EMAIL))){
+      userMap.put(JsonKey.MASKED_EMAIL, maskingServiceervice.maskEmail((String)userMap.get(JsonKey.EMAIL)));
+    }
     ProjectLogger.log("fetching user data completed");
     return userMap;
   }

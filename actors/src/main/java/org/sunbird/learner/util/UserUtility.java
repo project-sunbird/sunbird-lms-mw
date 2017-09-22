@@ -1,0 +1,96 @@
+package org.sunbird.learner.util;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
+import org.sunbird.common.models.util.datasecurity.EncryptionService;
+import org.sunbird.common.models.util.datasecurity.impl.ServiceFactory;
+
+/**
+ * This class is for utility methods for encrypting user data.
+ * @author Amit Kumar
+ *
+ */
+public class UserUtility {
+  
+  private UserUtility(){}
+  private static List<String> userKeyToEncrypt = new ArrayList<>(Arrays.asList(JsonKey.EMAIL,JsonKey.PHONE,JsonKey.USERNAME,JsonKey.LOCATION,JsonKey.LOGIN_ID));
+  private static List<String> addressKeyToEncrypt = new ArrayList<>(Arrays.asList(JsonKey.ADDRESS_LINE1,JsonKey.ADDRESS_LINE2,JsonKey.CITY,JsonKey.STATE,
+      JsonKey.ZIPCODE,JsonKey.COUNTRY,JsonKey.USER_ID,JsonKey.UPDATED_BY,JsonKey.CREATED_BY));
+  static{
+    String userKey = PropertiesCache.getInstance().getProperty("userkey.encryption");
+    userKeyToEncrypt =  new ArrayList<>(Arrays.asList(userKey.split(",")));
+    String addressKey = PropertiesCache.getInstance().getProperty("addresskey.encryption");
+    addressKeyToEncrypt =  new ArrayList<>(Arrays.asList(addressKey.split(",")));
+  }
+  
+  
+  public static Map<String,Object> encryptUserData(Map<String,Object> userMap) throws Exception{
+    EncryptionService service = ServiceFactory.getEncryptionServiceInstance(null);
+    //Encrypt user basic info
+    for(String key : userKeyToEncrypt){
+      if(userMap.containsKey(key)){
+        userMap.put(key, service.encryptData((String)userMap.get(key)));
+      }
+    }
+    //Encrypt user address Info
+    if(userMap.containsKey(JsonKey.ADDRESS)){
+        List<Map<String, Object>> addressList = (List<Map<String, Object>>) userMap.get(JsonKey.ADDRESS);
+        for(Map<String,Object> map : addressList){
+          for(String key : addressKeyToEncrypt){
+            if(map.containsKey(key)){
+              map.put(key, service.encryptData((String)map.get(key)));
+            }
+          }
+        }
+      }
+    return userMap;
+  }
+  
+  public static Map<String,Object> decryptUserData(Map<String,Object> userMap) throws Exception{
+    DecryptionService service = ServiceFactory.getDecryptionServiceInstance(null);
+    //Decrypt user basic info
+    for(String key : userKeyToEncrypt){
+      if(userMap.containsKey(key)){
+        userMap.put(key, service.decryptData((String)userMap.get(key)));
+      }
+    }
+    
+    //Decrypt user address Info
+    if(userMap.containsKey(JsonKey.ADDRESS)){
+        List<Map<String, Object>> addressList = (List<Map<String, Object>>) userMap.get(JsonKey.ADDRESS);
+        for(Map<String,Object> map : addressList){
+          for(String key : addressKeyToEncrypt){
+            if(map.containsKey(key)){
+              map.put(key, service.decryptData((String)map.get(key)));
+            }
+          }
+        }
+      }
+    return userMap;
+  }
+  
+  public static Map<String,Object> encryptUserSearchFilterQueryData(Map<String,Object> map) throws Exception{
+    Map<String,Object> filterMap = (Map<String,Object>)map.get(JsonKey.FILTERS);
+    EncryptionService service = ServiceFactory.getEncryptionServiceInstance(null);
+    //Encrypt user basic info
+    for(String key : userKeyToEncrypt){
+      if(filterMap.containsKey(key)){
+        filterMap.put(key, service.encryptData((String)filterMap.get(key)));
+      }
+    }
+    //Encrypt user address Info
+    for(String key : addressKeyToEncrypt){
+      if((filterMap).containsKey((JsonKey.ADDRESS+"."+key))){
+        filterMap.put((JsonKey.ADDRESS+"."+key), service.encryptData((String)filterMap.get(JsonKey.ADDRESS+"."+key)));
+      }
+    }
+    
+    return filterMap;
+  }
+  
+}

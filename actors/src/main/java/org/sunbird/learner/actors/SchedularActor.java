@@ -11,6 +11,12 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.actors.bulkupload.BulkUploadBackGroundJobActor;
 
+
+/**
+ * 
+ * @author Amit Kumar
+ *
+ */
 public class SchedularActor extends UntypedAbstractActor {
 
   private ActorRef bulkUploadBackGroundJobActor;

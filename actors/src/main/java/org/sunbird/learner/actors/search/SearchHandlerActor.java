@@ -1,10 +1,10 @@
 package org.sunbird.learner.actors.search;
 
+import akka.actor.UntypedAbstractActor;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -16,9 +16,8 @@ import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
+import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
-
-import akka.actor.UntypedAbstractActor;
 
 /**
  * This class will handle search operation for all different type
@@ -27,7 +26,7 @@ import akka.actor.UntypedAbstractActor;
  *
  */
 
-public class SearchHandlerActor extends UntypedAbstractActor {
+public class SearchHandlerActor extends UntypedAbstractActor { 
 
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	@Override
@@ -44,13 +43,25 @@ public class SearchHandlerActor extends UntypedAbstractActor {
  	                  types = list.toArray(new String[list.size()]);
 	               }
 	              ((Map<String,Object>)searchQueryMap.get(JsonKey.FILTERS)).remove(JsonKey.OBJECT_TYPE);
+	              String filterObjectType = "";
+	              for(String type : types){
+    	              if(EsType.user.getTypeName().equalsIgnoreCase(type)){
+    	                filterObjectType = EsType.user.getTypeName();
+    	                UserUtility.encryptUserSearchFilterQueryData(searchQueryMap);
+    	              }
+	              }
 	              SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
-									for(String type : types){
-										if(type.equalsIgnoreCase(EsType.user.getTypeName())){
-											searchDto.setExcludedFields(Arrays.asList(ProjectUtil.excludes));
-										}
-									}
+                    if(filterObjectType.equalsIgnoreCase(EsType.user.getTypeName())){
+                        searchDto.setExcludedFields(Arrays.asList(ProjectUtil.excludes));
+                    }
                   Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
+                  //Encrypt the data
+                  if(EsType.user.getTypeName().equalsIgnoreCase(filterObjectType)){
+                    List<Map<String,Object>> userMapList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+                    for(Map<String,Object> userMap : userMapList){
+                      UserUtility.decryptUserData(userMap);
+                    }
+                  }
                   Response response = new Response();
                   if(result !=null) {
                   response.put(JsonKey.RESPONSE, result);

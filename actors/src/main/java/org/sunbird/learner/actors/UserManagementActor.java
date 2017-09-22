@@ -25,11 +25,13 @@ import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.Status;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.services.sso.SSOManager;
@@ -45,7 +47,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
-  
+  private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
   private ActorRef backGroundActorRef;
 
   public UserManagementActor() {
@@ -128,6 +130,16 @@ public class UserManagementActor extends UntypedAbstractActor {
   Map<String , Object> userMap=(Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
   if(null != userMap.get(JsonKey.LOGIN_ID)){
     String loginId = (String)userMap.get(JsonKey.LOGIN_ID);
+    try {
+      loginId = encryptionService.encryptData((String) userMap.get(JsonKey.LOGIN_ID));
+    } catch (Exception e) {
+      ProjectCommonException exception = new ProjectCommonException(
+          ResponseCode.userDataEncryptionError.getErrorCode(),
+          ResponseCode.userDataEncryptionError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
     Response resultFrLoginId = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),
         JsonKey.LOGIN_ID,loginId);
     if(!((List<Map<String,Object>>)resultFrLoginId.get(JsonKey.RESPONSE)).isEmpty()){
@@ -154,8 +166,20 @@ public class UserManagementActor extends UntypedAbstractActor {
         //user data id is not same.
         String requestedById = (String) actorMessage.getRequest().getOrDefault(JsonKey.REQUESTED_BY,"");
         ProjectLogger.log("requested By and requested user id == " + requestedById +"  " + (String)map.get(JsonKey.USER_ID));
-        if(!(((String)map.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById))){
-           result = removeUserPrivateField(result);
+        
+        try {
+          if(!(((String)map.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById))){
+            result = removeUserPrivateField(result);
+         } else {
+           UserUtility.decryptUserData(result);
+         }
+        } catch (Exception e) {
+          ProjectCommonException exception = new ProjectCommonException(
+              ResponseCode.userDataEncryptionError.getErrorCode(),
+              ResponseCode.userDataEncryptionError.getErrorMessage(),
+              ResponseCode.SERVER_ERROR.getResponseCode());
+          sender().tell(exception, self());
+          return;
         }
         Response response = new Response();
         if (null != result) {
@@ -225,12 +249,24 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
 
     fetchRootAndRegisterOrganisation(result);
+    
     //having check for removing private filed from user , if call user and response 
     //user data id is not same.
     String requestedById = (String) actorMessage.getRequest().getOrDefault(JsonKey.REQUESTED_BY,"");
     ProjectLogger.log("requested By and requested user id == " + requestedById +"  " + (String) userMap.get(JsonKey.USER_ID));
-    if(!((String) userMap.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById)){
-       result = removeUserPrivateField(result);
+    try {
+      if(!((String) userMap.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById)){
+        result = removeUserPrivateField(result);
+     } else {
+       UserUtility.decryptUserData(result);
+     }
+    } catch (Exception e) {
+      ProjectCommonException exception = new ProjectCommonException(
+          ResponseCode.userDataEncryptionError.getErrorCode(),
+          ResponseCode.userDataEncryptionError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
     }
     Response response = new Response();
     if (null != result) {
@@ -426,6 +462,9 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
+    //remove these fields from req
+    userMap.remove(JsonKey.MASKED_EMAIL);
+    userMap.remove(JsonKey.MASKED_PHONE);
     if (null != userMap.get(JsonKey.USER_ID)) {
       userMap.put(JsonKey.ID, userMap.get(JsonKey.USER_ID));
     }else{
@@ -451,14 +490,25 @@ public class UserManagementActor extends UntypedAbstractActor {
     userMap.remove(JsonKey.USERNAME);
     userMap.remove(JsonKey.REGISTERED_ORG_ID);
     userMap.remove(JsonKey.ROOT_ORG_ID);
-    userMap.remove(JsonKey.LOGIN_ID);   
+    userMap.remove(JsonKey.LOGIN_ID); 
+    
     boolean isSSOEnabled = Boolean
         .parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
     if (isSSOEnabled) {
       UpdateKeyCloakUserBase(userMap);
     }
     userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-    userMap.put(JsonKey.UPDATED_BY, req.get(userMap.get(JsonKey.REQUESTED_BY)));
+    userMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+    try {
+      UserUtility.encryptUserData(userMap);
+    } catch (Exception e1) {
+      ProjectCommonException exception = new ProjectCommonException(
+          ResponseCode.userDataEncryptionError.getErrorCode(),
+          ResponseCode.userDataEncryptionError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
     requestMap = new HashMap<>();
     requestMap.putAll(userMap);
     removeUnwanted(requestMap);
@@ -555,14 +605,27 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   private void processUserAddress(Map<String, Object> reqMap, Map<String, Object> req, 
       Map<String, Object> userMap, DbInfo addrDbInfo) {
+    String encUserId = "";
+    String encreqById = "";
+    try {
+      encUserId = encryptionService.encryptData((String)userMap.get(JsonKey.ID));
+      encreqById = encryptionService.encryptData((String)req.get(JsonKey.REQUESTED_BY));
+    } catch (Exception e1) {
+      ProjectCommonException exception = new ProjectCommonException(
+          ResponseCode.userDataEncryptionError.getErrorCode(),
+          ResponseCode.userDataEncryptionError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
     if (!reqMap.containsKey(JsonKey.ID)) {
       reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
       reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-      reqMap.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
-      reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+      reqMap.put(JsonKey.CREATED_BY, encreqById);
+      reqMap.put(JsonKey.USER_ID, encUserId);
     } else {
       reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-      reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+      reqMap.put(JsonKey.UPDATED_BY, encreqById);
     }
     try {
       cassandraOperation
@@ -764,18 +827,30 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
-
+    userMap.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
+    //remove these fields from req
+    userMap.remove(JsonKey.MASKED_EMAIL);
+    userMap.remove(JsonKey.MASKED_PHONE);
     boolean isSSOEnabled = Boolean  
         .parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
     if (userMap.containsKey(JsonKey.PROVIDER) && !ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PROVIDER))) {
-      userMap.put(JsonKey.LOGIN_ID, 
-          (String)userMap.get(JsonKey.USERNAME)+"@"+(String)userMap.get(JsonKey.PROVIDER));
+      userMap.put(JsonKey.LOGIN_ID,(String)userMap.get(JsonKey.USERNAME)+"@"+(String)userMap.get(JsonKey.PROVIDER));
     } else {
-      userMap.put(JsonKey.LOGIN_ID,userMap.get(JsonKey.USERNAME));
+      userMap.put(JsonKey.LOGIN_ID,(String)userMap.get(JsonKey.USERNAME));
     }
    
     if (null != userMap.get(JsonKey.LOGIN_ID)) {
-      String loginId = (String) userMap.get(JsonKey.LOGIN_ID);
+      String loginId = "";
+      try {
+        loginId = encryptionService.encryptData((String) userMap.get(JsonKey.LOGIN_ID));
+      } catch (Exception e) {
+        ProjectCommonException exception = new ProjectCommonException(
+            ResponseCode.userDataEncryptionError.getErrorCode(),
+            ResponseCode.userDataEncryptionError.getErrorMessage(),
+            ResponseCode.SERVER_ERROR.getResponseCode());
+        sender().tell(exception, self());
+        return;
+      }
       Response resultFrUserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),
           usrDbInfo.getTableName(), JsonKey.LOGIN_ID, loginId);
       if (!(((List<Map<String, Object>>) resultFrUserName.get(JsonKey.RESPONSE)).isEmpty())) {
@@ -912,7 +987,16 @@ public class UserManagementActor extends UntypedAbstractActor {
       userMap
           .put(JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
     }
-    
+    try {
+      UserUtility.encryptUserData(userMap);
+    } catch (Exception e1) {
+      ProjectCommonException exception = new ProjectCommonException(
+          ResponseCode.userDataEncryptionError.getErrorCode(),
+          ResponseCode.userDataEncryptionError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
     requestMap = new HashMap<>();
     requestMap.putAll(userMap);
     removeUnwanted(requestMap);
@@ -937,8 +1021,21 @@ public class UserManagementActor extends UntypedAbstractActor {
           Map<String, Object> reqMap = reqList.get(i);
           reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i + 1));
           reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-          reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
-          reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+          String encUserId = "";
+          String encCreatedById = "";
+              try {
+                encUserId = encryptionService.encryptData((String)userMap.get(JsonKey.ID));
+                encCreatedById = encryptionService.encryptData((String)userMap.get(JsonKey.CREATED_BY));
+              } catch (Exception e) {
+                ProjectCommonException exception = new ProjectCommonException(
+                    ResponseCode.userDataEncryptionError.getErrorCode(),
+                    ResponseCode.userDataEncryptionError.getErrorMessage(),
+                    ResponseCode.SERVER_ERROR.getResponseCode());
+                sender().tell(exception, self());
+                return;
+              }
+          reqMap.put(JsonKey.CREATED_BY, encCreatedById);
+          reqMap.put(JsonKey.USER_ID, encUserId);
           try {
             cassandraOperation
                 .insertRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), reqMap);

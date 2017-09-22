@@ -183,6 +183,9 @@ public class UserManagementActor extends UntypedAbstractActor {
         }
         Response response = new Response();
         if (null != result) {
+        //remove email and phone no from response
+          result.remove(JsonKey.EMAIL);
+          result.remove(JsonKey.PHONE);
           response.put(JsonKey.RESPONSE, result);
         } else {
           result = new HashMap<>();
@@ -271,6 +274,9 @@ public class UserManagementActor extends UntypedAbstractActor {
     Response response = new Response();
     if (null != result) {
       result.put(JsonKey.LAST_LOGIN_TIME, System.currentTimeMillis());
+      //remove email and phone no from response
+      result.remove(JsonKey.EMAIL);
+      result.remove(JsonKey.PHONE);
       response.put(JsonKey.RESPONSE, result);
     } else {
       result = new HashMap<>();

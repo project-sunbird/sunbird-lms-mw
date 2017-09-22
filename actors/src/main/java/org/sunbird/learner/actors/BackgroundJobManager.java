@@ -25,6 +25,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.DataMaskingService;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.models.util.datasecurity.impl.DefaultEncryptionServivceImpl;
@@ -429,7 +430,8 @@ public class BackgroundJobManager extends UntypedAbstractActor {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
     Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
-    EncryptionService service = new DefaultEncryptionServivceImpl();
+    EncryptionService service = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
+    DecryptionService decService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(null);
     Response response = null;
     List<Map<String, Object>> list = null;
     try {
@@ -571,12 +573,16 @@ public class BackgroundJobManager extends UntypedAbstractActor {
           .get(JsonKey.RESPONSE)).get(0);
       
       //save masked email and phone number
-      DataMaskingService maskingServiceervice = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(null);
-      if(!ProjectUtil.isStringNullOREmpty((String)map.get(JsonKey.PHONE))){
-        map.put(JsonKey.MASKED_PHONE, maskingServiceervice.maskPhone((String)map.get(JsonKey.PHONE)));
+      DataMaskingService maskingService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(null);
+     String phone = (String)map.get(JsonKey.PHONE);
+     String email = (String)map.get(JsonKey.EMAIL);
+      if(!ProjectUtil.isStringNullOREmpty(phone)){
+          phone = decService.decryptData(phone);
+        map.put(JsonKey.MASKED_PHONE, maskingService.maskPhone(phone));
       }
-      if(!ProjectUtil.isStringNullOREmpty((String)map.get(JsonKey.EMAIL))){
-        map.put(JsonKey.MASKED_EMAIL, maskingServiceervice.maskEmail((String)map.get(JsonKey.EMAIL)));
+      if(!ProjectUtil.isStringNullOREmpty(email)){
+          email = decService.decryptData(email);
+        map.put(JsonKey.MASKED_EMAIL, maskingService.maskEmail(email));
       }
       
       insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),

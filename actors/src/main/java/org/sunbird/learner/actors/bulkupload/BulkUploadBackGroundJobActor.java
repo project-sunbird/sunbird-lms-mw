@@ -1034,6 +1034,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
 
   private String validateUser(Map<String,Object> map) {
+    if(!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.PHONE))){
+      validatePhoneNo( (String) map.get(JsonKey.PHONE) );
+    }
     if (map.get(JsonKey.EMAIL) == null || (ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.EMAIL)))) {
       return ResponseCode.emailRequired.getErrorMessage();
       }
@@ -1091,6 +1094,20 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     return JsonKey.SUCCESS;
   }
 
+  private static boolean validatePhoneNo(String phone) {
+    if(phone.contains("+")){
+      phone = phone.replace("+", "");
+    }
+    try{
+      Long.parseLong(phone);
+    }catch(Exception ex){
+      ProjectLogger.log(phone +"this phone no. is not a valid one.");
+      throw new ProjectCommonException(ResponseCode.phoneNoFormatError.getErrorCode(),
+          ResponseCode.phoneNoFormatError.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    return true;
+  }
+  
   private String generatePrimaryKey(Map<String, Object> req) {
     String userId = (String) req.get(JsonKey.USER_ID);
     String courseId = (String) req.get(JsonKey.COURSE_ID);

@@ -18,6 +18,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.DataMaskingService;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -187,13 +188,18 @@ public class EsSyncActor extends UntypedAbstractActor {
     userMap.put(JsonKey.BADGES, badgesMap);
     
   //save masked email and phone number
-    DataMaskingService maskingServiceervice = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(null);
-    if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PHONE))){
-      userMap.put(JsonKey.MASKED_PHONE, maskingServiceervice.maskPhone((String)userMap.get(JsonKey.PHONE)));
-    }
-    if(!ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.EMAIL))){
-      userMap.put(JsonKey.MASKED_EMAIL, maskingServiceervice.maskEmail((String)userMap.get(JsonKey.EMAIL)));
-    }
+    DataMaskingService maskingService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(null);
+    DecryptionService decService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(null);
+    String phone = (String)userMap.get(JsonKey.PHONE);
+    String email = (String)userMap.get(JsonKey.EMAIL);
+     if(!ProjectUtil.isStringNullOREmpty(phone)){
+         phone = decService.decryptData(phone);
+         userMap.put(JsonKey.MASKED_PHONE, maskingService.maskPhone(phone));
+     }
+     if(!ProjectUtil.isStringNullOREmpty(email)){
+         email = decService.decryptData(email);
+         userMap.put(JsonKey.MASKED_EMAIL, maskingService.maskEmail(email));
+     }
     ProjectLogger.log("fetching user data completed");
     return userMap;
   }

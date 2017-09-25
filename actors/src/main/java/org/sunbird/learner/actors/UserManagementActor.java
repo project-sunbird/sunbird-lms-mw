@@ -1796,7 +1796,7 @@ public class UserManagementActor extends UntypedAbstractActor {
   private void blockUser(Request actorMessage) {
 
     ProjectLogger.log("Method call  "+"deleteUser");
-    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB); 
     Map<String , Object> userMap=(Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
     if(ProjectUtil.isNull(userMap.get(JsonKey.USER_ID))) {
       ProjectCommonException exception = new ProjectCommonException(

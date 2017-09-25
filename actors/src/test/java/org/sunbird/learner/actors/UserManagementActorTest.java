@@ -26,6 +26,7 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
@@ -45,6 +46,7 @@ public class UserManagementActorTest {
   static PropertiesCache cach = PropertiesCache.getInstance();
   final static Props props = Props.create(UserManagementActor.class);
   final static Props orgProps = Props.create(OrganisationManagementActor.class);
+  EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
   static Util.DbInfo userManagementDB = null;
   static Util.DbInfo addressDB = null;
   static Util.DbInfo jobDB = null;
@@ -60,9 +62,11 @@ public class UserManagementActorTest {
   private static String userAddrIdToDelete = "";
   private static String userJobIdWithAddress = "";
   private static String userEduIdWithAddress = "";
+  private static String encryption = "";
 
   @BeforeClass
   public static void setUp() {
+    encryption = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_ENCRYPTION);
     system = ActorSystem.create("system");
     Util.checkCassandraDbConnections();
     userManagementDB = Util.dbInfoMap.get(JsonKey.USER_DB);
@@ -274,8 +278,17 @@ public class UserManagementActorTest {
   
   @Test
   public void TestCgetUserAddressInfo() {
+    String encUserId = userId;
+    if("ON".equalsIgnoreCase(encryption)){
+      try {
+        encUserId = encryptionService.encryptData(encUserId);
+      } catch (Exception e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    }
     Response response = operation.getRecordsByProperty(addressDB.getKeySpace(),
-        addressDB.getTableName(), JsonKey.USER_ID, userId);
+        addressDB.getTableName(), JsonKey.USER_ID, encUserId);
     Map<String, Object> result = (Map<String, Object>) (response.getResult());
     List<Map<String, Object>> addressList =  (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
     userAddrIdToDelete = (String) ((Map<String,Object>)addressList.get(0)).get(JsonKey.ID);
@@ -284,6 +297,17 @@ public class UserManagementActorTest {
   
   @Test
   public void TestCgetUserAddressInfoAndDelete() {
+    
+    String encUserId = userId;
+    if("ON".equalsIgnoreCase(encryption)){
+      try {
+        encUserId = encryptionService.encryptData(encUserId);
+      } catch (Exception e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    }
+    
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -309,7 +333,7 @@ public class UserManagementActorTest {
       e.printStackTrace();
     }
     Response response = operation.getRecordsByProperty(addressDB.getKeySpace(),
-        addressDB.getTableName(), JsonKey.USER_ID, userId);
+        addressDB.getTableName(), JsonKey.USER_ID, encUserId);
     Map<String, Object> result = (Map<String, Object>) (response.getResult());
     List<Map<String, Object>> addressList =  (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
     assertEquals(addressList.size(), 1);
@@ -317,13 +341,24 @@ public class UserManagementActorTest {
 
   @Test
   public void TestDUpdatedUserAddressInfo() {
+    String addrLine1 = "addr line1";
+    String encUserId = userId;
+    if("ON".equalsIgnoreCase(encryption)){
+      try {
+        addrLine1 = encryptionService.encryptData("addr line1");
+        encUserId = encryptionService.encryptData(userId);
+      } catch (Exception e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    }
     Response response = operation.getRecordsByProperty(addressDB.getKeySpace(),
-        addressDB.getTableName(), JsonKey.USER_ID, userId);
+        addressDB.getTableName(), JsonKey.USER_ID, encUserId);
     Map<String, Object> result = (Map<String, Object>) (response.getResult());
-    String name =
+    String addrLine =
         (String) ((Map<String, Object>) ((((List<Map<String, Object>>) result.get(JsonKey.RESPONSE))
             .get(0)))).get(JsonKey.ADDRESS_LINE1);
-    assertEquals("addr line1", name);
+    assertEquals(addrLine1, addrLine);
   }
 
   @Test
@@ -495,13 +530,25 @@ public class UserManagementActorTest {
 
   @Test
   public void TestJGetUserInfoByLoginId() {
+    
+    String encLoginId = "sunbird_dummy_user_1818@BLR";
+    String enccity = "new city";
+    if("ON".equalsIgnoreCase(encryption)){
+      try {
+        enccity = encryptionService.encryptData("new city");
+      } catch (Exception e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    }
+    
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.LOGIN_ID, "sunbird_dummy_user_1818@BLR");
+    innerMap.put(JsonKey.LOGIN_ID, encLoginId);
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
@@ -510,7 +557,7 @@ public class UserManagementActorTest {
     Response userResponse = probe.expectMsgClass(duration("200 second"), Response.class);
     Map<String, Object> result = (Map<String, Object>) (userResponse.getResult());
     Map<String, Object> response = (Map<String, Object>) result.get(JsonKey.RESPONSE);
-    assertEquals("new city",
+    assertEquals(enccity,
         ((List<Map<String, Object>>) response.get(JsonKey.ADDRESS)).get(0).get(JsonKey.CITY));
 
   }

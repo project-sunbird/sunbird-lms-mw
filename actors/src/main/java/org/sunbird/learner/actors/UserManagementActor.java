@@ -186,6 +186,23 @@ public class UserManagementActor extends UntypedAbstractActor {
         //remove email and phone no from response
           result.remove(JsonKey.EMAIL);
           result.remove(JsonKey.PHONE);
+          if(null != actorMessage.getRequest().get(JsonKey.FIELDS)){
+            List<String> requestFields = (List)actorMessage.getRequest().get(JsonKey.FIELDS);
+            if (requestFields != null){
+                if(!requestFields.contains(JsonKey.COMPLETENESS)){
+                    result.remove(JsonKey.COMPLETENESS);
+                } 
+                if(!requestFields.contains(JsonKey.MISSING_FIELDS)){
+                    result.remove(JsonKey.MISSING_FIELDS);
+                }
+            } else {
+              result.remove(JsonKey.MISSING_FIELDS);
+              result.remove(JsonKey.COMPLETENESS);
+            }   
+        }else {
+          result.remove(JsonKey.MISSING_FIELDS);
+          result.remove(JsonKey.COMPLETENESS);
+        }
           response.put(JsonKey.RESPONSE, result);
         } else {
           result = new HashMap<>();
@@ -274,17 +291,17 @@ public class UserManagementActor extends UntypedAbstractActor {
     if(null != actorMessage.getRequest().get(JsonKey.FIELDS)){
     	String requestFields = (String)actorMessage.getRequest().get(JsonKey.FIELDS);
     	if(!ProjectUtil.isStringNullOREmpty(requestFields)){
-    		if(requestFields.contains(JsonKey.COMPLETENESS)){
-    			result.put(JsonKey.COMPLETENESS, 70);
+    		if(!requestFields.contains(JsonKey.COMPLETENESS)){
+    			result.remove(JsonKey.COMPLETENESS);
         	} 
-    		if(requestFields.contains(JsonKey.MISSING_FIELDS)){
-        		List<String> missingFields = new ArrayList<>();
-        		missingFields.add("skills");
-        		missingFields.add("education");
-        		result.put(JsonKey.MISSING_FIELDS, missingFields);
+    		if(!requestFields.contains(JsonKey.MISSING_FIELDS)){
+        		result.remove(JsonKey.MISSING_FIELDS);
         	}
     	}
     		
+    }else {
+      result.remove(JsonKey.MISSING_FIELDS);
+      result.remove(JsonKey.COMPLETENESS);
     }
     Response response = new Response();
     if (null != result) {

@@ -21,6 +21,8 @@ import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.services.ProfileCompletenessService;
+import org.sunbird.common.services.impl.ProfileCompletenessFactory;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.BackgroundJobManager;
 import org.sunbird.learner.util.Util;
@@ -200,6 +202,10 @@ public class EsSyncActor extends UntypedAbstractActor {
          email = decService.decryptData(email);
          userMap.put(JsonKey.MASKED_EMAIL, maskingService.maskEmail(email));
      }
+   //compute profile completeness and error field.  
+    ProfileCompletenessService service = ProfileCompletenessFactory.getInstance();
+    Map<String,Object> profileResponse = service.computeProfile(userMap);
+    userMap.putAll(profileResponse);
     ProjectLogger.log("fetching user data completed");
     return userMap;
   }

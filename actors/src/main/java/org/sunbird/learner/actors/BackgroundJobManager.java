@@ -30,6 +30,8 @@ import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.models.util.datasecurity.impl.DefaultEncryptionServivceImpl;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.services.ProfileCompletenessService;
+import org.sunbird.common.services.impl.ProfileCompletenessFactory;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.Util;
@@ -576,13 +578,15 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       DataMaskingService maskingService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(null);
      String phone = (String)map.get(JsonKey.PHONE);
      String email = (String)map.get(JsonKey.EMAIL);
+     
+     
       if(!ProjectUtil.isStringNullOREmpty(phone)){
-          phone = decService.decryptData(phone);
-        map.put(JsonKey.MASKED_PHONE, maskingService.maskPhone(phone));
+        map.put(JsonKey.ENC_PHONE, phone);
+        map.put(JsonKey.PHONE, maskingService.maskPhone(decService.decryptData(phone)));
       }
       if(!ProjectUtil.isStringNullOREmpty(email)){
-          email = decService.decryptData(email);
-        map.put(JsonKey.MASKED_EMAIL, maskingService.maskEmail(email));
+        map.put(JsonKey.ENC_EMAIL, email);
+        map.put(JsonKey.EMAIL, maskingService.maskEmail(decService.decryptData(email)));
       }
       
       insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
@@ -754,6 +758,10 @@ public class BackgroundJobManager extends UntypedAbstractActor {
   private boolean insertDataToElastic(String index, String type, String identifier,
       Map<String, Object> data) {
     ProjectLogger.log("making call to ES for type ,identifier ,data==" + type +" " + identifier + data);
+    //now calculate profile completeness and error filed and store it in ES
+    ProfileCompletenessService service = ProfileCompletenessFactory.getInstance();
+    Map<String,Object> responsemap = service.computeProfile(data);
+    data.putAll(responsemap);
     String response = ElasticSearchUtil.createData(index, type, identifier, data);
     ProjectLogger.log("Getting ES save response for type , identiofier==" +type+"  " + identifier + "  "+ response);
     if (!ProjectUtil.isStringNullOREmpty(response)) {

@@ -28,7 +28,7 @@ public class SchedularActor extends UntypedAbstractActor {
   public void onReceive(Object message) throws Throwable {
     if (message instanceof Request) {
       try {
-        ProjectLogger.log("BulkUploadBackGroundJobActor onReceive called");
+        ProjectLogger.log("SchedularActor onReceive called");
         Request actorMessage = (Request) message;
         if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.SCHEDULE_BULK_UPLOAD.getValue())) {
           schedule(actorMessage);

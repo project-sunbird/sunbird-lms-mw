@@ -21,6 +21,8 @@ import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.services.ProfileCompletenessService;
+import org.sunbird.common.services.impl.ProfileCompletenessFactory;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.BackgroundJobManager;
 import org.sunbird.learner.util.Util;
@@ -193,13 +195,17 @@ public class EsSyncActor extends UntypedAbstractActor {
     String phone = (String)userMap.get(JsonKey.PHONE);
     String email = (String)userMap.get(JsonKey.EMAIL);
      if(!ProjectUtil.isStringNullOREmpty(phone)){
-         phone = decService.decryptData(phone);
-         userMap.put(JsonKey.MASKED_PHONE, maskingService.maskPhone(phone));
+         userMap.put(JsonKey.ENC_PHONE, phone);
+         userMap.put(JsonKey.PHONE, maskingService.maskPhone(decService.decryptData(phone)));
      }
      if(!ProjectUtil.isStringNullOREmpty(email)){
-         email = decService.decryptData(email);
-         userMap.put(JsonKey.MASKED_EMAIL, maskingService.maskEmail(email));
+         userMap.put(JsonKey.ENC_EMAIL, email);
+         userMap.put(JsonKey.EMAIL, maskingService.maskEmail(decService.decryptData(email)));
      }
+   //compute profile completeness and error field.  
+    ProfileCompletenessService service = ProfileCompletenessFactory.getInstance();
+    Map<String,Object> profileResponse = service.computeProfile(userMap);
+    userMap.putAll(profileResponse);
     ProjectLogger.log("fetching user data completed");
     return userMap;
   }

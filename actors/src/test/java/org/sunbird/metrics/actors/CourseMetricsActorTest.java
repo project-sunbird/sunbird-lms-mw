@@ -153,7 +153,7 @@ public class CourseMetricsActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException e = probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertEquals("UNAUTHORISE_USER", e.getCode());
+    Assert.assertEquals("UNAUTHORIZE_USER", e.getCode());
   }
   
   @SuppressWarnings("deprecation")

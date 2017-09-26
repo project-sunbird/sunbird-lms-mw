@@ -160,7 +160,7 @@ public class UserManagementActorTest {
     reqObj.setRequest(request);
 
     subject.tell(reqObj, probe.getRef());
-    Response response = probe.expectMsgClass(duration("200 second"), Response.class);
+    Response response = probe.expectMsgClass(duration("2000 second"), Response.class);
     userId = (String) response.get(JsonKey.USER_ID);
     innerMap.put(JsonKey.ID, userId);
     try {

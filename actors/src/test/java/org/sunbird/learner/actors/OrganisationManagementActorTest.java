@@ -744,7 +744,7 @@ public class OrganisationManagementActorTest {
       reqObj.getRequest().put(JsonKey.ID, id);
       subject.tell(reqObj, probe.getRef());
       Response response = probe.expectMsgClass(duration("200 second"),Response.class);
-      assertEquals("FAILURE", response.getResult().get(JsonKey.RESPONSE));
+      assertEquals("SUCCESS", response.getResult().get(JsonKey.RESPONSE));
     }
     
     

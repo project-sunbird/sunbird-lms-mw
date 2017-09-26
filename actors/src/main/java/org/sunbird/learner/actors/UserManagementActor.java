@@ -166,12 +166,11 @@ public class UserManagementActor extends UntypedAbstractActor {
         //user data id is not same.
         String requestedById = (String) actorMessage.getRequest().getOrDefault(JsonKey.REQUESTED_BY,"");
         ProjectLogger.log("requested By and requested user id == " + requestedById +"  " + (String)map.get(JsonKey.USER_ID));
-        
+      //Decrypt user data
+        UserUtility.decryptUserDataFrmES(result);
         try {
           if(!(((String)map.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById))){
             result = removeUserPrivateField(result);
-         } else {
-           UserUtility.decryptUserDataFrmES(result);
          }
         } catch (Exception e) {
           ProjectCommonException exception = new ProjectCommonException(
@@ -181,6 +180,7 @@ public class UserManagementActor extends UntypedAbstractActor {
           sender().tell(exception, self());
           return;
         }
+        
         Response response = new Response();
         if (null != result) {
         //remove email and phone no from response
@@ -269,7 +269,8 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
 
     fetchRootAndRegisterOrganisation(result);
-    
+    //Decrypt user data
+    UserUtility.decryptUserDataFrmES(result);
     //having check for removing private filed from user , if call user and response 
     //user data id is not same.
     String requestedById = (String) actorMessage.getRequest().getOrDefault(JsonKey.REQUESTED_BY,"");
@@ -277,8 +278,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     try {
       if(!((String) userMap.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById)){
         result = removeUserPrivateField(result);
-     } else {
-       UserUtility.decryptUserDataFrmES(result);
      }
     } catch (Exception e) {
       ProjectCommonException exception = new ProjectCommonException(

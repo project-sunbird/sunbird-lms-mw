@@ -129,7 +129,7 @@ public class UserUtility {
     Map<String,Object> filterMap = (Map<String,Object>)map.get(JsonKey.FILTERS);
     EncryptionService service = ServiceFactory.getEncryptionServiceInstance(null);
     //Encrypt user basic info
-    for(String key : userKeyToEncrypt){
+    for(String key : userKeyToDecrypt){
       if(filterMap.containsKey(key)){
         filterMap.put(key, service.encryptData((String)filterMap.get(key)));
       }

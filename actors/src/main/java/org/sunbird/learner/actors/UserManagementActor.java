@@ -203,7 +203,6 @@ public class UserManagementActor extends UntypedAbstractActor {
           result.remove(JsonKey.MISSING_FIELDS);
           result.remove(JsonKey.COMPLETENESS);
         }
->>>>>>> 93e9a4948f4a47859b322701aa4caebc29f6f76b
           response.put(JsonKey.RESPONSE, result);
         } else {
           result = new HashMap<>();

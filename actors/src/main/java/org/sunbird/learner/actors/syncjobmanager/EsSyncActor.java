@@ -193,12 +193,12 @@ public class EsSyncActor extends UntypedAbstractActor {
     String phone = (String)userMap.get(JsonKey.PHONE);
     String email = (String)userMap.get(JsonKey.EMAIL);
      if(!ProjectUtil.isStringNullOREmpty(phone)){
-         phone = decService.decryptData(phone);
-         userMap.put(JsonKey.MASKED_PHONE, maskingService.maskPhone(phone));
+         userMap.put(JsonKey.ENC_PHONE, phone);
+         userMap.put(JsonKey.PHONE, maskingService.maskPhone(decService.decryptData(phone)));
      }
      if(!ProjectUtil.isStringNullOREmpty(email)){
-         email = decService.decryptData(email);
-         userMap.put(JsonKey.MASKED_EMAIL, maskingService.maskEmail(email));
+         userMap.put(JsonKey.ENC_EMAIL, email);
+         userMap.put(JsonKey.EMAIL, maskingService.maskEmail(decService.decryptData(email)));
      }
     ProjectLogger.log("fetching user data completed");
     return userMap;

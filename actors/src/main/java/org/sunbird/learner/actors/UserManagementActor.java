@@ -171,7 +171,7 @@ public class UserManagementActor extends UntypedAbstractActor {
           if(!(((String)map.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById))){
             result = removeUserPrivateField(result);
          } else {
-           UserUtility.decryptUserData(result);
+           UserUtility.decryptUserDataFrmES(result);
          }
         } catch (Exception e) {
           ProjectCommonException exception = new ProjectCommonException(
@@ -184,8 +184,8 @@ public class UserManagementActor extends UntypedAbstractActor {
         Response response = new Response();
         if (null != result) {
         //remove email and phone no from response
-          result.remove(JsonKey.EMAIL);
-          result.remove(JsonKey.PHONE);
+          result.remove(JsonKey.ENC_EMAIL);
+          result.remove(JsonKey.ENC_PHONE);
           response.put(JsonKey.RESPONSE, result);
         } else {
           result = new HashMap<>();
@@ -261,7 +261,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       if(!((String) userMap.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById)){
         result = removeUserPrivateField(result);
      } else {
-       UserUtility.decryptUserData(result);
+       UserUtility.decryptUserDataFrmES(result);
      }
     } catch (Exception e) {
       ProjectCommonException exception = new ProjectCommonException(
@@ -290,8 +290,8 @@ public class UserManagementActor extends UntypedAbstractActor {
     if (null != result) {
       result.put(JsonKey.LAST_LOGIN_TIME, System.currentTimeMillis());
       //remove email and phone no from response
-      result.remove(JsonKey.EMAIL);
-      result.remove(JsonKey.PHONE);
+      result.remove(JsonKey.ENC_EMAIL);
+      result.remove(JsonKey.ENC_PHONE);
       response.put(JsonKey.RESPONSE, result);
     } else {
       result = new HashMap<>();
@@ -485,8 +485,8 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
     //remove these fields from req
-    userMap.remove(JsonKey.MASKED_EMAIL);
-    userMap.remove(JsonKey.MASKED_PHONE);
+    userMap.remove(JsonKey.ENC_EMAIL);
+    userMap.remove(JsonKey.ENC_PHONE);
     if (null != userMap.get(JsonKey.USER_ID)) {
       userMap.put(JsonKey.ID, userMap.get(JsonKey.USER_ID));
     }else{
@@ -851,8 +851,8 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
     userMap.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
     //remove these fields from req
-    userMap.remove(JsonKey.MASKED_EMAIL);
-    userMap.remove(JsonKey.MASKED_PHONE);
+    userMap.remove(JsonKey.ENC_EMAIL);
+    userMap.remove(JsonKey.ENC_PHONE);
     boolean isSSOEnabled = Boolean  
         .parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
     if (userMap.containsKey(JsonKey.PROVIDER) && !ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PROVIDER))) {

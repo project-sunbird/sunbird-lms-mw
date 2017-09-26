@@ -576,13 +576,15 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       DataMaskingService maskingService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(null);
      String phone = (String)map.get(JsonKey.PHONE);
      String email = (String)map.get(JsonKey.EMAIL);
+     
+     
       if(!ProjectUtil.isStringNullOREmpty(phone)){
-          phone = decService.decryptData(phone);
-        map.put(JsonKey.MASKED_PHONE, maskingService.maskPhone(phone));
+        map.put(JsonKey.ENC_PHONE, phone);
+        map.put(JsonKey.PHONE, maskingService.maskPhone(decService.decryptData(phone)));
       }
       if(!ProjectUtil.isStringNullOREmpty(email)){
-          email = decService.decryptData(email);
-        map.put(JsonKey.MASKED_EMAIL, maskingService.maskEmail(email));
+        map.put(JsonKey.ENC_EMAIL, email);
+        map.put(JsonKey.EMAIL, maskingService.maskEmail(decService.decryptData(email)));
       }
       
       insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),

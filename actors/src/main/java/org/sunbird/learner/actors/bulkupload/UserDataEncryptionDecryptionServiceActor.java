@@ -42,6 +42,7 @@ public class UserDataEncryptionDecryptionServiceActor extends UntypedAbstractAct
   }
 
   private  void decryptUserData(Request actorMessage) {
+    ProjectLogger.log("DecryptUserData API called by "+actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
     long start = System.currentTimeMillis();
     Response response = cassandraOperation.getAllRecords(usrDbInfo.getKeySpace(), usrDbInfo.getTableName());
     List<Map<String,Object>> userList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
@@ -86,6 +87,7 @@ public class UserDataEncryptionDecryptionServiceActor extends UntypedAbstractAct
   }
 
   private  void encryptUserData(Request actorMessage) {
+    ProjectLogger.log("EncryptUserData API called by "+actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
     long start = System.currentTimeMillis();
     Response response = cassandraOperation.getAllRecords(usrDbInfo.getKeySpace(), usrDbInfo.getTableName());
     List<Map<String,Object>> userList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);

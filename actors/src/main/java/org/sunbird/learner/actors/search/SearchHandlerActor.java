@@ -55,11 +55,13 @@ public class SearchHandlerActor extends UntypedAbstractActor {
                         searchDto.setExcludedFields(Arrays.asList(ProjectUtil.excludes));
                     }
                   Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
-                  //Encrypt the data
+                  //Decrypt the data
                   if(EsType.user.getTypeName().equalsIgnoreCase(filterObjectType)){
                     List<Map<String,Object>> userMapList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
                     for(Map<String,Object> userMap : userMapList){
-                      UserUtility.decryptUserData(userMap);
+                      UserUtility.decryptUserDataFrmES(userMap);
+                      userMap.remove(JsonKey.ENC_EMAIL);
+                      userMap.remove(JsonKey.ENC_PHONE);
                     }
                   }
                   Response response = new Response();

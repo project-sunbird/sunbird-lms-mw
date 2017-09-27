@@ -104,6 +104,8 @@ public class UserManagementActor extends UntypedAbstractActor {
         }else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.UNBLOCK_USER.getValue())) {
           unBlockUser(actorMessage);
+        }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.USER_CURRENT_LOGIN.getValue())) {
+           updateUserLoginTime(actorMessage);
         }
         else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
@@ -120,8 +122,19 @@ public class UserManagementActor extends UntypedAbstractActor {
     } 
     }
 
-
- 
+  /**
+   * This method will update user current login time in keycloak
+   * @param actorMessage Request
+   */
+  private void updateUserLoginTime(Request actorMessage) {
+    String userId =(String) actorMessage.getRequest().get(JsonKey.USER_ID);
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    sender().tell(response, self());
+    SSOManager ssoManager = SSOServiceFactory.getInstance();
+    boolean addedResponse = ssoManager.addUserLoginTime(userId);
+    ProjectLogger.log("user login time added response is =="+ addedResponse);
+  }
 
   @SuppressWarnings("unchecked")
   private void getUserDetailsByLoginId(Request actorMessage) {
@@ -194,6 +207,10 @@ public class UserManagementActor extends UntypedAbstractActor {
                 } 
                 if(!requestFields.contains(JsonKey.MISSING_FIELDS)){
                     result.remove(JsonKey.MISSING_FIELDS);
+                }if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)){
+                  SSOManager manager = SSOServiceFactory.getInstance();
+                  String lastLoginTime = manager.getLastLoginTime((String) userMap.get(JsonKey.USER_ID));
+                  result.put(JsonKey.LAST_LOGIN_TIME, lastLoginTime);
                 }
             } else {
               result.remove(JsonKey.MISSING_FIELDS);
@@ -296,6 +313,10 @@ public class UserManagementActor extends UntypedAbstractActor {
         	} 
     		if(!requestFields.contains(JsonKey.MISSING_FIELDS)){
         		result.remove(JsonKey.MISSING_FIELDS);
+        	}if (requestFields.contains(JsonKey.LAST_ACCESS_TIME)){
+        	  SSOManager manager = SSOServiceFactory.getInstance();
+        	   String lastLoginTime = manager.getLastLoginTime((String) userMap.get(JsonKey.USER_ID));
+        	   result.put(JsonKey.LAST_LOGIN_TIME, lastLoginTime);
         	}
     	}
     		
@@ -305,7 +326,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
     Response response = new Response();
     if (null != result) {
-      result.put(JsonKey.LAST_LOGIN_TIME, System.currentTimeMillis());
       //remove email and phone no from response
       result.remove(JsonKey.ENC_EMAIL);
       result.remove(JsonKey.ENC_PHONE);

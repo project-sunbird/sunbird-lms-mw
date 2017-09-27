@@ -14,6 +14,7 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.mail.SendMail;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -23,6 +24,9 @@ import org.sunbird.learner.util.Util;
 public class EmailServiceActor extends UntypedAbstractActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  DecryptionService decryptionService= org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(null);
+
+
   @Override
   public void onReceive(Object message) throws Throwable {
     try{
@@ -81,7 +85,8 @@ public class EmailServiceActor extends UntypedAbstractActor {
         }
       }else{
         for(Map<String,Object> map : respMapList){
-          emailIds.add((String)map.get(JsonKey.EMAIL));
+          String decryptedEmail = decryptionService.decryptData((String)map.get(JsonKey.EMAIL));
+          emailIds.add(decryptedEmail);
           name = (String) map.get(JsonKey.FIRST_NAME);
         }
       }
@@ -89,14 +94,13 @@ public class EmailServiceActor extends UntypedAbstractActor {
    }
     if(emailIds.size()>1) {
       name = "All";
-    }
-    if(ProjectUtil.isStringNullOREmpty(name)) {
-      name = "Hi";
+    } else if(ProjectUtil.isStringNullOREmpty(name)) {
+      //name = "Hi";
     } else {
-      name = "Hi "+ StringUtils.capitalize(name);
+      name = StringUtils.capitalize(name);
     }
     request.put(JsonKey.NAME, name);
-    SendMail.sendMail(emailIds.toArray(new String[emailIds.size()]), (String)request.get(JsonKey.SUBJECT), ProjectUtil.getContext(request), ProjectUtil.getTemplate(""));
+    SendMail.sendMail(emailIds.toArray(new String[emailIds.size()]), (String)request.get(JsonKey.SUBJECT), ProjectUtil.getContext(request), ProjectUtil.getTemplate(request));
     Response res =  new Response();
     res.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(res, self());

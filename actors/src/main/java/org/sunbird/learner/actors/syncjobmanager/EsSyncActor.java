@@ -17,8 +17,10 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
+import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.services.ProfileCompletenessService;
@@ -36,7 +38,7 @@ import org.sunbird.learner.util.Util.DbInfo;
 public class EsSyncActor extends UntypedAbstractActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  
+  private EncryptionService service = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
   @Override
   public void onReceive(Object message) throws Throwable {
     ProjectLogger.log("EsSyncBackgroundJobManager  onReceive called");
@@ -163,7 +165,16 @@ public class EsSyncActor extends UntypedAbstractActor {
     Util.removeAttributes(userMap, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY));
     
     ProjectLogger.log("fetching user address data started");
-    userMap.put(JsonKey.ADDRESS, getDetails(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),userId,JsonKey.USER_ID));
+    String encryption = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_ENCRYPTION);
+    String uid = userId;
+    if("ON".equalsIgnoreCase(encryption)){
+      try {
+        uid = service.encryptData(uid);
+      } catch (Exception e) {
+        ProjectLogger.log("Exception Occurred while encrypting userId in user search api ",e);
+      }
+    }
+    userMap.put(JsonKey.ADDRESS, getDetails(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),uid,JsonKey.USER_ID));
     ProjectLogger.log("fetching user education data started");
     List<Map<String, Object>> eduMap = getDetails(Util.dbInfoMap.get(JsonKey.EDUCATION_DB),userId,JsonKey.USER_ID);
     for(Map<String, Object> map : eduMap){

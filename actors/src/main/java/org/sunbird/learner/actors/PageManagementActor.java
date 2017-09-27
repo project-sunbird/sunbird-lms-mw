@@ -71,10 +71,10 @@ public class PageManagementActor extends UntypedAbstractActor {
           getAllSections();
         } else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
-          ProjectCommonException exception = new ProjectCommonException(
-              ResponseCode.invalidOperationName.getErrorCode(),
-              ResponseCode.invalidOperationName.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
+          ProjectCommonException exception =
+              new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
+                  ResponseCode.invalidOperationName.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
           sender().tell(exception, self());
         }
       } catch (Exception ex) {
@@ -84,10 +84,10 @@ public class PageManagementActor extends UntypedAbstractActor {
     } else {
       // Throw exception as message body
       ProjectLogger.log("UNSUPPORTED MESSAGE");
-      ProjectCommonException exception = new ProjectCommonException(
-          ResponseCode.invalidRequestData.getErrorCode(),
-          ResponseCode.invalidRequestData.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
     }
 
@@ -95,11 +95,11 @@ public class PageManagementActor extends UntypedAbstractActor {
 
   private void getAllSections() {
     Response response = null;
-    response = cassandraOperation
-        .getAllRecords(sectionDbInfo.getKeySpace(), sectionDbInfo.getTableName());
+    response =
+        cassandraOperation.getAllRecords(sectionDbInfo.getKeySpace(), sectionDbInfo.getTableName());
     @SuppressWarnings("unchecked")
-    List<Map<String, Object>> result = (List<Map<String, Object>>) response.getResult()
-        .get(JsonKey.RESPONSE);
+    List<Map<String, Object>> result =
+        (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
     for (Map<String, Object> map : result) {
       removeUnwantedData(map, "");
     }
@@ -113,12 +113,11 @@ public class PageManagementActor extends UntypedAbstractActor {
     Response response = null;
     Map<String, Object> req = actorMessage.getRequest();
     String sectionId = (String) req.get(JsonKey.ID);
-    response = cassandraOperation
-        .getRecordById(sectionDbInfo.getKeySpace(), sectionDbInfo.getTableName(),
-            sectionId);
+    response = cassandraOperation.getRecordById(sectionDbInfo.getKeySpace(),
+        sectionDbInfo.getTableName(), sectionId);
     @SuppressWarnings("unchecked")
-    List<Map<String, Object>> result = (List<Map<String, Object>>) response.getResult()
-        .get(JsonKey.RESPONSE);
+    List<Map<String, Object>> result =
+        (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
     if (!(result.isEmpty())) {
       Map<String, Object> map = result.get(0);
       removeUnwantedData(map, "");
@@ -151,11 +150,10 @@ public class PageManagementActor extends UntypedAbstractActor {
       }
     }
     sectionMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-    Response response = cassandraOperation
-        .updateRecord(sectionDbInfo.getKeySpace(), sectionDbInfo.getTableName(),
-            sectionMap);
+    Response response = cassandraOperation.updateRecord(sectionDbInfo.getKeySpace(),
+        sectionDbInfo.getTableName(), sectionMap);
     sender().tell(response, self());
-    //update DataCacheHandler section map with updated page section data
+    // update DataCacheHandler section map with updated page section data
     new Thread() {
       @Override
       public void run() {
@@ -192,12 +190,11 @@ public class PageManagementActor extends UntypedAbstractActor {
     sectionMap.put(JsonKey.ID, uniqueId);
     sectionMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
     sectionMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-    Response response = cassandraOperation
-        .insertRecord(sectionDbInfo.getKeySpace(), sectionDbInfo.getTableName(),
-            sectionMap);
+    Response response = cassandraOperation.insertRecord(sectionDbInfo.getKeySpace(),
+        sectionDbInfo.getTableName(), sectionMap);
     response.put(JsonKey.SECTION_ID, uniqueId);
     sender().tell(response, self());
-    //update DataCacheHandler section map with new page section data
+    // update DataCacheHandler section map with new page section data
     new Thread() {
       @Override
       public void run() {
@@ -218,8 +215,8 @@ public class PageManagementActor extends UntypedAbstractActor {
     String pageName = (String) req.get(JsonKey.PAGE_NAME);
     String source = (String) req.get(JsonKey.SOURCE);
     String orgCode = (String) req.get(JsonKey.ORG_CODE);
-    Map<String, String> headers = (Map<String, String>) actorMessage.getRequest()
-        .get(JsonKey.HEADER);
+    Map<String, String> headers =
+        (Map<String, String>) actorMessage.getRequest().get(JsonKey.HEADER);
     filterMap.putAll(req);
     filterMap.remove(JsonKey.PAGE_NAME);
     filterMap.remove(JsonKey.SOURCE);
@@ -230,9 +227,8 @@ public class PageManagementActor extends UntypedAbstractActor {
     List<Map<String, Object>> result = null;
     try {
       if (!ProjectUtil.isStringNullOREmpty(orgCode)) {
-        response = cassandraOperation
-            .getRecordsByProperty(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(),
-                JsonKey.ORG_CODE, orgCode);
+        response = cassandraOperation.getRecordsByProperty(orgDbInfo.getKeySpace(),
+            orgDbInfo.getTableName(), JsonKey.ORG_CODE, orgCode);
         result = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
       }
     } catch (Exception e) {
@@ -248,8 +244,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 
     Map<String, Object> pageMap = DataCacheHandler.getPageMap().get(orgId + ":" + pageName);
     /**
-     * if requested page for this organisation is not found,
-     * return default NTP page
+     * if requested page for this organisation is not found, return default NTP page
      */
     if (null == pageMap) {
       pageMap = DataCacheHandler.getPageMap().get("NA" + ":" + pageName);
@@ -295,11 +290,10 @@ public class PageManagementActor extends UntypedAbstractActor {
   private void getPageSetting(Request actorMessage) {
     Map<String, Object> req = actorMessage.getRequest();
     String pageName = (String) req.get(JsonKey.ID);
-    Response response = cassandraOperation
-        .getRecordsByProperty(pageDbInfo.getKeySpace(), pageDbInfo.getTableName(),
-            JsonKey.PAGE_NAME, pageName);
-    List<Map<String, Object>> result = (List<Map<String, Object>>) response.getResult()
-        .get(JsonKey.RESPONSE);
+    Response response = cassandraOperation.getRecordsByProperty(pageDbInfo.getKeySpace(),
+        pageDbInfo.getTableName(), JsonKey.PAGE_NAME, pageName);
+    List<Map<String, Object>> result =
+        (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
     if (!(result.isEmpty())) {
       Map<String, Object> pageDO = result.get(0);
       Map<String, Object> responseMap = getPageSetting(pageDO);
@@ -311,10 +305,10 @@ public class PageManagementActor extends UntypedAbstractActor {
 
   @SuppressWarnings("unchecked")
   private void getPageSettings() {
-    Response response = cassandraOperation
-        .getAllRecords(pageDbInfo.getKeySpace(), pageDbInfo.getTableName());
-    List<Map<String, Object>> result = (List<Map<String, Object>>) response.getResult()
-        .get(JsonKey.RESPONSE);
+    Response response =
+        cassandraOperation.getAllRecords(pageDbInfo.getKeySpace(), pageDbInfo.getTableName());
+    List<Map<String, Object>> result =
+        (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
     List<Map<String, Object>> pageList = new ArrayList<>();
     for (Map<String, Object> pageDO : result) {
       Map<String, Object> responseMap = getPageSetting(pageDO);
@@ -329,7 +323,7 @@ public class PageManagementActor extends UntypedAbstractActor {
   private void updatePage(Request actorMessage) {
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> pageMap = (Map<String, Object>) req.get(JsonKey.PAGE);
-    //default value for orgId
+    // default value for orgId
     if (ProjectUtil.isStringNullOREmpty((String) pageMap.get(JsonKey.ORGANISATION_ID))) {
       pageMap.put(JsonKey.ORGANISATION_ID, "NA");
     }
@@ -338,15 +332,15 @@ public class PageManagementActor extends UntypedAbstractActor {
       map.put(JsonKey.PAGE_NAME, pageMap.get(JsonKey.PAGE_NAME));
       map.put(JsonKey.ORGANISATION_ID, pageMap.get(JsonKey.ORGANISATION_ID));
 
-      Response res = cassandraOperation
-          .getRecordsByProperties(pageDbInfo.getKeySpace(), pageDbInfo.getTableName(), map);
+      Response res = cassandraOperation.getRecordsByProperties(pageDbInfo.getKeySpace(),
+          pageDbInfo.getTableName(), map);
       if (!((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).isEmpty()) {
         Map<String, Object> page = ((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).get(0);
         if (!(((String) page.get(JsonKey.ID)).equals((String) pageMap.get(JsonKey.ID)))) {
-          ProjectCommonException exception = new ProjectCommonException(
-              ResponseCode.pageAlreadyExist.getErrorCode(),
-              ResponseCode.pageAlreadyExist.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
+          ProjectCommonException exception =
+              new ProjectCommonException(ResponseCode.pageAlreadyExist.getErrorCode(),
+                  ResponseCode.pageAlreadyExist.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
           sender().tell(exception, self());
           return;
         }
@@ -369,11 +363,10 @@ public class PageManagementActor extends UntypedAbstractActor {
         ProjectLogger.log(e.getMessage(), e);
       }
     }
-    Response response = cassandraOperation
-        .updateRecord(pageDbInfo.getKeySpace(), pageDbInfo.getTableName(),
-            pageMap);
+    Response response = cassandraOperation.updateRecord(pageDbInfo.getKeySpace(),
+        pageDbInfo.getTableName(), pageMap);
     sender().tell(response, self());
-    //update DataCacheHandler page map with updated page data
+    // update DataCacheHandler page map with updated page data
     new Thread() {
       @Override
       public void run() {
@@ -382,8 +375,8 @@ public class PageManagementActor extends UntypedAbstractActor {
           if (pageMap.containsKey(JsonKey.ORGANISATION_ID)) {
             orgId = (String) pageMap.get(JsonKey.ORGANISATION_ID);
           }
-          DataCacheHandler.getPageMap()
-              .put(orgId + ":" + (String) pageMap.get(JsonKey.PAGE_NAME), pageMap);
+          DataCacheHandler.getPageMap().put(orgId + ":" + (String) pageMap.get(JsonKey.PAGE_NAME),
+              pageMap);
         }
       }
     }.start();
@@ -393,7 +386,7 @@ public class PageManagementActor extends UntypedAbstractActor {
   private void createPage(Request actorMessage) {
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> pageMap = (Map<String, Object>) req.get(JsonKey.PAGE);
-    //default value for orgId
+    // default value for orgId
     if (ProjectUtil.isStringNullOREmpty((String) pageMap.get(JsonKey.ORGANISATION_ID))) {
       pageMap.put(JsonKey.ORGANISATION_ID, "NA");
     }
@@ -403,13 +396,13 @@ public class PageManagementActor extends UntypedAbstractActor {
       map.put(JsonKey.PAGE_NAME, pageMap.get(JsonKey.PAGE_NAME));
       map.put(JsonKey.ORGANISATION_ID, pageMap.get(JsonKey.ORGANISATION_ID));
 
-      Response res = cassandraOperation
-          .getRecordsByProperties(pageDbInfo.getKeySpace(), pageDbInfo.getTableName(), map);
+      Response res = cassandraOperation.getRecordsByProperties(pageDbInfo.getKeySpace(),
+          pageDbInfo.getTableName(), map);
       if (!((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).isEmpty()) {
-        ProjectCommonException exception = new ProjectCommonException(
-            ResponseCode.pageAlreadyExist.getErrorCode(),
-            ResponseCode.pageAlreadyExist.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.pageAlreadyExist.getErrorCode(),
+                ResponseCode.pageAlreadyExist.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
         return;
       }
@@ -432,12 +425,11 @@ public class PageManagementActor extends UntypedAbstractActor {
         ProjectLogger.log(e.getMessage(), e);
       }
     }
-    Response response = cassandraOperation
-        .insertRecord(pageDbInfo.getKeySpace(), pageDbInfo.getTableName(),
-            pageMap);
+    Response response = cassandraOperation.insertRecord(pageDbInfo.getKeySpace(),
+        pageDbInfo.getTableName(), pageMap);
     response.put(JsonKey.PAGE_ID, uniqueId);
     sender().tell(response, self());
-    //update DataCacheHandler page map with new page data
+    // update DataCacheHandler page map with new page data
     new Thread() {
       @Override
       public void run() {
@@ -446,8 +438,8 @@ public class PageManagementActor extends UntypedAbstractActor {
           if (pageMap.containsKey(JsonKey.ORGANISATION_ID)) {
             orgId = (String) pageMap.get(JsonKey.ORGANISATION_ID);
           }
-          DataCacheHandler.getPageMap()
-              .put(orgId + ":" + (String) pageMap.get(JsonKey.PAGE_NAME), pageMap);
+          DataCacheHandler.getPageMap().put(orgId + ":" + (String) pageMap.get(JsonKey.PAGE_NAME),
+              pageMap);
         }
       }
     }.start();
@@ -455,8 +447,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 
   @SuppressWarnings("unchecked")
   private void getContentData(Map<String, Object> section, Map<String, Object> reqFilters,
-      Map<String, String> headers,
-      Map<String, Object> filterMap) {
+      Map<String, String> headers, Map<String, Object> filterMap) {
     ObjectMapper mapper = new ObjectMapper();
     Map<String, Object> map = new HashMap<>();
     try {
@@ -470,11 +461,10 @@ public class PageManagementActor extends UntypedAbstractActor {
         ((Map<String, Object>) map.get(JsonKey.REQUEST)).put(entry.getKey(), entry.getValue());
       }
     }
-    Map<String, Object> filters = (Map<String, Object>) ((Map<String, Object>) map
-        .get(JsonKey.REQUEST)).get(JsonKey.FILTERS);
-    ProjectLogger.log(
-        "default search query for ekstep for page data assemble api : " + (String) section
-            .get(JsonKey.SEARCH_QUERY));
+    Map<String, Object> filters =
+        (Map<String, Object>) ((Map<String, Object>) map.get(JsonKey.REQUEST)).get(JsonKey.FILTERS);
+    ProjectLogger.log("default search query for ekstep for page data assemble api : "
+        + (String) section.get(JsonKey.SEARCH_QUERY));
     applyFilters(filters, reqFilters);
     String query = "";
 
@@ -583,9 +573,8 @@ public class PageManagementActor extends UntypedAbstractActor {
         Response sectionResponse = cassandraOperation.getRecordById(pageSectionDbInfo.getKeySpace(),
             pageSectionDbInfo.getTableName(), (String) sectionMap.get(JsonKey.ID));
 
-        List<Map<String, Object>> sectionResult = (List<Map<String, Object>>) sectionResponse
-            .getResult()
-            .get(JsonKey.RESPONSE);
+        List<Map<String, Object>> sectionResult =
+            (List<Map<String, Object>>) sectionResponse.getResult().get(JsonKey.RESPONSE);
         if (null != sectionResult && !sectionResult.isEmpty()) {
           sectionResult.get(0).put(JsonKey.GROUP, sectionMap.get(JsonKey.GROUP));
           sectionResult.get(0).put(JsonKey.INDEX, sectionMap.get(JsonKey.INDEX));

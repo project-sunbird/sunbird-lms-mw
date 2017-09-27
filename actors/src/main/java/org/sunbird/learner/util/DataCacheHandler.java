@@ -14,62 +14,70 @@ import org.sunbird.helper.ServiceFactory;
 
 /**
  * This class will handle the data cache.
+ * 
  * @author Amit Kumar
  */
-public class DataCacheHandler implements Runnable{
-	/**
-	 * pageMap is the map of (orgId:pageName) and page Object (i.e map of string , object)
-	 * sectionMap is the map of section Id and section Object (i.e map of string , object)
-	 */
-	private static Map<String, Map<String,Object>> pageMap = new ConcurrentHashMap<>();
-	private static Map<String, Map<String,Object>> sectionMap = new ConcurrentHashMap<>();
-	private static Map<String, Object> roleMap = new ConcurrentHashMap<>();
-	CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-	
-	@Override
-	public void run() {
-		ProjectLogger.log("Data cache started..");
-		cache(pageMap,"page_management");
-		cache(sectionMap,"page_section");
-		roleCache(roleMap);
-	}
+public class DataCacheHandler implements Runnable {
+  /**
+   * pageMap is the map of (orgId:pageName) and page Object (i.e map of string , object) sectionMap
+   * is the map of section Id and section Object (i.e map of string , object)
+   */
+  private static Map<String, Map<String, Object>> pageMap = new ConcurrentHashMap<>();
+  private static Map<String, Map<String, Object>> sectionMap = new ConcurrentHashMap<>();
+  private static Map<String, Object> roleMap = new ConcurrentHashMap<>();
+  CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
-	private void roleCache(Map<String, Object> roleMap) {
-	  Response response = cassandraOperation.getAllRecords(Util.getProperty("db.keyspace"), JsonKey.ROLE_GROUP);
-	  List<Map<String, Object>> responseList = (List<Map<String, Object>>)response.get(JsonKey.RESPONSE);
-	  if(null != responseList && !responseList.isEmpty()){
-        for(Map<String, Object> resultMap:responseList){
-          roleMap.put((String)resultMap.get(JsonKey.ID), resultMap.get(JsonKey.ID));
-          }
-       }
-	  Response response2 = cassandraOperation.getAllRecords(Util.getProperty("db.keyspace"), JsonKey.ROLE);
-      List<Map<String, Object>> responseList2 = (List<Map<String, Object>>)response2.get(JsonKey.RESPONSE);
-      if(null != responseList2 && !responseList2.isEmpty()){
-        for(Map<String, Object> resultMap2:responseList2){
-          roleMap.put((String)resultMap2.get(JsonKey.ID), resultMap2.get(JsonKey.ID));
-          }
-       }
+  @Override
+  public void run() {
+    ProjectLogger.log("Data cache started..");
+    cache(pageMap, "page_management");
+    cache(sectionMap, "page_section");
+    roleCache(roleMap);
+  }
+
+  private void roleCache(Map<String, Object> roleMap) {
+    Response response =
+        cassandraOperation.getAllRecords(Util.getProperty("db.keyspace"), JsonKey.ROLE_GROUP);
+    List<Map<String, Object>> responseList =
+        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if (null != responseList && !responseList.isEmpty()) {
+      for (Map<String, Object> resultMap : responseList) {
+        roleMap.put((String) resultMap.get(JsonKey.ID), resultMap.get(JsonKey.ID));
+      }
     }
+    Response response2 =
+        cassandraOperation.getAllRecords(Util.getProperty("db.keyspace"), JsonKey.ROLE);
+    List<Map<String, Object>> responseList2 =
+        (List<Map<String, Object>>) response2.get(JsonKey.RESPONSE);
+    if (null != responseList2 && !responseList2.isEmpty()) {
+      for (Map<String, Object> resultMap2 : responseList2) {
+        roleMap.put((String) resultMap2.get(JsonKey.ID), resultMap2.get(JsonKey.ID));
+      }
+    }
+  }
 
   @SuppressWarnings("unchecked")
-	private void cache(Map<String, Map<String, Object>> map,String tableName) {
-		try{
-			Response response = cassandraOperation.getAllRecords(Util.getProperty("db.keyspace"), tableName);
-			List<Map<String, Object>> responseList = (List<Map<String, Object>>)response.get(JsonKey.RESPONSE);
-			if(null != responseList && !responseList.isEmpty()){
-				for(Map<String, Object> resultMap:responseList){
-					if(tableName.equalsIgnoreCase(JsonKey.PAGE_SECTION)){
-						map.put((String) resultMap.get(JsonKey.ID), resultMap);
-					}else{
-						String orgId = (((String) resultMap.get(JsonKey.ORGANISATION_ID)) == null ? "NA": (String) resultMap.get(JsonKey.ORGANISATION_ID));
-						map.put(orgId+":"+((String) resultMap.get(JsonKey.PAGE_NAME)), resultMap);
-					}
-				}
-			}
-		}catch(Exception e){
-			ProjectLogger.log(e.getMessage(), e);
-		}
-	}
+  private void cache(Map<String, Map<String, Object>> map, String tableName) {
+    try {
+      Response response =
+          cassandraOperation.getAllRecords(Util.getProperty("db.keyspace"), tableName);
+      List<Map<String, Object>> responseList =
+          (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+      if (null != responseList && !responseList.isEmpty()) {
+        for (Map<String, Object> resultMap : responseList) {
+          if (tableName.equalsIgnoreCase(JsonKey.PAGE_SECTION)) {
+            map.put((String) resultMap.get(JsonKey.ID), resultMap);
+          } else {
+            String orgId = (((String) resultMap.get(JsonKey.ORGANISATION_ID)) == null ? "NA"
+                : (String) resultMap.get(JsonKey.ORGANISATION_ID));
+            map.put(orgId + ":" + ((String) resultMap.get(JsonKey.PAGE_NAME)), resultMap);
+          }
+        }
+      }
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+  }
 
   /**
    * @return the pageMap

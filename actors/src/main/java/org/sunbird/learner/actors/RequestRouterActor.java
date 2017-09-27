@@ -14,6 +14,7 @@ import org.sunbird.learner.actors.assessment.AssessmentItemActor;
 import org.sunbird.learner.actors.badges.BadgesActor;
 import org.sunbird.learner.actors.bulkupload.BulkUploadBackGroundJobActor;
 import org.sunbird.learner.actors.bulkupload.BulkUploadManagementActor;
+import org.sunbird.learner.actors.bulkupload.UserDataEncryptionDecryptionServiceActor;
 import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
 import org.sunbird.learner.actors.fileuploadservice.FileUploadServiceActor;
 import org.sunbird.learner.actors.recommend.RecommendorActor;
@@ -62,6 +63,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private ActorRef emailServiceActor;
     private ActorRef fileUploadServiceActor;
     private ActorRef notesActor;
+    private ActorRef userDataEncryptionDecryptionServiceActor;
     public static ActorRef metricsBackGroungJobActor;
     public static ActorRef schedularActor;
     public static ActorRef organisationMetricsRouter;
@@ -95,6 +97,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private static final String METRICS_ACKGROUNG_JOB__ACTOR= "metricsBackGroungJobActor";
     private static final String BADGES_ACTOR = "badgesActor";
     private static final String NOTES_ACTOR = "notesActor";
+    private static final String USER_DATA_ENC_DEC_SERVICE_ACTOR = "userDataEncryptionDecryptionServiceActor";
     /**
      * constructor to initialize router actor with child actor pool
      */
@@ -152,6 +155,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
             BADGES_ACTOR);
         notesActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(NotesManagementActor.class)),
                 NOTES_ACTOR);
+        userDataEncryptionDecryptionServiceActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(UserDataEncryptionDecryptionServiceActor.class)),
+            USER_DATA_ENC_DEC_SERVICE_ACTOR);
         ec = getContext().dispatcher();
         initializeRouterMap();
     }
@@ -256,6 +261,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.UPDATE_NOTE.getValue(), notesActor);
         routerMap.put(ActorOperations.DELETE_NOTE.getValue(), notesActor);
         routerMap.put(ActorOperations.USER_CURRENT_LOGIN.getValue(), userManagementRouter);
+        routerMap.put(ActorOperations.ENCRYPT_USER_DATA.getValue(), userDataEncryptionDecryptionServiceActor);
+        routerMap.put(ActorOperations.DECRYPT_USER_DATA.getValue(), userDataEncryptionDecryptionServiceActor);
     }
 
 

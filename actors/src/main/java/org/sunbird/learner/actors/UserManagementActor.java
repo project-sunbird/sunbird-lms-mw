@@ -31,6 +31,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
@@ -526,6 +527,10 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
+
+    if(userMap.containsKey(JsonKey.WEB_PAGES)){
+      SocialMediaType.validateSocialMedia((List<Map<String, String>>) userMap.get(JsonKey.WEB_PAGES));
+    }
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
@@ -885,6 +890,9 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
+    if(userMap.containsKey(JsonKey.WEB_PAGES)){
+      SocialMediaType.validateSocialMedia((List<Map<String, String>>)userMap.get(JsonKey.WEB_PAGES));
+    }
     userMap.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);

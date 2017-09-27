@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -28,6 +29,8 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
@@ -63,6 +66,7 @@ public class UserManagementActorTest {
   private static String userJobIdWithAddress = "";
   private static String userEduIdWithAddress = "";
   private static String encryption = "";
+  private static String userIdnew = "";
 
   @BeforeClass
   public static void setUp() {
@@ -926,6 +930,186 @@ public class UserManagementActorTest {
 
   }
   
+  @SuppressWarnings("deprecation")
+  @Test
+  public void TestZACreateUserWithValidWebPage(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_1919");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_1919@gmail.com");
+    innerMap.put(JsonKey.PASSWORD, "password");
+    innerMap.put(JsonKey.ID, userId);
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_1818@gmail.com");
+    List<Map<String,String>> webPage = new ArrayList<>();
+    Map<String,String> webPageData = new HashMap<>();
+    webPageData.put(JsonKey.TYPE, "fb");
+    webPageData.put(JsonKey.URL, "https://www.facebook.com/facebook/");
+    webPage.add(webPageData);
+    innerMap.put(JsonKey.WEB_PAGES, webPage);
+    
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+
+    subject.tell(reqObj, probe.getRef());
+    Response response = probe.expectMsgClass(duration("2000 second"), Response.class);
+    userIdnew = (String) response.get(JsonKey.USER_ID);
+    assertTrue(null != userIdnew);
+  }
+  
+  @SuppressWarnings("deprecation")
+  @Test
+  public void TestZBCreateUserWithInValidWebPageType(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_1919");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_1919@gmail.com");
+    innerMap.put(JsonKey.PASSWORD, "password");
+    List<Map<String,String>> webPage = new ArrayList<>();
+    Map<String,String> webPageData = new HashMap<>();
+    webPageData.put(JsonKey.TYPE, "test");
+    webPageData.put(JsonKey.URL, "https://www.facebook.com/facebook/");
+    webPage.add(webPageData);
+    innerMap.put(JsonKey.WEB_PAGES, webPage);
+    
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+
+    subject.tell(reqObj, probe.getRef());
+    ProjectCommonException response = probe.expectMsgClass(duration("2000 second"), ProjectCommonException.class);
+    if(null != response){
+      Assert.assertEquals(ResponseMessage.Message.INVALID_MEDIA_TYPE, response.getMessage());
+    }
+  } 
+  
+  @SuppressWarnings("deprecation")
+  @Test
+  public void TestZCCreateUserWithInValidWebPageURL(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_1919");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_1919@gmail.com");
+    innerMap.put(JsonKey.PASSWORD, "password");
+    List<Map<String,String>> webPage = new ArrayList<>();
+    Map<String,String> webPageData = new HashMap<>();
+    webPageData.put(JsonKey.TYPE, "fb");
+    webPageData.put(JsonKey.URL, "https://test.com/test/");
+    webPage.add(webPageData);
+    innerMap.put(JsonKey.WEB_PAGES, webPage);
+    
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+
+    subject.tell(reqObj, probe.getRef());
+    ProjectCommonException response = probe.expectMsgClass(duration("2000 second"), ProjectCommonException.class);
+    if(null != response){
+      Assert.assertEquals(ResponseMessage.Key.INVALID_WEBPAGE_URL, response.getMessage());
+    }
+  } 
+  
+  @SuppressWarnings("deprecation")
+  @Test
+  public void TestZDUpdateUserWithValidWebPage(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.UPDATE_USER.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_1919");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_1919@gmail.com");
+    innerMap.put(JsonKey.ID, userIdnew);
+    List<Map<String,String>> webPage = new ArrayList<>();
+    Map<String,String> webPageData = new HashMap<>();
+    webPageData.put(JsonKey.TYPE, "in");
+    webPageData.put(JsonKey.URL, "https://www.linkedin.com/in/linkedin");
+    webPage.add(webPageData);
+    innerMap.put(JsonKey.WEB_PAGES, webPage);
+    
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+
+    subject.tell(reqObj, probe.getRef());
+    Response response = probe.expectMsgClass(duration("2000 second"), Response.class);
+    assertTrue(ResponseCode.OK == response.getResponseCode()); 
+  }
+  
+  @SuppressWarnings("deprecation")
+  @Test
+  public void TestZEUpdateUserWithInValidWebPageType(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.UPDATE_USER.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_1919");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_1919@gmail.com");
+    innerMap.put(JsonKey.ID, userIdnew);
+    List<Map<String,String>> webPage = new ArrayList<>();
+    Map<String,String> webPageData = new HashMap<>();
+    webPageData.put(JsonKey.TYPE, "test");
+    webPageData.put(JsonKey.URL, "https://www.facebook.com/facebook/");
+    webPage.add(webPageData);
+    innerMap.put(JsonKey.WEB_PAGES, webPage);
+    
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+
+    subject.tell(reqObj, probe.getRef());
+    ProjectCommonException response = probe.expectMsgClass(duration("2000 second"), ProjectCommonException.class);
+    if(null != response){
+      Assert.assertEquals(ResponseMessage.Message.INVALID_MEDIA_TYPE, response.getMessage());
+    }
+  } 
+  
+  @SuppressWarnings("deprecation")
+  @Test
+  public void TestZFUpdateUserWithInValidWebPageURL(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.UPDATE_USER.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_1919");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_1919@gmail.com");
+    innerMap.put(JsonKey.ID, userIdnew);
+    List<Map<String,String>> webPage = new ArrayList<>();
+    Map<String,String> webPageData = new HashMap<>();
+    webPageData.put(JsonKey.TYPE, "fb");
+    webPageData.put(JsonKey.URL, "https://test.com/test/");
+    webPage.add(webPageData);
+    innerMap.put(JsonKey.WEB_PAGES, webPage);
+    
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+
+    subject.tell(reqObj, probe.getRef());
+    ProjectCommonException response = probe.expectMsgClass(duration("2000 second"), ProjectCommonException.class);
+    if(null != response){
+      Assert.assertEquals(ResponseMessage.Key.INVALID_WEBPAGE_URL, response.getMessage());
+    }
+  } 
+ 
+  
   @AfterClass
   public static void deleteUser() {
     SSOManager ssoManager = SSOServiceFactory.getInstance();
@@ -947,7 +1131,15 @@ public class UserManagementActorTest {
 
     ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.user.getTypeName(), userId);
-
+    
+    //To delete user data with webPage Data
+    Map<String, Object> userMap = new HashMap<>();
+    userMap.put(JsonKey.USER_ID, userIdnew);
+    ssoManager.removeUser(userMap);
+    operation.deleteRecord(userManagementDB.getKeySpace(), userManagementDB.getTableName(), userIdnew);
+    
+    ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.user.getTypeName(), userIdnew);
   }
 
 }

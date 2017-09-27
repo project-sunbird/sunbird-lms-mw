@@ -260,10 +260,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.SEARCH_NOTE.getValue(), notesActor);
         routerMap.put(ActorOperations.UPDATE_NOTE.getValue(), notesActor);
         routerMap.put(ActorOperations.DELETE_NOTE.getValue(), notesActor);
-        
+        routerMap.put(ActorOperations.USER_CURRENT_LOGIN.getValue(), userManagementRouter);
         routerMap.put(ActorOperations.ENCRYPT_USER_DATA.getValue(), userDataEncryptionDecryptionServiceActor);
         routerMap.put(ActorOperations.DECRYPT_USER_DATA.getValue(), userDataEncryptionDecryptionServiceActor);
-
     }
 
 

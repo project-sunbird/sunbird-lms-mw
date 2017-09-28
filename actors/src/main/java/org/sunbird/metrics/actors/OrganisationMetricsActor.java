@@ -24,6 +24,7 @@ import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -44,7 +45,9 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   private ActorRef backGroundActorRef;
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
-  
+  DecryptionService decryptionService= org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(null);
+
+
   public OrganisationMetricsActor() {
     backGroundActorRef = getContext().actorOf(Props.create(MetricsBackGroundJobActor.class), "metricsBackGroundJobActor");
   }
@@ -168,7 +171,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     requestDbInfo.put(JsonKey.PERIOD , period);
     requestDbInfo.put(JsonKey.CREATED_DATE , format.format(new Date()));
     requestDbInfo.put(JsonKey.UPDATED_DATE , format.format(new Date()));
-    requestDbInfo.put(JsonKey.EMAIL, requestedByInfo.get(JsonKey.EMAIL));
+    String decryptedEmail = decryptionService.decryptData((String)requestedByInfo.get(JsonKey.ENC_EMAIL));
+    requestDbInfo.put(JsonKey.EMAIL, decryptedEmail);
     requestDbInfo.put(JsonKey.FORMAT, actorMessage.get(JsonKey.FORMAT));
    
     cassandraOperation.insertRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),

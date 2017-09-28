@@ -31,6 +31,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
@@ -109,7 +110,12 @@ public class UserManagementActor extends UntypedAbstractActor {
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.UNBLOCK_USER.getValue())) {
           unBlockUser(actorMessage);
-        } else {
+        }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.USER_CURRENT_LOGIN.getValue())) {
+           updateUserLoginTime(actorMessage);
+        }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_MEDIA_TYPES.getValue())) {
+          getMediaTypes(actorMessage);
+       }
+       else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
           ProjectCommonException exception =
               new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
@@ -124,8 +130,19 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
   }
 
-
-
+  /**
+   * This method will update user current login time in keycloak
+   * @param actorMessage Request
+   */
+  private void updateUserLoginTime(Request actorMessage) {
+    String userId =(String) actorMessage.getRequest().get(JsonKey.USER_ID);
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    sender().tell(response, self());
+    SSOManager ssoManager = SSOServiceFactory.getInstance();
+    boolean addedResponse = ssoManager.addUserLoginTime(userId);
+    ProjectLogger.log("user login time added response is =="+ addedResponse);
+  }
   @SuppressWarnings("unchecked")
   private void getUserDetailsByLoginId(Request actorMessage) {
 
@@ -193,15 +210,22 @@ public class UserManagementActor extends UntypedAbstractActor {
           // remove email and phone no from response
           result.remove(JsonKey.ENC_EMAIL);
           result.remove(JsonKey.ENC_PHONE);
-          if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
-            List<String> requestFields = (List) actorMessage.getRequest().get(JsonKey.FIELDS);
-            if (requestFields != null) {
-              if (!requestFields.contains(JsonKey.COMPLETENESS)) {
-                result.remove(JsonKey.COMPLETENESS);
-              }
-              if (!requestFields.contains(JsonKey.MISSING_FIELDS)) {
-                result.remove(JsonKey.MISSING_FIELDS);
-              }
+          if(null != actorMessage.getRequest().get(JsonKey.FIELDS)){
+            List<String> requestFields = (List)actorMessage.getRequest().get(JsonKey.FIELDS);
+            if (requestFields != null){
+                if(!requestFields.contains(JsonKey.COMPLETENESS)){
+                    result.remove(JsonKey.COMPLETENESS);
+                } 
+                if(!requestFields.contains(JsonKey.MISSING_FIELDS)){
+                    result.remove(JsonKey.MISSING_FIELDS);
+                }if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)){
+                  SSOManager manager = SSOServiceFactory.getInstance();
+                  String lastLoginTime = manager.getLastLoginTime((String) userMap.get(JsonKey.USER_ID));
+                  if (ProjectUtil.isStringNullOREmpty(lastLoginTime)){
+                    lastLoginTime = "0";
+                  }
+                  result.put(JsonKey.LAST_LOGIN_TIME, Long.parseLong(lastLoginTime));
+                }
             } else {
               result.remove(JsonKey.MISSING_FIELDS);
               result.remove(JsonKey.COMPLETENESS);
@@ -297,25 +321,29 @@ public class UserManagementActor extends UntypedAbstractActor {
       sender().tell(exception, self());
       return;
     }
-    if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
-      String requestFields = (String) actorMessage.getRequest().get(JsonKey.FIELDS);
-      if (!ProjectUtil.isStringNullOREmpty(requestFields)) {
-        if (!requestFields.contains(JsonKey.COMPLETENESS)) {
-          result.remove(JsonKey.COMPLETENESS);
-        }
-        if (!requestFields.contains(JsonKey.MISSING_FIELDS)) {
-          result.remove(JsonKey.MISSING_FIELDS);
-        }
-      }
-
-    } else {
+    if(null != actorMessage.getRequest().get(JsonKey.FIELDS)){
+    	String requestFields = (String)actorMessage.getRequest().get(JsonKey.FIELDS);
+    	if(!ProjectUtil.isStringNullOREmpty(requestFields)){
+    		if(!requestFields.contains(JsonKey.COMPLETENESS)){
+    			result.remove(JsonKey.COMPLETENESS);
+        	} 
+    		if(!requestFields.contains(JsonKey.MISSING_FIELDS)){
+        		result.remove(JsonKey.MISSING_FIELDS);
+        	}if (requestFields.contains(JsonKey.LAST_ACCESS_TIME)){
+        	  SSOManager manager = SSOServiceFactory.getInstance();
+        	   String lastLoginTime = manager.getLastLoginTime((String) userMap.get(JsonKey.USER_ID));
+        	   if (ProjectUtil.isStringNullOREmpty(lastLoginTime)){
+        	     lastLoginTime = "0";
+        	   }
+        	   result.put(JsonKey.LAST_LOGIN_TIME, Long.parseLong(lastLoginTime));
+        	}
+    	}
+    }else {
       result.remove(JsonKey.MISSING_FIELDS);
       result.remove(JsonKey.COMPLETENESS);
     }
     Response response = new Response();
     if (null != result) {
-      result.put(JsonKey.LAST_LOGIN_TIME, System.currentTimeMillis());
-      // remove email and phone no from response
       result.remove(JsonKey.ENC_EMAIL);
       result.remove(JsonKey.ENC_PHONE);
       response.put(JsonKey.RESPONSE, result);
@@ -507,6 +535,10 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
+
+    if(userMap.containsKey(JsonKey.WEB_PAGES)){
+      SocialMediaType.validateSocialMedia((List<Map<String, String>>) userMap.get(JsonKey.WEB_PAGES));
+    }
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
@@ -871,6 +903,9 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
+    if(userMap.containsKey(JsonKey.WEB_PAGES)){
+      SocialMediaType.validateSocialMedia((List<Map<String, String>>)userMap.get(JsonKey.WEB_PAGES));
+    }
     userMap.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
@@ -2139,6 +2174,11 @@ public class UserManagementActor extends UntypedAbstractActor {
       responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     }
     return responseList;
+  }
+  
+  private void getMediaTypes(Request actorMessage){
+    Response response =  SocialMediaType.getMediaTypeFromDB();
+    sender().tell(response, self());
   }
 
 }

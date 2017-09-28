@@ -265,6 +265,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
 
     for (String key : property) {
       if (!properties.contains(key)) {
+        ProjectLogger.log("Invalid Column bulk upload management actor :: "+key);
         throw new ProjectCommonException(ResponseCode.InvalidColumnError.getErrorCode(),
             ResponseCode.InvalidColumnError.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());

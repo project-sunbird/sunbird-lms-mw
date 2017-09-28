@@ -671,6 +671,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     } else {
       reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
       reqMap.put(JsonKey.UPDATED_BY, encreqById);
+      reqMap.remove(JsonKey.USER_ID);
     }
     try {
       cassandraOperation.upsertRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), reqMap);
@@ -719,6 +720,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         addrId = (String) address.get(JsonKey.ID);
         address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
         address.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+        address.remove(JsonKey.USER_ID);
       }
       try {
         addrResponse = cassandraOperation.upsertRecord(addrDbInfo.getKeySpace(),
@@ -736,6 +738,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     if (reqMap.containsKey(JsonKey.ID)) {
       reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
       reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+      reqMap.remove(JsonKey.USER_ID);
     } else {
       reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
       reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
@@ -767,6 +770,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         addrId = (String) address.get(JsonKey.ID);
         address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
         address.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+        address.remove(JsonKey.USER_ID);
       }
       try {
         addrResponse = cassandraOperation.upsertRecord(addrDbInfo.getKeySpace(),
@@ -794,6 +798,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     if (reqMap.containsKey(JsonKey.ID)) {
       reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
       reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+      reqMap.remove(JsonKey.USER_ID);
     } else {
       reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
       reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());

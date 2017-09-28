@@ -21,7 +21,7 @@ public class SocialMediaType {
 
   public static Map<String, String> getMediaTypes() {
     if (null == mediaTypes || mediaTypes.isEmpty()) {
-      mediaTypes = getMediaTypeFromDB();
+     updateCache();
     }
     return mediaTypes;
   }
@@ -37,22 +37,23 @@ public class SocialMediaType {
     }
   }
 
-  @SuppressWarnings("unchecked")
-  private static Map<String, String> getMediaTypeFromDB() {
-    Map<String, String> mediaMap = new HashMap<>();
+  public static Response getMediaTypeFromDB() {
     Response response =
         cassandraOperation.getAllRecords(mediaTypeDB.getKeySpace(), mediaTypeDB.getTableName());
+    return response;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static void updateCache() {
+    Response response = getMediaTypeFromDB();
+    Map<String, String> mediaMap = new HashMap<>();
     List<Map<String, Object>> list = ((List<Map<String, Object>>) response.get(JsonKey.RESPONSE));
     if (!list.isEmpty()) {
       for (Map<String, Object> data : list) {
         mediaMap.put((String) data.get(JsonKey.ID), (String) data.get(JsonKey.NAME));
       }
     }
-    return mediaMap;
-  }
-
-  private static void updateCache() {
-    mediaTypes = getMediaTypeFromDB();
+    mediaTypes = mediaMap;
   }
 
   private static Boolean validateMediaURL(String type, String url) {
@@ -101,9 +102,8 @@ public class SocialMediaType {
       }
       String mediaType = socialMedia.get(JsonKey.TYPE);
       if(!SocialMediaType.getMediaTypes().containsKey(mediaType)){
-        if(SocialMediaType.getMediaTypeFromDB().containsKey(mediaType)){
-          SocialMediaType.updateCache();
-        } else {
+        SocialMediaType.updateCache();
+        if(!SocialMediaType.getMediaTypes().containsKey(mediaType)){
           throw new ProjectCommonException(ResponseCode.invalidMediaType.getErrorCode(),
               ResponseCode.invalidMediaType.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());

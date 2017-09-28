@@ -112,7 +112,9 @@ public class UserManagementActor extends UntypedAbstractActor {
           unBlockUser(actorMessage);
         }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.USER_CURRENT_LOGIN.getValue())) {
            updateUserLoginTime(actorMessage);
-        }
+        }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_MEDIA_TYPES.getValue())) {
+          getMediaTypes(actorMessage);
+       }
        else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
           ProjectCommonException exception =
@@ -2167,6 +2169,11 @@ public class UserManagementActor extends UntypedAbstractActor {
       responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     }
     return responseList;
+  }
+  
+  private void getMediaTypes(Request actorMessage){
+    Response response =  SocialMediaType.getMediaTypeFromDB();
+    sender().tell(response, self());
   }
 
 }

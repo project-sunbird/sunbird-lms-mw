@@ -31,6 +31,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
@@ -111,7 +112,9 @@ public class UserManagementActor extends UntypedAbstractActor {
           unBlockUser(actorMessage);
         }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.USER_CURRENT_LOGIN.getValue())) {
            updateUserLoginTime(actorMessage);
-        }
+        }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_MEDIA_TYPES.getValue())) {
+          getMediaTypes(actorMessage);
+       }
        else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
           ProjectCommonException exception =
@@ -218,7 +221,10 @@ public class UserManagementActor extends UntypedAbstractActor {
                 }if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)){
                   SSOManager manager = SSOServiceFactory.getInstance();
                   String lastLoginTime = manager.getLastLoginTime((String) userMap.get(JsonKey.USER_ID));
-                  result.put(JsonKey.LAST_LOGIN_TIME, lastLoginTime);
+                  if (ProjectUtil.isStringNullOREmpty(lastLoginTime)){
+                    lastLoginTime = "0";
+                  }
+                  result.put(JsonKey.LAST_LOGIN_TIME, Long.parseLong(lastLoginTime));
                 }
             } else {
               result.remove(JsonKey.MISSING_FIELDS);
@@ -326,7 +332,10 @@ public class UserManagementActor extends UntypedAbstractActor {
         	}if (requestFields.contains(JsonKey.LAST_ACCESS_TIME)){
         	  SSOManager manager = SSOServiceFactory.getInstance();
         	   String lastLoginTime = manager.getLastLoginTime((String) userMap.get(JsonKey.USER_ID));
-        	   result.put(JsonKey.LAST_LOGIN_TIME, lastLoginTime);
+        	   if (ProjectUtil.isStringNullOREmpty(lastLoginTime)){
+        	     lastLoginTime = "0";
+        	   }
+        	   result.put(JsonKey.LAST_LOGIN_TIME, Long.parseLong(lastLoginTime));
         	}
     	}
     }else {
@@ -526,6 +535,10 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
+
+    if(userMap.containsKey(JsonKey.WEB_PAGES)){
+      SocialMediaType.validateSocialMedia((List<Map<String, String>>) userMap.get(JsonKey.WEB_PAGES));
+    }
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
@@ -885,6 +898,9 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
+    if(userMap.containsKey(JsonKey.WEB_PAGES)){
+      SocialMediaType.validateSocialMedia((List<Map<String, String>>)userMap.get(JsonKey.WEB_PAGES));
+    }
     userMap.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
@@ -2153,6 +2169,11 @@ public class UserManagementActor extends UntypedAbstractActor {
       responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     }
     return responseList;
+  }
+  
+  private void getMediaTypes(Request actorMessage){
+    Response response =  SocialMediaType.getMediaTypeFromDB();
+    sender().tell(response, self());
   }
 
 }

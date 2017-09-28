@@ -263,6 +263,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.USER_CURRENT_LOGIN.getValue(), userManagementRouter);
         routerMap.put(ActorOperations.ENCRYPT_USER_DATA.getValue(), userDataEncryptionDecryptionServiceActor);
         routerMap.put(ActorOperations.DECRYPT_USER_DATA.getValue(), userDataEncryptionDecryptionServiceActor);
+        routerMap.put(ActorOperations.GET_MEDIA_TYPES.getValue(), userManagementRouter);
     }
 
 

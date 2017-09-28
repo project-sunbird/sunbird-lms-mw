@@ -218,7 +218,10 @@ public class UserManagementActor extends UntypedAbstractActor {
                 }if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)){
                   SSOManager manager = SSOServiceFactory.getInstance();
                   String lastLoginTime = manager.getLastLoginTime((String) userMap.get(JsonKey.USER_ID));
-                  result.put(JsonKey.LAST_LOGIN_TIME, lastLoginTime);
+                  if (ProjectUtil.isStringNullOREmpty(lastLoginTime)){
+                    lastLoginTime = "0";
+                  }
+                  result.put(JsonKey.LAST_LOGIN_TIME, Long.parseLong(lastLoginTime));
                 }
             } else {
               result.remove(JsonKey.MISSING_FIELDS);
@@ -326,7 +329,10 @@ public class UserManagementActor extends UntypedAbstractActor {
         	}if (requestFields.contains(JsonKey.LAST_ACCESS_TIME)){
         	  SSOManager manager = SSOServiceFactory.getInstance();
         	   String lastLoginTime = manager.getLastLoginTime((String) userMap.get(JsonKey.USER_ID));
-        	   result.put(JsonKey.LAST_LOGIN_TIME, lastLoginTime);
+        	   if (ProjectUtil.isStringNullOREmpty(lastLoginTime)){
+        	     lastLoginTime = "0";
+        	   }
+        	   result.put(JsonKey.LAST_LOGIN_TIME, Long.parseLong(lastLoginTime));
         	}
     	}
     }else {

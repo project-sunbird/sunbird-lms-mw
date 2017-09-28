@@ -561,3 +561,7 @@ CREATE INDEX inx_un_contentId ON sunbird.user_notes(contentId);
 
 //Sept 25th 2017
 ALTER TABLE sunbird.user ADD createdBy text;
+
+//Adding changes related to social media in user table
+ALTER TABLE sunbird.user ADD webpages list<frozen <map<text,text>>>;
+CREATE TABLE IF NOT EXISTS sunbird.media_type(id text, name text, PRIMARY KEY (id));

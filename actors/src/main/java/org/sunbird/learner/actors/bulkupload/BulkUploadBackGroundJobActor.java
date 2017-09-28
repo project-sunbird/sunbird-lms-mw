@@ -40,6 +40,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.BackgroundJobManager;
+import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
@@ -116,6 +117,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void processBatchEnrollment(List<Map<String, Object>> jsonList, String processId) {
     // update status from NEW to INProgress
     updateStatusForProcessing(processId);
@@ -172,6 +174,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void validateBatchUserListAndAdd(Map<String, Object> courseBatchObject, String batchId,
       List<String> userIds, Map<String, Object> failList, Map<String, Object> successList) {
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
@@ -312,6 +315,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private String validateBatchInfo(Response courseBatchResult) {
     // check batch exist in db or not
     List<Map<String, Object>> courseList =
@@ -376,6 +380,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
   }
 
+  @SuppressWarnings("unchecked")
   private void processOrg(Map<String, Object> map, Map<String, Object> dataMap,
       List<Map<String, Object>> successList, List<Map<String, Object>> failureList,
       Map<String, String> channelToRootOrgCache) {
@@ -670,6 +675,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   }
 
 
+  @SuppressWarnings("unchecked")
   private void processUserInfo(List<Map<String, Object>> dataMapList, String processId,
       String updatedBy) {
     // update status from NEW to INProgress
@@ -715,6 +721,24 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             String[] userGrade = ((String) userMap.get(JsonKey.LANGUAGE)).split(",");
             List<String> list = new ArrayList<>(Arrays.asList(userGrade));
             userMap.put(JsonKey.LANGUAGE, list);
+          }
+          
+          if(null != userMap.get(JsonKey.WEB_PAGES)){
+            String webPageString = (String) userMap.get(JsonKey.WEB_PAGES);
+            webPageString = webPageString.replaceAll("'", "\"");
+            List<Map<String,String>> webPages = new ArrayList<>();
+            try {
+              ObjectMapper mapper = new ObjectMapper();
+              webPages = mapper.readValue(webPageString, List.class);
+            } catch (Exception ex) {
+              ProjectLogger.log("Unable to parse Org contact Details - OrgBulkUpload.", ex);
+              userMap.put(JsonKey.ERROR_MSG,
+                  "Unable to parse Org contact Details - OrgBulkUpload.");
+              failureUserReq.add(userMap);
+              continue;
+            }
+            SocialMediaType.validateSocialMedia(webPages);
+            userMap.put(JsonKey.WEB_PAGES, webPages);
           }
           // convert userName,provide,loginId,externalId.. value to lowercase
           updateMapSomeValueTOLowerCase(userMap);
@@ -949,6 +973,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private List<Map<String, Object>> checkDataUserExtTable(Map<String, Object> map) {
     Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
     Map<String, Object> reqMap = new HashMap<>();
@@ -982,6 +1007,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
   }
 
+  @SuppressWarnings("unchecked")
   private void insertRecordToUserOrgTable(Map<String, Object> userMap) {
     Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
     Map<String, Object> reqMap = new HashMap<>();

@@ -758,10 +758,12 @@ public class BackgroundJobManager extends UntypedAbstractActor {
   private boolean insertDataToElastic(String index, String type, String identifier,
       Map<String, Object> data) {
     ProjectLogger.log("making call to ES for type ,identifier ,data==" + type +" " + identifier + data);
-    //now calculate profile completeness and error filed and store it in ES
-    ProfileCompletenessService service = ProfileCompletenessFactory.getInstance();
-    Map<String,Object> responsemap = service.computeProfile(data);
-    data.putAll(responsemap);
+    if(type.equalsIgnoreCase(ProjectUtil.EsType.user.getTypeName())){
+      //now calculate profile completeness and error filed and store it in ES
+      ProfileCompletenessService service = ProfileCompletenessFactory.getInstance();
+      Map<String,Object> responsemap = service.computeProfile(data);
+      data.putAll(responsemap);
+    }
     String response = ElasticSearchUtil.createData(index, type, identifier, data);
     ProjectLogger.log("Getting ES save response for type , identiofier==" +type+"  " + identifier + "  "+ response);
     if (!ProjectUtil.isStringNullOREmpty(response)) {

@@ -329,7 +329,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         	} 
     		if(!requestFields.contains(JsonKey.MISSING_FIELDS)){
         		result.remove(JsonKey.MISSING_FIELDS);
-        	}if (requestFields.contains(JsonKey.LAST_ACCESS_TIME)){
+        	}if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)){
         	  SSOManager manager = SSOServiceFactory.getInstance();
         	   String lastLoginTime = manager.getLastLoginTime((String) userMap.get(JsonKey.USER_ID));
         	   if (ProjectUtil.isStringNullOREmpty(lastLoginTime)){

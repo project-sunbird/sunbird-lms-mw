@@ -52,6 +52,7 @@
     32. sunbird_quartz_mode: put this value {"embedded" to run quartz without any data base, "any other value" to run with postgres db }
     33. sunbird_encryption_key
     34. sunbird_encryption_mode : mode value is either local or remote
+    35. sunbird_sso_publickey : sso public key
 ## Build
 1. Clone the repository "sunbird-lms-mw"
 1. Run "git submodule foreach git pull origin master" to pull the latest sunbird-utils submodule.

@@ -60,7 +60,7 @@ public class ActorAuditLogServiceImpl implements AuditLogService{
   
   @Override
   public void save(Map<String, Object> requestedData) {
-    ElasticSearchUtil.createData(EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), (String) requestedData.get("objectId"), requestedData); 
+    ElasticSearchUtil.createData(EsIndex.sunbirdDataAudit.getIndexName(), EsType.history.getTypeName(), (String) requestedData.get(JsonKey.OBJECT_ID), requestedData); 
   }
 
 }

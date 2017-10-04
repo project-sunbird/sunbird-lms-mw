@@ -26,6 +26,7 @@ import org.sunbird.learner.actors.search.SearchHandlerActor;
 import org.sunbird.learner.actors.syncjobmanager.EsSyncActor;
 import org.sunbird.learner.audit.AuditLogService;
 import org.sunbird.learner.audit.impl.ActorAuditLogServiceImpl;
+import org.sunbird.learner.audit.impl.AuditLogManagementActor;
 import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.util.Util;
 import org.sunbird.metrics.actors.CourseMetricsActor;
@@ -70,6 +71,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ActorRef emailServiceActor;
   private ActorRef fileUploadServiceActor;
   private ActorRef notesActor;
+  public ActorRef auditLogManagementActor;
   private ActorRef userDataEncryptionDecryptionServiceActor;
   public static ActorRef metricsBackGroungJobActor;
   public static ActorRef schedularActor;
@@ -104,8 +106,10 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private static final String METRICS_ACKGROUNG_JOB__ACTOR = "metricsBackGroungJobActor";
   private static final String BADGES_ACTOR = "badgesActor";
   private static final String NOTES_ACTOR = "notesActor";
+  private static final String AUDIT_LOG_MGMT_ACTOR = "auditLogManagementActor";
   private static final String USER_DATA_ENC_DEC_SERVICE_ACTOR =
       "userDataEncryptionDecryptionServiceActor";
+  
 
   /**
    * constructor to initialize router actor with child actor pool
@@ -184,6 +188,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
         FromConfig.getInstance()
             .props(Props.create(UserDataEncryptionDecryptionServiceActor.class)),
         USER_DATA_ENC_DEC_SERVICE_ACTOR);
+    auditLogManagementActor = getContext().actorOf(
+        FromConfig.getInstance().props(Props.create(AuditLogManagementActor.class)), AUDIT_LOG_MGMT_ACTOR);
     ec = getContext().dispatcher();
     initializeRouterMap();
   }
@@ -299,6 +305,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.DECRYPT_USER_DATA.getValue(),
         userDataEncryptionDecryptionServiceActor);
     routerMap.put(ActorOperations.GET_MEDIA_TYPES.getValue(), userManagementRouter);
+    routerMap.put(ActorOperations.SEARCH_AUDIT_LOG.getValue(), auditLogManagementActor);
+    
   }
 
 

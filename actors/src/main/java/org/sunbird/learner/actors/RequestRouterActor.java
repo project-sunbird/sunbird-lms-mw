@@ -348,11 +348,11 @@ public class RequestRouterActor extends UntypedAbstractActor {
       map.put(JsonKey.OPERATION_TYPE, op.getOperationType());
       map.put(JsonKey.DATE, ProjectUtil.getFormattedDate());
       map.put(JsonKey.USER_ID, message.get(JsonKey.REQUESTED_BY));
-      map.put(JsonKey.REQUEST, message);
+      map.put(JsonKey.REQUEST, message.getRequest());
       if(message.getOperation().equals(ActorOperations.CREATE_USER.getValue())){
         map.put(JsonKey.OBJECT_ID, result.get(JsonKey.USER_ID));
       }else if(message.getOperation().equals(ActorOperations.CREATE_ORG.getValue())){
-        map.put(JsonKey.OBJECT_ID, result.get(JsonKey.ORG_ID));
+        map.put(JsonKey.OBJECT_ID, result.get(JsonKey.ORGANISATION_ID));
       }else if(message.getOperation().equals(ActorOperations.CREATE_BATCH.getValue())){
         map.put(JsonKey.OBJECT_ID, result.get(JsonKey.BATCH_ID));
       }else if(message.getOperation().equals(ActorOperations.CREATE_NOTE.getValue())){

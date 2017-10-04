@@ -22,15 +22,25 @@ public class ActorAuditLogServiceImpl implements AuditLogService{
     String objectType = (String) requestedData.get(JsonKey.OBJECT_TYPE);
     Map<String, Object> requestBody = (Map<String, Object>) requestedData.get(JsonKey.REQUEST);
     if(ProjectUtil.ObjectTypes.user.getValue().equalsIgnoreCase(objectType)){
+      requestBody.putAll((Map<String, Object>) requestBody.get(JsonKey.USER));
+      requestBody.remove(JsonKey.USER);
+      requestBody.remove(JsonKey.REQUESTED_BY);
       logRecord = processData(requestBody, JsonKey.USER_RELATIONS);
     } else if(ProjectUtil.ObjectTypes.organisation.getValue().equalsIgnoreCase(objectType)){
+      requestBody.putAll((Map<String, Object>) requestBody.get(JsonKey.ORGANISATION));
+      requestBody.remove(JsonKey.ORGANISATION);
+      requestBody.remove(JsonKey.REQUESTED_BY);
       logRecord = processData(requestBody, JsonKey.ORG_RELATIONS);
     } else if(ProjectUtil.ObjectTypes.batch.getValue().equalsIgnoreCase(objectType)){
+      requestBody.putAll((Map<String, Object>) requestBody.get(JsonKey.BATCH));
+      requestBody.remove(JsonKey.BATCH);
+      requestBody.remove(JsonKey.REQUESTED_BY);
       logRecord = processData(requestBody, JsonKey.BATCH_RELATIONS);
     }
     requestedData.remove(JsonKey.REQUEST);
     requestedData.put(JsonKey.LOG_RECORD, logRecord);
-    AuditLogGenerator.generateLogs(requestedData);
+    Map<String,Object> auditLog = AuditLogGenerator.generateLogs(requestedData);
+    save(auditLog);
   }
   
   @SuppressWarnings("unchecked")
@@ -59,7 +69,7 @@ public class ActorAuditLogServiceImpl implements AuditLogService{
   
   @Override
   public void save(Map<String, Object> requestedData) {
-    ElasticSearchUtil.createData(EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), (String) requestedData.get("objectId"), requestedData); 
+    ElasticSearchUtil.createData(EsIndex.sunbirdDataAudit.getIndexName(), EsType.history.getTypeName(), (String) requestedData.get(JsonKey.OBJECT_ID), requestedData); 
   }
 
 }

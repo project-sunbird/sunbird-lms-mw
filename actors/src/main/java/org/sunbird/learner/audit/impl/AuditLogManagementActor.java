@@ -62,13 +62,14 @@ public class AuditLogManagementActor extends UntypedAbstractActor {
   private void searchAuditHistory(Request actorMessage){
     Map<String,Object> filters = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.FILTERS);
     SimpleDateFormat dateFormat= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSSZ");
+    SimpleDateFormat dateFormat2= new SimpleDateFormat("yyyy-MM-dd");
     dateFormat.setLenient(false);
     String fromDate = (String) filters.get("fromDate");
     String toDate = (String) filters.get("toDate");
     Map<String,Object> map = null;
+    Calendar cal = Calendar.getInstance();
     if(ProjectUtil.isStringNullOREmpty(fromDate) && ProjectUtil.isStringNullOREmpty(toDate)){
       toDate = dateFormat.format(new Date());
-      Calendar cal = Calendar.getInstance();
       cal.add(Calendar.DATE, -(Integer.parseInt(cache.getProperty("default_date_range"))));
       Date toDate1 = cal.getTime();    
       fromDate = dateFormat.format(toDate1);
@@ -76,14 +77,12 @@ public class AuditLogManagementActor extends UntypedAbstractActor {
       map.put(">=", fromDate);
       map.put("<=", toDate);
       filters.put(JsonKey.DATE,map);
-      filters.remove(fromDate);
-      filters.remove(toDate);
     }else if(!ProjectUtil.isStringNullOREmpty(fromDate) && !ProjectUtil.isStringNullOREmpty(toDate)){
       Date date1 = null;
       Date date2 = null;
       try {
-        date1 = dateFormat.parse(fromDate);
-        date2 = dateFormat.parse(toDate);
+        date1 = dateFormat2.parse(fromDate);
+        date2 = dateFormat.parse(toDate+" 23:59:59:000+0530");
       } catch (ParseException e) {
         ProjectLogger.log("Exception occurred while parsing date ", e);
       }
@@ -97,29 +96,37 @@ public class AuditLogManagementActor extends UntypedAbstractActor {
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }else {
         map = new HashMap<>();
-        map.put(">=", dateFormat.format(fromDate));
-        map.put("<=", dateFormat.format(toDate));
+          map.put(">=", dateFormat.format(date1));
+          map.put("<=", dateFormat.format(date2));
+        
         filters.put(JsonKey.DATE,map);
-        filters.remove(fromDate);
-        filters.remove(toDate);
       }
     }else if(!ProjectUtil.isStringNullOREmpty(fromDate) && ProjectUtil.isStringNullOREmpty(toDate)){
-      Calendar cal = Calendar.getInstance();
       cal.add(Calendar.DATE, Integer.parseInt(cache.getProperty("default_date_range")));
-      Date todate = cal.getTime();    
+      Date todate = cal.getTime(); 
+      
       map = new HashMap<>();
-      map.put(">=", dateFormat.format(fromDate));
+      try {
+        map.put(">=", dateFormat.format(dateFormat2.parse(fromDate)));
+      } catch (ParseException e) {
+        ProjectLogger.log("Exception occurred while parsing date ", e);
+      }
       map.put("<=", dateFormat.format(todate));
       filters.put(JsonKey.DATE,map);
-      filters.remove(fromDate);
-      filters.remove(toDate);
     }else if(ProjectUtil.isStringNullOREmpty(fromDate) && !ProjectUtil.isStringNullOREmpty(toDate)){
-      filters.put(JsonKey.DATE,dateFormat.format(toDate));
-      filters.remove(fromDate);
-      filters.remove(toDate);
+      try {
+        map = new HashMap<>();
+        map.put(">=", dateFormat.format(dateFormat2.parse(toDate)));
+        map.put("<=", dateFormat.format(dateFormat.parse(toDate+" 23:59:59:000+0530")));
+        filters.put(JsonKey.DATE,map);
+      } catch (ParseException e) {
+        ProjectLogger.log("Exception occurred while parsing date ", e);
+      }
     }
     
     SearchDTO searchDTO = new SearchDTO();
+    filters.remove("fromDate");
+    filters.remove("toDate");
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS , filters);
     Map<String, Object> result =  ElasticSearchUtil.complexSearch(searchDTO , EsIndex.sunbirdDataAudit.getIndexName(), EsType.history.getTypeName());
     Response response = new Response();

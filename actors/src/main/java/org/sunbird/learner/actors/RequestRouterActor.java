@@ -26,6 +26,7 @@ import org.sunbird.learner.actors.search.SearchHandlerActor;
 import org.sunbird.learner.actors.syncjobmanager.EsSyncActor;
 import org.sunbird.learner.audit.AuditLogService;
 import org.sunbird.learner.audit.impl.ActorAuditLogServiceImpl;
+import org.sunbird.learner.audit.impl.AuditLogManagementActor;
 import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.util.Util;
 import org.sunbird.metrics.actors.CourseMetricsActor;
@@ -71,6 +72,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private ActorRef fileUploadServiceActor;
     private ActorRef notesActor;
     private ActorRef userDataEncryptionDecryptionServiceActor;
+    private ActorRef auditLogManagementActor;
     public static ActorRef metricsBackGroungJobActor;
     public static ActorRef schedularActor;
     public static ActorRef organisationMetricsRouter;
@@ -105,6 +107,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     private static final String BADGES_ACTOR = "badgesActor";
     private static final String NOTES_ACTOR = "notesActor";
     private static final String USER_DATA_ENC_DEC_SERVICE_ACTOR = "userDataEncryptionDecryptionServiceActor";
+    private static final String AUDIT_LOG_MGMT_ACTOR = "auditLogManagementActor";
     /**
      * constructor to initialize router actor with child actor pool
      */
@@ -164,6 +167,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
                 NOTES_ACTOR);
         userDataEncryptionDecryptionServiceActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(UserDataEncryptionDecryptionServiceActor.class)),
             USER_DATA_ENC_DEC_SERVICE_ACTOR);
+        auditLogManagementActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(AuditLogManagementActor.class)),
+            AUDIT_LOG_MGMT_ACTOR);
         ec = getContext().dispatcher();
         initializeRouterMap();
     }
@@ -271,6 +276,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
         routerMap.put(ActorOperations.ENCRYPT_USER_DATA.getValue(), userDataEncryptionDecryptionServiceActor);
         routerMap.put(ActorOperations.DECRYPT_USER_DATA.getValue(), userDataEncryptionDecryptionServiceActor);
         routerMap.put(ActorOperations.GET_MEDIA_TYPES.getValue(), userManagementRouter);
+        routerMap.put(ActorOperations.SEARCH_AUDIT_LOG.getValue(), auditLogManagementActor);
     }
 
 
@@ -328,7 +334,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
                     ProjectLogger.log("Actor Service Call Ended on Success for  api ==" + message.getOperation()  +" end time " +System.currentTimeMillis() +"  Time taken " + (System.currentTimeMillis()-startTime), LoggerEnum.PERF_LOG);
                     parent.tell(result, ActorRef.noSender());
                     //Audit log method call
-                    if(Util.auditLogUrlMap.containsKey(message.getOperation())){
+                    if(Util.auditLogUrlMap.containsKey(message.getOperation())){ 
                       AuditOperation auditOperation = (AuditOperation) Util.auditLogUrlMap.get(message.getOperation());
                       Map<String,Object> map = createAuditLogReqMap(auditOperation, message,(Response)result);
                       AuditLogService logService = new ActorAuditLogServiceImpl();
@@ -347,7 +353,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
       map.put(JsonKey.OBJECT_TYPE, op.getObjectType());
       map.put(JsonKey.OPERATION_TYPE, op.getOperationType());
       map.put(JsonKey.DATE, ProjectUtil.getFormattedDate());
-      map.put(JsonKey.USER_ID, message.get(JsonKey.REQUESTED_BY));
+      map.put(JsonKey.USER_ID, message.getRequest().get(JsonKey.REQUESTED_BY));
       map.put(JsonKey.REQUEST, message.getRequest());
       if(message.getOperation().equals(ActorOperations.CREATE_USER.getValue())){
         map.put(JsonKey.OBJECT_ID, result.get(JsonKey.USER_ID));

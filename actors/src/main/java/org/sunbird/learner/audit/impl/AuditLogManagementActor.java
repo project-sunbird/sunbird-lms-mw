@@ -6,17 +6,21 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.joda.time.DateTime;
 import org.joda.time.Months;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.ProjectUtil.EsIndex;
+import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
@@ -55,9 +59,9 @@ public class AuditLogManagementActor extends UntypedAbstractActor {
     }
   }
   
-  private Map<String,Object> searchAuditHistory(Request actorMessage){
+  private void searchAuditHistory(Request actorMessage){
     Map<String,Object> filters = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.FILTERS);
-    SimpleDateFormat dateFormat= new SimpleDateFormat("yyyy-MM-dd");
+    SimpleDateFormat dateFormat= new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSSZ");
     dateFormat.setLenient(false);
     String fromDate = (String) filters.get("fromDate");
     String toDate = (String) filters.get("toDate");
@@ -93,8 +97,8 @@ public class AuditLogManagementActor extends UntypedAbstractActor {
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }else {
         map = new HashMap<>();
-        map.put(">=", fromDate);
-        map.put("<=", toDate);
+        map.put(">=", dateFormat.format(fromDate));
+        map.put("<=", dateFormat.format(toDate));
         filters.put(JsonKey.DATE,map);
         filters.remove(fromDate);
         filters.remove(toDate);
@@ -104,20 +108,28 @@ public class AuditLogManagementActor extends UntypedAbstractActor {
       cal.add(Calendar.DATE, Integer.parseInt(cache.getProperty("default_date_range")));
       Date todate = cal.getTime();    
       map = new HashMap<>();
-      map.put(">=", fromDate);
-      map.put("<=", todate);
+      map.put(">=", dateFormat.format(fromDate));
+      map.put("<=", dateFormat.format(todate));
       filters.put(JsonKey.DATE,map);
       filters.remove(fromDate);
       filters.remove(toDate);
     }else if(ProjectUtil.isStringNullOREmpty(fromDate) && !ProjectUtil.isStringNullOREmpty(toDate)){
-      filters.put(JsonKey.DATE,toDate);
+      filters.put(JsonKey.DATE,dateFormat.format(toDate));
       filters.remove(fromDate);
       filters.remove(toDate);
     }
     
     SearchDTO searchDTO = new SearchDTO();
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS , filters);
-    return ElasticSearchUtil.complexSearch(searchDTO , "","");
+    Map<String, Object> result =  ElasticSearchUtil.complexSearch(searchDTO , EsIndex.sunbirdDataAudit.getIndexName(), EsType.history.getTypeName());
+    Response response = new Response();
+    if (result != null) {
+      response.put(JsonKey.RESPONSE, result);
+    } else {
+      result = new HashMap<>();
+      response.put(JsonKey.RESPONSE, result);
+    }
+    sender().tell(response, self());
   }
 
 }

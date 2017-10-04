@@ -53,6 +53,7 @@
     33. sunbird_encryption_key
     34. sunbird_encryption_mode : mode value is either local or remote
     35. sunbird_sso_publickey : sso public key
+    36. sunbird_env_logo_url : logo url for sending email.(http://www.paramountias.com/media/images/current-affairs/diksha-portal.jpg) 
 ## Build
 1. Clone the repository "sunbird-lms-mw"
 1. Run "git submodule foreach git pull origin master" to pull the latest sunbird-utils submodule.

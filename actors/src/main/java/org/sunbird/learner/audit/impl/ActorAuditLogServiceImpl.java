@@ -22,10 +22,19 @@ public class ActorAuditLogServiceImpl implements AuditLogService{
     String objectType = (String) requestedData.get(JsonKey.OBJECT_TYPE);
     Map<String, Object> requestBody = (Map<String, Object>) requestedData.get(JsonKey.REQUEST);
     if(ProjectUtil.ObjectTypes.user.getValue().equalsIgnoreCase(objectType)){
+      requestBody.putAll((Map<String, Object>) requestBody.get(JsonKey.USER));
+      requestBody.remove(JsonKey.USER);
+      requestBody.remove(JsonKey.REQUESTED_BY);
       logRecord = processData(requestBody, JsonKey.USER_RELATIONS);
     } else if(ProjectUtil.ObjectTypes.organisation.getValue().equalsIgnoreCase(objectType)){
+      requestBody.putAll((Map<String, Object>) requestBody.get(JsonKey.ORGANISATION));
+      requestBody.remove(JsonKey.ORGANISATION);
+      requestBody.remove(JsonKey.REQUESTED_BY);
       logRecord = processData(requestBody, JsonKey.ORG_RELATIONS);
     } else if(ProjectUtil.ObjectTypes.batch.getValue().equalsIgnoreCase(objectType)){
+      requestBody.putAll((Map<String, Object>) requestBody.get(JsonKey.BATCH));
+      requestBody.remove(JsonKey.BATCH);
+      requestBody.remove(JsonKey.REQUESTED_BY);
       logRecord = processData(requestBody, JsonKey.BATCH_RELATIONS);
     }
     requestedData.remove(JsonKey.REQUEST);

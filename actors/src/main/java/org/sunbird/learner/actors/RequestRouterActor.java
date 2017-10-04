@@ -329,8 +329,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
                     parent.tell(result, ActorRef.noSender());
                     //Audit log method call
                     if(Util.auditLogUrlMap.containsKey(message.getOperation())){
-                      Map<String,Object> auditLogUrlMap = (Map<String, Object>) Util.auditLogUrlMap.get(message.getOperation());
-                      Map<String,Object> map = createAuditLogReqMap(auditLogUrlMap, message,(Response)result);
+                      AuditOperation auditOperation = (AuditOperation) Util.auditLogUrlMap.get(message.getOperation());
+                      Map<String,Object> map = createAuditLogReqMap(auditOperation, message,(Response)result);
                       AuditLogService logService = new ActorAuditLogServiceImpl();
                       logService.process(map);
                     }
@@ -340,20 +340,19 @@ public class RequestRouterActor extends UntypedAbstractActor {
         return true;
     }
 
-    protected Map<String, Object> createAuditLogReqMap(Map<String, Object> auditLogUrlMap,
+    protected Map<String, Object> createAuditLogReqMap(AuditOperation op,
         Request message, Response result) {
-      AuditOperation op = (AuditOperation) auditLogUrlMap.get(message.getOperation());
       Map<String,Object> map = new HashMap<>();
       map.put(JsonKey.REQ_ID, message.getRequestId());
       map.put(JsonKey.OBJECT_TYPE, op.getObjectType());
       map.put(JsonKey.OPERATION_TYPE, op.getOperationType());
       map.put(JsonKey.DATE, ProjectUtil.getFormattedDate());
       map.put(JsonKey.USER_ID, message.get(JsonKey.REQUESTED_BY));
-      map.put(JsonKey.REQUEST, message);
+      map.put(JsonKey.REQUEST, message.getRequest());
       if(message.getOperation().equals(ActorOperations.CREATE_USER.getValue())){
         map.put(JsonKey.OBJECT_ID, result.get(JsonKey.USER_ID));
       }else if(message.getOperation().equals(ActorOperations.CREATE_ORG.getValue())){
-        map.put(JsonKey.OBJECT_ID, result.get(JsonKey.ORG_ID));
+        map.put(JsonKey.OBJECT_ID, result.get(JsonKey.ORGANISATION_ID));
       }else if(message.getOperation().equals(ActorOperations.CREATE_BATCH.getValue())){
         map.put(JsonKey.OBJECT_ID, result.get(JsonKey.BATCH_ID));
       }else if(message.getOperation().equals(ActorOperations.CREATE_NOTE.getValue())){

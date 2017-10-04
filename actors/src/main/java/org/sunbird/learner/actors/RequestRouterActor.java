@@ -329,8 +329,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
                     parent.tell(result, ActorRef.noSender());
                     //Audit log method call
                     if(Util.auditLogUrlMap.containsKey(message.getOperation())){
-                      Map<String,Object> auditLogUrlMap = (Map<String, Object>) Util.auditLogUrlMap.get(message.getOperation());
-                      Map<String,Object> map = createAuditLogReqMap(auditLogUrlMap, message,(Response)result);
+                      AuditOperation auditOperation = (AuditOperation) Util.auditLogUrlMap.get(message.getOperation());
+                      Map<String,Object> map = createAuditLogReqMap(auditOperation, message,(Response)result);
                       AuditLogService logService = new ActorAuditLogServiceImpl();
                       logService.process(map);
                     }
@@ -340,9 +340,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
         return true;
     }
 
-    protected Map<String, Object> createAuditLogReqMap(Map<String, Object> auditLogUrlMap,
+    protected Map<String, Object> createAuditLogReqMap(AuditOperation op,
         Request message, Response result) {
-      AuditOperation op = (AuditOperation) auditLogUrlMap.get(message.getOperation());
       Map<String,Object> map = new HashMap<>();
       map.put(JsonKey.REQ_ID, message.getRequestId());
       map.put(JsonKey.OBJECT_TYPE, op.getObjectType());

@@ -5,9 +5,12 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.assessment.AssessmentItemActor;
@@ -21,6 +24,10 @@ import org.sunbird.learner.actors.recommend.RecommendorActor;
 import org.sunbird.learner.actors.search.CourseSearchActor;
 import org.sunbird.learner.actors.search.SearchHandlerActor;
 import org.sunbird.learner.actors.syncjobmanager.EsSyncActor;
+import org.sunbird.learner.audit.AuditLogService;
+import org.sunbird.learner.audit.impl.ActorAuditLogServiceImpl;
+import org.sunbird.learner.util.AuditOperation;
+import org.sunbird.learner.util.Util;
 import org.sunbird.metrics.actors.CourseMetricsActor;
 import org.sunbird.metrics.actors.MetricsBackGroundJobActor;
 import org.sunbird.metrics.actors.OrganisationMetricsActor;
@@ -320,9 +327,56 @@ public class RequestRouterActor extends UntypedAbstractActor {
                     // We got a result, handle it
                     ProjectLogger.log("Actor Service Call Ended on Success for  api ==" + message.getOperation()  +" end time " +System.currentTimeMillis() +"  Time taken " + (System.currentTimeMillis()-startTime), LoggerEnum.PERF_LOG);
                     parent.tell(result, ActorRef.noSender());
+                    //Audit log method call
+                    if(Util.auditLogUrlMap.containsKey(message.getOperation())){
+                      Map<String,Object> auditLogUrlMap = (Map<String, Object>) Util.auditLogUrlMap.get(message.getOperation());
+                      Map<String,Object> map = createAuditLogReqMap(auditLogUrlMap, message,(Response)result);
+                      AuditLogService logService = new ActorAuditLogServiceImpl();
+                      logService.process(map);
+                    }
                 }
             }
         }, ec);
         return true;
+    }
+
+    protected Map<String, Object> createAuditLogReqMap(Map<String, Object> auditLogUrlMap,
+        Request message, Response result) {
+      AuditOperation op = (AuditOperation) auditLogUrlMap.get(message.getOperation());
+      Map<String,Object> map = new HashMap<>();
+      map.put(JsonKey.REQ_ID, message.getRequestId());
+      map.put(JsonKey.OBJECT_TYPE, op.getObjectType());
+      map.put(JsonKey.OPERATION_TYPE, op.getOperationType());
+      map.put(JsonKey.DATE, ProjectUtil.getFormattedDate());
+      map.put(JsonKey.USER_ID, message.get(JsonKey.REQUESTED_BY));
+      map.put(JsonKey.REQUEST, message);
+      if(message.getOperation().equals(ActorOperations.CREATE_USER.getValue())){
+        map.put(JsonKey.OBJECT_ID, result.get(JsonKey.USER_ID));
+      }else if(message.getOperation().equals(ActorOperations.CREATE_ORG.getValue())){
+        map.put(JsonKey.OBJECT_ID, result.get(JsonKey.ORG_ID));
+      }else if(message.getOperation().equals(ActorOperations.CREATE_BATCH.getValue())){
+        map.put(JsonKey.OBJECT_ID, result.get(JsonKey.BATCH_ID));
+      }else if(message.getOperation().equals(ActorOperations.CREATE_NOTE.getValue())){
+        map.put(JsonKey.OBJECT_ID, result.get(JsonKey.ID));
+      }else if(message.getOperation().equals(ActorOperations.UPDATE_USER.getValue()) || message.getOperation().equals(ActorOperations.BLOCK_USER.getValue()) ||
+          message.getOperation().equals(ActorOperations.UNBLOCK_USER.getValue()) || message.getOperation().equals(ActorOperations.ASSIGN_ROLES.getValue())){
+        if(null != result.get(JsonKey.USER_ID)){
+          map.put(JsonKey.OBJECT_ID, message.getRequest().get(JsonKey.USER_ID));
+        }else{
+          map.put(JsonKey.OBJECT_ID, message.getRequest().get(JsonKey.ID));
+        }
+      }else if(message.getOperation().equals(ActorOperations.UPDATE_ORG.getValue()) || message.getOperation().equals(ActorOperations.UPDATE_ORG_STATUS.getValue()) ||
+          message.getOperation().equals(ActorOperations.APPROVE_ORG.getValue()) || message.getOperation().equals(ActorOperations.APPROVE_ORGANISATION.getValue()) ||
+          message.getOperation().equals(ActorOperations.JOIN_USER_ORGANISATION.getValue()) || message.getOperation().equals(ActorOperations.ADD_MEMBER_ORGANISATION.getValue()) || 
+          message.getOperation().equals(ActorOperations.REMOVE_MEMBER_ORGANISATION.getValue()) || message.getOperation().equals(ActorOperations.APPROVE_USER_ORGANISATION.getValue()) ||
+          message.getOperation().equals(ActorOperations.REJECT_USER_ORGANISATION.getValue())){
+          map.put(JsonKey.OBJECT_ID, message.getRequest().get(JsonKey.ORGANISATION_ID));
+      }else if(message.getOperation().equals(ActorOperations.UPDATE_BATCH.getValue()) || message.getOperation().equals(ActorOperations.REMOVE_BATCH.getValue()) ||
+          message.getOperation().equals(ActorOperations.ADD_USER_TO_BATCH.getValue()) || message.getOperation().equals(ActorOperations.REMOVE_USER_FROM_BATCH.getValue())){
+          map.put(JsonKey.OBJECT_ID, message.getRequest().get(JsonKey.BATCH_ID));
+      }else if(message.getOperation().equals(ActorOperations.UPDATE_NOTE.getValue()) || message.getOperation().equals(ActorOperations.DELETE_NOTE.getValue())){
+          map.put(JsonKey.OBJECT_ID, message.getRequest().get(JsonKey.NOTE_ID));
+      }
+      return map;
     }
 }

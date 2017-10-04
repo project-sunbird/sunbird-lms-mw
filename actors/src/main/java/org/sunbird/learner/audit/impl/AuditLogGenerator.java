@@ -18,10 +18,10 @@ public class AuditLogGenerator {
   public static Map<String,Object> generateLogs(Map<String, Object> requestData){
     AuditLog auditLog = new AuditLog();
     auditLog.setObjectType((String)requestData.get(JsonKey.OBJECT_TYPE));
-    auditLog.setObjectId((String)requestData.get(JsonKey.ID));
-    auditLog.setOperationType((String)requestData.get(JsonKey.OPERATION));
-    auditLog.setUserId((String)requestData.get(JsonKey.REQUESTED_BY));
-    auditLog.setRequestId((String)requestData.get(JsonKey.REQUEST_ID));
+    auditLog.setObjectId((String)requestData.get(JsonKey.OBJECT_ID));
+    auditLog.setOperationType((String)requestData.get(JsonKey.OPERATION_TYPE));
+    auditLog.setUserId((String)requestData.get(JsonKey.USER_ID));
+    auditLog.setRequestId((String)requestData.get(JsonKey.REQ_ID));
     auditLog.setDate(ProjectUtil.getFormattedDate());
     Map<String, Object> logRecord = new HashMap<>();
     if(requestData.containsKey(JsonKey.LOG_RECORD)){

@@ -30,7 +30,8 @@ public class ActorAuditLogServiceImpl implements AuditLogService{
     }
     requestedData.remove(JsonKey.REQUEST);
     requestedData.put(JsonKey.LOG_RECORD, logRecord);
-    AuditLogGenerator.generateLogs(requestedData);
+    Map<String,Object> auditLog = AuditLogGenerator.generateLogs(requestedData);
+    save(auditLog);
   }
   
   @SuppressWarnings("unchecked")

@@ -1,13 +1,12 @@
 package org.sunbird.learner.audit.impl;
 
-import akka.actor.UntypedAbstractActor;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+
 import org.joda.time.DateTime;
 import org.joda.time.Months;
 import org.sunbird.common.ElasticSearchUtil;
@@ -18,12 +17,14 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
+import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
+
+import akka.actor.UntypedAbstractActor;
 
 public class AuditLogManagementActor extends UntypedAbstractActor {
   private PropertiesCache cache = PropertiesCache.getInstance();

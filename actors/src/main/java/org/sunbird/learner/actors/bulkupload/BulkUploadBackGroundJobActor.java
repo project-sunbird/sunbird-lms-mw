@@ -40,6 +40,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.BackgroundJobManager;
+import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
 import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
@@ -59,10 +60,13 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   private EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
           .getEncryptionServiceInstance(null);
+  private ActorRef emailServiceActorRef;
 
   public BulkUploadBackGroundJobActor() {
     backGroundActorRef =
         getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
+    emailServiceActorRef =
+        getContext().actorOf(Props.create(EmailServiceActor.class), "emailServiceActor");
   }
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -686,6 +690,14 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     Map<String, Object> userMap = null;
     for (int i = 0; i < dataMapList.size(); i++) {
       userMap = dataMapList.get(i);
+      Map<String , Object> welcomaMailTemplateMap = new HashMap<>();
+      if(ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PASSWORD))){
+        String randomPassword = ProjectUtil.generateRandomPassword();
+        userMap.put(JsonKey.PASSWORD , randomPassword);
+        welcomaMailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD ,randomPassword );
+      }else{
+        welcomaMailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD ,(String)userMap.get(JsonKey.PASSWORD) );
+      }
       String errMsg = validateUser(userMap);
       if (errMsg.equalsIgnoreCase(JsonKey.SUCCESS)) {
         try {
@@ -785,6 +797,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             }
             // insert details to user_org table
             insertRecordToUserOrgTable(userMap);
+            // send the welcome mail to user
+            welcomaMailTemplateMap.putAll(userMap);
+            sendOnboardingMail(welcomaMailTemplateMap);
 
           } else {
             // update user record
@@ -1265,6 +1280,33 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       return false;
     }
     return first.equalsIgnoreCase(second);
+  }
+
+  private void sendOnboardingMail(Map<String, Object> emailTemplateMap) {
+
+    if (!(ProjectUtil.isStringNullOREmpty((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
+
+      emailTemplateMap.put(JsonKey.SUBJECT, "Welcome to DIKSHA");
+      List<String> reciptientsMail = new ArrayList<>();
+      reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
+      emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
+      //TODO: discuss aout what should be the Body format
+      emailTemplateMap.put(JsonKey.BODY, "");
+      //TODO: what should e the login link
+      emailTemplateMap.put(JsonKey.ACTION_URL, "https://diksha.gov.in");
+      emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
+      if (!ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url"))) {
+        emailTemplateMap.put(JsonKey.WEB_URL, System.getenv("sunird_web_url"));
+      }
+      if (!ProjectUtil.isStringNullOREmpty(System.getenv("sunbird_app_url"))) {
+        emailTemplateMap.put(JsonKey.APP_URL, System.getenv("sunbird_app_url"));
+      }
+
+      Request request = new Request();
+      request.setOperation(ActorOperations.EMAIL_SERVICE.getValue());
+      request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);
+      emailServiceActorRef.tell(request, null);
+    }
   }
 
 }

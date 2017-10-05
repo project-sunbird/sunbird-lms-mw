@@ -1071,9 +1071,9 @@ public class UserManagementActor extends UntypedAbstractActor {
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
 
     if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PASSWORD))) {
+      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD , (String) userMap.get(JsonKey.PASSWORD));
       userMap.put(JsonKey.PASSWORD,
           OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
-      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD , (String) userMap.get(JsonKey.PASSWORD));
     }else{
       //create tempPassword
       String tempPassword = ProjectUtil.generateRandomPassword();

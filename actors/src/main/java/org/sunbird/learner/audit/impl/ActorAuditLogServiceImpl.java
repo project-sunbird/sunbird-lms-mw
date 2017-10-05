@@ -26,7 +26,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.audit.AuditLogService;
 import org.sunbird.learner.util.AuditOperation;
-
+import org.sunbird.learner.util.UserUtility;
 import akka.actor.UntypedAbstractActor;
 
 public class ActorAuditLogServiceImpl extends UntypedAbstractActor implements AuditLogService {
@@ -246,13 +246,24 @@ public class ActorAuditLogServiceImpl extends UntypedAbstractActor implements Au
     filters.remove("toDate");
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS , filters);
     Map<String, Object> result =  ElasticSearchUtil.complexSearch(searchDTO , EsIndex.sunbirdDataAudit.getIndexName(), EsType.history.getTypeName());
+    // Decrypt user data
+    List<Map<String,Object>> mapList = ((List<Map<String,Object>>)result.get(JsonKey.CONTENT));
+    for(Map<String,Object> dataMap : mapList){
+      Map<String,Object> record = (Map<String, Object>) dataMap.get(JsonKey.LOG_RECORD);
+      Map<String,Object> relationList = (Map<String, Object>) record.get(JsonKey.RELATIONS);
+      Map<String,Object> properties = (Map<String, Object>) record.get(JsonKey.PROPERTIES);
+      if(((String)dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.USER)){
+        UserUtility.decryptUserData(properties);
+        if((null != (List<Map<String, Object>>) relationList.get(JsonKey.ADDRESS)) &&(!((List<Map<String, Object>>) relationList.get(JsonKey.ADDRESS)).isEmpty())){
+           UserUtility.decryptUserAddressData((List<Map<String, Object>>) relationList.get(JsonKey.ADDRESS));
+        }
+      }
+    }
+    
     Response response = new Response();
     if (result != null) {
       response.put(JsonKey.RESPONSE, result);
-    } else {
-      result = new HashMap<>();
-      response.put(JsonKey.RESPONSE, result);
-    }
+    } 
     sender().tell(response, self());
   }
 

@@ -5,12 +5,10 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.assessment.AssessmentItemActor;
@@ -18,15 +16,13 @@ import org.sunbird.learner.actors.badges.BadgesActor;
 import org.sunbird.learner.actors.bulkupload.BulkUploadBackGroundJobActor;
 import org.sunbird.learner.actors.bulkupload.BulkUploadManagementActor;
 import org.sunbird.learner.actors.bulkupload.UserDataEncryptionDecryptionServiceActor;
-import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
 import org.sunbird.learner.actors.fileuploadservice.FileUploadServiceActor;
+import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
 import org.sunbird.learner.actors.recommend.RecommendorActor;
 import org.sunbird.learner.actors.search.CourseSearchActor;
 import org.sunbird.learner.actors.search.SearchHandlerActor;
 import org.sunbird.learner.actors.syncjobmanager.EsSyncActor;
-import org.sunbird.learner.audit.AuditLogService;
 import org.sunbird.learner.audit.impl.ActorAuditLogServiceImpl;
-import org.sunbird.learner.audit.impl.AuditLogManagementActor;
 import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.util.Util;
 import org.sunbird.metrics.actors.CourseMetricsActor;
@@ -109,6 +105,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private static final String AUDIT_LOG_MGMT_ACTOR = "auditLogManagementActor";
   private static final String USER_DATA_ENC_DEC_SERVICE_ACTOR =
       "userDataEncryptionDecryptionServiceActor";
+
   
 
   /**
@@ -188,8 +185,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
         FromConfig.getInstance()
             .props(Props.create(UserDataEncryptionDecryptionServiceActor.class)),
         USER_DATA_ENC_DEC_SERVICE_ACTOR);
-    auditLogManagementActor = getContext().actorOf(
-        FromConfig.getInstance().props(Props.create(AuditLogManagementActor.class)), AUDIT_LOG_MGMT_ACTOR);
+    auditLogManagementActor = getContext().actorOf(Props.create(ActorAuditLogServiceImpl.class), AUDIT_LOG_MGMT_ACTOR);;
     ec = getContext().dispatcher();
     initializeRouterMap();
   }
@@ -381,10 +377,14 @@ public class RequestRouterActor extends UntypedAbstractActor {
           if (Util.auditLogUrlMap.containsKey(message.getOperation())) {
             AuditOperation auditOperation =
                 (AuditOperation) Util.auditLogUrlMap.get(message.getOperation());
-            Map<String, Object> map =
-                createAuditLogReqMap(auditOperation, message, (Response) result);
-            AuditLogService logService = new ActorAuditLogServiceImpl();
-            logService.process(map);
+            Map<String, Object> map = new HashMap<>();
+            map.put(JsonKey.OPERATION, auditOperation);
+            map.put(JsonKey.REQUEST, message);
+            map.put(JsonKey.RESPONSE, result);
+            Request request = new Request();
+            request.setOperation(ActorOperations.PROCESS_AUDIT_LOG.getValue());
+            request.setRequest(map);
+            auditLogManagementActor.tell(request, self());
           }
         }
       }
@@ -392,56 +392,4 @@ public class RequestRouterActor extends UntypedAbstractActor {
     return true;
   }
 
-  @SuppressWarnings("unchecked")
-  protected Map<String, Object> createAuditLogReqMap(AuditOperation op, Request message,
-      Response result) {
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.REQ_ID, message.getRequestId());
-    map.put(JsonKey.OBJECT_TYPE, op.getObjectType());
-    map.put(JsonKey.OPERATION_TYPE, op.getOperationType());
-    map.put(JsonKey.DATE, ProjectUtil.getFormattedDate());
-    map.put(JsonKey.USER_ID, message.getRequest().get(JsonKey.REQUESTED_BY));
-    map.put(JsonKey.REQUEST, message.getRequest());
-    if (message.getOperation().equals(ActorOperations.CREATE_USER.getValue())) {
-      map.put(JsonKey.OBJECT_ID, result.get(JsonKey.USER_ID));
-    } else if (message.getOperation().equals(ActorOperations.CREATE_ORG.getValue())) {
-      map.put(JsonKey.OBJECT_ID, result.get(JsonKey.ORGANISATION_ID));
-    } else if (message.getOperation().equals(ActorOperations.CREATE_BATCH.getValue())) {
-      map.put(JsonKey.OBJECT_ID, result.get(JsonKey.BATCH_ID));
-    } else if (message.getOperation().equals(ActorOperations.CREATE_NOTE.getValue())) {
-      map.put(JsonKey.OBJECT_ID, result.get(JsonKey.ID));
-    } else if (message.getOperation().equals(ActorOperations.UPDATE_USER.getValue())
-        || message.getOperation().equals(ActorOperations.BLOCK_USER.getValue())
-        || message.getOperation().equals(ActorOperations.UNBLOCK_USER.getValue())
-        || message.getOperation().equals(ActorOperations.ASSIGN_ROLES.getValue())) {
-      if (null != result.get(JsonKey.USER_ID)) {
-        map.put(JsonKey.OBJECT_ID,
-            ((Map<String, Object>) message.getRequest().get(JsonKey.USER)).get(JsonKey.USER_ID));
-      } else {
-        map.put(JsonKey.OBJECT_ID, message.getRequest().get(JsonKey.ID));
-      }
-    } else if (message.getOperation().equals(ActorOperations.UPDATE_ORG.getValue())
-        || message.getOperation().equals(ActorOperations.UPDATE_ORG_STATUS.getValue())
-        || message.getOperation().equals(ActorOperations.APPROVE_ORG.getValue())
-        || message.getOperation().equals(ActorOperations.APPROVE_ORGANISATION.getValue())
-        || message.getOperation().equals(ActorOperations.JOIN_USER_ORGANISATION.getValue())
-        || message.getOperation().equals(ActorOperations.ADD_MEMBER_ORGANISATION.getValue())
-        || message.getOperation().equals(ActorOperations.REMOVE_MEMBER_ORGANISATION.getValue())
-        || message.getOperation().equals(ActorOperations.APPROVE_USER_ORGANISATION.getValue())
-        || message.getOperation().equals(ActorOperations.REJECT_USER_ORGANISATION.getValue())) {
-      map.put(JsonKey.OBJECT_ID,
-          ((Map<String, Object>) message.getRequest().get(JsonKey.ORGANISATION))
-              .get(JsonKey.ORGANISATION_ID));
-    } else if (message.getOperation().equals(ActorOperations.UPDATE_BATCH.getValue())
-        || message.getOperation().equals(ActorOperations.REMOVE_BATCH.getValue())
-        || message.getOperation().equals(ActorOperations.ADD_USER_TO_BATCH.getValue())
-        || message.getOperation().equals(ActorOperations.REMOVE_USER_FROM_BATCH.getValue())) {
-      map.put(JsonKey.OBJECT_ID,
-          ((Map<String, Object>) message.getRequest().get(JsonKey.BATCH)).get(JsonKey.BATCH_ID));
-    } else if (message.getOperation().equals(ActorOperations.UPDATE_NOTE.getValue())
-        || message.getOperation().equals(ActorOperations.DELETE_NOTE.getValue())) {
-      map.put(JsonKey.OBJECT_ID, message.getRequest().get(JsonKey.NOTE_ID));
-    }
-    return map;
-  }
 }

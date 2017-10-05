@@ -17,6 +17,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -39,19 +40,22 @@ import org.sunbird.helper.ServiceFactory;
  */
 public class Util {
 
-    public static Map<String, DbInfo> dbInfoMap = new HashMap<String, DbInfo>();
+    public static Map<String, DbInfo> dbInfoMap = new HashMap<>();
     public static final int RECOMENDED_LIST_SIZE = 10;
     
     private static final String KEY_SPACE_NAME = "sunbird";
     private static Properties prop = new Properties();
-    private static Map<String, String> headers = new HashMap<String, String>();
-    private static Map<Integer , List<Integer>> orgStatusTransition = new HashMap<Integer , List<Integer>>();
+    private static Map<String, String> headers = new HashMap<>();
+    private static Map<Integer , List<Integer>> orgStatusTransition = new HashMap<>();
+    public static final Map<String,Object> auditLogUrlMap  = new HashMap<>();
+   // private static final AuditOperation auditOperation = null;
     
     
     static {
         loadPropertiesFile();
         initializeOrgStatusTransition();
         initializeDBProperty();
+        initializeAuditLogUrl();
         // EkStep HttpClient headers init
         headers.put("content-type", "application/json");
         headers.put("accept", "application/json");
@@ -76,6 +80,34 @@ public class Util {
         orgStatusTransition.put(OrgStatus.RETIRED.getValue() ,Arrays.asList(OrgStatus.RETIRED.getValue()));
     }
     
+    private static void initializeAuditLogUrl() {
+      //This map will hold ActorOperationType as key and AuditOperation Object as value which contains operation Type  and Object Type info.
+      auditLogUrlMap.put(ActorOperations.CREATE_USER.getValue(), new AuditOperation(JsonKey.USER, JsonKey.CREATE));
+      auditLogUrlMap.put(ActorOperations.UPDATE_USER.getValue(), new AuditOperation(JsonKey.USER, JsonKey.UPDATE));
+      auditLogUrlMap.put(ActorOperations.CREATE_ORG.getValue(), new AuditOperation(JsonKey.ORGANISATION, JsonKey.CREATE));
+      auditLogUrlMap.put(ActorOperations.UPDATE_ORG.getValue(), new AuditOperation(JsonKey.ORGANISATION, JsonKey.UPDATE));
+      auditLogUrlMap.put(ActorOperations.UPDATE_ORG_STATUS.getValue(), new AuditOperation(JsonKey.ORGANISATION, JsonKey.UPDATE));
+      auditLogUrlMap.put(ActorOperations.APPROVE_ORG.getValue(), new AuditOperation(JsonKey.ORGANISATION, JsonKey.UPDATE));
+      auditLogUrlMap.put(ActorOperations.APPROVE_ORGANISATION.getValue(), new AuditOperation(JsonKey.ORGANISATION, JsonKey.UPDATE));
+      auditLogUrlMap.put(ActorOperations.JOIN_USER_ORGANISATION.getValue(), new AuditOperation(JsonKey.ORGANISATION, JsonKey.UPDATE));
+      auditLogUrlMap.put(ActorOperations.ADD_MEMBER_ORGANISATION.getValue(), new AuditOperation(JsonKey.ORGANISATION, JsonKey.UPDATE));
+      auditLogUrlMap.put(ActorOperations.REMOVE_MEMBER_ORGANISATION.getValue(), new AuditOperation(JsonKey.ORGANISATION, JsonKey.UPDATE));
+      auditLogUrlMap.put(ActorOperations.APPROVE_USER_ORGANISATION.getValue(), new AuditOperation(JsonKey.ORGANISATION, JsonKey.UPDATE));
+      auditLogUrlMap.put(ActorOperations.REJECT_USER_ORGANISATION.getValue(), new AuditOperation(JsonKey.ORGANISATION, JsonKey.UPDATE));
+      auditLogUrlMap.put(ActorOperations.BLOCK_USER.getValue(), new AuditOperation(JsonKey.USER, JsonKey.UPDATE));
+      auditLogUrlMap.put(ActorOperations.UNBLOCK_USER.getValue(), new AuditOperation(JsonKey.USER, JsonKey.UPDATE));
+      auditLogUrlMap.put(ActorOperations.ASSIGN_ROLES.getValue(), new AuditOperation(JsonKey.USER, JsonKey.UPDATE));
+      auditLogUrlMap.put(ActorOperations.CREATE_BATCH.getValue(), new AuditOperation(JsonKey.BATCH, JsonKey.CREATE));
+      auditLogUrlMap.put(ActorOperations.UPDATE_BATCH.getValue(), new AuditOperation(JsonKey.BATCH, JsonKey.UPDATE));
+      auditLogUrlMap.put(ActorOperations.REMOVE_BATCH.getValue(), new AuditOperation(JsonKey.BATCH, JsonKey.UPDATE));
+      auditLogUrlMap.put(ActorOperations.ADD_USER_TO_BATCH.getValue(), new AuditOperation(JsonKey.BATCH, JsonKey.UPDATE));
+      auditLogUrlMap.put(ActorOperations.REMOVE_USER_FROM_BATCH.getValue(), new AuditOperation(JsonKey.BATCH, JsonKey.UPDATE));
+      auditLogUrlMap.put(ActorOperations.CREATE_NOTE.getValue(), new AuditOperation(JsonKey.USER, JsonKey.CREATE));
+      auditLogUrlMap.put(ActorOperations.UPDATE_NOTE.getValue(), new AuditOperation(JsonKey.USER, JsonKey.UPDATE));
+      auditLogUrlMap.put(ActorOperations.DELETE_NOTE.getValue(), new AuditOperation(JsonKey.USER, JsonKey.UPDATE));
+      
+    }
+
     /**
      * This method will initialize the cassandra data base
      * property 
@@ -527,4 +559,6 @@ public class Util {
       }
       return JsonKey.SUCCESS;
     }
+    
+    
 }

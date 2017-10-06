@@ -1204,9 +1204,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
     reqMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.REGISTERED_ORG_ID));
     reqMap.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
-    List<String> roleList = new ArrayList<>();
-    roleList.add(ProjectUtil.UserRole.CONTENT_CREATOR.getValue());
-    reqMap.put(JsonKey.ROLES, roleList);
     reqMap.put(JsonKey.IS_DELETED, false);
 
     try {

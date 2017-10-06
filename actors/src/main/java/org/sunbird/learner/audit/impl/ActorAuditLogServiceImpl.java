@@ -129,9 +129,16 @@ public class ActorAuditLogServiceImpl extends UntypedAbstractActor implements Au
         || message.getOperation().equals(ActorOperations.REMOVE_MEMBER_ORGANISATION.getValue())
         || message.getOperation().equals(ActorOperations.APPROVE_USER_ORGANISATION.getValue())
         || message.getOperation().equals(ActorOperations.REJECT_USER_ORGANISATION.getValue())) {
-      map.put(JsonKey.OBJECT_ID,
-          ((Map<String, Object>) message.getRequest().get(JsonKey.ORGANISATION))
-              .get(JsonKey.ORGANISATION_ID));
+      if(!ProjectUtil.isStringNullOREmpty((String)((Map<String, Object>) message.getRequest().get(JsonKey.ORGANISATION))
+          .get(JsonKey.ORGANISATION_ID))){
+        map.put(JsonKey.OBJECT_ID,
+            ((Map<String, Object>) message.getRequest().get(JsonKey.ORGANISATION))
+                .get(JsonKey.ORGANISATION_ID));
+      }else {
+        map.put(JsonKey.OBJECT_ID,
+            ((Map<String, Object>) message.getRequest().get(JsonKey.ORGANISATION))
+                .get(JsonKey.ID));
+      }
     } else if (message.getOperation().equals(ActorOperations.UPDATE_BATCH.getValue())
         || message.getOperation().equals(ActorOperations.REMOVE_BATCH.getValue())
         || message.getOperation().equals(ActorOperations.ADD_USER_TO_BATCH.getValue())

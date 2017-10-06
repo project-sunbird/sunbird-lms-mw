@@ -31,6 +31,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
 import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
@@ -52,10 +53,14 @@ public class UserManagementActor extends UntypedAbstractActor {
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
           .getEncryptionServiceInstance(null);
   private ActorRef backGroundActorRef;
+  private ActorRef emailServiceActorRef;
+  private PropertiesCache propertiesCache = PropertiesCache.getInstance();
 
   public UserManagementActor() {
     backGroundActorRef =
         getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
+    emailServiceActorRef =
+        getContext().actorOf(Props.create(EmailServiceActor.class), "emailServiceActor");
   }
 
   /**
@@ -903,6 +908,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
+    Map<String , Object> emailTemplateMap = new HashMap<>(userMap);
     if(userMap.containsKey(JsonKey.WEB_PAGES)){
       SocialMediaType.validateSocialMedia((List<Map<String, String>>)userMap.get(JsonKey.WEB_PAGES));
     }
@@ -1066,8 +1072,15 @@ public class UserManagementActor extends UntypedAbstractActor {
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
 
     if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PASSWORD))) {
+      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD , (String) userMap.get(JsonKey.PASSWORD));
       userMap.put(JsonKey.PASSWORD,
           OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
+    }else{
+      //create tempPassword
+      String tempPassword = ProjectUtil.generateRandomPassword();
+      userMap.put(JsonKey.PASSWORD,
+            OneWayHashing.encryptVal(tempPassword));
+      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD , tempPassword);
     }
     try {
       UserUtility.encryptUserData(userMap);
@@ -1162,6 +1175,9 @@ public class UserManagementActor extends UntypedAbstractActor {
     response.put(JsonKey.ACCESSTOKEN, accessToken);
     sender().tell(response, self());
 
+    // user created successfully send the onboarding mail
+    sendOnboardingMail(emailTemplateMap);
+
 
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       ProjectLogger.log("method call going to satrt for ES--.....");
@@ -1188,9 +1204,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
     reqMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.REGISTERED_ORG_ID));
     reqMap.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
-    List<String> roleList = new ArrayList<>();
-    roleList.add(ProjectUtil.UserRole.CONTENT_CREATOR.getValue());
-    reqMap.put(JsonKey.ROLES, roleList);
     reqMap.put(JsonKey.IS_DELETED, false);
 
     try {
@@ -2179,6 +2192,31 @@ public class UserManagementActor extends UntypedAbstractActor {
   private void getMediaTypes(Request actorMessage){
     Response response =  SocialMediaType.getMediaTypeFromDB();
     sender().tell(response, self());
+  }
+
+  private void sendOnboardingMail(Map<String, Object> emailTemplateMap) {
+
+    if(!(ProjectUtil.isStringNullOREmpty((String)emailTemplateMap.get(JsonKey.EMAIL)))) {
+
+      emailTemplateMap.put(JsonKey.SUBJECT, "Welcome to DIKSHA");
+      List<String> reciptientsMail = new ArrayList<>();
+      reciptientsMail.add((String)emailTemplateMap.get(JsonKey.EMAIL));
+      emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS , reciptientsMail);
+      if(! ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url")) || !ProjectUtil.isStringNullOREmpty(propertiesCache.getProperty("sunird_web_url"))) {
+        emailTemplateMap.put(JsonKey.WEB_URL, ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url")) ? propertiesCache.getProperty("sunird_web_url") : System.getenv("sunird_web_url"));
+      }
+      if(! ProjectUtil.isStringNullOREmpty(System.getenv("sunbird_app_url")) || !ProjectUtil.isStringNullOREmpty(propertiesCache.getProperty("sunbird_app_url"))) {
+        emailTemplateMap.put(JsonKey.APP_URL, ProjectUtil.isStringNullOREmpty(System.getenv("sunbird_app_url")) ? propertiesCache.getProperty("sunbird_app_url") : System.getenv("sunird_web_url"));
+      }
+
+      emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE , "welcome");
+
+      Request request = new Request();
+      request.setOperation(ActorOperations.EMAIL_SERVICE.getValue());
+      request.put(JsonKey.EMAIL_REQUEST , emailTemplateMap);
+      emailServiceActorRef.tell(request, null);
+    }
+
   }
 
 }

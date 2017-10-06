@@ -426,6 +426,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
         for (Map<String, Object> map : useresContent) {
           String userId = (String) map.get(JsonKey.USER_ID);
           map.put("user", userId);
+          map.put(JsonKey.USERNAME , decryptionService.decryptData((String)map.get(JsonKey.USERNAME)));
           String registerdOrgId = (String) map.get(JsonKey.REGISTERED_ORG_ID);
           if (isNotNull(registerdOrgId)) {
             orgSet.add(registerdOrgId);

@@ -240,7 +240,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), courseBatchObject);
     successList.put(JsonKey.SUCCESS_RESULT, passedUserList);
     failList.put(JsonKey.FAILURE_RESULT, failedUserList);
-
+    //process Audit Log
+    processAuditLog(courseBatchObject,ActorOperations.UPDATE_BATCH.getValue(),"",JsonKey.BATCH);
     ProjectLogger.log("method call going to satrt for ES--.....");
     Response batchRes = new Response();
     batchRes.getResult().put(JsonKey.OPERATION, ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
@@ -436,8 +437,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         || isNotNull((String) concurrentHashMap.get(JsonKey.EXTERNAL_ID))) {
       if (isNull(concurrentHashMap.get(JsonKey.PROVIDER))
           || isNull(concurrentHashMap.get(JsonKey.EXTERNAL_ID))) {
-        ProjectLogger.log("Source and external ids both should exist.");
-        concurrentHashMap.put(JsonKey.ERROR_MSG, "Source and external ids both should exist.");
+        ProjectLogger.log("Provider and external ids both should exist.");
+        concurrentHashMap.put(JsonKey.ERROR_MSG, "Provider and external ids both should exist.");
         failureList.add(concurrentHashMap);
         return;
       }
@@ -485,6 +486,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
               .log("Calling background job to save org data into ES" + orgResult.get(JsonKey.ID));
           backGroundActorRef.tell(orgResponse, self());
           successList.add(concurrentHashMap);
+        //process Audit Log
+          processAuditLog(concurrentHashMap,ActorOperations.UPDATE_ORG.getValue(),"",JsonKey.ORGANISATION);
           return;
         } catch (Exception ex) {
 
@@ -553,6 +556,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
               + contentList.get(0).get(JsonKey.ID));
           backGroundActorRef.tell(orgResponse, self());
           successList.add(concurrentHashMap);
+        //process Audit Log
+          processAuditLog(concurrentHashMap,ActorOperations.UPDATE_ORG.getValue(),"",JsonKey.ORGANISATION);
           return;
         } catch (Exception ex) {
 
@@ -622,7 +627,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
     concurrentHashMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     concurrentHashMap.put(JsonKey.STATUS, ProjectUtil.OrgStatus.ACTIVE.getValue());
-    // allow lower case values for source and externalId to the database
+    // allow lower case values for provider and externalId to the database
     if (concurrentHashMap.get(JsonKey.PROVIDER) != null) {
       concurrentHashMap.put(JsonKey.PROVIDER,
           ((String) concurrentHashMap.get(JsonKey.PROVIDER)).toLowerCase());
@@ -660,6 +665,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
       backGroundActorRef.tell(orgResponse, self());
       successList.add(concurrentHashMap);
+    //process Audit Log
+      processAuditLog(concurrentHashMap,ActorOperations.CREATE_ORG.getValue(),"",JsonKey.ORGANISATION);
     } catch (Exception ex) {
 
       ProjectLogger.log("Exception occurs  ", ex);
@@ -793,7 +800,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             insertRecordToUserOrgTable(userMap);
             
             //process Audit Log
-            processAuditLog(userMap,ActorOperations.CREATE_USER.getValue(),updatedBy);
+            processAuditLog(userMap,ActorOperations.CREATE_USER.getValue(),updatedBy,JsonKey.USER);
           } else {
             // update user record
             tempMap.remove(JsonKey.OPERATION);
@@ -824,7 +831,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
               continue;
             }
             //Process Audit Log
-            processAuditLog(userMap,ActorOperations.UPDATE_USER.getValue(),updatedBy);
+            processAuditLog(userMap,ActorOperations.UPDATE_USER.getValue(),updatedBy,JsonKey.USER);
           }
           // save successfully created user data
           tempMap.putAll(userMap);
@@ -875,14 +882,23 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
   }
 
-  private void processAuditLog(Map<String, Object> userMap, String actorOperationType, String updatedBy) {
+  private void processAuditLog(Map<String, Object> dataMap, String actorOperationType, String updatedBy, String objectType) {
     Request req = new Request();
+    Response res = new Response();
     req.setRequest_id(processId);
     req.setOperation(actorOperationType);
     req.getRequest().put(JsonKey.REQUESTED_BY, updatedBy);
-    req.getRequest().put(JsonKey.USER,userMap);
-    Response res = new Response();
-    res.getResult().put(JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
+    if(objectType.equalsIgnoreCase(JsonKey.USER)){
+      req.getRequest().put(JsonKey.USER,dataMap);
+      res.getResult().put(JsonKey.USER_ID, dataMap.get(JsonKey.USER_ID));
+    } else if (objectType.equalsIgnoreCase(JsonKey.ORGANISATION)){
+      req.getRequest().put(JsonKey.ORGANISATION,dataMap);
+      res.getResult().put(JsonKey.ORGANISATION_ID, dataMap.get(JsonKey.ID));
+    } else if (objectType.equalsIgnoreCase(JsonKey.BATCH)){
+      req.getRequest().put(JsonKey.BATCH,dataMap);
+      dataMap.remove("header");
+      res.getResult().put(JsonKey.BATCH_ID, dataMap.get(JsonKey.ID));
+    }
     saveAuditLog(res, actorOperationType, req);
   }
 
@@ -1039,9 +1055,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     reqMap.put(JsonKey.POSITION, userMap.get(JsonKey.POSITION));
     reqMap.put(JsonKey.IS_DELETED, false);
     List<String> roleList = (List<String>) userMap.get(JsonKey.ROLES);
-    if (!roleList.contains(ProjectUtil.UserRole.CONTENT_CREATOR.getValue())) {
-      roleList.add(ProjectUtil.UserRole.CONTENT_CREATOR.getValue());
-    }
     reqMap.put(JsonKey.ROLES, roleList);
 
     try {
@@ -1289,19 +1302,20 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   }
   
   private void saveAuditLog(Response result,String operation,Request message){
-    
-    try {
-      Map<String,Object> map = new HashMap<>();
-      map.putAll((Map<String, Object>) message.getRequest().get(JsonKey.USER));
-      UserUtility.encryptUserData(map);
-      message.getRequest().put(JsonKey.USER, map);
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "Exception occurred while bulk user upload in BulkUploadBackGroundJobActor during data encryption :",
-          ex);
-    }
     AuditOperation auditOperation =
         (AuditOperation) Util.auditLogUrlMap.get(operation);
+    if(auditOperation.getObjectType().equalsIgnoreCase(JsonKey.USER)){
+      try {
+        Map<String,Object> map = new HashMap<>();
+        map.putAll((Map<String, Object>) message.getRequest().get(JsonKey.USER));
+        UserUtility.encryptUserData(map);
+        message.getRequest().put(JsonKey.USER, map);
+      } catch (Exception ex) {
+        ProjectLogger.log(
+            "Exception occurred while bulk user upload in BulkUploadBackGroundJobActor during data encryption :",
+            ex);
+      }
+    }
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.OPERATION, auditOperation);
     map.put(JsonKey.REQUEST,  message);

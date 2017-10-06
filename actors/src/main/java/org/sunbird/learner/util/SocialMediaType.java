@@ -10,6 +10,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 
@@ -89,11 +90,6 @@ public class SocialMediaType {
   }
   
   public static void validateSocialMedia(List<Map<String, String>> socialMediaList) {
-    if (null == socialMediaList || socialMediaList.isEmpty()) {
-      throw new ProjectCommonException(ResponseCode.invalidWebPageData.getErrorCode(),
-          ResponseCode.invalidWebPageData.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
     for(Map<String,String> socialMedia : socialMediaList){
       if(null == socialMedia || socialMedia.isEmpty()){
         throw new ProjectCommonException(ResponseCode.invalidWebPageData.getErrorCode(),
@@ -111,7 +107,7 @@ public class SocialMediaType {
       }
       if(!SocialMediaType.validateMediaURL(mediaType, socialMedia.get(JsonKey.URL))){
         throw new ProjectCommonException(ResponseCode.invalidWebPageUrl.getErrorCode(),
-            ResponseCode.invalidWebPageUrl.getErrorMessage(),
+            ProjectUtil.formatMessage(ResponseCode.invalidWebPageUrl.getErrorMessage(), mediaType),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }  
     } 

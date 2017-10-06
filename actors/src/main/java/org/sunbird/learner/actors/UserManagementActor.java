@@ -2205,10 +2205,16 @@ public class UserManagementActor extends UntypedAbstractActor {
       if(! ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url")) || !ProjectUtil.isStringNullOREmpty(propertiesCache.getProperty("sunird_web_url"))) {
         emailTemplateMap.put(JsonKey.WEB_URL, ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url")) ? propertiesCache.getProperty("sunird_web_url") : System.getenv("sunird_web_url"));
       }
-      if(! ProjectUtil.isStringNullOREmpty(System.getenv("sunbird_app_url")) || !ProjectUtil.isStringNullOREmpty(propertiesCache.getProperty("sunbird_app_url"))) {
-        emailTemplateMap.put(JsonKey.APP_URL, ProjectUtil.isStringNullOREmpty(System.getenv("sunbird_app_url")) ? propertiesCache.getProperty("sunbird_app_url") : System.getenv("sunird_web_url"));
+      String appUrl = System.getenv("sunbird_app_url");
+      if (ProjectUtil.isStringNullOREmpty(appUrl)) {
+         appUrl = propertiesCache.getProperty("sunbird_app_url");
       }
-
+      
+      if(!ProjectUtil.isStringNullOREmpty(appUrl)) {
+         if (!"sunbird_app_url".equalsIgnoreCase(appUrl)) {
+           emailTemplateMap.put(JsonKey.APP_URL, appUrl);
+         }
+      }
       emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE , "welcome");
 
       Request request = new Request();

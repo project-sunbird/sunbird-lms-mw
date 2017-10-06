@@ -69,8 +69,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   public BulkUploadBackGroundJobActor() {
     backGroundActorRef =
         getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
-    auditLogManagementActor =
-        getContext().actorOf(Props.create(ActorAuditLogServiceImpl.class), "auditLogManagementActor");
+    auditLogManagementActor = getContext().actorOf(Props.create(ActorAuditLogServiceImpl.class),
+        "auditLogManagementActor");
     emailServiceActorRef =
         getContext().actorOf(Props.create(EmailServiceActor.class), "emailServiceActor");
   }
@@ -244,8 +244,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), courseBatchObject);
     successList.put(JsonKey.SUCCESS_RESULT, passedUserList);
     failList.put(JsonKey.FAILURE_RESULT, failedUserList);
-    //process Audit Log
-    processAuditLog(courseBatchObject,ActorOperations.UPDATE_BATCH.getValue(),"",JsonKey.BATCH);
+    // process Audit Log
+    processAuditLog(courseBatchObject, ActorOperations.UPDATE_BATCH.getValue(), "", JsonKey.BATCH);
     ProjectLogger.log("method call going to satrt for ES--.....");
     Response batchRes = new Response();
     batchRes.getResult().put(JsonKey.OPERATION, ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
@@ -490,8 +490,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
               .log("Calling background job to save org data into ES" + orgResult.get(JsonKey.ID));
           backGroundActorRef.tell(orgResponse, self());
           successList.add(concurrentHashMap);
-        //process Audit Log
-          processAuditLog(concurrentHashMap,ActorOperations.UPDATE_ORG.getValue(),"",JsonKey.ORGANISATION);
+          // process Audit Log
+          processAuditLog(concurrentHashMap, ActorOperations.UPDATE_ORG.getValue(), "",
+              JsonKey.ORGANISATION);
           return;
         } catch (Exception ex) {
 
@@ -560,8 +561,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
               + contentList.get(0).get(JsonKey.ID));
           backGroundActorRef.tell(orgResponse, self());
           successList.add(concurrentHashMap);
-        //process Audit Log
-          processAuditLog(concurrentHashMap,ActorOperations.UPDATE_ORG.getValue(),"",JsonKey.ORGANISATION);
+          // process Audit Log
+          processAuditLog(concurrentHashMap, ActorOperations.UPDATE_ORG.getValue(), "",
+              JsonKey.ORGANISATION);
           return;
         } catch (Exception ex) {
 
@@ -669,8 +671,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
       backGroundActorRef.tell(orgResponse, self());
       successList.add(concurrentHashMap);
-    //process Audit Log
-      processAuditLog(concurrentHashMap,ActorOperations.CREATE_ORG.getValue(),"",JsonKey.ORGANISATION);
+      // process Audit Log
+      processAuditLog(concurrentHashMap, ActorOperations.CREATE_ORG.getValue(), "",
+          JsonKey.ORGANISATION);
     } catch (Exception ex) {
 
       ProjectLogger.log("Exception occurs  ", ex);
@@ -703,13 +706,14 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     Map<String, Object> userMap = null;
     for (int i = 0; i < dataMapList.size(); i++) {
       userMap = dataMapList.get(i);
-      Map<String , Object> welcomaMailTemplateMap = new HashMap<>();
-      if(ProjectUtil.isStringNullOREmpty((String)userMap.get(JsonKey.PASSWORD))){
+      Map<String, Object> welcomaMailTemplateMap = new HashMap<>();
+      if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PASSWORD))) {
         String randomPassword = ProjectUtil.generateRandomPassword();
-        userMap.put(JsonKey.PASSWORD , randomPassword);
-        welcomaMailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD ,randomPassword );
-      }else{
-        welcomaMailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD ,(String)userMap.get(JsonKey.PASSWORD) );
+        userMap.put(JsonKey.PASSWORD, randomPassword);
+        welcomaMailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, randomPassword);
+      } else {
+        welcomaMailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD,
+            (String) userMap.get(JsonKey.PASSWORD));
       }
       String errMsg = validateUser(userMap);
       if (errMsg.equalsIgnoreCase(JsonKey.SUCCESS)) {
@@ -747,11 +751,11 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             List<String> list = new ArrayList<>(Arrays.asList(userGrade));
             userMap.put(JsonKey.LANGUAGE, list);
           }
-          
-          if(null != userMap.get(JsonKey.WEB_PAGES)){
+
+          if (null != userMap.get(JsonKey.WEB_PAGES)) {
             String webPageString = (String) userMap.get(JsonKey.WEB_PAGES);
             webPageString = webPageString.replaceAll("'", "\"");
-            List<Map<String,String>> webPages = new ArrayList<>();
+            List<Map<String, String>> webPages = new ArrayList<>();
             try {
               ObjectMapper mapper = new ObjectMapper();
               webPages = mapper.readValue(webPageString, List.class);
@@ -815,8 +819,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             sendOnboardingMail(welcomaMailTemplateMap);
 
 
-            //process Audit Log
-            processAuditLog(userMap,ActorOperations.CREATE_USER.getValue(),updatedBy,JsonKey.USER);
+            // process Audit Log
+            processAuditLog(userMap, ActorOperations.CREATE_USER.getValue(), updatedBy,
+                JsonKey.USER);
           } else {
             // update user record
             tempMap.remove(JsonKey.OPERATION);
@@ -846,8 +851,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
               failureUserReq.add(userMap);
               continue;
             }
-            //Process Audit Log
-            processAuditLog(userMap,ActorOperations.UPDATE_USER.getValue(),updatedBy,JsonKey.USER);
+            // Process Audit Log
+            processAuditLog(userMap, ActorOperations.UPDATE_USER.getValue(), updatedBy,
+                JsonKey.USER);
           }
           // save successfully created user data
           tempMap.putAll(userMap);
@@ -898,20 +904,21 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
   }
 
-  private void processAuditLog(Map<String, Object> dataMap, String actorOperationType, String updatedBy, String objectType) {
+  private void processAuditLog(Map<String, Object> dataMap, String actorOperationType,
+      String updatedBy, String objectType) {
     Request req = new Request();
     Response res = new Response();
     req.setRequest_id(processId);
     req.setOperation(actorOperationType);
     req.getRequest().put(JsonKey.REQUESTED_BY, updatedBy);
-    if(objectType.equalsIgnoreCase(JsonKey.USER)){
-      req.getRequest().put(JsonKey.USER,dataMap);
+    if (objectType.equalsIgnoreCase(JsonKey.USER)) {
+      req.getRequest().put(JsonKey.USER, dataMap);
       res.getResult().put(JsonKey.USER_ID, dataMap.get(JsonKey.USER_ID));
-    } else if (objectType.equalsIgnoreCase(JsonKey.ORGANISATION)){
-      req.getRequest().put(JsonKey.ORGANISATION,dataMap);
+    } else if (objectType.equalsIgnoreCase(JsonKey.ORGANISATION)) {
+      req.getRequest().put(JsonKey.ORGANISATION, dataMap);
       res.getResult().put(JsonKey.ORGANISATION_ID, dataMap.get(JsonKey.ID));
-    } else if (objectType.equalsIgnoreCase(JsonKey.BATCH)){
-      req.getRequest().put(JsonKey.BATCH,dataMap);
+    } else if (objectType.equalsIgnoreCase(JsonKey.BATCH)) {
+      req.getRequest().put(JsonKey.BATCH, dataMap);
       dataMap.remove("header");
       res.getResult().put(JsonKey.BATCH_ID, dataMap.get(JsonKey.ID));
     }
@@ -1317,12 +1324,11 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     return first.equalsIgnoreCase(second);
   }
 
-  private void saveAuditLog(Response result,String operation,Request message){
-    AuditOperation auditOperation =
-        (AuditOperation) Util.auditLogUrlMap.get(operation);
-    if(auditOperation.getObjectType().equalsIgnoreCase(JsonKey.USER)){
+  private void saveAuditLog(Response result, String operation, Request message) {
+    AuditOperation auditOperation = (AuditOperation) Util.auditLogUrlMap.get(operation);
+    if (auditOperation.getObjectType().equalsIgnoreCase(JsonKey.USER)) {
       try {
-        Map<String,Object> map = new HashMap<>();
+        Map<String, Object> map = new HashMap<>();
         map.putAll((Map<String, Object>) message.getRequest().get(JsonKey.USER));
         UserUtility.encryptUserData(map);
         message.getRequest().put(JsonKey.USER, map);
@@ -1334,7 +1340,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.OPERATION, auditOperation);
-    map.put(JsonKey.REQUEST,  message);
+    map.put(JsonKey.REQUEST, message);
     map.put(JsonKey.RESPONSE, result);
     Request request = new Request();
     request.setOperation(ActorOperations.PROCESS_AUDIT_LOG.getValue());
@@ -1350,9 +1356,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       List<String> reciptientsMail = new ArrayList<>();
       reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
       emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
-      //TODO: discuss aout what should be the Body format
+      // TODO: discuss aout what should be the Body format
       emailTemplateMap.put(JsonKey.BODY, "");
-      //TODO: what should e the login link
+      // TODO: what should e the login link
       emailTemplateMap.put(JsonKey.ACTION_URL, "https://diksha.gov.in");
       emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
       if (!ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url"))) {

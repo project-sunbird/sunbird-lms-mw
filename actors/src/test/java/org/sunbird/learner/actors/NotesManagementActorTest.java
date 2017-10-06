@@ -189,7 +189,7 @@ public class NotesManagementActorTest {
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException res= probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
     if(null != res){
-      Assert.assertEquals("Invalid note id", res.getMessage());
+      Assert.assertEquals("You are not authorized.", res.getMessage());
     }
   }
   
@@ -242,7 +242,7 @@ public class NotesManagementActorTest {
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException res= probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
     if(null != res){
-      Assert.assertEquals("Invalid note id", res.getMessage());
+      Assert.assertEquals("You are not authorized.", res.getMessage());
     }
   }
   
@@ -321,7 +321,7 @@ public class NotesManagementActorTest {
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException res= probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
     if(null != res){
-      Assert.assertEquals("Invalid note id", res.getMessage());
+      Assert.assertEquals("You are not authorized.", res.getMessage());
     }
   }
   

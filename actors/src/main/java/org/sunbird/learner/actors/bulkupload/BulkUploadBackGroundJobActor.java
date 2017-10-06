@@ -40,6 +40,8 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.BackgroundJobManager;
+import org.sunbird.learner.audit.impl.ActorAuditLogServiceImpl;
+import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
 import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
@@ -56,6 +58,8 @@ import org.sunbird.services.sso.SSOServiceFactory;
 public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
   private ActorRef backGroundActorRef;
+  private ActorRef auditLogManagementActor;
+  private String processId = "";
   Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
   private EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
@@ -65,6 +69,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   public BulkUploadBackGroundJobActor() {
     backGroundActorRef =
         getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
+    auditLogManagementActor =
+        getContext().actorOf(Props.create(ActorAuditLogServiceImpl.class), "auditLogManagementActor");
     emailServiceActorRef =
         getContext().actorOf(Props.create(EmailServiceActor.class), "emailServiceActor");
   }
@@ -94,7 +100,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
   private void process(Request actorMessage) {
     ObjectMapper mapper = new ObjectMapper();
-    String processId = (String) actorMessage.get(JsonKey.PROCESS_ID);
+    processId = (String) actorMessage.get(JsonKey.PROCESS_ID);
     Map<String, Object> dataMap = getBulkData(processId);
     int status = (int) dataMap.get(JsonKey.STATUS);
     if (!(status == (ProjectUtil.BulkProcessStatus.COMPLETED.getValue())
@@ -801,6 +807,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             welcomaMailTemplateMap.putAll(userMap);
             sendOnboardingMail(welcomaMailTemplateMap);
 
+
+            //process Audit Log
+            processAuditLog(userMap,ActorOperations.CREATE_USER.getValue(),updatedBy);
           } else {
             // update user record
             tempMap.remove(JsonKey.OPERATION);
@@ -830,6 +839,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
               failureUserReq.add(userMap);
               continue;
             }
+            //Process Audit Log
+            processAuditLog(userMap,ActorOperations.UPDATE_USER.getValue(),updatedBy);
           }
           // save successfully created user data
           tempMap.putAll(userMap);
@@ -878,6 +889,17 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           "Exception Occurred while updating bulk_upload_process in BulkUploadBackGroundJobActor : ",
           e);
     }
+  }
+
+  private void processAuditLog(Map<String, Object> userMap, String actorOperationType, String updatedBy) {
+    Request req = new Request();
+    req.setRequest_id(processId);
+    req.setOperation(actorOperationType);
+    req.getRequest().put(JsonKey.REQUESTED_BY, updatedBy);
+    req.getRequest().put(JsonKey.USER,userMap);
+    Response res = new Response();
+    res.getResult().put(JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
+    saveAuditLog(res, actorOperationType, req);
   }
 
   private void updateStatusForProcessing(String processId) {
@@ -1280,6 +1302,30 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       return false;
     }
     return first.equalsIgnoreCase(second);
+  }
+
+  private void saveAuditLog(Response result,String operation,Request message){
+
+    try {
+      Map<String,Object> map = new HashMap<>();
+      map.putAll((Map<String, Object>) message.getRequest().get(JsonKey.USER));
+      UserUtility.encryptUserData(map);
+      message.getRequest().put(JsonKey.USER, map);
+    } catch (Exception ex) {
+      ProjectLogger.log(
+          "Exception occurred while bulk user upload in BulkUploadBackGroundJobActor during data encryption :",
+          ex);
+    }
+    AuditOperation auditOperation =
+        (AuditOperation) Util.auditLogUrlMap.get(operation);
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.OPERATION, auditOperation);
+    map.put(JsonKey.REQUEST,  message);
+    map.put(JsonKey.RESPONSE, result);
+    Request request = new Request();
+    request.setOperation(ActorOperations.PROCESS_AUDIT_LOG.getValue());
+    request.setRequest(map);
+    auditLogManagementActor.tell(request, self());
   }
 
   private void sendOnboardingMail(Map<String, Object> emailTemplateMap) {

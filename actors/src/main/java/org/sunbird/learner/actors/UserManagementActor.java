@@ -925,6 +925,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     } else {
       userMap.put(JsonKey.LOGIN_ID, (String) userMap.get(JsonKey.USERNAME));
     }
+    emailTemplateMap.put(JsonKey.USERNAME , userMap.get(JsonKey.LOGIN_ID));
 
     if (null != userMap.get(JsonKey.LOGIN_ID)) {
       String loginId = "";
@@ -2208,6 +2209,12 @@ public class UserManagementActor extends UntypedAbstractActor {
       if(! ProjectUtil.isStringNullOREmpty(System.getenv("sunbird_app_url")) || !ProjectUtil.isStringNullOREmpty(propertiesCache.getProperty("sunbird_app_url"))) {
         emailTemplateMap.put(JsonKey.APP_URL, ProjectUtil.isStringNullOREmpty(System.getenv("sunbird_app_url")) ? propertiesCache.getProperty("sunbird_app_url") : System.getenv("sunird_web_url"));
       }
+
+      emailTemplateMap.put(JsonKey.BODY , propertiesCache.getProperty(JsonKey.ONBOARDING_WELCOME_MAIL_BODY));
+      emailTemplateMap.put(JsonKey.NOTE , propertiesCache.getProperty(JsonKey.MAIL_NOTE));
+      emailTemplateMap.put(JsonKey.ORG_NAME , propertiesCache.getProperty(JsonKey.ORG_NAME));
+      String welcomeMessage = propertiesCache.getProperty("onboarding_welcome_message");
+      emailTemplateMap.put(JsonKey.WELCOME_MESSAGE , ProjectUtil.formatMessage(welcomeMessage, propertiesCache.getProperty(JsonKey.ORG_NAME)).trim());
 
       emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE , "welcome");
 

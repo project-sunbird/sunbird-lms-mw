@@ -15,8 +15,6 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 
-import javassist.bytecode.SourceFileAttribute;
-
 public class SocialMediaType {
 
   private static Map<String, String> mediaTypes = new HashMap<>();

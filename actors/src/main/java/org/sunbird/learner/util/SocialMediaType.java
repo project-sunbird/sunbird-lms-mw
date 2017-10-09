@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -13,6 +14,8 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+
+import javassist.bytecode.SourceFileAttribute;
 
 public class SocialMediaType {
 
@@ -57,24 +60,60 @@ public class SocialMediaType {
     mediaTypes = mediaMap;
   }
 
-  private static Boolean validateMediaURL(String type, String url) {
+  private static String validateMediaURL(String type, String url) {
     String pattern = "";
+    if(ProjectUtil.isStringNullOREmpty(url)){
+      return url;
+    }
     switch (type) {
       case "fb":{
-        pattern = "(?:(?:http|https):\\/\\/)?(?:www.)?facebook.com\\/(?:(?:\\w)*#!\\/)?(?:pages\\/)?(?:[?\\w\\-]*\\/)?(?:profile.php\\?id=(?=\\d.*))?([\\w\\-]*)?";
-        return IsMatch(url, pattern);
+        if(url.contains("http")){
+          pattern = "http(?:s)?:\\/\\/(?:www.)?facebook.com\\/(?:(?:\\w)*#!\\/)?(?:pages\\/)?(?:[?\\w\\-]*\\/)?(?:profile.php\\?id=(?=\\d.*))?([\\w\\-]*)?";
+          if(!IsMatch(url, pattern)){
+           url = ""; 
+          }
+        } else {
+          if(url.contains("facebook.com/")){
+            url = StringUtils.substringAfter(url, "facebook.com/");
+          }
+          url = "https://www.facebook.com/" + url;
+        }
+        return url;
       }
       case "twitter":{
-        pattern = "http(?:s)?:\\/\\/(?:www.)?twitter\\.com\\/([a-zA-Z0-9_]+)";
-        return IsMatch(url, pattern);
+        if(url.contains("http")){
+          pattern = "http(?:s)?:\\/\\/(?:www.)?twitter\\.com\\/([a-zA-Z0-9_]+)";
+          if(!IsMatch(url, pattern)){
+            url = ""; 
+           }
+        } else {
+          if(url.contains("twitter.com/")){
+            url = StringUtils.substringAfter(url, "twitter.com/");
+          }
+          url = "https://twitter.com/" + url;
+        }
+        return url;
       }
       case "in":{
-        pattern = "((http(s?)://)*([a-zA-Z0-9\\-])*\\.|[linkedin])[linkedin/~\\-]+\\.[a-zA-Z0-9/~\\-_,&=\\?\\.;]+[^\\.,\\s<]";
-        return IsMatch(url, pattern);
+        if(url.contains("http")){
+          pattern = "http(?:s)?:\\/\\/(?:www.)?linkedin+\\.[a-zA-Z0-9/~\\-_,&=\\?\\.;]+[^\\.,\\s<]";
+          if(!IsMatch(url, pattern)){
+            url = ""; 
+           }
+        } else {
+          if(url.contains("linkedin.com/in/")){
+            url = StringUtils.substringAfter(url, "linkedin.com/in/");
+          }
+          url = "https://www.linkedin.com/in/" + url;
+        }
+        return url;
       }
       default: {
         pattern = "\\b(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]";
-        return IsMatch(url, pattern);
+        if(!IsMatch(url, pattern)){
+          url = ""; 
+         }
+        return url;
       }
     }
   }
@@ -105,12 +144,14 @@ public class SocialMediaType {
               ResponseCode.CLIENT_ERROR.getResponseCode());
         } 
       }
-      if(!SocialMediaType.validateMediaURL(mediaType, socialMedia.get(JsonKey.URL))){
+      String mediaUrl = SocialMediaType.validateMediaURL(mediaType, socialMedia.get(JsonKey.URL));
+      if(ProjectUtil.isStringNullOREmpty(mediaUrl)){
         throw new ProjectCommonException(ResponseCode.invalidWebPageUrl.getErrorCode(),
-            ProjectUtil.formatMessage(ResponseCode.invalidWebPageUrl.getErrorMessage(), mediaType),
+            ProjectUtil.formatMessage(ResponseCode.invalidWebPageUrl.getErrorMessage(), getMediaTypes().get(mediaType)),
             ResponseCode.CLIENT_ERROR.getResponseCode());
-      }  
+      }  else {
+        socialMedia.put(JsonKey.URL, mediaUrl);
+      }
     } 
   }
-  
 }

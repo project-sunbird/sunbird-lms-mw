@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -374,17 +375,19 @@ public class RequestRouterActor extends UntypedAbstractActor {
               + (System.currentTimeMillis() - startTime), LoggerEnum.PERF_LOG);
           parent.tell(result, ActorRef.noSender());
           // Audit log method call
-          if (Util.auditLogUrlMap.containsKey(message.getOperation())) {
-            AuditOperation auditOperation =
-                (AuditOperation) Util.auditLogUrlMap.get(message.getOperation());
-            Map<String, Object> map = new HashMap<>();
-            map.put(JsonKey.OPERATION, auditOperation);
-            map.put(JsonKey.REQUEST, message);
-            map.put(JsonKey.RESPONSE, result);
-            Request request = new Request();
-            request.setOperation(ActorOperations.PROCESS_AUDIT_LOG.getValue());
-            request.setRequest(map);
-            auditLogManagementActor.tell(request, self());
+          if(result instanceof Response){
+            if (Util.auditLogUrlMap.containsKey(message.getOperation())) {
+              AuditOperation auditOperation =
+                  (AuditOperation) Util.auditLogUrlMap.get(message.getOperation());
+              Map<String, Object> map = new HashMap<>();
+              map.put(JsonKey.OPERATION, auditOperation);
+              map.put(JsonKey.REQUEST, message);
+              map.put(JsonKey.RESPONSE, result);
+              Request request = new Request();
+              request.setOperation(ActorOperations.PROCESS_AUDIT_LOG.getValue());
+              request.setRequest(map);
+              auditLogManagementActor.tell(request, self());
+            }
           }
         }
       }

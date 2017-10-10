@@ -178,7 +178,7 @@ public class ActorAuditLogServiceImpl extends UntypedAbstractActor implements Au
 
   @Override
   public void save(Map<String, Object> requestedData) {
-    ElasticSearchUtil.createData(EsIndex.sunbirdDataAudit.getIndexName(),
+    String str = ElasticSearchUtil.createData(EsIndex.sunbirdDataAudit.getIndexName(),
         EsType.history.getTypeName(), ProjectUtil.getUniqueIdFromTimestamp(1), requestedData);
   }
   
@@ -193,13 +193,17 @@ public class ActorAuditLogServiceImpl extends UntypedAbstractActor implements Au
     Map<String,Object> map = null;
     Calendar cal = Calendar.getInstance();
     if(ProjectUtil.isStringNullOREmpty(fromDate) && ProjectUtil.isStringNullOREmpty(toDate)){
-      toDate = dateFormat.format(new Date());
+      toDate = dateFormat2.format(new Date());
       cal.add(Calendar.DATE, -(Integer.parseInt(cache.getProperty("default_date_range"))));
       Date toDate1 = cal.getTime();    
-      fromDate = dateFormat.format(toDate1);
+      fromDate = dateFormat2.format(toDate1);
       map = new HashMap<>();
-      map.put(">=", fromDate);
-      map.put("<=", toDate);
+      try{
+      map.put(">=", dateFormat.format(dateFormat.parse(fromDate+" 23:59:59:000+0530")));
+      map.put("<=", dateFormat.format(dateFormat.parse(toDate+" 23:59:59:000+0530")));
+      }catch(ParseException e) {
+        ProjectLogger.log("Exception occurred while parsing date ", e);
+      }
       filters.put(JsonKey.DATE,map);
     }else if(!ProjectUtil.isStringNullOREmpty(fromDate) && !ProjectUtil.isStringNullOREmpty(toDate)){
       Date date1 = null;

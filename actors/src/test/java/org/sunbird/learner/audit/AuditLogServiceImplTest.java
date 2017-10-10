@@ -50,7 +50,7 @@ public class AuditLogServiceImplTest {
   }
 
   @SuppressWarnings({"deprecation", "unchecked"})
-  //@Test
+  @Test
   public void TestACreateUserAuditLog() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -59,8 +59,8 @@ public class AuditLogServiceImplTest {
     reqObj.setOperation(ActorOperations.PROCESS_AUDIT_LOG.getValue());
     Request request = new Request();
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_1818");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_1818@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_18182");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_18182@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
     innerMap.put(JsonKey.PHONE, "9874561230");
@@ -116,7 +116,7 @@ public class AuditLogServiceImplTest {
     reqObj.setRequest(opMap);
     subject.tell(reqObj, probe.getRef());
     try {
-      Thread.sleep(200);
+      Thread.sleep(4000);
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
@@ -133,6 +133,11 @@ public class AuditLogServiceImplTest {
     subject.tell(requestObj, probe.getRef());
     Response responseObj = probe.expectMsgClass(duration("300 second"), Response.class);
     Assert.assertEquals(ResponseCode.OK, responseObj.getResponseCode());
+    try {
+      Thread.sleep(4000);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
     List<Object> auditRecordList =
         (List<Object>) ((Map<String, Object>) responseObj.getResult().get(JsonKey.RESPONSE))
             .get(JsonKey.CONTENT);
@@ -142,8 +147,8 @@ public class AuditLogServiceImplTest {
         ((Map<String, Object>) responseObj.getResult().get(JsonKey.RESPONSE)).get(JsonKey.COUNT));
   }
 
-  @SuppressWarnings({"unchecked", "deprecation"})
- // @Test
+  @SuppressWarnings({"unchecked"})
+  @Test
   public void testCreateOrgAuditLog() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -174,7 +179,7 @@ public class AuditLogServiceImplTest {
     reqObj.setRequest(opMap);
     subject.tell(reqObj, probe.getRef());
     try {
-      Thread.sleep(200);
+      Thread.sleep(2000);
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
@@ -183,14 +188,20 @@ public class AuditLogServiceImplTest {
     requestObj.setOperation(ActorOperations.SEARCH_AUDIT_LOG.getValue());
     Map<String, Object> filters = new HashMap<>();
     Map<String, Object> filterMap = new HashMap<>();
-    filters.put(JsonKey.OBJECT_ID, "01234567891011");
+    filters.put(JsonKey.OBJECT_ID, "01234567891012");
     filters.put(JsonKey.OPERATION_TYPE, JsonKey.CREATE);
     filters.put(JsonKey.OBJECT_TYPE, ProjectUtil.ObjectTypes.organisation.getValue());
     filterMap.put(JsonKey.FILTERS, filters);
     requestObj.setRequest(filterMap);
     subject.tell(requestObj, probe.getRef());
-    Response responseObj = probe.expectMsgClass(duration("200 second"), Response.class);
+    @SuppressWarnings("deprecation")
+    Response responseObj = probe.expectMsgClass(duration("300 second"),Response.class);
     Assert.assertEquals(ResponseCode.OK, responseObj.getResponseCode());
+    try {
+      Thread.sleep(4000);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
     List<Object> auditRecordList =
         (List<Object>) ((Map<String, Object>) responseObj.getResult().get(JsonKey.RESPONSE))
             .get(JsonKey.CONTENT);
@@ -201,7 +212,7 @@ public class AuditLogServiceImplTest {
   }
 
   @SuppressWarnings({"unchecked", "deprecation"})
- // @Test
+  @Test
   public void testCreateBatchAuditLog() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -215,8 +226,8 @@ public class AuditLogServiceImplTest {
     batchMap.put(JsonKey.DESCRIPTION, "Central Board of Secondary Education");
     batchMap.put(JsonKey.NAME, "BATCH 1");
     batchMap.put(JsonKey.ENROLLMENT_TYPE, EnrolmentType.inviteOnly.getVal());
-    batchMap.put(JsonKey.START_DATE, "");
-    batchMap.put(JsonKey.END_DATE, "");
+    batchMap.put(JsonKey.START_DATE, "2017-10-10");
+    batchMap.put(JsonKey.END_DATE, "2017-10-10");
     List<String> course = new ArrayList<>();
     course.add("ORG_001");
     batchMap.put(JsonKey.COURSE_CREATED_FOR, course);
@@ -237,7 +248,7 @@ public class AuditLogServiceImplTest {
     reqObj.setRequest(opMap);
     subject.tell(reqObj, probe.getRef());
     try {
-      Thread.sleep(200);
+      Thread.sleep(2000);
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
@@ -254,6 +265,11 @@ public class AuditLogServiceImplTest {
     subject.tell(requestObj, probe.getRef());
     Response responseObj = probe.expectMsgClass(duration("200 second"), Response.class);
     Assert.assertEquals(ResponseCode.OK, responseObj.getResponseCode());
+    try {
+      Thread.sleep(4000);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
     List<Object> auditRecordList =
         (List<Object>) ((Map<String, Object>) responseObj.getResult().get(JsonKey.RESPONSE))
             .get(JsonKey.CONTENT);

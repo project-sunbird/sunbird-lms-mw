@@ -106,6 +106,13 @@ public class SocialMediaType {
         }
         return url;
       }
+      case "blog": {
+        pattern = "http(?:s)?://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]";
+        if(!IsMatch(url, pattern)){
+          url = "";
+        }
+        return url;
+      }
       default: {
         pattern = "\\b(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]";
         if(!IsMatch(url, pattern)){

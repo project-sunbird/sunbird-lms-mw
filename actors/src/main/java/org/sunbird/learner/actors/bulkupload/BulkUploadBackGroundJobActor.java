@@ -32,6 +32,7 @@ import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.Status;
+import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.Slug;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
@@ -65,6 +66,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
           .getEncryptionServiceInstance(null);
   private ActorRef emailServiceActorRef;
+  private PropertiesCache propertiesCache = PropertiesCache.getInstance();
 
   public BulkUploadBackGroundJobActor() {
     backGroundActorRef =
@@ -816,6 +818,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             insertRecordToUserOrgTable(userMap);
             // send the welcome mail to user
             welcomaMailTemplateMap.putAll(userMap);
+            // the loginid will become user id for logon purpose .
+            welcomaMailTemplateMap.put(JsonKey.USERNAME , userMap.get(JsonKey.LOGIN_ID));
             sendOnboardingMail(welcomaMailTemplateMap);
 
 
@@ -1350,27 +1354,30 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
   private void sendOnboardingMail(Map<String, Object> emailTemplateMap) {
 
-    if (!(ProjectUtil.isStringNullOREmpty((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
+    if(!(ProjectUtil.isStringNullOREmpty((String)emailTemplateMap.get(JsonKey.EMAIL)))) {
 
       emailTemplateMap.put(JsonKey.SUBJECT, "Welcome to DIKSHA");
       List<String> reciptientsMail = new ArrayList<>();
-      reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
-      emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
-      // TODO: discuss aout what should be the Body format
-      emailTemplateMap.put(JsonKey.BODY, "");
-      // TODO: what should e the login link
-      emailTemplateMap.put(JsonKey.ACTION_URL, "https://diksha.gov.in");
-      emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
-      if (!ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url"))) {
-        emailTemplateMap.put(JsonKey.WEB_URL, System.getenv("sunird_web_url"));
+      reciptientsMail.add((String)emailTemplateMap.get(JsonKey.EMAIL));
+      emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS , reciptientsMail);
+      if(! ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url")) || !ProjectUtil.isStringNullOREmpty(propertiesCache.getProperty("sunird_web_url"))) {
+        emailTemplateMap.put(JsonKey.WEB_URL, ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url")) ? propertiesCache.getProperty("sunird_web_url") : System.getenv("sunird_web_url"));
       }
-      if (!ProjectUtil.isStringNullOREmpty(System.getenv("sunbird_app_url"))) {
-        emailTemplateMap.put(JsonKey.APP_URL, System.getenv("sunbird_app_url"));
+      if(! ProjectUtil.isStringNullOREmpty(System.getenv("sunbird_app_url")) || !ProjectUtil.isStringNullOREmpty(propertiesCache.getProperty("sunbird_app_url"))) {
+        emailTemplateMap.put(JsonKey.APP_URL, ProjectUtil.isStringNullOREmpty(System.getenv("sunbird_app_url")) ? propertiesCache.getProperty("sunbird_app_url") : System.getenv("sunird_web_url"));
       }
+
+      emailTemplateMap.put(JsonKey.BODY , propertiesCache.getProperty(JsonKey.ONBOARDING_WELCOME_MAIL_BODY));
+      emailTemplateMap.put(JsonKey.NOTE , propertiesCache.getProperty(JsonKey.MAIL_NOTE));
+      emailTemplateMap.put(JsonKey.ORG_NAME , propertiesCache.getProperty(JsonKey.ORG_NAME));
+      String welcomeMessage = propertiesCache.getProperty("onboarding_welcome_message");
+      emailTemplateMap.put(JsonKey.WELCOME_MESSAGE , ProjectUtil.formatMessage(welcomeMessage, propertiesCache.getProperty(JsonKey.ORG_NAME)).trim());
+
+      emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE , "welcome");
 
       Request request = new Request();
       request.setOperation(ActorOperations.EMAIL_SERVICE.getValue());
-      request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);
+      request.put(JsonKey.EMAIL_REQUEST , emailTemplateMap);
       emailServiceActorRef.tell(request, null);
     }
   }

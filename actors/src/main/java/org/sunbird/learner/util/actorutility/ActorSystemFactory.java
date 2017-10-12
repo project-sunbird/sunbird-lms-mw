@@ -11,30 +11,27 @@ import org.sunbird.learner.util.actorutility.impl.RemoteActorSystem;
  *
  */
 public class ActorSystemFactory {
-  
-  private static RemoteActorSystem remoteActorSystem = null;
-  private static LocalActorSystem localActorSystem = null;
-  
-  private ActorSystemFactory(){}
-  
-  public static ActorSystem getActorSystem(){
+
+  private static ActorSystem actorSystem = null;
+
+  private ActorSystemFactory() {}
+
+  static {
     PropertiesCache cache = PropertiesCache.getInstance();
-    if("remote".equalsIgnoreCase(cache.getProperty("background_actor_provider"))){
+    if ("remote".equalsIgnoreCase(cache.getProperty("background_actor_provider"))) {
       ProjectLogger.log("Initializing Remote Actor System");
-      if(null == remoteActorSystem){
-        remoteActorSystem = new RemoteActorSystem();
-        return remoteActorSystem ;
-      }else{
-        return remoteActorSystem;
+      if (null == actorSystem) {
+        actorSystem = new RemoteActorSystem();
       }
-    }else{
+    } else {
       ProjectLogger.log("Initializing Local Actor System");
-      if(null == localActorSystem){
-        localActorSystem = new LocalActorSystem();
-        return localActorSystem ;
-      }else{
-        return localActorSystem;
+      if (null == actorSystem) {
+        actorSystem = new LocalActorSystem();
       }
     }
+  }
+
+  public static ActorSystem getActorSystem() {
+    return actorSystem;
   }
 }

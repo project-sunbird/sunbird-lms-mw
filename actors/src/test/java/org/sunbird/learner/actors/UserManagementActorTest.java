@@ -32,6 +32,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.Application;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.services.sso.SSOManager;
@@ -70,6 +71,7 @@ public class UserManagementActorTest {
 
   @BeforeClass
   public static void setUp() {
+    Application.startLocalActorSystem();
     encryption = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_ENCRYPTION);
     system = ActorSystem.create("system");
     Util.checkCassandraDbConnections();
@@ -561,7 +563,7 @@ public class UserManagementActorTest {
     Response userResponse = probe.expectMsgClass(duration("200 second"), Response.class);
     Map<String, Object> result = (Map<String, Object>) (userResponse.getResult());
     Map<String, Object> response = (Map<String, Object>) result.get(JsonKey.RESPONSE);
-    assertEquals(enccity,
+    assertEquals("new city",
         ((List<Map<String, Object>>) response.get(JsonKey.ADDRESS)).get(0).get(JsonKey.CITY));
 
   }
@@ -618,10 +620,9 @@ public class UserManagementActorTest {
     Response response =
         operation.getRecordsByProperties(userOrgDB.getKeySpace(), userOrgDB.getTableName(), map);
     Map<String, Object> result = (Map<String, Object>) (response.getResult());
-    List<String> roles =
-        (List) ((Map<String, Object>) ((((List<Map<String, Object>>) result.get(JsonKey.RESPONSE))
-            .get(0)))).get(JsonKey.ROLES);
-    assertTrue(roles.contains(ProjectUtil.UserRole.CONTENT_CREATOR.getValue()));
+    String usrId = (String) ((Map<String, Object>) ((((List<Map<String, Object>>) result.get(JsonKey.RESPONSE))
+        .get(0)))).get(JsonKey.USER_ID);
+    assertEquals(usrId, userId);
     userOrgId =
         (String) ((Map<String, Object>) ((((List<Map<String, Object>>) result.get(JsonKey.RESPONSE))
             .get(0)))).get(JsonKey.ID);

@@ -26,6 +26,7 @@ import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.RequestRouterActor;
+import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -36,7 +37,6 @@ public class MetricsReportJob implements Job {
 
   Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private ActorRef backGroundActorRef = RequestRouterActor.metricsBackGroungJobActor;
   SimpleDateFormat format = ProjectUtil.format;
   private int time = -30;
 
@@ -56,18 +56,19 @@ public class MetricsReportJob implements Job {
 
     List<Map<String, Object>> dbResult = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (!(dbResult.isEmpty())) {
-      // TODO: perform logic here 1. the updated date value should be older than 30 minutes then pick that one
+      // TODO: perform logic here 1. the updated date value should be older than 30 minutes then
+      // pick that one
       Calendar now = Calendar.getInstance();
       now.add(Calendar.MINUTE, time);
       Date thirtyMinutesBefore = now.getTime();
       for (Map<String, Object> map : dbResult) {
         String updatedDate = (String) map.get(JsonKey.UPDATED_DATE);
         try {
-          if (thirtyMinutesBefore.compareTo(format.parse(updatedDate))>=0) {
+          if (thirtyMinutesBefore.compareTo(format.parse(updatedDate)) >= 0) {
             String jsonString = (String) map.get(JsonKey.DATA);
             // convert that string to List<List<Object>>
-            TypeReference<List<List<Object>>> typeReference = new TypeReference<List<List<Object>>>() {
-            };
+            TypeReference<List<List<Object>>> typeReference =
+                new TypeReference<List<List<Object>>>() {};
             List<List<Object>> data = mapper.readValue(jsonString, typeReference);
             // assign the back ground task to background job actor ...
             Request backGroundRequest = new Request();
@@ -78,16 +79,16 @@ public class MetricsReportJob implements Job {
             innerMap.put(JsonKey.DATA, data);
 
             backGroundRequest.setRequest(innerMap);
-            backGroundActorRef.tell(backGroundRequest, null);
+            ActorUtil.tell(backGroundRequest);
           }
         } catch (ParseException e) {
-          ProjectLogger.log(e.getMessage(),e);
+          ProjectLogger.log(e.getMessage(), e);
         } catch (JsonParseException e) {
-          ProjectLogger.log(e.getMessage(),e);
+          ProjectLogger.log(e.getMessage(), e);
         } catch (JsonMappingException e) {
-          ProjectLogger.log(e.getMessage(),e);
+          ProjectLogger.log(e.getMessage(), e);
         } catch (IOException e) {
-          ProjectLogger.log(e.getMessage(),e);
+          ProjectLogger.log(e.getMessage(), e);
         }
       }
     }
@@ -98,7 +99,8 @@ public class MetricsReportJob implements Job {
 
     dbResult = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (!(dbResult.isEmpty())) {
-      // TODO: perform logic here 1. the updated value should be older than 30 minutes then pick that one
+      // TODO: perform logic here 1. the updated value should be older than 30 minutes then pick
+      // that one
       Calendar now = Calendar.getInstance();
       now.add(Calendar.MINUTE, time);
       Date thirtyMinutesBefore = now.getTime();
@@ -106,7 +108,7 @@ public class MetricsReportJob implements Job {
         String updatedDate = (String) map.get(JsonKey.UPDATED_DATE);
 
         try {
-          if (thirtyMinutesBefore.compareTo(format.parse(updatedDate))>=0) {
+          if (thirtyMinutesBefore.compareTo(format.parse(updatedDate)) >= 0) {
 
             Request backGroundRequest = new Request();
             backGroundRequest.setOperation(ActorOperations.SEND_MAIL.getValue());
@@ -115,12 +117,12 @@ public class MetricsReportJob implements Job {
             innerMap.put(JsonKey.REQUEST_ID, map.get(JsonKey.ID));
 
             backGroundRequest.setRequest(innerMap);
-            backGroundActorRef.tell(backGroundRequest, null);
+            ActorUtil.tell(backGroundRequest);
 
           }
 
         } catch (ParseException e) {
-          ProjectLogger.log(e.getMessage(),e);
+          ProjectLogger.log(e.getMessage(), e);
         }
 
       }

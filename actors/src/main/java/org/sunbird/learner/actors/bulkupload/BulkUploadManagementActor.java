@@ -2,8 +2,6 @@ package org.sunbird.learner.actors.bulkupload;
 
 import static org.sunbird.learner.util.Util.isNotNull;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.CSVReader;
@@ -31,6 +29,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
@@ -44,15 +43,9 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
   private static final String CSV_FILE_EXTENSION = ".csv";
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
-  private ActorRef bulkUploadBackGroundJobActorRef;
   int userDataSize = 0;
   int orgDataSize = 0;
   int batchDataSize = 0;
-
-  public BulkUploadManagementActor() {
-    bulkUploadBackGroundJobActorRef = getContext()
-        .actorOf(Props.create(BulkUploadBackGroundJobActor.class), "bulkUploadBackGroundJobActor");
-  }
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -265,7 +258,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
 
     for (String key : property) {
       if (!properties.contains(key)) {
-        ProjectLogger.log("Invalid Column bulk upload management actor :: "+key);
+        ProjectLogger.log("Invalid Column bulk upload management actor :: " + key);
         throw new ProjectCommonException(ResponseCode.InvalidColumnError.getErrorCode(),
             ResponseCode.InvalidColumnError.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -441,7 +434,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
       Request request = new Request();
       request.put(JsonKey.PROCESS_ID, processId);
       request.setOperation(ActorOperations.PROCESS_BULK_UPLOAD.getValue());
-      bulkUploadBackGroundJobActorRef.tell(request, self());
+      ActorUtil.tell(request);
     }
   }
 

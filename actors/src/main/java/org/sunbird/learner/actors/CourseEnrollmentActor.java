@@ -1,7 +1,5 @@
 package org.sunbird.learner.actors;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
 import java.sql.Timestamp;
 import java.util.Date;
@@ -18,6 +16,7 @@ import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
 
@@ -29,16 +28,12 @@ import org.sunbird.learner.util.Util;
  */
 public class CourseEnrollmentActor extends UntypedAbstractActor {
 
-  private static String EKSTEP_COURSE_SEARCH_QUERY = "{\"request\": {\"filters\":{\"contentType\": [\"Course\"], \"objectType\": [\"Content\"], \"identifier\": \"COURSE_ID_PLACEHOLDER\", \"status\": \"Live\"},\"limit\": 1}}";
+  private static String EKSTEP_COURSE_SEARCH_QUERY =
+      "{\"request\": {\"filters\":{\"contentType\": [\"Course\"], \"objectType\": [\"Content\"], \"identifier\": \"COURSE_ID_PLACEHOLDER\", \"status\": \"Live\"},\"limit\": 1}}";
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
-  private ActorRef backGroundActorRef;
-  private static final String DEFAULT_BATCH_ID ="1";
+  private static final String DEFAULT_BATCH_ID = "1";
 
-  public CourseEnrollmentActor() {
-    backGroundActorRef = getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
-   }
-  
   /**
    * Receives the actor message and perform the course enrollment operation .
    *
@@ -58,25 +53,26 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
           Map<String, Object> req = actorMessage.getRequest();
           String addedBy = (String) req.get(JsonKey.REQUESTED_BY);
           Map<String, Object> courseMap = (Map<String, Object>) req.get(JsonKey.COURSE);
-          
-          if(ProjectUtil.isNull(courseMap.get(JsonKey.BATCH_ID))) {
+
+          if (ProjectUtil.isNull(courseMap.get(JsonKey.BATCH_ID))) {
             courseMap.put(JsonKey.BATCH_ID, DEFAULT_BATCH_ID);
-          }else{
-            Response response = cassandraOperation.getRecordById(batchDbInfo.getKeySpace(), batchDbInfo.getTableName(),
-                (String)courseMap.get(JsonKey.BATCH_ID));
-            List<Map<String,Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-            if(responseList.isEmpty()){
-              throw new ProjectCommonException(
-                  ResponseCode.invalidCourseBatchId.getErrorCode(),
+          } else {
+            Response response = cassandraOperation.getRecordById(batchDbInfo.getKeySpace(),
+                batchDbInfo.getTableName(), (String) courseMap.get(JsonKey.BATCH_ID));
+            List<Map<String, Object>> responseList =
+                (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+            if (responseList.isEmpty()) {
+              throw new ProjectCommonException(ResponseCode.invalidCourseBatchId.getErrorCode(),
                   ResponseCode.invalidCourseBatchId.getErrorMessage(),
                   ResponseCode.CLIENT_ERROR.getResponseCode());
             }
           }
-          //check whether user already enroll  for course
+          // check whether user already enroll for course
           Response dbResult = cassandraOperation.getRecordById(courseEnrollmentdbInfo.getKeySpace(),
-              courseEnrollmentdbInfo.getTableName() , generateUserCoursesPrimaryKey(courseMap));
-          List<Map<String , Object>> dbList = (List<Map<String, Object>>) dbResult.get(JsonKey.RESPONSE);
-          if(!dbList.isEmpty()){
+              courseEnrollmentdbInfo.getTableName(), generateUserCoursesPrimaryKey(courseMap));
+          List<Map<String, Object>> dbList =
+              (List<Map<String, Object>>) dbResult.get(JsonKey.RESPONSE);
+          if (!dbList.isEmpty()) {
             ProjectLogger.log("User Already Enrolled Course ");
             ProjectCommonException exception = new ProjectCommonException(
                 ResponseCode.userAlreadyEnrolledThisCourse.getErrorCode(),
@@ -86,20 +82,20 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
             return;
           }
 
-          Map<String, String> headers = (Map<String, String>) actorMessage.getRequest()
-              .get(JsonKey.HEADER);
+          Map<String, String> headers =
+              (Map<String, String>) actorMessage.getRequest().get(JsonKey.HEADER);
           String courseId = (String) courseMap.get(JsonKey.COURSE_ID);
           Map<String, Object> ekStepContent = getCourseObjectFromEkStep(courseId, headers);
           if (null == ekStepContent || ekStepContent.size() == 0) {
             ProjectLogger.log("Course Id not found in EkStep");
-            ProjectCommonException exception = new ProjectCommonException(
-                ResponseCode.invalidCourseId.getErrorCode(),
-                ResponseCode.invalidCourseId.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
+            ProjectCommonException exception =
+                new ProjectCommonException(ResponseCode.invalidCourseId.getErrorCode(),
+                    ResponseCode.invalidCourseId.getErrorMessage(),
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
             sender().tell(exception, self());
             return;
           } else {
-        	Timestamp ts = new Timestamp(new Date().getTime());
+            Timestamp ts = new Timestamp(new Date().getTime());
             courseMap.put(JsonKey.COURSE_LOGO_URL, ekStepContent.get(JsonKey.APP_ICON));
             courseMap.put(JsonKey.CONTENT_ID, courseId);
             courseMap.put(JsonKey.COURSE_NAME, ekStepContent.get(JsonKey.NAME));
@@ -115,17 +111,18 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
             Response result = cassandraOperation.insertRecord(courseEnrollmentdbInfo.getKeySpace(),
                 courseEnrollmentdbInfo.getTableName(), courseMap);
             sender().tell(result, self());
-            // TODO: for some reason, ES indexing is failing with Timestamp value. need to check and correct it.
+            // TODO: for some reason, ES indexing is failing with Timestamp value. need to check and
+            // correct it.
             courseMap.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
             insertUserCoursesToES(courseMap);
             return;
-            }
+          }
         } else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
-          ProjectCommonException exception = new ProjectCommonException(
-              ResponseCode.invalidOperationName.getErrorCode(),
-              ResponseCode.invalidOperationName.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
+          ProjectCommonException exception =
+              new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
+                  ResponseCode.invalidOperationName.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
           sender().tell(exception, self());
         }
       } catch (Exception ex) {
@@ -135,21 +132,21 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
     } else {
       // Throw exception as message body
       ProjectLogger.log("UNSUPPORTED MESSAGE");
-      ProjectCommonException exception = new ProjectCommonException(
-          ResponseCode.invalidRequestData.getErrorCode(),
-          ResponseCode.invalidRequestData.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
     }
   }
 
   private void insertUserCoursesToES(Map<String, Object> courseMap) {
-    Response response = new Response();
-    response.put(JsonKey.OPERATION, ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue());
-    response.put(JsonKey.USER_COURSES, courseMap);
-    try{
-      backGroundActorRef.tell(response,self());
-    }catch(Exception ex){
+    Request request = new Request();
+    request.setOperation(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue());
+    request.getRequest().put(JsonKey.USER_COURSES, courseMap);
+    try {
+      ActorUtil.tell(request);
+    } catch (Exception ex) {
       ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
     }
   }
@@ -182,7 +179,8 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
     String userId = (String) req.get(JsonKey.USER_ID);
     String courseId = (String) req.get(JsonKey.COURSE_ID);
     String batchId = (String) req.get(JsonKey.BATCH_ID);
-    return OneWayHashing.encryptVal(userId + JsonKey.PRIMARY_KEY_DELIMETER + courseId+JsonKey.PRIMARY_KEY_DELIMETER+batchId);
+    return OneWayHashing.encryptVal(userId + JsonKey.PRIMARY_KEY_DELIMETER + courseId
+        + JsonKey.PRIMARY_KEY_DELIMETER + batchId);
   }
 
   /**
@@ -194,13 +192,17 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
    */
   @SuppressWarnings("unused")
   private void updateCoursemanagement(String operation, Object courseData, String innerOperation) {
-    Response userCountresponse = new Response();
-    userCountresponse.put(JsonKey.OPERATION, operation);
-    userCountresponse.put(JsonKey.COURSE_ID, courseData);
-    userCountresponse.getResult().put(JsonKey.OPERATION, innerOperation);
-    try{
-      backGroundActorRef.tell(userCountresponse,self());
-    }catch(Exception ex){
+    Request request = new Request();
+    request.setOperation(operation);
+    request.getRequest().put(JsonKey.COURSE_ID, courseData);
+    request.getRequest().put(JsonKey.OPERATION, innerOperation);
+    /*
+     * userCountresponse.put(JsonKey.OPERATION, operation); userCountresponse.put(JsonKey.COURSE_ID,
+     * courseData); userCountresponse.getResult().put(JsonKey.OPERATION, innerOperation);
+     */
+    try {
+      ActorUtil.tell(request);
+    } catch (Exception ex) {
       ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
     }
   }

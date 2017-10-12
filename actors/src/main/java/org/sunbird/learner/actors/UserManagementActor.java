@@ -3,8 +3,6 @@ package org.sunbird.learner.actors;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -31,7 +29,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
+import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
@@ -52,16 +50,8 @@ public class UserManagementActor extends UntypedAbstractActor {
   private EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
           .getEncryptionServiceInstance(null);
-  private ActorRef backGroundActorRef;
-  private ActorRef emailServiceActorRef;
   private PropertiesCache propertiesCache = PropertiesCache.getInstance();
 
-  public UserManagementActor() {
-    backGroundActorRef =
-        getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
-    emailServiceActorRef =
-        getContext().actorOf(Props.create(EmailServiceActor.class), "emailServiceActor");
-  }
 
   /**
    * Receives the actor message and perform the course enrollment operation .
@@ -115,12 +105,13 @@ public class UserManagementActor extends UntypedAbstractActor {
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.UNBLOCK_USER.getValue())) {
           unBlockUser(actorMessage);
-        }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.USER_CURRENT_LOGIN.getValue())) {
-           updateUserLoginTime(actorMessage);
-        }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_MEDIA_TYPES.getValue())) {
+        } else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.USER_CURRENT_LOGIN.getValue())) {
+          updateUserLoginTime(actorMessage);
+        } else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.GET_MEDIA_TYPES.getValue())) {
           getMediaTypes(actorMessage);
-       }
-       else {
+        } else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
           ProjectCommonException exception =
               new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
@@ -137,17 +128,19 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   /**
    * This method will update user current login time in keycloak
+   * 
    * @param actorMessage Request
    */
   private void updateUserLoginTime(Request actorMessage) {
-    String userId =(String) actorMessage.getRequest().get(JsonKey.USER_ID);
+    String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
     SSOManager ssoManager = SSOServiceFactory.getInstance();
     boolean addedResponse = ssoManager.addUserLoginTime(userId);
-    ProjectLogger.log("user login time added response is =="+ addedResponse);
+    ProjectLogger.log("user login time added response is ==" + addedResponse);
   }
+
   @SuppressWarnings("unchecked")
   private void getUserDetailsByLoginId(Request actorMessage) {
 
@@ -215,22 +208,24 @@ public class UserManagementActor extends UntypedAbstractActor {
           // remove email and phone no from response
           result.remove(JsonKey.ENC_EMAIL);
           result.remove(JsonKey.ENC_PHONE);
-          if(null != actorMessage.getRequest().get(JsonKey.FIELDS)){
-            List<String> requestFields = (List)actorMessage.getRequest().get(JsonKey.FIELDS);
-            if (requestFields != null){
-                if(!requestFields.contains(JsonKey.COMPLETENESS)){
-                    result.remove(JsonKey.COMPLETENESS);
-                } 
-                if(!requestFields.contains(JsonKey.MISSING_FIELDS)){
-                    result.remove(JsonKey.MISSING_FIELDS);
-                }if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)){
-                  SSOManager manager = SSOServiceFactory.getInstance();
-                  String lastLoginTime = manager.getLastLoginTime((String) userMap.get(JsonKey.USER_ID));
-                  if (ProjectUtil.isStringNullOREmpty(lastLoginTime)){
-                    lastLoginTime = "0";
-                  }
-                  result.put(JsonKey.LAST_LOGIN_TIME, Long.parseLong(lastLoginTime));
+          if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
+            List<String> requestFields = (List) actorMessage.getRequest().get(JsonKey.FIELDS);
+            if (requestFields != null) {
+              if (!requestFields.contains(JsonKey.COMPLETENESS)) {
+                result.remove(JsonKey.COMPLETENESS);
+              }
+              if (!requestFields.contains(JsonKey.MISSING_FIELDS)) {
+                result.remove(JsonKey.MISSING_FIELDS);
+              }
+              if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
+                SSOManager manager = SSOServiceFactory.getInstance();
+                String lastLoginTime =
+                    manager.getLastLoginTime((String) userMap.get(JsonKey.USER_ID));
+                if (ProjectUtil.isStringNullOREmpty(lastLoginTime)) {
+                  lastLoginTime = "0";
                 }
+                result.put(JsonKey.LAST_LOGIN_TIME, Long.parseLong(lastLoginTime));
+              }
             } else {
               result.remove(JsonKey.MISSING_FIELDS);
               result.remove(JsonKey.COMPLETENESS);
@@ -326,24 +321,25 @@ public class UserManagementActor extends UntypedAbstractActor {
       sender().tell(exception, self());
       return;
     }
-    if(null != actorMessage.getRequest().get(JsonKey.FIELDS)){
-    	String requestFields = (String)actorMessage.getRequest().get(JsonKey.FIELDS);
-    	if(!ProjectUtil.isStringNullOREmpty(requestFields)){
-    		if(!requestFields.contains(JsonKey.COMPLETENESS)){
-    			result.remove(JsonKey.COMPLETENESS);
-        	} 
-    		if(!requestFields.contains(JsonKey.MISSING_FIELDS)){
-        		result.remove(JsonKey.MISSING_FIELDS);
-        	}if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)){
-        	  SSOManager manager = SSOServiceFactory.getInstance();
-        	   String lastLoginTime = manager.getLastLoginTime((String) userMap.get(JsonKey.USER_ID));
-        	   if (ProjectUtil.isStringNullOREmpty(lastLoginTime)){
-        	     lastLoginTime = "0";
-        	   }
-        	   result.put(JsonKey.LAST_LOGIN_TIME, Long.parseLong(lastLoginTime));
-        	}
-    	}
-    }else {
+    if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
+      String requestFields = (String) actorMessage.getRequest().get(JsonKey.FIELDS);
+      if (!ProjectUtil.isStringNullOREmpty(requestFields)) {
+        if (!requestFields.contains(JsonKey.COMPLETENESS)) {
+          result.remove(JsonKey.COMPLETENESS);
+        }
+        if (!requestFields.contains(JsonKey.MISSING_FIELDS)) {
+          result.remove(JsonKey.MISSING_FIELDS);
+        }
+        if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
+          SSOManager manager = SSOServiceFactory.getInstance();
+          String lastLoginTime = manager.getLastLoginTime((String) userMap.get(JsonKey.USER_ID));
+          if (ProjectUtil.isStringNullOREmpty(lastLoginTime)) {
+            lastLoginTime = "0";
+          }
+          result.put(JsonKey.LAST_LOGIN_TIME, Long.parseLong(lastLoginTime));
+        }
+      }
+    } else {
       result.remove(JsonKey.MISSING_FIELDS);
       result.remove(JsonKey.COMPLETENESS);
     }
@@ -541,8 +537,9 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
 
-    if(userMap.containsKey(JsonKey.WEB_PAGES)){
-      SocialMediaType.validateSocialMedia((List<Map<String, String>>) userMap.get(JsonKey.WEB_PAGES));
+    if (userMap.containsKey(JsonKey.WEB_PAGES)) {
+      SocialMediaType
+          .validateSocialMedia((List<Map<String, String>>) userMap.get(JsonKey.WEB_PAGES));
     }
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
@@ -672,12 +669,11 @@ public class UserManagementActor extends UntypedAbstractActor {
     sender().tell(result, self());
 
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      Response usrResponse = new Response();
-      usrResponse.getResult().put(JsonKey.OPERATION,
-          ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-      usrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));
+      Request userRequest = new Request();
+      userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+      userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
       try {
-        backGroundActorRef.tell(usrResponse, self());
+        ActorUtil.tell(userRequest);
       } catch (Exception ex) {
         ProjectLogger.log("Exception Occured during saving user to Es while updating user : ", ex);
       }
@@ -908,9 +904,10 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
-    Map<String , Object> emailTemplateMap = new HashMap<>(userMap);
-    if(userMap.containsKey(JsonKey.WEB_PAGES)){
-      SocialMediaType.validateSocialMedia((List<Map<String, String>>)userMap.get(JsonKey.WEB_PAGES));
+    Map<String, Object> emailTemplateMap = new HashMap<>(userMap);
+    if (userMap.containsKey(JsonKey.WEB_PAGES)) {
+      SocialMediaType
+          .validateSocialMedia((List<Map<String, String>>) userMap.get(JsonKey.WEB_PAGES));
     }
     userMap.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
     // remove these fields from req
@@ -925,7 +922,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     } else {
       userMap.put(JsonKey.LOGIN_ID, (String) userMap.get(JsonKey.USERNAME));
     }
-    emailTemplateMap.put(JsonKey.USERNAME , userMap.get(JsonKey.LOGIN_ID));
+    emailTemplateMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
 
     if (null != userMap.get(JsonKey.LOGIN_ID)) {
       String loginId = "";
@@ -1073,15 +1070,14 @@ public class UserManagementActor extends UntypedAbstractActor {
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
 
     if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PASSWORD))) {
-      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD , (String) userMap.get(JsonKey.PASSWORD));
+      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, (String) userMap.get(JsonKey.PASSWORD));
       userMap.put(JsonKey.PASSWORD,
           OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
-    }else{
-      //create tempPassword
+    } else {
+      // create tempPassword
       String tempPassword = ProjectUtil.generateRandomPassword();
-      userMap.put(JsonKey.PASSWORD,
-            OneWayHashing.encryptVal(tempPassword));
-      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD , tempPassword);
+      userMap.put(JsonKey.PASSWORD, OneWayHashing.encryptVal(tempPassword));
+      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, tempPassword);
     }
     try {
       UserUtility.encryptUserData(userMap);
@@ -1182,13 +1178,12 @@ public class UserManagementActor extends UntypedAbstractActor {
 
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       ProjectLogger.log("method call going to satrt for ES--.....");
-      Response usrResponse = new Response();
-      usrResponse.getResult().put(JsonKey.OPERATION,
-          ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-      usrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));
+      Request userRequest = new Request();
+      userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+      userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
       ProjectLogger.log("making a call to save user data to ES");
       try {
-        backGroundActorRef.tell(usrResponse, self());
+        ActorUtil.tell(userRequest);
       } catch (Exception ex) {
         ProjectLogger.log("Exception Occured during saving user to Es while creating user : ", ex);
       }
@@ -1907,11 +1902,10 @@ public class UserManagementActor extends UntypedAbstractActor {
     sender().tell(response, self());
 
     // update record in elasticsearch ......
-    Response usrResponse = new Response();
-    usrResponse.getResult().put(JsonKey.OPERATION,
-        ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-    usrResponse.getResult().put(JsonKey.ID, userId);
-    backGroundActorRef.tell(usrResponse, self());
+    Request request = new Request();
+    request.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+    request.getRequest().put(JsonKey.ID, userId);
+    ActorUtil.tell(request);
   }
 
 
@@ -2057,15 +2051,15 @@ public class UserManagementActor extends UntypedAbstractActor {
       String orgId) {
 
     ProjectLogger.log("method call going to satrt for ES--.....");
-    Response usrResponse = new Response();
-    usrResponse.getResult().put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_ROLES_ES.getValue());
-    usrResponse.getResult().put(JsonKey.ROLES, tempMap.get(JsonKey.ROLES));
-    usrResponse.getResult().put(JsonKey.TYPE, type);
-    usrResponse.getResult().put(JsonKey.USER_ID, userid);
-    usrResponse.getResult().put(JsonKey.ORGANISATION_ID, orgId);
+    Request request = new Request();
+    request.setOperation(ActorOperations.UPDATE_USER_ROLES_ES.getValue());
+    request.getRequest().put(JsonKey.ROLES, tempMap.get(JsonKey.ROLES));
+    request.getRequest().put(JsonKey.TYPE, type);
+    request.getRequest().put(JsonKey.USER_ID, userid);
+    request.getRequest().put(JsonKey.ORGANISATION_ID, orgId);
     ProjectLogger.log("making a call to save user data to ES");
     try {
-      backGroundActorRef.tell(usrResponse, self());
+      ActorUtil.tell(request);
     } catch (Exception ex) {
       ProjectLogger.log("Exception Occured during saving user to Es while joinUserOrganisation : ",
           ex);
@@ -2139,11 +2133,10 @@ public class UserManagementActor extends UntypedAbstractActor {
     sender().tell(response, self());
 
     // make user active in elasticsearch ......
-    Response usrResponse = new Response();
-    usrResponse.getResult().put(JsonKey.OPERATION,
-        ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-    usrResponse.getResult().put(JsonKey.ID, userId);
-    backGroundActorRef.tell(usrResponse, self());
+    Request request = new Request();
+    request.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+    request.getRequest().put(JsonKey.ID, userId);
+    ActorUtil.tell(request);
   }
 
   /**
@@ -2189,46 +2182,51 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
     return responseList;
   }
-  
-  private void getMediaTypes(Request actorMessage){
-    Response response =  SocialMediaType.getMediaTypeFromDB();
+
+  private void getMediaTypes(Request actorMessage) {
+    Response response = SocialMediaType.getMediaTypeFromDB();
     sender().tell(response, self());
   }
 
   private void sendOnboardingMail(Map<String, Object> emailTemplateMap) {
 
-    if(!(ProjectUtil.isStringNullOREmpty((String)emailTemplateMap.get(JsonKey.EMAIL)))) {
+    if (!(ProjectUtil.isStringNullOREmpty((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
 
       emailTemplateMap.put(JsonKey.SUBJECT, "Welcome to DIKSHA");
       List<String> reciptientsMail = new ArrayList<>();
-      reciptientsMail.add((String)emailTemplateMap.get(JsonKey.EMAIL));
-      emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS , reciptientsMail);
-      if(! ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url")) || !ProjectUtil.isStringNullOREmpty(propertiesCache.getProperty("sunird_web_url"))) {
-        emailTemplateMap.put(JsonKey.WEB_URL, ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url")) ? propertiesCache.getProperty("sunird_web_url") : System.getenv("sunird_web_url"));
+      reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
+      emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
+      if (!ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url"))
+          || !ProjectUtil.isStringNullOREmpty(propertiesCache.getProperty("sunird_web_url"))) {
+        emailTemplateMap.put(JsonKey.WEB_URL,
+            ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url"))
+                ? propertiesCache.getProperty("sunird_web_url") : System.getenv("sunird_web_url"));
       }
       String appUrl = System.getenv("sunbird_app_url");
       if (ProjectUtil.isStringNullOREmpty(appUrl)) {
-         appUrl = propertiesCache.getProperty("sunbird_app_url");
+        appUrl = propertiesCache.getProperty("sunbird_app_url");
       }
 
-      if(!ProjectUtil.isStringNullOREmpty(appUrl)) {
-         if (!"sunbird_app_url".equalsIgnoreCase(appUrl)) {
-           emailTemplateMap.put(JsonKey.APP_URL, appUrl);
-         }
+      if (!ProjectUtil.isStringNullOREmpty(appUrl)) {
+        if (!"sunbird_app_url".equalsIgnoreCase(appUrl)) {
+          emailTemplateMap.put(JsonKey.APP_URL, appUrl);
+        }
       }
 
-      emailTemplateMap.put(JsonKey.BODY , propertiesCache.getProperty(JsonKey.ONBOARDING_WELCOME_MAIL_BODY));
-      emailTemplateMap.put(JsonKey.NOTE , propertiesCache.getProperty(JsonKey.MAIL_NOTE));
-      emailTemplateMap.put(JsonKey.ORG_NAME , propertiesCache.getProperty(JsonKey.ORG_NAME));
+      emailTemplateMap.put(JsonKey.BODY,
+          propertiesCache.getProperty(JsonKey.ONBOARDING_WELCOME_MAIL_BODY));
+      emailTemplateMap.put(JsonKey.NOTE, propertiesCache.getProperty(JsonKey.MAIL_NOTE));
+      emailTemplateMap.put(JsonKey.ORG_NAME, propertiesCache.getProperty(JsonKey.ORG_NAME));
       String welcomeMessage = propertiesCache.getProperty("onboarding_welcome_message");
-      emailTemplateMap.put(JsonKey.WELCOME_MESSAGE , ProjectUtil.formatMessage(welcomeMessage, propertiesCache.getProperty(JsonKey.ORG_NAME)).trim());
+      emailTemplateMap.put(JsonKey.WELCOME_MESSAGE, ProjectUtil
+          .formatMessage(welcomeMessage, propertiesCache.getProperty(JsonKey.ORG_NAME)).trim());
 
-      emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE , "welcome");
+      emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
 
       Request request = new Request();
       request.setOperation(ActorOperations.EMAIL_SERVICE.getValue());
-      request.put(JsonKey.EMAIL_REQUEST , emailTemplateMap);
-      emailServiceActorRef.tell(request, null);
+      request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);
+      ActorUtil.tell(request);
     }
 
   }

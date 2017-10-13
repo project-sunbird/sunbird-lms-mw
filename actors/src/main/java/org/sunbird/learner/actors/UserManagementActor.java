@@ -12,6 +12,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.velocity.VelocityContext;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.Constants;
 import org.sunbird.common.ElasticSearchUtil;
@@ -19,14 +21,17 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.Status;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
+import org.sunbird.common.models.util.mail.SendMail;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
@@ -52,6 +57,8 @@ public class UserManagementActor extends UntypedAbstractActor {
   private EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
           .getEncryptionServiceInstance(null);
+  private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
+      .getDecryptionServiceInstance(null);
   private ActorRef backGroundActorRef;
   private ActorRef emailServiceActorRef;
   private PropertiesCache propertiesCache = PropertiesCache.getInstance();
@@ -119,7 +126,9 @@ public class UserManagementActor extends UntypedAbstractActor {
            updateUserLoginTime(actorMessage);
         }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_MEDIA_TYPES.getValue())) {
           getMediaTypes(actorMessage);
-       }
+       }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.FORGOT_PASSWORD.getValue())) {
+         forgotPassword(actorMessage);
+      }
        else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
           ProjectCommonException exception =
@@ -134,7 +143,58 @@ public class UserManagementActor extends UntypedAbstractActor {
       }
     }
   }
-
+  
+  /**
+   * This method will verify the loginId or email key against cassandra db.
+   * if user is found then it will send temporary password to user 
+   * register email.
+   * @param actorMessage Request
+   */
+  private void forgotPassword(Request actorMessage) {
+    Map<String, Object> map = (Map) actorMessage.getRequest().get(JsonKey.USER);
+    String userName = (String) map.get(JsonKey.USERNAME);
+    boolean isEmailvalid = ProjectUtil.isEmailvalid(userName);
+    String searchedKey = "";
+    if (isEmailvalid) {
+      searchedKey = JsonKey.EMAIL;
+    } else {
+      searchedKey = JsonKey.USERNAME;
+    }
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    Response response = null;
+    try {
+      response = cassandraOperation.getRecordsByProperty(
+          usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), searchedKey,
+          encryptionService.encryptData(userName));
+      if (response != null) {
+        List<Map<String, Object>> list =
+            (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+        if (list != null && list.size() == 1) {
+          Map<String, Object> userMap = list.get(0);
+          String email = decryptionService
+              .decryptData((String) userMap.get(JsonKey.EMAIL));
+          String name = (String)userMap.get(JsonKey.FIRST_NAME);
+          String userId = (String) userMap.get(JsonKey.USER_ID);
+          if (!ProjectUtil.isStringNullOREmpty(email)) {
+            response = new Response();
+            response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+            sender().tell(response, self());
+            sendForgotPasswordEmail(name, email, userId); 
+            return;
+          }
+        }
+      }
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    ProjectCommonException exception =
+        new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(),
+            ResponseCode.userNotFound.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+    sender().tell(exception, self());
+  }
+  
+  
   /**
    * This method will update user current login time in keycloak
    * @param actorMessage Request
@@ -144,9 +204,12 @@ public class UserManagementActor extends UntypedAbstractActor {
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
-    SSOManager ssoManager = SSOServiceFactory.getInstance();
-    boolean addedResponse = ssoManager.addUserLoginTime(userId);
-    ProjectLogger.log("user login time added response is =="+ addedResponse);
+    if (Boolean.parseBoolean(
+        PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED))) {
+      SSOManager ssoManager = SSOServiceFactory.getInstance();
+      boolean addedResponse = ssoManager.addUserLoginTime(userId);
+      ProjectLogger.log("user login time added response is ==" + addedResponse);
+    }
   }
   @SuppressWarnings("unchecked")
   private void getUserDetailsByLoginId(Request actorMessage) {
@@ -223,14 +286,13 @@ public class UserManagementActor extends UntypedAbstractActor {
                 } 
                 if(!requestFields.contains(JsonKey.MISSING_FIELDS)){
                     result.remove(JsonKey.MISSING_FIELDS);
-                }if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)){
-                  SSOManager manager = SSOServiceFactory.getInstance();
-                  String lastLoginTime = manager.getLastLoginTime((String) userMap.get(JsonKey.USER_ID));
-                  if (ProjectUtil.isStringNullOREmpty(lastLoginTime)){
-                    lastLoginTime = "0";
-                  }
-                  result.put(JsonKey.LAST_LOGIN_TIME, Long.parseLong(lastLoginTime));
-                }
+              }
+              if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
+                result.put(JsonKey.LAST_LOGIN_TIME, Long.parseLong(
+                    getLastLoginTime((String) userMap.get(JsonKey.USER_ID),(String)result.get(JsonKey.LAST_LOGIN_TIME))));
+              }if (!requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
+                result.remove(JsonKey.LAST_LOGIN_TIME);
+              }
             } else {
               result.remove(JsonKey.MISSING_FIELDS);
               result.remove(JsonKey.COMPLETENESS);
@@ -334,14 +396,15 @@ public class UserManagementActor extends UntypedAbstractActor {
         	} 
     		if(!requestFields.contains(JsonKey.MISSING_FIELDS)){
         		result.remove(JsonKey.MISSING_FIELDS);
-        	}if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)){
-        	  SSOManager manager = SSOServiceFactory.getInstance();
-        	   String lastLoginTime = manager.getLastLoginTime((String) userMap.get(JsonKey.USER_ID));
-        	   if (ProjectUtil.isStringNullOREmpty(lastLoginTime)){
-        	     lastLoginTime = "0";
-        	   }
-        	   result.put(JsonKey.LAST_LOGIN_TIME, Long.parseLong(lastLoginTime));
-        	}
+        }
+        if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
+          result.put(JsonKey.LAST_LOGIN_TIME,
+              Long.parseLong(
+                  getLastLoginTime((String) userMap.get(JsonKey.USER_ID),
+                      (String) result.get(JsonKey.LAST_LOGIN_TIME))));
+        }if (!requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
+          result.remove(JsonKey.LAST_LOGIN_TIME);
+        }
     	}
     }else {
       result.remove(JsonKey.MISSING_FIELDS);
@@ -397,12 +460,14 @@ public class UserManagementActor extends UntypedAbstractActor {
   @SuppressWarnings("unchecked")
   private void changePassword(Request actorMessage) {
     Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Map<String, Object> userMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
+    Map<String, Object> userMap =
+        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
     String currentPassword = (String) userMap.get(JsonKey.PASSWORD);
     String newPassword = (String) userMap.get(JsonKey.NEW_PASSWORD);
     Response result = cassandraOperation.getRecordById(userDbInfo.getKeySpace(),
         userDbInfo.getTableName(), (String) userMap.get(JsonKey.USER_ID));
-    List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+    List<Map<String, Object>> list =
+        (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
     if (!(list.isEmpty())) {
       Map<String, Object> resultMap = list.get(0);
       boolean passwordMatched = ((String) resultMap.get(JsonKey.PASSWORD))
@@ -413,16 +478,18 @@ public class UserManagementActor extends UntypedAbstractActor {
         Map<String, Object> queryMap = new LinkedHashMap<>();
         queryMap.put(JsonKey.ID, userMap.get(JsonKey.USER_ID));
         queryMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-        queryMap.put(JsonKey.UPDATED_BY, actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
+        queryMap.put(JsonKey.UPDATED_BY,
+            actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
         queryMap.put(JsonKey.PASSWORD, newHashedPassword);
+        queryMap.put(JsonKey.TEMPORARY_PASSWORD, "");
         result = cassandraOperation.updateRecord(userDbInfo.getKeySpace(),
             userDbInfo.getTableName(), queryMap);
         sender().tell(result, self());
       } else {
-        ProjectCommonException exception =
-            new ProjectCommonException(ResponseCode.invalidCredentials.getErrorCode(),
-                ResponseCode.invalidCredentials.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
+        ProjectCommonException exception = new ProjectCommonException(
+            ResponseCode.invalidCredentials.getErrorCode(),
+            ResponseCode.invalidCredentials.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
       }
     }
@@ -455,20 +522,31 @@ public class UserManagementActor extends UntypedAbstractActor {
    * @param actorMessage Request
    */
   @SuppressWarnings("unchecked")
-  private void login(Request actorMessage) {
-    Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+  private void login(Request actorMessage) throws Exception{
     Map<String, Object> reqMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
-    Response result = cassandraOperation.getRecordById(userDbInfo.getKeySpace(),
-        userDbInfo.getTableName(), OneWayHashing.encryptVal((String) reqMap.get(JsonKey.USERNAME)));
+     String data =(String) reqMap.get(JsonKey.USERNAME);
+     Response result =  null;
+     if (ProjectUtil.isEmailvalid(data)){
+       result = loginWithEmail(data);
+     }else if (ProjectUtil.validatePhoneNumber(data)){
+        result = loginWithPhone(data);
+     } else {
+       result = loginWithLoginId(data);
+     }
     List<Map<String, Object>> list = ((List<Map<String, Object>>) result.get(JsonKey.RESPONSE));
     if (null != list && list.size() == 1) {
       Map<String, Object> resultMap = list.get(0);
+      boolean isChangePasswordReqquired = false;
       if (null != resultMap.get(JsonKey.STATUS)
           && (ProjectUtil.Status.ACTIVE.getValue()) == (int) resultMap.get(JsonKey.STATUS)) {
         if (ProjectUtil.isStringNullOREmpty(((String) reqMap.get(JsonKey.LOGIN_TYPE)))) {
           // here login type is general
           boolean password = ((String) resultMap.get(JsonKey.PASSWORD))
               .equals(OneWayHashing.encryptVal((String) reqMap.get(JsonKey.PASSWORD)));
+          if (((String) resultMap.get(JsonKey.PASSWORD))
+              .equals((String) resultMap.get(JsonKey.TEMPORARY_PASSWORD))) {
+            isChangePasswordReqquired = true;
+          }
           if (password) {
             Map<String, Object> userAuthMap = new HashMap<>();
             userAuthMap.put(JsonKey.SOURCE, reqMap.get(JsonKey.SOURCE));
@@ -479,22 +557,20 @@ public class UserManagementActor extends UntypedAbstractActor {
                 (String) reqMap.get(JsonKey.SOURCE));
             userAuthMap.put(JsonKey.ID, userAuth);
             checkForDuplicateUserAuthToken(userAuthMap, resultMap, reqMap);
-
-            Map<String, Object> user = new HashMap<>();
-            user.put(JsonKey.ID, OneWayHashing.encryptVal((String) reqMap.get(JsonKey.USERNAME)));
-            user.put(JsonKey.LAST_LOGIN_TIME, ProjectUtil.getFormattedDate());
-
-            cassandraOperation.updateRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(),
-                user);
-
             reqMap.remove(JsonKey.PASSWORD);
             reqMap.remove(JsonKey.USERNAME);
+            reqMap.remove(JsonKey.SOURCE);
             reqMap.put(JsonKey.FIRST_NAME, resultMap.get(JsonKey.FIRST_NAME));
-            reqMap.put(JsonKey.TOKEN, userAuthMap.get(JsonKey.ID));
+            reqMap.put(JsonKey.ACCESSTOKEN, userAuthMap.get(JsonKey.ID));
             reqMap.put(JsonKey.USER_ID, resultMap.get(JsonKey.USER_ID));
+            if (isChangePasswordReqquired) {
+              reqMap.put(JsonKey.STATUS_CODE,
+                  ResponseCode.REDIRECTION_REQUIRED.getResponseCode());
+            }
             Response response = new Response();
             response.put(Constants.RESPONSE, reqMap);
             sender().tell(response, self());
+            updateUserLoginTime(resultMap);
           } else {
             ProjectCommonException exception =
                 new ProjectCommonException(ResponseCode.invalidCredentials.getErrorCode(),
@@ -527,6 +603,53 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
   }
 
+  
+  /**
+   * 
+   * @param actorMessage
+   * @return Response
+   * @throws Exception
+   */
+  private Response loginWithEmail(String email) throws Exception {
+    Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    return cassandraOperation.getRecordsByProperty(userDbInfo.getKeySpace(),
+        userDbInfo.getTableName(), JsonKey.EMAIL,
+        encryptionService.encryptData(email));
+  }
+  
+  /**
+   * 
+   * @param phone
+   * @return Response
+   * @throws Exception
+   */
+  private Response loginWithPhone (String phone) throws Exception{
+    Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    Response resposne = null;
+    try {
+     resposne = cassandraOperation.getRecordsByProperty(userDbInfo.getKeySpace(),
+        userDbInfo.getTableName(), JsonKey.PHONE,
+        encryptionService.encryptData(phone));
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return resposne;
+  }
+  
+  /**
+   * 
+   * @param loginId
+   * @return Response
+   * @throws Exception
+   */
+  private Response loginWithLoginId (String loginId) throws Exception{
+    Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    return cassandraOperation.getRecordsByProperty(userDbInfo.getKeySpace(),
+        userDbInfo.getTableName(), JsonKey.LOGIN_ID,
+        encryptionService.encryptData(loginId));
+  }
+  
+  
   /**
    * Method to update the user profile.
    */
@@ -2233,4 +2356,90 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   }
 
+  /**
+   * This method will send forgot password email
+   * @param name String
+   * @param email String
+   * @param userId String
+   */
+  private void sendForgotPasswordEmail (String name,String email,String userId) {
+    VelocityContext context = new VelocityContext();
+    context.put(JsonKey.NAME, name);
+    context.put(JsonKey.TEMPORARY_PASSWORD, ProjectUtil.generateRandomPassword());
+    context.put(JsonKey.NOTE , propertiesCache.getProperty(JsonKey.MAIL_NOTE));
+    context.put(JsonKey.ORG_NAME , propertiesCache.getProperty(JsonKey.ORG_NAME));
+    String appUrl = System.getenv(JsonKey.SUNBIRD_APP_URL);
+    if (ProjectUtil.isStringNullOREmpty(appUrl)) {
+       appUrl = propertiesCache.getProperty(JsonKey.SUNBIRD_APP_URL);
+    }
+    context.put(JsonKey.WEB_URL, ProjectUtil.isStringNullOREmpty(System.getenv(JsonKey.SUNBIRD_WEB_URL)) ? propertiesCache.getProperty(JsonKey.SUNBIRD_WEB_URL) : System.getenv(JsonKey.SUNBIRD_WEB_URL));
+    if(!ProjectUtil.isStringNullOREmpty(appUrl)) {
+       if (!JsonKey.SUNBIRD_APP_URL.equalsIgnoreCase(appUrl)) {
+         context.put(JsonKey.APP_URL, appUrl);
+       }
+    }
+    ProjectLogger.log("Starting to update password inside cassandra" , LoggerEnum.INFO.name());
+    updatePassword(userId, (String)context.get(JsonKey.TEMPORARY_PASSWORD));
+    ProjectLogger.log("Password updated in cassandra and start sending email" , LoggerEnum.INFO.name());
+    boolean response = SendMail.sendMail(new String[]{email}, "Forgot password", context, "forgotpassword.vm");
+    ProjectLogger.log("email sent resposne==" + response , LoggerEnum.INFO.name());
+  }
+  
+  /**
+   * This method will update user temporary password inside
+   * cassandra db.
+   * @param userId String
+   * @param password Stirng
+   */
+  private void updatePassword(String userId, String password) {
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.ID, userId);
+    map.put(JsonKey.PASSWORD, OneWayHashing.encryptVal(password));
+    map.put(JsonKey.TEMPORARY_PASSWORD, map.get(JsonKey.PASSWORD));
+    cassandraOperation.updateRecord(usrDbInfo.getKeySpace(),
+        usrDbInfo.getTableName(), map);
+  }
+ 
+  /**
+   * This method will update user login time under cassandra and Elasticsearch.
+   * @param reqMap Map<String, Object>
+   * @return boolean
+   */
+  private boolean updateUserLoginTime(Map<String, Object> reqMap) {
+    ProjectLogger.log("Start saving user login time==" , LoggerEnum.INFO.name());
+    boolean response = false;
+    String lastLoginTime = (String) reqMap.get(JsonKey.CURRENT_LOGIN_TIME);
+    String userId = (String) reqMap.get(JsonKey.USER_ID);
+    reqMap.clear();
+    reqMap.put(JsonKey.LAST_LOGIN_TIME, lastLoginTime);
+    reqMap.put(JsonKey.CURRENT_LOGIN_TIME, System.currentTimeMillis() + "");
+    response =
+        ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(), userId, reqMap);
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    reqMap.put(JsonKey.ID, userId);
+    cassandraOperation.updateRecord(usrDbInfo.getKeySpace(),
+        usrDbInfo.getTableName(), reqMap);
+    ProjectLogger.log("End saving user login time== " + response , LoggerEnum.INFO.name());
+    return response;
+  }
+  
+  private String getLastLoginTime(String userId,String time) {
+    String lastLoginTime = "0";
+    if (Boolean.parseBoolean(
+        PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED))) {
+      SSOManager manager = SSOServiceFactory.getInstance();
+      lastLoginTime =
+          manager.getLastLoginTime(userId);
+    } else {
+      lastLoginTime = time;
+    }
+    if (ProjectUtil.isStringNullOREmpty(lastLoginTime)) {
+      return "0";
+    }
+    return lastLoginTime;
+  }
+  
+  
 }

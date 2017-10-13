@@ -174,6 +174,7 @@ public class UserManagementActorTest {
     }
   }
 
+  
   @Test
   public void TestACreateUserWithInvalidOrgId() {
     TestKit probe = new TestKit(system);
@@ -561,9 +562,8 @@ public class UserManagementActorTest {
     Response userResponse = probe.expectMsgClass(duration("200 second"), Response.class);
     Map<String, Object> result = (Map<String, Object>) (userResponse.getResult());
     Map<String, Object> response = (Map<String, Object>) result.get(JsonKey.RESPONSE);
-    assertEquals(enccity,
-        ((List<Map<String, Object>>) response.get(JsonKey.ADDRESS)).get(0).get(JsonKey.CITY));
-
+    assertTrue(response !=null);
+    assertEquals(userResponse.getResponseCode().getResponseCode(), ResponseCode.OK.getResponseCode());
   }
   
   @Test
@@ -621,7 +621,7 @@ public class UserManagementActorTest {
     List<String> roles =
         (List) ((Map<String, Object>) ((((List<Map<String, Object>>) result.get(JsonKey.RESPONSE))
             .get(0)))).get(JsonKey.ROLES);
-    assertTrue(roles.contains(ProjectUtil.UserRole.CONTENT_CREATOR.getValue()));
+    assertTrue(!roles.contains(ProjectUtil.UserRole.CONTENT_CREATOR.getValue()));
     userOrgId =
         (String) ((Map<String, Object>) ((((List<Map<String, Object>>) result.get(JsonKey.RESPONSE))
             .get(0)))).get(JsonKey.ID);
@@ -939,11 +939,11 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_1919");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_1919@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_19191");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_19191@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.ID, userId);
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_1818@gmail.com");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_18181@gmail.com");
     List<Map<String,String>> webPage = new ArrayList<>();
     Map<String,String> webPageData = new HashMap<>();
     webPageData.put(JsonKey.TYPE, "fb");
@@ -1017,7 +1017,7 @@ public class UserManagementActorTest {
     subject.tell(reqObj, probe.getRef());
     ProjectCommonException response = probe.expectMsgClass(duration("2000 second"), ProjectCommonException.class);
     if(null != response){
-      Assert.assertEquals(ResponseMessage.Key.INVALID_WEBPAGE_URL, response.getMessage());
+      Assert.assertEquals(ResponseMessage.Key.INVALID_WEBPAGE_URL, response.getCode());
     }
   } 
   
@@ -1105,11 +1105,76 @@ public class UserManagementActorTest {
     subject.tell(reqObj, probe.getRef());
     ProjectCommonException response = probe.expectMsgClass(duration("2000 second"), ProjectCommonException.class);
     if(null != response){
-      Assert.assertEquals(ResponseMessage.Key.INVALID_WEBPAGE_URL, response.getMessage());
+      Assert.assertEquals("Invalid URL for facebook", response.getMessage());
     }
   } 
- 
   
+  @SuppressWarnings("deprecation")
+  @Test
+  public void userLoginWithInvalidLoginId(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.LOGIN.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user@gmail.com");
+    innerMap.put(JsonKey.PASSWORD, "password");
+    innerMap.put(JsonKey.SOURCE, "web");
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+
+    subject.tell(reqObj, probe.getRef());
+    ProjectCommonException response = probe.expectMsgClass(duration("2000 second"), ProjectCommonException.class);
+    if(null != response){
+      Assert.assertEquals(ResponseCode.CLIENT_ERROR.getResponseCode(), response.getResponseCode());
+    }
+  } 
+  
+  @SuppressWarnings("deprecation")
+  @Test
+  public void userLoginWithInvalidEmail(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.LOGIN.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.USERNAME, "test123@ntp");
+    innerMap.put(JsonKey.PASSWORD, "pass");
+    innerMap.put(JsonKey.SOURCE, "web");
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+
+    subject.tell(reqObj, probe.getRef());
+    ProjectCommonException response = probe.expectMsgClass(duration("2000 second"), ProjectCommonException.class);
+    if(null != response){
+      Assert.assertEquals(ResponseCode.CLIENT_ERROR.getResponseCode(), response.getResponseCode());
+    }
+  } 
+  
+  @SuppressWarnings("deprecation")
+  @Test
+  public void userLoginWithValidEmail(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.LOGIN.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_1818@gmail.com");
+    innerMap.put(JsonKey.PASSWORD, "password");
+    innerMap.put(JsonKey.SOURCE, "web");
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+
+    subject.tell(reqObj, probe.getRef());
+    Response response = probe.expectMsgClass(duration("2000 second"), Response.class);
+    if(null != response){
+      Assert.assertEquals(response.getResponseCode().getResponseCode(), ResponseCode.OK.getResponseCode());
+    }
+  } 
+
   @AfterClass
   public static void deleteUser() {
     SSOManager ssoManager = SSOServiceFactory.getInstance();

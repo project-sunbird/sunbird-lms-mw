@@ -18,7 +18,7 @@ public class ActorSystemTest {
       
   @BeforeClass
   public static void setUp() {
-    
+    Application.startLocalActorSystem();
     provider = PropertiesCache.getInstance().getProperty("background_actor_provider");
   }
   
@@ -34,7 +34,7 @@ public class ActorSystemTest {
   }
   
   @SuppressWarnings("deprecation")
- // @Test
+  @Test
   public void testActorRef(){
     Object obj = ActorSystemFactory.getActorSystem().initializeActorSystem(ActorOperations.CREATE_USER.getValue());
      if(provider.equalsIgnoreCase("local")){

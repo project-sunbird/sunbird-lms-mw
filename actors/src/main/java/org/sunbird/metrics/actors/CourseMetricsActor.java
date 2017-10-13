@@ -3,6 +3,8 @@ package org.sunbird.metrics.actors;
 import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 import static org.sunbird.common.models.util.ProjectUtil.isNull;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -32,14 +33,8 @@ import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.UserUtility;
+import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import akka.actor.ActorRef;
-import akka.actor.Props;
 
 public class CourseMetricsActor extends BaseMetricsActor {
 
@@ -48,16 +43,10 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
   protected static final String CONTENT_ID = "content_id";
   private static ObjectMapper mapper = new ObjectMapper();
-  private ActorRef backGroundActorRef;
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo batchDbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
   Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   DecryptionService decryptionService= org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(null);
-
-  public CourseMetricsActor() {
-      backGroundActorRef = getContext()
-          .actorOf(Props.create(MetricsBackGroundJobActor.class), "metricsBackGroundJobActor");
-  }
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -317,7 +306,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     backGroundRequest.setOperation(ActorOperations.PROCESS_DATA.getValue());
     backGroundRequest.getRequest().put(JsonKey.REQUEST , JsonKey.CourseProgress);
     backGroundRequest.getRequest().put(JsonKey.REQUEST_ID , requestId);
-    backGroundActorRef.tell(backGroundRequest , self());
+    ActorUtil.tell(backGroundRequest);
   }
 
   private void assignTaskToBackGround(List<List<Object>> finalList) {

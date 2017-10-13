@@ -1,7 +1,5 @@
 package org.sunbird.learner.actors;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,17 +31,13 @@ public class CourseManagementActor extends UntypedAbstractActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo dbInfo = null;
-  private String coursePublishedBody = "{\"request\":{\"content\":{\"lastPublishedBy\": \"userId\"}}}";
-  private ActorRef backGroundActorRef;
+  private String coursePublishedBody =
+      "{\"request\":{\"content\":{\"lastPublishedBy\": \"userId\"}}}";
 
-  public CourseManagementActor() {
-    backGroundActorRef = getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
-   }
-  
   /**
    * Receives the actor message and perform the course enrollment operation .
    *
-   * @param message Object  is an instance of Request
+   * @param message Object is an instance of Request
    */
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -63,10 +57,10 @@ public class CourseManagementActor extends UntypedAbstractActor {
           deleteCourse(actorMessage);
         } else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
-          ProjectCommonException exception = new ProjectCommonException(
-              ResponseCode.invalidOperationName.getErrorCode(),
-              ResponseCode.invalidOperationName.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
+          ProjectCommonException exception =
+              new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
+                  ResponseCode.invalidOperationName.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
           sender().tell(exception, self());
         }
       } catch (Exception ex) {
@@ -76,10 +70,10 @@ public class CourseManagementActor extends UntypedAbstractActor {
     } else {
       // Throw exception as message body
       ProjectLogger.log("UNSUPPORTED MESSAGE");
-      ProjectCommonException exception = new ProjectCommonException(
-          ResponseCode.invalidRequestData.getErrorCode(),
-          ResponseCode.invalidRequestData.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
     }
   }
@@ -103,8 +97,8 @@ public class CourseManagementActor extends UntypedAbstractActor {
     queryMap.put(JsonKey.ID, (String) req.get(JsonKey.COURSE_ID));
     queryMap.put(JsonKey.STATUS, ProjectUtil.CourseMgmtStatus.RETIRED.getValue());
     queryMap.put(JsonKey.UPDATED_BY, updatedBy);
-    Response result = cassandraOperation
-        .updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), queryMap);
+    Response result =
+        cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), queryMap);
     sender().tell(result, self());
   }
 
@@ -117,40 +111,36 @@ public class CourseManagementActor extends UntypedAbstractActor {
    */
   @SuppressWarnings("unchecked")
   private void publishCourse(Request actorMessage) {
-    Map<String, Object> req =
-        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.COURSE);
+    Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.COURSE);
     req.put(JsonKey.ID, (String) req.get(JsonKey.COURSE_ID));
-    String updatedBy =
-        (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
+    String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
     Map<String, String> headers =
         (Map<String, String>) actorMessage.getRequest().get(JsonKey.HEADER);
     String resposne = null;
     try {
-      
+
       String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-      if(ProjectUtil.isStringNullOREmpty(ekStepBaseUrl)) {
-        ekStepBaseUrl = PropertiesCache.getInstance()
-            .getProperty(JsonKey.EKSTEP_BASE_URL);
+      if (ProjectUtil.isStringNullOREmpty(ekStepBaseUrl)) {
+        ekStepBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
       }
-      
+
       resposne = HttpUtil.sendPostRequest(
           ekStepBaseUrl
-              + PropertiesCache.getInstance()
-                  .getProperty(JsonKey.EKSTEP_COURSE_PUBLISH_URL)
-              + "/" + (String) req.get(JsonKey.COURSE_ID),
+              + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_COURSE_PUBLISH_URL) + "/"
+              + (String) req.get(JsonKey.COURSE_ID),
           coursePublishedBody.replace("userId", updatedBy), headers);
     } catch (IOException e) {
-       ProjectLogger.log(e.getMessage(), e);
-       sender().tell(e, self());
-       return;
+      ProjectLogger.log(e.getMessage(), e);
+      sender().tell(e, self());
+      return;
     }
     ProjectLogger.log("Resposne for Course published==" + resposne);
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.ID, (String) req.get(JsonKey.COURSE_ID));
     map.put(JsonKey.STATUS, ProjectUtil.CourseMgmtStatus.DRAFT.ordinal());
     map.put(JsonKey.SUBMIT_DATE, ProjectUtil.getFormattedDate());
-    Response result = cassandraOperation.insertRecord(dbInfo.getKeySpace(),
-        dbInfo.getTableName(), map);
+    Response result =
+        cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), map);
     sender().tell(result, self());
   }
 
@@ -178,10 +168,10 @@ public class CourseManagementActor extends UntypedAbstractActor {
       Map<String, Object> courseObject = courseList.get(0);
       if (((String) courseObject.get(JsonKey.STATUS))
           .equalsIgnoreCase(ProjectUtil.CourseMgmtStatus.LIVE.getValue())) {
-        ProjectCommonException projectCommonException = new ProjectCommonException(
-            ResponseCode.publishedCourseCanNotBeUpdated.getErrorCode(),
-            ResponseCode.publishedCourseCanNotBeUpdated.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+        ProjectCommonException projectCommonException =
+            new ProjectCommonException(ResponseCode.publishedCourseCanNotBeUpdated.getErrorCode(),
+                ResponseCode.publishedCourseCanNotBeUpdated.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(projectCommonException, self());
       } else {
 
@@ -194,8 +184,8 @@ public class CourseManagementActor extends UntypedAbstractActor {
         queryMap.put(JsonKey.UPDATED_BY_NAME, updatedByName);
         queryMap.remove(JsonKey.COURSE_ID);
 
-        result = cassandraOperation
-            .updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), queryMap);
+        result =
+            cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), queryMap);
         sender().tell(result, self());
 
       }
@@ -225,8 +215,8 @@ public class CourseManagementActor extends UntypedAbstractActor {
     req.put(JsonKey.COURSE_ID, uniqueId);
     req.put(JsonKey.STATUS, ProjectUtil.CourseMgmtStatus.DRAFT.getValue());
     req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-    Response result = cassandraOperation
-        .insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), req);
+    Response result =
+        cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), req);
     List<Map<String, Object>> responseList = new ArrayList<>();
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.COURSE_ID, uniqueId);
@@ -236,8 +226,7 @@ public class CourseManagementActor extends UntypedAbstractActor {
   }
 
   /**
-   * This method will provide user name based on user id if user not found
-   * then it will return null.
+   * This method will provide user name based on user id if user not found then it will return null.
    *
    * @param userId String
    * @return String
@@ -246,8 +235,8 @@ public class CourseManagementActor extends UntypedAbstractActor {
   private String getUserNamebyUserId(String userId) {
 
     Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Response result = cassandraOperation
-        .getRecordById(userdbInfo.getKeySpace(), userdbInfo.getTableName(), userId);
+    Response result = cassandraOperation.getRecordById(userdbInfo.getKeySpace(),
+        userdbInfo.getTableName(), userId);
 
     List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
     if (!(list.isEmpty())) {

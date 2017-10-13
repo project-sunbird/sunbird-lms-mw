@@ -48,17 +48,18 @@ public class LearnerStateActor extends UntypedAbstractActor {
         if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_COURSE.getValue())) {
           String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
 
-          Map<String , Object> filter = new HashMap<>();
-          filter.put(JsonKey.USER_ID , userId);
+          Map<String, Object> filter = new HashMap<>();
+          filter.put(JsonKey.USER_ID, userId);
 
           SearchDTO searchDto = new SearchDTO();
-          searchDto.getAdditionalProperties().put(JsonKey.FILTERS , filter);
+          searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
 
-          //SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
-          Map<String, Object> result = ElasticSearchUtil
-              .complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.usercourses.getTypeName());
+          // SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
+          Map<String, Object> result =
+              ElasticSearchUtil.complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(),
+                  ProjectUtil.EsType.usercourses.getTypeName());
 
-          response.put(JsonKey.RESPONSE , result.get(JsonKey.CONTENT));
+          response.put(JsonKey.RESPONSE, result.get(JsonKey.CONTENT));
           sender().tell(response, self());
 
         } else if (actorMessage.getOperation()
@@ -76,10 +77,10 @@ public class LearnerStateActor extends UntypedAbstractActor {
           sender().tell(res, self());
         } else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
-          ProjectCommonException exception = new ProjectCommonException(
-              ResponseCode.invalidOperationName.getErrorCode(),
-              ResponseCode.invalidOperationName.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
+          ProjectCommonException exception =
+              new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
+                  ResponseCode.invalidOperationName.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
           sender().tell(exception, ActorRef.noSender());
         }
       } catch (Exception ex) {
@@ -89,10 +90,10 @@ public class LearnerStateActor extends UntypedAbstractActor {
 
     } else {
       ProjectLogger.log("UNSUPPORTED MESSAGE");
-      ProjectCommonException exception = new ProjectCommonException(
-          ResponseCode.invalidRequestData.getErrorCode(),
-          ResponseCode.invalidRequestData.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, ActorRef.noSender());
     }
 
@@ -110,8 +111,8 @@ public class LearnerStateActor extends UntypedAbstractActor {
 
     Response response = new Response();
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
-    CopyOnWriteArrayList<String> courseIds = new CopyOnWriteArrayList<String>(
-        (List<String>) request.get(JsonKey.COURSE_IDS));
+    CopyOnWriteArrayList<String> courseIds =
+        new CopyOnWriteArrayList<String>((List<String>) request.get(JsonKey.COURSE_IDS));
     List<Map<String, Object>> modifiedContentList = new ArrayList<Map<String, Object>>();
 
     LinkedHashMap<String, Object> queryMap = new LinkedHashMap<String, Object>();
@@ -119,8 +120,8 @@ public class LearnerStateActor extends UntypedAbstractActor {
 
     for (String courseid : courseIds) {
       queryMap.put(JsonKey.COURSE_ID, courseid);
-      response = cassandraOperation
-          .getRecordsByProperties(dbInfo.getKeySpace(), dbInfo.getTableName(), queryMap);
+      response = cassandraOperation.getRecordsByProperties(dbInfo.getKeySpace(),
+          dbInfo.getTableName(), queryMap);
       modifiedContentList
           .addAll((List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE));
     }
@@ -135,8 +136,8 @@ public class LearnerStateActor extends UntypedAbstractActor {
   private Response getContentByContents(String userId, Map<String, Object> request) {
     Response response = null;
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
-    CopyOnWriteArrayList<String> contentIds = new CopyOnWriteArrayList<String>(
-        (List<String>) request.get(JsonKey.CONTENT_IDS));
+    CopyOnWriteArrayList<String> contentIds =
+        new CopyOnWriteArrayList<String>((List<String>) request.get(JsonKey.CONTENT_IDS));
 
     LinkedHashMap<String, Object> queryMap = new LinkedHashMap<String, Object>();
     queryMap.put(JsonKey.USER_ID, userId);
@@ -145,8 +146,8 @@ public class LearnerStateActor extends UntypedAbstractActor {
 
     for (String contentid : contentIds) {
       queryMap.put(JsonKey.CONTENT_ID, contentid);
-      response = cassandraOperation
-          .getRecordsByProperties(dbInfo.getKeySpace(), dbInfo.getTableName(), queryMap);
+      response = cassandraOperation.getRecordsByProperties(dbInfo.getKeySpace(),
+          dbInfo.getTableName(), queryMap);
       modifiedContentList
           .addAll((List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE));
 
@@ -169,16 +170,16 @@ public class LearnerStateActor extends UntypedAbstractActor {
     if (request.get(JsonKey.COURSE) != null) {
       Map<String, Object> courseMap = (Map<String, Object>) request.get(JsonKey.COURSE);
       String courseId = (String) courseMap.get(JsonKey.COURSE_ID);
-      CopyOnWriteArrayList<String> contentIds = new CopyOnWriteArrayList<String>(
-          (List<String>) courseMap.get(JsonKey.CONTENT_IDS));
+      CopyOnWriteArrayList<String> contentIds =
+          new CopyOnWriteArrayList<String>((List<String>) courseMap.get(JsonKey.CONTENT_IDS));
       LinkedHashMap<String, Object> queryMap = new LinkedHashMap<String, Object>();
       queryMap.put(JsonKey.USER_ID, userId);
       queryMap.put(JsonKey.COURSE_ID, courseId);
-      response = cassandraOperation
-          .getRecordsByProperties(dbInfo.getKeySpace(), dbInfo.getTableName(), queryMap);
+      response = cassandraOperation.getRecordsByProperties(dbInfo.getKeySpace(),
+          dbInfo.getTableName(), queryMap);
       List<Map<String, Object>> modifiedContentList = new ArrayList<Map<String, Object>>();
-      List<Map<String, Object>> resultedList = (List<Map<String, Object>>) response.getResult()
-          .get(JsonKey.RESPONSE);
+      List<Map<String, Object>> resultedList =
+          (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
 
       if (null != contentIds && !(contentIds.isEmpty())) {
 
@@ -200,8 +201,8 @@ public class LearnerStateActor extends UntypedAbstractActor {
 
   @SuppressWarnings("unchecked")
   private void removeUnwantedProperties(Response response) {
-    List<Map<String, Object>> list = (List<Map<String, Object>>) response.getResult()
-        .get(JsonKey.RESPONSE);
+    List<Map<String, Object>> list =
+        (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
     for (Map<String, Object> map : list) {
       map.remove(JsonKey.DATE_TIME);
       map.remove(JsonKey.USER_ID);

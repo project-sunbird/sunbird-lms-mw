@@ -32,6 +32,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.Application;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.services.sso.SSOManager;
@@ -70,6 +71,7 @@ public class UserManagementActorTest {
 
   @BeforeClass
   public static void setUp() {
+    Application.startLocalActorSystem();
     encryption = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_ENCRYPTION);
     system = ActorSystem.create("system");
     Util.checkCassandraDbConnections();

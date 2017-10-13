@@ -24,99 +24,110 @@ import org.sunbird.metrics.actors.MetricsJobScheduler;
 
 /**
  * 
- * This class will manage all the Quartz scheduler.
- * We need to call the schedule method at one time.
+ * This class will manage all the Quartz scheduler. We need to call the schedule method at one time.
  * we are calling this method from Util.java class.
+ * 
  * @author Manzarul
  *
  */
 public class SchedulerManager {
-  
+
   private static final String file = "quartz.properties";
   private static Scheduler scheduler = null;
   private static SchedulerManager schedulerManager = null;
-  
-   private SchedulerManager() throws CloneNotSupportedException{
-     schedule();
-   }
-  
+
+  private SchedulerManager() throws CloneNotSupportedException {
+    schedule();
+  }
+
   /**
    * This method will register the quartz scheduler job.
    */
-  private  void schedule() {
+  private void schedule() {
     try {
       Thread.sleep(240000);
       boolean isEmbedded = false;
       Properties configProp = null;
       String embeddVal = System.getenv(JsonKey.SUNBIRD_QUARTZ_MODE);
-      if(JsonKey.EMBEDDED.equalsIgnoreCase(embeddVal)) {
+      if (JsonKey.EMBEDDED.equalsIgnoreCase(embeddVal)) {
         isEmbedded = true;
-      }else {
+      } else {
         configProp = setUpClusterMode();
       }
-      if(!isEmbedded && configProp !=null){
-        ProjectLogger.log("Quartz scheduler is running in cluster mode."); 
-       scheduler = new StdSchedulerFactory(configProp).getScheduler();
+      if (!isEmbedded && configProp != null) {
+        ProjectLogger.log("Quartz scheduler is running in cluster mode.");
+        scheduler = new StdSchedulerFactory(configProp).getScheduler();
       } else {
-        ProjectLogger.log("Quartz scheduler is running in embedded mode."); 
-       scheduler = new StdSchedulerFactory().getScheduler();
+        ProjectLogger.log("Quartz scheduler is running in embedded mode.");
+        scheduler = new StdSchedulerFactory().getScheduler();
       }
-     String identifier = "NetOps-PC1502295457753";
-   // 1- create a job and bind with class which is implementing Job
+      String identifier = "NetOps-PC1502295457753";
+      // 1- create a job and bind with class which is implementing Job
       // interface.
-      JobDetail job = JobBuilder.newJob(ManageCourseBatchCount.class).requestRecovery(true).withIdentity("schedulerJob", identifier).build();
-      
+      JobDetail job = JobBuilder.newJob(ManageCourseBatchCount.class).requestRecovery(true)
+          .withIdentity("schedulerJob", identifier).build();
+
       // 2- Create a trigger object that will define frequency of run.
-      //This scheduler will run every day 11:30 PM IN GMT and 6 PM on UTC.
-      //server time is set in UTC so all scheduler need to be manage based on that time only.
+      // This scheduler will run every day 11:30 PM IN GMT and 6 PM on UTC.
+      // server time is set in UTC so all scheduler need to be manage based on that time only.
       Trigger trigger = TriggerBuilder.newTrigger().withIdentity("schedulertrigger", identifier)
-          .withSchedule(CronScheduleBuilder.cronSchedule(PropertiesCache.getInstance().getProperty("quartz_course_batch_timer"))).build();
+          .withSchedule(CronScheduleBuilder
+              .cronSchedule(PropertiesCache.getInstance().getProperty("quartz_course_batch_timer")))
+          .build();
       try {
-         if (scheduler.checkExists(job.getKey())){
+        if (scheduler.checkExists(job.getKey())) {
           scheduler.deleteJob(job.getKey());
-         }
-          scheduler.scheduleJob(job, trigger);
-          scheduler.start();
-          ProjectLogger.log("ManageCourseBatchCount schedular started",LoggerEnum.INFO.name());
+        }
+        scheduler.scheduleJob(job, trigger);
+        scheduler.start();
+        ProjectLogger.log("ManageCourseBatchCount schedular started", LoggerEnum.INFO.name());
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);
       }
       // add another job for verifying the bulk upload part.
       // 1- create a job and bind with class which is implementing Job
       // interface.
-      JobDetail uploadVerifyJob = JobBuilder.newJob(UploadLookUpScheduler.class).requestRecovery(true).withIdentity("uploadVerifyScheduler", identifier).build();
-      
+      JobDetail uploadVerifyJob = JobBuilder.newJob(UploadLookUpScheduler.class)
+          .requestRecovery(true).withIdentity("uploadVerifyScheduler", identifier).build();
+
       // 2- Create a trigger object that will define frequency of run.
-      //This will run every day 4:30 AM and in UTC 11 PM
-      Trigger uploadTrigger = TriggerBuilder.newTrigger().withIdentity("uploadVerifyTrigger", identifier)
-          .withSchedule(CronScheduleBuilder.cronSchedule(PropertiesCache.getInstance().getProperty("quartz_upload_timer"))).build();
+      // This will run every day 4:30 AM and in UTC 11 PM
+      Trigger uploadTrigger =
+          TriggerBuilder.newTrigger().withIdentity("uploadVerifyTrigger", identifier)
+              .withSchedule(CronScheduleBuilder
+                  .cronSchedule(PropertiesCache.getInstance().getProperty("quartz_upload_timer")))
+              .build();
       try {
-         if (scheduler.checkExists(uploadVerifyJob.getKey())){
+        if (scheduler.checkExists(uploadVerifyJob.getKey())) {
           scheduler.deleteJob(uploadVerifyJob.getKey());
-         }
-          scheduler.scheduleJob(uploadVerifyJob, uploadTrigger);
-          scheduler.start();
-          ProjectLogger.log("UploadLookUpScheduler schedular started",LoggerEnum.INFO.name());
+        }
+        scheduler.scheduleJob(uploadVerifyJob, uploadTrigger);
+        scheduler.start();
+        ProjectLogger.log("UploadLookUpScheduler schedular started", LoggerEnum.INFO.name());
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);
       }
-      
+
       // add another job for verifying the course published details from EKStep.
       // 1- create a job and bind with class which is implementing Job
       // interface.
-      JobDetail coursePublishedJob = JobBuilder.newJob(CoursePublishedUpdate.class).requestRecovery(true).withIdentity("coursePublishedScheduler", identifier).build();
-      
+      JobDetail coursePublishedJob = JobBuilder.newJob(CoursePublishedUpdate.class)
+          .requestRecovery(true).withIdentity("coursePublishedScheduler", identifier).build();
+
       // 2- Create a trigger object that will define frequency of run.
-      //This job will run every hours.
-      Trigger coursePublishedTrigger = TriggerBuilder.newTrigger().withIdentity("coursePublishedTrigger", identifier)
-          .withSchedule(CronScheduleBuilder.cronSchedule(PropertiesCache.getInstance().getProperty("quartz_course_publish_timer"))).build();
+      // This job will run every hours.
+      Trigger coursePublishedTrigger =
+          TriggerBuilder.newTrigger().withIdentity("coursePublishedTrigger", identifier)
+              .withSchedule(CronScheduleBuilder.cronSchedule(
+                  PropertiesCache.getInstance().getProperty("quartz_course_publish_timer")))
+              .build();
       try {
-         if (scheduler.checkExists(coursePublishedJob.getKey())){
+        if (scheduler.checkExists(coursePublishedJob.getKey())) {
           scheduler.deleteJob(coursePublishedJob.getKey());
-         }
-          scheduler.scheduleJob(coursePublishedJob, coursePublishedTrigger);
-          scheduler.start();
-          ProjectLogger.log("CoursePublishedUpdate schedular started",LoggerEnum.INFO.name());
+        }
+        scheduler.scheduleJob(coursePublishedJob, coursePublishedTrigger);
+        scheduler.start();
+        ProjectLogger.log("CoursePublishedUpdate schedular started", LoggerEnum.INFO.name());
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);
       }
@@ -126,55 +137,64 @@ public class SchedulerManager {
       // add another job for verifying the course published details from EKStep.
       // 1- create a job and bind with class which is implementing Job
       // interface.
-      JobDetail metricsReportJob = JobBuilder.newJob(MetricsReportJob.class).requestRecovery(true).withIdentity("metricsReportJob", identifier).build();
+      JobDetail metricsReportJob = JobBuilder.newJob(MetricsReportJob.class).requestRecovery(true)
+          .withIdentity("metricsReportJob", identifier).build();
 
       // 2- Create a trigger object that will define frequency of run.
-      //This job will run every day 11:30 PM IN GMT and 6 PM on UTC.
-      Trigger metricsReportRetryTrigger = TriggerBuilder.newTrigger().withIdentity("metricsReportRetryTrigger", identifier)
-          .withSchedule(CronScheduleBuilder.cronSchedule(PropertiesCache.getInstance().getProperty("quartz_matrix_report_timer"))).build();
+      // This job will run every day 11:30 PM IN GMT and 6 PM on UTC.
+      Trigger metricsReportRetryTrigger =
+          TriggerBuilder.newTrigger().withIdentity("metricsReportRetryTrigger", identifier)
+              .withSchedule(CronScheduleBuilder.cronSchedule(
+                  PropertiesCache.getInstance().getProperty("quartz_matrix_report_timer")))
+              .build();
       try {
-        if (scheduler.checkExists(metricsReportJob.getKey())){
+        if (scheduler.checkExists(metricsReportJob.getKey())) {
           scheduler.deleteJob(metricsReportJob.getKey());
         }
         scheduler.scheduleJob(metricsReportJob, metricsReportRetryTrigger);
         scheduler.start();
-        ProjectLogger.log("MetricsReportJob schedular started",LoggerEnum.INFO.name());
+        ProjectLogger.log("MetricsReportJob schedular started", LoggerEnum.INFO.name());
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);
         e.printStackTrace();
       }
-      
-   // add another job for verifying the course published details from EKStep.
+
+      // add another job for verifying the course published details from EKStep.
       // 1- create a job and bind with class which is implementing Job
       // interface.
-      JobDetail metricsJob = JobBuilder.newJob(MetricsJobScheduler.class).requestRecovery(true).withIdentity("metricsJob", identifier).build();
+      JobDetail metricsJob = JobBuilder.newJob(MetricsJobScheduler.class).requestRecovery(true)
+          .withIdentity("metricsJob", identifier).build();
 
       // 2- Create a trigger object that will define frequency of run.
-      //This job will run every 4 hours everyday.
-      Trigger metricsTrigger = TriggerBuilder.newTrigger().withIdentity("metricsTrigger", identifier)
-          .withSchedule(CronScheduleBuilder.cronSchedule(PropertiesCache.getInstance().getProperty("quartz_metrics_timer"))).build();
+      // This job will run every 4 hours everyday.
+      Trigger metricsTrigger =
+          TriggerBuilder.newTrigger().withIdentity("metricsTrigger", identifier)
+              .withSchedule(CronScheduleBuilder
+                  .cronSchedule(PropertiesCache.getInstance().getProperty("quartz_metrics_timer")))
+              .build();
       try {
-        if (scheduler.checkExists(metricsJob.getKey())){
+        if (scheduler.checkExists(metricsJob.getKey())) {
           scheduler.deleteJob(metricsJob.getKey());
         }
         scheduler.scheduleJob(metricsJob, metricsTrigger);
         scheduler.start();
-        ProjectLogger.log("MetricsJob schedular started",LoggerEnum.INFO.name());
+        ProjectLogger.log("MetricsJob schedular started", LoggerEnum.INFO.name());
       } catch (Exception e) {
         ProjectLogger.log("Error occured", e);
       }
 
 
-    } catch (Exception e ) {
+    } catch (Exception e) {
       ProjectLogger.log("Error in properties cache", e);
       e.printStackTrace();
     } finally {
-        registerShutDownHook();
+      registerShutDownHook();
     }
   }
-  
+
   /**
    * This method will do the Quartz scheduler set up in cluster mode.
+   * 
    * @return Properties
    * @throws Exception
    */
@@ -186,14 +206,11 @@ public class SchedulerManager {
     String db = System.getenv(JsonKey.SUNBIRD_PG_DB);
     String username = System.getenv(JsonKey.SUNBIRD_PG_USER);
     String password = System.getenv(JsonKey.SUNBIRD_PG_PASSWORD);
-    ProjectLogger.log(
-        "Environment variable value for PostGress SQl= host, port,db,username,password "
-            + host + " ," + port + "," + db + "," + username + "," + password,
-        LoggerEnum.INFO.name());
-    if (!ProjectUtil.isStringNullOREmpty(host)
-        && !ProjectUtil.isStringNullOREmpty(port)
-        && !ProjectUtil.isStringNullOREmpty(db)
-        && !ProjectUtil.isStringNullOREmpty(username)
+    ProjectLogger
+        .log("Environment variable value for PostGress SQl= host, port,db,username,password " + host
+            + " ," + port + "," + db + "," + username + "," + password, LoggerEnum.INFO.name());
+    if (!ProjectUtil.isStringNullOREmpty(host) && !ProjectUtil.isStringNullOREmpty(port)
+        && !ProjectUtil.isStringNullOREmpty(db) && !ProjectUtil.isStringNullOREmpty(username)
         && !ProjectUtil.isStringNullOREmpty(password)) {
       ProjectLogger.log("Taking Postgres value from Environment variable...",
           LoggerEnum.INFO.name());
@@ -209,53 +226,48 @@ public class SchedulerManager {
     }
     return configProp;
   }
-  
-  public static SchedulerManager getInstance () {
-     if(schedulerManager != null) {
-       return schedulerManager;
-     } 
-     try {
-       schedulerManager = new SchedulerManager();
+
+  public static SchedulerManager getInstance() {
+    if (schedulerManager != null) {
+      return schedulerManager;
+    }
+    try {
+      schedulerManager = new SchedulerManager();
     } catch (CloneNotSupportedException e) {
       ProjectLogger.log(e.getMessage(), e);
     }
-     return schedulerManager;
-  }
-  
-  public static void main(String[] args) {
-    getInstance();
+    return schedulerManager;
   }
 
-  
+
   /**
-   * This class will be called by registerShutDownHook to 
-   * register the call inside jvm , when jvm terminate it will call
-   * the run method to clean up the resource.
+   * This class will be called by registerShutDownHook to register the call inside jvm , when jvm
+   * terminate it will call the run method to clean up the resource.
+   * 
    * @author Manzarul
    *
    */
   static class ResourceCleanUp extends Thread {
-        public void run() {
-            ProjectLogger.log("started resource cleanup for Quartz job.");
-            try {
-              scheduler.shutdown();
-            } catch (SchedulerException e) {
-              ProjectLogger.log(e.getMessage(), e);
-            }
-            ProjectLogger.log("completed resource cleanup Quartz job.");
-        }
-  }
-  
-  /**
-   * Register the hook for resource clean up.
-   * this will be called when jvm shut down.
-   */
-  public static void registerShutDownHook() {
-      Runtime runtime = Runtime.getRuntime();
-      runtime.addShutdownHook(new ResourceCleanUp());
-      ProjectLogger.log("ShutDownHook registered for Quartz scheduler.");
+    public void run() {
+      ProjectLogger.log("started resource cleanup for Quartz job.");
+      try {
+        scheduler.shutdown();
+      } catch (SchedulerException e) {
+        ProjectLogger.log(e.getMessage(), e);
+      }
+      ProjectLogger.log("completed resource cleanup Quartz job.");
+    }
   }
 
-  
-  
+  /**
+   * Register the hook for resource clean up. this will be called when jvm shut down.
+   */
+  public static void registerShutDownHook() {
+    Runtime runtime = Runtime.getRuntime();
+    runtime.addShutdownHook(new ResourceCleanUp());
+    ProjectLogger.log("ShutDownHook registered for Quartz scheduler.");
+  }
+
+
+
 }

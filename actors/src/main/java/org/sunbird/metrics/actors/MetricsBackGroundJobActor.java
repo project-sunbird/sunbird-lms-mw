@@ -1,5 +1,6 @@
 package org.sunbird.metrics.actors;
 
+import akka.actor.UntypedAbstractActor;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -7,13 +8,11 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.velocity.VelocityContext;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.ExcelFileUtil;
 import org.sunbird.common.models.util.FileUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -25,11 +24,8 @@ import org.sunbird.common.models.util.mail.SendMail;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.RequestRouterActor;
+import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
-
-import akka.actor.ActorRef;
-import akka.actor.UntypedAbstractActor;
 
 /**
  * Created by arvind on 28/8/17.
@@ -40,8 +36,6 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static FileUtil fileUtil;
   SimpleDateFormat format = ProjectUtil.format;
-  private ActorRef courseMetricsActor = RequestRouterActor.courseMetricsRouter;
-  private ActorRef orgMetricsActor = RequestRouterActor.organisationMetricsRouter;
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -53,21 +47,19 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
         Request actorMessage = (Request) message;
         String requestedOperation = actorMessage.getOperation();
         ProjectLogger.log("Operation name is ==" + requestedOperation);
-        if (requestedOperation
-            .equalsIgnoreCase(ActorOperations.PROCESS_DATA.getValue())) {
+        if (requestedOperation.equalsIgnoreCase(ActorOperations.PROCESS_DATA.getValue())) {
           processData(actorMessage);
         } else if (requestedOperation
             .equalsIgnoreCase(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue())) {
           fileGenerationAndUpload(actorMessage);
-        } else if (requestedOperation
-            .equalsIgnoreCase(ActorOperations.SEND_MAIL.getValue())) {
+        } else if (requestedOperation.equalsIgnoreCase(ActorOperations.SEND_MAIL.getValue())) {
           sendMail(actorMessage);
 
         } else {
-          ProjectCommonException exception = new ProjectCommonException(
-              ResponseCode.invalidOperationName.getErrorCode(),
-              ResponseCode.invalidOperationName.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
+          ProjectCommonException exception =
+              new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
+                  ResponseCode.invalidOperationName.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
           ProjectLogger.log("UnSupported operation in Background Job Manager", exception);
         }
       } catch (Exception ex) {
@@ -88,15 +80,15 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     if (JsonKey.OrgCreation.equalsIgnoreCase(operation)) {
       metricsRequest.setOperation(ActorOperations.ORG_CREATION_METRICS_DATA.getValue());
       metricsRequest.setRequest(request);
-      orgMetricsActor.tell(metricsRequest, self());
+      ActorUtil.tell(metricsRequest);
     } else if (JsonKey.OrgConsumption.equalsIgnoreCase(operation)) {
       metricsRequest.setOperation(ActorOperations.ORG_CONSUMPTION_METRICS_DATA.getValue());
       metricsRequest.setRequest(request);
-      orgMetricsActor.tell(metricsRequest, self());
+      ActorUtil.tell(metricsRequest);
     } else if (JsonKey.CourseProgress.equalsIgnoreCase(operation)) {
       metricsRequest.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_DATA.getValue());
       metricsRequest.setRequest(request);
-      courseMetricsActor.tell(metricsRequest, self());
+      ActorUtil.tell(metricsRequest);
     }
     return;
   }
@@ -107,16 +99,14 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     Map<String, Object> map = request.getRequest();
     String requestId = (String) map.get(JsonKey.REQUEST_ID);
 
-    //fetch the DB details from database on basis of requestId ....
-    Response response = cassandraOperation
-        .getRecordById(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-            requestId);
-    List<Map<String, Object>> responseList = (List<Map<String, Object>>) response
-        .get(JsonKey.RESPONSE);
+    // fetch the DB details from database on basis of requestId ....
+    Response response = cassandraOperation.getRecordById(reportTrackingdbInfo.getKeySpace(),
+        reportTrackingdbInfo.getTableName(), requestId);
+    List<Map<String, Object>> responseList =
+        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (responseList.isEmpty()) {
       ProjectLogger.log("Invalid data");
-      throw new ProjectCommonException(
-          ResponseCode.invalidRequestData.getErrorCode(),
+      throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
           ResponseCode.invalidRequestData.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
@@ -128,23 +118,20 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     if (processMailSending(reportDbInfo)) {
       dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.SENDING_MAIL_SUCCESS.getValue());
       dbReqMap.put(JsonKey.UPDATED_DATE, format.format(new Date()));
-      cassandraOperation
-          .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-              dbReqMap);
+      cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(),
+          reportTrackingdbInfo.getTableName(), dbReqMap);
     } else {
       increasetryCount(reportDbInfo);
       if ((Integer) reportDbInfo.get(JsonKey.TRY_COUNT) > 3) {
         dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.FAILED.getValue());
         dbReqMap.put(JsonKey.UPDATED_DATE, format.format(new Date()));
-        cassandraOperation
-            .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-                dbReqMap);
+        cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(),
+            reportTrackingdbInfo.getTableName(), dbReqMap);
       } else {
         dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.SENDING_MAIL.getValue());
         dbReqMap.put(JsonKey.UPDATED_DATE, format.format(new Date()));
-        cassandraOperation
-            .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-                dbReqMap);
+        cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(),
+            reportTrackingdbInfo.getTableName(), dbReqMap);
       }
     }
 
@@ -166,15 +153,13 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     Map<String, Object> map = request.getRequest();
     String requestId = (String) map.get(JsonKey.REQUEST_ID);
 
-    Response response = cassandraOperation
-        .getRecordById(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-            requestId);
-    List<Map<String, Object>> responseList = (List<Map<String, Object>>) response
-        .get(JsonKey.RESPONSE);
+    Response response = cassandraOperation.getRecordById(reportTrackingdbInfo.getKeySpace(),
+        reportTrackingdbInfo.getTableName(), requestId);
+    List<Map<String, Object>> responseList =
+        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (responseList.isEmpty()) {
       ProjectLogger.log("Invalid data");
-      throw new ProjectCommonException(
-          ResponseCode.invalidRequestData.getErrorCode(),
+      throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
           ResponseCode.invalidRequestData.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
@@ -198,33 +183,30 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
       // update DB as status failed since unable to convert data to file
       dbReqMap.put(JsonKey.UPDATED_DATE, format.format(new Date()));
       dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.FAILED.getValue());
-      cassandraOperation
-          .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-              dbReqMap);
+      cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(),
+          reportTrackingdbInfo.getTableName(), dbReqMap);
       throw ex;
     }
 
     String storageUrl = null;
     try {
-      //TODO : confirm the container name ...
+      // TODO : confirm the container name ...
       storageUrl = processFileUpload(file, "testContainer");
 
     } catch (IOException e) {
-      ProjectLogger
-          .log("Error occured while uploading file on storage for requset " + requestId, e);
+      ProjectLogger.log("Error occured while uploading file on storage for requset " + requestId,
+          e);
       increasetryCount(reportDbInfo);
       if ((Integer) reportDbInfo.get(JsonKey.TRY_COUNT) > 3) {
         dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.FAILED.getValue());
         dbReqMap.put(JsonKey.UPDATED_DATE, format.format(new Date()));
-        cassandraOperation
-            .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-                dbReqMap);
+        cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(),
+            reportTrackingdbInfo.getTableName(), dbReqMap);
       } else {
         dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.UPLOADING_FILE.getValue());
         dbReqMap.put(JsonKey.UPDATED_DATE, format.format(new Date()));
-        cassandraOperation
-            .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-                dbReqMap);
+        cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(),
+            reportTrackingdbInfo.getTableName(), dbReqMap);
       }
       throw e;
     } finally {
@@ -238,9 +220,8 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     dbReqMap.put(JsonKey.UPDATED_DATE, format.format(new Date()));
     dbReqMap.put(JsonKey.DATA, null);
     dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.UPLOADING_FILE_SUCCESS.getValue());
-    cassandraOperation
-        .updateRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
-            dbReqMap);
+    cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(),
+        reportTrackingdbInfo.getTableName(), dbReqMap);
 
     Request backGroundRequest = new Request();
     backGroundRequest.setOperation(ActorOperations.SEND_MAIL.getValue());
@@ -265,21 +246,19 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     templateMap.put(JsonKey.ACTION_NAME, "DOWNLOAD REPORT");
     VelocityContext context = ProjectUtil.getContext(templateMap);
 
-    return SendMail.sendMail(new String[]{(String) reportDbInfo.get(JsonKey.EMAIL)},
+    return SendMail.sendMail(new String[] {(String) reportDbInfo.get(JsonKey.EMAIL)},
         reportDbInfo.get(JsonKey.TYPE) + " for " + reportDbInfo.get(JsonKey.RESOURCE_ID), context,
         ProjectUtil.getTemplate(new HashMap()));
   }
 
-  private String processFileUpload(File file, String container)
-      throws IOException {
+  private String processFileUpload(File file, String container) throws IOException {
 
     String storageUrl = null;
     try {
       CloudService service = (CloudService) CloudServiceFactory.get("Azure");
       if (null == service) {
         ProjectLogger.log("The cloud service is not available");
-        throw new ProjectCommonException(
-            ResponseCode.invalidRequestData.getErrorCode(),
+        throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
             ResponseCode.invalidRequestData.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }

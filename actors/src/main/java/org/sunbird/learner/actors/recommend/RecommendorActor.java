@@ -23,17 +23,18 @@ import org.sunbird.learner.util.Util;
 
 /**
  * Class to perform the recommended operations like recommended courses etc.
+ * 
  * @author arvind
  */
 public class RecommendorActor extends UntypedAbstractActor {
 
-    private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
-    /**
-     * @param message
-     * @throws Throwable
-     */
-    @Override
+  /**
+   * @param message
+   * @throws Throwable
+   */
+  @Override
   public void onReceive(Object message) throws Throwable {
     if (message instanceof Request) {
       try {
@@ -66,11 +67,13 @@ public class RecommendorActor extends UntypedAbstractActor {
     }
   }
 
-    /**
-     * method to get the recommended contents from EkStep on basis of user language,grade and subbject .
-     * @param request
-     * @return
-     */
+  /**
+   * method to get the recommended contents from EkStep on basis of user language,grade and subbject
+   * .
+   * 
+   * @param request
+   * @return
+   */
   private void getRecommendedCourses(Request request) {
 
     Response response = new Response();
@@ -133,14 +136,15 @@ public class RecommendorActor extends UntypedAbstractActor {
       return;
     }
   }
-    
-    /**
-     * This method will provide user details map based on passed userid,
-     * if user found then Map<Stirng,Object> will be return otherwise null.
-     * @param userId String
-     * @return Map<String, Object>
-     */
-    @SuppressWarnings("unchecked")
+
+  /**
+   * This method will provide user details map based on passed userid, if user found then Map
+   * <Stirng,Object> will be return otherwise null.
+   * 
+   * @param userId String
+   * @return Map<String, Object>
+   */
+  @SuppressWarnings("unchecked")
   private Map<String, Object> getUserInfo(String userId) {
 
     Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
@@ -182,11 +186,11 @@ public class RecommendorActor extends UntypedAbstractActor {
 
   }
 
-    private List<Object> shuffleList(List<Object> list){
-        if(list.size()<=Util.RECOMENDED_LIST_SIZE){
-            return list;
-        }
-        Collections.shuffle(list);
-        return list.subList(0,Util.RECOMENDED_LIST_SIZE);
+  private List<Object> shuffleList(List<Object> list) {
+    if (list.size() <= Util.RECOMENDED_LIST_SIZE) {
+      return list;
     }
+    Collections.shuffle(list);
+    return list.subList(0, Util.RECOMENDED_LIST_SIZE);
+  }
 }

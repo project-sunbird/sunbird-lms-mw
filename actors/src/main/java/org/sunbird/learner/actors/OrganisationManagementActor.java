@@ -3,8 +3,6 @@ package org.sunbird.learner.actors;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -32,6 +30,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -44,12 +43,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
-  private ActorRef backGroundActorRef;
-
-  public OrganisationManagementActor() {
-    backGroundActorRef = getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
-   }
-  
   @Override
   public void onReceive(Object message) throws Throwable {
     if (message instanceof Request) {
@@ -87,13 +80,13 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           removeMemberOrganisation(actorMessage);
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.GET_ORG_TYPE_LIST.getValue())) {
-            getOrgTypeList(actorMessage);
+          getOrgTypeList(actorMessage);
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.CREATE_ORG_TYPE.getValue())) {
-            createOrgType(actorMessage);
+          createOrgType(actorMessage);
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.UPDATE_ORG_TYPE.getValue())) {
-            updateOrgType(actorMessage);
+          updateOrgType(actorMessage);
         } else {
           ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
           ProjectCommonException exception =
@@ -123,24 +116,26 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     try {
       Util.DbInfo orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
       Map<String, Object> request = actorMessage.getRequest();
-      Response result = cassandraOperation.getRecordsByProperty(orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName(), JsonKey.NAME, request.get(JsonKey.NAME));
+      Response result = cassandraOperation.getRecordsByProperty(orgTypeDbInfo.getKeySpace(),
+          orgTypeDbInfo.getTableName(), JsonKey.NAME, request.get(JsonKey.NAME));
       List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
       if (!(list.isEmpty())) {
         Map<String, Object> map = list.get(0);
-          if(!(((String)map.get(JsonKey.ID)).equals((String)request.get(JsonKey.ID)))){
-            ProjectCommonException exception = new ProjectCommonException(
-                ResponseCode.orgTypeAlreadyExist.getErrorCode(),
-                ResponseCode.orgTypeAlreadyExist.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-            sender().tell(exception, self());
-            return;
-          } 
+        if (!(((String) map.get(JsonKey.ID)).equals((String) request.get(JsonKey.ID)))) {
+          ProjectCommonException exception =
+              new ProjectCommonException(ResponseCode.orgTypeAlreadyExist.getErrorCode(),
+                  ResponseCode.orgTypeAlreadyExist.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
+          sender().tell(exception, self());
+          return;
         }
-      
+      }
+
       request.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-      Response response = cassandraOperation.updateRecord(orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName(), request);
+      Response response = cassandraOperation.updateRecord(orgTypeDbInfo.getKeySpace(),
+          orgTypeDbInfo.getTableName(), request);
       sender().tell(response, self());
-    }catch (Exception e){
+    } catch (Exception e) {
       ProjectLogger.log("Exception Occurred while updating data to orgType table :: ", e);
       sender().tell(e, self());
     }
@@ -151,25 +146,28 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     try {
       Util.DbInfo orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
       Map<String, Object> request = actorMessage.getRequest();
-      Response result = cassandraOperation.getAllRecords(orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName());
+      Response result = cassandraOperation.getAllRecords(orgTypeDbInfo.getKeySpace(),
+          orgTypeDbInfo.getTableName());
       List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
       if (!(list.isEmpty())) {
-        for(Map<String, Object> map : list){
-          if(((String)map.get(JsonKey.NAME)).equalsIgnoreCase((String)request.get(JsonKey.NAME))){
-            ProjectCommonException exception = new ProjectCommonException(
-                ResponseCode.orgTypeAlreadyExist.getErrorCode(),
-                ResponseCode.orgTypeAlreadyExist.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
+        for (Map<String, Object> map : list) {
+          if (((String) map.get(JsonKey.NAME))
+              .equalsIgnoreCase((String) request.get(JsonKey.NAME))) {
+            ProjectCommonException exception =
+                new ProjectCommonException(ResponseCode.orgTypeAlreadyExist.getErrorCode(),
+                    ResponseCode.orgTypeAlreadyExist.getErrorMessage(),
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
             sender().tell(exception, self());
             return;
-          } 
+          }
         }
       }
       request.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
       request.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv()));
-      Response response = cassandraOperation.insertRecord(orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName(), request);
+      Response response = cassandraOperation.insertRecord(orgTypeDbInfo.getKeySpace(),
+          orgTypeDbInfo.getTableName(), request);
       sender().tell(response, self());
-    }catch (Exception e){
+    } catch (Exception e) {
       ProjectLogger.log("Exception Occurred while inserting data to orgType table :: ", e);
       sender().tell(e, self());
     }
@@ -179,10 +177,11 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     ProjectLogger.log("getOrgTypeList method call start");
     try {
       Util.DbInfo orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
-      Response response = cassandraOperation.getAllRecords(orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName());
+      Response response = cassandraOperation.getAllRecords(orgTypeDbInfo.getKeySpace(),
+          orgTypeDbInfo.getTableName());
       List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
       if (!(list.isEmpty())) {
-        for(Map<String, Object> map : list){
+        for (Map<String, Object> map : list) {
           map.remove(JsonKey.CREATED_BY);
           map.remove(JsonKey.CREATED_DATE);
           map.remove(JsonKey.UPDATED_BY);
@@ -190,7 +189,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         }
       }
       sender().tell(response, self());
-    }catch (Exception e){
+    } catch (Exception e) {
       ProjectLogger.log("Exception Occurred while fetching orgType List :: ", e);
       sender().tell(e, self());
     }
@@ -213,20 +212,21 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       boolean isChannelVerified = false;
       // combination of source and external id should be unique ...
       if (req.containsKey(JsonKey.PROVIDER) || req.containsKey(JsonKey.EXTERNAL_ID)) {
-        validateExternalIdAndProvider((String)req.get(JsonKey.PROVIDER), (String)req.get(JsonKey.EXTERNAL_ID));
+        validateExternalIdAndProvider((String) req.get(JsonKey.PROVIDER),
+            (String) req.get(JsonKey.EXTERNAL_ID));
         validateChannelIdForRootOrg(req);
         if (req.containsKey(JsonKey.CHANNEL)) {
           isChannelVerified = true;
           validateChannel(req);
-        }else {
-          //if Channel value is not coming then check for provider
-          //now if any org has same channel value as provider and that 
-          //org is rootOrg then set that root orgid with current orgId.
+        } else {
+          // if Channel value is not coming then check for provider
+          // now if any org has same channel value as provider and that
+          // org is rootOrg then set that root orgid with current orgId.
           if (req.containsKey(JsonKey.PROVIDER)) {
-             String rootOrgId = getRootOrgIdFromChannel((String)req.get(JsonKey.PROVIDER));
-             if(!ProjectUtil.isStringNullOREmpty(rootOrgId)) {
-               req.put(JsonKey.ROOT_ORG_ID, rootOrgId);
-             }
+            String rootOrgId = getRootOrgIdFromChannel((String) req.get(JsonKey.PROVIDER));
+            if (!ProjectUtil.isStringNullOREmpty(rootOrgId)) {
+              req.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+            }
           }
         }
 
@@ -293,19 +293,19 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       if (ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ROOT_ORG_ID))) {
         req.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
       }
-      //adding one extra filed for tag.
+      // adding one extra filed for tag.
       req.put(JsonKey.HASH_TAG_ID, uniqueId);
-      //if channel is available then make slug for channel.
-      //remove the slug key if coming from user input
+      // if channel is available then make slug for channel.
+      // remove the slug key if coming from user input
       req.remove(JsonKey.SLUG);
-      if (req.containsKey(JsonKey.CHANNEL)){
-        req.put(JsonKey.SLUG, Slug.makeSlug((String)req.getOrDefault(JsonKey.CHANNEL, ""), true));
+      if (req.containsKey(JsonKey.CHANNEL)) {
+        req.put(JsonKey.SLUG, Slug.makeSlug((String) req.getOrDefault(JsonKey.CHANNEL, ""), true));
       }
-      //check contactDetail filed is coming or not. it will always come as list of map
-      List<Map<String,Object>> listOfMap = null;
-      if(req.containsKey(JsonKey.CONTACT_DETAILS)) {
-         listOfMap = (List<Map<String,Object>>) req.get(JsonKey.CONTACT_DETAILS);
-        if (listOfMap != null && listOfMap.size()>0) {
+      // check contactDetail filed is coming or not. it will always come as list of map
+      List<Map<String, Object>> listOfMap = null;
+      if (req.containsKey(JsonKey.CONTACT_DETAILS)) {
+        listOfMap = (List<Map<String, Object>>) req.get(JsonKey.CONTACT_DETAILS);
+        if (listOfMap != null && listOfMap.size() > 0) {
           ObjectMapper mapper = new ObjectMapper();
           try {
             req.put(JsonKey.CONTACT_DETAILS, mapper.writeValueAsString(listOfMap));
@@ -314,8 +314,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           }
         }
       }
-      if(ProjectUtil.isNull(req.get(JsonKey.IS_ROOT_ORG))){
-        req.put(JsonKey.IS_ROOT_ORG , false);
+      if (ProjectUtil.isNull(req.get(JsonKey.IS_ROOT_ORG))) {
+        req.put(JsonKey.IS_ROOT_ORG, false);
       }
       Response result =
           cassandraOperation.insertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), req);
@@ -334,16 +334,17 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       if (null != addressReq) {
         req.put(JsonKey.ADDRESS, addressReq);
       }
-      if(listOfMap !=null) {
+      if (listOfMap != null) {
         req.put(JsonKey.CONTACT_DETAILS, listOfMap);
-      }else {
-        listOfMap = new ArrayList<Map<String,Object>>();
+      } else {
+        listOfMap = new ArrayList<Map<String, Object>>();
         req.put(JsonKey.CONTACT_DETAILS, listOfMap);
       }
-      orgResponse.put(JsonKey.ORGANISATION, req);
-      orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
+      Request orgReq = new Request();
+      orgReq.getRequest().put(JsonKey.ORGANISATION, req);
+      orgReq.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
       ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
-      backGroundActorRef.tell(orgResponse,self());
+      ActorUtil.tell(orgReq);
     } catch (ProjectCommonException e) {
       ProjectLogger.log("Some error occurs" + e.getMessage());
       sender().tell(e, self());
@@ -402,10 +403,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       response.getResult().put(JsonKey.ORGANISATION_ID, orgDBO.get(JsonKey.ID));
       sender().tell(response, self());
       // update the ES --
-      Response orgResponse = new Response();
-      orgResponse.put(JsonKey.ORGANISATION, updateOrgDBO);
-      orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-      backGroundActorRef.tell(orgResponse,self());
+      Request request = new Request();
+      request.getRequest().put(JsonKey.ORGANISATION, updateOrgDBO);
+      request.setOperation(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
+      ActorUtil.tell(request);
       return;
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
@@ -474,11 +475,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       response.getResult().put(JsonKey.ORGANISATION_ID, orgDBO.get(JsonKey.ID));
       sender().tell(response, self());
       // update the ES --
-      Response orgResponse = new Response();
-
-      orgResponse.put(JsonKey.ORGANISATION, updateOrgDBO);
-      orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-      backGroundActorRef.tell(orgResponse,self());
+      Request request = new Request();
+      request.getRequest().put(JsonKey.ORGANISATION, updateOrgDBO);
+      request.setOperation(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
+      ActorUtil.tell(request);
 
       return;
     } catch (ProjectCommonException e) {
@@ -504,7 +504,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       // validate if Source and external id is in request , it should not already exist in DataBase
       // .....
       if (req.containsKey(JsonKey.PROVIDER) || req.containsKey(JsonKey.EXTERNAL_ID)) {
-        validateExternalIdAndProvider((String)req.get(JsonKey.EXTERNAL_ID), (String)req.get(JsonKey.PROVIDER));
+        validateExternalIdAndProvider((String) req.get(JsonKey.EXTERNAL_ID),
+            (String) req.get(JsonKey.PROVIDER));
         Map<String, Object> dbMap = new HashMap<String, Object>();
         dbMap.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
         dbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
@@ -515,8 +516,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           String organisationId = (String) list.get(0).get(JsonKey.ID);
 
           if (!(req.get(JsonKey.ORGANISATION_ID).equals(organisationId))) {
-            ProjectLogger.log("Org exist with Source " + req.get(JsonKey.PROVIDER) + " , External Id "
-                + req.get(JsonKey.EXTERNAL_ID));
+            ProjectLogger.log("Org exist with Source " + req.get(JsonKey.PROVIDER)
+                + " , External Id " + req.get(JsonKey.EXTERNAL_ID));
             ProjectCommonException exception = new ProjectCommonException(
                 ResponseCode.sourceAndExternalIdAlreadyExist.getErrorCode(),
                 ResponseCode.sourceAndExternalIdAlreadyExist.getErrorMessage(),
@@ -529,30 +530,32 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       validateChannelIdForRootOrg(req);
       //
       boolean channelAdded = false;
-      if(!req.containsKey(JsonKey.CHANNEL)) {
-          if(req.containsKey(JsonKey.PROVIDER)) {
-            //then make provider as channel to fetch root org id.
-            req.put(JsonKey.CHANNEL, req.get(JsonKey.PROVIDER));
-            channelAdded = true;
-          }
+      if (!req.containsKey(JsonKey.CHANNEL)) {
+        if (req.containsKey(JsonKey.PROVIDER)) {
+          // then make provider as channel to fetch root org id.
+          req.put(JsonKey.CHANNEL, req.get(JsonKey.PROVIDER));
+          channelAdded = true;
+        }
       }
       if (req.containsKey(JsonKey.CHANNEL)) {
         if (!req.containsKey(JsonKey.IS_ROOT_ORG) || !(Boolean) req.get(JsonKey.IS_ROOT_ORG)) {
-          String rootOrgId =  getRootOrgIdFromChannel((String)req.get(JsonKey.CHANNEL));
-          if(!ProjectUtil.isStringNullOREmpty(rootOrgId) || channelAdded){
-             req.put(JsonKey.ROOT_ORG_ID, rootOrgId.equals("")?JsonKey.DEFAULT_ROOT_ORG_ID:rootOrgId);
-          }else {
+          String rootOrgId = getRootOrgIdFromChannel((String) req.get(JsonKey.CHANNEL));
+          if (!ProjectUtil.isStringNullOREmpty(rootOrgId) || channelAdded) {
+            req.put(JsonKey.ROOT_ORG_ID,
+                rootOrgId.equals("") ? JsonKey.DEFAULT_ROOT_ORG_ID : rootOrgId);
+          } else {
             ProjectLogger.log("Invalid channel id.");
             ProjectCommonException exception =
                 new ProjectCommonException(ResponseCode.invalidChannel.getErrorCode(),
                     ResponseCode.invalidChannel.getErrorMessage(),
                     ResponseCode.CLIENT_ERROR.getResponseCode());
             sender().tell(exception, self());
-            return;  
+            return;
           }
-         // req.remove(JsonKey.CHANNEL);
-        } else if (!channelAdded && !validateChannelForUniquenessForUpdate((String) req.get(JsonKey.CHANNEL),
-            (String) req.get(JsonKey.ORGANISATION_ID))) {
+          // req.remove(JsonKey.CHANNEL);
+        } else if (!channelAdded
+            && !validateChannelForUniquenessForUpdate((String) req.get(JsonKey.CHANNEL),
+                (String) req.get(JsonKey.ORGANISATION_ID))) {
           ProjectLogger.log("Channel validation failed");
           ProjectCommonException exception =
               new ProjectCommonException(ResponseCode.channelUniquenessInvalid.getErrorCode(),
@@ -562,9 +565,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           return;
         }
       }
-      //if channel is not coming and we added it from provider to collect the rootOrgId then
-      //remove channel
-      if(channelAdded) {
+      // if channel is not coming and we added it from provider to collect the rootOrgId then
+      // remove channel
+      if (channelAdded) {
         req.remove(JsonKey.CHANNEL);
       }
       Map<String, Object> addressReq = null;
@@ -644,19 +647,20 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         upsertOrgMap((String) orgDBO.get(JsonKey.ID), parentOrg,
             (String) req.get(JsonKey.ROOT_ORG_ID), actorMessage.getEnv(), relation);
       }
-      
-    //if channel is available then make slug for channel.
-    //remove the slug key if coming from user input
+
+      // if channel is available then make slug for channel.
+      // remove the slug key if coming from user input
       updateOrgDBO.remove(JsonKey.SLUG);
-      if (updateOrgDBO.containsKey(JsonKey.CHANNEL)){
-        updateOrgDBO.put(JsonKey.SLUG, Slug.makeSlug((String)updateOrgDBO.getOrDefault(JsonKey.CHANNEL, ""), true));
+      if (updateOrgDBO.containsKey(JsonKey.CHANNEL)) {
+        updateOrgDBO.put(JsonKey.SLUG,
+            Slug.makeSlug((String) updateOrgDBO.getOrDefault(JsonKey.CHANNEL, ""), true));
       }
-      
-    //check contactDetail filed is coming or not. it will always come as list of map
-      List<Map<String,Object>> listOfMap =  null;
-      if(updateOrgDBO.containsKey(JsonKey.CONTACT_DETAILS)) {
-         listOfMap = (List<Map<String,Object>>) updateOrgDBO.get(JsonKey.CONTACT_DETAILS);
-        if (listOfMap != null && listOfMap.size()>0) {
+
+      // check contactDetail filed is coming or not. it will always come as list of map
+      List<Map<String, Object>> listOfMap = null;
+      if (updateOrgDBO.containsKey(JsonKey.CONTACT_DETAILS)) {
+        listOfMap = (List<Map<String, Object>>) updateOrgDBO.get(JsonKey.CONTACT_DETAILS);
+        if (listOfMap != null && listOfMap.size() > 0) {
           ObjectMapper mapper = new ObjectMapper();
           try {
             updateOrgDBO.put(JsonKey.CONTACT_DETAILS, mapper.writeValueAsString(listOfMap));
@@ -675,15 +679,16 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       if (null != addressReq) {
         updateOrgDBO.put(JsonKey.ADDRESS, addressReq);
       }
-      if(listOfMap !=null) {
+      if (listOfMap != null) {
         updateOrgDBO.put(JsonKey.CONTACT_DETAILS, listOfMap);
-      }else {
-        listOfMap = new ArrayList<Map<String,Object>>();
+      } else {
+        listOfMap = new ArrayList<Map<String, Object>>();
         updateOrgDBO.put(JsonKey.CONTACT_DETAILS, listOfMap);
       }
-      orgResponse.put(JsonKey.ORGANISATION, updateOrgDBO);
-      orgResponse.put(JsonKey.OPERATION, ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-      backGroundActorRef.tell(orgResponse,self());
+      Request request = new Request();
+      request.getRequest().put(JsonKey.ORGANISATION, updateOrgDBO);
+      request.setOperation(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
+      ActorUtil.tell(request);
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
       return;
@@ -746,11 +751,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
     if (isNotNull(usrOrgData.get(JsonKey.ROLES))) {
       roles.addAll((List<String>) usrOrgData.get(JsonKey.ROLES));
-      if(!((List<String>) usrOrgData.get(JsonKey.ROLES)).isEmpty()){
+      if (!((List<String>) usrOrgData.get(JsonKey.ROLES)).isEmpty()) {
         String msg = Util.validateRoles((List<String>) usrOrgData.get(JsonKey.ROLES));
-        if(!msg.equalsIgnoreCase(JsonKey.SUCCESS)){
-          throw new ProjectCommonException(
-              ResponseCode.invalidRole.getErrorCode(),
+        if (!msg.equalsIgnoreCase(JsonKey.SUCCESS)) {
+          throw new ProjectCommonException(ResponseCode.invalidRole.getErrorCode(),
               ResponseCode.invalidRole.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
@@ -860,19 +864,19 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
 
     sender().tell(response, self());
-    
-  //update ES with latest data through background job manager
+
+    // update ES with latest data through background job manager
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       ProjectLogger.log("method call going to satrt for ES--.....");
-      Response usrResponse = new Response();
-      usrResponse.getResult()
-          .put(JsonKey.OPERATION, ActorOperations.UPDATE_USER_ORG_ES.getValue());
-      usrResponse.getResult().put(JsonKey.USER, usrOrgData);
+      Request request = new Request();
+      request.setOperation(ActorOperations.UPDATE_USER_ORG_ES.getValue());
+      request.getRequest().put(JsonKey.USER, usrOrgData);
       ProjectLogger.log("making a call to save user data to ES");
       try {
-        backGroundActorRef.tell(usrResponse,self());
+        ActorUtil.tell(request);
       } catch (Exception ex) {
-        ProjectLogger.log("Exception Occured during saving user to Es while addMemberOrganisation : ", ex);
+        ProjectLogger
+            .log("Exception Occured during saving user to Es while addMemberOrganisation : ", ex);
       }
     } else {
       ProjectLogger.log("no call for ES to save user");
@@ -910,18 +914,18 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
               ResponseCode.invalidRequestData.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
-    //update ES with latest data through background job manager
+      // update ES with latest data through background job manager
       if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
         ProjectLogger.log("method call going to satrt for ES--.....");
-        Response usrResponse = new Response();
-        usrResponse.getResult()
-            .put(JsonKey.OPERATION, ActorOperations.REMOVE_USER_ORG_ES.getValue());
-        usrResponse.getResult().put(JsonKey.USER, usrOrgData);
+        Request request = new Request();
+        request.setOperation(ActorOperations.REMOVE_USER_ORG_ES.getValue());
+        request.getRequest().put(JsonKey.USER, usrOrgData);
         ProjectLogger.log("making a call to save user data to ES");
         try {
-          backGroundActorRef.tell(usrResponse,self());
+          ActorUtil.tell(request);
         } catch (Exception ex) {
-          ProjectLogger.log("Exception Occured during saving user to Es while removeMeOrganisation : ", ex);
+          ProjectLogger
+              .log("Exception Occured during saving user to Es while removeMeOrganisation : ", ex);
         }
       } else {
         ProjectLogger.log("no call for ES to save user");
@@ -1001,19 +1005,20 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         }
       }
       sender().tell(response, self());
-      
-    //update ES with latest data through background job manager
+
+      // update ES with latest data through background job manager
       if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
         ProjectLogger.log("method call going to satrt for ES--.....");
-        Response usrResponse = new Response();
-        usrResponse.getResult()
-            .put(JsonKey.OPERATION, ActorOperations.REMOVE_USER_ORG_ES.getValue());
-        usrResponse.getResult().put(JsonKey.USER, dataMap);
+        Request request = new Request();
+        request.setOperation(ActorOperations.REMOVE_USER_ORG_ES.getValue());
+        request.getRequest().put(JsonKey.USER, dataMap);
         ProjectLogger.log("making a call to save user data to ES");
         try {
-          backGroundActorRef.tell(usrResponse,self());
+          ActorUtil.tell(request);
         } catch (Exception ex) {
-          ProjectLogger.log("Exception Occured during saving user to Es while removing memeber from Organisation : ", ex);
+          ProjectLogger.log(
+              "Exception Occured during saving user to Es while removing memeber from Organisation : ",
+              ex);
         }
       } else {
         ProjectLogger.log("no call for ES to save user");
@@ -1517,14 +1522,15 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         parentOrgDBO = list.get(0);
       }
       if (!ProjectUtil.isStringNullOREmpty((String) parentOrgDBO.get(JsonKey.ROOT_ORG_ID))) {
-        String parentRootOrg = (String)parentOrgDBO.get(JsonKey.ROOT_ORG_ID);
-        if (null != request.get(JsonKey.ROOT_ORG_ID) && !parentRootOrg.equalsIgnoreCase(request.get(JsonKey.ROOT_ORG).toString())) {
-            throw new ProjectCommonException(ResponseCode.invalidRootOrganisationId.getErrorCode(),
-                ResponseCode.invalidRootOrganisationId.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-        }else {
-          //set the parent root org to this organisation.
-          request.put(JsonKey.ROOT_ORG_ID, parentRootOrg);  
+        String parentRootOrg = (String) parentOrgDBO.get(JsonKey.ROOT_ORG_ID);
+        if (null != request.get(JsonKey.ROOT_ORG_ID)
+            && !parentRootOrg.equalsIgnoreCase(request.get(JsonKey.ROOT_ORG).toString())) {
+          throw new ProjectCommonException(ResponseCode.invalidRootOrganisationId.getErrorCode(),
+              ResponseCode.invalidRootOrganisationId.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+        } else {
+          // set the parent root org to this organisation.
+          request.put(JsonKey.ROOT_ORG_ID, parentRootOrg);
         }
       }
     }
@@ -1693,9 +1699,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       return false;
     }
     req.put(JsonKey.ORGANISATION_ID, list.get(0).get(JsonKey.ID));
-    if(req.containsKey(JsonKey.PROVIDER) || req.containsKey(JsonKey.SOURCE)) {
-      req.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER)); 
-    }else{
+    if (req.containsKey(JsonKey.PROVIDER) || req.containsKey(JsonKey.SOURCE)) {
+      req.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
+    } else {
       req.put(JsonKey.PROVIDER, list.get(0).get(JsonKey.PROVIDER));
     }
     return true;
@@ -1785,8 +1791,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
     return true;
   }
-  
-  
+
+
   private String getRootOrgIdFromChannel(String channel) {
     if (!ProjectUtil.isStringNullOREmpty(channel)) {
       Map<String, Object> filters = new HashMap<>();
@@ -1804,18 +1810,19 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
     return "";
   }
-  
-  
-  private Map<String , Object> elasticSearchComplexSearch(Map<String , Object> filters , String index , String type) {
+
+
+  private Map<String, Object> elasticSearchComplexSearch(Map<String, Object> filters, String index,
+      String type) {
 
     SearchDTO searchDTO = new SearchDTO();
-    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS , filters);
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
 
-    return ElasticSearchUtil.complexSearch(searchDTO , index,type);
+    return ElasticSearchUtil.complexSearch(searchDTO, index, type);
 
   }
-  
-  
+
+
   /**
    * validates if channel is already present in the organisation while Updating
    * 
@@ -1845,35 +1852,32 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   /**
    * @param actorMessage
    */
-  private Map<String,Object> getOrgsData(Request actorMessage) {
+  private Map<String, Object> getOrgsData(Request actorMessage) {
     Map<String, Object> requestMap = actorMessage.getRequest();
     SearchDTO dto = new SearchDTO();
     Map<String, Object> map = new HashMap<String, Object>();
-    //TODO need to check with request body what data we will get
-    //map.put(JsonKey.REGISTERED_ORG_ID, "some value");
-    //map.put(JsonKey.ROOT_ORG_ID, "");
+    // TODO need to check with request body what data we will get
+    // map.put(JsonKey.REGISTERED_ORG_ID, "some value");
+    // map.put(JsonKey.ROOT_ORG_ID, "");
     Map<String, Object> additionalProperty = new HashMap<>();
     additionalProperty.put(JsonKey.FILTERS, map);
     dto.setAdditionalProperties(additionalProperty);
-    Map<String, Object> responseMap = ElasticSearchUtil
-        .complexSearch(dto, ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName());
+    Map<String, Object> responseMap = ElasticSearchUtil.complexSearch(dto,
+        ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName());
     if (requestMap != null) {
       return responseMap;
     }
     return null;
 
   }
-  
+
   /**
    * 
    * @param externalId
    * @param provider
    */
-  private void validateExternalIdAndProvider(String externalId,
-      String provider) {
-    if (ProjectUtil.isStringNullOREmpty(externalId)
-        || ProjectUtil.isStringNullOREmpty(provider)) {
+  private void validateExternalIdAndProvider(String externalId, String provider) {
+    if (ProjectUtil.isStringNullOREmpty(externalId) || ProjectUtil.isStringNullOREmpty(provider)) {
       ProjectLogger.log("Source and external ids should exist.");
       throw new ProjectCommonException(
           ResponseCode.sourceAndExternalIdValidationError.getErrorCode(),
@@ -1882,35 +1886,31 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
 
   }
-  
+
   /**
    * This method will do the channel uniqueness validation
+   * 
    * @param req
    */
   private void validateChannel(Map<String, Object> req) {
-    if (!req.containsKey(JsonKey.IS_ROOT_ORG)
-        || !(Boolean) req.get(JsonKey.IS_ROOT_ORG)) {
-      String rootOrgId =
-          getRootOrgIdFromChannel((String) req.get(JsonKey.CHANNEL));
+    if (!req.containsKey(JsonKey.IS_ROOT_ORG) || !(Boolean) req.get(JsonKey.IS_ROOT_ORG)) {
+      String rootOrgId = getRootOrgIdFromChannel((String) req.get(JsonKey.CHANNEL));
       if (!ProjectUtil.isStringNullOREmpty(rootOrgId)) {
         req.put(JsonKey.ROOT_ORG_ID, rootOrgId);
       } else {
         ProjectLogger.log("Invalid channel id.");
-        throw new ProjectCommonException(
-            ResponseCode.invalidChannel.getErrorCode(),
+        throw new ProjectCommonException(ResponseCode.invalidChannel.getErrorCode(),
             ResponseCode.invalidChannel.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
-    } else if (!validateChannelForUniqueness(
-        (String) req.get(JsonKey.CHANNEL))) {
+    } else if (!validateChannelForUniqueness((String) req.get(JsonKey.CHANNEL))) {
       ProjectLogger.log("Channel validation failed");
-      throw new ProjectCommonException(
-          ResponseCode.channelUniquenessInvalid.getErrorCode(),
+      throw new ProjectCommonException(ResponseCode.channelUniquenessInvalid.getErrorCode(),
           ResponseCode.channelUniquenessInvalid.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
   }
-  
-  
-  }
+
+
+}

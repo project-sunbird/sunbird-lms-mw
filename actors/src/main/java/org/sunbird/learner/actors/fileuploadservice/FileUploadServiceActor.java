@@ -17,10 +17,9 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 
 /**
- * Class to upload the file on cloud storage.
- * Created by arvind on 28/8/17.
+ * Class to upload the file on cloud storage. Created by arvind on 28/8/17.
  */
-public class FileUploadServiceActor  extends UntypedAbstractActor {
+public class FileUploadServiceActor extends UntypedAbstractActor {
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -29,71 +28,72 @@ public class FileUploadServiceActor  extends UntypedAbstractActor {
       try {
         ProjectLogger.log("FileUploadServiceActor onReceive called");
         Request actorMessage = (Request) message;
-        if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.FILE_STORAGE_SERVICE.getValue())) {
+        if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.FILE_STORAGE_SERVICE.getValue())) {
           processFileUpload(actorMessage);
-        }else {
+        } else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
-          ProjectCommonException exception = new ProjectCommonException(
-              ResponseCode.invalidOperationName.getErrorCode(),
-              ResponseCode.invalidOperationName.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
+          ProjectCommonException exception =
+              new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
+                  ResponseCode.invalidOperationName.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
           sender().tell(exception, self());
         }
       } catch (Exception ex) {
         ProjectLogger.log(ex.getMessage(), ex);
         sender().tell(ex, self());
       }
-    }else {
+    } else {
       // Throw exception as message body
       ProjectLogger.log("UNSUPPORTED MESSAGE");
-      ProjectCommonException exception = new ProjectCommonException(
-          ResponseCode.invalidRequestData.getErrorCode(),
-          ResponseCode.invalidRequestData.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
     }
   }
 
-  private void processFileUpload(Request actorMessage)
-      throws IOException {
+  private void processFileUpload(Request actorMessage) throws IOException {
     String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.DATA);
 
     Response response = new Response();
-    File file = new File("File-"+processId);
+    File file = new File("File-" + processId);
     FileOutputStream fos = null;
     String avatarUrl = null;
     try {
       fos = new FileOutputStream(file);
-      fos.write( (byte[]) req.get(JsonKey.FILE));
+      fos.write((byte[]) req.get(JsonKey.FILE));
 
       CloudService service = (CloudService) CloudServiceFactory.get("Azure");
-      if(null == service){
+      if (null == service) {
         ProjectLogger.log("The cloud service is not available");
-        ProjectCommonException exception = new ProjectCommonException(
-            ResponseCode.invalidRequestData.getErrorCode(),
-            ResponseCode.invalidRequestData.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+                ResponseCode.invalidRequestData.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
       }
-      String container = (String)req.get(JsonKey.CONTAINER);
-      avatarUrl = service.uploadFile(container , file);
+      String container = (String) req.get(JsonKey.CONTAINER);
+      avatarUrl = service.uploadFile(container, file);
     } catch (IOException e) {
       ProjectLogger.log("Exception Occurred while reading file in FileUploadServiceActor", e);
       throw e;
-    }finally{
+    } finally {
       try {
-        if(ProjectUtil.isNotNull(fos)) {
+        if (ProjectUtil.isNotNull(fos)) {
           fos.close();
         }
-        if(ProjectUtil.isNotNull(file)){
+        if (ProjectUtil.isNotNull(file)) {
           file.delete();
         }
       } catch (IOException e) {
-        ProjectLogger.log("Exception Occurred while closing fileInputStream in FileUploadServiceActor", e);
+        ProjectLogger
+            .log("Exception Occurred while closing fileInputStream in FileUploadServiceActor", e);
       }
     }
-    response.put(JsonKey.URL , avatarUrl);
-    sender().tell(response , self());
+    response.put(JsonKey.URL, avatarUrl);
+    sender().tell(response, self());
   }
 }

@@ -43,6 +43,7 @@ import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
 /**
+ * @author Amit Kumar
  * @author  arvind .
  * Class to initialize and select the appropriate actor on the basis of message type .
  */
@@ -56,7 +57,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ActorRef pageManagementRouter;
   private ActorRef organisationManagementRouter;
   private ActorRef recommendorActorRouter;
-  public static ActorRef backgroundJobManager;
+  private ActorRef backgroundJobManager;
   private ActorRef courseSearchActorRouter;
   private ActorRef assessmentItemActor;
   private ActorRef searchHandlerActor;
@@ -68,15 +69,15 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ActorRef emailServiceActor;
   private ActorRef fileUploadServiceActor;
   private ActorRef notesActor;
-  public ActorRef auditLogManagementActor;
+  private ActorRef auditLogManagementActor;
   private ActorRef userDataEncryptionDecryptionServiceActor;
-  public static ActorRef metricsBackGroungJobActor;
-  public static ActorRef schedularActor;
-  public static ActorRef organisationMetricsRouter;
-  public static ActorRef courseMetricsRouter;
+  private ActorRef metricsBackGroungJobActor;
+  private ActorRef schedularActor;
+  private ActorRef organisationMetricsRouter;
+  private ActorRef courseMetricsRouter;
   private ActorRef badgesActor;
   private ExecutionContext ec;
-  Map<String, ActorRef> routerMap = new HashMap<>();
+  public static Map<String, ActorRef> routerMap = new HashMap<>();
   private static final int WAIT_TIME_VALUE = 9;
   private static final String COURSE_ENROLLMENT_ROUTER = "courseEnrollmentRouter";
   private static final String LEARNER_ACTOR_ROUTER = "learnerActorRouter";
@@ -85,7 +86,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private static final String COURSE_MANAGEMENT_ROUTER = "courseManagementRouter";
   private static final String PAGE_MANAGEMENT_ROUTER = "pageManagementRouter";
   private static final String ORGANISATION_MANAGEMENT_ROUTER = "organisationManagementRouter";
-  private static final String BkJOB = "backgroundJobManager";
+  private static final String BACKGROUND_JOB = "backgroundJobManager";
   private static final String COURSE_SEARCH_ACTOR_ROUTER = "courseSearchActorRouter";
   private static final String ASSESSMENT_ITEM_ACTOR_ROUTER = "assessmentItemActor";
   private static final String RECOMMENDOR_ACTOR_ROUTER = "recommendorActorRouter";
@@ -135,7 +136,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
         FromConfig.getInstance().props(Props.create(OrganisationManagementActor.class)),
         ORGANISATION_MANAGEMENT_ROUTER);
     backgroundJobManager = getContext()
-        .actorOf(FromConfig.getInstance().props(Props.create(BackgroundJobManager.class)), BkJOB);
+        .actorOf(FromConfig.getInstance().props(Props.create(BackgroundJobManager.class)), BACKGROUND_JOB);
     courseSearchActorRouter =
         getContext().actorOf(FromConfig.getInstance().props(Props.create(CourseSearchActor.class)),
             COURSE_SEARCH_ACTOR_ROUTER);
@@ -304,7 +305,23 @@ public class RequestRouterActor extends UntypedAbstractActor {
         userDataEncryptionDecryptionServiceActor);
     routerMap.put(ActorOperations.GET_MEDIA_TYPES.getValue(), userManagementRouter);
     routerMap.put(ActorOperations.SEARCH_AUDIT_LOG.getValue(), auditLogManagementActor);
-    
+    routerMap.put(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue(), backgroundJobManager);
+    routerMap.put(ActorOperations.UPDATE_USER_ROLES_ES.getValue(), backgroundJobManager);
+    routerMap.put(ActorOperations.PROCESS_DATA.getValue(), backgroundJobManager);
+    routerMap.put(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue(), backgroundJobManager);
+    routerMap.put(ActorOperations.ADD_USER_BADGE_BKG.getValue(), backgroundJobManager);
+    routerMap.put(ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue(), backgroundJobManager);
+    routerMap.put(ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue(), backgroundJobManager);
+    routerMap.put(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue(), backgroundJobManager);
+    routerMap.put(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue(), backgroundJobManager);
+    routerMap.put(ActorOperations.UPDATE_USER_ORG_ES.getValue(), backgroundJobManager);
+    routerMap.put(ActorOperations.REMOVE_USER_ORG_ES.getValue(), backgroundJobManager);
+    routerMap.put(ActorOperations.INSERT_USER_NOTES_ES.getValue(), backgroundJobManager);
+    routerMap.put(ActorOperations.UPDATE_USER_NOTES_ES.getValue(), backgroundJobManager);
+    routerMap.put(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue(), backgroundJobManager);
+    routerMap.put(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue(), backgroundJobManager);
+    routerMap.put(ActorOperations.INSERT_COURSE_BATCH_ES.getValue(), backgroundJobManager);
+    routerMap.put(ActorOperations.SCHEDULE_BULK_UPLOAD.getValue(), schedularActor);
   }
 
 

@@ -3,7 +3,6 @@ package org.sunbird.learner.actors;
 import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 
 import akka.actor.ActorRef;
-import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
 import java.math.BigInteger;
 import java.sql.Timestamp;
@@ -25,6 +24,7 @@ import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -38,11 +38,6 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
   private final String CONTENT_STATE_INFO = "contentStateInfo";
   private SimpleDateFormat sdf = ProjectUtil.format;
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private ActorRef utilityActorRef;
-
-  public LearnerStateUpdateActor() {
-    utilityActorRef = getContext().actorOf(Props.create(UtilityActor.class), "UtilityActor");
-  }
 
   /**
    * Receives the actor message and perform the add content operation .
@@ -61,36 +56,38 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
           Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
           Util.DbInfo batchdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
           String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
-          List<Map<String, Object>> requestedcontentList = (List<Map<String, Object>>) actorMessage
-              .getRequest().get(JsonKey.CONTENTS);
-          CopyOnWriteArrayList<Map<String, Object>> contentList = new CopyOnWriteArrayList<Map<String, Object>>(requestedcontentList);
-          actorMessage
-              .getRequest().put(JsonKey.CONTENTS , contentList);
+          List<Map<String, Object>> requestedcontentList =
+              (List<Map<String, Object>>) actorMessage.getRequest().get(JsonKey.CONTENTS);
+          CopyOnWriteArrayList<Map<String, Object>> contentList =
+              new CopyOnWriteArrayList<Map<String, Object>>(requestedcontentList);
+          actorMessage.getRequest().put(JsonKey.CONTENTS, contentList);
           // map to hold the status of requested state of contents
           Map<String, Integer> contentStatusHolder = new HashMap<String, Integer>();
 
           if (!(contentList.isEmpty())) {
             for (Map<String, Object> map : contentList) {
-              //replace the course id (equivalent to Ekstep content id) with One way hashing of userId#courseId , bcoz in cassndra we are saving course id as userId#courseId
+              // replace the course id (equivalent to Ekstep content id) with One way hashing of
+              // userId#courseId , bcoz in cassndra we are saving course id as userId#courseId
 
               String batchId = (String) map.get(JsonKey.BATCH_ID);
               boolean flag = true;
 
               // code to validate the whether request for valid batch range(start and end date)
-              if(!(ProjectUtil.isStringNullOREmpty(batchId))) {
-                Response batchResponse =cassandraOperation
-                    .getRecordById(batchdbInfo.getKeySpace(), batchdbInfo.getTableName(), batchId);
-                List<Map<String , Object>> batches = (List<Map<String, Object>>) batchResponse.getResult()
-                    .get(JsonKey.RESPONSE);
-                if(batches.isEmpty()){
+              if (!(ProjectUtil.isStringNullOREmpty(batchId))) {
+                Response batchResponse = cassandraOperation.getRecordById(batchdbInfo.getKeySpace(),
+                    batchdbInfo.getTableName(), batchId);
+                List<Map<String, Object>> batches =
+                    (List<Map<String, Object>>) batchResponse.getResult().get(JsonKey.RESPONSE);
+                if (batches.isEmpty()) {
                   flag = false;
-                }else{
-                  Map<String , Object> batchInfo = batches.get(0);
+                } else {
+                  Map<String, Object> batchInfo = batches.get(0);
                   flag = validateBatchRange(batchInfo);
                 }
 
-                if(!flag){
-                  response.getResult().put((String) map.get(JsonKey.CONTENT_ID), "BATCH NOT STARTED OR BATCH CLOSED");
+                if (!flag) {
+                  response.getResult().put((String) map.get(JsonKey.CONTENT_ID),
+                      "BATCH NOT STARTED OR BATCH CLOSED");
                   contentList.remove(map);
                   continue;
                 }
@@ -111,15 +108,15 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
             }
           }
           sender().tell(response, self());
-          //call to update the corresponding course
+          // call to update the corresponding course
           actorMessage.getRequest().put(this.CONTENT_STATE_INFO, contentStatusHolder);
-          utilityActorRef.tell(actorMessage, ActorRef.noSender());
+          ActorUtil.tell(actorMessage);
         } else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
-          ProjectCommonException exception = new ProjectCommonException(
-              ResponseCode.invalidOperationName.getErrorCode(),
-              ResponseCode.invalidOperationName.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
+          ProjectCommonException exception =
+              new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
+                  ResponseCode.invalidOperationName.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
           sender().tell(exception, ActorRef.noSender());
         }
       } catch (Exception ex) {
@@ -128,10 +125,10 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
       }
     } else {
       ProjectLogger.log("UNSUPPORTED MESSAGE");
-      ProjectCommonException exception = new ProjectCommonException(
-          ResponseCode.invalidRequestData.getErrorCode(),
-          ResponseCode.invalidRequestData.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, ActorRef.noSender());
     }
   }
@@ -143,27 +140,27 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
 
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     Date todaydate = null;
-    Date  startDate = null;
+    Date startDate = null;
     Date endDate = null;
 
     try {
-      todaydate = format.parse((String)format.format(new Date()));
+      todaydate = format.parse((String) format.format(new Date()));
       startDate = format.parse(start);
       endDate = null;
-      if(!(ProjectUtil.isStringNullOREmpty(end))){
+      if (!(ProjectUtil.isStringNullOREmpty(end))) {
         endDate = format.parse(end);
       }
     } catch (ParseException e) {
       e.printStackTrace();
-      ProjectLogger.log("Date parse exception while parsing batch start and end date" , e);
+      ProjectLogger.log("Date parse exception while parsing batch start and end date", e);
       return false;
     }
 
-    if(todaydate.compareTo(startDate)<0){
+    if (todaydate.compareTo(startDate) < 0) {
       return false;
     }
 
-    if(null != endDate && todaydate.compareTo(endDate)>0){
+    if (null != endDate && todaydate.compareTo(endDate) > 0) {
       return false;
     }
 
@@ -181,13 +178,13 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
 
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
     req.put(JsonKey.ID, generatePrimaryKey(req, userId));
-    contentStateHolder
-        .put((String) req.get(JsonKey.ID), ((BigInteger) req.get(JsonKey.STATUS)).intValue());
-    Response response = cassandraOperation
-        .getRecordById(dbInfo.getKeySpace(), dbInfo.getTableName(), (String) req.get(JsonKey.ID));
+    contentStateHolder.put((String) req.get(JsonKey.ID),
+        ((BigInteger) req.get(JsonKey.STATUS)).intValue());
+    Response response = cassandraOperation.getRecordById(dbInfo.getKeySpace(),
+        dbInfo.getTableName(), (String) req.get(JsonKey.ID));
 
-    List<Map<String, Object>> resultList = (List<Map<String, Object>>) response.getResult()
-        .get(JsonKey.RESPONSE);
+    List<Map<String, Object>> resultList =
+        (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
 
     if (!(resultList.isEmpty())) {
       Map<String, Object> result = resultList.get(0);
@@ -199,8 +196,8 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
         currentProgressStatus = (Integer) result.get(JsonKey.CONTENT_PROGRESS);
       }
       if (isNotNull(req.get(JsonKey.CONTENT_PROGRESS))) {
-        Integer requestedProgressStatus = ((BigInteger) req.get(JsonKey.CONTENT_PROGRESS))
-            .intValue();
+        Integer requestedProgressStatus =
+            ((BigInteger) req.get(JsonKey.CONTENT_PROGRESS)).intValue();
         if (requestedProgressStatus > currentProgressStatus) {
           req.put(JsonKey.CONTENT_PROGRESS, requestedProgressStatus);
         } else {
@@ -259,7 +256,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
           req.put(JsonKey.COMPLETED_COUNT, 1);
           req.put(JsonKey.LAST_COMPLETED_TIME, compareTime(null, requestCompletedTime));
           req.put(JsonKey.COMPLETED_COUNT, 1);
-        }else{
+        } else {
           req.put(JsonKey.COMPLETED_COUNT, 0);
         }
 
@@ -297,8 +294,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
       date = formatter.parse((String) obj);
     } catch (ParseException ex) {
       ex.printStackTrace();
-      throw new ProjectCommonException(
-          ResponseCode.invalidDateFormat.getErrorCode(),
+      throw new ProjectCommonException(ResponseCode.invalidDateFormat.getErrorCode(),
           ResponseCode.invalidDateFormat.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
 
@@ -323,7 +319,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
     String courseId = (String) req.get(JsonKey.COURSE_ID);
     String batchId = (String) req.get(JsonKey.BATCH_ID);
     String key = userId + JsonKey.PRIMARY_KEY_DELIMETER + contentId + JsonKey.PRIMARY_KEY_DELIMETER
-        + courseId+JsonKey.PRIMARY_KEY_DELIMETER+batchId;
+        + courseId + JsonKey.PRIMARY_KEY_DELIMETER + batchId;
     return OneWayHashing.encryptVal(key);
   }
 

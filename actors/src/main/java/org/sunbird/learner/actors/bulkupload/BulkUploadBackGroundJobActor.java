@@ -4,7 +4,6 @@ import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
 import akka.actor.ActorRef;
-import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,10 +39,8 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.BackgroundJobManager;
-import org.sunbird.learner.audit.impl.ActorAuditLogServiceImpl;
+import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.AuditOperation;
-import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
 import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
@@ -58,24 +55,12 @@ import org.sunbird.services.sso.SSOServiceFactory;
  */
 public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
-  private ActorRef backGroundActorRef;
-  private ActorRef auditLogManagementActor;
   private String processId = "";
   Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
   private EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
           .getEncryptionServiceInstance(null);
-  private ActorRef emailServiceActorRef;
   private PropertiesCache propertiesCache = PropertiesCache.getInstance();
-
-  public BulkUploadBackGroundJobActor() {
-    backGroundActorRef =
-        getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
-    auditLogManagementActor = getContext().actorOf(Props.create(ActorAuditLogServiceImpl.class),
-        "auditLogManagementActor");
-    emailServiceActorRef =
-        getContext().actorOf(Props.create(EmailServiceActor.class), "emailServiceActor");
-  }
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
@@ -249,12 +234,12 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     // process Audit Log
     processAuditLog(courseBatchObject, ActorOperations.UPDATE_BATCH.getValue(), "", JsonKey.BATCH);
     ProjectLogger.log("method call going to satrt for ES--.....");
-    Response batchRes = new Response();
-    batchRes.getResult().put(JsonKey.OPERATION, ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
-    batchRes.getResult().put(JsonKey.BATCH, courseBatchObject);
+    Request request = new Request();
+    request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
+    request.getRequest().put(JsonKey.BATCH, courseBatchObject);
     ProjectLogger.log("making a call to save Course Batch data to ES");
     try {
-      backGroundActorRef.tell(batchRes, self());
+      ActorUtil.tell(request);
     } catch (Exception ex) {
       ProjectLogger.log(
           "Exception Occured during saving Course Batch to Es while updating Course Batch : ", ex);
@@ -318,11 +303,11 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   }
 
   private void insertUserCoursesToES(Map<String, Object> courseMap) {
-    Response response = new Response();
-    response.put(JsonKey.OPERATION, ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue());
-    response.put(JsonKey.USER_COURSES, courseMap);
+    Request request = new Request();
+    request.setOperation(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue());
+    request.getRequest().put(JsonKey.USER_COURSES, courseMap);
     try {
-      backGroundActorRef.tell(response, self());
+      ActorUtil.tell(request);
     } catch (Exception ex) {
       ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
     }
@@ -490,7 +475,10 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
           ProjectLogger
               .log("Calling background job to save org data into ES" + orgResult.get(JsonKey.ID));
-          backGroundActorRef.tell(orgResponse, self());
+          Request request = new Request();
+          request.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
+          request.getRequest().put(JsonKey.ORGANISATION, concurrentHashMap);
+          ActorUtil.tell(request);
           successList.add(concurrentHashMap);
           // process Audit Log
           processAuditLog(concurrentHashMap, ActorOperations.UPDATE_ORG.getValue(), "",
@@ -561,7 +549,10 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
           ProjectLogger.log("Calling background job to save org data into ES"
               + contentList.get(0).get(JsonKey.ID));
-          backGroundActorRef.tell(orgResponse, self());
+          Request request = new Request();
+          request.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
+          request.getRequest().put(JsonKey.ORGANISATION, concurrentHashMap);
+          ActorUtil.tell(request);
           successList.add(concurrentHashMap);
           // process Audit Log
           processAuditLog(concurrentHashMap, ActorOperations.UPDATE_ORG.getValue(), "",
@@ -671,7 +662,10 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       orgResponse.put(JsonKey.ORGANISATION, concurrentHashMap);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
       ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
-      backGroundActorRef.tell(orgResponse, self());
+      Request request = new Request();
+      request.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
+      request.getRequest().put(JsonKey.ORGANISATION, concurrentHashMap);
+      ActorUtil.tell(request);
       successList.add(concurrentHashMap);
       // process Audit Log
       processAuditLog(concurrentHashMap, ActorOperations.CREATE_ORG.getValue(), "",
@@ -819,7 +813,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             // send the welcome mail to user
             welcomaMailTemplateMap.putAll(userMap);
             // the loginid will become user id for logon purpose .
-            welcomaMailTemplateMap.put(JsonKey.USERNAME , userMap.get(JsonKey.LOGIN_ID));
+            welcomaMailTemplateMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
             sendOnboardingMail(welcomaMailTemplateMap);
 
 
@@ -871,13 +865,12 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           // insert details to user Ext Identity table
           insertRecordToUserExtTable(userMap);
           // update elastic search
-          Response usrResponse = new Response();
-          usrResponse.getResult().put(JsonKey.OPERATION,
-              ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-          usrResponse.getResult().put(JsonKey.ID, userMap.get(JsonKey.ID));
           ProjectLogger
               .log("making a call to save user data to ES in BulkUploadBackGroundJobActor");
-          backGroundActorRef.tell(usrResponse, self());
+          Request request = new Request();
+          request.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+          request.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
+          ActorUtil.tell(request);
 
         } catch (Exception ex) {
           ProjectLogger.log(
@@ -1349,36 +1342,44 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     Request request = new Request();
     request.setOperation(ActorOperations.PROCESS_AUDIT_LOG.getValue());
     request.setRequest(map);
-    auditLogManagementActor.tell(request, self());
+    ActorUtil.tell(request);
   }
 
   private void sendOnboardingMail(Map<String, Object> emailTemplateMap) {
 
-    if(!(ProjectUtil.isStringNullOREmpty((String)emailTemplateMap.get(JsonKey.EMAIL)))) {
+    if (!(ProjectUtil.isStringNullOREmpty((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
 
       emailTemplateMap.put(JsonKey.SUBJECT, "Welcome to DIKSHA");
       List<String> reciptientsMail = new ArrayList<>();
-      reciptientsMail.add((String)emailTemplateMap.get(JsonKey.EMAIL));
-      emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS , reciptientsMail);
-      if(! ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url")) || !ProjectUtil.isStringNullOREmpty(propertiesCache.getProperty("sunird_web_url"))) {
-        emailTemplateMap.put(JsonKey.WEB_URL, ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url")) ? propertiesCache.getProperty("sunird_web_url") : System.getenv("sunird_web_url"));
+      reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
+      emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
+      if (!ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url"))
+          || !ProjectUtil.isStringNullOREmpty(propertiesCache.getProperty("sunird_web_url"))) {
+        emailTemplateMap.put(JsonKey.WEB_URL,
+            ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url"))
+                ? propertiesCache.getProperty("sunird_web_url") : System.getenv("sunird_web_url"));
       }
-      if(! ProjectUtil.isStringNullOREmpty(System.getenv("sunbird_app_url")) || !ProjectUtil.isStringNullOREmpty(propertiesCache.getProperty("sunbird_app_url"))) {
-        emailTemplateMap.put(JsonKey.APP_URL, ProjectUtil.isStringNullOREmpty(System.getenv("sunbird_app_url")) ? propertiesCache.getProperty("sunbird_app_url") : System.getenv("sunird_web_url"));
+      if (!ProjectUtil.isStringNullOREmpty(System.getenv("sunbird_app_url"))
+          || !ProjectUtil.isStringNullOREmpty(propertiesCache.getProperty("sunbird_app_url"))) {
+        emailTemplateMap.put(JsonKey.APP_URL,
+            ProjectUtil.isStringNullOREmpty(System.getenv("sunbird_app_url"))
+                ? propertiesCache.getProperty("sunbird_app_url") : System.getenv("sunird_web_url"));
       }
 
-      emailTemplateMap.put(JsonKey.BODY , propertiesCache.getProperty(JsonKey.ONBOARDING_WELCOME_MAIL_BODY));
-      emailTemplateMap.put(JsonKey.NOTE , propertiesCache.getProperty(JsonKey.MAIL_NOTE));
-      emailTemplateMap.put(JsonKey.ORG_NAME , propertiesCache.getProperty(JsonKey.ORG_NAME));
+      emailTemplateMap.put(JsonKey.BODY,
+          propertiesCache.getProperty(JsonKey.ONBOARDING_WELCOME_MAIL_BODY));
+      emailTemplateMap.put(JsonKey.NOTE, propertiesCache.getProperty(JsonKey.MAIL_NOTE));
+      emailTemplateMap.put(JsonKey.ORG_NAME, propertiesCache.getProperty(JsonKey.ORG_NAME));
       String welcomeMessage = propertiesCache.getProperty("onboarding_welcome_message");
-      emailTemplateMap.put(JsonKey.WELCOME_MESSAGE , ProjectUtil.formatMessage(welcomeMessage, propertiesCache.getProperty(JsonKey.ORG_NAME)).trim());
+      emailTemplateMap.put(JsonKey.WELCOME_MESSAGE, ProjectUtil
+          .formatMessage(welcomeMessage, propertiesCache.getProperty(JsonKey.ORG_NAME)).trim());
 
-      emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE , "welcome");
+      emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
 
       Request request = new Request();
       request.setOperation(ActorOperations.EMAIL_SERVICE.getValue());
-      request.put(JsonKey.EMAIL_REQUEST , emailTemplateMap);
-      emailServiceActorRef.tell(request, null);
+      request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);
+      ActorUtil.tell(request);
     }
   }
 

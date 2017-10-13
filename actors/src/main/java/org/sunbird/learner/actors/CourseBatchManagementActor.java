@@ -1,7 +1,5 @@
 package org.sunbird.learner.actors;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
 import java.sql.Timestamp;
 import java.text.ParseException;
@@ -27,6 +25,7 @@ import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -40,12 +39,6 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo dbInfo = null;
   private Util.DbInfo userOrgdbInfo = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
-  private ActorRef backGroundActorRef;
-
-  public CourseBatchManagementActor() {
-    backGroundActorRef =
-        getContext().actorOf(Props.create(BackgroundJobManager.class), "backGroundActor");
-  }
 
   /**
    * Receives the actor message and perform the course enrollment operation .
@@ -212,12 +205,12 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     sender().tell(response, self());
 
     ProjectLogger.log("method call going to satrt for ES--.....");
-    Response batchRes = new Response();
-    batchRes.getResult().put(JsonKey.OPERATION, ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
-    batchRes.getResult().put(JsonKey.BATCH, courseBatchObject);
+    Request request = new Request();
+    request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
+    request.getRequest().put(JsonKey.BATCH, courseBatchObject);
     ProjectLogger.log("making a call to save Course Batch data to ES");
     try {
-      backGroundActorRef.tell(batchRes, self());
+      ActorUtil.tell(request);
     } catch (Exception ex) {
       ProjectLogger.log(
           "Exception Occured during saving Course Batch to Es while updating Course Batch : ", ex);
@@ -359,13 +352,12 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
 
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       ProjectLogger.log("method call going to satrt for ES--.....");
-      Response response = new Response();
-      response.getResult().put(JsonKey.OPERATION,
-          ActorOperations.INSERT_COURSE_BATCH_ES.getValue());
-      response.getResult().put(JsonKey.BATCH, req);
+      Request request = new Request();
+      request.setOperation(ActorOperations.INSERT_COURSE_BATCH_ES.getValue());
+      request.getRequest().put(JsonKey.BATCH, req);
       ProjectLogger.log("making a call to save Course Batch data to ES");
       try {
-        backGroundActorRef.tell(response, self());
+        ActorUtil.tell(request);
       } catch (Exception ex) {
         ProjectLogger.log(
             "Exception Occured during saving Course Batch to Es while creating Course Batch : ",
@@ -473,13 +465,12 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
 
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       ProjectLogger.log("method call going to satrt for ES--.....");
-      Response response = new Response();
-      response.getResult().put(JsonKey.OPERATION,
-          ActorOperations.INSERT_COURSE_BATCH_ES.getValue());
-      response.getResult().put(JsonKey.BATCH, req);
+      Request request = new Request();
+      request.setOperation(ActorOperations.INSERT_COURSE_BATCH_ES.getValue());
+      request.getRequest().put(JsonKey.BATCH, req);
       ProjectLogger.log("making a call to save Course Batch data to ES");
       try {
-        backGroundActorRef.tell(response, self());
+        ActorUtil.tell(request);
       } catch (Exception ex) {
         ProjectLogger.log(
             "Exception Occured during saving Course Batch to Es while creating Course Batch : ",
@@ -716,13 +707,12 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
 
       if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
         ProjectLogger.log("method call going to satrt for ES--.....");
-        Response batchRes = new Response();
-        batchRes.getResult().put(JsonKey.OPERATION,
-            ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
-        batchRes.getResult().put(JsonKey.BATCH, req);
+        Request request = new Request();
+        request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
+        request.getRequest().put(JsonKey.BATCH, req);
         ProjectLogger.log("making a call to save Course Batch data to ES");
         try {
-          backGroundActorRef.tell(batchRes, self());
+          ActorUtil.tell(request);
         } catch (Exception ex) {
           ProjectLogger.log(
               "Exception Occured during saving Course Batch to Es while updating Course Batch : ",
@@ -758,11 +748,11 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
   }
 
   private void insertUserCoursesToES(Map<String, Object> courseMap) {
-    Response response = new Response();
-    response.put(JsonKey.OPERATION, ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue());
-    response.put(JsonKey.USER_COURSES, courseMap);
+    Request request = new Request();
+    request.setOperation(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue());
+    request.getRequest().put(JsonKey.USER_COURSES, courseMap);
     try {
-      backGroundActorRef.tell(response, self());
+      ActorUtil.tell(request);
     } catch (Exception ex) {
       ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
     }

@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
-import org.apache.commons.codec.Charsets;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -61,6 +60,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   protected static final String folderPath = "/data/";
   protected static final String FILENAMESEPARATOR = "_";
   protected static final MetricsCache cache = new MetricsCache();
+  private static final String Charsets_UTF_8 = "UTF-8";
   SimpleDateFormat format = ProjectUtil.format;
   
 
@@ -339,7 +339,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     HttpPost post = new HttpPost(baseSearchUrl + PropertiesCache.getInstance().getProperty(url));
     post.addHeader("Content-Type", "application/json; charset=utf-8");
     post.addHeader(JsonKey.AUTHORIZATION, authKey);
-    post.setEntity(new StringEntity(body, Charsets.UTF_8.name()));
+    post.setEntity(new StringEntity(body, Charsets_UTF_8));
     HttpResponse response = client.execute(post);
     if (response.getStatusLine().getStatusCode() != 200) {
       throw new ProjectCommonException(ResponseCode.unableToConnect.getErrorCode(),
@@ -347,7 +347,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
     BufferedReader rd = new BufferedReader(
-        new InputStreamReader(response.getEntity().getContent(), Charsets.UTF_8));
+        new InputStreamReader(response.getEntity().getContent(), Charsets_UTF_8));
 
     StringBuffer result = new StringBuffer();
     String line = "";

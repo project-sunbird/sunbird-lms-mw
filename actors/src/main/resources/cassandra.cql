@@ -120,13 +120,13 @@ CREATE INDEX inx_ai_processingStatus ON sunbird.assessment_item (processingStatu
 ALTER TABLE sunbird.course_management DROP noOfLectures;
 ALTER TABLE sunbird.course_management ADD noOfLectures int;
 ALTER TABLE sunbird.assessment_item DROP evaluationStatus;
-ALTER TABLE sunbird.assessment_item DROP processingStatus;
+//ALTER TABLE sunbird.assessment_item DROP processingStatus;
 ALTER TABLE sunbird.assessment_item ADD evaluationStatus boolean;
-ALTER TABLE sunbird.assessment_item ADD processingStatus boolean;
-ALTER TABLE sunbird.assessment_eval DROP assessmentItemId;
-ALTER TABLE sunbird.assessment_eval DROP maxScore;
-ALTER TABLE sunbird.page_management ADD organisationId text;
-ALTER TABLE sunbird.organisation ADD orgCode text;
+//ALTER TABLE sunbird.assessment_item ADD processingStatus boolean;
+//ALTER TABLE sunbird.assessment_eval DROP assessmentItemId;
+//ALTER TABLE sunbird.assessment_eval DROP maxScore;
+//ALTER TABLE sunbird.page_management ADD organisationId text;
+//ALTER TABLE sunbird.organisation ADD orgCode text;
 
 //2017-06-30 changes for user and organisation
 ALTER TABLE sunbird.user DROP zipcode;
@@ -182,7 +182,7 @@ ALTER TABLE sunbird.organisation ADD homeUrl text;
 ALTER TABLE sunbird.organisation ADD isRootOrg boolean;
 ALTER TABLE sunbird.organisation ADD addId text;
 ALTER TABLE sunbird.organisation ADD noOfmembers int;
-ALTER TABLE sunbird.organisation ADD orgCode text;
+//ALTER TABLE sunbird.organisation ADD orgCode text;
 ALTER TABLE sunbird.organisation ADD isApproved boolean;
 ALTER TABLE sunbird.organisation ADD approvedBy text;
 ALTER TABLE sunbird.organisation ADD approvedDate text;
@@ -200,14 +200,14 @@ CREATE INDEX inx_om_orgIdOne ON sunbird.org_mapping(orgIdOne);
 CREATE INDEX inx_om_orgIdTwo ON sunbird.org_mapping(orgIdTwo);    
 
 CREATE TABLE IF NOT EXISTS sunbird.role(id text, name text,status int, PRIMARY KEY (id));
-CREATE INDEX inx_ro_master_name ON sunbird.role(name);  
+//CREATE INDEX inx_ro_master_name ON sunbird.role(name);
 
-insert into role (id,name,status) values ('r_101','ADMIN',1);
-insert into role (id,name,status) values ('r_102','ORG_ADMIN',1);
-insert into role (id,name,status) values ('r_103','ORG_MODERATOR',1);
-insert into role (id,name,status) values ('r_104','CONTENT_CREATOR',1);
-insert into role (id,name,status) values ('r_105','CONTENT_REVIEWER',1);
-insert into role (id,name,status) values ('r_106','ORG_MEMBER',1);
+//insert into role (id,name,status) values ('r_101','ADMIN',1);
+//insert into role (id,name,status) values ('r_102','ORG_ADMIN',1);
+//insert into role (id,name,status) values ('r_103','ORG_MODERATOR',1);
+//insert into role (id,name,status) values ('r_104','CONTENT_CREATOR',1);
+//insert into role (id,name,status) values ('r_105','CONTENT_REVIEWER',1);
+//insert into role (id,name,status) values ('r_106','ORG_MEMBER',1);
 
 
 ALTER TABLE sunbird.user ADD rootOrgId text;
@@ -215,13 +215,13 @@ ALTER TABLE sunbird.address ADD addressLine1 text;
 ALTER TABLE sunbird.address ADD addressLine2 text;
 ALTER TABLE sunbird.user_education ADD degree text;
 
-insert into sunbird.role (id,name,status) values ('r_101','SYSTEM_ADMINISTRATION',1);
-insert into sunbird.role (id,name,status) values ('r_102','ORG_MANAGEMENT',1);
-insert into sunbird.role (id,name,status) values ('r_103','MEMBERSHIP_MANAGEMENT',1);
-insert into sunbird.role (id,name,status) values ('r_104','CONTENT_CREATION',1);
-insert into sunbird.role (id,name,status) values ('r_105','CONTENT_REVIEW',1);
-insert into sunbird.role (id,name,status) values ('r_106','CONTENT_CURATION',1);
-insert into sunbird.role (id,name,status) values ('r_107','PUBLIC',1);
+//insert into sunbird.role (id,name,status) values ('r_101','SYSTEM_ADMINISTRATION',1);
+//insert into sunbird.role (id,name,status) values ('r_102','ORG_MANAGEMENT',1);
+//insert into sunbird.role (id,name,status) values ('r_103','MEMBERSHIP_MANAGEMENT',1);
+//insert into sunbird.role (id,name,status) values ('r_104','CONTENT_CREATION',1);
+//insert into sunbird.role (id,name,status) values ('r_105','CONTENT_REVIEW',1);
+//insert into sunbird.role (id,name,status) values ('r_106','CONTENT_CURATION',1);
+//insert into sunbird.role (id,name,status) values ('r_107','PUBLIC',1);
 
 
 CREATE TABLE IF NOT EXISTS sunbird.master_action(id text, name text, PRIMARY KEY (id));
@@ -371,7 +371,7 @@ CREATE INDEX inx_ucs_batchId ON sunbird.user_courses (batchId);
 CREATE INDEX inx_ucs_course_name ON sunbird.user_courses (courseName);
 CREATE INDEX inx_ucs_status ON sunbird.user_courses (status);
 
-ALTER TABLE sunbird.user_external_identity DROP source;
+//ALTER TABLE sunbird.user_external_identity DROP source;
 ALTER TABLE sunbird.user_external_identity ADD provider text;
 ALTER TABLE sunbird.user_external_identity ADD externalIdValue text;
 DROP INDEX inx_uei_source;
@@ -403,8 +403,8 @@ ALTER TABLE sunbird.user ADD profileSummary text;
 ALTER TABLE sunbird.organisation ADD source text;
 ALTER TABLE sunbird.organisation ADD externalId text;
 
-ALTER TABLE sunbird.user_org drop role;
-ALTER TABLE sunbird.user_org ADD roles list<text>;
+//ALTER TABLE sunbird.user_org drop role;
+//ALTER TABLE sunbird.user_org ADD roles list<text>;
 
 //to export data from csv to cassandra table run below command(for page_section and page_management table) 
 // change the path of csv file
@@ -420,7 +420,7 @@ ALTER TABLE sunbird.user_org ADD roles List<text>;
 // insert default root organisation -- July 15,2017
 ALTER TABLE sunbird.organisation ADD isDefault boolean;
 
-INSERT INTO sunbird.organisation(id , isRootOrg , isDefault, status) values('ORG_001' , true , true, 1);
+//INSERT INTO sunbird.organisation(id , isRootOrg , isDefault, status) values('ORG_001' , true , true, 1);
 
 ALTER TABLE sunbird.user_courses ADD leafNodesCount int;
 // change organisation status field from text to int -- July 19,2017
@@ -438,7 +438,7 @@ CREATE INDEX inx_cou_bat_status ON sunbird.course_batch (status);
 CREATE INDEX inx_cou_bat_courseId ON sunbird.course_batch (courseId);     
 CREATE INDEX inx_cou_bat_courseCreator ON sunbird.course_batch (courseCreator); 
 CREATE INDEX inx_cou_bat_createdBy ON sunbird.course_batch (createdBy); 
-CREATE INDEX inx_cou_bat_enrolmentType ON sunbird.course_batch (enrolmentType); 
+//CREATE INDEX inx_cou_bat_enrolmentType ON sunbird.course_batch (enrolmentType);
 ALTER TABLE sunbird.course_batch DROP createdon;
 ALTER TABLE sunbird.course_batch ADD createdDate text;
 ALTER TABLE sunbird.course_batch DROP lastupdatedon;
@@ -456,9 +456,9 @@ ALTER TABLE sunbird.course_batch DROP participants;
 ALTER TABLE sunbird.course_batch ADD participant map<text,boolean>;
 
 ALTER TABLE sunbird.course_batch ADD courseAdditionalInfo map<text,text>;
-DROP INDEX inx_cou_bat_enrolmentType;
-ALTER TABLE sunbird.course_batch DROP enrolmentType;
-ALTER TABLE sunbird.course_batch ADD enrollmentType text;
+//DROP INDEX inx_cou_bat_enrolmentType;
+//ALTER TABLE sunbird.course_batch DROP enrolmentType;
+//ALTER TABLE sunbird.course_batch ADD enrollmentType text;
 CREATE INDEX inx_cou_bat_enrollmentType ON sunbird.course_batch (enrollmentType);
 
 // adding the batchId column to content consumption table -- Aug 8,2017

@@ -36,6 +36,7 @@ public class Application {
     Config con = null;
     String host = System.getenv(JsonKey.SUNBIRD_ACTOR_SERVICE_IP);
     String port = System.getenv(JsonKey.SUNBIRD_ACTOR_SERVICE_PORT);
+    
     if (!ProjectUtil.isStringNullOREmpty(host) && !ProjectUtil.isStringNullOREmpty(port)) {
       con = ConfigFactory
           .parseString(

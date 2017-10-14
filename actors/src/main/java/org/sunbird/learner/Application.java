@@ -5,6 +5,7 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
+import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
@@ -33,8 +34,8 @@ public class Application {
    */
   private static void startRemoteActorSystem() {
     Config con = null;
-    String host = "";
-    String port = "";
+    String host = System.getenv(JsonKey.SUNBIRD_ACTOR_SERVICE_IP);
+    String port = System.getenv(JsonKey.SUNBIRD_ACTOR_SERVICE_PORT);
     if (!ProjectUtil.isStringNullOREmpty(host) && !ProjectUtil.isStringNullOREmpty(port)) {
       con = ConfigFactory
           .parseString(

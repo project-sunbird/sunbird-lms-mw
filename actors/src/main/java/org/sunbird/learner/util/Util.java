@@ -471,7 +471,7 @@ public class Util {
           if(ProjectUtil.isStringNullOREmpty((String)headers.get(JsonKey.AUTHORIZATION))){
             headers.put(JsonKey.AUTHORIZATION, JsonKey.BEARER+PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
           }
-            response = HttpUtil.sendPostRequest(baseSearchUrl+PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTNET_SEARCH_URL),
+            response = HttpUtil.sendPostRequest(baseSearchUrl+PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_URL),
                     (String) section.get(JsonKey.SEARCH_QUERY), headers);
             jObject = new JSONObject(response);
             data = jObject.getJSONObject(JsonKey.RESULT);

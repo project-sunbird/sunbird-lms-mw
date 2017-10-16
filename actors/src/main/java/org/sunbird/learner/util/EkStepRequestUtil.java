@@ -51,7 +51,7 @@ public class EkStepRequestUtil {
 		    headers.put(JsonKey.AUTHORIZATION, PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
 		  }
 			response = HttpUtil.sendPostRequest(baseSearchUrl+
-					PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTNET_SEARCH_URL), params, headers);
+					PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_URL), params, headers);
 			jObject = new JSONObject(response);
 			data = jObject.getJSONObject(JsonKey.RESULT);
 			ProjectLogger.log("Total number of content fetched from Ekstep while assembling page data : "+data.get("count"));

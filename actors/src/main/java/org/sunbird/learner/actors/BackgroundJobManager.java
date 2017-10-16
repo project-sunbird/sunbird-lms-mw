@@ -684,7 +684,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       }
 
       responseData = HttpUtil.sendGetRequest(ekStepBaseUrl
-          + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTNET_URL) + contnetId,
+          + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_URL) + contnetId,
           headerMap);
     } catch (IOException e) {
       ProjectLogger.log(e.getMessage(), e);

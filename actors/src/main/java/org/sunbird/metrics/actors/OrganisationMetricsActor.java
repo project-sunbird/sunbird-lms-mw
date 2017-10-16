@@ -785,7 +785,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       csvRecords.add(headers);
       for (String operation : operationList) {
         String requestStr = getRequestObject(operation, requestId);
-        String ekStepResponse = makePostRequest(JsonKey.EKSTEP_CONTNET_SEARCH_URL, requestStr);
+        String ekStepResponse = makePostRequest(JsonKey.EKSTEP_CONTENT_SEARCH_URL, requestStr);
         List<Map<String, Object>> ekstepData = getDataFromResponse(ekStepResponse, headers, orgId);
         List<Map<String, Object>> userData = getUserDetailsFromES(ekstepData);
         csvRecords.addAll(generateDataList(userData, headers));

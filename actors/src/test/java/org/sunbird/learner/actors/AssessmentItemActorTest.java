@@ -44,7 +44,7 @@ public class AssessmentItemActorTest {
         ActorRef subject = system.actorOf(props);
 
         Request reqObj = new Request();
-        reqObj.setRequest_id("121");
+        reqObj.setRequestId("121");
         reqObj.setOperation(ActorOperations.GET_ASSESSMENT.getValue());
         reqObj.getRequest().put(JsonKey.CONTENT_ID, "1");
         reqObj.getRequest().put(JsonKey.COURSE_ID, "11");
@@ -74,7 +74,7 @@ public class AssessmentItemActorTest {
         ActorRef subject = system.actorOf(props);
 
         Request reqObj = new Request();
-        reqObj.setRequest_id("121");
+        reqObj.setRequestId("121");
         reqObj.setOperation(ActorOperations.GET_ASSESSMENT.getValue());
         reqObj.getRequest().put(JsonKey.CONTENT_ID, "1");
         reqObj.getRequest().put(JsonKey.COURSE_ID, "11");
@@ -101,7 +101,7 @@ public class AssessmentItemActorTest {
         ActorRef subject = system.actorOf(props);
 
         Request reqObj = new Request();
-        reqObj.setRequest_id("121");
+        reqObj.setRequestId("121");
         reqObj.setOperation(ActorOperations.SAVE_ASSESSMENT.getValue());
         reqObj.getRequest().put(JsonKey.CONTENT_ID, "1");
         reqObj.getRequest().put(JsonKey.COURSE_ID, "11");
@@ -130,7 +130,7 @@ public class AssessmentItemActorTest {
         ActorRef subject = system.actorOf(props);
 
         Request reqObj = new Request();
-        reqObj.setRequest_id("121");
+        reqObj.setRequestId("121");
         reqObj.setOperation("INVALID_OPERATION");
         HashMap<String, Object> innerMap = new HashMap<>();
         innerMap.put(JsonKey.COURSE, reqObj.getRequest());

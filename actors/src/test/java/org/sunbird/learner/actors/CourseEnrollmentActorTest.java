@@ -93,7 +93,7 @@ public class CourseEnrollmentActorTest {
     ActorRef subject = system.actorOf(props);
 
     Request reqObj = new Request();
-    reqObj.setRequest_id("1");
+    reqObj.setRequestId("1");
     reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
     reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
     reqObj.put(JsonKey.BATCH_ID,batchId);
@@ -121,7 +121,7 @@ public class CourseEnrollmentActorTest {
     ActorRef subject = system.actorOf(props);
 
     Request reqObj = new Request();
-    reqObj.setRequest_id("1");
+    reqObj.setRequestId("1");
     reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
     reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
     reqObj.put(JsonKey.USER_ID, "USR");
@@ -146,7 +146,7 @@ public class CourseEnrollmentActorTest {
     when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
 
     Request reqObj = new Request();
-    reqObj.setRequest_id("1");
+    reqObj.setRequestId("1");
     reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
     reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
     reqObj.put(JsonKey.USER_ID, "USR");
@@ -169,7 +169,7 @@ public class CourseEnrollmentActorTest {
     ActorRef subject = system.actorOf(props);
 
     Request reqObj = new Request();
-    reqObj.setRequest_id("1211");
+    reqObj.setRequestId("1211");
     reqObj.setOperation("INVALID_OPERATION");
     HashMap<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.COURSE, reqObj.getRequest());

@@ -15,7 +15,6 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import org.sunbird.cassandra.CassandraOperation;
@@ -29,14 +28,13 @@ import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.Application;
 import org.sunbird.learner.util.Util;
-import org.sunbird.services.sso.SSOManager;
-import org.sunbird.services.sso.SSOServiceFactory;
 
 /**
  * @author arvind.
  */
-@Ignore
+//@Ignore
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class OrganisationManagementActorTest {
 
@@ -62,6 +60,7 @@ public class OrganisationManagementActorTest {
     
     @BeforeClass
     public static void setUp() {
+        Application.startLocalActorSystem();
         system = ActorSystem.create("system");
         Util.checkCassandraDbConnections();
         userManagementDB = Util.dbInfoMap.get(JsonKey.USER_DB);
@@ -75,7 +74,7 @@ public class OrganisationManagementActorTest {
       ActorRef subject = system.actorOf(propsUser);
 
       Request reqObj = new Request();
-      reqObj.setRequest_id("1");
+      reqObj.setRequestId("1");
       reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
       HashMap<String, Object> innerMap = new HashMap<>();
       innerMap.put(JsonKey.USERNAME, "test04buser");
@@ -194,15 +193,9 @@ public class OrganisationManagementActorTest {
       orgMap.put(JsonKey.ORGANISATION_NAME , "CBSE");
       orgMap.put(JsonKey.DESCRIPTION, "Central Board of Secondary Education");
       orgMap.put("orgCode", "CBSE");
-      orgMap.put(JsonKey.PROVIDER, "pr100000001");
-      orgMap.put(JsonKey.EXTERNAL_ID, "ex100000001");
+      orgMap.put(JsonKey.PROVIDER, "pr0001");
+      orgMap.put(JsonKey.EXTERNAL_ID, "ex0001");
      // orgMap.put("channel", "test1");
-      Map<String,Object> address = new HashMap<String,Object>();
-      address.put("city", "Hyderabad");
-      address.put("state", "Andra Pradesh");
-      address.put("country", "India");
-      address.put("zipCode", "466899");
-      innerMap.put("address", address);
       innerMap.put(JsonKey.ORGANISATION , orgMap);
 
       reqObj.setRequest(innerMap);
@@ -230,8 +223,8 @@ public class OrganisationManagementActorTest {
       orgMap.put(JsonKey.ORGANISATION_NAME , "CBSE");
       orgMap.put(JsonKey.DESCRIPTION, "Central Board of Secondary Education");
       orgMap.put("orgCode", "CBSE");
-      orgMap.put(JsonKey.PROVIDER, "pr10001");
-      orgMap.put(JsonKey.EXTERNAL_ID, "ex10001");
+      orgMap.put(JsonKey.PROVIDER, "pr0001");
+      orgMap.put(JsonKey.EXTERNAL_ID, "ex0001");
       orgMap.put("channel", "test");
       innerMap.put(JsonKey.ORGANISATION , orgMap);
 
@@ -263,7 +256,7 @@ public class OrganisationManagementActorTest {
     }
     
     
-    @Test
+    //@Test
     public void test16CreateOrgRootWithoutChannelExc(){
       TestKit probe = new TestKit(system);
       ActorRef subject = system.actorOf(props);
@@ -306,12 +299,6 @@ public class OrganisationManagementActorTest {
       orgMap.put("homeUrl", "https:testUrl");
       orgMap.put(JsonKey.ORG_CODE, "TN");
       orgMap.put(JsonKey.IS_ROOT_ORG, false);
-      Map<String,Object> address = new HashMap<String,Object>();
-      address.put(JsonKey.CITY, "Chennai");
-      address.put("state", "Tamil Nadu");
-      address.put("country", "India");
-      address.put("zipCode", "466879");
-      orgMap.put(JsonKey.ADDRESS, address);
       innerMap.put(JsonKey.ORGANISATION , orgMap);
 
       reqObj.setRequest(innerMap);
@@ -427,6 +414,7 @@ public class OrganisationManagementActorTest {
       probe.expectMsgClass(duration("200 second"),Response.class);
     }
     
+    @SuppressWarnings("unchecked")
     @Test
     public void test24GetOrgSuc() {
         TestKit probe = new TestKit(system);
@@ -442,7 +430,11 @@ public class OrganisationManagementActorTest {
         reqObj.setRequest(innerMap);
         subject.tell(reqObj, probe.getRef());
         Response resp =probe.expectMsgClass(duration("200 second"),Response.class);
-       // addressId = (String) ((Map<String,Object>)resp.getResult().get(JsonKey.ADDRESS)).get(JsonKey.ID);
+        try{
+        addressId = (String) (((Map<String,Object>)resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ADDRESS_ID));
+        }catch(Exception ex){
+          ex.printStackTrace();
+        }
     }
     
     @Test
@@ -643,26 +635,23 @@ public class OrganisationManagementActorTest {
       probe.expectMsgClass(duration("200 second"),ProjectCommonException.class);
     }
     
-    public void deleteOrgBySourceAndExternalId(){
-      
-    }
     
-   // @Test
+    @Test
     public void test36CreateOrgType() {
       TestKit probe = new TestKit(system);
       ActorRef subject = system.actorOf(props);
       Request reqObj = new Request();
       reqObj.setOperation(ActorOperations.CREATE_ORG_TYPE.getValue());
-      reqObj.setRequest_id(ExecutionContext.getRequestId());
+      reqObj.setRequestId(ExecutionContext.getRequestId());
       reqObj.setEnv(1);
-      reqObj.getRequest().put(JsonKey.NAME, "ORG_TYPE_001");
+      reqObj.getRequest().put(JsonKey.NAME, "ORG_TYPE_0001");
       subject.tell(reqObj, probe.getRef());
       Response response = probe.expectMsgClass(Response.class);
       assertEquals("SUCCESS", response.getResult().get(JsonKey.RESPONSE));
       
       Request req = new Request();
       req.setOperation(ActorOperations.GET_ORG_TYPE_LIST.getValue());
-      req.setRequest_id(ExecutionContext.getRequestId());
+      req.setRequestId(ExecutionContext.getRequestId());
       req.setEnv(1);
       subject.tell(req, probe.getRef());
       Response res = probe.expectMsgClass(duration("200 second"), Response.class);
@@ -670,29 +659,29 @@ public class OrganisationManagementActorTest {
       if(null != resMapList && !resMapList.isEmpty()){
         for(Map<String,Object> map : resMapList){
           String name = (String) map.get(JsonKey.NAME);
-          if(null != name && "ORG_TYPE_001".equalsIgnoreCase(name)){
+          if(null != name && "ORG_TYPE_0001".equalsIgnoreCase(name)){
             orgTypeId1 = (String) map.get(JsonKey.ID);
           }
         }
       }
     }
     
-   // @Test
+    @Test
     public void test37CreateOrgType() {
       TestKit probe = new TestKit(system);
       ActorRef subject = system.actorOf(props);
       Request reqObj = new Request();
       reqObj.setOperation(ActorOperations.CREATE_ORG_TYPE.getValue());
-      reqObj.setRequest_id(ExecutionContext.getRequestId());
+      reqObj.setRequestId(ExecutionContext.getRequestId());
       reqObj.setEnv(1);
-      reqObj.getRequest().put(JsonKey.NAME, "ORG_TYPE_002");
+      reqObj.getRequest().put(JsonKey.NAME, "ORG_TYPE_0002");
       subject.tell(reqObj, probe.getRef());
       Response response = probe.expectMsgClass(Response.class);
       assertEquals("SUCCESS", response.getResult().get(JsonKey.RESPONSE));
       
       Request req = new Request();
       req.setOperation(ActorOperations.GET_ORG_TYPE_LIST.getValue());
-      req.setRequest_id(ExecutionContext.getRequestId());
+      req.setRequestId(ExecutionContext.getRequestId());
       req.setEnv(1);
       subject.tell(req, probe.getRef());
       Response res = probe.expectMsgClass(duration("200 second"), Response.class);
@@ -700,43 +689,43 @@ public class OrganisationManagementActorTest {
       if(null != resMapList && !resMapList.isEmpty()){
         for(Map<String,Object> map : resMapList){
           String name = (String) map.get(JsonKey.NAME);
-          if(null != name && "ORG_TYPE_002".equalsIgnoreCase(name)){
+          if(null != name && "ORG_TYPE_0002".equalsIgnoreCase(name)){
             orgTypeId2 = (String) map.get(JsonKey.ID);
           }
         }
       }
     }
-   // @Test
+    @Test
     public void test38OrgTypeList() {
       TestKit probe = new TestKit(system);
       ActorRef subject = system.actorOf(props);
       Request reqObj = new Request();
       reqObj.setOperation(ActorOperations.GET_ORG_TYPE_LIST.getValue());
-      reqObj.setRequest_id(ExecutionContext.getRequestId());
+      reqObj.setRequestId(ExecutionContext.getRequestId());
       reqObj.setEnv(1);
       subject.tell(reqObj, probe.getRef());
       probe.expectMsgClass(duration("200 second"), Response.class);
     }
     
-   // @Test
+    @Test
     public void test39CreateOrgTypeWithSameName() {
       TestKit probe = new TestKit(system);
       ActorRef subject = system.actorOf(props);
       Request reqObj = new Request();
       reqObj.setOperation(ActorOperations.CREATE_ORG_TYPE.getValue());
-      reqObj.setRequest_id(ExecutionContext.getRequestId());
+      reqObj.setRequestId(ExecutionContext.getRequestId());
       reqObj.setEnv(1);
-      reqObj.getRequest().put(JsonKey.NAME, "ORG_TYPE_001");
+      reqObj.getRequest().put(JsonKey.NAME, "ORG_TYPE_0001");
       subject.tell(reqObj, probe.getRef());
       probe.expectMsgClass(ProjectCommonException.class);
     }
-   // @Test
+    @Test
     public void test40UpdateOrgType() {
       TestKit probe = new TestKit(system);
       ActorRef subject = system.actorOf(props);
       Request reqObj = new Request();
       reqObj.setOperation(ActorOperations.UPDATE_ORG_TYPE.getValue());
-      reqObj.setRequest_id(ExecutionContext.getRequestId());
+      reqObj.setRequestId(ExecutionContext.getRequestId());
       reqObj.setEnv(1);
       reqObj.getRequest().put(JsonKey.NAME, "ORG_TYPE_203");
       reqObj.getRequest().put(JsonKey.ID, orgTypeId1);
@@ -745,27 +734,27 @@ public class OrganisationManagementActorTest {
       assertEquals("SUCCESS", response.getResult().get(JsonKey.RESPONSE));
     }
     
-   // @Test
+    @Test
     public void test41UpdateOrgTypeWithExistingName() {
       TestKit probe = new TestKit(system);
       ActorRef subject = system.actorOf(props);
       Request reqObj = new Request();
       reqObj.setOperation(ActorOperations.UPDATE_ORG_TYPE.getValue());
-      reqObj.setRequest_id(ExecutionContext.getRequestId());
+      reqObj.setRequestId(ExecutionContext.getRequestId());
       reqObj.setEnv(1);
-      reqObj.getRequest().put(JsonKey.NAME, "ORG_TYPE_001");
-      reqObj.getRequest().put(JsonKey.ID, orgTypeId2);
+      reqObj.getRequest().put(JsonKey.NAME, "ORG_TYPE_0002");
+      reqObj.getRequest().put(JsonKey.ID, orgTypeId1);
       subject.tell(reqObj, probe.getRef());
       ProjectCommonException response = probe.expectMsgClass(duration("200 second"),ProjectCommonException.class);
     }
     
-  //  @Test
+    @Test
     public void test42UpdateOrgTypeWithWrongId() {
       TestKit probe = new TestKit(system);
       ActorRef subject = system.actorOf(props);
       Request reqObj = new Request();
       reqObj.setOperation(ActorOperations.UPDATE_ORG_TYPE.getValue());
-      reqObj.setRequest_id(ExecutionContext.getRequestId());
+      reqObj.setRequestId(ExecutionContext.getRequestId());
       reqObj.setEnv(1);
       reqObj.getRequest().put(JsonKey.NAME, "ORG_TYPE_12");
       String id = orgTypeId2+"1";
@@ -779,16 +768,16 @@ public class OrganisationManagementActorTest {
     @AfterClass
     public static void delete() {
       System.out.println("After class");
-      SSOManager ssoManager = SSOServiceFactory.getInstance();
+     /* SSOManager ssoManager = SSOServiceFactory.getInstance();
       Map<String, Object> innerMap = new HashMap<>();
       innerMap.put(JsonKey.USER_ID, usrId);
-      ssoManager.removeUser(innerMap);
+      ssoManager.removeUser(innerMap);*/
       try{
       CassandraOperation operation = ServiceFactory.getInstance();
-      //operation.deleteRecord(orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName(), orgTypeId1);
-      //operation.deleteRecord(orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName(), orgTypeId2);
+      operation.deleteRecord(orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName(), orgTypeId1);
+      operation.deleteRecord(orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName(), orgTypeId2);
       //operation.deleteRecord(userManagementDB.getKeySpace(), userManagementDB.getTableName(), usrId);
-      //operation.deleteRecord(addressDB.getKeySpace(), addressDB.getTableName(), addressId);
+      operation.deleteRecord(addressDB.getKeySpace(), addressDB.getTableName(), addressId);
       operation.deleteRecord(orgDB.getKeySpace(), orgDB.getTableName(), orgId);
       System.out.println("1 "+ orgId);
       
@@ -798,12 +787,6 @@ public class OrganisationManagementActorTest {
       operation.deleteRecord(orgDB.getKeySpace(), orgDB.getTableName(), OrgIdWithSourceAndExternalId);
       System.out.println("3 "+ OrgIdWithSourceAndExternalId);
       
-      Map<String , Object> orgMap = new HashMap<String , Object>();
-      orgMap.put(JsonKey.PROVIDER, "pr100000001");
-      orgMap.put(JsonKey.EXTERNAL_ID, "ex100000001");
-      Response response = operation.getRecordsByProperties(orgDB.getKeySpace(), orgDB.getTableName(), orgMap);
-      response.getResult().get(JsonKey.ID);
-      System.out.println("Id frm response "+response.getResult().get(JsonKey.ID));
       }catch(Throwable th){
         th.printStackTrace();
       }

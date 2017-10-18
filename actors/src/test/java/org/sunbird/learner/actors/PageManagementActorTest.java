@@ -45,6 +45,7 @@ public class PageManagementActorTest {
     static String sectionId2 = "";
     static String pageId = "";
     static String pageIdWithOrg = "";
+    static String pageIdWithOrg2 = "";
     
     @BeforeClass
     public static void setUp() {
@@ -187,6 +188,44 @@ public class PageManagementActorTest {
         Response response = probe.expectMsgClass(Response.class);
         pageIdWithOrg = (String) response.get(JsonKey.PAGE_ID);
     }
+    
+    @Test
+    public void testBCreatePageWithOrgId2(){
+
+        TestKit probe = new TestKit(system);
+        ActorRef subject = system.actorOf(props);
+
+        Request reqObj = new Request();
+        reqObj.setOperation(ActorOperations.CREATE_PAGE.getValue());
+        HashMap<String, Object> innerMap = new HashMap<>();
+        Map<String , Object> pageMap = new HashMap<String , Object>();
+        List<Map<String, Object>> appMapList = new ArrayList<Map<String, Object>>();
+        Map<String , Object> appMap = new HashMap<String , Object>();
+        appMap.put(JsonKey.ID , sectionId);
+        appMap.put(JsonKey.INDEX , new BigInteger("1"));
+        appMap.put(JsonKey.GROUP , new BigInteger("1"));
+        appMapList.add(appMap);
+        
+        pageMap.put(JsonKey.APP_MAP , appMapList);
+
+        List<Map<String, Object>> portalMapList = new ArrayList<Map<String, Object>>();
+        Map<String , Object> portalMap = new HashMap<String , Object>();
+        portalMap.put(JsonKey.ID , sectionId);
+        portalMap.put(JsonKey.INDEX , new BigInteger("1"));
+        portalMap.put(JsonKey.GROUP , new BigInteger("1"));
+        portalMapList.add(portalMap);
+        
+        pageMap.put(JsonKey.PORTAL_MAP , portalMapList);
+        
+        pageMap.put(JsonKey.PAGE_NAME, "Test Page3");
+        pageMap.put(JsonKey.ORGANISATION_ID, "ORG1");
+        innerMap.put(JsonKey.PAGE , pageMap);
+        reqObj.setRequest(innerMap);
+
+        subject.tell(reqObj, probe.getRef());
+        Response response = probe.expectMsgClass(Response.class);
+        pageIdWithOrg2 = (String) response.get(JsonKey.PAGE_ID);
+    }
 
     @Test
     public void testBCreatePage(){
@@ -223,6 +262,42 @@ public class PageManagementActorTest {
         subject.tell(reqObj, probe.getRef());
         Response response = probe.expectMsgClass(Response.class);
         pageId = (String) response.get(JsonKey.PAGE_ID);
+    }
+    
+    @Test
+    public void testBCreatePageWithSameName(){
+
+        TestKit probe = new TestKit(system);
+        ActorRef subject = system.actorOf(props);
+
+        Request reqObj = new Request();
+        reqObj.setOperation(ActorOperations.CREATE_PAGE.getValue());
+        HashMap<String, Object> innerMap = new HashMap<>();
+        Map<String , Object> pageMap = new HashMap<String , Object>();
+        List<Map<String, Object>> appMapList = new ArrayList<Map<String, Object>>();
+        Map<String , Object> appMap = new HashMap<String , Object>();
+        appMap.put(JsonKey.ID , sectionId);
+        appMap.put(JsonKey.INDEX , new BigInteger("1"));
+        appMap.put(JsonKey.GROUP , new BigInteger("1"));
+        appMapList.add(appMap);
+        
+        pageMap.put(JsonKey.APP_MAP , appMapList);
+
+        List<Map<String, Object>> portalMapList = new ArrayList<Map<String, Object>>();
+        Map<String , Object> portalMap = new HashMap<String , Object>();
+        portalMap.put(JsonKey.ID , sectionId);
+        portalMap.put(JsonKey.INDEX , new BigInteger("1"));
+        portalMap.put(JsonKey.GROUP , new BigInteger("1"));
+        portalMapList.add(portalMap);
+        
+        pageMap.put(JsonKey.PORTAL_MAP , portalMapList);
+        
+        pageMap.put(JsonKey.PAGE_NAME, "Test Page");
+        innerMap.put(JsonKey.PAGE , pageMap);
+        reqObj.setRequest(innerMap);
+
+        subject.tell(reqObj, probe.getRef());
+        probe.expectMsgClass(ProjectCommonException.class);
     }
     
     @Test
@@ -320,6 +395,26 @@ public class PageManagementActorTest {
 
         subject.tell(reqObj, probe.getRef());
         probe.expectMsgClass(duration("100 second"),Response.class);
+    }
+    
+    @Test
+    public void testCUpdatePageWithOrgIdWithSameName(){
+
+        TestKit probe = new TestKit(system);
+        ActorRef subject = system.actorOf(props);
+
+        Request reqObj = new Request();
+        reqObj.setOperation(ActorOperations.UPDATE_PAGE.getValue());
+        HashMap<String, Object> innerMap = new HashMap<>();
+        Map<String , Object> pageMap = new HashMap<String , Object>();
+        
+        pageMap.put(JsonKey.PAGE_NAME, "Test Page");
+        pageMap.put(JsonKey.ID, pageIdWithOrg2);
+        innerMap.put(JsonKey.PAGE , pageMap);
+        reqObj.setRequest(innerMap);
+
+        subject.tell(reqObj, probe.getRef());
+        probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
     }
     
     @Test
@@ -536,9 +631,12 @@ public class PageManagementActorTest {
       assertEquals("SUCCESS", response.get("response"));
       Response response1=operation.deleteRecord(pageMgmntDbInfo.getKeySpace(), pageMgmntDbInfo.getTableName(), pageIdWithOrg);
       assertEquals("SUCCESS", response1.get("response"));
+      Response response11=operation.deleteRecord(pageMgmntDbInfo.getKeySpace(), pageMgmntDbInfo.getTableName(), pageIdWithOrg2);
+      assertEquals("SUCCESS", response11.get("response"));
       Response response2=operation.deleteRecord(pageSectionDbInfo.getKeySpace(), pageSectionDbInfo.getTableName(), sectionId);
       assertEquals("SUCCESS", response2.get("response"));
       Response response3=operation.deleteRecord(pageSectionDbInfo.getKeySpace(), pageSectionDbInfo.getTableName(), sectionId2);
       assertEquals("SUCCESS", response3.get("response"));
+      //
     }
 }

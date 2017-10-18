@@ -585,7 +585,7 @@ public class UserManagementActorTest {
     probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
   }
 
-  @Test
+ // @Test
   public void TestJUserOrgInfo() {
     try {
       Thread.sleep(3000);
@@ -606,6 +606,12 @@ public class UserManagementActorTest {
 
     subject.tell(reqObj, probe.getRef());
     Response userResponse = probe.expectMsgClass(duration("200 second"), Response.class);
+    try {
+      Thread.sleep(2000);
+    } catch (InterruptedException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
     Map<String, Object> result = (Map<String, Object>) (userResponse.getResult());
     Map<String, Object> response = (Map<String, Object>) result.get(JsonKey.RESPONSE);
     assertEquals("DUMMY_ORG", ((Map<String, Object>) response.get(JsonKey.REGISTERED_ORG))
@@ -941,11 +947,11 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_19191");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_19191@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_191911");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_191911@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.ID, userId);
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_18181@gmail.com");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_181811@gmail.com");
     List<Map<String,String>> webPage = new ArrayList<>();
     Map<String,String> webPageData = new HashMap<>();
     webPageData.put(JsonKey.TYPE, "fb");
@@ -1022,7 +1028,6 @@ public class UserManagementActorTest {
       Assert.assertEquals(ResponseMessage.Key.INVALID_WEBPAGE_URL, response.getCode());
     }
   } 
-  
   @SuppressWarnings("deprecation")
   @Test
   public void TestZDUpdateUserWithValidWebPage(){
@@ -1032,8 +1037,8 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.UPDATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_1919");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_1919@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_191911");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_191911@gmail.com");
     innerMap.put(JsonKey.ID, userIdnew);
     List<Map<String,String>> webPage = new ArrayList<>();
     Map<String,String> webPageData = new HashMap<>();
@@ -1240,6 +1245,9 @@ public class UserManagementActorTest {
 
     ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.user.getTypeName(), userId);
+    
+    ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.organisation.getTypeName(), orgId);
     
     //To delete user data with webPage Data
     Map<String, Object> userMap = new HashMap<>();

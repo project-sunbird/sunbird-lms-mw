@@ -907,6 +907,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     Response res = new Response();
     req.setRequest_id(processId);
     req.setOperation(actorOperationType);
+    dataMap.remove("header");
     req.getRequest().put(JsonKey.REQUESTED_BY, updatedBy);
     if (objectType.equalsIgnoreCase(JsonKey.USER)) {
       req.getRequest().put(JsonKey.USER, dataMap);
@@ -916,7 +917,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       res.getResult().put(JsonKey.ORGANISATION_ID, dataMap.get(JsonKey.ID));
     } else if (objectType.equalsIgnoreCase(JsonKey.BATCH)) {
       req.getRequest().put(JsonKey.BATCH, dataMap);
-      dataMap.remove("header");
       res.getResult().put(JsonKey.BATCH_ID, dataMap.get(JsonKey.ID));
     }
     saveAuditLog(res, actorOperationType, req);

@@ -111,10 +111,9 @@ public class NotesManagementActor extends UntypedAbstractActor {
       result.getResult().put(JsonKey.ID, uniqueId);
       result.getResult().remove(JsonKey.RESPONSE);
       sender().tell(result, self());
-
       Request request = new Request();
       request.setOperation(ActorOperations.INSERT_USER_NOTES_ES.getValue());
-      request.getRequest().put(JsonKey.OPERATION, ActorOperations.INSERT_USER_NOTES_ES.getValue());
+      request.getRequest().put(JsonKey.NOTE, req);
       ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
       ActorUtil.tell(request);
     } catch (Exception e) {

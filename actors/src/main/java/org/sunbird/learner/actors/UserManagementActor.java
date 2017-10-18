@@ -572,7 +572,7 @@ public class UserManagementActor extends UntypedAbstractActor {
             ProjectCommonException exception =
                 new ProjectCommonException(ResponseCode.invalidCredentials.getErrorCode(),
                     ResponseCode.invalidCredentials.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
+                    ResponseCode.UNAUTHORIZED.getResponseCode());
             sender().tell(exception, self());
           }
         } else {

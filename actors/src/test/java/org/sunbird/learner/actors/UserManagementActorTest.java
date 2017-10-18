@@ -1181,6 +1181,48 @@ public class UserManagementActorTest {
       Assert.assertEquals(response.getResponseCode().getResponseCode(), ResponseCode.OK.getResponseCode());
     }
   } 
+  
+  @SuppressWarnings("deprecation")
+  @Test
+  public void userchangePasswordFailure(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.CHANGE_PASSWORD.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_1818@gmail.com");
+    innerMap.put(JsonKey.PASSWORD, "password2");
+    innerMap.put(JsonKey.NEW_PASSWORD, "password1");
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+    subject.tell(reqObj, probe.getRef());
+    ProjectCommonException response = probe.expectMsgClass(duration("2000 second"), ProjectCommonException.class);
+    if(null != response){
+      Assert.assertEquals(response.getCode(), ResponseCode.invalidCredentials.getErrorCode());
+    }
+  } 
+  
+  @SuppressWarnings("deprecation")
+  @Test
+  public void userchangePasswordSuccess(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.CHANGE_PASSWORD.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.USER_ID,userId);
+    innerMap.put(JsonKey.PASSWORD, "password");
+    innerMap.put(JsonKey.NEW_PASSWORD, "password1");
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+    subject.tell(reqObj, probe.getRef());
+    Response response = probe.expectMsgClass(duration("2000 second"), Response.class);
+    if(null != response){
+      Assert.assertEquals(response.getResponseCode(), ResponseCode.OK.getResponseCode());
+    }
+  } 
 
   @AfterClass
   public static void deleteUser() {

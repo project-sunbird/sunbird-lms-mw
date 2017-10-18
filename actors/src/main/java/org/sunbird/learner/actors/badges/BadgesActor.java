@@ -194,7 +194,7 @@ public class BadgesActor extends UntypedAbstractActor {
       }
       String response = HttpUtil.sendPostRequest(
           PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL)
-              + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTNET_SEARCH_URL),
+              + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_URL),
           body, headers);
       if (response.contains("OK")) {
         responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE, false, null));

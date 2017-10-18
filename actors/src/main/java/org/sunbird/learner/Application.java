@@ -55,7 +55,7 @@ public class Application {
   }
 
 
-  private static void checkCassandraConnection() {
+  public static void checkCassandraConnection() {
     Util.checkCassandraDbConnections();
     SchedulerManager.schedule();
   }

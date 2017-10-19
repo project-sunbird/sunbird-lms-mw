@@ -331,18 +331,19 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     if (ProjectUtil.isStringNullOREmpty(baseSearchUrl)) {
       baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
     }
-    ProjectLogger.log("##**",LoggerEnum.INFO.name());
+    ProjectLogger.log("##Test Logger",LoggerEnum.INFO.name());
     String authKey = System.getenv(JsonKey.AUTHORIZATION);
     if (ProjectUtil.isStringNullOREmpty(authKey)) {
       authKey = JsonKey.BEARER
           + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION);
     }
-    ProjectLogger.log("##>>",LoggerEnum.INFO.name());
+    ProjectLogger.log("##Testing1",LoggerEnum.INFO.name());
     HttpClient client = HttpClientBuilder.create().build();
     HttpPost post = new HttpPost(baseSearchUrl + PropertiesCache.getInstance().getProperty(url));
     post.addHeader("Content-Type", "application/json; charset=utf-8");
+    ProjectLogger.log("Authorization"+ authKey);
     post.addHeader(JsonKey.AUTHORIZATION, authKey);
-    ProjectLogger.log("##<<"+post.getRequestLine(),LoggerEnum.INFO.name());
+    ProjectLogger.log("##Testing2"+post.getRequestLine(),LoggerEnum.INFO.name());
     post.setEntity(new StringEntity(body, Charsets_UTF_8));
     HttpResponse response = client.execute(post);
     ProjectLogger.log("####responseCode"+response.getStatusLine().getStatusCode(),LoggerEnum.INFO.name());

@@ -341,6 +341,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     post.addHeader(JsonKey.AUTHORIZATION, authKey);
     post.setEntity(new StringEntity(body, Charsets_UTF_8));
     HttpResponse response = client.execute(post);
+    ProjectLogger.log("####responseCode"+response.getStatusLine().getStatusCode());
     if (response.getStatusLine().getStatusCode() != 200) {
       throw new ProjectCommonException(ResponseCode.unableToConnect.getErrorCode(),
           ResponseCode.unableToConnect.getErrorMessage(),

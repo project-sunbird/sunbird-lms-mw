@@ -336,12 +336,14 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
           + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION);
     }
     HttpClient client = HttpClientBuilder.create().build();
+    ProjectLogger.log("##>>",LoggerEnum.INFO.name());
     HttpPost post = new HttpPost(baseSearchUrl + PropertiesCache.getInstance().getProperty(url));
     post.addHeader("Content-Type", "application/json; charset=utf-8");
     post.addHeader(JsonKey.AUTHORIZATION, authKey);
+    ProjectLogger.log("##<<",LoggerEnum.INFO.name());
     post.setEntity(new StringEntity(body, Charsets_UTF_8));
     HttpResponse response = client.execute(post);
-    ProjectLogger.log("####responseCode"+response.getStatusLine().getStatusCode());
+    ProjectLogger.log("####responseCode"+response.getStatusLine().getStatusCode(),LoggerEnum.INFO.name());
     if (response.getStatusLine().getStatusCode() != 200) {
       throw new ProjectCommonException(ResponseCode.unableToConnect.getErrorCode(),
           ResponseCode.unableToConnect.getErrorMessage(),

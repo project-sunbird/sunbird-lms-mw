@@ -587,6 +587,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       String responseFormat = (String) cache.getData(JsonKey.OrgConsumption, orgId, periodStr);
       if (ProjectUtil.isStringNullOREmpty(responseFormat)) {
         responseFormat = getOrgConsumptionData(actorMessage, periodStr, orgHashId, channel);
+        ProjectLogger.log("Response"+responseFormat);
         cache.setData(JsonKey.OrgConsumption, orgId, periodStr, responseFormat);
       }
       Response response =

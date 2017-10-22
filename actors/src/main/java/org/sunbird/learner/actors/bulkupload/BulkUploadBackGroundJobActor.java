@@ -3,7 +3,6 @@ package org.sunbird.learner.actors.bulkupload;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
-import akka.actor.ActorRef;
 import akka.actor.UntypedAbstractActor;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -886,12 +885,18 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       }
     }
     // Insert record to BulkDb table
+    //After Successful completion of bulk upload process , encrypt the success and failure result and delete the user data(csv file data)
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.ID, processId);
-    map.put(JsonKey.SUCCESS_RESULT, convertMapToJsonString(successUserReq));
-    map.put(JsonKey.FAILURE_RESULT, convertMapToJsonString(failureUserReq));
+    try {
+      map.put(JsonKey.SUCCESS_RESULT, UserUtility.encryptData(convertMapToJsonString(successUserReq)));
+      map.put(JsonKey.FAILURE_RESULT, UserUtility.encryptData(convertMapToJsonString(failureUserReq)));
+    } catch (Exception e1) {
+      ProjectLogger.log("Exception occurred while encrypting success and failure result in bulk upload process : ", e1);
+    }
     map.put(JsonKey.PROCESS_END_TIME, ProjectUtil.getFormattedDate());
     map.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
+    map.put(JsonKey.DATA, "");
     try {
       cassandraOperation.updateRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), map);
     } catch (Exception e) {

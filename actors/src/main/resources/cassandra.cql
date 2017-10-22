@@ -578,3 +578,5 @@ UPDATE sunbird.media_type SET name = 'Facebook' where id = 'fb';
 UPDATE sunbird.media_type SET name = 'Twitter' where id = 'twitter';
 UPDATE sunbird.media_type SET name = 'LinkedIn' where id = 'in';
 UPDATE sunbird.media_type SET name = 'Blog' where id = 'blog';
+
+ALTER TABLE sunbird.bulk_upload_process ADD retryCount int;

@@ -305,6 +305,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
         userDataEncryptionDecryptionServiceActor);
     routerMap.put(ActorOperations.GET_MEDIA_TYPES.getValue(), userManagementRouter);
     routerMap.put(ActorOperations.SEARCH_AUDIT_LOG.getValue(), auditLogManagementActor);
+    routerMap.put(ActorOperations.PROCESS_AUDIT_LOG.getValue(), auditLogManagementActor);
     routerMap.put(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue(), backgroundJobManager);
     routerMap.put(ActorOperations.UPDATE_USER_ROLES_ES.getValue(), backgroundJobManager);
     routerMap.put(ActorOperations.PROCESS_DATA.getValue(), backgroundJobManager);

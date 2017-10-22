@@ -160,5 +160,10 @@ public class UserUtility {
 
     return filterMap;
   }
+  
+  public static String encryptData(String data) throws Exception {
+    EncryptionService service = ServiceFactory.getEncryptionServiceInstance(null);
+    return service.encryptData(data);
+  }
 
 }

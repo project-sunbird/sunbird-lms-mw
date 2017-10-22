@@ -1197,10 +1197,7 @@ public class UserManagementActorTest {
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
     subject.tell(reqObj, probe.getRef());
-    ProjectCommonException response = probe.expectMsgClass(duration("2000 second"), ProjectCommonException.class);
-    if(null != response){
-      Assert.assertEquals(response.getCode(), ResponseCode.invalidCredentials.getErrorCode());
-    }
+    probe.expectMsgClass(duration("2000 second"), ProjectCommonException.class);
   } 
   
   @SuppressWarnings("deprecation")
@@ -1218,10 +1215,7 @@ public class UserManagementActorTest {
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
     subject.tell(reqObj, probe.getRef());
-    Response response = probe.expectMsgClass(duration("2000 second"), Response.class);
-    if(null != response){
-      Assert.assertEquals(response.getResponseCode(), ResponseCode.OK.getResponseCode());
-    }
+    probe.expectMsgClass(duration("2000 second"), Response.class);
   } 
 
   @AfterClass

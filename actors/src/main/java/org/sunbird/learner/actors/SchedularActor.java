@@ -8,6 +8,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
@@ -48,26 +49,28 @@ public class SchedularActor extends UntypedAbstractActor {
     Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     for (Map<String, Object> map : result) {
+      int retryCount = 0;
       if (null != map.get(JsonKey.RETRY_COUNT)) {
-        int retryCount = (int) map.get(JsonKey.RETRY_COUNT);
-        if (retryCount >= 2) {
-          String data = (String) map.get(JsonKey.DATA);
-          try {
-            Map<String, Object> bulkMap = new HashMap<>();
-            bulkMap.put(JsonKey.DATA, UserUtility.encryptData(data));
-            bulkMap.put(JsonKey.PROCESS_ID, map.get(JsonKey.ID));
-            cassandraOperation.updateRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), bulkMap);
-          } catch (Exception e) {
-            ProjectLogger.log(
-                "Exception ocurred while encrypting data while running scheduler for bulk upload process : ",
-                e);
-          }
-          break;
+       retryCount = (int) map.get(JsonKey.RETRY_COUNT);
+      }
+      if (retryCount > 2) {
+        String data = (String) map.get(JsonKey.DATA);
+        try {
+          Map<String, Object> bulkMap = new HashMap<>();
+          bulkMap.put(JsonKey.DATA, UserUtility.encryptData(data));
+          bulkMap.put(JsonKey.PROCESS_ID, map.get(JsonKey.ID));
+          bulkMap.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.FAILED.getValue());
+          cassandraOperation.updateRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), bulkMap);
+        } catch (Exception e) {
+          ProjectLogger.log(
+              "Exception ocurred while encrypting data while running scheduler for bulk upload process : ",
+              e);
         }
       } else {
         Map<String, Object> bulkMap = new HashMap<>();
-        bulkMap.put(JsonKey.RETRY_COUNT, 1);
+        bulkMap.put(JsonKey.RETRY_COUNT, retryCount+1);
         bulkMap.put(JsonKey.PROCESS_ID, map.get(JsonKey.ID));
+        bulkMap.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.IN_PROGRESS.getValue());
         cassandraOperation.updateRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), bulkMap);
         Request req = new Request();
         req.put(JsonKey.PROCESS_ID, map.get(JsonKey.ID));
@@ -76,7 +79,7 @@ public class SchedularActor extends UntypedAbstractActor {
         req.setOperation(ActorOperations.PROCESS_BULK_UPLOAD.getValue());
         ActorUtil.tell(req);
       }
-    }
+      }
   }
 
 }

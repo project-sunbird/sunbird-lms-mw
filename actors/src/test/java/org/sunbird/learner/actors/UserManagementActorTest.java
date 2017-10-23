@@ -1242,7 +1242,22 @@ public class UserManagementActorTest {
     
     ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.organisation.getTypeName(), orgId);
-    
+    try{
+      Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
+      Response response = operation.getRecordsByProperty(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), JsonKey.USER_ID, userId);
+      List<Map<String,Object>> mapList = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
+      for(Map<String,Object> map : mapList){
+        operation.deleteRecord(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), (String)map.get(JsonKey.ID));
+      }
+      
+      response = operation.getRecordsByProperty(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), JsonKey.USER_ID, userIdnew);
+      mapList = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
+      for(Map<String,Object> map : mapList){
+        operation.deleteRecord(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), (String)map.get(JsonKey.ID));
+      }
+    }catch(Exception e){
+      e.printStackTrace();
+    }
     //To delete user data with webPage Data
     Map<String, Object> userMap = new HashMap<>();
     userMap.put(JsonKey.USER_ID, userIdnew);

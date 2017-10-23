@@ -775,7 +775,7 @@ public class UserManagementActor extends UntypedAbstractActor {
             addrsId = (String) ((Map<String, Object>) reqMap.get(JsonKey.ADDRESS)).get(JsonKey.ID);
             deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
           } else {
-            addrsId = getAddressId((String) reqMap.get(JsonKey.ID), eduDbInfo);
+            addrsId = getAddressId((String) reqMap.get(JsonKey.ID), jobProDbInfo);
             if (null != addrsId) {
               deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
             }
@@ -837,11 +837,11 @@ public class UserManagementActor extends UntypedAbstractActor {
   }
 
   @SuppressWarnings("unchecked")
-  private String getAddressId(String id, DbInfo eduDbInfo) {
+  private String getAddressId(String id, DbInfo dbInfo) {
     String addressId = null;
     try {
-      Response res = cassandraOperation.getPropertiesValueById(eduDbInfo.getKeySpace(),
-          eduDbInfo.getTableName(), id, JsonKey.ADDRESS_ID);
+      Response res = cassandraOperation.getPropertiesValueById(dbInfo.getKeySpace(),
+          dbInfo.getTableName(), id, JsonKey.ADDRESS_ID);
       if (!((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).isEmpty()) {
         addressId = (String) (((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).get(0))
             .get(JsonKey.ADDRESS_ID);

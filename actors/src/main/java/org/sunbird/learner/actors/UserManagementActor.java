@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.velocity.VelocityContext;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.Constants;
@@ -58,6 +57,8 @@ public class UserManagementActor extends UntypedAbstractActor {
   private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
       .getDecryptionServiceInstance(null);
   private PropertiesCache propertiesCache = PropertiesCache.getInstance();
+  boolean isSSOEnabled =
+      Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
 
 
   /**
@@ -572,7 +573,7 @@ public class UserManagementActor extends UntypedAbstractActor {
             ProjectCommonException exception =
                 new ProjectCommonException(ResponseCode.invalidCredentials.getErrorCode(),
                     ResponseCode.invalidCredentials.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
+                    ResponseCode.UNAUTHORIZED.getResponseCode());
             sender().tell(exception, self());
           }
         } else {
@@ -695,8 +696,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     userMap.remove(JsonKey.ROOT_ORG_ID);
     userMap.remove(JsonKey.LOGIN_ID);
 
-    boolean isSSOEnabled =
-        Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
     if (isSSOEnabled) {
       UpdateKeyCloakUserBase(userMap);
     }
@@ -776,7 +775,7 @@ public class UserManagementActor extends UntypedAbstractActor {
             addrsId = (String) ((Map<String, Object>) reqMap.get(JsonKey.ADDRESS)).get(JsonKey.ID);
             deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
           } else {
-            addrsId = getAddressId((String) reqMap.get(JsonKey.ID), eduDbInfo);
+            addrsId = getAddressId((String) reqMap.get(JsonKey.ID), jobProDbInfo);
             if (null != addrsId) {
               deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
             }
@@ -838,11 +837,11 @@ public class UserManagementActor extends UntypedAbstractActor {
   }
 
   @SuppressWarnings("unchecked")
-  private String getAddressId(String id, DbInfo eduDbInfo) {
+  private String getAddressId(String id, DbInfo dbInfo) {
     String addressId = null;
     try {
-      Response res = cassandraOperation.getPropertiesValueById(eduDbInfo.getKeySpace(),
-          eduDbInfo.getTableName(), id, JsonKey.ADDRESS_ID);
+      Response res = cassandraOperation.getPropertiesValueById(dbInfo.getKeySpace(),
+          dbInfo.getTableName(), id, JsonKey.ADDRESS_ID);
       if (!((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).isEmpty()) {
         addressId = (String) (((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).get(0))
             .get(JsonKey.ADDRESS_ID);
@@ -1037,8 +1036,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
-    boolean isSSOEnabled =
-        Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
     if (userMap.containsKey(JsonKey.PROVIDER)
         && !ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PROVIDER))) {
       userMap.put(JsonKey.LOGIN_ID,
@@ -2014,8 +2011,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     dbMap.put(JsonKey.UPDATED_BY, actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
 
     // deactivate from keycloak -- softdelete
-    boolean isSSOEnabled =
-        Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
     if (isSSOEnabled) {
       ssoManager.deactivateUser(dbMap);
     }
@@ -2245,8 +2240,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     dbMap.put(JsonKey.UPDATED_BY, actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
 
     // Activate user from keycloak
-    boolean isSSOEnabled =
-        Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
     if (isSSOEnabled) {
       ssoManager.activateUser(dbMap);
     }

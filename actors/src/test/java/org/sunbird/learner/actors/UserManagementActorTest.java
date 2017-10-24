@@ -585,7 +585,7 @@ public class UserManagementActorTest {
     probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
   }
 
-  @Test
+ // @Test
   public void TestJUserOrgInfo() {
     try {
       Thread.sleep(3000);
@@ -606,6 +606,12 @@ public class UserManagementActorTest {
 
     subject.tell(reqObj, probe.getRef());
     Response userResponse = probe.expectMsgClass(duration("200 second"), Response.class);
+    try {
+      Thread.sleep(2000);
+    } catch (InterruptedException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
     Map<String, Object> result = (Map<String, Object>) (userResponse.getResult());
     Map<String, Object> response = (Map<String, Object>) result.get(JsonKey.RESPONSE);
     assertEquals("DUMMY_ORG", ((Map<String, Object>) response.get(JsonKey.REGISTERED_ORG))
@@ -941,11 +947,11 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_19191");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_19191@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_191911");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_191911@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.ID, userId);
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_18181@gmail.com");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_181811@gmail.com");
     List<Map<String,String>> webPage = new ArrayList<>();
     Map<String,String> webPageData = new HashMap<>();
     webPageData.put(JsonKey.TYPE, "fb");
@@ -1022,7 +1028,6 @@ public class UserManagementActorTest {
       Assert.assertEquals(ResponseMessage.Key.INVALID_WEBPAGE_URL, response.getCode());
     }
   } 
-  
   @SuppressWarnings("deprecation")
   @Test
   public void TestZDUpdateUserWithValidWebPage(){
@@ -1032,8 +1037,8 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.UPDATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_1919");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_1919@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_191911");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_191911@gmail.com");
     innerMap.put(JsonKey.ID, userIdnew);
     List<Map<String,String>> webPage = new ArrayList<>();
     Map<String,String> webPageData = new HashMap<>();
@@ -1176,6 +1181,42 @@ public class UserManagementActorTest {
       Assert.assertEquals(response.getResponseCode().getResponseCode(), ResponseCode.OK.getResponseCode());
     }
   } 
+  
+  @SuppressWarnings("deprecation")
+  @Test
+  public void userchangePasswordFailure(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.CHANGE_PASSWORD.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_1818@gmail.com");
+    innerMap.put(JsonKey.PASSWORD, "password2");
+    innerMap.put(JsonKey.NEW_PASSWORD, "password1");
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(duration("2000 second"), ProjectCommonException.class);
+  } 
+  
+  @SuppressWarnings("deprecation")
+  @Test
+  public void userchangePasswordSuccess(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.CHANGE_PASSWORD.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.USER_ID,userId);
+    innerMap.put(JsonKey.PASSWORD, "password");
+    innerMap.put(JsonKey.NEW_PASSWORD, "password1");
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(duration("2000 second"), Response.class);
+  } 
 
   @AfterClass
   public static void deleteUser() {
@@ -1199,6 +1240,24 @@ public class UserManagementActorTest {
     ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.user.getTypeName(), userId);
     
+    ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.organisation.getTypeName(), orgId);
+    try{
+      Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
+      Response response = operation.getRecordsByProperty(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), JsonKey.USER_ID, userId);
+      List<Map<String,Object>> mapList = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
+      for(Map<String,Object> map : mapList){
+        operation.deleteRecord(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), (String)map.get(JsonKey.ID));
+      }
+      
+      response = operation.getRecordsByProperty(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), JsonKey.USER_ID, userIdnew);
+      mapList = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
+      for(Map<String,Object> map : mapList){
+        operation.deleteRecord(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), (String)map.get(JsonKey.ID));
+      }
+    }catch(Exception e){
+      e.printStackTrace();
+    }
     //To delete user data with webPage Data
     Map<String, Object> userMap = new HashMap<>();
     userMap.put(JsonKey.USER_ID, userIdnew);

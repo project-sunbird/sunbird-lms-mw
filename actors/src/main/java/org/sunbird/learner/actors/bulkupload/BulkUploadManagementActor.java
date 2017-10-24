@@ -24,6 +24,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -84,6 +85,8 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
 
   private void getUploadStatus(Request actorMessage) {
     String processId = (String) actorMessage.getRequest().get(JsonKey.PROCESS_ID);
+    DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
+        .getDecryptionServiceInstance(null);
     Response response = null;
     response =
         cassandraOperation.getRecordById(bulkDb.getKeySpace(), bulkDb.getTableName(), processId);
@@ -104,17 +107,17 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
         resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
         resMap.remove(JsonKey.ID);
         ObjectMapper mapper = new ObjectMapper();
-        Object[] successMap = null;;
+        Object[] successMap = null;
         Object[] failureMap = null;
         try {
           if (null != resMap.get(JsonKey.SUCCESS_RESULT)) {
             successMap =
-                mapper.readValue((String) resMap.get(JsonKey.SUCCESS_RESULT), Object[].class);
+                mapper.readValue(decryptionService.decryptData((String) resMap.get(JsonKey.SUCCESS_RESULT)), Object[].class);
             resMap.put(JsonKey.SUCCESS_RESULT, successMap);
           }
           if (null != resMap.get(JsonKey.FAILURE_RESULT)) {
             failureMap =
-                mapper.readValue((String) resMap.get(JsonKey.FAILURE_RESULT), Object[].class);
+                mapper.readValue(decryptionService.decryptData((String) resMap.get(JsonKey.FAILURE_RESULT)), Object[].class);
             resMap.put(JsonKey.FAILURE_RESULT, failureMap);
           }
         } catch (IOException e) {
@@ -138,7 +141,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
   private void upload(Request actorMessage) throws IOException {
     String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.DATA);
-    req.put(JsonKey.CREATED_BY, req.get("X-Authenticated-Userid"));
+    req.put(JsonKey.CREATED_BY, req.get(JsonKey.CREATED_BY));
     if (((String) req.get(JsonKey.OBJECT_TYPE)).equals(JsonKey.USER)) {
       processBulkUserUpload(req, processId);
     } else if (((String) req.get(JsonKey.OBJECT_TYPE)).equals(JsonKey.ORGANISATION)) {

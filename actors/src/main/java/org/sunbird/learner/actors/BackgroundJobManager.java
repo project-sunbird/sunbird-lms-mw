@@ -807,10 +807,12 @@ public class BackgroundJobManager extends UntypedAbstractActor {
   private void insertUserNotesToEs(Request actorMessage) {
     ProjectLogger.log("Calling method to save inside Es==");
     Map<String, Object> noteMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.NOTE);
-    if (ProjectUtil.isNotNull(noteMap)) {
+    if (ProjectUtil.isNotNull(noteMap) && noteMap.size()>0) {
       String id = (String) noteMap.get(JsonKey.ID);
       insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
           ProjectUtil.EsType.usernotes.getTypeName(), id, noteMap);
+    }else {
+      ProjectLogger.log("No data found to save inside Es for Notes--", LoggerEnum.INFO.name());
     }
   }
 

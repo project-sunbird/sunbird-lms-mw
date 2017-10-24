@@ -17,6 +17,7 @@ import org.sunbird.learner.actors.badges.BadgesActor;
 import org.sunbird.learner.actors.bulkupload.BulkUploadBackGroundJobActor;
 import org.sunbird.learner.actors.bulkupload.BulkUploadManagementActor;
 import org.sunbird.learner.actors.bulkupload.UserDataEncryptionDecryptionServiceActor;
+import org.sunbird.learner.actors.endoresement.SkillmanagementActor;
 import org.sunbird.learner.actors.fileuploadservice.FileUploadServiceActor;
 import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
 import org.sunbird.learner.actors.recommend.RecommendorActor;
@@ -76,7 +77,10 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ActorRef organisationMetricsRouter;
   private ActorRef courseMetricsRouter;
   private ActorRef badgesActor;
+  private ActorRef skillManagementActor;
+
   private ExecutionContext ec;
+
   public static Map<String, ActorRef> routerMap = new HashMap<>();
   private static final int WAIT_TIME_VALUE = 9;
   private static final String COURSE_ENROLLMENT_ROUTER = "courseEnrollmentRouter";
@@ -107,6 +111,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private static final String AUDIT_LOG_MGMT_ACTOR = "auditLogManagementActor";
   private static final String USER_DATA_ENC_DEC_SERVICE_ACTOR =
       "userDataEncryptionDecryptionServiceActor";
+  private static final String SKILL_MANAGEMENT_ACTOR = "skillManagementActor";
 
   
 
@@ -187,7 +192,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
         FromConfig.getInstance()
             .props(Props.create(UserDataEncryptionDecryptionServiceActor.class)),
         USER_DATA_ENC_DEC_SERVICE_ACTOR);
-    auditLogManagementActor = getContext().actorOf(Props.create(ActorAuditLogServiceImpl.class), AUDIT_LOG_MGMT_ACTOR);;
+    auditLogManagementActor = getContext().actorOf(Props.create(ActorAuditLogServiceImpl.class), AUDIT_LOG_MGMT_ACTOR);
+    skillManagementActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(SkillmanagementActor.class)), SKILL_MANAGEMENT_ACTOR);
     ec = getContext().dispatcher();
     initializeRouterMap();
   }
@@ -322,6 +328,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue(), backgroundJobManager);
     routerMap.put(ActorOperations.INSERT_COURSE_BATCH_ES.getValue(), backgroundJobManager);
     routerMap.put(ActorOperations.SCHEDULE_BULK_UPLOAD.getValue(), schedularActor);
+    routerMap.put(ActorOperations.ADD_SKILL.getValue(), skillManagementActor);
+    routerMap.put(ActorOperations.GET_SKILL.getValue(), skillManagementActor);
+    routerMap.put(ActorOperations.GET_SKILLS_LIST.getValue(), skillManagementActor);
   }
 
 

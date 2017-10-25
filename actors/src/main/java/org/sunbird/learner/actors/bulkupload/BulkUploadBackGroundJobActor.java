@@ -704,9 +704,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
         if (!list.isEmpty()) {
           for (Map<String, Object> map : list) {
-            if((((String)map.get(JsonKey.NAME)).toLowerCase()).equalsIgnoreCase(orgType)){
+            if((((String)map.get(JsonKey.NAME)).toLowerCase()).equalsIgnoreCase(orgType.toLowerCase())){
               orgTypeId = (String)map.get(JsonKey.ID);
-              DataCacheHandler.getOrgTypeMap().put((String)map.get(JsonKey.NAME), (String)map.get(JsonKey.ID));
+              DataCacheHandler.getOrgTypeMap().put(((String)map.get(JsonKey.NAME)).toLowerCase(), (String)map.get(JsonKey.ID));
             }
           }
         }

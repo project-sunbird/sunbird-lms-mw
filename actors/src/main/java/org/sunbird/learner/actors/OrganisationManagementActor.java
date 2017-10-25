@@ -136,6 +136,15 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       Response response = cassandraOperation.updateRecord(orgTypeDbInfo.getKeySpace(),
           orgTypeDbInfo.getTableName(), request);
       sender().tell(response, self());
+   // update DataCacheHandler orgType map with new data
+      new Thread() {
+        @Override
+        public void run() {
+          if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+            DataCacheHandler.getOrgTypeMap().put(((String)request.get(JsonKey.NAME)).toLowerCase(),(String)request.get(JsonKey.ID));
+          }
+        }
+      }.start();
     } catch (Exception e) {
       ProjectLogger.log("Exception Occurred while updating data to orgType table :: ", e);
       sender().tell(e, self());
@@ -168,6 +177,15 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       Response response = cassandraOperation.insertRecord(orgTypeDbInfo.getKeySpace(),
           orgTypeDbInfo.getTableName(), request);
       sender().tell(response, self());
+   // update DataCacheHandler orgType map with new data
+      new Thread() {
+        @Override
+        public void run() {
+          if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+            DataCacheHandler.getOrgTypeMap().put(((String)request.get(JsonKey.NAME)).toLowerCase(),(String)request.get(JsonKey.ID));
+          }
+        }
+      }.start();
     } catch (Exception e) {
       ProjectLogger.log("Exception Occurred while inserting data to orgType table :: ", e);
       sender().tell(e, self());
@@ -361,7 +379,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     String orgTypeId = null;
     if (!ProjectUtil
         .isStringNullOREmpty((String) DataCacheHandler.getOrgTypeMap().get(orgType.toLowerCase()))) {
-      orgTypeId = DataCacheHandler.getOrgTypeMap().get(orgType);
+      orgTypeId = DataCacheHandler.getOrgTypeMap().get(orgType.toLowerCase());
     } else {
       Util.DbInfo orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
       Response response = cassandraOperation.getAllRecords(orgTypeDbInfo.getKeySpace(),
@@ -369,9 +387,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
       if (!list.isEmpty()) {
         for (Map<String, Object> map : list) {
-          if((((String)map.get(JsonKey.NAME)).toLowerCase()).equalsIgnoreCase(orgType)){
+          if((((String)map.get(JsonKey.NAME)).toLowerCase()).equalsIgnoreCase(orgType.toLowerCase())){
             orgTypeId = (String)map.get(JsonKey.ID);
-            DataCacheHandler.getOrgTypeMap().put((String)map.get(JsonKey.NAME), (String)map.get(JsonKey.ID));
+            DataCacheHandler.getOrgTypeMap().put(((String)map.get(JsonKey.NAME)).toLowerCase(), (String)map.get(JsonKey.ID));
           }
         }
       }

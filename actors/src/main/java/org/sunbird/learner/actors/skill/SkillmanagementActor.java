@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArraySet;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -136,7 +137,8 @@ public class SkillmanagementActor extends UntypedAbstractActor {
 
     ProjectLogger.log("SkillmanagementActor-endorseSkill called");
     String endoresedUserId  = (String) actorMessage.getRequest().get(JsonKey.ENDORSED_USER_ID);
-    String skillName = (String) actorMessage.getRequest().get(JsonKey.SKILL_NAME);
+    List<String> list = (List<String>) actorMessage.getRequest().get(JsonKey.SKILL_NAME);
+    CopyOnWriteArraySet<String> skillset = new CopyOnWriteArraySet<>(list);
     String requestedByUserId = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
 
     Response response1=cassandraOperation.getRecordById(userDbInfo.getKeySpace(), userDbInfo.getTableName(), endoresedUserId);
@@ -144,94 +146,113 @@ public class SkillmanagementActor extends UntypedAbstractActor {
     List<Map<String, Object>> endoresedList =  (List<Map<String, Object>>) response1.get(JsonKey.RESPONSE);
     List<Map<String, Object>> requestedUserList =  (List<Map<String, Object>>) response2.get(JsonKey.RESPONSE);
 
-
     // check whether both userid exist or not if not throw exception
-    if(endoresedList.isEmpty() || requestedUserList.isEmpty()){
+    if (endoresedList.isEmpty() || requestedUserList.isEmpty()) {
       throw new ProjectCommonException(ResponseCode.invalidUserId.getErrorCode(),
           ResponseCode.invalidUserId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
-    Map<String , Object> endoresedMap = endoresedList.get(0);
-    Map<String , Object> requestedUserMap =  requestedUserList.get(0);
+    Map<String, Object> endoresedMap = endoresedList.get(0);
+    Map<String, Object> requestedUserMap = requestedUserList.get(0);
 
     // check whether both belongs to same org or not(check root  or id of both users)  , if not then throw exception ---
-    if(! compareStrings((String)endoresedMap.get(JsonKey.ROOT_ORG_ID) , (String)requestedUserMap.get(JsonKey.ROOT_ORG_ID))){
+    if (!compareStrings((String) endoresedMap.get(JsonKey.ROOT_ORG_ID),
+        (String) requestedUserMap.get(JsonKey.ROOT_ORG_ID))) {
 
       throw new ProjectCommonException(ResponseCode.canNotEndorse.getErrorCode(),
           ResponseCode.canNotEndorse.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
-    // check whether user have already this skill or not -
-    String id = OneWayHashing.encryptVal(endoresedUserId + JsonKey.PRIMARY_KEY_DELIMETER + skillName.toLowerCase());
-    Response response = cassandraOperation.getRecordById(userSkillDbInfo.getKeySpace() , userSkillDbInfo.getTableName(), id);
-    List<Map<String,Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    for(String skillName : skillset) {
 
-    if(responseList.isEmpty()){
-      // means this is first time skill coming so add this one
-      Map<String , Object> skillMap = new HashMap<>();
-      skillMap.put(JsonKey.ID , id);
-      skillMap.put(JsonKey.USER_ID , endoresedUserId);
-      skillMap.put(JsonKey.SKILL_NAME , skillName);
-      skillMap.put(JsonKey.SKILL_NAME_TO_LOWERCASE , skillName.toLowerCase());
-      skillMap.put(JsonKey.ADDED_BY ,requestedByUserId );
-      skillMap.put(JsonKey.ADDED_AT , format.format(new Date()));
-      Map<String , String> endoresers = new HashMap<>();
-      endoresers.put(requestedByUserId , format.format(new Date()));
-      skillMap.put(JsonKey.ENDORSERS , endoresers);
-      skillMap.put(JsonKey.ENDORSEMENT_COUNT,1);
-      cassandraOperation.insertRecord(userSkillDbInfo.getKeySpace() , userSkillDbInfo.getTableName(), skillMap);
+      if (!ProjectUtil.isStringNullOREmpty(skillName)) {
 
-      updateEs(endoresedUserId);
-    }else{
-      // skill already exist for user simply update the then check if it is already added by same user then dont do anything
-      // otherwise update the existing one ...
+        // check whether user have already this skill or not -
+        String id = OneWayHashing
+            .encryptVal(endoresedUserId + JsonKey.PRIMARY_KEY_DELIMETER + skillName.toLowerCase());
+        Response response = cassandraOperation
+            .getRecordById(userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), id);
+        List<Map<String, Object>> responseList = (List<Map<String, Object>>) response
+            .get(JsonKey.RESPONSE);
 
-      Map<String , Object> responseMap = responseList.get(0);
-      // check whether requested user has already endoresed to that user or not
-      Map<String , String> endoresersMap = (Map<String, String>) responseMap.get(JsonKey.ENDORSERS);
-      if(endoresersMap.containsKey(requestedByUserId)){
-        // donot do anything..
-        ProjectLogger.log(requestedByUserId + " has already endorsed the "+endoresedUserId);
+        if (responseList.isEmpty()) {
+          // means this is first time skill coming so add this one
+          Map<String, Object> skillMap = new HashMap<>();
+          skillMap.put(JsonKey.ID, id);
+          skillMap.put(JsonKey.USER_ID, endoresedUserId);
+          skillMap.put(JsonKey.SKILL_NAME, skillName);
+          skillMap.put(JsonKey.SKILL_NAME_TO_LOWERCASE, skillName.toLowerCase());
+          skillMap.put(JsonKey.ADDED_BY, requestedByUserId);
+          skillMap.put(JsonKey.ADDED_AT, format.format(new Date()));
+          Map<String, String> endoresers = new HashMap<>();
+          endoresers.put(requestedByUserId, format.format(new Date()));
+          skillMap.put(JsonKey.ENDORSERS, endoresers);
+          skillMap.put(JsonKey.ENDORSEMENT_COUNT, 0);
+          cassandraOperation
+              .insertRecord(userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(),
+                  skillMap);
+
+          updateEs(endoresedUserId);
+        } else {
+          // skill already exist for user simply update the then check if it is already added by same user then dont do anything
+          // otherwise update the existing one ...
+
+          Map<String, Object> responseMap = responseList.get(0);
+          // check whether requested user has already endoresed to that user or not
+          Map<String, String> endoresersMap = (Map<String, String>) responseMap
+              .get(JsonKey.ENDORSERS);
+          if (endoresersMap.containsKey(requestedByUserId)) {
+            // donot do anything..
+            ProjectLogger.log(requestedByUserId + " has already endorsed the " + endoresedUserId);
+          } else {
+            Integer endoresementCount = (Integer) responseMap.get(JsonKey.ENDORSEMENT_COUNT) + 1;
+            endoresersMap.put(requestedByUserId, format.format(new Date()));
+            responseMap.put(JsonKey.ENDORSERS, endoresersMap);
+            responseMap.put(JsonKey.ENDORSEMENT_COUNT, endoresementCount);
+            cassandraOperation
+                .updateRecord(userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(),
+                    responseMap);
+            updateEs(endoresedUserId);
+          }
+        }
       }else{
-        Integer endoresementCount = (Integer)responseMap.get(JsonKey.ENDORSEMENT_COUNT)+1;
-        endoresersMap.put(requestedByUserId , format.format(new Date()));
-        responseMap.put(JsonKey.ENDORSERS , endoresersMap);
-        responseMap.put(JsonKey.ENDORSEMENT_COUNT , endoresementCount);
-        cassandraOperation.updateRecord(userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), responseMap);
-        updateEs(endoresedUserId);
+        skillset.remove(skillName);
       }
     }
+
     Response response3 = new Response();
     response3.getResult().put(JsonKey.RESULT, "SUCCESS");
     sender().tell(response3 , self());
-    updateSkillsList(skillName);
+    updateSkillsList(skillset);
   }
 
-  private void updateSkillsList(String skillName) {
+  private void updateSkillsList(CopyOnWriteArraySet<String> skillset) {
 
     Map<String , Object> skills = new HashMap<>();
+    List<String> skillsList = new ArrayList<>();
     Response skilldbresponse=cassandraOperation.getRecordById(skillsListDbInfo.getKeySpace(), skillsListDbInfo.getTableName(), REF_SKILLS_DB_ID);
     List<Map<String, Object>> list =  (List<Map<String, Object>>) skilldbresponse.get(JsonKey.RESPONSE);
 
     if(! list.isEmpty()){
       skills = list.get(0);
-      List<String> skillsList = (List<String>) skills.get(JsonKey.SKILLS);
-      if(!skillsList.contains(skillName.toLowerCase())){
-        skillsList.add(skillName.toLowerCase());
-        skills.put(JsonKey.SKILLS , skillsList);
-        cassandraOperation.updateRecord(skillsListDbInfo.getKeySpace(), skillsListDbInfo.getTableName() ,skills);
-      }
+      skillsList = (List<String>) skills.get(JsonKey.SKILLS);
 
     }else{
       // craete new Entry into the
-      skills.put(JsonKey.ID , REF_SKILLS_DB_ID);
-      List<String> skilllist = new ArrayList<>();
-      skilllist.add(skillName.toLowerCase());
-      skills.put(JsonKey.SKILLS , skilllist);
-      cassandraOperation.insertRecord(skillsListDbInfo.getKeySpace(), skillsListDbInfo.getTableName() , skills);
+      skillsList = new ArrayList<>();
     }
+
+    for(String skillName : skillset){
+      if(!skillsList.contains(skillName.toLowerCase())) {
+        skillsList.add(skillName.toLowerCase());
+      }
+    }
+
+      skills.put(JsonKey.ID , REF_SKILLS_DB_ID);
+      skills.put(JsonKey.SKILLS , skillsList);
+      cassandraOperation.updateRecord(skillsListDbInfo.getKeySpace(), skillsListDbInfo.getTableName() ,skills);
 
   }
 

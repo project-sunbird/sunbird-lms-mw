@@ -7,7 +7,9 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.TestActorRef;
 import akka.testkit.javadsl.TestKit;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -47,11 +49,13 @@ public class SkillmanagementActorTest {
   private static final String ROOT_ORG_ID = "7838hhucy83";
   private static final String ENDORSED_USER_ID = "nmnkfiiuvcehuy";
   private static final String SKILL_NAME="Java";
+  private static List<String> skillsList = new ArrayList<>();
 
   @BeforeClass
   public static void setUp(){
     system = ActorSystem.create("system");
 
+    skillsList.add("Java");
     Util.checkCassandraDbConnections();
     insertUserDataInCassandraAndEs();
 
@@ -83,7 +87,7 @@ public class SkillmanagementActorTest {
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.REQUESTED_BY , USER_ID);
     actorMessage.put(JsonKey.ENDORSED_USER_ID , ENDORSED_USER_ID);
-    actorMessage.put(JsonKey.SKILL_NAME, SKILL_NAME);
+    actorMessage.put(JsonKey.SKILL_NAME, skillsList);
     actorMessage.setOperation(ActorOperations.ADD_SKILL.getValue());
 
     subject.tell(actorMessage, probe.getRef());
@@ -100,7 +104,7 @@ public class SkillmanagementActorTest {
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.REQUESTED_BY , USER_ID);
     actorMessage.put(JsonKey.ENDORSED_USER_ID , ENDORSED_USER_ID);
-    actorMessage.put(JsonKey.SKILL_NAME, SKILL_NAME);
+    actorMessage.put(JsonKey.SKILL_NAME, skillsList);
     actorMessage.setOperation(ActorOperations.ADD_SKILL.getValue());
 
     subject.tell(actorMessage, probe.getRef());
@@ -117,7 +121,7 @@ public class SkillmanagementActorTest {
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.REQUESTED_BY , USER_ID);
     actorMessage.put(JsonKey.ENDORSED_USER_ID , ENDORSED_USER_ID+1123);
-    actorMessage.put(JsonKey.SKILL_NAME, SKILL_NAME);
+    actorMessage.put(JsonKey.SKILL_NAME, skillsList);
     actorMessage.setOperation(ActorOperations.ADD_SKILL.getValue());
 
     subject.tell(actorMessage, probe.getRef());
@@ -195,10 +199,6 @@ public class SkillmanagementActorTest {
     ProjectCommonException res= probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
 
   }
-
-
-
-
 
   @AfterClass
   public static void destroy(){

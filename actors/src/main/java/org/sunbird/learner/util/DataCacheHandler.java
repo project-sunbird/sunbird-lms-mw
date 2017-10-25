@@ -25,6 +25,7 @@ public class DataCacheHandler implements Runnable {
   private static Map<String, Map<String, Object>> pageMap = new ConcurrentHashMap<>();
   private static Map<String, Map<String, Object>> sectionMap = new ConcurrentHashMap<>();
   private static Map<String, Object> roleMap = new ConcurrentHashMap<>();
+  private static Map<String, String> orgTypeMap = new ConcurrentHashMap<>();
   CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   @Override
@@ -33,8 +34,21 @@ public class DataCacheHandler implements Runnable {
     cache(pageMap, "page_management");
     cache(sectionMap, "page_section");
     roleCache(roleMap);
+    orgTypeCache(orgTypeMap);
   }
 
+  private void orgTypeCache(Map<String, String> orgTypeMap) {
+    Response response =
+        cassandraOperation.getAllRecords(Util.getProperty("db.keyspace"), JsonKey.ORG_TYPE_DB);
+    List<Map<String, Object>> responseList =
+        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if (null != responseList && !responseList.isEmpty()) {
+      for (Map<String, Object> resultMap : responseList) {
+        orgTypeMap.put(((String) resultMap.get(JsonKey.NAME)).toLowerCase(), (String)resultMap.get(JsonKey.ID));
+      }
+    }
+  }
+  
   private void roleCache(Map<String, Object> roleMap) {
     Response response =
         cassandraOperation.getAllRecords(Util.getProperty("db.keyspace"), JsonKey.ROLE_GROUP);
@@ -121,4 +135,18 @@ public class DataCacheHandler implements Runnable {
     DataCacheHandler.roleMap = roleMap;
   }
 
+  /**
+   * @return the orgTypeMap
+   */
+  public static Map<String, String> getOrgTypeMap() {
+    return orgTypeMap;
+  }
+
+  /**
+   * @param orgTypeMap the orgTypeMap to set
+   */
+  public static void setOrgTypeMap(Map<String, String> orgTypeMap) {
+    DataCacheHandler.orgTypeMap = orgTypeMap;
+  }
+  
 }

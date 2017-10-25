@@ -10,10 +10,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import org.apache.thrift.transport.TTransportException;
-import org.cassandraunit.CassandraCQLUnit;
-import org.cassandraunit.dataset.cql.ClassPathCQLDataSet;
-import org.cassandraunit.utils.EmbeddedCassandraServerHelper;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -155,6 +151,8 @@ public class Util {
       dbInfoMap.put(JsonKey.USER_BADGES_DB, getDbInfoObject(KEY_SPACE_NAME , "user_badge"));
       dbInfoMap.put(JsonKey.USER_NOTES_DB, getDbInfoObject(KEY_SPACE_NAME, "user_notes"));
       dbInfoMap.put(JsonKey.MEDIA_TYPE_DB, getDbInfoObject(KEY_SPACE_NAME, "media_type"));
+      dbInfoMap.put(JsonKey.USER_SKILL_DB , getDbInfoObject(KEY_SPACE_NAME, "user_skills"));
+      dbInfoMap.put(JsonKey.SKILLS_LIST_DB , getDbInfoObject(KEY_SPACE_NAME, "skills"));
     }
     
     

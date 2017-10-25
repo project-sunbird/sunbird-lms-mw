@@ -141,7 +141,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
   private void upload(Request actorMessage) throws IOException {
     String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.DATA);
-    req.put(JsonKey.CREATED_BY, req.get("X-Authenticated-Userid"));
+    req.put(JsonKey.CREATED_BY, req.get(JsonKey.CREATED_BY));
     if (((String) req.get(JsonKey.OBJECT_TYPE)).equals(JsonKey.USER)) {
       processBulkUserUpload(req, processId);
     } else if (((String) req.get(JsonKey.OBJECT_TYPE)).equals(JsonKey.ORGANISATION)) {

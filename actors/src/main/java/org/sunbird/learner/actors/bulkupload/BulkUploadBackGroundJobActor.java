@@ -793,9 +793,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
               ObjectMapper mapper = new ObjectMapper();
               webPages = mapper.readValue(webPageString, List.class);
             } catch (Exception ex) {
-              ProjectLogger.log("Unable to parse Org contact Details - OrgBulkUpload.", ex);
+              ProjectLogger.log("Unable to parse Web Page Details ", ex);
               userMap.put(JsonKey.ERROR_MSG,
-                  "Unable to parse Org contact Details - OrgBulkUpload.");
+                  "Unable to parse Web Page Details ");
               failureUserReq.add(userMap);
               continue;
             }

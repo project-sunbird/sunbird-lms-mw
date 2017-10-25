@@ -18,16 +18,31 @@ public class ActorSystemFactory {
 
   static {
     PropertiesCache cache = PropertiesCache.getInstance();
-    if ("remote".equalsIgnoreCase(cache.getProperty("background_actor_provider"))) {
+    if ("remote"
+        .equalsIgnoreCase(cache.getProperty("background_actor_provider"))) {
       ProjectLogger.log("Initializing Remote Actor System");
-      if (null == actorSystem) {
-        actorSystem = new RemoteActorSystem();
-      }
+      createRemoteActorSystem();
     } else {
-      ProjectLogger.log("Initializing Local Actor System");
-      if (null == actorSystem) {
-        actorSystem = new LocalActorSystem();
-      }
+      createLocalActorSystem();
+    }
+  }
+  
+  /**
+   * This method will initialize the local actor system.
+   */
+  private static void createLocalActorSystem () {
+    ProjectLogger.log("Initializing Local Actor System");
+    if (null == actorSystem) {
+      actorSystem = new LocalActorSystem();
+    }
+  }
+  
+  /**
+   * This method will initialize the remote actor system.
+   */
+  public static void createRemoteActorSystem() {
+    if (null == actorSystem) {
+      actorSystem = new RemoteActorSystem();
     }
   }
 

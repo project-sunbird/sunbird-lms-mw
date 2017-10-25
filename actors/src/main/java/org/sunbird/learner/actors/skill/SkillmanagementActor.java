@@ -1,4 +1,4 @@
-package org.sunbird.learner.actors.endoresement;
+package org.sunbird.learner.actors.skill;
 
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
@@ -142,7 +142,7 @@ public class SkillmanagementActor extends UntypedAbstractActor {
     Response response1=cassandraOperation.getRecordById(userDbInfo.getKeySpace(), userDbInfo.getTableName(), endoresedUserId);
     Response response2=cassandraOperation.getRecordById(userDbInfo.getKeySpace(), userDbInfo.getTableName(), requestedByUserId);
     List<Map<String, Object>> endoresedList =  (List<Map<String, Object>>) response1.get(JsonKey.RESPONSE);
-    List<Map<String, Object>> requestedUserList =  (List<Map<String, Object>>) response1.get(JsonKey.RESPONSE);
+    List<Map<String, Object>> requestedUserList =  (List<Map<String, Object>>) response2.get(JsonKey.RESPONSE);
 
 
     // check whether both userid exist or not if not throw exception

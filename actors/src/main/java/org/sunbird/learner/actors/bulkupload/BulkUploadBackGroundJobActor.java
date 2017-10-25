@@ -40,6 +40,7 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.AuditOperation;
+import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
@@ -387,6 +388,17 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     Object[] orgContactList = null;
     String contactDetails = null;
 
+    if(concurrentHashMap.containsKey(JsonKey.ORG_TYPE)
+        && !ProjectUtil.isStringNullOREmpty((String) concurrentHashMap.get(JsonKey.ORG_TYPE))){
+      String orgTypeId = validateOrgType((String) concurrentHashMap.get(JsonKey.ORG_TYPE));
+      if(null == orgTypeId){
+        concurrentHashMap.put(JsonKey.ERROR_MSG, "Invalid OrgType.");
+        failureList.add(concurrentHashMap);
+        return;
+      }else{
+       concurrentHashMap.put(JsonKey.ORG_TYPE_ID, orgTypeId);
+      }
+    }
     if (isNull(concurrentHashMap.get(JsonKey.ORGANISATION_NAME)) || ProjectUtil
         .isStringNullOREmpty((String) concurrentHashMap.get(JsonKey.ORGANISATION_NAME))) {
       ProjectLogger.log("orgName is mandatory for org creation.");
@@ -677,6 +689,32 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       return;
     }
 
+  }
+
+  private String validateOrgType(String orgType) {
+    String orgTypeId = null;
+    try{
+      if (!ProjectUtil
+          .isStringNullOREmpty((String) DataCacheHandler.getOrgTypeMap().get(orgType.toLowerCase()))) {
+        orgTypeId = DataCacheHandler.getOrgTypeMap().get(orgType.toLowerCase());
+      } else {
+        Util.DbInfo orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
+        Response response = cassandraOperation.getAllRecords(orgTypeDbInfo.getKeySpace(),
+            orgTypeDbInfo.getTableName());
+        List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+        if (!list.isEmpty()) {
+          for (Map<String, Object> map : list) {
+            if((((String)map.get(JsonKey.NAME)).toLowerCase()).equalsIgnoreCase(orgType)){
+              orgTypeId = (String)map.get(JsonKey.ID);
+              DataCacheHandler.getOrgTypeMap().put((String)map.get(JsonKey.NAME), (String)map.get(JsonKey.ID));
+            }
+          }
+        }
+      }
+    }catch(Exception ex){
+      ProjectLogger.log("Exception occurred while getting orgTypeId from OrgType", ex);
+    }
+    return orgTypeId;
   }
 
   private Map<String, Object> elasticSearchComplexSearch(Map<String, Object> filters, String index,

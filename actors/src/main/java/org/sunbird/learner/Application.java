@@ -22,7 +22,7 @@ public class Application {
   private static ActorSystem system;
   private static final String ACTOR_CONFIG_NAME = "RemoteMWConfig";
   private static final String ACTOR_LOCAL_CONFIG_NAME = "LocaleMWConfig";
-  private static final String ACTOR_SYSTEM_NAME = "RemoteMiddlewareSystem";
+  private static final String LOCAL_ACTOR_SYSTEM_NAME = "LocalMiddlewareActorSystem";
   private static final String REMOTE_ACTOR_SYSTEM_NAME = "RemoteMiddlewareActorSystem";
 
   public static void main(String[] args) {
@@ -61,7 +61,7 @@ public class Application {
   }
 
   public static ActorRef startLocalActorSystem() {
-    system = ActorSystem.create(ACTOR_SYSTEM_NAME,
+    system = ActorSystem.create(LOCAL_ACTOR_SYSTEM_NAME,
         ConfigFactory.load().getConfig(ACTOR_LOCAL_CONFIG_NAME));
     ActorRef learnerActorSelectorRef = system.actorOf(Props.create(RequestRouterActor.class),
         RequestRouterActor.class.getSimpleName());

@@ -31,6 +31,7 @@ import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
+import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -204,6 +205,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     try {
       Map<String, Object> req =
           (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+      if (req.containsKey(JsonKey.ORG_TYPE)
+          && !ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ORG_TYPE))) {
+        req.put(JsonKey.ORG_TYPE_ID, validateOrgType((String) req.get(JsonKey.ORG_TYPE)));
+      }
       Map<String, Object> addressReq = null;
       if (null != actorMessage.getRequest().get(JsonKey.ADDRESS)) {
         addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
@@ -352,6 +357,34 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
   }
 
+  private String validateOrgType(String orgType) {
+    String orgTypeId = null;
+    if (!ProjectUtil
+        .isStringNullOREmpty((String) DataCacheHandler.getOrgTypeMap().get(orgType.toLowerCase()))) {
+      orgTypeId = DataCacheHandler.getOrgTypeMap().get(orgType);
+    } else {
+      Util.DbInfo orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
+      Response response = cassandraOperation.getAllRecords(orgTypeDbInfo.getKeySpace(),
+          orgTypeDbInfo.getTableName());
+      List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+      if (!list.isEmpty()) {
+        for (Map<String, Object> map : list) {
+          if((((String)map.get(JsonKey.NAME)).toLowerCase()).equalsIgnoreCase(orgType)){
+            orgTypeId = (String)map.get(JsonKey.ID);
+            DataCacheHandler.getOrgTypeMap().put((String)map.get(JsonKey.NAME), (String)map.get(JsonKey.ID));
+          }
+        }
+      }
+      if(null == orgTypeId){
+        throw new ProjectCommonException(ResponseCode.invalidOrgType.getErrorCode(),
+            ResponseCode.invalidOrgType.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
+    return orgTypeId;
+  }
+
+
   /**
    * Method to approve the organisation only if the org in inactive state
    */
@@ -497,6 +530,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     try {
       Map<String, Object> req =
           (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+      if (req.containsKey(JsonKey.ORG_TYPE)
+          && !ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ORG_TYPE))) {
+        req.put(JsonKey.ORG_TYPE_ID, validateOrgType((String) req.get(JsonKey.ORG_TYPE)));
+      }
       if (!(validateOrgRequest(req))) {
         ProjectLogger.log("REQUESTED DATA IS NOT VALID");
         return;

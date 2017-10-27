@@ -56,7 +56,7 @@ public class SkillmanagementActorTest {
     system = ActorSystem.create("system");
 
     skillsList.add("Java");
-    Util.checkCassandraDbConnections();
+    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
     insertUserDataInCassandraAndEs();
 
   }

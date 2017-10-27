@@ -55,7 +55,7 @@ public class CourseEnrollmentActorTest {
   @BeforeClass
   public static void setUp() {
     system = ActorSystem.create("system");
-    Util.checkCassandraDbConnections();
+    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
     userCoursesdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
     //PowerMockito.mockStatic(EkStepRequestUtil.class);
     insertBatch();

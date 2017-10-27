@@ -85,6 +85,7 @@ public class CourseEnrollmentActorTest {
     this.testAonReceive();
     this.testBEnrollWithSameCourse();
     this.onReceiveTestWithInvalidRequestType();
+    this.testWithInvalidCourseBatchId();
   }
 
   //@Test()
@@ -189,6 +190,25 @@ public class CourseEnrollmentActorTest {
     subject.tell("INVALID REQ", probe.getRef());
     probe.expectMsgClass( ProjectCommonException.class);
 
+  }
+
+  public void testWithInvalidCourseBatchId() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request reqObj = new Request();
+    reqObj.setRequestId("1");
+    reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
+    reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
+    reqObj.put(JsonKey.USER_ID, "USR");
+    reqObj.put(JsonKey.BATCH_ID,batchId+0123);
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.COURSE, reqObj.getRequest());
+    innerMap.put(JsonKey.USER_ID, "USR");
+    reqObj.setRequest(innerMap);
+
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
   }
 
   @AfterClass

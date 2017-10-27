@@ -123,8 +123,14 @@ public class SkillmanagementActor extends UntypedAbstractActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     List<Map<String , Object>> skillList = (List<Map<String , Object>>)result.get(JsonKey.CONTENT);
+
+    Map<String , Object> skillMap = new HashMap();
+    if(! skillList.isEmpty()){
+      skillMap = skillList.get(0);
+    }
+
       Response response = new Response();
-      response.getResult().put(JsonKey.RESPONSE , skillList);
+      response.getResult().put(JsonKey.SKILLS , skillMap.get(JsonKey.SKILLS));
       sender().tell(response , self());
 
   }

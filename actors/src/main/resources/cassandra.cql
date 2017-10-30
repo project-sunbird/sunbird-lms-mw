@@ -594,4 +594,8 @@ creation of id = one way hash of (userId##skillnametolowercase)
 */
 CREATE TABLE IF NOT EXISTS sunbird.skills(id text,skills list<text>, PRIMARY KEY (id));
 
+ALTER TABLE sunbird.user ADD profileVisibility map<text,text>;
 
+insert into sunbird.role_group (id,name) values ('ANNOUNCEMENT_SENDER','Announcement Sender');
+update sunbird.role_group set url_action_ids=['Announcement Sender'] where id='ANNOUNCEMENT_SENDER';
+insert into sunbird.role (id,name,rolegroupid,status) values ('ANNOUNCEMENT_SENDER','Announcement Sender',['ANNOUNCEMENT_SENDER'],1);

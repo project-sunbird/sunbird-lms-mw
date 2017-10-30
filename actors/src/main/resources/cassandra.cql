@@ -595,3 +595,15 @@ creation of id = one way hash of (userId##skillnametolowercase)
 CREATE TABLE IF NOT EXISTS sunbird.skills(id text,skills list<text>, PRIMARY KEY (id));
 ALTER TABLE sunbird.organisation ADD orgTypeId text;
 
+// T&C - Oct 27,2017
+CREATE TABLE IF NOT EXISTS sunbird.tenant_preference(id text,tenantName text,orgId text,role text, data text, PRIMARY KEY (id));
+CREATE INDEX inx_tp_userId ON sunbird.tenant_preference(orgId);
+
+ALTER TABLE sunbird.user ADD tcstatus text;
+ALTER TABLE sunbird.user ADD tcupdatedat text;
+
+
+
+
+
+

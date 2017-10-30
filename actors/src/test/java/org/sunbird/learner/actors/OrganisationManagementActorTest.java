@@ -62,7 +62,7 @@ public class OrganisationManagementActorTest {
     public static void setUp() {
         Application.startLocalActorSystem();
         system = ActorSystem.create("system");
-        Util.checkCassandraDbConnections();
+        Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
         userManagementDB = Util.dbInfoMap.get(JsonKey.USER_DB);
         addressDB = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
         orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
@@ -193,8 +193,8 @@ public class OrganisationManagementActorTest {
       orgMap.put(JsonKey.ORGANISATION_NAME , "CBSE");
       orgMap.put(JsonKey.DESCRIPTION, "Central Board of Secondary Education");
       orgMap.put("orgCode", "CBSE");
-      orgMap.put(JsonKey.PROVIDER, "pr0001");
-      orgMap.put(JsonKey.EXTERNAL_ID, "ex0001");
+      orgMap.put(JsonKey.PROVIDER, "pr00001");
+      orgMap.put(JsonKey.EXTERNAL_ID, "ex00001");
      // orgMap.put("channel", "test1");
       innerMap.put(JsonKey.ORGANISATION , orgMap);
 
@@ -223,8 +223,8 @@ public class OrganisationManagementActorTest {
       orgMap.put(JsonKey.ORGANISATION_NAME , "CBSE");
       orgMap.put(JsonKey.DESCRIPTION, "Central Board of Secondary Education");
       orgMap.put("orgCode", "CBSE");
-      orgMap.put(JsonKey.PROVIDER, "pr0001");
-      orgMap.put(JsonKey.EXTERNAL_ID, "ex0001");
+      orgMap.put(JsonKey.PROVIDER, "pr00001");
+      orgMap.put(JsonKey.EXTERNAL_ID, "ex00001");
       orgMap.put("channel", "test");
       innerMap.put(JsonKey.ORGANISATION , orgMap);
 

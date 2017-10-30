@@ -49,7 +49,7 @@ public class LearnerStateUpdateActorTest {
     @BeforeClass
     public static void setUp() {
         system = ActorSystem.create("system");
-        Util.checkCassandraDbConnections();
+        Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
         insertCourse();
         insertBatch();
     }

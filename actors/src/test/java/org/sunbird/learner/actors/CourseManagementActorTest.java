@@ -31,7 +31,7 @@ public class CourseManagementActorTest {
     //@BeforeClass
     public static void setUp() {
         system = ActorSystem.create("system");
-        Util.checkCassandraDbConnections();
+        Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
         ref = TestActorRef.create(system, props, "testActor");
         courseManagementActor = ref.underlyingActor();
     }

@@ -167,6 +167,7 @@ public class EsSyncActor extends UntypedAbstractActor {
   private Map<String, Object> getOrgDetails(Entry<String, Object> entry) {
     ProjectLogger.log("fetching org data started");
     Map<String, Object> orgMap = (Map<String, Object>) entry.getValue();
+    orgMap.remove(JsonKey.ORG_TYPE);
     if (orgMap.containsKey(JsonKey.ADDRESS_ID)
         && !ProjectUtil.isStringNullOREmpty((String) orgMap.get(JsonKey.ADDRESS_ID))) {
       orgMap.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),

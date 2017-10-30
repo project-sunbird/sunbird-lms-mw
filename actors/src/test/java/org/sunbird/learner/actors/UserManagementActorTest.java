@@ -74,7 +74,7 @@ public class UserManagementActorTest {
     Application.startLocalActorSystem();
     encryption = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_ENCRYPTION);
     system = ActorSystem.create("system");
-    Util.checkCassandraDbConnections();
+    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
     userManagementDB = Util.dbInfoMap.get(JsonKey.USER_DB);
     addressDB = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     jobDB = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);

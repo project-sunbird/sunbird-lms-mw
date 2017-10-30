@@ -56,7 +56,8 @@ public class Application {
 
 
   public static void checkCassandraConnection() {
-    Util.checkCassandraDbConnections();
+    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
+    Util.checkCassandraDbConnections(JsonKey.SUNBIRD_PLUGIN);
     SchedulerManager.schedule();
   }
 

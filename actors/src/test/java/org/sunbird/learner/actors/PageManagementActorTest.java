@@ -50,7 +50,7 @@ public class PageManagementActorTest {
     @BeforeClass
     public static void setUp() {
         system = ActorSystem.create("system");
-        Util.checkCassandraDbConnections();
+        Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
         pageMgmntDbInfo = Util.dbInfoMap.get(JsonKey.PAGE_MGMT_DB);
         pageSectionDbInfo = Util.dbInfoMap.get(JsonKey.PAGE_SECTION_DB);
     }

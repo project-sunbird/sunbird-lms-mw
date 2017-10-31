@@ -10,6 +10,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.helper.ServiceFactory;
 
 /**
@@ -25,7 +26,9 @@ public class DataCacheHandler implements Runnable {
   private static Map<String, Map<String, Object>> pageMap = new ConcurrentHashMap<>();
   private static Map<String, Map<String, Object>> sectionMap = new ConcurrentHashMap<>();
   private static Map<String, Object> roleMap = new ConcurrentHashMap<>();
+  private static Map<String, String> orgTypeMap = new ConcurrentHashMap<>();
   CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static final String KEY_SPACE_NAME = "sunbird";
 
   @Override
   public void run() {
@@ -33,11 +36,24 @@ public class DataCacheHandler implements Runnable {
     cache(pageMap, "page_management");
     cache(sectionMap, "page_section");
     roleCache(roleMap);
+    orgTypeCache(orgTypeMap);
   }
 
+  private void orgTypeCache(Map<String, String> orgTypeMap) {
+    Response response =
+        cassandraOperation.getAllRecords(KEY_SPACE_NAME, JsonKey.ORG_TYPE_DB);
+    List<Map<String, Object>> responseList =
+        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if (null != responseList && !responseList.isEmpty()) {
+      for (Map<String, Object> resultMap : responseList) {
+        orgTypeMap.put(((String) resultMap.get(JsonKey.NAME)).toLowerCase(), (String)resultMap.get(JsonKey.ID));
+      }
+    }
+  }
+  
   private void roleCache(Map<String, Object> roleMap) {
     Response response =
-        cassandraOperation.getAllRecords(Util.getProperty("db.keyspace"), JsonKey.ROLE_GROUP);
+        cassandraOperation.getAllRecords(KEY_SPACE_NAME, JsonKey.ROLE_GROUP);
     List<Map<String, Object>> responseList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (null != responseList && !responseList.isEmpty()) {
@@ -46,7 +62,7 @@ public class DataCacheHandler implements Runnable {
       }
     }
     Response response2 =
-        cassandraOperation.getAllRecords(Util.getProperty("db.keyspace"), JsonKey.ROLE);
+        cassandraOperation.getAllRecords(KEY_SPACE_NAME, JsonKey.ROLE);
     List<Map<String, Object>> responseList2 =
         (List<Map<String, Object>>) response2.get(JsonKey.RESPONSE);
     if (null != responseList2 && !responseList2.isEmpty()) {
@@ -60,7 +76,7 @@ public class DataCacheHandler implements Runnable {
   private void cache(Map<String, Map<String, Object>> map, String tableName) {
     try {
       Response response =
-          cassandraOperation.getAllRecords(Util.getProperty("db.keyspace"), tableName);
+          cassandraOperation.getAllRecords(KEY_SPACE_NAME, tableName);
       List<Map<String, Object>> responseList =
           (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
       if (null != responseList && !responseList.isEmpty()) {
@@ -74,6 +90,8 @@ public class DataCacheHandler implements Runnable {
           }
         }
       }
+      ProjectLogger.log("pagemap size" +map.size());
+      ProjectLogger.log("pagemap keyset "+map.keySet());
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
@@ -121,4 +139,18 @@ public class DataCacheHandler implements Runnable {
     DataCacheHandler.roleMap = roleMap;
   }
 
+  /**
+   * @return the orgTypeMap
+   */
+  public static Map<String, String> getOrgTypeMap() {
+    return orgTypeMap;
+  }
+
+  /**
+   * @param orgTypeMap the orgTypeMap to set
+   */
+  public static void setOrgTypeMap(Map<String, String> orgTypeMap) {
+    DataCacheHandler.orgTypeMap = orgTypeMap;
+  }
+  
 }

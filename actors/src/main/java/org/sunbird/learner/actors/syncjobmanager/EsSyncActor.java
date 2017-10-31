@@ -42,6 +42,7 @@ public class EsSyncActor extends UntypedAbstractActor {
   private EncryptionService service =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
           .getEncryptionServiceInstance(null);
+  private Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -166,6 +167,7 @@ public class EsSyncActor extends UntypedAbstractActor {
   private Map<String, Object> getOrgDetails(Entry<String, Object> entry) {
     ProjectLogger.log("fetching org data started");
     Map<String, Object> orgMap = (Map<String, Object>) entry.getValue();
+    orgMap.remove(JsonKey.ORG_TYPE);
     if (orgMap.containsKey(JsonKey.ADDRESS_ID)
         && !ProjectUtil.isStringNullOREmpty((String) orgMap.get(JsonKey.ADDRESS_ID))) {
       orgMap.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),
@@ -242,6 +244,10 @@ public class EsSyncActor extends UntypedAbstractActor {
       userMap.put(JsonKey.ENC_EMAIL, email);
       userMap.put(JsonKey.EMAIL, maskingService.maskEmail(decService.decryptData(email)));
     }
+    // add the skills column into ES
+    Response skillresponse = cassandraOperation.getRecordsByProperty(userSkillDbInfo.getKeySpace() , userSkillDbInfo.getTableName(), JsonKey.USER_ID , userId);
+    List<Map<String,Object>> responseList = (List<Map<String, Object>>) skillresponse.get(JsonKey.RESPONSE);
+    userMap.put(JsonKey.SKILLS , responseList);
     // compute profile completeness and error field.
     ProfileCompletenessService service = ProfileCompletenessFactory.getInstance();
     Map<String, Object> profileResponse = service.computeProfile(userMap);

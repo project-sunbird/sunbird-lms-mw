@@ -55,7 +55,7 @@ public class NotesManagementActorTest {
   public static void setUp() {
     system = ActorSystem.create("system");
     ref = TestActorRef.create(system, props, "testActor");
-    Util.checkCassandraDbConnections();
+    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
     insertUserDataToES();
   }
   /**

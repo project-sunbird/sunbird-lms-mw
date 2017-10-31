@@ -46,7 +46,7 @@ public class AuditLogServiceImplTest {
   @BeforeClass
   public static void setUp() {
     system = ActorSystem.create("system");
-    Util.checkCassandraDbConnections();
+    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
   }
 
   @SuppressWarnings({"deprecation", "unchecked"})

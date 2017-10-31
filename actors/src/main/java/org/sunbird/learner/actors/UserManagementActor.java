@@ -7,9 +7,13 @@ import akka.actor.UntypedAbstractActor;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
 import org.apache.velocity.VelocityContext;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.Constants;
@@ -121,6 +125,8 @@ public class UserManagementActor extends UntypedAbstractActor {
           getMediaTypes(actorMessage);
        }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.FORGOT_PASSWORD.getValue())) {
          forgotPassword(actorMessage);
+      }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.PROFILE_VISIBILITY.getValue())) {
+        profileVisibility(actorMessage);
       }
        else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
@@ -136,6 +142,167 @@ public class UserManagementActor extends UntypedAbstractActor {
       }
     }
   }
+  
+  /**
+   * This method will first check user exist with us or not.
+   *  after that it will create private filed Map,
+   *  for creating private field map it will take store value 
+   *  from ES and then a separate map for private field and remove those
+   *  field from original map.
+   *  if will user is sending some public field list as well then it will 
+   *  take private field values from another ES index and update values under 
+   *  original data. 
+   * @param actorMessage
+   */
+  private void profileVisibility(Request actorMessage) {
+    Map<String, Object> map = (Map) actorMessage.getRequest().get(JsonKey.USER);
+    String userId  = (String)map.get(JsonKey.USER_ID);
+    List<String> privateList  = (List)map.get(JsonKey.PRIVATE);
+    List<String> publicList  = (List)map.get(JsonKey.PUBLIC);
+    Map<String, Object> esResult =
+        ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(), userId);
+    if (esResult == null || esResult.size()==0) {
+      throw new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(),
+          ResponseCode.userNotFound.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode()); 
+    }
+    Map<String, Object> esPrivateResult = ElasticSearchUtil
+        .getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId);
+    Map<String,Object> responseMap = new HashMap<>();
+    if(privateList != null && privateList.size()>0) {
+        responseMap = handlePrivateVisibility(privateList, esResult,esPrivateResult);
+    }
+    if (responseMap != null && responseMap.size() > 0) {
+      Map<String, Object> privateDataMap =
+          (Map<String, Object>) responseMap.get(JsonKey.DATA);
+      if (privateDataMap != null && privateDataMap.size() >= esResult.size()) {
+        // this will indicate some extra private data is added
+        esPrivateResult = privateDataMap;
+      }
+    }
+    // now have a check for public field.    
+    if (publicList != null && publicList.size() > 0) {
+      //this estype will hold all private data of user.
+      //now collecting values from private filed and it will update 
+      //under original index with public field.
+      for (String field : publicList) {
+        if (esPrivateResult.containsKey(field)) {
+          esResult.put(field,esPrivateResult.get(field) );  
+        } else {
+          ProjectLogger.log("field value not found inside private index =="+field);
+        }
+      }
+    }
+    Map<String,String> privateFieldMap = new HashMap<>();
+    if (privateList != null) {
+      for (String key : privateList) {
+        privateFieldMap.put(key, JsonKey.PRIVATE);
+      }
+    }
+    if (privateFieldMap.size()>0) {
+      updateCassandraWithPrivateFiled(userId, privateFieldMap);
+      esResult.put(JsonKey.PROFILE_VISIBILITY, privateFieldMap);
+    }
+    boolean updateResponse =true; //updateDataInES(esResult, privateFiledMap, userId);
+    Response response = new Response();
+    if (updateResponse) {
+      response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    } else {
+      response.put(JsonKey.RESPONSE, JsonKey.FAILURE);
+    }
+    sender().tell(response, self()); 
+  }
+
+  
+  private Map<String,Object> handlePrivateVisibility(
+      List<String> privateFieldList, Map<String, Object> data,
+      Map<String, Object> oldPrivateData) {
+    Map<String, Object> privateFiledMap =
+        createPrivateFiledMap(data, privateFieldList);
+    privateFiledMap.putAll(oldPrivateData);
+    Map<String, String> privateField = new HashMap<>();
+    if (privateFieldList != null) {
+      for (String key : privateFieldList) {
+        privateField.put(key, JsonKey.PRIVATE);
+      }
+    }
+    // update old private field with new requested one.
+    Set<Entry<String, Object>> set = privateFiledMap.entrySet();
+    Iterator<Entry<String, Object>> itr = set.iterator();
+    while (itr.hasNext()) {
+      Entry<String, Object> entry = itr.next();
+      if (!privateField.containsKey(entry.getKey())) {
+        privateField.put(entry.getKey(), JsonKey.PRIVATE);
+      }
+    }
+    
+    Map<String,Object> map = new HashMap<>();
+    map.put(JsonKey.PRIVATE, privateField);
+    map.put(JsonKey.DATA, privateFiledMap);
+    return map;
+  }
+  
+  
+  private void handlePublicVisibility (String userId, List<String> publicFieldList,Map<String,Object> data) {
+    
+  }
+  
+  /**
+   * This method will create a private field map and remove those filed from 
+   * original map.
+   * @param map Map<String, Object> complete save data Map
+   * @param fields List<String> list of private fields
+   * @return Map<String, Object> map of private field with their original values.
+   */
+  private Map<String, Object> createPrivateFiledMap(Map<String, Object> map,
+      List<String> fields) {
+    Map<String, Object> privateMap = new HashMap<>();
+    if(fields != null && fields.size()>0) {
+      for (String field : fields) {
+      privateMap.put(field, map.get(field));
+      map.remove(field);
+      }
+    }
+    return privateMap;
+  }
+  
+  /**
+   * THis methods will update user private field under cassandra.
+   * @param userId Stirng
+   * @param privateFieldMap Map<String,String>
+   */
+  private void updateCassandraWithPrivateFiled (String userId, Map<String,String> privateFieldMap) {
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    Map<String,Object> reqMap = new HashMap<>();
+    reqMap.put(JsonKey.ID, userId);
+    reqMap.put(JsonKey.PROFILE_VISIBILITY, privateFieldMap);
+    Response response = cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(),reqMap);
+    String val  =(String)response.get(JsonKey.RESPONSE);
+    ProjectLogger.log("Private field updated under cassandra==" + val);
+  }
+  
+  /**
+   * This method will first removed the remove the saved private data for the user and then
+   * it will create new private data for that user.
+   * @param dataMap Map<String, Object> allData
+   * @param privateDataMap Map<String, Object> only private data.
+   * @param userId String
+   * @return boolean
+   */
+  private boolean updateDataInES(Map<String, Object> dataMap,
+      Map<String, Object> privateDataMap, String userId) {
+    boolean response = false;
+    ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId);
+    ElasticSearchUtil.createData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId,
+        privateDataMap);
+    response =
+        ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(), userId, dataMap);
+    return response;
+  } 
   
   /**
    * This method will verify the loginId or email key against cassandra db.

@@ -29,7 +29,7 @@ public class RecommendorActorTest {
     @BeforeClass
     public static void setUp() {
         system = ActorSystem.create("system");
-        Util.checkCassandraDbConnections();
+        Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
     }
 
     @Test()

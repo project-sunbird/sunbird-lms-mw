@@ -3,7 +3,6 @@ package org.sunbird.learner.actors;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
-import akka.actor.UntypedAbstractActor;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,6 +43,8 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
+
+import akka.actor.UntypedAbstractActor;
 
 /**
  * This actor will handle course enrollment operation .
@@ -258,14 +259,62 @@ public class UserManagementActor extends UntypedAbstractActor {
   private Map<String, Object> createPrivateFiledMap(Map<String, Object> map,
       List<String> fields) {
     Map<String, Object> privateMap = new HashMap<>();
+    Map<String,List<String>> tempMap = new HashMap<>();
     if(fields != null && fields.size()>0) {
       for (String field : fields) {
-      privateMap.put(field, map.get(field));
-      map.remove(field);
+       // now if field contains {address.someField,education.someField,jobprofile.someField}
+        //then we need to remove those filed 
+       if (field.contains(JsonKey.ADDRESS+".")){
+         tempMap = addPrivateField(JsonKey.ADDRESS, tempMap, field);
+       } else if (field.contains(JsonKey.EDUCATION+"."))  {
+         tempMap = addPrivateField(JsonKey.EDUCATION, tempMap, field);
+       }else if (field.contains(JsonKey.JOB_PROFILE+".")) {
+         tempMap = addPrivateField(JsonKey.EDUCATION, tempMap, field);
+       }else {
+        privateMap.put(field, map.get(field));
+        map.remove(field);
+       }
       }
     }
     return privateMap;
   }
+  
+  
+  private Map<String, List<String>> addPrivateField(String key,
+      Map<String, List<String>> map, String privateField) {
+    if (map.containsKey(key)) {
+      List<String> list = (List) map.get(key);
+      list.add(privateField);
+    } else {
+      List<String> list = new ArrayList<>();
+      list.add(privateField);
+      map.put(key, list);
+    }
+    return map;
+  }
+  
+  @SuppressWarnings("unchecked")
+  private void updatePrivateKey(List<String> keys, Map<String, Object> data,
+      Map<String, Object> privateMap, String attribute) {
+    if (keys == null || keys.size() == 0)
+      return;
+    List<Map<String, Object>> reqData =
+        (List<Map<String, Object>>) data.get(attribute);
+    List<Map<String, Object>> privateList = new ArrayList<>();
+    if (reqData != null && reqData.size() > 0) {
+      for (Map<String, Object> map : reqData) {
+        Map<String, Object> innerPrivateMap = new HashMap<>();
+        for (String key : keys) {
+          innerPrivateMap.put(key, map.get(key));
+          map.remove(key);
+        }
+        privateList.add(innerPrivateMap);
+      }
+      privateMap.put(attribute, privateList);
+    }
+  }
+  
+  
   
   /**
    * THis methods will update user private field under cassandra.

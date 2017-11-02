@@ -595,11 +595,19 @@ creation of id = one way hash of (userId##skillnametolowercase)
 CREATE TABLE IF NOT EXISTS sunbird.skills(id text,skills list<text>, PRIMARY KEY (id));
 ALTER TABLE sunbird.organisation ADD orgTypeId text;
 
+ALTER TABLE sunbird.user ADD profileVisibility map<text,text>;
 
-
-
-
+insert into sunbird.role_group (id,name) values ('ANNOUNCEMENT_SENDER','Announcement Sender');
+update sunbird.role_group set url_action_ids=['Announcement Sender'] where id='ANNOUNCEMENT_SENDER';
+insert into sunbird.role (id,name,rolegroupid,status) values ('ANNOUNCEMENT_SENDER','Announcement Sender',['ANNOUNCEMENT_SENDER'],1);
 //Announcement apis -27th Oct 
+// T&C - Oct 27,2017
+CREATE TABLE IF NOT EXISTS sunbird.tenant_preference(id text,tenantName text,orgId text,role text, data text, PRIMARY KEY (id));
+CREATE INDEX inx_tp_userId ON sunbird.tenant_preference(orgId);
+
+ALTER TABLE sunbird.user ADD tcstatus text;
+ALTER TABLE sunbird.user ADD tcupdatedat text;
+//Announcement apis -27th Oct
 CREATE KEYSPACE IF NOT EXISTS sunbirdplugin WITH replication = {'class':'SimpleStrategy','replication_factor':1};
 //CREATE TYPE IF NOT EXISTS sunbirdplugin.attachment (id text,filename text,mimetype text);
 CREATE TABLE sunbirdplugin.announcement (id text,userid text,sourceid text,details map<text, text>,links list<text>,attachments list<text>,target text,sentcount int,priority text,expiry text,status text,createddate text,updateddate text, PRIMARY KEY (id));
@@ -608,3 +616,6 @@ CREATE TABLE sunbirdplugin.metrics (id text,userid text,announcementid text,acti
 CREATE TABLE sunbirdplugin.announcementtype (id text,rootorgid text,name text,status text,createddate text, PRIMARY KEY (id));
 CREATE TABLE sunbirdplugin.announcementauth (id text,userid text,rootorgid text,permissions map<text, text>,status text,createddate text, PRIMARY KEY (id));
 
+//CLIENT_INFO table for master key
+CREATE TABLE IF NOT EXISTS sunbird.client_info(id text, clientname text, masterkey text, createddate text, updateddate text, PRIMARY KEY (id));
+CREATE INDEX inx_ci_clientname ON sunbird.client_info(clientname);

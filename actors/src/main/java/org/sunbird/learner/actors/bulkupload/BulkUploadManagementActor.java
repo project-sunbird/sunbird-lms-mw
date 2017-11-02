@@ -194,7 +194,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
           ResponseCode.csvError.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     // save csv file to db
-    uploadCsvToDB(batchList, processId, null, JsonKey.BATCH, (String) req.get(JsonKey.REQUESTED_BY),
+    uploadCsvToDB(batchList, processId, null, JsonKey.BATCH, (String) req.get(JsonKey.CREATED_BY),
         null);
 
   }
@@ -250,7 +250,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
     }
     // save csv file to db
     uploadCsvToDB(orgList, processId, null, JsonKey.ORGANISATION,
-        (String) req.get(JsonKey.REQUESTED_BY), null);
+        (String) req.get(JsonKey.CREATED_BY), null);
   }
 
   private void validateOrgProperty(String[] property) {

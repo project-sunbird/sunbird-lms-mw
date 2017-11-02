@@ -17,6 +17,7 @@ import org.sunbird.learner.actors.badges.BadgesActor;
 import org.sunbird.learner.actors.bulkupload.BulkUploadBackGroundJobActor;
 import org.sunbird.learner.actors.bulkupload.BulkUploadManagementActor;
 import org.sunbird.learner.actors.bulkupload.UserDataEncryptionDecryptionServiceActor;
+import org.sunbird.learner.actors.client.ClientManagementActor;
 import org.sunbird.learner.actors.skill.SkillmanagementActor;
 import org.sunbird.learner.actors.fileuploadservice.FileUploadServiceActor;
 import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
@@ -24,6 +25,7 @@ import org.sunbird.learner.actors.recommend.RecommendorActor;
 import org.sunbird.learner.actors.search.CourseSearchActor;
 import org.sunbird.learner.actors.search.SearchHandlerActor;
 import org.sunbird.learner.actors.syncjobmanager.EsSyncActor;
+import org.sunbird.learner.actors.tenantpreference.TenantPreferenceManagementActor;
 import org.sunbird.learner.audit.impl.ActorAuditLogServiceImpl;
 import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.util.Util;
@@ -78,6 +80,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ActorRef courseMetricsRouter;
   private ActorRef badgesActor;
   private ActorRef skillManagementActor;
+  private ActorRef tenantPrefManagementActor;
+  private ActorRef clientManagementActor;
 
   private ExecutionContext ec;
 
@@ -112,6 +116,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private static final String USER_DATA_ENC_DEC_SERVICE_ACTOR =
       "userDataEncryptionDecryptionServiceActor";
   private static final String SKILL_MANAGEMENT_ACTOR = "skillManagementActor";
+  private static final String TENANT_PREFERENCE_MNGT_ACTOR = "tenantPreferenceManagementActor";
+  private static final String CLIENT_MANAGEMENT_ACTOR = "clientManagementActor";
 
   
 
@@ -194,6 +200,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
         USER_DATA_ENC_DEC_SERVICE_ACTOR);
     auditLogManagementActor = getContext().actorOf(Props.create(ActorAuditLogServiceImpl.class), AUDIT_LOG_MGMT_ACTOR);
     skillManagementActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(SkillmanagementActor.class)), SKILL_MANAGEMENT_ACTOR);
+    tenantPrefManagementActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(TenantPreferenceManagementActor.class)), TENANT_PREFERENCE_MNGT_ACTOR);
+    clientManagementActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(ClientManagementActor.class)), CLIENT_MANAGEMENT_ACTOR);
     ec = getContext().dispatcher();
     initializeRouterMap();
   }
@@ -332,6 +340,13 @@ public class RequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.ADD_SKILL.getValue(), skillManagementActor);
     routerMap.put(ActorOperations.GET_SKILL.getValue(), skillManagementActor);
     routerMap.put(ActorOperations.GET_SKILLS_LIST.getValue(), skillManagementActor);
+    routerMap.put(ActorOperations.CREATE_TENANT_PREFERENCE.getValue(), tenantPrefManagementActor);
+    routerMap.put(ActorOperations.UPDATE_TENANT_PREFERENCE.getValue(), tenantPrefManagementActor);
+    routerMap.put(ActorOperations.GET_TENANT_PREFERENCE.getValue(), tenantPrefManagementActor);
+    routerMap.put(ActorOperations.UPDATE_TC_STATUS_OF_USER.getValue(), tenantPrefManagementActor);
+    routerMap.put(ActorOperations.REGISTER_CLIENT.getValue(), clientManagementActor);
+    routerMap.put(ActorOperations.UPDATE_CLIENT_KEY.getValue(), clientManagementActor);
+    routerMap.put(ActorOperations.GET_CLIENT_KEY.getValue(), clientManagementActor);
   }
 
 

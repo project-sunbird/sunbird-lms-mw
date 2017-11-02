@@ -674,6 +674,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     } else {
       userMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
     }
+    checkPhoneUniqueness(userMap,JsonKey.UPDATE);
     if (null != userMap.get(JsonKey.EMAIL)) {
       checkForEmailAndUserNameUniqueness(userMap, usrDbInfo);
     }
@@ -697,7 +698,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     userMap.remove(JsonKey.LOGIN_ID);
 
     if (isSSOEnabled) {
-      UpdateKeyCloakUserBase(userMap);
+      updateKeyCloakUserBase(userMap);
     }
     userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
@@ -992,9 +993,17 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
   }
 
-  private void UpdateKeyCloakUserBase(Map<String, Object> userMap) {
+  private void updateKeyCloakUserBase(Map<String, Object> userMap) {
     try {
       String userId = ssoManager.updateUser(userMap);
+      
+      if(!ProjectUtil.isStringNullOREmpty(userId) && null != userMap.get(JsonKey.PHONE)){
+        boolean bool = ssoManager.addAttributesToKeyCloak(JsonKey.MOBILE, (String) userMap.get(JsonKey.PHONE), userId);
+        if(!bool){
+          ProjectLogger.log("phone not saved for userId "+userId);
+        }
+      }
+      
       if (!(!ProjectUtil.isStringNullOREmpty(userId) && userId.equalsIgnoreCase(JsonKey.SUCCESS))) {
         throw new ProjectCommonException(ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
             ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
@@ -1027,6 +1036,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
+    checkPhoneUniqueness(userMap,JsonKey.CREATE);
     Map<String, Object> emailTemplateMap = new HashMap<>(userMap);
     if (userMap.containsKey(JsonKey.WEB_PAGES)) {
       SocialMediaType
@@ -1166,6 +1176,12 @@ public class UserManagementActor extends UntypedAbstractActor {
         userId = responseMap.get(JsonKey.USER_ID);
         accessToken = responseMap.get(JsonKey.ACCESSTOKEN);
         if (!ProjectUtil.isStringNullOREmpty(userId)) {
+          if(null != userMap.get(JsonKey.PHONE)){
+            boolean bool = ssoManager.addAttributesToKeyCloak(JsonKey.MOBILE, (String) userMap.get(JsonKey.PHONE), userId);
+            if(!bool){
+              ProjectLogger.log("phone not saved for userId "+userId);
+            }
+          }
           userMap.put(JsonKey.USER_ID, userId);
           userMap.put(JsonKey.ID, userId);
         } else {
@@ -1313,6 +1329,40 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
 
   }
+
+  private void checkPhoneUniqueness(Map<String,Object> userMap,String opType) {
+    String phone  = (String) userMap.get(JsonKey.PHONE);
+    if(!ProjectUtil.isStringNullOREmpty(phone)){
+      try{
+        phone = encryptionService.encryptData(phone);
+      }catch(Exception e){
+        ProjectLogger.log("Exception occured while encrypting phone number ", e);
+      }
+      Map<String,Object> filters = new HashMap<>();
+      filters.put(JsonKey.ENC_PHONE, phone);
+      Map<String,Object> map = new HashMap<>();
+      map.put(JsonKey.FILTERS, filters);
+      SearchDTO searchDto = Util.createSearchDto(map);
+      Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto,
+          ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName());
+        List<Map<String, Object>> userMapList =
+            (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+        if(!userMapList.isEmpty()){
+          if(opType.equalsIgnoreCase(JsonKey.CREATE)){
+            throw  new ProjectCommonException(ResponseCode.PhoneNumberInUse.getErrorCode(),
+                  ResponseCode.PhoneNumberInUse.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
+          }else{
+            Map<String,Object> user = userMapList.get(0);
+            if(!(((String)user.get(JsonKey.ID)).equalsIgnoreCase((String)userMap.get(JsonKey.ID)))){
+              throw  new ProjectCommonException(ResponseCode.PhoneNumberInUse.getErrorCode(),
+                  ResponseCode.PhoneNumberInUse.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
+            }
+          }
+        }
+      }
+    }
 
   private void insertOrganisationDetails(Map<String, Object> userMap, DbInfo usrOrgDb) {
 

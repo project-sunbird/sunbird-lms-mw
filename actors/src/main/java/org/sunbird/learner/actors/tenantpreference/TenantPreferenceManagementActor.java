@@ -2,6 +2,7 @@ package org.sunbird.learner.actors.tenantpreference;
 
 import akka.actor.UntypedAbstractActor;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -117,6 +118,7 @@ public class TenantPreferenceManagementActor extends UntypedAbstractActor {
     List<Map<String, Object>> reqList = (List<Map<String, Object>>) actorMessage.getRequest().get(JsonKey.TENANT_PREFERENCE);
 
     Response finalResponse = new Response();
+    List<Map<String , Object>> responseList = new ArrayList<>();
     String requestedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
     String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
 
@@ -141,26 +143,11 @@ public class TenantPreferenceManagementActor extends UntypedAbstractActor {
       String id = (String) map.get(JsonKey.ID);
 
       if(ProjectUtil.isStringNullOREmpty(id)){
-        String requestedRole =(String)map.get(JsonKey.ROLE);
-        if(ProjectUtil.isStringNullOREmpty(requestedRole)){
-          //throw exception either Id or role is mandatory .
-          throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-        }
 
-        boolean flag = false;
-        for(Map<String , Object> m : list){
-          if(requestedRole.equals((String)m.get(JsonKey.ROLE)) && orgId.equals((String)m.get(JsonKey.ORG_ID))){
-            dbMap = m;
-            flag = true;
-            break;
-          }
-        }
-        if(!flag){
-          // means data not found
-          finalResponse.getResult().put(requestedRole , " This role does not exist");
-        }
+        Map<String , Object> responseMap = new HashMap<>();
+        responseMap.put(JsonKey.ID , id);
+        responseMap.put(JsonKey.STATUS , JsonKey.FAILURE);
+        responseList.add(responseMap);
       }else{
         boolean flag = false;
         for(Map<String , Object> m : list){
@@ -172,7 +159,10 @@ public class TenantPreferenceManagementActor extends UntypedAbstractActor {
         }
         if(!flag){
           // means data not found
-          finalResponse.getResult().put(id , " This id does not exist");
+          Map<String , Object> responseMap = new HashMap<>();
+          responseMap.put(JsonKey.ID , id);
+          responseMap.put(JsonKey.STATUS , "Invalid Id");
+          responseList.add(responseMap);
         }
       }
 
@@ -184,10 +174,14 @@ public class TenantPreferenceManagementActor extends UntypedAbstractActor {
           dbMap.put(JsonKey.DATA , map.get(JsonKey.DATA));
         }
         cassandraOperation.updateRecord(tenantPreferenceDbInfo.getKeySpace(), tenantPreferenceDbInfo.getTableName(), dbMap);
-        finalResponse.put((String) dbMap.get(JsonKey.ID), JsonKey.SUCCESS);
+        Map<String , Object> responseMap = new HashMap<>();
+        responseMap.put(JsonKey.ID , id);
+        responseMap.put(JsonKey.STATUS , JsonKey.SUCCESS);
+        responseList.add(responseMap);
       }
 
     }
+    finalResponse.getResult().put(JsonKey.RESPONSE , responseList);
     sender().tell(finalResponse , self());
 
   }
@@ -202,6 +196,7 @@ public class TenantPreferenceManagementActor extends UntypedAbstractActor {
     List<Map<String, Object>> req = (List<Map<String, Object>>) actorMessage.getRequest().get(JsonKey.TENANT_PREFERENCE);
 
     Response finalResponse = new Response();
+    List<Map<String , Object>> responseList = new ArrayList<>();
     String requestedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
     String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
 
@@ -240,7 +235,10 @@ public class TenantPreferenceManagementActor extends UntypedAbstractActor {
       boolean flag = true;
       for(Map<String,Object> m : list){
         if(role.equalsIgnoreCase((String) m.get(JsonKey.ROLE))){
-          finalResponse.getResult().put(role , "Tenant preference already exist for role "+role);
+          Map<String, Object> responseMap = new HashMap<>();
+          responseMap.put(JsonKey.ROLE , role);
+          responseMap.put(JsonKey.STATUS , "Tenant preference already exist for role ");
+          responseList.add(responseMap);
           flag = false;
           break;
         }
@@ -255,9 +253,15 @@ public class TenantPreferenceManagementActor extends UntypedAbstractActor {
         dbMap.put(JsonKey.DATA, (String) map.get(JsonKey.DATA));
         cassandraOperation.insertRecord(tenantPreferenceDbInfo.getKeySpace(),
             tenantPreferenceDbInfo.getTableName(), dbMap);
+        Map<String, Object> responseMap = new HashMap<>();
+        responseMap.put(JsonKey.ID ,id);
+        responseMap.put(JsonKey.ROLE , role);
+        responseMap.put(JsonKey.STATUS , JsonKey.SUCCESS);
+        responseList.add(responseMap);
         finalResponse.getResult().put(role, JsonKey.SUCCESS);
       }
     }
+    finalResponse.getResult().put(JsonKey.RESPONSE , responseList);
     sender().tell(finalResponse , self());
   }
 

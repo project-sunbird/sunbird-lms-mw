@@ -190,27 +190,6 @@ public class TenantPreferenceManagementActorTest {
     Response res= probe.expectMsgClass(duration("100 second"),Response.class);
   }
 
-  @Test
-  public void testUpdateTanentPreferenceWithoutRole(){
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    Request actorMessage = new Request();
-    List<Map<String , Object>> reqList = new ArrayList<>();
-
-    Map<String , Object> map = new HashMap<>();
-    //map.put(JsonKey.ROLE , "admin");
-    reqList.add(map);
-
-    actorMessage.getRequest().put(JsonKey.TENANT_PREFERENCE , reqList);
-    actorMessage.getRequest().put(JsonKey.ORG_ID , orgId);
-    actorMessage.getRequest().put(JsonKey.REQUESTED_BY , USER_ID);
-    actorMessage.setOperation(ActorOperations.UPDATE_TENANT_PREFERENCE.getValue());
-
-    subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
-  }
-
 
   @Test
   public void testUpdateTanentPreferenceWithInvalidRequestData(){

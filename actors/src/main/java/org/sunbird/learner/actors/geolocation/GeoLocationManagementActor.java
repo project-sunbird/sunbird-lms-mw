@@ -150,6 +150,7 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
       dbMap.put(JsonKey.ROOT_ORG_ID , rootOrgId);
       dbMap.put(JsonKey.LOCATION , location);
       dbMap.put(JsonKey.TOPIC , id);
+      dbMap.put(JsonKey.TYPE , type);
 
       cassandraOperation.insertRecord(geoLocationDbInfo.getKeySpace() , geoLocationDbInfo.getTableName() , dbMap);
 

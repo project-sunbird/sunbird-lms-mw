@@ -595,7 +595,6 @@ creation of id = one way hash of (userId##skillnametolowercase)
 CREATE TABLE IF NOT EXISTS sunbird.skills(id text,skills list<text>, PRIMARY KEY (id));
 ALTER TABLE sunbird.organisation ADD orgTypeId text;
 
-<<<<<<< HEAD
 ALTER TABLE sunbird.user ADD profileVisibility map<text,text>;
 
 insert into sunbird.role_group (id,name) values ('ANNOUNCEMENT_SENDER','Announcement Sender');
@@ -616,3 +615,7 @@ CREATE TABLE sunbirdplugin.attachment (id text,file text,filename text,mimetype 
 CREATE TABLE sunbirdplugin.metrics (id text,userid text,announcementid text,activity text,channel text,createddate text, PRIMARY KEY (id));
 CREATE TABLE sunbirdplugin.announcementtype (id text,rootorgid text,name text,status text,createddate text, PRIMARY KEY (id));
 CREATE TABLE sunbirdplugin.announcementauth (id text,userid text,rootorgid text,permissions map<text, text>,status text,createddate text, PRIMARY KEY (id));
+
+//CLIENT_INFO table for master key
+CREATE TABLE IF NOT EXISTS sunbird.client_info(id text, clientname text, masterkey text, createddate text, updateddate text, PRIMARY KEY (id));
+CREATE INDEX inx_ci_clientname ON sunbird.client_info(clientname);

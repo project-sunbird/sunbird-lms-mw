@@ -154,7 +154,7 @@ public class Util {
       dbInfoMap.put(JsonKey.USER_SKILL_DB , getDbInfoObject(KEY_SPACE_NAME, "user_skills"));
       dbInfoMap.put(JsonKey.SKILLS_LIST_DB , getDbInfoObject(KEY_SPACE_NAME, "skills"));
       dbInfoMap.put(JsonKey.TENANT_PREFERENCE_DB , getDbInfoObject(KEY_SPACE_NAME, "tenant_preference"));
-
+      dbInfoMap.put(JsonKey.CLIENT_INFO_DB, getDbInfoObject(KEY_SPACE_NAME, "client_info"));
     }
     
     

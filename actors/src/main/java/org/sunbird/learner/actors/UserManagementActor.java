@@ -767,7 +767,7 @@ public class UserManagementActor extends UntypedAbstractActor {
             userAuthMap.put(JsonKey.USER_ID, resultMap.get(JsonKey.ID));
             userAuthMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
 
-            String userAuth = ProjectUtil.createUserAuthToken((String) resultMap.get(JsonKey.ID),
+            String userAuth = ProjectUtil.createAuthToken((String) resultMap.get(JsonKey.ID),
                 (String) reqMap.get(JsonKey.SOURCE));
             userAuthMap.put(JsonKey.ID, userAuth);
             checkForDuplicateUserAuthToken(userAuthMap, resultMap, reqMap);
@@ -1754,7 +1754,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     } else {
       cassandraOperation.deleteRecord(userAuthDbInfo.getKeySpace(), userAuthDbInfo.getTableName(),
           (String) (userAuthList.get(0)).get(JsonKey.ID));
-      userAuth = ProjectUtil.createUserAuthToken((String) resultMap.get(JsonKey.ID),
+      userAuth = ProjectUtil.createAuthToken((String) resultMap.get(JsonKey.ID),
           (String) reqMap.get(JsonKey.SOURCE));
       userAuthMap.put(JsonKey.ID, userAuth);
       userAuthMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());

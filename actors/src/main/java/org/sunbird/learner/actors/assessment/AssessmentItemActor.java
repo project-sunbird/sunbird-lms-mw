@@ -74,8 +74,8 @@ public class AssessmentItemActor extends UntypedAbstractActor {
 		try{
 		assmntResponse.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
 		for(Map<String, Object> assmtMap : assmtItemMapList){
-			String uniqueId = ProjectUtil.createUserAuthToken((String)req.get(JsonKey.REQUESTED_BY),"");
-			assmtMap.put(JsonKey.ID, uniqueId);
+		    String uniqueId = ProjectUtil.createAuthToken((String)req.get(JsonKey.REQUESTED_BY),"");
+            assmtMap.put(JsonKey.ID, uniqueId);
 			if(assmtMap.containsKey(JsonKey.TIME_TAKEN)){
 				assmtMap.put(JsonKey.TIME_TAKEN, ((BigInteger)assmtMap.get(JsonKey.TIME_TAKEN)).intValue());
 			}

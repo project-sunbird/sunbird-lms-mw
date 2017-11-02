@@ -80,7 +80,7 @@ public class TenantPreferenceManagementActorTest {
     reqList.add(map);
 
     actorMessage.getRequest().put(JsonKey.TENANT_PREFERENCE , reqList);
-    actorMessage.getRequest().put(JsonKey.ORG_ID , orgId);
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId);
     actorMessage.getRequest().put(JsonKey.REQUESTED_BY , USER_ID);
     actorMessage.setOperation(ActorOperations.CREATE_TENANT_PREFERENCE.getValue());
 
@@ -101,7 +101,7 @@ public class TenantPreferenceManagementActorTest {
     reqList.add(map);
 
     actorMessage.getRequest().put(JsonKey.TENANT_PREFERENCE , reqList);
-    actorMessage.getRequest().put(JsonKey.ORG_ID , orgId);
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId);
     actorMessage.getRequest().put(JsonKey.REQUESTED_BY , USER_ID);
     actorMessage.setOperation(ActorOperations.CREATE_TENANT_PREFERENCE.getValue());
 
@@ -122,7 +122,7 @@ public class TenantPreferenceManagementActorTest {
     reqList.add(map);
 
     actorMessage.getRequest().put(JsonKey.TENANT_PREFERENCE , reqList);
-    actorMessage.getRequest().put(JsonKey.ORG_ID , "");
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , "");
     actorMessage.getRequest().put(JsonKey.REQUESTED_BY , USER_ID);
     actorMessage.setOperation(ActorOperations.CREATE_TENANT_PREFERENCE.getValue());
 
@@ -143,7 +143,7 @@ public class TenantPreferenceManagementActorTest {
     reqList.add(map);
 
     actorMessage.getRequest().put(JsonKey.TENANT_PREFERENCE , reqList);
-    actorMessage.getRequest().put(JsonKey.ORG_ID , "nc389f3ffi");
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , "nc389f3ffi");
     actorMessage.getRequest().put(JsonKey.REQUESTED_BY , USER_ID);
     actorMessage.setOperation(ActorOperations.CREATE_TENANT_PREFERENCE.getValue());
 
@@ -160,7 +160,7 @@ public class TenantPreferenceManagementActorTest {
     List<Map<String , Object>> reqList = new ArrayList<>();
 
     actorMessage.getRequest().put(JsonKey.TENANT_PREFERENCE , reqList);
-    actorMessage.getRequest().put(JsonKey.ORG_ID , orgId);
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId);
     actorMessage.getRequest().put(JsonKey.REQUESTED_BY , USER_ID);
     actorMessage.setOperation(ActorOperations.CREATE_TENANT_PREFERENCE.getValue());
 
@@ -182,7 +182,7 @@ public class TenantPreferenceManagementActorTest {
     reqList.add(map);
 
     actorMessage.getRequest().put(JsonKey.TENANT_PREFERENCE , reqList);
-    actorMessage.getRequest().put(JsonKey.ORG_ID , orgId);
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId);
     actorMessage.getRequest().put(JsonKey.REQUESTED_BY , USER_ID);
     actorMessage.setOperation(ActorOperations.UPDATE_TENANT_PREFERENCE.getValue());
 
@@ -200,7 +200,7 @@ public class TenantPreferenceManagementActorTest {
     List<Map<String , Object>> reqList = new ArrayList<>();
 
     actorMessage.getRequest().put(JsonKey.TENANT_PREFERENCE , reqList);
-    actorMessage.getRequest().put(JsonKey.ORG_ID , orgId);
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId);
     actorMessage.getRequest().put(JsonKey.REQUESTED_BY , USER_ID);
     actorMessage.setOperation(ActorOperations.UPDATE_TENANT_PREFERENCE.getValue());
 
@@ -217,7 +217,7 @@ public class TenantPreferenceManagementActorTest {
     List<Map<String , Object>> reqList = new ArrayList<>();
 
     actorMessage.getRequest().put(JsonKey.TENANT_PREFERENCE , reqList);
-    actorMessage.getRequest().put(JsonKey.ORG_ID , "");
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , "");
     actorMessage.getRequest().put(JsonKey.REQUESTED_BY , USER_ID);
     actorMessage.setOperation(ActorOperations.UPDATE_TENANT_PREFERENCE.getValue());
 
@@ -247,7 +247,7 @@ public class TenantPreferenceManagementActorTest {
     ActorRef subject = system.actorOf(props);
     Request actorMessage = new Request();
 
-    actorMessage.getRequest().put(JsonKey.ORG_ID , "");
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , "");
     actorMessage.getRequest().put(JsonKey.REQUESTED_BY , USER_ID);
     actorMessage.setOperation(ActorOperations.GET_TENANT_PREFERENCE.getValue());
 
@@ -262,7 +262,7 @@ public class TenantPreferenceManagementActorTest {
     ActorRef subject = system.actorOf(props);
     Request actorMessage = new Request();
 
-    actorMessage.getRequest().put(JsonKey.ORG_ID , "org647bdg7");
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , "org647bdg7");
     actorMessage.getRequest().put(JsonKey.REQUESTED_BY , USER_ID);
     actorMessage.setOperation(ActorOperations.GET_TENANT_PREFERENCE.getValue());
 
@@ -282,7 +282,7 @@ public class TenantPreferenceManagementActorTest {
 
 
     actorMessage.getRequest().put(JsonKey.TENANT_PREFERENCE , map);
-    actorMessage.getRequest().put(JsonKey.ORG_ID , orgId);
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId);
     actorMessage.getRequest().put(JsonKey.REQUESTED_BY , USER_ID);
     actorMessage.setOperation(ActorOperations.UPDATE_TC_STATUS_OF_USER.getValue());
 
@@ -302,7 +302,7 @@ public class TenantPreferenceManagementActorTest {
 
 
     actorMessage.getRequest().put(JsonKey.TENANT_PREFERENCE , map);
-    actorMessage.getRequest().put(JsonKey.ORG_ID , orgId);
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId);
     actorMessage.getRequest().put(JsonKey.REQUESTED_BY , USER_ID);
     actorMessage.setOperation("InvalidOperation");
 

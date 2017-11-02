@@ -156,6 +156,7 @@ public class Util {
       dbInfoMap.put(JsonKey.TENANT_PREFERENCE_DB , getDbInfoObject(KEY_SPACE_NAME, "tenant_preference"));
       dbInfoMap.put(JsonKey.GEO_LOCATION_DB , getDbInfoObject(KEY_SPACE_NAME, "geo_location"));
 
+      dbInfoMap.put(JsonKey.CLIENT_INFO_DB, getDbInfoObject(KEY_SPACE_NAME, "client_info"));
     }
     
     

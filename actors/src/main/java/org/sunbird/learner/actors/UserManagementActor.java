@@ -1217,6 +1217,11 @@ public class UserManagementActor extends UntypedAbstractActor {
         boolean bool = ssoManager.addAttributesToKeyCloak(JsonKey.MOBILE, (String) userMap.get(JsonKey.PHONE), userId);
         if(!bool){
           ProjectLogger.log("phone not saved for userId "+userId);
+          ProjectCommonException exception = new ProjectCommonException(ResponseCode.userPhoneUpdateFailed.getErrorCode(),
+              ResponseCode.userPhoneUpdateFailed.getErrorMessage(),
+              ResponseCode.SERVER_ERROR.getResponseCode());
+          sender().tell(exception, self());
+          return;
         }
       }
       
@@ -1396,6 +1401,13 @@ public class UserManagementActor extends UntypedAbstractActor {
             boolean bool = ssoManager.addAttributesToKeyCloak(JsonKey.MOBILE, (String) userMap.get(JsonKey.PHONE), userId);
             if(!bool){
               ProjectLogger.log("phone not saved for userId "+userId);
+              ProjectCommonException exception = new ProjectCommonException(ResponseCode.userPhoneUpdateFailed.getErrorCode(),
+                  ResponseCode.userPhoneUpdateFailed.getErrorMessage(),
+                  ResponseCode.SERVER_ERROR.getResponseCode());
+              sender().tell(exception, self());
+              userMap.put(JsonKey.USER_ID, userId);
+              ssoManager.removeUser(userMap);
+              return;
             }
           }
           userMap.put(JsonKey.USER_ID, userId);

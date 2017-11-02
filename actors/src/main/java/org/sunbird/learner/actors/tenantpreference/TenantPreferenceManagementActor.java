@@ -120,7 +120,7 @@ public class TenantPreferenceManagementActor extends UntypedAbstractActor {
     Response finalResponse = new Response();
     List<Map<String , Object>> responseList = new ArrayList<>();
     String requestedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
-    String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
+    String orgId = (String) actorMessage.getRequest().get(JsonKey.ROOT_ORG_ID);
 
     if(ProjectUtil.isStringNullOREmpty(orgId)){
       // throw invalid ord id ,org id should not be null or empty .
@@ -198,7 +198,7 @@ public class TenantPreferenceManagementActor extends UntypedAbstractActor {
     Response finalResponse = new Response();
     List<Map<String , Object>> responseList = new ArrayList<>();
     String requestedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
-    String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
+    String orgId = (String) actorMessage.getRequest().get(JsonKey.ROOT_ORG_ID);
 
     if(ProjectUtil.isStringNullOREmpty(orgId)){
       // throw invalid ord id ,org id should not be null or empty .

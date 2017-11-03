@@ -2387,8 +2387,8 @@ public class UserManagementActor extends UntypedAbstractActor {
       List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
       if (list.isEmpty()) {
         ProjectCommonException exception =
-            new ProjectCommonException(ResponseCode.invalidUsrData.getErrorCode(),
-                ResponseCode.invalidUsrData.getErrorMessage(),
+            new ProjectCommonException(ResponseCode.invalidUsrOrgData.getErrorCode(),
+                ResponseCode.invalidUsrOrgData.getErrorMessage(),
                 ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
         return;

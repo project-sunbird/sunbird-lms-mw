@@ -176,8 +176,7 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
 
     }else if(type.equalsIgnoreCase(JsonKey.LOCATION)){
 
-      //Response response1 = cassandraOperation.getRecordById(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), id);
-      Response response1 = cassandraOperation.getRecordsByProperty(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), JsonKey.LOCATION, id);
+      Response response1 = cassandraOperation.getRecordById(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), id);
       List<Map<String, Object>> list = (List<Map<String, Object>>) response1.get(JsonKey.RESPONSE);
       finalResponse.put(JsonKey.RESPONSE , list);
       sender().tell(finalResponse , self());

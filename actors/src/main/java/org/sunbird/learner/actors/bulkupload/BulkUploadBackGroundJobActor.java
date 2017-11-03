@@ -470,6 +470,26 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           failureList.add(concurrentHashMap);
           return;
         }
+
+        // check logic here to check the hashtag id ... if in db null and requested one not exist in db only then we are going to update the new one...
+
+        if(!ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.HASHTAGID))){
+          String requestedHashTagId = (String)concurrentHashMap.get(JsonKey.HASHTAGID);
+          //if both are not equal ...
+          if(! requestedHashTagId.equals(orgResult.get(JsonKey.HASHTAGID))){
+            Map<String, Object> dbMap1 = new HashMap<>();
+            dbMap1.put(JsonKey.HASHTAGID, concurrentHashMap.get(JsonKey.HASHTAGID));
+            Response result1 = cassandraOperation.getRecordsByProperties(orgDbInfo.getKeySpace(),
+                orgDbInfo.getTableName(), dbMap1);
+            List<Map<String, Object>> list1 = (List<Map<String, Object>>) result1.get(JsonKey.RESPONSE);
+            if(!list1.isEmpty()){
+              ProjectLogger.log("Can not update hashtag value , since it is already exist ");
+              concurrentHashMap.put(JsonKey.ERROR_MSG, "Hash Tag ID already exist for another org ");
+              failureList.add(concurrentHashMap);
+              return;
+            }
+          }
+        }
         concurrentHashMap.put(JsonKey.ID, orgResult.get(JsonKey.ID));
 
         try {
@@ -544,6 +564,25 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           concurrentHashMap.put(JsonKey.ERROR_MSG, "Can not update Provider ");
           failureList.add(concurrentHashMap);
           return;
+        }
+
+        // check for duplicate hashtag id ...
+        if(!ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.HASHTAGID))){
+          String requestedHashTagId = (String)concurrentHashMap.get(JsonKey.HASHTAGID);
+          //if both are not equal ...
+          if(! requestedHashTagId.equalsIgnoreCase((String)rootOrgInfo.get(JsonKey.HASHTAGID))){
+            Map<String, Object> dbMap1 = new HashMap<>();
+            dbMap1.put(JsonKey.HASHTAGID, concurrentHashMap.get(JsonKey.HASHTAGID));
+            Response result1 = cassandraOperation.getRecordsByProperties(orgDbInfo.getKeySpace(),
+                orgDbInfo.getTableName(), dbMap1);
+            List<Map<String, Object>> list1 = (List<Map<String, Object>>) result1.get(JsonKey.RESPONSE);
+            if(!list1.isEmpty()){
+              ProjectLogger.log("Can not update hashtag value , since it is already exist ");
+              concurrentHashMap.put(JsonKey.ERROR_MSG, "Hash Tag ID already exist for another org ");
+              failureList.add(concurrentHashMap);
+              return;
+            }
+          }
         }
 
         try {
@@ -629,6 +668,23 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         concurrentHashMap.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
       }
 
+    }
+
+    // we can put logic here to check uniqueness of hash tag id in order to create new organisation ...
+    if(!ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.HASHTAGID))){
+      String requestedHashTagId = (String)concurrentHashMap.get(JsonKey.HASHTAGID);
+
+        Map<String, Object> dbMap1 = new HashMap<>();
+        dbMap1.put(JsonKey.HASHTAGID, concurrentHashMap.get(JsonKey.HASHTAGID));
+        Response result1 = cassandraOperation.getRecordsByProperties(orgDbInfo.getKeySpace(),
+            orgDbInfo.getTableName(), dbMap1);
+        List<Map<String, Object>> list1 = (List<Map<String, Object>>) result1.get(JsonKey.RESPONSE);
+        if(!list1.isEmpty()){
+          ProjectLogger.log("Can not update hashtag value , since it is already exist ");
+          concurrentHashMap.put(JsonKey.ERROR_MSG, "Hash Tag ID already exist for another org ");
+          failureList.add(concurrentHashMap);
+          return;
+      }
     }
 
     String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(1);

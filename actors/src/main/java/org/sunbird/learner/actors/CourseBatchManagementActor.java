@@ -23,6 +23,7 @@ import org.sunbird.common.models.util.ProjectUtil.Status;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
@@ -447,7 +448,12 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
 
     req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     req.put(JsonKey.COURSE_ADDITIONAL_INFO, getAdditionalCourseInfo(ekStepContent));
-    req.put(JsonKey.HASH_TAG_ID, uniqueId);
+    if(!ProjectUtil.isStringNullOREmpty(((String)req.get(JsonKey.HASHTAGID)))){
+      req.put(JsonKey.HASHTAGID,
+          validateHashTagId(((String)req.get(JsonKey.HASHTAGID)),JsonKey.CREATE,""));
+    }else{
+     req.put(JsonKey.HASHTAGID, uniqueId);
+    }
     req.put(JsonKey.COUNTER_INCREMENT_STATUS, false);
     req.put(JsonKey.COUNTER_DECREMENT_STATUS, false);
 
@@ -478,6 +484,30 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     } else {
       ProjectLogger.log("no call for ES to save Course Batch");
     }
+  }
+  
+  private String validateHashTagId(String hashTagId,String opType,String id) {
+    Map<String,Object> filters =  new HashMap<>();
+    filters.put(JsonKey.HASHTAGID, hashTagId);
+    SearchDTO searchDto = new SearchDTO();
+    searchDto.getAdditionalProperties().put(JsonKey.FILTERS,filters);
+    Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto,
+        ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.course.getTypeName());
+    List<Map<String, Object>> dataMapList =
+        (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+    if(opType.equalsIgnoreCase(JsonKey.CREATE) && !dataMapList.isEmpty()){
+      throw new ProjectCommonException(ResponseCode.invalidHashTagId.getErrorCode(),
+          ResponseCode.invalidHashTagId.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }else{
+      Map<String, Object> batchMap = dataMapList.get(0);
+      if(!(((String)batchMap.get(JsonKey.ID)).equalsIgnoreCase(id))){
+        throw new ProjectCommonException(ResponseCode.invalidHashTagId.getErrorCode(),
+            ResponseCode.invalidHashTagId.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
+    return hashTagId;
   }
 
   private Map<String, String> getAdditionalCourseInfo(Map<String, Object> ekStepContent) {
@@ -517,8 +547,10 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     req.remove(JsonKey.COUNTER_INCREMENT_STATUS);
     req.remove(JsonKey.COUNTER_DECREMENT_STATUS);
     req.remove(JsonKey.PARTICIPANT);
-    req.remove(JsonKey.HASH_TAG_ID);
     req.remove(JsonKey.HASHTAGID);
+    if(!ProjectUtil.isStringNullOREmpty(((String)req.get(JsonKey.HASHTAGID)))){
+      req.put(JsonKey.HASHTAGID,validateHashTagId(((String)req.get(JsonKey.HASHTAGID)),JsonKey.UPDATE,(String) req.get(JsonKey.ID)));
+    }
     List<Map<String, Object>> resList =
         ((List<Map<String, Object>>) response.get(JsonKey.RESPONSE));
     if (null != resList && !resList.isEmpty()) {

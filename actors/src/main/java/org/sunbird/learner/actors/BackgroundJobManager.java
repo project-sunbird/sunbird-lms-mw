@@ -34,6 +34,7 @@ import org.sunbird.common.services.ProfileCompletenessService;
 import org.sunbird.common.services.impl.ProfileCompletenessFactory;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
+import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
@@ -594,7 +595,18 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       Response skillresponse = cassandraOperation.getRecordsByProperty(userSkillDbInfo.getKeySpace() , userSkillDbInfo.getTableName(), JsonKey.USER_ID , userId);
       List<Map<String,Object>> responseList = (List<Map<String, Object>>) skillresponse.get(JsonKey.RESPONSE);
       map.put(JsonKey.SKILLS , responseList);
-
+      //TODO:Refactor the code for better understanding and based on modules
+      Map<String, Object> profileVisibility =
+          (Map<String, Object>) map.get(JsonKey.PROFILE_VISIBILITY);
+      if (null != profileVisibility && !profileVisibility.isEmpty()) {
+        Map<String, Object> profileVisibilityMap = new HashMap<>();
+        for (String field : profileVisibility.keySet()) {
+          profileVisibilityMap.put(field, map.get(field));
+        }
+        insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId, profileVisibility);
+        UserUtility.updateProfileVisibilityFields(profileVisibilityMap, map);
+      }
       insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
           ProjectUtil.EsType.user.getTypeName(), userId, map);
       ProjectLogger.log("saving completed user to es userId : " + userId);

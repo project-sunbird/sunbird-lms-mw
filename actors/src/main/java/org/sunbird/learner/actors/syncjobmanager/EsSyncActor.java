@@ -27,6 +27,7 @@ import org.sunbird.common.services.ProfileCompletenessService;
 import org.sunbird.common.services.impl.ProfileCompletenessFactory;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.BackgroundJobManager;
+import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
@@ -177,6 +178,7 @@ public class EsSyncActor extends UntypedAbstractActor {
     return orgMap;
   }
 
+  @SuppressWarnings("unchecked")
   private Map<String, Object> getUserDetails(Entry<String, Object> entry) {
     String userId = entry.getKey();
     ProjectLogger.log("fetching user data started");
@@ -252,6 +254,17 @@ public class EsSyncActor extends UntypedAbstractActor {
     ProfileCompletenessService service = ProfileCompletenessFactory.getInstance();
     Map<String, Object> profileResponse = service.computeProfile(userMap);
     userMap.putAll(profileResponse);
+    Map<String, Object> profileVisibility =
+        (Map<String, Object>) userMap.get(JsonKey.PROFILE_VISIBILITY);
+    if (null != profileVisibility && !profileVisibility.isEmpty()) {
+      Map<String, Object> profileVisibilityMap = new HashMap<>();
+      for (String field : profileVisibility.keySet()) {
+        profileVisibilityMap.put(field, userMap.get(field));
+      }
+      ElasticSearchUtil.upsertData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+          ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId, profileVisibilityMap);
+      UserUtility.updateProfileVisibilityFields(profileVisibilityMap, userMap);
+    }
     ProjectLogger.log("fetching user data completed");
     return userMap;
   }

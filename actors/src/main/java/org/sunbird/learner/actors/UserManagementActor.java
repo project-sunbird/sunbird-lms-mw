@@ -1232,7 +1232,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     try {
       String userId = ssoManager.updateUser(userMap);
       
-      if(!ProjectUtil.isStringNullOREmpty(userId) && null != userMap.get(JsonKey.PHONE)){
+      /*if(!ProjectUtil.isStringNullOREmpty(userId) && null != userMap.get(JsonKey.PHONE)){
         boolean bool = ssoManager.addAttributesToKeyCloak(JsonKey.MOBILE, (String) userMap.get(JsonKey.PHONE), userId);
         if(!bool){
           ProjectLogger.log("phone not saved for userId "+userId);
@@ -1242,7 +1242,7 @@ public class UserManagementActor extends UntypedAbstractActor {
           sender().tell(exception, self());
           return;
         }
-      }
+      }*/
       
       if (!(!ProjectUtil.isStringNullOREmpty(userId) && userId.equalsIgnoreCase(JsonKey.SUCCESS))) {
         throw new ProjectCommonException(ResponseCode.userUpdationUnSuccessfull.getErrorCode(),

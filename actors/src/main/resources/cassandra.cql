@@ -633,3 +633,6 @@ ALTER TABLE sunbird.geo_location DROP topicName ;
 ALTER TABLE sunbird.geo_location ADD topic text;
 ALTER TABLE sunbird.geo_location DROP locationName ;
 ALTER TABLE sunbird.geo_location ADD location text;
+
+//Nov 3 -2017
+CREATE INDEX inx_gl_location ON sunbird.geo_location(location);

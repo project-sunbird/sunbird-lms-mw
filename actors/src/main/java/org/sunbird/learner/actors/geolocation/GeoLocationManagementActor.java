@@ -21,6 +21,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
 /**
+ * Class for providing Geo Location for Organisation
  * Created by arvind on 31/10/17.
  */
 public class GeoLocationManagementActor extends UntypedAbstractActor {
@@ -42,7 +43,15 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.GET_GEO_LOCATION.getValue())) {
           getGeoLocation(actorMessage);
-        } else {
+        }
+        else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.UPDATE_GEO_LOCATION.getValue())) {
+          updateGeoLocation(actorMessage);
+        }
+        else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.DELETE_GEO_LOCATION.getValue())) {
+          deleteGeoLocation(actorMessage);
+        }else {
           ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
           ProjectCommonException exception =
               new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
@@ -64,6 +73,83 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
     }
   }
 
+
+  /**
+   * Delete geo location on basis of location id.
+   * @param actorMessage
+   */
+  private void deleteGeoLocation(Request actorMessage) {
+
+    ProjectLogger.log("GeoLocationManagementActor-updateGeoLocation called");
+    String requestedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
+    String locationId = (String) actorMessage.getRequest().get(JsonKey.LOCATION_ID);
+    Response finalResponse = new Response();
+
+    if(ProjectUtil.isStringNullOREmpty(locationId)){
+      throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+          ResponseCode.invalidRequestData.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+
+    cassandraOperation.deleteRecord(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), locationId);
+    finalResponse.getResult().put(JsonKey.RESPONSE , JsonKey.SUCCESS);
+    sender().tell(finalResponse , self());
+
+  }
+
+  /**
+   * Update geo location on basis of locationId , only location type and
+   * @param actorMessage
+   */
+  private void updateGeoLocation(Request actorMessage) {
+
+    ProjectLogger.log("GeoLocationManagementActor-updateGeoLocation called");
+    String requestedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
+    String locationId = (String) actorMessage.getRequest().get(JsonKey.LOCATION_ID);
+    String type = (String) actorMessage.getRequest().get(JsonKey.TYPE);
+    String location = (String) actorMessage.getRequest().get(JsonKey.LOCATION);
+    Response finalResponse = new Response();
+
+    if(ProjectUtil.isStringNullOREmpty(locationId)){
+      throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+          ResponseCode.invalidRequestData.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+
+    Response response1 = cassandraOperation.getRecordById(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), locationId);
+    List<Map<String, Object>> list = (List<Map<String, Object>>) response1.get(JsonKey.RESPONSE);
+    if(list.isEmpty()){
+      // throw exception that invalid location id ...
+      throw new ProjectCommonException(ResponseCode.invalidLocationId.getErrorCode(),
+          ResponseCode.invalidLocationId.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    Map<String , Object> dbResult = list.get(0);
+
+
+    Map<String , Object> dbMap = new HashMap<>();
+    if(!ProjectUtil.isStringNullOREmpty(type)){
+      dbMap.put(JsonKey.TYPE , type);
+    }
+    if(!ProjectUtil.isStringNullOREmpty(location)){
+      dbMap.put(JsonKey.LOCATION , location);
+    }
+
+    dbMap.put(JsonKey.UPDATED_BY, requestedBy);
+    dbMap.put(JsonKey.UPDATED_DATE , format.format(new Date()));
+
+    dbMap.put(JsonKey.ID , dbResult.get(JsonKey.ID));
+    cassandraOperation.updateRecord(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), dbMap);
+
+    finalResponse.put(JsonKey.RESPONSE , JsonKey.SUCCESS);
+    sender().tell(finalResponse , self());
+
+  }
+
+  /**
+   * Get geo location on basis of type and id . type should be organisation or location .
+   * @param actorMessage
+   */
   private void getGeoLocation(Request actorMessage) {
 
     ProjectLogger.log("GeoLocationManagementActor-getGeoLocation called");
@@ -90,14 +176,23 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
 
     }else if(type.equalsIgnoreCase(JsonKey.LOCATION)){
 
-      Response response1 = cassandraOperation.getRecordById(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), id);
+      //Response response1 = cassandraOperation.getRecordById(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), id);
+      Response response1 = cassandraOperation.getRecordsByProperty(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), JsonKey.LOCATION, id);
       List<Map<String, Object>> list = (List<Map<String, Object>>) response1.get(JsonKey.RESPONSE);
       finalResponse.put(JsonKey.RESPONSE , list);
       sender().tell(finalResponse , self());
       return;
+    }else{
+      throw new ProjectCommonException(ResponseCode.invalidTypeValue.getErrorCode(),
+          ResponseCode.invalidTypeValue.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
   }
 
+  /**
+   * Create geo location , and id and topic value will be same .
+   * @param actorMessage
+   */
   private void createGeoLocation(Request actorMessage) {
 
     ProjectLogger.log("GeoLocationManagementActor-createGeoLocation called");
@@ -158,11 +253,8 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
       responseMap.put(JsonKey.ID , id);
       responseMap.put(JsonKey.LOCATION , location);
       responseMap.put(JsonKey.STATUS , JsonKey.SUCCESS);
-
       responseList.add(responseMap);
-
     }
-
     finalResponse.getResult().put(JsonKey.RESPONSE , responseList);
     sender().tell(finalResponse , self());
 

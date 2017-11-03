@@ -353,6 +353,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.GET_CLIENT_KEY.getValue(), clientManagementActor);
     routerMap.put(ActorOperations.GET_GEO_LOCATION.getValue() ,geoLocationManagementActor);
     routerMap.put(ActorOperations.CREATE_GEO_LOCATION.getValue() ,geoLocationManagementActor);
+    routerMap.put(ActorOperations.UPDATE_GEO_LOCATION.getValue() ,geoLocationManagementActor);
+    routerMap.put(ActorOperations.DELETE_GEO_LOCATION.getValue() ,geoLocationManagementActor);
   }
 
 

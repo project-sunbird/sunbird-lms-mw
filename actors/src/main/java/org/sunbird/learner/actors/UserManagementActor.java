@@ -485,6 +485,7 @@ public class UserManagementActor extends UntypedAbstractActor {
             Map<String, Object> privateResult =
                 ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
                     ProjectUtil.EsType.userprofilevisibility.getTypeName(), (String) userMap.get(JsonKey.USER_ID));
+            UserUtility.decryptUserDataFrmES(privateResult);
             result.putAll(privateResult);
           }
         } catch (Exception e) {
@@ -611,6 +612,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         Map<String, Object> privateResult =
             ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
                 ProjectUtil.EsType.userprofilevisibility.getTypeName(), (String) userMap.get(JsonKey.USER_ID));
+        UserUtility.decryptUserDataFrmES(privateResult);
         result.putAll(privateResult);
       }
     } catch (Exception e) {

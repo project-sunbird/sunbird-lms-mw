@@ -227,6 +227,12 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           && !ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ORG_TYPE))) {
         req.put(JsonKey.ORG_TYPE_ID, validateOrgType((String) req.get(JsonKey.ORG_TYPE)));
       }
+      
+      if (req.containsKey(JsonKey.LOC_ID)
+          && !ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.LOC_ID))) {
+        req.put(JsonKey.LOC_ID, validateLocationId((String) req.get(JsonKey.LOC_ID)));
+      }
+      
       Map<String, Object> addressReq = null;
       if (null != actorMessage.getRequest().get(JsonKey.ADDRESS)) {
         addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
@@ -317,7 +323,11 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         req.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
       }
       // adding one extra filed for tag.
-      req.put(JsonKey.HASH_TAG_ID, uniqueId);
+      if(!ProjectUtil.isStringNullOREmpty(((String)req.get(JsonKey.HASHTAGID)))){
+        req.put(JsonKey.HASHTAGID,validateHashTagId(((String)req.get(JsonKey.HASHTAGID)),JsonKey.CREATE,""));
+      }else{
+       req.put(JsonKey.HASHTAGID, uniqueId);
+      }
       // if channel is available then make slug for channel.
       // remove the slug key if coming from user input
       req.remove(JsonKey.SLUG);
@@ -374,6 +384,46 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       return;
     }
   }
+
+  private String validateHashTagId(String hashTagId,String opType,String orgId) {
+    Map<String,Object> filters =  new HashMap<>();
+    filters.put(JsonKey.HASHTAGID, hashTagId);
+    SearchDTO searchDto = new SearchDTO();
+    searchDto.getAdditionalProperties().put(JsonKey.FILTERS,filters);
+    Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto,
+        ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName());
+    List<Map<String, Object>> dataMapList =
+        (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+    if(opType.equalsIgnoreCase(JsonKey.CREATE) && !dataMapList.isEmpty()){
+      throw new ProjectCommonException(ResponseCode.invalidHashTagId.getErrorCode(),
+          ResponseCode.invalidHashTagId.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }else{
+      Map<String, Object> orgMap = dataMapList.get(0);
+      if(!(((String)orgMap.get(JsonKey.ID)).equalsIgnoreCase(orgId))){
+        throw new ProjectCommonException(ResponseCode.invalidHashTagId.getErrorCode(),
+            ResponseCode.invalidHashTagId.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
+    return hashTagId;
+  }
+
+
+  private String validateLocationId(String locId) {
+    Util.DbInfo geoLocDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
+    Response response = cassandraOperation.getRecordById(geoLocDbInfo.getKeySpace(), geoLocDbInfo.getTableName(), locId);
+    List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if (!list.isEmpty()) {
+      Map<String, Object> map = list.get(0);
+      return ((String)map.get(JsonKey.ID));
+    }else{
+      throw new ProjectCommonException(ResponseCode.invalidLocationId.getErrorCode(),
+          ResponseCode.invalidLocationId.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+  }
+
 
   private String validateOrgType(String orgType) {
     String orgTypeId = null;
@@ -552,6 +602,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           && !ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ORG_TYPE))) {
         req.put(JsonKey.ORG_TYPE_ID, validateOrgType((String) req.get(JsonKey.ORG_TYPE)));
       }
+      if (req.containsKey(JsonKey.LOC_ID)
+          && !ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.LOC_ID))) {
+        req.put(JsonKey.LOC_ID, validateLocationId((String) req.get(JsonKey.LOC_ID)));
+      }
       if (!(validateOrgRequest(req))) {
         ProjectLogger.log("REQUESTED DATA IS NOT VALID");
         return;
@@ -607,7 +661,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
             sender().tell(exception, self());
             return;
           }
-          // req.remove(JsonKey.CHANNEL);
         } else if (!channelAdded
             && !validateChannelForUniquenessForUpdate((String) req.get(JsonKey.CHANNEL),
                 (String) req.get(JsonKey.ORGANISATION_ID))) {
@@ -690,8 +743,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           upsertAddress(addressReq);
         }
       }
-      updateOrgDBO.remove(JsonKey.HASHTAGID);
-      updateOrgDBO.remove(JsonKey.HASH_TAG_ID);
+      if (!ProjectUtil.isStringNullOREmpty(((String) req.get(JsonKey.HASHTAGID)))) {
+        req.put(JsonKey.HASHTAGID,
+            validateHashTagId(((String) req.get(JsonKey.HASHTAGID)), JsonKey.UPDATE, orgId));
+      }
       if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
         updateOrgDBO.put(JsonKey.UPDATED_BY, updatedBy);
       }
@@ -715,7 +770,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       List<Map<String, Object>> listOfMap = null;
       if (updateOrgDBO.containsKey(JsonKey.CONTACT_DETAILS)) {
         listOfMap = (List<Map<String, Object>>) updateOrgDBO.get(JsonKey.CONTACT_DETAILS);
-        if (listOfMap != null && listOfMap.size() > 0) {
+        if (listOfMap != null && !listOfMap.isEmpty()) {
           ObjectMapper mapper = new ObjectMapper();
           try {
             updateOrgDBO.put(JsonKey.CONTACT_DETAILS, mapper.writeValueAsString(listOfMap));

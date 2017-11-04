@@ -18,7 +18,7 @@ public class ActorUtil {
   public static void tell(Request request){
     Object obj = ActorSystemFactory.getActorSystem().initializeActorSystem(request.getOperation());
      if(obj instanceof ActorRef){
-       ProjectLogger.log("In ActorUtil(org.sunbird.learner.util) Actor ref is running "+((ActorSelection)obj));
+       ProjectLogger.log("In ActorUtil(org.sunbird.learner.util) Actor ref is running "+((ActorRef)obj));
        ((ActorRef)obj).tell(request, ActorRef.noSender());
      } else {
        ProjectLogger.log("In ActorUtil(org.sunbird.learner.util) Actor selection is running "+((ActorSelection)obj));

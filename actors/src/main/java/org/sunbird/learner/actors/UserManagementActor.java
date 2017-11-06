@@ -358,14 +358,12 @@ public class UserManagementActor extends UntypedAbstractActor {
    */
   private boolean updateDataInES(Map<String, Object> dataMap,
       Map<String, Object> privateDataMap, String userId) {
-    boolean response = false;
-    ElasticSearchUtil.upsertData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+    ElasticSearchUtil.createData(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId,
         privateDataMap);
-    response =
-        ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+    ElasticSearchUtil.createData(ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.user.getTypeName(), userId, dataMap);
-    return response;
+    return true;
   } 
   
   /**

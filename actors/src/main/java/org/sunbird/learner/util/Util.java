@@ -221,20 +221,21 @@ public class Util {
           for (int i = 0; i < ipList.length; i++) {
             String ip = ipList[i];
             String port = portList[i];
-            String keyspace = keyspaceList[i];
+            //Reading the same keyspace which is passed in the method
+            //String keyspace = keyspaceList[i];
 
             try {
 
               boolean result = cassandraConnectionManager.createConnection(ip, port, userName,
-                  password, keyspace);
+                  password, keySpace);
               if (result) {
                 ProjectLogger
                     .log("CONNECTION CREATED SUCCESSFULLY FOR IP: " + ip + " : KEYSPACE :"
-                            + keyspace,
+                            + keySpace,
                         LoggerEnum.INFO.name());
               } else {
                 ProjectLogger
-                    .log("CONNECTION CREATION FAILED FOR IP: " + ip + " : KEYSPACE :" + keyspace);
+                    .log("CONNECTION CREATION FAILED FOR IP: " + ip + " : KEYSPACE :" + keySpace);
               }
 
             } catch (ProjectCommonException ex) {

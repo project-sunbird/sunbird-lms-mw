@@ -388,7 +388,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
       throw new ProjectCommonException(ResponseCode.invalidCourseId.getErrorCode(),
           ResponseCode.invalidCourseId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
+    } 
     String enrolmentType = (String) req.get(JsonKey.ENROLLMENT_TYPE);
     List<String> createdFor = new ArrayList<>();
     if (req.containsKey(JsonKey.COURSE_CREATED_FOR)
@@ -499,7 +499,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
       throw new ProjectCommonException(ResponseCode.invalidHashTagId.getErrorCode(),
           ResponseCode.invalidHashTagId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
-    }else{
+    }else if(opType.equalsIgnoreCase(JsonKey.UPDATE)){
       Map<String, Object> batchMap = dataMapList.get(0);
       if(!(((String)batchMap.get(JsonKey.ID)).equalsIgnoreCase(id))){
         throw new ProjectCommonException(ResponseCode.invalidHashTagId.getErrorCode(),

@@ -398,7 +398,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       throw new ProjectCommonException(ResponseCode.invalidHashTagId.getErrorCode(),
           ResponseCode.invalidHashTagId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
-    }else{
+    }else if(opType.equalsIgnoreCase(JsonKey.UPDATE)){
       Map<String, Object> orgMap = dataMapList.get(0);
       if(!(((String)orgMap.get(JsonKey.ID)).equalsIgnoreCase(orgId))){
         throw new ProjectCommonException(ResponseCode.invalidHashTagId.getErrorCode(),

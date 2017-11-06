@@ -3,13 +3,13 @@ package org.sunbird.learner.actors;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
-import akka.actor.UntypedAbstractActor;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.velocity.VelocityContext;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.Constants;
@@ -40,6 +40,8 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
+
+import akka.actor.UntypedAbstractActor;
 
 /**
  * This actor will handle course enrollment operation .
@@ -188,7 +190,6 @@ public class UserManagementActor extends UntypedAbstractActor {
         if (esPrivateResult.containsKey(field)) {
           esResult.put(field,esPrivateResult.get(field) ); 
           esPrivateResult.remove(field);
-          privateList.remove(field);
         } else {
           ProjectLogger.log("field value not found inside private index =="+field);
         }
@@ -199,6 +200,14 @@ public class UserManagementActor extends UntypedAbstractActor {
       for (String key : privateList) {
         privateFieldMap.put(key, JsonKey.PRIVATE);
       }
+    }
+    if (publicList != null && privateFieldMap.isEmpty()) {
+      privateFieldMap = (Map<String, String>) esResult.get(JsonKey.PROFILE_VISIBILITY);
+      for (String key : publicList) {
+        privateFieldMap.remove(key);
+      }
+      updateCassandraWithPrivateFiled(userId, privateFieldMap);
+      esResult.put(JsonKey.PROFILE_VISIBILITY, privateFieldMap);
     }
     if (privateFieldMap.size()>0) {
       updateCassandraWithPrivateFiled(userId, privateFieldMap);

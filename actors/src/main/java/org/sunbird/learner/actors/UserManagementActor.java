@@ -188,6 +188,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         if (esPrivateResult.containsKey(field)) {
           esResult.put(field,esPrivateResult.get(field) ); 
           esPrivateResult.remove(field);
+          privateList.remove(field);
         } else {
           ProjectLogger.log("field value not found inside private index =="+field);
         }
@@ -273,6 +274,11 @@ public class UserManagementActor extends UntypedAbstractActor {
          privateMap.put(JsonKey.JOB_PROFILE, map.get(JsonKey.JOB_PROFILE));
          //tempMap = addPrivateField(JsonKey.EDUCATION, tempMap, field);
        }else {
+         if(!map.containsKey(field)){
+           throw new ProjectCommonException(ResponseCode.InvalidColumnError.getErrorCode(),
+               ResponseCode.InvalidColumnError.getErrorMessage(),
+               ResponseCode.CLIENT_ERROR.getResponseCode());
+         }
         privateMap.put(field, map.get(field));
         //map.remove(field);
        }

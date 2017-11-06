@@ -3,16 +3,13 @@ package org.sunbird.learner.actors;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
+import akka.actor.UntypedAbstractActor;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
 import org.apache.velocity.VelocityContext;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.Constants;
@@ -43,8 +40,6 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
-
-import akka.actor.UntypedAbstractActor;
 
 /**
  * This actor will handle course enrollment operation .
@@ -303,12 +298,12 @@ public class UserManagementActor extends UntypedAbstractActor {
   @SuppressWarnings("unchecked")
   private void updatePrivateKey(List<String> keys, Map<String, Object> data,
       Map<String, Object> privateMap, String attribute) {
-    if (keys == null || keys.size() == 0)
+    if (keys == null || keys.isEmpty())
       return;
     List<Map<String, Object>> reqData =
         (List<Map<String, Object>>) data.get(attribute);
     List<Map<String, Object>> privateList = new ArrayList<>();
-    if (reqData != null && reqData.size() > 0) {
+    if (reqData != null && !reqData.isEmpty()) {
       for (Map<String, Object> map : reqData) {
         Map<String, Object> innerPrivateMap = new HashMap<>();
         for (String key : keys) {
@@ -1233,19 +1228,6 @@ public class UserManagementActor extends UntypedAbstractActor {
   private void updateKeyCloakUserBase(Map<String, Object> userMap) {
     try {
       String userId = ssoManager.updateUser(userMap);
-      
-      /*if(!ProjectUtil.isStringNullOREmpty(userId) && null != userMap.get(JsonKey.PHONE)){
-        boolean bool = ssoManager.addAttributesToKeyCloak(JsonKey.MOBILE, (String) userMap.get(JsonKey.PHONE), userId);
-        if(!bool){
-          ProjectLogger.log("phone not saved for userId "+userId);
-          ProjectCommonException exception = new ProjectCommonException(ResponseCode.userPhoneUpdateFailed.getErrorCode(),
-              ResponseCode.userPhoneUpdateFailed.getErrorMessage(),
-              ResponseCode.SERVER_ERROR.getResponseCode());
-          sender().tell(exception, self());
-          return;
-        }
-      }*/
-      
       if (!(!ProjectUtil.isStringNullOREmpty(userId) && userId.equalsIgnoreCase(JsonKey.SUCCESS))) {
         throw new ProjectCommonException(ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
             ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
@@ -1418,19 +1400,6 @@ public class UserManagementActor extends UntypedAbstractActor {
         userId = responseMap.get(JsonKey.USER_ID);
         accessToken = responseMap.get(JsonKey.ACCESSTOKEN);
         if (!ProjectUtil.isStringNullOREmpty(userId)) {
-          if(null != userMap.get(JsonKey.PHONE)){
-            boolean bool = ssoManager.addAttributesToKeyCloak(JsonKey.MOBILE, (String) userMap.get(JsonKey.PHONE), userId);
-            if(!bool){
-              ProjectLogger.log("phone not saved for userId "+userId);
-              ProjectCommonException exception = new ProjectCommonException(ResponseCode.userPhoneUpdateFailed.getErrorCode(),
-                  ResponseCode.userPhoneUpdateFailed.getErrorMessage(),
-                  ResponseCode.SERVER_ERROR.getResponseCode());
-              sender().tell(exception, self());
-              userMap.put(JsonKey.USER_ID, userId);
-              ssoManager.removeUser(userMap);
-              return;
-            }
-          }
           userMap.put(JsonKey.USER_ID, userId);
           userMap.put(JsonKey.ID, userId);
         } else {

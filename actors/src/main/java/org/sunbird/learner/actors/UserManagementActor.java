@@ -155,6 +155,7 @@ public class UserManagementActor extends UntypedAbstractActor {
    *  original data. 
    * @param actorMessage
    */
+  @SuppressWarnings({"unchecked", "rawtypes"})
   private void profileVisibility(Request actorMessage) {
     Map<String, Object> map = (Map) actorMessage.getRequest().get(JsonKey.USER);
     String userId  = (String)map.get(JsonKey.USER_ID);
@@ -177,9 +178,10 @@ public class UserManagementActor extends UntypedAbstractActor {
     if (responseMap != null && responseMap.size() > 0) {
       Map<String, Object> privateDataMap =
           (Map<String, Object>) responseMap.get(JsonKey.DATA);
-      if (privateDataMap != null && privateDataMap.size() >= esResult.size()) {
+      if (privateDataMap != null && privateDataMap.size() >= esPrivateResult.size()) {
         // this will indicate some extra private data is added
         esPrivateResult = privateDataMap;
+        UserUtility.updateProfileVisibilityFields(privateDataMap, esResult);
       }
     }
     // now have a check for public field.    
@@ -189,7 +191,8 @@ public class UserManagementActor extends UntypedAbstractActor {
       //under original index with public field.
       for (String field : publicList) {
         if (esPrivateResult.containsKey(field)) {
-          esResult.put(field,esPrivateResult.get(field) );  
+          esResult.put(field,esPrivateResult.get(field) ); 
+          esPrivateResult.remove(field);
         } else {
           ProjectLogger.log("field value not found inside private index =="+field);
         }
@@ -205,7 +208,8 @@ public class UserManagementActor extends UntypedAbstractActor {
       updateCassandraWithPrivateFiled(userId, privateFieldMap);
       esResult.put(JsonKey.PROFILE_VISIBILITY, privateFieldMap);
     }
-    boolean updateResponse =true; //updateDataInES(esResult, privateFiledMap, userId);
+    boolean updateResponse =true; 
+    updateResponse = updateDataInES(esResult, esPrivateResult, userId);
     Response response = new Response();
     if (updateResponse) {
       response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
@@ -222,7 +226,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> privateFiledMap =
         createPrivateFiledMap(data, privateFieldList);
     privateFiledMap.putAll(oldPrivateData);
-    Map<String, String> privateField = new HashMap<>();
+ /*   Map<String, String> privateField = new HashMap<>();
     if (privateFieldList != null) {
       for (String key : privateFieldList) {
         privateField.put(key, JsonKey.PRIVATE);
@@ -236,10 +240,10 @@ public class UserManagementActor extends UntypedAbstractActor {
       if (!privateField.containsKey(entry.getKey())) {
         privateField.put(entry.getKey(), JsonKey.PRIVATE);
       }
-    }
+    }*/
     
     Map<String,Object> map = new HashMap<>();
-    map.put(JsonKey.PRIVATE, privateField);
+    //map.put(JsonKey.PRIVATE, privateField);
     map.put(JsonKey.DATA, privateFiledMap);
     return map;
   }
@@ -265,14 +269,17 @@ public class UserManagementActor extends UntypedAbstractActor {
        // now if field contains {address.someField,education.someField,jobprofile.someField}
         //then we need to remove those filed 
        if (field.contains(JsonKey.ADDRESS+".")){
-         tempMap = addPrivateField(JsonKey.ADDRESS, tempMap, field);
+         privateMap.put(JsonKey.ADDRESS, map.get(JsonKey.ADDRESS));
+         //tempMap = addPrivateField(JsonKey.ADDRESS, tempMap, field);
        } else if (field.contains(JsonKey.EDUCATION+"."))  {
-         tempMap = addPrivateField(JsonKey.EDUCATION, tempMap, field);
+         privateMap.put(JsonKey.EDUCATION, map.get(JsonKey.EDUCATION));
+         //tempMap = addPrivateField(JsonKey.EDUCATION, tempMap, field);
        }else if (field.contains(JsonKey.JOB_PROFILE+".")) {
-         tempMap = addPrivateField(JsonKey.EDUCATION, tempMap, field);
+         privateMap.put(JsonKey.JOB_PROFILE, map.get(JsonKey.JOB_PROFILE));
+         //tempMap = addPrivateField(JsonKey.EDUCATION, tempMap, field);
        }else {
         privateMap.put(field, map.get(field));
-        map.remove(field);
+        //map.remove(field);
        }
       }
     }
@@ -342,9 +349,7 @@ public class UserManagementActor extends UntypedAbstractActor {
   private boolean updateDataInES(Map<String, Object> dataMap,
       Map<String, Object> privateDataMap, String userId) {
     boolean response = false;
-    ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
-        ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId);
-    ElasticSearchUtil.createData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+    ElasticSearchUtil.upsertData(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId,
         privateDataMap);
     response =
@@ -474,6 +479,14 @@ public class UserManagementActor extends UntypedAbstractActor {
         try {
           if (!(((String) map.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById))) {
             result = removeUserPrivateField(result);
+          } else {
+            //If the user requests his data then we are fetching the private data from userprofilevisibility index
+            //and merge it with user index data
+            Map<String, Object> privateResult =
+                ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+                    ProjectUtil.EsType.userprofilevisibility.getTypeName(), (String) userMap.get(JsonKey.USER_ID));
+            UserUtility.decryptUserDataFrmES(privateResult);
+            result.putAll(privateResult);
           }
         } catch (Exception e) {
           ProjectCommonException exception =
@@ -593,6 +606,14 @@ public class UserManagementActor extends UntypedAbstractActor {
     try {
       if (!((String) userMap.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById)) {
         result = removeUserPrivateField(result);
+      } else {
+        //If the user requests his data then we are fetching the private data from userprofilevisibility index
+        //and merge it with user index data
+        Map<String, Object> privateResult =
+            ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+                ProjectUtil.EsType.userprofilevisibility.getTypeName(), (String) userMap.get(JsonKey.USER_ID));
+        UserUtility.decryptUserDataFrmES(privateResult);
+        result.putAll(privateResult);
       }
     } catch (Exception e) {
       ProjectCommonException exception =
@@ -1213,7 +1234,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     try {
       String userId = ssoManager.updateUser(userMap);
       
-      if(!ProjectUtil.isStringNullOREmpty(userId) && null != userMap.get(JsonKey.PHONE)){
+      /*if(!ProjectUtil.isStringNullOREmpty(userId) && null != userMap.get(JsonKey.PHONE)){
         boolean bool = ssoManager.addAttributesToKeyCloak(JsonKey.MOBILE, (String) userMap.get(JsonKey.PHONE), userId);
         if(!bool){
           ProjectLogger.log("phone not saved for userId "+userId);
@@ -1223,7 +1244,7 @@ public class UserManagementActor extends UntypedAbstractActor {
           sender().tell(exception, self());
           return;
         }
-      }
+      }*/
       
       if (!(!ProjectUtil.isStringNullOREmpty(userId) && userId.equalsIgnoreCase(JsonKey.SUCCESS))) {
         throw new ProjectCommonException(ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
@@ -2387,8 +2408,8 @@ public class UserManagementActor extends UntypedAbstractActor {
       List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
       if (list.isEmpty()) {
         ProjectCommonException exception =
-            new ProjectCommonException(ResponseCode.invalidUsrData.getErrorCode(),
-                ResponseCode.invalidUsrData.getErrorMessage(),
+            new ProjectCommonException(ResponseCode.invalidUsrOrgData.getErrorCode(),
+                ResponseCode.invalidUsrOrgData.getErrorMessage(),
                 ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
         return;

@@ -394,10 +394,12 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName());
     List<Map<String, Object>> dataMapList =
         (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-    if(opType.equalsIgnoreCase(JsonKey.CREATE) && !dataMapList.isEmpty()){
-      throw new ProjectCommonException(ResponseCode.invalidHashTagId.getErrorCode(),
+    if(opType.equalsIgnoreCase(JsonKey.CREATE)){
+      if(!dataMapList.isEmpty()){
+       throw new ProjectCommonException(ResponseCode.invalidHashTagId.getErrorCode(),
           ResponseCode.invalidHashTagId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
     }else if(opType.equalsIgnoreCase(JsonKey.UPDATE)){
       Map<String, Object> orgMap = dataMapList.get(0);
       if(!(((String)orgMap.get(JsonKey.ID)).equalsIgnoreCase(orgId))){

@@ -11,9 +11,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 
+import java.util.Set;
 import org.apache.velocity.VelocityContext;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.Constants;
@@ -208,6 +207,14 @@ public class UserManagementActor extends UntypedAbstractActor {
         privateFieldMap.put(key, JsonKey.PRIVATE);
       }
     }
+    if (publicList != null && privateFieldMap.isEmpty()) {
+      privateFieldMap = (Map<String, String>) esResult.get(JsonKey.PROFILE_VISIBILITY);
+      for (String key : publicList) {
+        privateFieldMap.remove(key);
+      }
+      updateCassandraWithPrivateFiled(userId, privateFieldMap);
+      esResult.put(JsonKey.PROFILE_VISIBILITY, privateFieldMap);
+    }
     if (privateFieldMap.size()>0) {
       updateCassandraWithPrivateFiled(userId, privateFieldMap);
       esResult.put(JsonKey.PROFILE_VISIBILITY, privateFieldMap);
@@ -282,6 +289,11 @@ public class UserManagementActor extends UntypedAbstractActor {
          privateMap.put(JsonKey.JOB_PROFILE, map.get(JsonKey.JOB_PROFILE));
          //tempMap = addPrivateField(JsonKey.EDUCATION, tempMap, field);
        }else {
+         if(!map.containsKey(field)){
+           throw new ProjectCommonException(ResponseCode.InvalidColumnError.getErrorCode(),
+               ResponseCode.InvalidColumnError.getErrorMessage(),
+               ResponseCode.CLIENT_ERROR.getResponseCode());
+         }
         privateMap.put(field, map.get(field));
         //map.remove(field);
        }
@@ -307,12 +319,12 @@ public class UserManagementActor extends UntypedAbstractActor {
   @SuppressWarnings("unchecked")
   private void updatePrivateKey(List<String> keys, Map<String, Object> data,
       Map<String, Object> privateMap, String attribute) {
-    if (keys == null || keys.size() == 0)
+    if (keys == null || keys.isEmpty())
       return;
     List<Map<String, Object>> reqData =
         (List<Map<String, Object>>) data.get(attribute);
     List<Map<String, Object>> privateList = new ArrayList<>();
-    if (reqData != null && reqData.size() > 0) {
+    if (reqData != null && !reqData.isEmpty()) {
       for (Map<String, Object> map : reqData) {
         Map<String, Object> innerPrivateMap = new HashMap<>();
         for (String key : keys) {
@@ -352,14 +364,12 @@ public class UserManagementActor extends UntypedAbstractActor {
    */
   private boolean updateDataInES(Map<String, Object> dataMap,
       Map<String, Object> privateDataMap, String userId) {
-    boolean response = false;
-    ElasticSearchUtil.upsertData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+    ElasticSearchUtil.createData(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId,
         privateDataMap);
-    response =
-        ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+    ElasticSearchUtil.createData(ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.user.getTypeName(), userId, dataMap);
-    return response;
+    return true;
   } 
   
   /**
@@ -1315,19 +1325,6 @@ public class UserManagementActor extends UntypedAbstractActor {
   private void updateKeyCloakUserBase(Map<String, Object> userMap) {
     try {
       String userId = ssoManager.updateUser(userMap);
-      
-      /*if(!ProjectUtil.isStringNullOREmpty(userId) && null != userMap.get(JsonKey.PHONE)){
-        boolean bool = ssoManager.addAttributesToKeyCloak(JsonKey.MOBILE, (String) userMap.get(JsonKey.PHONE), userId);
-        if(!bool){
-          ProjectLogger.log("phone not saved for userId "+userId);
-          ProjectCommonException exception = new ProjectCommonException(ResponseCode.userPhoneUpdateFailed.getErrorCode(),
-              ResponseCode.userPhoneUpdateFailed.getErrorMessage(),
-              ResponseCode.SERVER_ERROR.getResponseCode());
-          sender().tell(exception, self());
-          return;
-        }
-      }*/
-      
       if (!(!ProjectUtil.isStringNullOREmpty(userId) && userId.equalsIgnoreCase(JsonKey.SUCCESS))) {
         throw new ProjectCommonException(ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
             ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
@@ -1500,19 +1497,6 @@ public class UserManagementActor extends UntypedAbstractActor {
         userId = responseMap.get(JsonKey.USER_ID);
         accessToken = responseMap.get(JsonKey.ACCESSTOKEN);
         if (!ProjectUtil.isStringNullOREmpty(userId)) {
-          if(null != userMap.get(JsonKey.PHONE)){
-            boolean bool = ssoManager.addAttributesToKeyCloak(JsonKey.MOBILE, (String) userMap.get(JsonKey.PHONE), userId);
-            if(!bool){
-              ProjectLogger.log("phone not saved for userId "+userId);
-              ProjectCommonException exception = new ProjectCommonException(ResponseCode.userPhoneUpdateFailed.getErrorCode(),
-                  ResponseCode.userPhoneUpdateFailed.getErrorMessage(),
-                  ResponseCode.SERVER_ERROR.getResponseCode());
-              sender().tell(exception, self());
-              userMap.put(JsonKey.USER_ID, userId);
-              ssoManager.removeUser(userMap);
-              return;
-            }
-          }
           userMap.put(JsonKey.USER_ID, userId);
           userMap.put(JsonKey.ID, userId);
         } else {

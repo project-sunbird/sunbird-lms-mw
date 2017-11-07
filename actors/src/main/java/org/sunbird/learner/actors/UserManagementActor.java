@@ -202,6 +202,9 @@ public class UserManagementActor extends UntypedAbstractActor {
       }
     }
     Map<String,String> privateFieldMap = (Map<String, String>) esResult.get(JsonKey.PROFILE_VISIBILITY);
+    if(null == privateFieldMap){
+      privateFieldMap = new HashMap<>();
+    }
     if (privateList != null) {
       for (String key : privateList) {
         privateFieldMap.put(key, JsonKey.PRIVATE);

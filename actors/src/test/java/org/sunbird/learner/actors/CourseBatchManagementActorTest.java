@@ -100,6 +100,8 @@ public class CourseBatchManagementActorTest {
     testD1addUserToBatch();
     testD2addUserToBatchWithInvalidBatchId();
     testE1UpdateBatch();
+    testE2UpdateBatchAsStartDateBeforeTodayDate();
+    testE3UpdateBatchAsStartDateAfterEndDate();
   }
   
   public void createUser() {
@@ -407,6 +409,39 @@ public class CourseBatchManagementActorTest {
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
     Response response = probe.expectMsgClass(duration("1000 second"),Response.class);
+  }
+  
+  public void testE2UpdateBatchAsStartDateBeforeTodayDate(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.UPDATE_BATCH.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.ID ,batchId );
+    Calendar now =  Calendar.getInstance();
+    now.add(Calendar.DAY_OF_MONTH, -5);
+    Date after5Days = now.getTime();
+    innerMap.put(JsonKey.START_DATE , (String)format.format(after5Days));
+    innerMap.put(JsonKey.END_DATE , (String)format.format(new Date()));
+    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(duration("1000 second"),ProjectCommonException.class);
+  }
+  
+  public void testE3UpdateBatchAsStartDateAfterEndDate(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.UPDATE_BATCH.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.ID ,batchId );
+    Calendar now =  Calendar.getInstance();
+    now.add(Calendar.DAY_OF_MONTH, 15);
+    Date after5Days = now.getTime();
+    innerMap.put(JsonKey.START_DATE , (String)format.format(after5Days));
+    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(duration("1000 second"),ProjectCommonException.class);
   }
   
   @AfterClass

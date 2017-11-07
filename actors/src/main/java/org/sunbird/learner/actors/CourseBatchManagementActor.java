@@ -413,7 +413,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
             ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
                 ProjectUtil.EsType.user.getTypeName(), userId);
         // check whether is_deletd true or false
-        if ((ProjectUtil.isNull(result))
+        if ((ProjectUtil.isNull(result)) || (ProjectUtil.isNotNull(result) && result.isEmpty())
             || (ProjectUtil.isNotNull(result) && result.containsKey(JsonKey.IS_DELETED)
                 && ProjectUtil.isNotNull(result.get(JsonKey.IS_DELETED))
                 && (Boolean) result.get(JsonKey.IS_DELETED))) {
@@ -719,7 +719,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
                   ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
                       ProjectUtil.EsType.user.getTypeName(), userId);
               // check whether is_deletd true or false
-              if ((ProjectUtil.isNull(result))
+              if ((ProjectUtil.isNull(result))|| (ProjectUtil.isNotNull(result) && result.isEmpty())
                   || (ProjectUtil.isNotNull(result) && result.containsKey(JsonKey.IS_DELETED)
                       && ProjectUtil.isNotNull(result.get(JsonKey.IS_DELETED))
                       && (Boolean) result.get(JsonKey.IS_DELETED))) {

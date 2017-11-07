@@ -61,6 +61,9 @@ public class CourseBatchManagementActorTest {
   private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
   private static String batchId = "";
   private static String hashTagId = "";
+  private static Util.DbInfo userOrgDB = null;
+  private static String usrOrgId = "";
+  private static String userId = "";
   
   @BeforeClass
   public static void setUp() {
@@ -69,10 +72,14 @@ public class CourseBatchManagementActorTest {
       Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
       batchDbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
       userOrgdbInfo = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
+      userOrgDB = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
+      userId = String.valueOf(System.currentTimeMillis());
+      usrOrgId = String.valueOf(System.currentTimeMillis());
   }
   
   @Test
   public void runAllTestCases(){
+    createUser();
     test1InvalidOperation();
     test2InvalidMessageType();
     testA1CreateBatch();
@@ -90,7 +97,19 @@ public class CourseBatchManagementActorTest {
     testC3getBatchDetailsWithInvalidId();
     testC4getCourseBatchDetails();
     testC4getCourseBatchDetailsWithInvalidId();
-    
+    testD1addUserToBatch();
+    testD2addUserToBatchWithInvalidBatchId();
+    testE1UpdateBatch();
+  }
+  
+  public void createUser() {
+    Map<String,Object> userMap = new HashMap<>();
+    userMap.put(JsonKey.USER_ID, userId);
+    userMap.put(JsonKey.ORGANISATION_ID, "ORG_001");
+    userMap.put(JsonKey.ID, usrOrgId);
+    Response res =ServiceFactory.getInstance().insertRecord(userOrgdbInfo.getKeySpace(), userOrgdbInfo.getTableName(), userMap); 
+    ElasticSearchUtil.createData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+                ProjectUtil.EsType.user.getTypeName(), userId, userMap);
   }
   
   //@Test
@@ -136,6 +155,12 @@ public class CourseBatchManagementActorTest {
     now.add(Calendar.DAY_OF_MONTH, 5);
     Date after5Days = now.getTime();
     innerMap.put(JsonKey.END_DATE , (String)format.format(after5Days));
+    List<String> createdFr = new ArrayList<>();
+    createdFr.add("ORG_001");
+    innerMap.put(JsonKey.COURSE_CREATED_FOR, createdFr);
+    List<String> mentors = new ArrayList<>();
+    mentors.add(userId);
+    innerMap.put(JsonKey.MENTORS, mentors);
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
     Response response = probe.expectMsgClass(duration("1000 second"),Response.class);
@@ -333,15 +358,65 @@ public class CourseBatchManagementActorTest {
     probe.expectMsgClass(duration("1000 second"),ProjectCommonException.class);
   }
   
+  public void testD1addUserToBatch(){
+     TestKit probe = new TestKit(system);
+     ActorRef subject = system.actorOf(props);
+     Request reqObj = new Request();
+     reqObj.setOperation(ActorOperations.ADD_USER_TO_BATCH.getValue());
+     HashMap<String, Object> innerMap = new HashMap<>();
+     innerMap.put(JsonKey.BATCH_ID ,batchId );
+     List<String> userids = new ArrayList<>();
+     userids.add(userId);
+     innerMap.put(JsonKey.USERIDS ,userids );
+     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
+     subject.tell(reqObj, probe.getRef());
+     Response response = probe.expectMsgClass(duration("1000 second"),Response.class);
+   }
+  
+  public void testD2addUserToBatchWithInvalidBatchId(){
+    
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.ADD_USER_TO_BATCH.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.BATCH_ID ,batchId+"1235" );
+    List<String> userids = new ArrayList<>();
+    userids.add(userId);
+    innerMap.put(JsonKey.USERIDS ,userids );
+    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(duration("1000 second"),ProjectCommonException.class);
+  }
+  
+  public void testE1UpdateBatch(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.UPDATE_BATCH.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.ID ,batchId );
+    innerMap.put(JsonKey.ENROLLMENT_TYPE, "invite-only");
+    innerMap.put(JsonKey.HASHTAGID ,""+System.currentTimeMillis());
+    List<String> createdFr = new ArrayList<>();
+    createdFr.add("ORG_001");
+    innerMap.put(JsonKey.COURSE_CREATED_FOR, createdFr);
+    List<String> mentors = new ArrayList<>();
+    mentors.add(userId);
+    innerMap.put(JsonKey.MENTORS, mentors);
+    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
+    subject.tell(reqObj, probe.getRef());
+    Response response = probe.expectMsgClass(duration("1000 second"),Response.class);
+  }
+  
   @AfterClass
   public static void deleteUser() {
-
-
     operation.deleteRecord(batchDbInfo.getKeySpace(), batchDbInfo.getTableName(), batchId);
-
     ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.course.getTypeName(), batchId);
-    
+    ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.user.getTypeName(), userId);
+    operation.deleteRecord(userOrgDB.getKeySpace(), userOrgDB.getTableName(), usrOrgId);
     
   }
 }

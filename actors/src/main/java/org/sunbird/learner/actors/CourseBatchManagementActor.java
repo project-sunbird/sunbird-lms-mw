@@ -501,7 +501,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
           ResponseCode.invalidHashTagId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
       }
-    }else if(opType.equalsIgnoreCase(JsonKey.UPDATE)){
+    }else if(opType.equalsIgnoreCase(JsonKey.UPDATE) && !dataMapList.isEmpty()){
       Map<String, Object> batchMap = dataMapList.get(0);
       if(!(((String)batchMap.get(JsonKey.ID)).equalsIgnoreCase(id))){
         throw new ProjectCommonException(ResponseCode.invalidHashTagId.getErrorCode(),
@@ -549,7 +549,6 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     req.remove(JsonKey.COUNTER_INCREMENT_STATUS);
     req.remove(JsonKey.COUNTER_DECREMENT_STATUS);
     req.remove(JsonKey.PARTICIPANT);
-    req.remove(JsonKey.HASHTAGID);
     if(!ProjectUtil.isStringNullOREmpty(((String)req.get(JsonKey.HASHTAGID)))){
       req.put(JsonKey.HASHTAGID,validateHashTagId(((String)req.get(JsonKey.HASHTAGID)),JsonKey.UPDATE,(String) req.get(JsonKey.ID)));
     }

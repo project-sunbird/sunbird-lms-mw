@@ -7,6 +7,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.cassandra.cql3.Json;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -15,6 +17,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.fcm.Notification;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -51,6 +54,9 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
         else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.DELETE_GEO_LOCATION.getValue())) {
           deleteGeoLocation(actorMessage);
+        } else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.SEND_NOTIFICATION.getValue())) {
+          sendNotification(actorMessage);
         }else {
           ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
           ProjectCommonException exception =
@@ -71,6 +77,33 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
               ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
     }
+  }
+
+
+  private void sendNotification(Request actorMessage) {
+    ProjectLogger.log("sendnotification actor method called.");
+      String topic = (String)actorMessage.getRequest().get(JsonKey.TO);
+      //Topic name is same as Location id  in current system.
+      // if logic is change then we need to update the matching logic as well
+     Response response = cassandraOperation.getRecordById(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), topic);
+     List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+     if(list.isEmpty()){
+       // throw exception that invalid topic  ...
+       throw new ProjectCommonException(ResponseCode.invalidTopic.getErrorCode(),
+           ResponseCode.invalidTopic.getErrorMessage(),
+           ResponseCode.CLIENT_ERROR.getResponseCode());
+     }
+     Map<String,Object> NotificationData = (Map) actorMessage.getRequest().get(JsonKey.DATA);
+    String message = Notification.sendNotification(topic, NotificationData, Notification.FCM_URL);
+    ProjectLogger.log("FCM message from Google ==" + message);
+    response = new Response();
+    if(JsonKey.FAILURE.equalsIgnoreCase(message)){
+      response.getResult().put(JsonKey.RESPONSE , JsonKey.FAILURE);
+    }else {
+      response.getResult().put(JsonKey.RESPONSE , JsonKey.SUCCESS);
+      response.getResult().put(JsonKey.ID , message);
+    }
+    sender().tell(response , self());
   }
 
 

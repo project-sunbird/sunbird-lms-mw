@@ -6,6 +6,7 @@ import static org.sunbird.learner.util.Util.isNull;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -64,6 +65,9 @@ public class UserManagementActor extends UntypedAbstractActor {
   private PropertiesCache propertiesCache = PropertiesCache.getInstance();
   boolean isSSOEnabled =
       Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
+  private Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+  private Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+  private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
 
 
   /**
@@ -519,6 +523,9 @@ public class UserManagementActor extends UntypedAbstractActor {
                   lastLoginTime = "0";
                 }
                 result.put(JsonKey.LAST_LOGIN_TIME, Long.parseLong(lastLoginTime));
+              }if(requestFields.contains(JsonKey.TOPIC)){
+                // fetch the topic details of all user associated orgs and append in the result
+                fetchTopicOfAssociatedOrgs(result);
               }
             } else {
               result.remove(JsonKey.MISSING_FIELDS);
@@ -639,6 +646,9 @@ public class UserManagementActor extends UntypedAbstractActor {
                       (String) result.get(JsonKey.LAST_LOGIN_TIME))));
         }if (!requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
           result.remove(JsonKey.LAST_LOGIN_TIME);
+        }if(requestFields.contains(JsonKey.TOPIC)){
+    		  // fetch the topic details of all user associated orgs and append in the result
+          fetchTopicOfAssociatedOrgs(result);
         }
     	}
     }else {
@@ -655,6 +665,78 @@ public class UserManagementActor extends UntypedAbstractActor {
       response.put(JsonKey.RESPONSE, result);
     }
     sender().tell(response, self());
+  }
+
+
+  private void fetchTopicOfAssociatedOrgs(Map<String, Object> result) {
+
+    String userId = (String) result.get(JsonKey.ID);
+    Map<String, Object> locationCache = new HashMap<>();
+    Set<String> topicSet = new HashSet<>();
+
+    // fetch all associated user orgs
+    Response response1 = cassandraOperation
+        .getRecordsByProperty(userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName(),
+            JsonKey.USER_ID, userId);
+
+    List<Map<String, Object>> list = (List<Map<String, Object>>) response1.get(JsonKey.RESPONSE);
+
+    List<String> orgIdsList = new ArrayList<>();
+    if (!list.isEmpty()) {
+
+      for (Map<String, Object> m : list) {
+        String orgId = (String) m.get(JsonKey.ORGANISATION_ID);
+        orgIdsList.add(orgId);
+      }
+
+      // fetch all org details from elasticsearch ...
+      if (!orgIdsList.isEmpty()) {
+
+        Map<String, Object> filters = new HashMap<>();
+        filters.put(JsonKey.ID, orgIdsList);
+
+        List<String> orgfields = new ArrayList<>();
+        orgfields.add(JsonKey.ID);
+        orgfields.add(JsonKey.LOCATION_ID);
+
+        SearchDTO searchDTO = new SearchDTO();
+        searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
+        searchDTO.setFields(orgfields);
+
+        Map<String, Object> esresult = ElasticSearchUtil
+            .complexSearch(searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(),
+                EsType.organisation.getTypeName());
+        List<Map<String, Object>> esContent = (List<Map<String, Object>>) esresult
+            .get(JsonKey.CONTENT);
+
+        if (!esContent.isEmpty()) {
+          for (Map<String, Object> m : esContent) {
+            if (!ProjectUtil.isStringNullOREmpty((String) m.get(JsonKey.LOCATION_ID))) {
+              String locationId = (String) m.get(JsonKey.LOCATION_ID);
+              if (locationCache.containsKey(locationId)) {
+                topicSet.add((String) locationCache.get(locationId));
+              } else {
+                // get the location id info from db and set to the cacche and topicSet
+                Response response3 = cassandraOperation
+                    .getRecordById(geoLocationDbInfo.getKeySpace(),
+                        geoLocationDbInfo.getTableName(), locationId);
+                List<Map<String, Object>> list3 = (List<Map<String, Object>>) response3
+                    .get(JsonKey.RESPONSE);
+                if (!list3.isEmpty()) {
+                  Map<String, Object> locationInfoMap = list3.get(0);
+                  String topic = (String) locationInfoMap.get(JsonKey.TOPIC);
+                  topicSet.add(topic);
+                  locationCache.put(locationId, topic);
+                }
+
+              }
+
+            }
+          }
+        }
+      }
+    }
+    result.put(JsonKey.TOPICS, topicSet);
   }
 
   /**

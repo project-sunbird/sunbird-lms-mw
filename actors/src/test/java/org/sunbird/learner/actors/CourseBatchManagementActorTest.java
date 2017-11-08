@@ -60,7 +60,9 @@ public class CourseBatchManagementActorTest {
   private String courseId = "do_212282810555342848180";
   private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
   private static String batchId = "";
+  private static String batchId2 = "";
   private static String hashTagId = "";
+  private static String hashTagId2 = "";
   private static Util.DbInfo userOrgDB = null;
   private static String usrOrgId = "";
   private static String userId = "";
@@ -68,6 +70,7 @@ public class CourseBatchManagementActorTest {
   @BeforeClass
   public static void setUp() {
       hashTagId = String.valueOf(System.currentTimeMillis());
+      hashTagId2 = String.valueOf(System.currentTimeMillis())+45;
       system = ActorSystem.create("system");
       Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
       batchDbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
@@ -83,6 +86,7 @@ public class CourseBatchManagementActorTest {
     test1InvalidOperation();
     test2InvalidMessageType();
     testA1CreateBatch();
+    testA2CreateBatch();
     testA1CreateBatchWithInvalidCorsId();
     try {
       Thread.sleep(2000);
@@ -100,6 +104,7 @@ public class CourseBatchManagementActorTest {
     testD1addUserToBatch();
     testD2addUserToBatchWithInvalidBatchId();
     testE1UpdateBatch();
+    testE2UpdateBatchWithExistingHashTagId();
     testE2UpdateBatchAsStartDateBeforeTodayDate();
     testE3UpdateBatchAsStartDateAfterEndDate();
   }
@@ -167,7 +172,41 @@ public class CourseBatchManagementActorTest {
     subject.tell(reqObj, probe.getRef());
     Response response = probe.expectMsgClass(duration("1000 second"),Response.class);
     batchId = (String) response.getResult().get(JsonKey.BATCH_ID);
-    System.out.println("batchId : "+batchId);
+    System.out.println("batchId1 : "+batchId);
+  }
+  
+  public void testA2CreateBatch(){
+    PowerMockito.mockStatic(EkStepRequestUtil.class);
+    Map<String , Object> ekstepResponse = new HashMap<String , Object>();
+    ekstepResponse.put("count" , 10);
+    Object[] ekstepMockResult = {ekstepResponse};
+    when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
+    
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.CREATE_BATCH.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.COURSE_ID, courseId);
+    innerMap.put(JsonKey.NAME, "DUMMY_COURSE_NAME2");
+    innerMap.put(JsonKey.ENROLLMENT_TYPE, "invite-only");
+    innerMap.put(JsonKey.START_DATE , (String)format.format(new Date()));
+    innerMap.put(JsonKey.HASHTAGID ,hashTagId2 );
+    Calendar now =  Calendar.getInstance();
+    now.add(Calendar.DAY_OF_MONTH, 5);
+    Date after5Days = now.getTime();
+    innerMap.put(JsonKey.END_DATE , (String)format.format(after5Days));
+    List<String> createdFr = new ArrayList<>();
+    createdFr.add("ORG_001");
+    innerMap.put(JsonKey.COURSE_CREATED_FOR, createdFr);
+    List<String> mentors = new ArrayList<>();
+    mentors.add(userId);
+    innerMap.put(JsonKey.MENTORS, mentors);
+    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
+    subject.tell(reqObj, probe.getRef());
+    Response response = probe.expectMsgClass(duration("1000 second"),Response.class);
+    batchId2 = (String) response.getResult().get(JsonKey.BATCH_ID);
+    System.out.println("batchId2 : "+batchId2);
   }
   
   public void testA1CreateBatchWithInvalidCorsId(){
@@ -411,6 +450,46 @@ public class CourseBatchManagementActorTest {
     Response response = probe.expectMsgClass(duration("1000 second"),Response.class);
   }
   
+  public void testE2UpdateBatchWithExistingHashTagId(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.UPDATE_BATCH.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.ID ,batchId );
+    innerMap.put(JsonKey.ENROLLMENT_TYPE, "invite-only");
+    innerMap.put(JsonKey.HASHTAGID ,hashTagId2);
+    List<String> createdFr = new ArrayList<>();
+    createdFr.add("ORG_001");
+    innerMap.put(JsonKey.COURSE_CREATED_FOR, createdFr);
+    List<String> mentors = new ArrayList<>();
+    mentors.add(userId);
+    innerMap.put(JsonKey.MENTORS, mentors);
+    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(duration("1000 second"),ProjectCommonException.class);
+  }
+  
+  public void testE2UpdateClosedBatch(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.UPDATE_BATCH.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.ID ,batchId );
+    innerMap.put(JsonKey.ENROLLMENT_TYPE, "invite-only");
+    innerMap.put(JsonKey.HASHTAGID ,hashTagId2);
+    List<String> createdFr = new ArrayList<>();
+    createdFr.add("ORG_001");
+    innerMap.put(JsonKey.COURSE_CREATED_FOR, createdFr);
+    List<String> mentors = new ArrayList<>();
+    mentors.add(userId);
+    innerMap.put(JsonKey.MENTORS, mentors);
+    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(duration("1000 second"),ProjectCommonException.class);
+  }
+  
   public void testE2UpdateBatchAsStartDateBeforeTodayDate(){
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -449,6 +528,9 @@ public class CourseBatchManagementActorTest {
     operation.deleteRecord(batchDbInfo.getKeySpace(), batchDbInfo.getTableName(), batchId);
     ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.course.getTypeName(), batchId);
+    operation.deleteRecord(batchDbInfo.getKeySpace(), batchDbInfo.getTableName(), batchId2);
+    ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.course.getTypeName(), batchId2);
     ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.user.getTypeName(), userId);
     operation.deleteRecord(userOrgDB.getKeySpace(), userOrgDB.getTableName(), usrOrgId);

@@ -254,8 +254,8 @@ public class EsSyncActor extends UntypedAbstractActor {
     ProfileCompletenessService service = ProfileCompletenessFactory.getInstance();
     Map<String, Object> profileResponse = service.computeProfile(userMap);
     userMap.putAll(profileResponse);
-    Map<String, Object> profileVisibility =
-        (Map<String, Object>) userMap.get(JsonKey.PROFILE_VISIBILITY);
+    Map<String, String> profileVisibility =
+        (Map<String, String>) userMap.get(JsonKey.PROFILE_VISIBILITY);
     if (null != profileVisibility && !profileVisibility.isEmpty()) {
       Map<String, Object> profileVisibilityMap = new HashMap<>();
       for (String field : profileVisibility.keySet()) {
@@ -264,6 +264,8 @@ public class EsSyncActor extends UntypedAbstractActor {
       ElasticSearchUtil.upsertData(ProjectUtil.EsIndex.sunbird.getIndexName(),
           ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId, profileVisibilityMap);
       UserUtility.updateProfileVisibilityFields(profileVisibilityMap, userMap);
+    }else{
+      userMap.put(JsonKey.PROFILE_VISIBILITY, new HashMap<String, String>());
     }
     ProjectLogger.log("fetching user data completed");
     return userMap;

@@ -636,3 +636,6 @@ ALTER TABLE sunbird.geo_location ADD location text;
 
 // 3rd Nov 2017
 ALTER TABLE sunbird.organisation ADD locationId text;
+// 9th Nov 2017
+ALTER TABLE sunbirdplugin.announcement DROP target ;
+ALTER TABLE sunbirdplugin.announcement ADD target map<text, frozen<map<text ,frozen<list<text>>>>>;

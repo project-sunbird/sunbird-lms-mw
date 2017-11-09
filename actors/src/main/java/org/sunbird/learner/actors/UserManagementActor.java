@@ -1546,6 +1546,11 @@ public class UserManagementActor extends UntypedAbstractActor {
     requestMap = new HashMap<>();
     requestMap.putAll(userMap);
     removeUnwanted(requestMap);
+    Map<String,String> profileVisbility = new HashMap<>(); 
+    for(String field: ProjectUtil.defaultPrivateFields){
+      profileVisbility.put(field, JsonKey.PRIVATE);
+    }
+    requestMap.put(JsonKey.PROFILE_VISIBILITY, profileVisbility);
     Response response = null;
     try {
       response = cassandraOperation.insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(),

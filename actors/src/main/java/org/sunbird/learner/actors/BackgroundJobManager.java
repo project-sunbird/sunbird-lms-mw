@@ -595,7 +595,11 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       Response skillresponse = cassandraOperation.getRecordsByProperty(userSkillDbInfo.getKeySpace() , userSkillDbInfo.getTableName(), JsonKey.USER_ID , userId);
       List<Map<String,Object>> responseList = (List<Map<String, Object>>) skillresponse.get(JsonKey.RESPONSE);
       map.put(JsonKey.SKILLS , responseList);
+      ProfileCompletenessService profileService = ProfileCompletenessFactory.getInstance();
+      Map<String, Object> responsemap = profileService.computeProfile(map);
+      map.putAll(responsemap);
       //TODO:Refactor the code for better understanding and based on modules
+      //Update private fields data to userProfileVisbility index and others to user index
       Map<String, Object> profileVisibility =
           (Map<String, Object>) map.get(JsonKey.PROFILE_VISIBILITY);
       if (null != profileVisibility && !profileVisibility.isEmpty()) {
@@ -778,12 +782,12 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       Map<String, Object> data) {
     ProjectLogger
         .log("making call to ES for type ,identifier ,data==" + type + " " + identifier + data);
-    if (type.equalsIgnoreCase(ProjectUtil.EsType.user.getTypeName())) {
+   /* if (type.equalsIgnoreCase(ProjectUtil.EsType.user.getTypeName())) {
       // now calculate profile completeness and error filed and store it in ES
       ProfileCompletenessService service = ProfileCompletenessFactory.getInstance();
       Map<String, Object> responsemap = service.computeProfile(data);
       data.putAll(responsemap);
-    }
+    }*/
     String response = ElasticSearchUtil.createData(index, type, identifier, data);
     ProjectLogger.log("Getting ES save response for type , identiofier==" + type + "  " + identifier
         + "  " + response);

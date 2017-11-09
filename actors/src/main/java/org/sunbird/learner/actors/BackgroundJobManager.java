@@ -608,7 +608,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
           profileVisibilityMap.put(field, map.get(field));
         }
         insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId, profileVisibility);
+            ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId, profileVisibilityMap);
         UserUtility.updateProfileVisibilityFields(profileVisibilityMap, map);
       }
       insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),

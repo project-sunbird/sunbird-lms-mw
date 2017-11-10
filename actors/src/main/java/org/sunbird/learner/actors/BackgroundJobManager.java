@@ -186,9 +186,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
           (List<Map<String, Object>>) result.get(JsonKey.ORGANISATIONS);
       if (null != roleMapList) {
         for (Map<String, Object> map : roleMapList) {
-          if ((((String) map.get(JsonKey.USER_ID))
-              .equalsIgnoreCase((String) actorMessage.get(JsonKey.USER_ID)))
-              && (((String) map.get(JsonKey.ORGANISATION_ID)).equalsIgnoreCase(orgId))) {
+          if ((orgId.equalsIgnoreCase((String) map.get(JsonKey.ORGANISATION_ID)))) {
             map.put(JsonKey.ROLES, roles);
           }
         }
@@ -550,14 +548,9 @@ public class BackgroundJobManager extends UntypedAbstractActor {
         Response result = cassandraOperation.getRecordsByProperties(orgUsrDbInfo.getKeySpace(),
             orgUsrDbInfo.getTableName(), reqMap);
         list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-        Map<String, Object> orgDb = null;
         if (!(list.isEmpty())) {
           for (Map<String, Object> tempMap : list) {
-            Map<String, Object> orgData = new HashMap<>();
-            orgDb = tempMap;
-            orgData.put(JsonKey.ORGANISATION_ID, orgDb.get(JsonKey.ORGANISATION_ID));
-            orgData.put(JsonKey.ROLES, orgDb.get(JsonKey.ROLES));
-            organisations.add(orgData);
+            organisations.add(tempMap);
           }
         }
       } catch (Exception e) {

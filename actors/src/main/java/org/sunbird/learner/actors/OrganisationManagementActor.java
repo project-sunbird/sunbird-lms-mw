@@ -400,7 +400,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           ResponseCode.invalidHashTagId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
       }
-    }else if(opType.equalsIgnoreCase(JsonKey.UPDATE)){
+    }else if(opType.equalsIgnoreCase(JsonKey.UPDATE) && !dataMapList.isEmpty()){
       Map<String, Object> orgMap = dataMapList.get(0);
       if(!(((String)orgMap.get(JsonKey.ID)).equalsIgnoreCase(orgId))){
         throw new ProjectCommonException(ResponseCode.invalidHashTagId.getErrorCode(),

@@ -201,7 +201,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
         FromConfig.getInstance()
             .props(Props.create(UserDataEncryptionDecryptionServiceActor.class)),
         USER_DATA_ENC_DEC_SERVICE_ACTOR);
-    auditLogManagementActor = getContext().actorOf(Props.create(ActorAuditLogServiceImpl.class), AUDIT_LOG_MGMT_ACTOR);
+    auditLogManagementActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(ActorAuditLogServiceImpl.class)), AUDIT_LOG_MGMT_ACTOR);
     skillManagementActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(SkillmanagementActor.class)), SKILL_MANAGEMENT_ACTOR);
     tenantPrefManagementActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(TenantPreferenceManagementActor.class)), TENANT_PREFERENCE_MNGT_ACTOR);
     clientManagementActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(ClientManagementActor.class)), CLIENT_MANAGEMENT_ACTOR);
@@ -327,7 +327,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.PROCESS_AUDIT_LOG.getValue(), auditLogManagementActor);
     routerMap.put(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue(), backgroundJobManager);
     routerMap.put(ActorOperations.UPDATE_USER_ROLES_ES.getValue(), backgroundJobManager);
-    routerMap.put(ActorOperations.PROCESS_DATA.getValue(), backgroundJobManager);
+    routerMap.put(ActorOperations.PROCESS_DATA.getValue(), metricsBackGroungJobActor);
     routerMap.put(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue(), backgroundJobManager);
     routerMap.put(ActorOperations.ADD_USER_BADGE_BKG.getValue(), backgroundJobManager);
     routerMap.put(ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue(), backgroundJobManager);

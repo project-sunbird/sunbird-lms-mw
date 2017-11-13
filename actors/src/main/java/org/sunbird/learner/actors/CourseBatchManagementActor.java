@@ -413,7 +413,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
             ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
                 ProjectUtil.EsType.user.getTypeName(), userId);
         // check whether is_deletd true or false
-        if ((ProjectUtil.isNull(result))
+        if ((ProjectUtil.isNull(result)) || (ProjectUtil.isNotNull(result) && result.isEmpty())
             || (ProjectUtil.isNotNull(result) && result.containsKey(JsonKey.IS_DELETED)
                 && ProjectUtil.isNotNull(result.get(JsonKey.IS_DELETED))
                 && (Boolean) result.get(JsonKey.IS_DELETED))) {
@@ -501,7 +501,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
           ResponseCode.invalidHashTagId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
       }
-    }else if(opType.equalsIgnoreCase(JsonKey.UPDATE)){
+    }else if(opType.equalsIgnoreCase(JsonKey.UPDATE) && !dataMapList.isEmpty()){
       Map<String, Object> batchMap = dataMapList.get(0);
       if(!(((String)batchMap.get(JsonKey.ID)).equalsIgnoreCase(id))){
         throw new ProjectCommonException(ResponseCode.invalidHashTagId.getErrorCode(),
@@ -549,7 +549,6 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     req.remove(JsonKey.COUNTER_INCREMENT_STATUS);
     req.remove(JsonKey.COUNTER_DECREMENT_STATUS);
     req.remove(JsonKey.PARTICIPANT);
-    req.remove(JsonKey.HASHTAGID);
     if(!ProjectUtil.isStringNullOREmpty(((String)req.get(JsonKey.HASHTAGID)))){
       req.put(JsonKey.HASHTAGID,validateHashTagId(((String)req.get(JsonKey.HASHTAGID)),JsonKey.UPDATE,(String) req.get(JsonKey.ID)));
     }
@@ -719,7 +718,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
                   ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
                       ProjectUtil.EsType.user.getTypeName(), userId);
               // check whether is_deletd true or false
-              if ((ProjectUtil.isNull(result))
+              if ((ProjectUtil.isNull(result))|| (ProjectUtil.isNotNull(result) && result.isEmpty())
                   || (ProjectUtil.isNotNull(result) && result.containsKey(JsonKey.IS_DELETED)
                       && ProjectUtil.isNotNull(result.get(JsonKey.IS_DELETED))
                       && (Boolean) result.get(JsonKey.IS_DELETED))) {

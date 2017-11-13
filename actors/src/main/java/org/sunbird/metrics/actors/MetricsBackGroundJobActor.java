@@ -97,6 +97,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     ProjectLogger.log("In sendMail for metrics Report");
     Map<String, Object> map = request.getRequest();
     SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
+    simpleDateFormat.setLenient(false);
     String requestId = (String) map.get(JsonKey.REQUEST_ID);
 
     // fetch the DB details from database on basis of requestId ....
@@ -153,6 +154,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     Map<String, Object> map = request.getRequest();
     String requestId = (String) map.get(JsonKey.REQUEST_ID);
     SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
+    simpleDateFormat.setLenient(false);
 
     Response response = cassandraOperation.getRecordById(reportTrackingdbInfo.getKeySpace(),
         reportTrackingdbInfo.getTableName(), requestId);

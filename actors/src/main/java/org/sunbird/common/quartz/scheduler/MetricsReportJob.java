@@ -49,6 +49,7 @@ public class MetricsReportJob implements Job {
 
     ObjectMapper mapper = new ObjectMapper();
     SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
+    simpleDateFormat.setLenient(false);
 
     Response response = cassandraOperation.getRecordsByProperty(reportTrackingdbInfo.getKeySpace(),
         reportTrackingdbInfo.getTableName(), JsonKey.STATUS,

@@ -145,6 +145,7 @@ public class UtilityActor extends UntypedAbstractActor {
   private Map<String, Object> getLatestContent(Map<String, Object> current,
       Map<String, Object> next) {
     SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
+    simpleDateFormat.setLenient(false);
     if (current.get(JsonKey.LAST_ACCESS_TIME) == null
         && next.get(JsonKey.LAST_ACCESS_TIME) == null) {
       return next;

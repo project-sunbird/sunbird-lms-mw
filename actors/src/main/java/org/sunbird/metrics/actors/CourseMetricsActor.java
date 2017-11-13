@@ -241,6 +241,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     ProjectLogger.log("CourseMetricsActor-courseProgressMetrics called");
     SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
+    simpleDateFormat.setLenient(false);
 
     String requestedBy = (String) actorMessage.get(JsonKey.REQUESTED_BY);
 

@@ -177,6 +177,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
       Map<String, Integer> contentStateHolder) throws ParseException {
 
     SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
+    simpleDateFormat.setLenient(false);
 
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
     req.put(JsonKey.ID, generatePrimaryKey(req, userId));
@@ -306,6 +307,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
 
   private String compareTime(Date currentValue, Date requestedValue) {
     SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
+    simpleDateFormat.setLenient(false);
     if (currentValue == null && requestedValue == null) {
       return ProjectUtil.getFormattedDate();
     } else if (currentValue == null) {

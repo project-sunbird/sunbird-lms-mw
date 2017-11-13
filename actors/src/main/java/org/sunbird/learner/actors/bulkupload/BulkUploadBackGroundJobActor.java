@@ -1003,7 +1003,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           request.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
           request.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
           ActorUtil.tell(request);
-
         } catch (Exception ex) {
           ProjectLogger.log(
               "Exception occurred while bulk user upload in BulkUploadBackGroundJobActor:", ex);

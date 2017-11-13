@@ -33,7 +33,7 @@ public class ActorSystemFactory {
   private static void createLocalActorSystem () {
     ProjectLogger.log("Initializing Local Actor System");
     if (null == actorSystem) {
-      actorSystem = new LocalActorSystem();
+      actorSystem = LocalActorSystem.getInstance();
     }
   }
   
@@ -42,7 +42,7 @@ public class ActorSystemFactory {
    */
   public static void createRemoteActorSystem() {
     if (null == actorSystem) {
-      actorSystem = new RemoteActorSystem();
+      actorSystem = RemoteActorSystem.getInstance();
     }
   }
 

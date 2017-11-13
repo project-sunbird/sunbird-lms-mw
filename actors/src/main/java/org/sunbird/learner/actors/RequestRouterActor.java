@@ -1,57 +1,81 @@
 package org.sunbird.learner.actors;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.learner.actors.assessment.AssessmentItemActor;
-import org.sunbird.learner.actors.badges.BadgesActor;
-import org.sunbird.learner.actors.bulkupload.BulkUploadBackGroundJobActor;
-import org.sunbird.learner.actors.bulkupload.BulkUploadManagementActor;
-import org.sunbird.learner.actors.bulkupload.UserDataEncryptionDecryptionServiceActor;
-import org.sunbird.learner.actors.client.ClientManagementActor;
-import org.sunbird.learner.actors.geolocation.GeoLocationManagementActor;
-import org.sunbird.learner.actors.skill.SkillmanagementActor;
-import org.sunbird.learner.actors.fileuploadservice.FileUploadServiceActor;
-import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
-import org.sunbird.learner.actors.recommend.RecommendorActor;
-import org.sunbird.learner.actors.search.CourseSearchActor;
-import org.sunbird.learner.actors.search.SearchHandlerActor;
-import org.sunbird.learner.actors.syncjobmanager.EsSyncActor;
-import org.sunbird.learner.actors.tenantpreference.TenantPreferenceManagementActor;
-import org.sunbird.learner.audit.impl.ActorAuditLogServiceImpl;
-import org.sunbird.learner.util.AuditOperation;
-import org.sunbird.learner.util.Util;
-import org.sunbird.metrics.actors.CourseMetricsActor;
-import org.sunbird.metrics.actors.MetricsBackGroundJobActor;
-import org.sunbird.metrics.actors.OrganisationMetricsActor;
-import org.sunbird.metrics.actors.UserMetricsActor;
-
 import akka.actor.ActorRef;
+import akka.actor.ActorSelection;
+import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
 import akka.dispatch.OnComplete;
 import akka.pattern.Patterns;
 import akka.routing.FromConfig;
 import akka.util.Timeout;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import java.text.MessageFormat;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.learner.actors.assessment.AssessmentItemActor;
+import org.sunbird.learner.actors.badges.BadgesActor;
+import org.sunbird.learner.actors.bulkupload.BulkUploadManagementActor;
+import org.sunbird.learner.actors.bulkupload.UserDataEncryptionDecryptionServiceActor;
+import org.sunbird.learner.actors.client.ClientManagementActor;
+import org.sunbird.learner.actors.fileuploadservice.FileUploadServiceActor;
+import org.sunbird.learner.actors.geolocation.GeoLocationManagementActor;
+import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
+import org.sunbird.learner.actors.recommend.RecommendorActor;
+import org.sunbird.learner.actors.search.CourseSearchActor;
+import org.sunbird.learner.actors.search.SearchHandlerActor;
+import org.sunbird.learner.actors.skill.SkillmanagementActor;
+import org.sunbird.learner.actors.syncjobmanager.EsSyncActor;
+import org.sunbird.learner.actors.tenantpreference.TenantPreferenceManagementActor;
+import org.sunbird.learner.audit.impl.ActorAuditLogServiceImpl;
+import org.sunbird.learner.util.AuditOperation;
+import org.sunbird.learner.util.Util;
+import org.sunbird.metrics.actors.CourseMetricsActor;
+import org.sunbird.metrics.actors.OrganisationMetricsActor;
+import org.sunbird.metrics.actors.UserMetricsActor;
 import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
 /**
  * @author Amit Kumar
- * @author  arvind .
- * Class to initialize and select the appropriate actor on the basis of message type .
+ * @author arvind . 
+ * 
+ * Class to initialize and select the appropriate actor on the basis of message
+ *         type .
  */
 public class RequestRouterActor extends UntypedAbstractActor {
+
+  private static ActorSystem system = null;
+  /**
+   * @return the system
+   */
+  public static ActorSystem getSystem() {
+    return system;
+  }
+
+  /**
+   * @param system the system to set
+   */
+  public static void setSystem(ActorSystem system) {
+    RequestRouterActor.system = system;
+  }
+
+  private static ActorSelection selection = null;
+  private static final String ACTOR_CONFIG_NAME = "RemoteMWConfig";
+  private static final String REMOTE_ACTOR_SYSTEM_NAME = "RemoteMiddlewareActorSystem";
 
   private ActorRef courseEnrollmentActorRouter;
   private ActorRef learnerStateActorRouter;
@@ -61,12 +85,10 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ActorRef pageManagementRouter;
   private ActorRef organisationManagementRouter;
   private ActorRef recommendorActorRouter;
-  private ActorRef backgroundJobManager;
   private ActorRef courseSearchActorRouter;
   private ActorRef assessmentItemActor;
   private ActorRef searchHandlerActor;
   private ActorRef bulkUploadManagementActor;
-  private ActorRef bulkUploadBackGroundJobActor;
   private ActorRef courseBatchActor;
   private ActorRef userMetricsRouter;
   private ActorRef esSyncActor;
@@ -75,7 +97,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ActorRef notesActor;
   private ActorRef auditLogManagementActor;
   private ActorRef userDataEncryptionDecryptionServiceActor;
-  private ActorRef metricsBackGroungJobActor;
   private ActorRef schedularActor;
   private ActorRef organisationMetricsRouter;
   private ActorRef courseMetricsRouter;
@@ -86,6 +107,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ActorRef geoLocationManagementActor;
 
   private ExecutionContext ec;
+  
 
   public static Map<String, ActorRef> routerMap = new HashMap<>();
   private static final int WAIT_TIME_VALUE = 9;
@@ -96,13 +118,11 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private static final String COURSE_MANAGEMENT_ROUTER = "courseManagementRouter";
   private static final String PAGE_MANAGEMENT_ROUTER = "pageManagementRouter";
   private static final String ORGANISATION_MANAGEMENT_ROUTER = "organisationManagementRouter";
-  private static final String BACKGROUND_JOB = "backgroundJobManager";
   private static final String COURSE_SEARCH_ACTOR_ROUTER = "courseSearchActorRouter";
   private static final String ASSESSMENT_ITEM_ACTOR_ROUTER = "assessmentItemActor";
   private static final String RECOMMENDOR_ACTOR_ROUTER = "recommendorActorRouter";
   private static final String SEARCH_HANDLER_ACTOR_ROUTER = "searchHandlerActor";
   private static final String BULK_UPLOAD_MGMT_ACTOR = "bulkUploadManagementActor";
-  private static final String BULK_UPLOAD_BACKGROUND_ACTOR = "bulkUploadBackGroundJobActor";
   private static final String COURSE_BATCH_MANAGEMENT_ACTOR = "courseBatchActor";
   private static final String ORGANISATION_METRICS_ROUTER = "organisationMetricsRouter";
   private static final String COURSE_METRICS_ROUTER = "courseMetricsRouter";
@@ -111,7 +131,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private static final String SCHEDULAR_ACTOR = "schedularActor";
   private static final String EMAIL_SERVICE_ACTOR = "emailServiceActor";
   private static final String FILE_UPLOAD_ACTOR = "fileUploadActor";
-  private static final String METRICS_ACKGROUNG_JOB__ACTOR = "metricsBackGroungJobActor";
   private static final String BADGES_ACTOR = "badgesActor";
   private static final String NOTES_ACTOR = "notesActor";
   private static final String AUDIT_LOG_MGMT_ACTOR = "auditLogManagementActor";
@@ -120,9 +139,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private static final String SKILL_MANAGEMENT_ACTOR = "skillManagementActor";
   private static final String TENANT_PREFERENCE_MNGT_ACTOR = "tenantPreferenceManagementActor";
   private static final String CLIENT_MANAGEMENT_ACTOR = "clientManagementActor";
-  private static final String GEO_LOCATION_MANAGEMENT_ACTOR="geoLocationManagementActor";
+  private static final String GEO_LOCATION_MANAGEMENT_ACTOR = "geoLocationManagementActor";
 
-  
+
 
   /**
    * constructor to initialize router actor with child actor pool
@@ -149,8 +168,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
     organisationManagementRouter = getContext().actorOf(
         FromConfig.getInstance().props(Props.create(OrganisationManagementActor.class)),
         ORGANISATION_MANAGEMENT_ROUTER);
-    backgroundJobManager = getContext()
-        .actorOf(FromConfig.getInstance().props(Props.create(BackgroundJobManager.class)), BACKGROUND_JOB);
     courseSearchActorRouter =
         getContext().actorOf(FromConfig.getInstance().props(Props.create(CourseSearchActor.class)),
             COURSE_SEARCH_ACTOR_ROUTER);
@@ -166,9 +183,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
     bulkUploadManagementActor = getContext().actorOf(
         FromConfig.getInstance().props(Props.create(BulkUploadManagementActor.class)),
         BULK_UPLOAD_MGMT_ACTOR);
-    bulkUploadBackGroundJobActor = getContext().actorOf(
-        FromConfig.getInstance().props(Props.create(BulkUploadBackGroundJobActor.class)),
-        BULK_UPLOAD_BACKGROUND_ACTOR);
     courseBatchActor = getContext().actorOf(
         FromConfig.getInstance().props(Props.create(CourseBatchManagementActor.class)),
         COURSE_BATCH_MANAGEMENT_ACTOR);
@@ -189,10 +203,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
         FromConfig.getInstance().props(Props.create(SchedularActor.class)), SCHEDULAR_ACTOR);
     emailServiceActor = getContext().actorOf(
         FromConfig.getInstance().props(Props.create(EmailServiceActor.class)), EMAIL_SERVICE_ACTOR);
-    metricsBackGroungJobActor = getContext().actorOf(
-        FromConfig.getInstance().props(Props.create(MetricsBackGroundJobActor.class)),
-        METRICS_ACKGROUNG_JOB__ACTOR);
-
     badgesActor = getContext()
         .actorOf(FromConfig.getInstance().props(Props.create(BadgesActor.class)), BADGES_ACTOR);
     notesActor = getContext().actorOf(
@@ -201,11 +211,21 @@ public class RequestRouterActor extends UntypedAbstractActor {
         FromConfig.getInstance()
             .props(Props.create(UserDataEncryptionDecryptionServiceActor.class)),
         USER_DATA_ENC_DEC_SERVICE_ACTOR);
-    auditLogManagementActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(ActorAuditLogServiceImpl.class)), AUDIT_LOG_MGMT_ACTOR);
-    skillManagementActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(SkillmanagementActor.class)), SKILL_MANAGEMENT_ACTOR);
-    tenantPrefManagementActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(TenantPreferenceManagementActor.class)), TENANT_PREFERENCE_MNGT_ACTOR);
-    clientManagementActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(ClientManagementActor.class)), CLIENT_MANAGEMENT_ACTOR);
-    geoLocationManagementActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(GeoLocationManagementActor.class)), GEO_LOCATION_MANAGEMENT_ACTOR);
+    auditLogManagementActor = getContext().actorOf(
+        FromConfig.getInstance().props(Props.create(ActorAuditLogServiceImpl.class)),
+        AUDIT_LOG_MGMT_ACTOR);
+    skillManagementActor = getContext().actorOf(
+        FromConfig.getInstance().props(Props.create(SkillmanagementActor.class)),
+        SKILL_MANAGEMENT_ACTOR);
+    tenantPrefManagementActor = getContext().actorOf(
+        FromConfig.getInstance().props(Props.create(TenantPreferenceManagementActor.class)),
+        TENANT_PREFERENCE_MNGT_ACTOR);
+    clientManagementActor = getContext().actorOf(
+        FromConfig.getInstance().props(Props.create(ClientManagementActor.class)),
+        CLIENT_MANAGEMENT_ACTOR);
+    geoLocationManagementActor = getContext().actorOf(
+        FromConfig.getInstance().props(Props.create(GeoLocationManagementActor.class)),
+        GEO_LOCATION_MANAGEMENT_ACTOR);
     ec = getContext().dispatcher();
     initializeRouterMap();
   }
@@ -233,9 +253,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.GET_ROLES.getValue(), userManagementRouter);
     routerMap.put(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue(), userManagementRouter);
     routerMap.put(ActorOperations.DOWNLOAD_USERS.getValue(), userManagementRouter);
-    routerMap.put(ActorOperations.FORGOT_PASSWORD.getValue(), userManagementRouter); 
+    routerMap.put(ActorOperations.FORGOT_PASSWORD.getValue(), userManagementRouter);
     routerMap.put(ActorOperations.PROFILE_VISIBILITY.getValue(), userManagementRouter);
-    
+
     routerMap.put(ActorOperations.CREATE_PAGE.getValue(), pageManagementRouter);
     routerMap.put(ActorOperations.UPDATE_PAGE.getValue(), pageManagementRouter);
     routerMap.put(ActorOperations.GET_PAGE_DATA.getValue(), pageManagementRouter);
@@ -275,7 +295,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.ASSIGN_ROLES.getValue(), userManagementRouter);
     routerMap.put(ActorOperations.UNBLOCK_USER.getValue(), userManagementRouter);
     routerMap.put(ActorOperations.BULK_UPLOAD.getValue(), bulkUploadManagementActor);
-    routerMap.put(ActorOperations.PROCESS_BULK_UPLOAD.getValue(), bulkUploadBackGroundJobActor);
     routerMap.put(ActorOperations.CREATE_BATCH.getValue(), courseBatchActor);
     routerMap.put(ActorOperations.UPDATE_BATCH.getValue(), courseBatchActor);
     routerMap.put(ActorOperations.ADD_USER_TO_BATCH.getValue(), courseBatchActor);
@@ -304,7 +323,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
 
     routerMap.put(ActorOperations.SYNC.getValue(), esSyncActor);
     routerMap.put(ActorOperations.FILE_STORAGE_SERVICE.getValue(), fileUploadServiceActor);
-    routerMap.put(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue(), metricsBackGroungJobActor);
     routerMap.put(ActorOperations.GET_ALL_BADGE.getValue(), badgesActor);
     routerMap.put(ActorOperations.ADD_USER_BADGE.getValue(), badgesActor);
     routerMap.put(ActorOperations.HEALTH_CHECK.getValue(), badgesActor);
@@ -325,22 +343,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.GET_MEDIA_TYPES.getValue(), userManagementRouter);
     routerMap.put(ActorOperations.SEARCH_AUDIT_LOG.getValue(), auditLogManagementActor);
     routerMap.put(ActorOperations.PROCESS_AUDIT_LOG.getValue(), auditLogManagementActor);
-    routerMap.put(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue(), backgroundJobManager);
-    routerMap.put(ActorOperations.UPDATE_USER_ROLES_ES.getValue(), backgroundJobManager);
-    routerMap.put(ActorOperations.PROCESS_DATA.getValue(), backgroundJobManager);
-    routerMap.put(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue(), backgroundJobManager);
-    routerMap.put(ActorOperations.ADD_USER_BADGE_BKG.getValue(), backgroundJobManager);
-    routerMap.put(ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue(), backgroundJobManager);
-    routerMap.put(ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue(), backgroundJobManager);
-    routerMap.put(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue(), backgroundJobManager);
-    routerMap.put(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue(), backgroundJobManager);
-    routerMap.put(ActorOperations.UPDATE_USER_ORG_ES.getValue(), backgroundJobManager);
-    routerMap.put(ActorOperations.REMOVE_USER_ORG_ES.getValue(), backgroundJobManager);
-    routerMap.put(ActorOperations.INSERT_USER_NOTES_ES.getValue(), backgroundJobManager);
-    routerMap.put(ActorOperations.UPDATE_USER_NOTES_ES.getValue(), backgroundJobManager);
-    routerMap.put(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue(), backgroundJobManager);
-    routerMap.put(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue(), backgroundJobManager);
-    routerMap.put(ActorOperations.INSERT_COURSE_BATCH_ES.getValue(), backgroundJobManager);
     routerMap.put(ActorOperations.SCHEDULE_BULK_UPLOAD.getValue(), schedularActor);
     routerMap.put(ActorOperations.ADD_SKILL.getValue(), skillManagementActor);
     routerMap.put(ActorOperations.GET_SKILL.getValue(), skillManagementActor);
@@ -352,10 +354,10 @@ public class RequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.REGISTER_CLIENT.getValue(), clientManagementActor);
     routerMap.put(ActorOperations.UPDATE_CLIENT_KEY.getValue(), clientManagementActor);
     routerMap.put(ActorOperations.GET_CLIENT_KEY.getValue(), clientManagementActor);
-    routerMap.put(ActorOperations.GET_GEO_LOCATION.getValue() ,geoLocationManagementActor);
-    routerMap.put(ActorOperations.CREATE_GEO_LOCATION.getValue() ,geoLocationManagementActor);
-    routerMap.put(ActorOperations.UPDATE_GEO_LOCATION.getValue() ,geoLocationManagementActor);
-    routerMap.put(ActorOperations.DELETE_GEO_LOCATION.getValue() ,geoLocationManagementActor);
+    routerMap.put(ActorOperations.GET_GEO_LOCATION.getValue(), geoLocationManagementActor);
+    routerMap.put(ActorOperations.CREATE_GEO_LOCATION.getValue(), geoLocationManagementActor);
+    routerMap.put(ActorOperations.UPDATE_GEO_LOCATION.getValue(), geoLocationManagementActor);
+    routerMap.put(ActorOperations.DELETE_GEO_LOCATION.getValue(), geoLocationManagementActor);
     routerMap.put(ActorOperations.SEND_NOTIFICATION.getValue(), geoLocationManagementActor);
   }
 
@@ -428,7 +430,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
               + (System.currentTimeMillis() - startTime), LoggerEnum.PERF_LOG);
           parent.tell(result, ActorRef.noSender());
           // Audit log method call
-          if(result instanceof Response){
+          if (result instanceof Response) {
             if (Util.auditLogUrlMap.containsKey(message.getOperation())) {
               AuditOperation auditOperation =
                   (AuditOperation) Util.auditLogUrlMap.get(message.getOperation());
@@ -446,6 +448,55 @@ public class RequestRouterActor extends UntypedAbstractActor {
       }
     }, ec);
     return true;
+  }
+
+  public static void createConnectionForBackgroundActors() {
+    String path = PropertiesCache.getInstance().getProperty("background.remote.actor.path");
+    akka.actor.ActorSystem system = null;
+    String bkghost = System.getenv(JsonKey.BKG_SUNBIRD_ACTOR_SERVICE_IP);
+    String bkgport = System.getenv(JsonKey.BKG_SUNBIRD_ACTOR_SERVICE_PORT);
+    Config con = null;
+    String host = System.getenv(JsonKey.SUNBIRD_ACTOR_SERVICE_IP);
+    String port = System.getenv(JsonKey.SUNBIRD_ACTOR_SERVICE_PORT);
+    if ("local"
+        .equalsIgnoreCase(PropertiesCache.getInstance().getProperty("api_actor_provider"))) {
+      if (!ProjectUtil.isStringNullOREmpty(host) && !ProjectUtil.isStringNullOREmpty(port)) {
+        con = ConfigFactory
+            .parseString(
+                "akka.remote.netty.tcp.hostname=" + host + ",akka.remote.netty.tcp.port=" + port + "")
+            .withFallback(ConfigFactory.load().getConfig(ACTOR_CONFIG_NAME));
+      } else {
+        con = ConfigFactory.load().getConfig(ACTOR_CONFIG_NAME);
+      }
+  
+      system = akka.actor.ActorSystem.create(REMOTE_ACTOR_SYSTEM_NAME, con);
+    }else{
+      system = RequestRouterActor.getSystem();
+    }
+    try {
+      if (!ProjectUtil.isStringNullOREmpty(bkghost) && !ProjectUtil.isStringNullOREmpty(bkgport)) {
+        ProjectLogger.log("value is taking from system env");
+        path = MessageFormat.format(
+            PropertiesCache.getInstance().getProperty("background.remote.actor.env.path"),
+            System.getenv(JsonKey.BKG_SUNBIRD_ACTOR_SERVICE_IP),
+            System.getenv(JsonKey.BKG_SUNBIRD_ACTOR_SERVICE_PORT));
+      }
+      ProjectLogger.log("Actor path is ==" + path, LoggerEnum.INFO.name());
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    selection = system.actorSelection(path);
+    ProjectLogger.log("ActorUtility selection reference    : " + selection);
+  }
+
+  /**
+   * @return the selection
+   */
+  public static ActorSelection getSelection() {
+    if (null == selection) {
+      createConnectionForBackgroundActors();
+    }
+    return selection;
   }
 
 }

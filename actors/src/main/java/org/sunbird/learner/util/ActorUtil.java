@@ -4,6 +4,8 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
+import org.sunbird.learner.actors.BackgroundRequestRouterActor;
+import org.sunbird.learner.actors.RequestRouterActor;
 import org.sunbird.learner.util.actorutility.ActorSystemFactory;
 
 /**
@@ -12,17 +14,30 @@ import org.sunbird.learner.util.actorutility.ActorSystemFactory;
  *
  */
 public class ActorUtil {
-  
-  private ActorUtil(){}
-  
-  public static void tell(Request request){
-    Object obj = ActorSystemFactory.getActorSystem().initializeActorSystem(request.getOperation());
-     if(obj instanceof ActorRef){
-       ProjectLogger.log("In ActorUtil(org.sunbird.learner.util) Actor ref is running "+((ActorRef)obj));
-       ((ActorRef)obj).tell(request, ActorRef.noSender());
-     } else {
-       ProjectLogger.log("In ActorUtil(org.sunbird.learner.util) Actor selection is running "+((ActorSelection)obj));
-       ((ActorSelection)obj).tell(request, ActorRef.noSender());
-     }
+
+  private ActorUtil() {}
+
+  public static void tell(Request request) {
+
+    if (null != BackgroundRequestRouterActor.routerMap
+        && null != BackgroundRequestRouterActor.routerMap.get(request.getOperation())) {
+      BackgroundRequestRouterActor.routerMap.get(request.getOperation()).tell(request,
+          ActorRef.noSender());
+    } else if (null != RequestRouterActor.routerMap
+        && null != RequestRouterActor.routerMap.get(request.getOperation())) {
+      RequestRouterActor.routerMap.get(request.getOperation()).tell(request, ActorRef.noSender());
+    } else {
+      Object obj =
+          ActorSystemFactory.getActorSystem().initializeActorSystem(request.getOperation());
+      if (obj instanceof ActorRef) {
+        ProjectLogger
+            .log("In ActorUtil(org.sunbird.learner.util) Actor ref is running " + ((ActorRef) obj));
+        ((ActorRef) obj).tell(request, ActorRef.noSender());
+      } else {
+        ProjectLogger.log("In ActorUtil(org.sunbird.learner.util) Actor selection is running "
+            + ((ActorSelection) obj));
+        ((ActorSelection) obj).tell(request, ActorRef.noSender());
+      }
+    }
   }
 }

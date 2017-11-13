@@ -128,6 +128,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
         response = new Response();
         response.put(JsonKey.RESPONSE,
             "Operation is still in progress, Please try after some time.");
+        sender().tell(response, self());
       }
     } else {
       throw new ProjectCommonException(ResponseCode.invalidProcessId.getErrorCode(),

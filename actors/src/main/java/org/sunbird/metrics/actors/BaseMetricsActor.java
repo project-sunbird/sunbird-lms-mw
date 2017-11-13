@@ -62,7 +62,6 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   protected static final String FILENAMESEPARATOR = "_";
   protected static final MetricsCache cache = new MetricsCache();
   private static final String Charsets_UTF_8 = "UTF-8";
-  SimpleDateFormat format = ProjectUtil.format;
   
 
   protected Map<String, Object> addSnapshot(String keyName, String name, Object value,

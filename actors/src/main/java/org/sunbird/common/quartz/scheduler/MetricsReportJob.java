@@ -37,7 +37,6 @@ public class MetricsReportJob implements Job {
 
   Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  SimpleDateFormat format = ProjectUtil.format;
   private int time = -30;
 
   @Override
@@ -49,6 +48,7 @@ public class MetricsReportJob implements Job {
   private void performReportJob() {
 
     ObjectMapper mapper = new ObjectMapper();
+    SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
 
     Response response = cassandraOperation.getRecordsByProperty(reportTrackingdbInfo.getKeySpace(),
         reportTrackingdbInfo.getTableName(), JsonKey.STATUS,
@@ -64,7 +64,7 @@ public class MetricsReportJob implements Job {
       for (Map<String, Object> map : dbResult) {
         String updatedDate = (String) map.get(JsonKey.UPDATED_DATE);
         try {
-          if (thirtyMinutesBefore.compareTo(format.parse(updatedDate)) >= 0) {
+          if (thirtyMinutesBefore.compareTo(simpleDateFormat.parse(updatedDate)) >= 0) {
             String jsonString = (String) map.get(JsonKey.DATA);
             // convert that string to List<List<Object>>
             TypeReference<List<List<Object>>> typeReference =
@@ -108,7 +108,7 @@ public class MetricsReportJob implements Job {
         String updatedDate = (String) map.get(JsonKey.UPDATED_DATE);
 
         try {
-          if (thirtyMinutesBefore.compareTo(format.parse(updatedDate)) >= 0) {
+          if (thirtyMinutesBefore.compareTo(simpleDateFormat.parse(updatedDate)) >= 0) {
 
             Request backGroundRequest = new Request();
             backGroundRequest.setOperation(ActorOperations.SEND_MAIL.getValue());

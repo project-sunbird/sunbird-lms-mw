@@ -35,7 +35,6 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
   Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static FileUtil fileUtil;
-  SimpleDateFormat format = ProjectUtil.format;
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -97,6 +96,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
   private void sendMail(Request request) {
     ProjectLogger.log("In sendMail for metrics Report");
     Map<String, Object> map = request.getRequest();
+    SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
     String requestId = (String) map.get(JsonKey.REQUEST_ID);
 
     // fetch the DB details from database on basis of requestId ....
@@ -117,19 +117,19 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
 
     if (processMailSending(reportDbInfo)) {
       dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.SENDING_MAIL_SUCCESS.getValue());
-      dbReqMap.put(JsonKey.UPDATED_DATE, format.format(new Date()));
+      dbReqMap.put(JsonKey.UPDATED_DATE, simpleDateFormat.format(new Date()));
       cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(),
           reportTrackingdbInfo.getTableName(), dbReqMap);
     } else {
       increasetryCount(reportDbInfo);
       if ((Integer) reportDbInfo.get(JsonKey.TRY_COUNT) > 3) {
         dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.FAILED.getValue());
-        dbReqMap.put(JsonKey.UPDATED_DATE, format.format(new Date()));
+        dbReqMap.put(JsonKey.UPDATED_DATE, simpleDateFormat.format(new Date()));
         cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(),
             reportTrackingdbInfo.getTableName(), dbReqMap);
       } else {
         dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.SENDING_MAIL.getValue());
-        dbReqMap.put(JsonKey.UPDATED_DATE, format.format(new Date()));
+        dbReqMap.put(JsonKey.UPDATED_DATE, simpleDateFormat.format(new Date()));
         cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(),
             reportTrackingdbInfo.getTableName(), dbReqMap);
       }
@@ -152,6 +152,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     ProjectLogger.log("In fileGeneration and Upload");
     Map<String, Object> map = request.getRequest();
     String requestId = (String) map.get(JsonKey.REQUEST_ID);
+    SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
 
     Response response = cassandraOperation.getRecordById(reportTrackingdbInfo.getKeySpace(),
         reportTrackingdbInfo.getTableName(), requestId);
@@ -181,7 +182,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     } catch (Exception ex) {
       ProjectLogger.log("PROCESS FAILED WHILE CONVERTING THE DATA TO FILE .", ex);
       // update DB as status failed since unable to convert data to file
-      dbReqMap.put(JsonKey.UPDATED_DATE, format.format(new Date()));
+      dbReqMap.put(JsonKey.UPDATED_DATE, simpleDateFormat.format(new Date()));
       dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.FAILED.getValue());
       cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(),
           reportTrackingdbInfo.getTableName(), dbReqMap);
@@ -199,12 +200,12 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
       increasetryCount(reportDbInfo);
       if ((Integer) reportDbInfo.get(JsonKey.TRY_COUNT) > 3) {
         dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.FAILED.getValue());
-        dbReqMap.put(JsonKey.UPDATED_DATE, format.format(new Date()));
+        dbReqMap.put(JsonKey.UPDATED_DATE, simpleDateFormat.format(new Date()));
         cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(),
             reportTrackingdbInfo.getTableName(), dbReqMap);
       } else {
         dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.UPLOADING_FILE.getValue());
-        dbReqMap.put(JsonKey.UPDATED_DATE, format.format(new Date()));
+        dbReqMap.put(JsonKey.UPDATED_DATE, simpleDateFormat.format(new Date()));
         cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(),
             reportTrackingdbInfo.getTableName(), dbReqMap);
       }
@@ -217,7 +218,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
 
     reportDbInfo.put(JsonKey.FILE_URL, storageUrl);
     dbReqMap.put(JsonKey.FILE_URL, storageUrl);
-    dbReqMap.put(JsonKey.UPDATED_DATE, format.format(new Date()));
+    dbReqMap.put(JsonKey.UPDATED_DATE, simpleDateFormat.format(new Date()));
     dbReqMap.put(JsonKey.DATA, null);
     dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.UPLOADING_FILE_SUCCESS.getValue());
     cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(),

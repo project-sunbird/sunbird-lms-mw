@@ -648,7 +648,8 @@ public class BackgroundJobManager extends UntypedAbstractActor {
   }
 
   /**
-   * @param data Map<String, Object>
+   *
+   * @param request
    * @return boolean
    */
   @SuppressWarnings("unchecked")
@@ -814,7 +815,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
           body, header);
       ProjectLogger
           .log("end call for tag registration id and status  ==" + tagId + " " + tagStatus);
-    } catch (IOException e) {
+    } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
 

@@ -55,7 +55,7 @@ public class Application {
         && (BKG_REMOTE_ACTOR_SYSTEM_NAME.equalsIgnoreCase(actorSystemToStart))) {
       ProjectLogger.log("Initializing Background Actor System remotely ");
       startBackgroundRemoteActorSystem();
-    } else {
+    } else if("local".equalsIgnoreCase(cache.getProperty("background_actor_provider"))){
       ProjectLogger.log("Initializing Background Actor System locally ");
       startBackgroundLocalActorSystem();
     }

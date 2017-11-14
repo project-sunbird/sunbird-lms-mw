@@ -1,6 +1,7 @@
 package org.sunbird.metrics.actors;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -478,6 +479,8 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
   
   private void saveData(List<List<Object>> data, String requestId, String type) {
     Map<String, Object> dbReqMap = new HashMap<>();
+    SimpleDateFormat format = ProjectUtil.getDateFormatter();
+    format.setLenient(false);
     dbReqMap.put(JsonKey.ID, requestId);
     String dataStr = getJsonString(data);
     dbReqMap.put(JsonKey.DATA, dataStr);

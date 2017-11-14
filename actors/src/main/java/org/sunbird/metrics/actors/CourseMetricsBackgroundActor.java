@@ -2,6 +2,7 @@ package org.sunbird.metrics.actors;
 
 import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -74,6 +75,8 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
   public void courseProgressMetricsData(Request actorMessage) {
 
     ProjectLogger.log("CourseMetricsActor-courseProgressMetrics called");
+    SimpleDateFormat format = ProjectUtil.getDateFormatter();
+    format.setLenient(false);
 
     Map<String , Object> req = actorMessage.getRequest();
     String requestId = (String)req.get(JsonKey.REQUEST_ID);

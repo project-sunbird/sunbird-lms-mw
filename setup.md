@@ -56,6 +56,14 @@
     36. sunbird_env_logo_url : logo url for sending email.(http://www.paramountias.com/media/images/current-affairs/diksha-portal.jpg) 
     37. sunird_web_url : web page url
     38. sunbird_app_url : paly store url to downlaod the app
+	
+## Do the below env setup , if you are planing to run background actor in remote mode.
+	1. sunbird_background_actor_host: host running for learner background actor
+    2. sunbird_background_actor_port: port on which learner background actor is running.
+	
+## Do the below env setup , to start a actor system on a machine {"RemoteMiddlewareActorSystem" it will start Normal Actor System on that machine,             ##"BackGroundRemoteMiddlewareActorSystem" , it will start background actor}.
+
+   1.  actor_service_name : actor system name to start{values are "RemoteMiddlewareActorSystem" , "BackGroundRemoteMiddlewareActorSystem"}
 
 ## Build
 1. Clone the repository "sunbird-lms-mw"

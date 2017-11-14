@@ -457,14 +457,14 @@ public class RequestRouterActor extends UntypedAbstractActor {
     String port = System.getenv(JsonKey.SUNBIRD_ACTOR_SERVICE_PORT);
     if ("local"
         .equalsIgnoreCase(PropertiesCache.getInstance().getProperty("api_actor_provider"))) {
-      if (!ProjectUtil.isStringNullOREmpty(host) && !ProjectUtil.isStringNullOREmpty(port)) {
+      /*if (!ProjectUtil.isStringNullOREmpty(host) && !ProjectUtil.isStringNullOREmpty(port)) {
         con = ConfigFactory
             .parseString(
                 "akka.remote.netty.tcp.hostname=" + host + ",akka.remote.netty.tcp.port=" + port + "")
             .withFallback(ConfigFactory.load().getConfig(ACTOR_CONFIG_NAME));
-      } else {
+      } else {*/
         con = ConfigFactory.load().getConfig(ACTOR_CONFIG_NAME);
-      }
+      //}
 
       system = akka.actor.ActorSystem.create(REMOTE_ACTOR_SYSTEM_NAME, con);
     }else{

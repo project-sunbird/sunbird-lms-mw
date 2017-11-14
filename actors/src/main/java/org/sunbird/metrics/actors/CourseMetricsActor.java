@@ -88,6 +88,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
   private void courseProgressMetricsReport(Request actorMessage) {
 
     ProjectLogger.log("CourseMetricsActor-courseProgressMetrics called");
+    SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
+    simpleDateFormat.setLenient(false);
 
     String requestedBy = (String) actorMessage.get(JsonKey.REQUESTED_BY);
 
@@ -135,8 +137,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
     requestDbInfo.put(JsonKey.STATUS, ReportTrackingStatus.NEW.getValue());
     requestDbInfo.put(JsonKey.RESOURCE_ID , batchId);
     requestDbInfo.put(JsonKey.PERIOD , periodStr);
-    requestDbInfo.put(JsonKey.CREATED_DATE , format.format(new Date()));
-    requestDbInfo.put(JsonKey.UPDATED_DATE , format.format(new Date()));
+    requestDbInfo.put(JsonKey.CREATED_DATE , simpleDateFormat.format(new Date()));
+    requestDbInfo.put(JsonKey.UPDATED_DATE , simpleDateFormat.format(new Date()));
     String decryptedEmail = decryptionService.decryptData((String)requestedByInfo.get(JsonKey.ENC_EMAIL));
     requestDbInfo.put(JsonKey.EMAIL, decryptedEmail);
     requestDbInfo.put(JsonKey.TYPE , COURSE_PROGRESS_REPORT);

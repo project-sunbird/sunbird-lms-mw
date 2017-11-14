@@ -262,6 +262,7 @@ public class SkillmanagementActor extends UntypedAbstractActor {
 
   }
 
+  @SuppressWarnings("unchecked")
   private void updateEs(String userId) {
 
     //  get all records from cassandra as list and add that list to user in ElasticSearch ...
@@ -269,8 +270,19 @@ public class SkillmanagementActor extends UntypedAbstractActor {
     List<Map<String,Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     Map<String , Object> esMap = new HashMap<>();
     esMap.put(JsonKey.SKILLS , responseList);
-    ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId , esMap);
-
+    Map<String,Object> profile = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId);
+    if(null!= profile && !profile.isEmpty()){
+      Map<String,String> visibility = (Map<String, String>) profile.get(JsonKey.PROFILE_VISIBILITY);
+      if((null!=visibility && !visibility.isEmpty())&& visibility.containsKey(JsonKey.SKILLS)){
+        Map<String,Object> visibilityMap = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.userprofilevisibility.getTypeName(), userId);
+        if (null != visibilityMap && !visibilityMap.isEmpty()) {
+          visibilityMap.putAll(esMap);
+          ElasticSearchUtil.createData(ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.userprofilevisibility.getTypeName(), userId , visibilityMap);
+        }
+      }else {
+        ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId , esMap);
+      }
+    } 
   }
 
   // method will compare two strings and return true id both are same otherwise false ...

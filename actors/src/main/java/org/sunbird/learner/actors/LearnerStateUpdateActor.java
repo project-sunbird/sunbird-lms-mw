@@ -36,7 +36,7 @@ import org.sunbird.learner.util.Util;
 public class LearnerStateUpdateActor extends UntypedAbstractActor {
 
   private final String CONTENT_STATE_INFO = "contentStateInfo";
-  private SimpleDateFormat sdf = ProjectUtil.format;
+
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   /**
@@ -176,6 +176,9 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
   private void preOperation(Map<String, Object> req, String userId,
       Map<String, Integer> contentStateHolder) throws ParseException {
 
+    SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
+    simpleDateFormat.setLenient(false);
+
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
     req.put(JsonKey.ID, generatePrimaryKey(req, userId));
     contentStateHolder.put((String) req.get(JsonKey.ID),
@@ -207,11 +210,11 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
         req.put(JsonKey.CONTENT_PROGRESS, currentProgressStatus);
       }
 
-      Date accessTime = parseDate(result.get(JsonKey.LAST_ACCESS_TIME), sdf);
-      Date requestAccessTime = parseDate(req.get(JsonKey.LAST_ACCESS_TIME), sdf);
+      Date accessTime = parseDate(result.get(JsonKey.LAST_ACCESS_TIME), simpleDateFormat);
+      Date requestAccessTime = parseDate(req.get(JsonKey.LAST_ACCESS_TIME), simpleDateFormat);
 
-      Date completedDate = parseDate(result.get(JsonKey.LAST_COMPLETED_TIME), sdf);
-      Date requestCompletedTime = parseDate(req.get(JsonKey.LAST_COMPLETED_TIME), sdf);
+      Date completedDate = parseDate(result.get(JsonKey.LAST_COMPLETED_TIME), simpleDateFormat);
+      Date requestCompletedTime = parseDate(req.get(JsonKey.LAST_COMPLETED_TIME), simpleDateFormat);
 
       int completedCount;
       if (!(isNullCheck(result.get(JsonKey.COMPLETED_COUNT)))) {
@@ -248,7 +251,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
 
     } else {
       // IT IS NEW CONTENT SIMPLY ADD IT
-      Date requestCompletedTime = parseDate(req.get(JsonKey.LAST_COMPLETED_TIME), sdf);
+      Date requestCompletedTime = parseDate(req.get(JsonKey.LAST_COMPLETED_TIME), simpleDateFormat);
       if (null != req.get(JsonKey.STATUS)) {
         int requestedStatus = ((BigInteger) req.get(JsonKey.STATUS)).intValue();
         req.put(JsonKey.STATUS, requestedStatus);
@@ -272,7 +275,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
       req.put(JsonKey.CONTENT_PROGRESS, progressStatus);
 
       req.put(JsonKey.VIEW_COUNT, 1);
-      Date requestAccessTime = parseDate(req.get(JsonKey.LAST_ACCESS_TIME), sdf);
+      Date requestAccessTime = parseDate(req.get(JsonKey.LAST_ACCESS_TIME), simpleDateFormat);
 
       req.put(JsonKey.LAST_UPDATED_TIME, ProjectUtil.getFormattedDate());
 
@@ -303,15 +306,17 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
   }
 
   private String compareTime(Date currentValue, Date requestedValue) {
+    SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
+    simpleDateFormat.setLenient(false);
     if (currentValue == null && requestedValue == null) {
       return ProjectUtil.getFormattedDate();
     } else if (currentValue == null) {
-      return sdf.format(requestedValue);
+      return simpleDateFormat.format(requestedValue);
     } else if (null == requestedValue) {
-      return sdf.format(currentValue);
+      return simpleDateFormat.format(currentValue);
     }
-    return (requestedValue.after(currentValue) ? sdf.format(requestedValue)
-        : sdf.format(currentValue));
+    return (requestedValue.after(currentValue) ? simpleDateFormat.format(requestedValue)
+        : simpleDateFormat.format(currentValue));
   }
 
   private String generatePrimaryKey(Map<String, Object> req, String userId) {

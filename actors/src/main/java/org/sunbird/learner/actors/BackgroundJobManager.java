@@ -186,9 +186,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
           (List<Map<String, Object>>) result.get(JsonKey.ORGANISATIONS);
       if (null != roleMapList) {
         for (Map<String, Object> map : roleMapList) {
-          if ((((String) map.get(JsonKey.USER_ID))
-              .equalsIgnoreCase((String) actorMessage.get(JsonKey.USER_ID)))
-              && (((String) map.get(JsonKey.ORGANISATION_ID)).equalsIgnoreCase(orgId))) {
+          if ((orgId.equalsIgnoreCase((String) map.get(JsonKey.ORGANISATION_ID)))) {
             map.put(JsonKey.ROLES, roles);
           }
         }
@@ -550,14 +548,9 @@ public class BackgroundJobManager extends UntypedAbstractActor {
         Response result = cassandraOperation.getRecordsByProperties(orgUsrDbInfo.getKeySpace(),
             orgUsrDbInfo.getTableName(), reqMap);
         list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-        Map<String, Object> orgDb = null;
         if (!(list.isEmpty())) {
           for (Map<String, Object> tempMap : list) {
-            Map<String, Object> orgData = new HashMap<>();
-            orgDb = tempMap;
-            orgData.put(JsonKey.ORGANISATION_ID, orgDb.get(JsonKey.ORGANISATION_ID));
-            orgData.put(JsonKey.ROLES, orgDb.get(JsonKey.ROLES));
-            organisations.add(orgData);
+            organisations.add(tempMap);
           }
         }
       } catch (Exception e) {
@@ -595,7 +588,11 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       Response skillresponse = cassandraOperation.getRecordsByProperty(userSkillDbInfo.getKeySpace() , userSkillDbInfo.getTableName(), JsonKey.USER_ID , userId);
       List<Map<String,Object>> responseList = (List<Map<String, Object>>) skillresponse.get(JsonKey.RESPONSE);
       map.put(JsonKey.SKILLS , responseList);
+      ProfileCompletenessService profileService = ProfileCompletenessFactory.getInstance();
+      Map<String, Object> responsemap = profileService.computeProfile(map);
+      map.putAll(responsemap);
       //TODO:Refactor the code for better understanding and based on modules
+      //Update private fields data to userProfileVisbility index and others to user index
       Map<String, Object> profileVisibility =
           (Map<String, Object>) map.get(JsonKey.PROFILE_VISIBILITY);
       if (null != profileVisibility && !profileVisibility.isEmpty()) {
@@ -604,7 +601,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
           profileVisibilityMap.put(field, map.get(field));
         }
         insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId, profileVisibility);
+            ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId, profileVisibilityMap);
         UserUtility.updateProfileVisibilityFields(profileVisibilityMap, map);
       }
       insertDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
@@ -648,7 +645,8 @@ public class BackgroundJobManager extends UntypedAbstractActor {
   }
 
   /**
-   * @param data Map<String, Object>
+   *
+   * @param request
    * @return boolean
    */
   @SuppressWarnings("unchecked")
@@ -778,12 +776,12 @@ public class BackgroundJobManager extends UntypedAbstractActor {
       Map<String, Object> data) {
     ProjectLogger
         .log("making call to ES for type ,identifier ,data==" + type + " " + identifier + data);
-    if (type.equalsIgnoreCase(ProjectUtil.EsType.user.getTypeName())) {
+   /* if (type.equalsIgnoreCase(ProjectUtil.EsType.user.getTypeName())) {
       // now calculate profile completeness and error filed and store it in ES
       ProfileCompletenessService service = ProfileCompletenessFactory.getInstance();
       Map<String, Object> responsemap = service.computeProfile(data);
       data.putAll(responsemap);
-    }
+    }*/
     String response = ElasticSearchUtil.createData(index, type, identifier, data);
     ProjectLogger.log("Getting ES save response for type , identiofier==" + type + "  " + identifier
         + "  " + response);
@@ -814,7 +812,7 @@ public class BackgroundJobManager extends UntypedAbstractActor {
           body, header);
       ProjectLogger
           .log("end call for tag registration id and status  ==" + tagId + " " + tagStatus);
-    } catch (IOException e) {
+    } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
 

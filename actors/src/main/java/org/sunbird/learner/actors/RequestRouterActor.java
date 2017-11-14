@@ -51,8 +51,8 @@ import scala.concurrent.duration.Duration;
 
 /**
  * @author Amit Kumar
- * @author arvind . 
- * 
+ * @author arvind .
+ *
  * Class to initialize and select the appropriate actor on the basis of message
  *         type .
  */
@@ -107,7 +107,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ActorRef geoLocationManagementActor;
 
   private ExecutionContext ec;
-  
+
 
   public static Map<String, ActorRef> routerMap = new HashMap<>();
   private static final int WAIT_TIME_VALUE = 9;
@@ -465,7 +465,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
       } else {
         con = ConfigFactory.load().getConfig(ACTOR_CONFIG_NAME);
       }
-  
+
       system = akka.actor.ActorSystem.create(REMOTE_ACTOR_SYSTEM_NAME, con);
     }else{
       system = RequestRouterActor.getSystem();

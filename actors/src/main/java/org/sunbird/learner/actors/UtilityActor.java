@@ -31,7 +31,6 @@ public class UtilityActor extends UntypedAbstractActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private final String CONTENT_STATE_INFO = "contentStateInfo";
-  SimpleDateFormat sdf = ProjectUtil.format;
 
   @SuppressWarnings("unchecked")
   @Override
@@ -145,6 +144,8 @@ public class UtilityActor extends UntypedAbstractActor {
 
   private Map<String, Object> getLatestContent(Map<String, Object> current,
       Map<String, Object> next) {
+    SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
+    simpleDateFormat.setLenient(false);
     if (current.get(JsonKey.LAST_ACCESS_TIME) == null
         && next.get(JsonKey.LAST_ACCESS_TIME) == null) {
       return next;
@@ -154,8 +155,8 @@ public class UtilityActor extends UntypedAbstractActor {
       return current;
     }
     try {
-      Date currentUpdatedTime = sdf.parse((String) current.get(JsonKey.LAST_ACCESS_TIME));
-      Date nextUpdatedTime = sdf.parse((String) next.get(JsonKey.LAST_ACCESS_TIME));
+      Date currentUpdatedTime = simpleDateFormat.parse((String) current.get(JsonKey.LAST_ACCESS_TIME));
+      Date nextUpdatedTime = simpleDateFormat.parse((String) next.get(JsonKey.LAST_ACCESS_TIME));
       if (currentUpdatedTime.after(nextUpdatedTime)) {
         return current;
       } else {

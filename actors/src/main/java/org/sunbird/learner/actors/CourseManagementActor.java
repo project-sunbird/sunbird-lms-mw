@@ -129,7 +129,7 @@ public class CourseManagementActor extends UntypedAbstractActor {
               + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_COURSE_PUBLISH_URL) + "/"
               + (String) req.get(JsonKey.COURSE_ID),
           coursePublishedBody.replace("userId", updatedBy), headers);
-    } catch (IOException e) {
+    } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
       sender().tell(e, self());
       return;

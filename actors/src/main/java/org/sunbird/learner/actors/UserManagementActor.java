@@ -290,7 +290,10 @@ public class UserManagementActor extends UntypedAbstractActor {
        }else if (field.contains(JsonKey.JOB_PROFILE+".")) {
          privateMap.put(JsonKey.JOB_PROFILE, map.get(JsonKey.JOB_PROFILE));
          //tempMap = addPrivateField(JsonKey.EDUCATION, tempMap, field);
-       }else {
+       } else if (field.contains(JsonKey.SKILLS+".")) {
+         privateMap.put(JsonKey.SKILLS, map.get(JsonKey.SKILLS));
+         //tempMap = addPrivateField(JsonKey.EDUCATION, tempMap, field);
+       } else {
          if(!map.containsKey(field)){
            throw new ProjectCommonException(ResponseCode.InvalidColumnError.getErrorCode(),
                ResponseCode.InvalidColumnError.getErrorMessage(),
@@ -1546,6 +1549,11 @@ public class UserManagementActor extends UntypedAbstractActor {
     requestMap = new HashMap<>();
     requestMap.putAll(userMap);
     removeUnwanted(requestMap);
+    Map<String,String> profileVisbility = new HashMap<>(); 
+    for(String field: ProjectUtil.defaultPrivateFields){
+      profileVisbility.put(field, JsonKey.PRIVATE);
+    }
+    requestMap.put(JsonKey.PROFILE_VISIBILITY, profileVisbility);
     Response response = null;
     try {
       response = cassandraOperation.insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(),

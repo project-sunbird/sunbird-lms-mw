@@ -105,6 +105,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
   private String createReportTrackingEntry(Request actorMessage) {
     ProjectLogger.log("Create Report Tracking Entry");
+    SimpleDateFormat simpleDateFormat= ProjectUtil.getDateFormatter();
     String requestedBy = (String) actorMessage.get(JsonKey.REQUESTED_BY);
     String orgId = (String) actorMessage.get(JsonKey.ORG_ID);
     String period = (String) actorMessage.get(JsonKey.PERIOD);
@@ -134,8 +135,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     requestDbInfo.put(JsonKey.STATUS, ReportTrackingStatus.NEW.getValue());
     requestDbInfo.put(JsonKey.RESOURCE_ID, orgId);
     requestDbInfo.put(JsonKey.PERIOD, period);
-    requestDbInfo.put(JsonKey.CREATED_DATE, format.format(new Date()));
-    requestDbInfo.put(JsonKey.UPDATED_DATE, format.format(new Date()));
+    requestDbInfo.put(JsonKey.CREATED_DATE, simpleDateFormat.format(new Date()));
+    requestDbInfo.put(JsonKey.UPDATED_DATE, simpleDateFormat.format(new Date()));
     String decryptedEmail =
         decryptionService.decryptData((String) requestedByInfo.get(JsonKey.ENC_EMAIL));
     requestDbInfo.put(JsonKey.EMAIL, decryptedEmail);

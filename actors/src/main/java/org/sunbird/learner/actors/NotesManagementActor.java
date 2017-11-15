@@ -126,7 +126,7 @@ public class NotesManagementActor extends UntypedAbstractActor {
   /**
    * Method to update the tags, title and note details of the user note
    * 
-   * @param Request containing noteId and requestedBy
+   * @param actorMessage containing noteId and requestedBy
    */
   @SuppressWarnings("unchecked")
   private void updateNote(Request actorMessage) {
@@ -179,7 +179,7 @@ public class NotesManagementActor extends UntypedAbstractActor {
   /**
    * Method to get the note for the given note Id of the user
    * 
-   * @param Request containing noteId and requestedBy
+   * @param actorMessage containing noteId and requestedBy
    */
   private void getNote(Request actorMessage) {
     ProjectLogger.log("Update Note method call start");
@@ -217,7 +217,7 @@ public class NotesManagementActor extends UntypedAbstractActor {
   /**
    * Method to search the note for the given request
    * 
-   * @param Request containing search parameters
+   * @param actorMessage containing search parameters
    */
   private void searchNote(Request actorMessage) {
     ProjectLogger.log("Update Note method call start");
@@ -365,10 +365,8 @@ public class NotesManagementActor extends UntypedAbstractActor {
   private Boolean validateUserForNoteUpdation(String userId, String noteId) {
     Boolean result = false;
     Map<String, Object> noteData = getNoteRecordById(noteId);
-    if ((null != noteData && !noteData.isEmpty()) && !ProjectUtil.isStringNullOREmpty(userId)) {
-      if (userId.equalsIgnoreCase((String) noteData.get(JsonKey.USER_ID))) {
+    if ((null != noteData && !noteData.isEmpty()) && !ProjectUtil.isStringNullOREmpty(userId) && userId.equalsIgnoreCase((String) noteData.get(JsonKey.USER_ID))) {
         result = true;
-      }
     }
     return result;
   }

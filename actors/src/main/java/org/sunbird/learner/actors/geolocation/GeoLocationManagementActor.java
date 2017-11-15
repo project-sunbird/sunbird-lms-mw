@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.cassandra.cql3.Json;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -114,7 +113,6 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
   private void deleteGeoLocation(Request actorMessage) {
 
     ProjectLogger.log("GeoLocationManagementActor-updateGeoLocation called");
-    String requestedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
     String locationId = (String) actorMessage.getRequest().get(JsonKey.LOCATION_ID);
     Response finalResponse = new Response();
 
@@ -186,7 +184,6 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
   private void getGeoLocation(Request actorMessage) {
 
     ProjectLogger.log("GeoLocationManagementActor-getGeoLocation called");
-    String requestedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
     String id = (String) actorMessage.getRequest().get(JsonKey.ID);
     String type = (String) actorMessage.getRequest().get(JsonKey.TYPE);
     Response finalResponse = new Response();

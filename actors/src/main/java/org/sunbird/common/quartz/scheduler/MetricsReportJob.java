@@ -1,6 +1,5 @@
 package org.sunbird.common.quartz.scheduler;
 
-import akka.actor.ActorRef;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -25,7 +24,6 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.RequestRouterActor;
 import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
 

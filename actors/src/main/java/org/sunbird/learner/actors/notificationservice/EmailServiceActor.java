@@ -72,7 +72,6 @@ public class EmailServiceActor extends UntypedAbstractActor {
 
   private void sendMail(Request actorMessage) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    boolean isSingleUser = false;
     String name = "";
     Map<String, Object> request =
         (Map<String, Object>) actorMessage.getRequest().get(JsonKey.EMAIL_REQUEST);

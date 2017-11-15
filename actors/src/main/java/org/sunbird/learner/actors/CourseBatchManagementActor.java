@@ -309,8 +309,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
         && req.get(JsonKey.COURSE_CREATED_FOR) instanceof List) {
       createdFor = (List<String>) req.get(JsonKey.COURSE_CREATED_FOR);
     }
-    if (ProjectUtil.EnrolmentType.inviteOnly.getVal().equalsIgnoreCase(enrolmentType)) {
-      if (createdFor != null) {
+    if (ProjectUtil.EnrolmentType.inviteOnly.getVal().equalsIgnoreCase(enrolmentType) && createdFor != null) {
         for (String orgId : createdFor) {
           if (!isOrgValid(orgId)) {
             throw new ProjectCommonException(ResponseCode.invalidOrgId.getErrorCode(),
@@ -318,7 +317,6 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
                 ResponseCode.CLIENT_ERROR.getResponseCode());
           }
         }
-      }
     }
     if (req.containsKey(JsonKey.MENTORS) && req.get(JsonKey.MENTORS) instanceof List) {
       List<String> mentors = (List<String>) req.get(JsonKey.MENTORS);

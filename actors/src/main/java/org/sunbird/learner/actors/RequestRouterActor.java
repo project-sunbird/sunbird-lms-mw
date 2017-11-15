@@ -449,7 +449,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
 
   public static void createConnectionForBackgroundActors() {
     String path = PropertiesCache.getInstance().getProperty("background.remote.actor.path");
-    akka.actor.ActorSystem system = null;
+    ActorSystem system = null;
     String bkghost = System.getenv(JsonKey.BKG_SUNBIRD_ACTOR_SERVICE_IP);
     String bkgport = System.getenv(JsonKey.BKG_SUNBIRD_ACTOR_SERVICE_PORT);
     Config con = null;

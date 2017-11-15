@@ -219,6 +219,10 @@ public class CourseMetricsActor extends BaseMetricsActor {
         Map<String, Object> dateRange = getStartAndEndDate(periodStr);
         dateRangeFilter.put(GTE, (String) dateRange.get(startDate));
         dateRangeFilter.put(LTE, (String) dateRange.get(endDate));
+        if("5w".equalsIgnoreCase(periodStr)){
+          Map<String, Object> dateMap = getStartAndEndDateForDay(periodStr);
+          dateRangeFilter.put(LTE, (String) dateMap.get(endDate));
+        }
         filter.put(JsonKey.DATE_TIME, dateRangeFilter);
       }
 

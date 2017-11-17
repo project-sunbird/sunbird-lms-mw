@@ -639,3 +639,8 @@ ALTER TABLE sunbird.organisation ADD locationId text;
 // 9th Nov 2017
 ALTER TABLE sunbirdplugin.announcement DROP target ;
 ALTER TABLE sunbirdplugin.announcement ADD target map<text, frozen<map<text ,frozen<list<text>>>>>;
+
+// Nov 17,2017
+ALTER TABLE sunbird.user_skills drop endorsers;
+ALTER TABLE sunbird.user_skills ADD endorsersList frozen<List<Map<text , text>>>;
+

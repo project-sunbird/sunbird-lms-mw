@@ -142,6 +142,7 @@ public class SkillmanagementActor extends UntypedAbstractActor {
   private void endorseSkill(Request actorMessage) {
 
     ProjectLogger.log("SkillmanagementActor-endorseSkill called");
+    format = new SimpleDateFormat("yyyy-MM-dd");
     String endoresedUserId  = (String) actorMessage.getRequest().get(JsonKey.ENDORSED_USER_ID);
     List<String> list = (List<String>) actorMessage.getRequest().get(JsonKey.SKILL_NAME);
     CopyOnWriteArraySet<String> skillset = new CopyOnWriteArraySet<>(list);
@@ -193,8 +194,13 @@ public class SkillmanagementActor extends UntypedAbstractActor {
           skillMap.put(JsonKey.ADDED_BY, requestedByUserId);
           skillMap.put(JsonKey.ADDED_AT, format.format(new Date()));
           Map<String, String> endoresers = new HashMap<>();
-          endoresers.put(requestedByUserId, format.format(new Date()));
-          skillMap.put(JsonKey.ENDORSERS, endoresers);
+
+          List<Map<String , String>> endorsersList = new ArrayList<>();
+          endoresers.put(JsonKey.USER_ID , requestedByUserId);
+          endoresers.put(JsonKey.ENDORSE_DATE , format.format(new Date()));
+          endorsersList.add(endoresers);
+
+          skillMap.put(JsonKey.ENDORSERS_LIST, endorsersList);
           skillMap.put(JsonKey.ENDORSEMENT_COUNT, 0);
           cassandraOperation
               .insertRecord(userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(),
@@ -207,15 +213,26 @@ public class SkillmanagementActor extends UntypedAbstractActor {
 
           Map<String, Object> responseMap = responseList.get(0);
           // check whether requested user has already endoresed to that user or not
-          Map<String, String> endoresersMap = (Map<String, String>) responseMap
-              .get(JsonKey.ENDORSERS);
-          if (endoresersMap.containsKey(requestedByUserId)) {
+          List<Map<String, String>> endoresersList = (List<Map<String, String>>) responseMap
+              .get(JsonKey.ENDORSERS_LIST);
+          boolean flag = false;
+          for(Map<String , String> map : endoresersList){
+            if(((String)map.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedByUserId)){
+              flag = true;
+              break;
+            }
+          }
+          if (flag) {
             // donot do anything..
             ProjectLogger.log(requestedByUserId + " has already endorsed the " + endoresedUserId);
           } else {
             Integer endoresementCount = (Integer) responseMap.get(JsonKey.ENDORSEMENT_COUNT) + 1;
-            endoresersMap.put(requestedByUserId, format.format(new Date()));
-            responseMap.put(JsonKey.ENDORSERS, endoresersMap);
+            Map<String , String> endorsersMap = new HashMap<>();
+            endorsersMap.put(JsonKey.USER_ID , requestedByUserId);
+            endorsersMap.put(JsonKey.ENDORSE_DATE , format.format(new Date()));
+            endoresersList.add(endorsersMap);
+
+            responseMap.put(JsonKey.ENDORSERS_LIST, endoresersList);
             responseMap.put(JsonKey.ENDORSEMENT_COUNT, endoresementCount);
             cassandraOperation
                 .updateRecord(userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(),
@@ -258,7 +275,7 @@ public class SkillmanagementActor extends UntypedAbstractActor {
 
       skills.put(JsonKey.ID , REF_SKILLS_DB_ID);
       skills.put(JsonKey.SKILLS , skillsList);
-      cassandraOperation.updateRecord(skillsListDbInfo.getKeySpace(), skillsListDbInfo.getTableName() ,skills);
+      cassandraOperation.upsertRecord(skillsListDbInfo.getKeySpace(), skillsListDbInfo.getTableName() ,skills);
 
   }
 

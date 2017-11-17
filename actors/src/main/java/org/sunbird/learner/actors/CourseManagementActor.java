@@ -1,7 +1,6 @@
 package org.sunbird.learner.actors;
 
 import akka.actor.UntypedAbstractActor;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;

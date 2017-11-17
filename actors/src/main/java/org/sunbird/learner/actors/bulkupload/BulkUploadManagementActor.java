@@ -133,7 +133,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
     } else {
       throw new ProjectCommonException(ResponseCode.invalidProcessId.getErrorCode(),
           ResponseCode.invalidProcessId.getErrorMessage(),
-          ResponseCode.SERVER_ERROR.getResponseCode());
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
 
   }

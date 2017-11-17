@@ -178,7 +178,7 @@ public class ActorAuditLogServiceImpl extends UntypedAbstractActor implements Au
 
   @Override
   public void save(Map<String, Object> requestedData) {
-    String str = ElasticSearchUtil.createData(EsIndex.sunbirdDataAudit.getIndexName(),
+    ElasticSearchUtil.createData(EsIndex.sunbirdDataAudit.getIndexName(),
         EsType.history.getTypeName(), ProjectUtil.getUniqueIdFromTimestamp(1), requestedData);
   }
   

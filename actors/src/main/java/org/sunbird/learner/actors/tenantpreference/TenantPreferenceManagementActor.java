@@ -81,7 +81,6 @@ public class TenantPreferenceManagementActor extends UntypedAbstractActor {
 
     ProjectLogger.log("TenantPreferenceManagementActor-createTenantPreference called");
 
-    String requestedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
     String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
 
     if(ProjectUtil.isStringNullOREmpty(orgId)){
@@ -119,7 +118,6 @@ public class TenantPreferenceManagementActor extends UntypedAbstractActor {
 
     Response finalResponse = new Response();
     List<Map<String , Object>> responseList = new ArrayList<>();
-    String requestedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
     String orgId = (String) actorMessage.getRequest().get(JsonKey.ROOT_ORG_ID);
 
     if(ProjectUtil.isStringNullOREmpty(orgId)){
@@ -197,7 +195,6 @@ public class TenantPreferenceManagementActor extends UntypedAbstractActor {
 
     Response finalResponse = new Response();
     List<Map<String , Object>> responseList = new ArrayList<>();
-    String requestedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
     String orgId = (String) actorMessage.getRequest().get(JsonKey.ROOT_ORG_ID);
 
     if(ProjectUtil.isStringNullOREmpty(orgId)){

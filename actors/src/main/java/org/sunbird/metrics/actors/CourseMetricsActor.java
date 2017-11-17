@@ -94,7 +94,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     String requestedBy = (String) actorMessage.get(JsonKey.REQUESTED_BY);
 
     Map<String , Object> requestedByInfo = ElasticSearchUtil.getDataByIdentifier(EsIndex.sunbird.getIndexName() , EsType.user.getTypeName() ,requestedBy);
-    if(ProjectUtil.isNull(requestedByInfo) || ProjectUtil.isStringNullOREmpty((String)requestedByInfo.get(JsonKey.FIRST_NAME))){
+    if(isNull(requestedByInfo) || ProjectUtil.isStringNullOREmpty((String)requestedByInfo.get(JsonKey.FIRST_NAME))){
       throw new ProjectCommonException(ResponseCode.invalidUserId.getErrorCode(),
           ResponseCode.invalidUserId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -169,7 +169,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     String requestedBy = (String) actorMessage.get(JsonKey.REQUESTED_BY);
 
     Map<String , Object> requestedByInfo = ElasticSearchUtil.getDataByIdentifier(EsIndex.sunbird.getIndexName() , EsType.user.getTypeName() ,requestedBy);
-    if(ProjectUtil.isNull(requestedByInfo) || ProjectUtil.isStringNullOREmpty((String)requestedByInfo.get(JsonKey.FIRST_NAME))){
+    if(isNull(requestedByInfo) || ProjectUtil.isStringNullOREmpty((String)requestedByInfo.get(JsonKey.FIRST_NAME))){
       throw new ProjectCommonException(ResponseCode.invalidUserId.getErrorCode(),
           ResponseCode.invalidUserId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -199,7 +199,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
 
     Map<String, Object> cacheResponse = (Map<String, Object>) cache.getData(JsonKey.CourseProgress, batchId, periodStr);
-    if(ProjectUtil.isNotNull(cacheResponse)){
+    if(isNotNull(cacheResponse)){
       Response response = new Response();
       response.putAll(cacheResponse);
       sender().tell(response, self());
@@ -219,6 +219,10 @@ public class CourseMetricsActor extends BaseMetricsActor {
         Map<String, Object> dateRange = getStartAndEndDate(periodStr);
         dateRangeFilter.put(GTE, (String) dateRange.get(startDate));
         dateRangeFilter.put(LTE, (String) dateRange.get(endDate));
+        if("5w".equalsIgnoreCase(periodStr)){
+          Map<String, Object> dateMap = getStartAndEndDateForDay(periodStr);
+          dateRangeFilter.put(LTE, (String) dateMap.get(endDate));
+        }
         filter.put(JsonKey.DATE_TIME, dateRangeFilter);
       }
 

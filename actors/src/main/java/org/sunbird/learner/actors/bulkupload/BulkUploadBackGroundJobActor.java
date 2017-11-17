@@ -346,7 +346,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     for (Map<String, Object> map : jsonList) {
       try {
         if (map.containsKey(JsonKey.IS_ROOT_ORG) && isNotNull(map.get(JsonKey.IS_ROOT_ORG))) {
-          Boolean isRootOrg = new Boolean((String) map.get(JsonKey.IS_ROOT_ORG));
+          Boolean isRootOrg = Boolean.valueOf((String) map.get(JsonKey.IS_ROOT_ORG));
           if (isRootOrg) {
             processOrg(map, dataMap, successList, failureList, channelToRootOrgCache);
             jsonList.remove(map);
@@ -422,7 +422,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
     Boolean isRootOrg;
     if (isNotNull(concurrentHashMap.get(JsonKey.IS_ROOT_ORG))) {
-      isRootOrg = new Boolean((String) concurrentHashMap.get(JsonKey.IS_ROOT_ORG));
+      isRootOrg = Boolean.valueOf((String) concurrentHashMap.get(JsonKey.IS_ROOT_ORG));
     } else {
       isRootOrg = false;
     }
@@ -435,11 +435,10 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       contactDetails = contactDetails.replaceAll("'", "\"");
       JSONParser parser = new JSONParser();
       try {
-        JSONArray json = (JSONArray) parser.parse(contactDetails);
         ObjectMapper mapper = new ObjectMapper();
         orgContactList = mapper.readValue(contactDetails, Object[].class);
 
-      } catch (IOException | ParseException ex) {
+      } catch (IOException ex) {
         ProjectLogger.log("Unable to parse Org contact Details - OrgBulkUpload.", ex);
         concurrentHashMap.put(JsonKey.ERROR_MSG,
             "Unable to parse Org contact Details - OrgBulkUpload.");
@@ -685,7 +684,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
     // we can put logic here to check uniqueness of hash tag id in order to create new organisation ...
     if(!ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.HASHTAGID))){
-      String requestedHashTagId = (String)concurrentHashMap.get(JsonKey.HASHTAGID);
 
         Map<String, Object> dbMap1 = new HashMap<>();
         dbMap1.put(JsonKey.HASHTAGID, concurrentHashMap.get(JsonKey.HASHTAGID));
@@ -730,8 +728,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       concurrentHashMap.put(JsonKey.IS_ROOT_ORG, false);
     }
     try {
-      Response result = cassandraOperation.upsertRecord(orgDbInfo.getKeySpace(),
-          orgDbInfo.getTableName(), concurrentHashMap);
       Response orgResponse = new Response();
 
       // sending the org contact as List if it is null simply remove from map

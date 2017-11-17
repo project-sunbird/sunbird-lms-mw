@@ -6,5 +6,5 @@ package org.sunbird.learner.util.actorutility;
  *
  */
 public interface ActorSystem {
-  public Object initializeActorSystem(String operationType);
+  Object initializeActorSystem(String operationType);
 }

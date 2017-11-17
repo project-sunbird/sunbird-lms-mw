@@ -289,7 +289,6 @@ public class BadgesActor extends UntypedAbstractActor {
 
   @SuppressWarnings("unchecked")
   private void getBadges(Request actorMessage) {
-    Map<String, Object> req = actorMessage.getRequest();
     try {
       Response response =
           cassandraOperation.getAllRecords(badgesDbInfo.getKeySpace(), badgesDbInfo.getTableName());

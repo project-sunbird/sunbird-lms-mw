@@ -363,7 +363,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       result.getResult().put(JsonKey.ORGANISATION_ID, uniqueId);
       sender().tell(result, self());
 
-      Response orgResponse = new Response();
       if (null != addressReq) {
         req.put(JsonKey.ADDRESS, addressReq);
       }
@@ -641,12 +640,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       validateChannelIdForRootOrg(req);
       //
       boolean channelAdded = false;
-      if (!req.containsKey(JsonKey.CHANNEL)) {
-        if (req.containsKey(JsonKey.PROVIDER)) {
+      if ((!req.containsKey(JsonKey.CHANNEL)) && req.containsKey(JsonKey.PROVIDER)) {
           // then make provider as channel to fetch root org id.
           req.put(JsonKey.CHANNEL, req.get(JsonKey.PROVIDER));
           channelAdded = true;
-        }
       }
       if (req.containsKey(JsonKey.CHANNEL)) {
         if (!req.containsKey(JsonKey.IS_ROOT_ORG) || !(Boolean) req.get(JsonKey.IS_ROOT_ORG)) {
@@ -785,8 +782,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           orgDbInfo.getTableName(), updateOrgDBO);
       response.getResult().put(JsonKey.ORGANISATION_ID, orgDBO.get(JsonKey.ID));
       sender().tell(response, self());
-
-      Response orgResponse = new Response();
 
       if (null != addressReq) {
         updateOrgDBO.put(JsonKey.ADDRESS, addressReq);

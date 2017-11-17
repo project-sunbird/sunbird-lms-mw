@@ -7,7 +7,6 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,7 +64,6 @@ public class UserManagementActor extends UntypedAbstractActor {
   boolean isSSOEnabled =
       Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
   private Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
-  private Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
 
 
@@ -276,7 +274,6 @@ public class UserManagementActor extends UntypedAbstractActor {
   private Map<String, Object> createPrivateFiledMap(Map<String, Object> map,
       List<String> fields) {
     Map<String, Object> privateMap = new HashMap<>();
-    Map<String,List<String>> tempMap = new HashMap<>();
     if(fields != null && fields.size()>0) {
       for (String field : fields) {
        // now if field contains {address.someField,education.someField,jobprofile.someField}
@@ -2699,10 +2696,8 @@ public class UserManagementActor extends UntypedAbstractActor {
         appUrl = propertiesCache.getProperty("sunbird_app_url");
       }
 
-      if (!ProjectUtil.isStringNullOREmpty(appUrl)) {
-        if (!"sunbird_app_url".equalsIgnoreCase(appUrl)) {
+      if ((!ProjectUtil.isStringNullOREmpty(appUrl)) && (!"sunbird_app_url".equalsIgnoreCase(appUrl))) {
           emailTemplateMap.put(JsonKey.APP_URL, appUrl);
-        }
       }
 
       emailTemplateMap.put(JsonKey.BODY,

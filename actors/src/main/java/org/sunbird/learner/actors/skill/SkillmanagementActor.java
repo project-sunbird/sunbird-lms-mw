@@ -50,7 +50,7 @@ public class SkillmanagementActor extends UntypedAbstractActor {
         if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ADD_SKILL.getValue())) {
           endorseSkill(actorMessage);
         } else if (actorMessage.getOperation()
-            .equalsIgnoreCase(ActorOperations.GET_SKILL.getValue())) {
+              .equalsIgnoreCase(ActorOperations.GET_SKILL.getValue())) {
           getSkill(actorMessage);
         }else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.GET_SKILLS_LIST.getValue())) {

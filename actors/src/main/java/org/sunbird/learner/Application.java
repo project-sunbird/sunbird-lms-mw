@@ -46,6 +46,21 @@ public class Application {
      * system on that machine
      */
     String actorSystemToStart = System.getenv(JsonKey.ACTOR_SERVICE_INSTANCE);
+    /*
+     * Temporary changes for running learning service and actor service only on 2 machine instead of 3 machine
+     * 
+     * if have to run normal actor and background actor both remotely then change the value of this variable 
+     * accordingly on machine and read from environment variable and make the value of this variable in config file i.e in
+     * externalResource properties file to NULL or empty.
+     * 
+     * actorSystemToStart : reading this value from properties file to start any actor system as remote
+     * only one actor system , can run remotely at a time with this change (other actor system should run locally)
+     * if you want to run background actor remotely then change the value of actorSystemToStart to BackGroundRemoteMiddlewareActorSystem
+     * OR if you want to run normal actor remotely then change the value of actorSystemToStart to RemoteMiddlewareActorSystem
+     */
+    if(!ProjectUtil.isStringNullOREmpty(PropertiesCache.getInstance().getProperty(JsonKey.ACTOR_SERVICE_INSTANCE))){
+      actorSystemToStart = PropertiesCache.getInstance().getProperty(JsonKey.ACTOR_SERVICE_INSTANCE);
+    }
     if ("remote".equalsIgnoreCase(cache.getProperty("api_actor_provider"))
         && (REMOTE_ACTOR_SYSTEM_NAME.equalsIgnoreCase(actorSystemToStart))) {
       ProjectLogger.log("Initializing Normal Actor System remotely");

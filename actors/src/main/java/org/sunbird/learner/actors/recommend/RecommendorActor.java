@@ -156,8 +156,7 @@ public class RecommendorActor extends UntypedAbstractActor {
 
     Response response = cassandraOperation.getRecordById(userdbInfo.getKeySpace(),
         userdbInfo.getTableName(), userId);
-    if (response.getResult() != null) {
-      if (response.getResult().get(JsonKey.RESPONSE) != null) {
+    if (response.getResult() != null && response.getResult().get(JsonKey.RESPONSE) != null) {
         List<Map<String, Object>> userDBO =
             (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
         if (userDBO != null && userDBO.size() > 0) {
@@ -179,7 +178,6 @@ public class RecommendorActor extends UntypedAbstractActor {
         } else {
           return null;
         }
-      }
     }
 
     return map;

@@ -63,7 +63,7 @@
 	
 ## Do the below env setup , to start a actor system on a machine {"RemoteMiddlewareActorSystem" it will start Normal Actor System on that machine,             ##"BackGroundRemoteMiddlewareActorSystem" , it will start background actor}.
 
-   1.  actor_service_name : actor system name to start{values are "RemoteMiddlewareActorSystem" , "BackGroundRemoteMiddlewareActorSystem"}
+   1.  sunbird_actor_system_name : actor system name to start{values are "RemoteMiddlewareActorSystem" , "BackGroundRemoteMiddlewareActorSystem"}
 
 ## Build
 1. Clone the repository "sunbird-lms-mw"

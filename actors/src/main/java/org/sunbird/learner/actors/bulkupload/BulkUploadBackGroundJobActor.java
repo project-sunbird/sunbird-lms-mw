@@ -715,7 +715,10 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
     concurrentHashMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     concurrentHashMap.put(JsonKey.CREATED_BY, dataMap.get(JsonKey.UPLOADED_BY));
-    concurrentHashMap.put(JsonKey.HASH_TAG_ID, uniqueId);
+    // if user does not provide hash tag id in the file set it to equivalent to org id
+    if(ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.HASHTAGID))) {
+      concurrentHashMap.put(JsonKey.HASHTAGID, uniqueId);
+    }
     // Remove the slug key if coming form user input.
     concurrentHashMap.remove(JsonKey.SLUG);
     if (concurrentHashMap.containsKey(JsonKey.CHANNEL)) {
@@ -728,6 +731,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       concurrentHashMap.put(JsonKey.IS_ROOT_ORG, false);
     }
     try {
+      cassandraOperation.upsertRecord(orgDbInfo.getKeySpace() , orgDbInfo.getTableName(), concurrentHashMap);
       Response orgResponse = new Response();
 
       // sending the org contact as List if it is null simply remove from map

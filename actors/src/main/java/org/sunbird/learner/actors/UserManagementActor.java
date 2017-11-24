@@ -937,7 +937,7 @@ public class UserManagementActor extends UntypedAbstractActor {
   
   /**
    * 
-   * @param actorMessage
+   * @param email
    * @return Response
    * @throws Exception
    */
@@ -1275,8 +1275,12 @@ public class UserManagementActor extends UntypedAbstractActor {
       reqMap.remove(JsonKey.ADDRESS);
     }
     try {
-      reqMap.put(JsonKey.YEAR_OF_PASSING,
-          ((BigInteger) reqMap.get(JsonKey.YEAR_OF_PASSING)).intValue());
+      if(null != reqMap.get(JsonKey.YEAR_OF_PASSING)){
+        reqMap.put(JsonKey.YEAR_OF_PASSING,
+            ((BigInteger) reqMap.get(JsonKey.YEAR_OF_PASSING)).intValue());
+      }else{
+        reqMap.put(JsonKey.YEAR_OF_PASSING,0);
+      }
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
     }
@@ -1776,8 +1780,12 @@ public class UserManagementActor extends UntypedAbstractActor {
         reqMap.remove(JsonKey.ADDRESS);
       }
       try {
-        reqMap.put(JsonKey.YEAR_OF_PASSING,
-            ((BigInteger) reqMap.get(JsonKey.YEAR_OF_PASSING)).intValue());
+        if(null != reqMap.get(JsonKey.YEAR_OF_PASSING)){
+          reqMap.put(JsonKey.YEAR_OF_PASSING,
+              ((BigInteger) reqMap.get(JsonKey.YEAR_OF_PASSING)).intValue());
+        }else{
+          reqMap.put(JsonKey.YEAR_OF_PASSING,0);
+        }
       } catch (Exception ex) {
         ProjectLogger.log(ex.getMessage(), ex);
       }

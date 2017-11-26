@@ -47,6 +47,7 @@ public class CourseMetricsActorTest {
   @BeforeClass
   public static void setUp() {
     system = ActorSystem.create("system");
+    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
     ref = TestActorRef.create(system, props, "testActor");
     insertBatchDataToES();
     insertOrgDataToES();
@@ -62,6 +63,7 @@ public class CourseMetricsActorTest {
     userMap.put(JsonKey.ROOT_ORG_ID, "ORG_001");
     userMap.put(JsonKey.USERNAME , "alpha-beta");
     userMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
+    userMap.put(JsonKey.EMAIL , "arvind.glaitm108@gmail.com");
     ElasticSearchUtil.createData(EsIndex.sunbird.getIndexName(),EsType.user.getTypeName() , userId , userMap);
   }
 
@@ -107,6 +109,26 @@ public class CourseMetricsActorTest {
     System.out.println("SUCCESS");
 
   }
+
+  @Test
+  public void testCourseProgressReport(){
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request actorMessage = new Request();
+    actorMessage.put(JsonKey.REQUESTED_BY , userId);
+    actorMessage.put(JsonKey.BATCH_ID , batchId);
+    actorMessage.put(JsonKey.PERIOD , "fromBegining");
+    actorMessage.put(JsonKey.FORMAT, "csv");
+    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue());
+
+    subject.tell(actorMessage, probe.getRef());
+    Response res= probe.expectMsgClass(duration("100 second"),Response.class);
+    System.out.println("SUCCESS");
+    System.out.println("SUCCESS");
+
+  }
   
   @SuppressWarnings({"unchecked", "deprecation"})
   @Test
@@ -121,7 +143,7 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_CREATION_METRICS.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("15 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("1500 second"), Response.class);
     Map<String, Object> data = res.getResult();
     Assert.assertEquals("7d", data.get(JsonKey.PERIOD));
     Assert.assertEquals("mclr309f39", ((Map<String, Object>) data.get("course")).get(JsonKey.COURSE_ID));

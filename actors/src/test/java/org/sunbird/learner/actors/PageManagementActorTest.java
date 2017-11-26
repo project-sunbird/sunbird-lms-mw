@@ -19,10 +19,13 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
@@ -41,11 +44,11 @@ public class PageManagementActorTest {
     final static Props props = Props.create(PageManagementActor.class);
     static Util.DbInfo pageMgmntDbInfo = null;
     static Util.DbInfo pageSectionDbInfo = null;
-    static String sectionId = "";
-    static String sectionId2 = "";
-    static String pageId = "";
-    static String pageIdWithOrg = "";
-    static String pageIdWithOrg2 = "";
+    static String sectionId = null;
+    static String sectionId2 = null;
+    static String pageId = null;
+    static String pageIdWithOrg = null;
+    static String pageIdWithOrg2 = null;
     
     @BeforeClass
     public static void setUp() {
@@ -627,16 +630,82 @@ public class PageManagementActorTest {
     
     @AfterClass
     public static void deletePageAndSection() {
-      Response response=operation.deleteRecord(pageMgmntDbInfo.getKeySpace(), pageMgmntDbInfo.getTableName(), pageId);
-      assertEquals("SUCCESS", response.get("response"));
-      Response response1=operation.deleteRecord(pageMgmntDbInfo.getKeySpace(), pageMgmntDbInfo.getTableName(), pageIdWithOrg);
-      assertEquals("SUCCESS", response1.get("response"));
-      Response response11=operation.deleteRecord(pageMgmntDbInfo.getKeySpace(), pageMgmntDbInfo.getTableName(), pageIdWithOrg2);
-      assertEquals("SUCCESS", response11.get("response"));
-      Response response2=operation.deleteRecord(pageSectionDbInfo.getKeySpace(), pageSectionDbInfo.getTableName(), sectionId);
-      assertEquals("SUCCESS", response2.get("response"));
-      Response response3=operation.deleteRecord(pageSectionDbInfo.getKeySpace(), pageSectionDbInfo.getTableName(), sectionId2);
-      assertEquals("SUCCESS", response3.get("response"));
+      if(pageId != null) {
+        Response response = operation
+            .deleteRecord(pageMgmntDbInfo.getKeySpace(), pageMgmntDbInfo.getTableName(), pageId);
+      }
+
+      //assertEquals("SUCCESS", response.get("response"));
+      if(pageIdWithOrg != null) {
+        Response response1 = operation
+            .deleteRecord(pageMgmntDbInfo.getKeySpace(), pageMgmntDbInfo.getTableName(),
+                pageIdWithOrg);
+      }
+      //assertEquals("SUCCESS", response1.get("response"));
+      if(pageIdWithOrg2 != null) {
+        Response response11 = operation
+            .deleteRecord(pageMgmntDbInfo.getKeySpace(), pageMgmntDbInfo.getTableName(),
+                pageIdWithOrg2);
+      }
+      //assertEquals("SUCCESS", response11.get("response"));
+      if(sectionId != null) {
+        Response response2 = operation
+            .deleteRecord(pageSectionDbInfo.getKeySpace(), pageSectionDbInfo.getTableName(),
+                sectionId);
+      }
+      //assertEquals("SUCCESS", response2.get("response"));
+      if(sectionId2 != null) {
+        Response response3 = operation
+            .deleteRecord(pageSectionDbInfo.getKeySpace(), pageSectionDbInfo.getTableName(),
+                sectionId2);
+      }
+      //assertEquals("SUCCESS", response3.get("response"));
+
+
+      Map<String, Object> dbMap = new HashMap<>();
+      dbMap.put(JsonKey.ORGANISATION_ID, "ORG1");
+      Response result = operation.getRecordsByProperties(pageMgmntDbInfo.getKeySpace(),
+          pageMgmntDbInfo.getTableName(), dbMap);
+      List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      if (!(list.isEmpty())) {
+        for (Map<String, Object> res : list) {
+          String id = (String) res.get(JsonKey.ID);
+          System.out.println("ID is " + id);
+          operation.deleteRecord(pageMgmntDbInfo.getKeySpace(), pageMgmntDbInfo.getTableName(), id);
+          /*ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+              EsType.user.getTypeName(), id);*/
+        }
+      }
+
+      /*dbMap = new HashMap<>();
+      dbMap.put(JsonKey.ORG_CODE,"ORG1");
+      result = operation.getRecordsByProperties(pageMgmntDbInfo.getKeySpace(),
+          pageMgmntDbInfo.getTableName(), dbMap);
+      list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      if (!(list.isEmpty())) {
+        for (Map<String, Object> res : list) {
+          String id = (String) res.get(JsonKey.ID);
+          System.out.println("ID is " + id);
+          operation.deleteRecord(pageMgmntDbInfo.getKeySpace(), pageMgmntDbInfo.getTableName(), id);
+          *//*ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+              EsType.user.getTypeName(), id);*//*
+        }
+      }*/
+
+      dbMap = new HashMap<>();
+      dbMap.put(JsonKey.PAGE_NAME, "Test Page");
+      result = operation.getRecordsByProperties(pageMgmntDbInfo.getKeySpace(),
+          pageMgmntDbInfo.getTableName(), dbMap);
+      list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      if (!(list.isEmpty())) {
+        for (Map<String, Object> res : list) {
+          String id = (String) res.get(JsonKey.ID);
+          System.out.println("ID is " + id);
+          operation.deleteRecord(pageMgmntDbInfo.getKeySpace(), pageMgmntDbInfo.getTableName(), id);
+          /*ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+              EsType.user.getTypeName(), id);*/
+        }
+      }
       //
     }
 }

@@ -639,3 +639,9 @@ ALTER TABLE sunbird.organisation ADD locationId text;
 // 9th Nov 2017
 ALTER TABLE sunbirdplugin.announcement DROP target ;
 ALTER TABLE sunbirdplugin.announcement ADD target map<text, frozen<map<text ,frozen<list<text>>>>>;
+
+// 16th Nov 2017
+ALTER TABLE sunbird.user ADD emailVerified boolean;
+
+// 23rd Nov 2017
+ALTER TABLE sunbird.user ADD countryCode text;

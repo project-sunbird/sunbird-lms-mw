@@ -1250,7 +1250,18 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         if (userMap.get(JsonKey.REGISTERED_ORG_ID).equals(map.get(JsonKey.REGISTERED_ORG_ID))) {
           checkEmailUniqueness(userMap,JsonKey.UPDATE);
           checkPhoneUniqueness(userMap,JsonKey.UPDATE);
-          if(null != (String)map.get(JsonKey.EMAIL) && ((String)map.get(JsonKey.EMAIL)).equalsIgnoreCase((String) userMap.get(JsonKey.EMAIL))){
+          String email = "";
+          try{
+            email = encryptionService.encryptData((String) userMap.get(JsonKey.EMAIL));
+          }catch(Exception ex){
+            ProjectLogger.log(
+                "Exception occurred while bulk user upload in BulkUploadBackGroundJobActor during encryption of loginId:",
+                ex);
+            throw new ProjectCommonException(ResponseCode.userDataEncryptionError.getErrorCode(),
+                ResponseCode.userDataEncryptionError.getErrorMessage(),
+                ResponseCode.SERVER_ERROR.getResponseCode());
+          }
+          if(null != (String)map.get(JsonKey.EMAIL) && ((String)map.get(JsonKey.EMAIL)).equalsIgnoreCase(email)){
             //DB email value and req email value both are same , no need to update
             userMap.remove(JsonKey.EMAIL);
           }

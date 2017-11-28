@@ -184,7 +184,9 @@ public class EsSyncActor extends UntypedAbstractActor {
     ProjectLogger.log("fetching user data started");
     Map<String, Object> userMap = (Map<String, Object>) entry.getValue();
     Util.removeAttributes(userMap, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY));
-
+    if(ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.COUNTRY_CODE))){
+      userMap.put(JsonKey.COUNTRY_CODE, PropertiesCache.getInstance().getProperty("sunbird_default_country_code"));
+    }
     ProjectLogger.log("fetching user address data started");
     String encryption = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_ENCRYPTION);
     String uid = userId;

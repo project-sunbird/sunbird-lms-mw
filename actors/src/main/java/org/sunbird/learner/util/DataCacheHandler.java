@@ -59,6 +59,9 @@ public class DataCacheHandler implements Runnable {
               (String) resultMap.get(JsonKey.VALUE));
         }
       }
+    }else{
+      configSettings.put(JsonKey.PHONE, JsonKey.UNIQUE);
+      configSettings.put(JsonKey.EMAIL, JsonKey.DUPLICATE);
     }
   }
 

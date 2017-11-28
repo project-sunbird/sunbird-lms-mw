@@ -645,3 +645,10 @@ ALTER TABLE sunbird.user ADD emailVerified boolean;
 
 // 23rd Nov 2017
 ALTER TABLE sunbird.user ADD countryCode text;
+//adding default one Skills.
+insert into skills (id,skills) values ('001',['java']);
+
+// Nov 17,2017
+ALTER TABLE sunbird.user_skills drop endorsers;
+ALTER TABLE sunbird.user_skills ADD endorsersList frozen<List<Map<text , text>>>;
+

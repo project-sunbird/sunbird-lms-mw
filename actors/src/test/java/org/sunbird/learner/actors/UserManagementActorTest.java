@@ -1206,6 +1206,7 @@ public class UserManagementActorTest {
   @SuppressWarnings("deprecation")
   @Test
   public void userchangePasswordSuccess(){
+
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();

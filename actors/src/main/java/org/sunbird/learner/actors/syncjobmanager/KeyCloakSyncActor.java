@@ -55,7 +55,7 @@ public class KeyCloakSyncActor extends UntypedAbstractActor {
               new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
                   ResponseCode.invalidOperationName.getErrorMessage(),
                   ResponseCode.CLIENT_ERROR.getResponseCode());
-          ProjectLogger.log("Unsupported operation in Es sync Background Job Manager", exception);
+          ProjectLogger.log("Unsupported operation in Keycloak sync Background Job Manager", exception);
           sender().tell(exception, self());
           return;
         }
@@ -84,8 +84,8 @@ public class KeyCloakSyncActor extends UntypedAbstractActor {
     List<Map<String, Object>> reponseList = null;
     Map<String, Object> dataMap = (Map<String, Object>) req.get(JsonKey.DATA);
     List<String> userIds = null;
-    if (dataMap.containsKey(JsonKey.USER_IDs) && null != dataMap.get(JsonKey.USER_IDs)) {
-      userIds = (List<String>) dataMap.get(JsonKey.USER_IDs);
+    if (dataMap.containsKey(JsonKey.OBJECT_IDS) && null != dataMap.get(JsonKey.OBJECT_IDS)) {
+      userIds = (List<String>) dataMap.get(JsonKey.OBJECT_IDS);
     }
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     

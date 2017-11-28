@@ -1285,6 +1285,10 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         }
         userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
         userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
+        userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
+        if(!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.COUNTRY_CODE))){
+          userMap.put(JsonKey.COUNTRY_CODE, propertiesCache.getProperty("sunbird_default_country_code"));
+        }
         /**
          * set role as PUBLIC by default if role is empty in request body. And if roles are coming
          * in request body, then check for PUBLIC role , if not present then add PUBLIC role to the
@@ -1314,8 +1318,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   
   private void checkEmailUniqueness(Map<String, Object> userMap, String opType) {
   //Get Email configuration if not found , by default Email can be duplicate across the application
-    boolean unique = true;
-    if(unique){
+    String emailSetting  = DataCacheHandler.getConfigSettings().get(JsonKey.EMAIL);
+    if(null != emailSetting && JsonKey.UNIQUE.equalsIgnoreCase(emailSetting)){
       String email  = (String) userMap.get(JsonKey.EMAIL);
       if(!ProjectUtil.isStringNullOREmpty(email)){
         try{
@@ -1352,8 +1356,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   
   private void checkPhoneUniqueness(Map<String,Object> userMap,String opType) {
     //Get Phone configuration if not found , by default phone will be unique across the application
-    boolean unique = true;
-    if(unique){
+    String phoneSetting  = DataCacheHandler.getConfigSettings().get(JsonKey.PHONE);
+    if(null != phoneSetting && JsonKey.UNIQUE.equalsIgnoreCase(phoneSetting)){
       String phone  = (String) userMap.get(JsonKey.PHONE);
       if(!ProjectUtil.isStringNullOREmpty(phone)){
         try{

@@ -36,6 +36,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
+import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
@@ -1611,6 +1612,9 @@ public class UserManagementActor extends UntypedAbstractActor {
       profileVisbility.put(field, JsonKey.PRIVATE);
     }
     requestMap.put(JsonKey.PROFILE_VISIBILITY, profileVisbility);
+    if(!ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.COUNTRY_CODE))){
+      requestMap.put(JsonKey.COUNTRY_CODE, propertiesCache.getProperty("sunbird_default_country_code"));
+    }
     Response response = null;
     try {
       response = cassandraOperation.insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(),
@@ -1715,8 +1719,8 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   private void checkEmailUniqueness(Map<String, Object> userMap, String opType) {
   //Get Email configuration if not found , by default Email can be duplicate across the application
-    boolean unique = true;
-    if(unique){
+    String emailSetting  = DataCacheHandler.getConfigSettings().get(JsonKey.EMAIL);
+    if(null != emailSetting && JsonKey.UNIQUE.equalsIgnoreCase(emailSetting)){
       String email  = (String) userMap.get(JsonKey.EMAIL);
       if(!ProjectUtil.isStringNullOREmpty(email)){
         try{
@@ -1753,8 +1757,8 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   private void checkPhoneUniqueness(Map<String,Object> userMap,String opType) {
     //Get Phone configuration if not found , by default phone will be unique across the application
-    boolean unique = true;
-    if(unique){
+    String phoneSetting  = DataCacheHandler.getConfigSettings().get(JsonKey.PHONE);
+    if(null != phoneSetting && JsonKey.UNIQUE.equalsIgnoreCase(phoneSetting)){
       String phone  = (String) userMap.get(JsonKey.PHONE);
       if(!ProjectUtil.isStringNullOREmpty(phone)){
         try{

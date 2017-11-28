@@ -38,6 +38,7 @@ import org.sunbird.learner.actors.search.CourseSearchActor;
 import org.sunbird.learner.actors.search.SearchHandlerActor;
 import org.sunbird.learner.actors.skill.SkillmanagementActor;
 import org.sunbird.learner.actors.syncjobmanager.EsSyncActor;
+import org.sunbird.learner.actors.syncjobmanager.KeyCloakSyncActor;
 import org.sunbird.learner.actors.tenantpreference.TenantPreferenceManagementActor;
 import org.sunbird.learner.audit.impl.ActorAuditLogServiceImpl;
 import org.sunbird.learner.util.AuditOperation;
@@ -105,6 +106,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ActorRef tenantPrefManagementActor;
   private ActorRef clientManagementActor;
   private ActorRef geoLocationManagementActor;
+  private ActorRef keyCloakSyncActor;
 
   private ExecutionContext ec;
 
@@ -140,6 +142,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private static final String TENANT_PREFERENCE_MNGT_ACTOR = "tenantPreferenceManagementActor";
   private static final String CLIENT_MANAGEMENT_ACTOR = "clientManagementActor";
   private static final String GEO_LOCATION_MANAGEMENT_ACTOR = "geoLocationManagementActor";
+  private static final String KEYCLOAK_SYNC_ACTOR = "keyCloakSyncActor";
 
 
 
@@ -226,6 +229,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
     geoLocationManagementActor = getContext().actorOf(
         FromConfig.getInstance().props(Props.create(GeoLocationManagementActor.class)),
         GEO_LOCATION_MANAGEMENT_ACTOR);
+    keyCloakSyncActor = getContext().actorOf(
+        FromConfig.getInstance().props(Props.create(KeyCloakSyncActor.class)),
+        KEYCLOAK_SYNC_ACTOR);
     ec = getContext().dispatcher();
     initializeRouterMap();
   }
@@ -356,6 +362,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.UPDATE_GEO_LOCATION.getValue(), geoLocationManagementActor);
     routerMap.put(ActorOperations.DELETE_GEO_LOCATION.getValue(), geoLocationManagementActor);
     routerMap.put(ActorOperations.SEND_NOTIFICATION.getValue(), geoLocationManagementActor);
+    routerMap.put(ActorOperations.SYNC_KEYCLOAK.getValue(), keyCloakSyncActor);
   }
 
 

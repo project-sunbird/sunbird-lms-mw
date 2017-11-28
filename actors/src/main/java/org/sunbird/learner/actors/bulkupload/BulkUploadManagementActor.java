@@ -481,7 +481,7 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
   }
 
   private void validateUserProperty(String[] property) {
-    ArrayList<String> properties = new ArrayList<>(Arrays.asList(JsonKey.FIRST_NAME,
+    ArrayList<String> properties = new ArrayList<>(Arrays.asList(JsonKey.FIRST_NAME, JsonKey.COUNTRY_CODE, 
         JsonKey.LAST_NAME, JsonKey.PHONE, JsonKey.COUNTRY_CODE , JsonKey.EMAIL, JsonKey.PASSWORD, JsonKey.USERNAME,
         JsonKey.PROVIDER, JsonKey.PHONE_VERIFIED, JsonKey.EMAIL_VERIFIED, JsonKey.ROLES,
         JsonKey.POSITION, JsonKey.GRADE, JsonKey.LOCATION, JsonKey.DOB, JsonKey.GENDER,

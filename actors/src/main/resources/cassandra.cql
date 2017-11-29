@@ -652,3 +652,5 @@ insert into skills (id,skills) values ('001',['java']);
 ALTER TABLE sunbird.user_skills drop endorsers;
 ALTER TABLE sunbird.user_skills ADD endorsersList frozen<List<Map<text , text>>>;
 
+CREATE TABLE IF NOT EXISTS sunbird.system_settings (id text ,field text ,value text ,PRIMARY KEY (id));
+

@@ -138,8 +138,7 @@ public class KeyCloakSyncActor extends UntypedAbstractActor {
     
     if(isSSOEnabled){
       try {
-        userMap.put(JsonKey.OPERATION, "SYNC");
-        String res = ssoManager.updateUser(userMap);
+        String res = ssoManager.syncUserData(userMap);
         if (!(!ProjectUtil.isStringNullOREmpty(res) && res.equalsIgnoreCase(JsonKey.SUCCESS))) {
           ProjectLogger.log("User sync failed in KeyCloakSyncActor for userID : "+ userId);
         }

@@ -452,6 +452,13 @@ public class UserManagementActor extends UntypedAbstractActor {
         //update user Ext Db
         updateUserAndExtIdTable(userId);
         ssoManager.setEmailVerifiedUpdatedFlag(userId, "true");
+        boolean flag = ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(), userId, map);
+        if(flag){
+          ProjectLogger.log("User data updated to ES for EMAIL_VERIFIED for userId :: "+userId);
+        }else{
+          ProjectLogger.log("User data update failed to ES for EMAIL_VERIFIED for userId :: "+userId);
+        }
       }
     }
   }

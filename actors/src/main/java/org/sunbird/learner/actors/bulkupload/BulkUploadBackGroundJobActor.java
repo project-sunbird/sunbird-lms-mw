@@ -62,6 +62,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   private List<String> locnIdList = new ArrayList<>();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
+  private final String SUNBIRD_WEB_URL = "sunbird_web_url";
+  private final String SUNBIRD_APP_URL = "sunbird_app_url";
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -713,7 +715,10 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
     concurrentHashMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     concurrentHashMap.put(JsonKey.CREATED_BY, dataMap.get(JsonKey.UPLOADED_BY));
-    concurrentHashMap.put(JsonKey.HASH_TAG_ID, uniqueId);
+    // if user does not provide hash tag id in the file set it to equivalent to org id
+    if(ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.HASHTAGID))) {
+      concurrentHashMap.put(JsonKey.HASHTAGID, uniqueId);
+    }
     // Remove the slug key if coming form user input.
     concurrentHashMap.remove(JsonKey.SLUG);
     if (concurrentHashMap.containsKey(JsonKey.CHANNEL)) {
@@ -726,6 +731,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       concurrentHashMap.put(JsonKey.IS_ROOT_ORG, false);
     }
     try {
+      cassandraOperation.upsertRecord(orgDbInfo.getKeySpace() , orgDbInfo.getTableName(), concurrentHashMap);
       Response orgResponse = new Response();
 
       // sending the org contact as List if it is null simply remove from map
@@ -1607,17 +1613,22 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       List<String> reciptientsMail = new ArrayList<>();
       reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
       emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
-      if (!ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url"))
-          || !ProjectUtil.isStringNullOREmpty(propertiesCache.getProperty("sunird_web_url"))) {
-        emailTemplateMap.put(JsonKey.WEB_URL,
-            ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url"))
-                ? propertiesCache.getProperty("sunird_web_url") : System.getenv("sunird_web_url"));
+
+      String webUrl = System.getenv(SUNBIRD_WEB_URL);
+      if(ProjectUtil.isStringNullOREmpty(webUrl)){
+        webUrl = propertiesCache.getProperty(SUNBIRD_WEB_URL);
       }
-      if (!ProjectUtil.isStringNullOREmpty(System.getenv("sunbird_app_url"))
-          || !ProjectUtil.isStringNullOREmpty(propertiesCache.getProperty("sunbird_app_url"))) {
-        emailTemplateMap.put(JsonKey.APP_URL,
-            ProjectUtil.isStringNullOREmpty(System.getenv("sunbird_app_url"))
-                ? propertiesCache.getProperty("sunbird_app_url") : System.getenv("sunird_web_url"));
+      if ((!ProjectUtil.isStringNullOREmpty(webUrl)) && (!SUNBIRD_WEB_URL.equalsIgnoreCase(webUrl))) {
+        emailTemplateMap.put(JsonKey.WEB_URL, webUrl);
+      }
+
+      String appUrl = System.getenv(SUNBIRD_APP_URL);
+      if (ProjectUtil.isStringNullOREmpty(appUrl)) {
+        appUrl = propertiesCache.getProperty(SUNBIRD_APP_URL);
+      }
+
+      if ((!ProjectUtil.isStringNullOREmpty(appUrl)) && (!SUNBIRD_APP_URL.equalsIgnoreCase(appUrl))) {
+        emailTemplateMap.put(JsonKey.APP_URL, appUrl);
       }
 
       emailTemplateMap.put(JsonKey.BODY,

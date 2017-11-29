@@ -20,6 +20,11 @@ public class SocialMediaType {
   private static Map<String, String> mediaTypes = new HashMap<>();
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static Util.DbInfo mediaTypeDB = Util.dbInfoMap.get(JsonKey.MEDIA_TYPE_DB);
+  private static Map<String,Boolean> invalidUrls = new HashMap<>();
+
+  static{
+    initInvalidUrlMap();
+  }
 
   public static Map<String, String> getMediaTypes() {
     if (null == mediaTypes || mediaTypes.isEmpty()) {
@@ -60,13 +65,18 @@ public class SocialMediaType {
 
   private static String validateMediaURL(String type, String url) {
     String pattern = "";
+
     if(ProjectUtil.isStringNullOREmpty(url)){
       return url;
+    }
+    if(validateUrls(url)){
+      return "";
     }
     switch (type) {
       case "fb":{
         if(url.contains("http")){
-          pattern = "http(?:s)?:\\/\\/(?:www.)?facebook.com\\/(?:(?:\\w)*#!\\/)?(?:pages\\/)?(?:[?\\w\\-]*\\/)?(?:profile.php\\?id=(?=\\d.*))?([\\w\\-]*)?";
+          //pattern = "http(?:s)?:\\/\\/(?:www.)?facebook.com\\/(?:(?:\\w)*#!\\/)?(?:pages\\/)?(?:[?\\w\\-]*\\/)?(?:profile.php\\?id=(?=\\d.*))?([\\w\\-]*)?";
+          pattern = "http(?:s)?:\\/\\/(?:www.)?facebook.com\\/(?:(?:\\w\\.)*#!\\/)?(?:pages\\/)?(?:[\\w\\-\\.]*\\/)*([\\w\\-\\.]*)?(?:profile.php\\?id=(?=\\d.*))?([\\w\\-\\.]*)?";
           if(!IsMatch(url, pattern)){
            url = ""; 
           }
@@ -121,6 +131,39 @@ public class SocialMediaType {
         return url;
       }
     }
+  }
+  private static boolean validateUrls(String url){
+
+    if(invalidUrls.containsKey(url.toLowerCase())){
+      return true;
+    }
+    return false;
+
+  }
+
+  private static void initInvalidUrlMap () {
+    invalidUrls.put("www.facebook.com",true);
+    invalidUrls.put("www.facebook.com/",true);
+
+    invalidUrls.put("https://www.facebook.com",true);
+    invalidUrls.put("https://www.facebook.com/",true);
+    invalidUrls.put("http://www.facebook.com/",true);
+    invalidUrls.put("http://www.facebook.com",true);
+
+    invalidUrls.put("https://www.linkedin.com" , true);
+    invalidUrls.put("https://www.linkedin.com/" , true);
+    invalidUrls.put("http://www.linkedin.com" , true);
+    invalidUrls.put("http://www.linkedin.com/" , true);
+    invalidUrls.put("www.linkedin.com" , true);
+    invalidUrls.put("www.linkedin.com/" , true);
+
+    invalidUrls.put("https://twitter.com/" , true);
+    invalidUrls.put("https://twitter.com" , true);
+    invalidUrls.put("http://twitter.com/" , true);
+    invalidUrls.put("http://twitter.com" , true);
+    invalidUrls.put("www.twitter.com" , true);
+    invalidUrls.put("www.twitter.com/" , true);
+
   }
 
   private static boolean IsMatch(String s, String pattern) {

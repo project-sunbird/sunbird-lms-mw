@@ -186,14 +186,18 @@ public class BadgesActor extends UntypedAbstractActor {
     try {
       String body = "{\"request\":{\"filters\":{\"identifier\":\"test\"}}}";
       Map<String, String> headers = new HashMap<>();
-      headers.put(JsonKey.AUTHORIZATION, System.getenv(JsonKey.AUTHORIZATION));
+      headers.put(JsonKey.AUTHORIZATION, JsonKey.BEARER+System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
       if (ProjectUtil.isStringNullOREmpty((String) headers.get(JsonKey.AUTHORIZATION))) {
         headers.put(JsonKey.AUTHORIZATION,
             PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
         headers.put("Content_Type", "application/json; charset=utf-8");
       }
+      String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
+      if (ProjectUtil.isStringNullOREmpty(ekStepBaseUrl)) {
+        ekStepBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
+      }
       String response = HttpUtil.sendPostRequest(
-          PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL)
+          ekStepBaseUrl
               + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_URL),
           body, headers);
       if (response.contains("OK")) {

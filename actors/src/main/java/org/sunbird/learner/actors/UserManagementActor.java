@@ -64,6 +64,8 @@ public class UserManagementActor extends UntypedAbstractActor {
       Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
   private Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
+  private final String SUNBIRD_WEB_URL = "sunbird_web_url";
+  private final String SUNBIRD_APP_URL = "sunbird_app_url";
 
 
   /**
@@ -982,7 +984,7 @@ public class UserManagementActor extends UntypedAbstractActor {
   
   /**
    * 
-   * @param actorMessage
+   * @param email
    * @return Response
    * @throws Exception
    */
@@ -1349,6 +1351,7 @@ public class UserManagementActor extends UntypedAbstractActor {
          reqMap.put(JsonKey.YEAR_OF_PASSING,0);
        }
     } catch (Exception ex) {
+    	reqMap.put(JsonKey.YEAR_OF_PASSING,0);    	
       ProjectLogger.log(ex.getMessage(), ex);
     }
 
@@ -1889,6 +1892,7 @@ public class UserManagementActor extends UntypedAbstractActor {
          }
       } catch (Exception ex) {
         ProjectLogger.log(ex.getMessage(), ex);
+        reqMap.put(JsonKey.YEAR_OF_PASSING,0);
       }
       if (null != reqMap.get(JsonKey.PERCENTAGE)) {
         reqMap.put(JsonKey.PERCENTAGE,
@@ -2793,18 +2797,21 @@ public class UserManagementActor extends UntypedAbstractActor {
       List<String> reciptientsMail = new ArrayList<>();
       reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
       emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
-      if (!ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url"))
-          || !ProjectUtil.isStringNullOREmpty(propertiesCache.getProperty("sunird_web_url"))) {
-        emailTemplateMap.put(JsonKey.WEB_URL,
-            ProjectUtil.isStringNullOREmpty(System.getenv("sunird_web_url"))
-                ? propertiesCache.getProperty("sunird_web_url") : System.getenv("sunird_web_url"));
+
+      String webUrl = System.getenv(SUNBIRD_WEB_URL);
+      if(ProjectUtil.isStringNullOREmpty(webUrl)){
+        webUrl = propertiesCache.getProperty(SUNBIRD_WEB_URL);
       }
-      String appUrl = System.getenv("sunbird_app_url");
-      if (ProjectUtil.isStringNullOREmpty(appUrl)) {
-        appUrl = propertiesCache.getProperty("sunbird_app_url");
+      if ((!ProjectUtil.isStringNullOREmpty(webUrl)) && (!SUNBIRD_WEB_URL.equalsIgnoreCase(webUrl))) {
+        emailTemplateMap.put(JsonKey.WEB_URL, webUrl);
       }
 
-      if ((!ProjectUtil.isStringNullOREmpty(appUrl)) && (!"sunbird_app_url".equalsIgnoreCase(appUrl))) {
+      String appUrl = System.getenv(SUNBIRD_APP_URL);
+      if (ProjectUtil.isStringNullOREmpty(appUrl)) {
+        appUrl = propertiesCache.getProperty(SUNBIRD_APP_URL);
+      }
+
+      if ((!ProjectUtil.isStringNullOREmpty(appUrl)) && (!SUNBIRD_APP_URL.equalsIgnoreCase(appUrl))) {
           emailTemplateMap.put(JsonKey.APP_URL, appUrl);
       }
 
@@ -2842,7 +2849,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     if (ProjectUtil.isStringNullOREmpty(appUrl)) {
        appUrl = propertiesCache.getProperty(JsonKey.SUNBIRD_APP_URL);
     }
-    context.put(JsonKey.WEB_URL, ProjectUtil.isStringNullOREmpty(System.getenv(JsonKey.SUNBIRD_WEB_URL)) ? propertiesCache.getProperty(JsonKey.SUNBIRD_WEB_URL) : System.getenv(JsonKey.SUNBIRD_WEB_URL));
+    context.put(JsonKey.WEB_URL, ProjectUtil.isStringNullOREmpty(System.getenv(SUNBIRD_WEB_URL)) ? propertiesCache.getProperty(SUNBIRD_WEB_URL) : System.getenv(SUNBIRD_WEB_URL));
     if(!ProjectUtil.isStringNullOREmpty(appUrl)) {
        if (!JsonKey.SUNBIRD_APP_URL.equalsIgnoreCase(appUrl)) {
          context.put(JsonKey.APP_URL, appUrl);

@@ -3,6 +3,7 @@ package org.sunbird.learner.actors;
 import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 
 import akka.actor.ActorRef;
+import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
 import java.math.BigInteger;
 import java.sql.Timestamp;
@@ -38,6 +39,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
   private final String CONTENT_STATE_INFO = "contentStateInfo";
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private ActorRef utilityActorRef = context().actorOf(Props.create(UtilityActor.class) , "utilityActor");
 
   /**
    * Receives the actor message and perform the add content operation .
@@ -109,8 +111,10 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
           }
           sender().tell(response, self());
           // call to update the corresponding course
+          //actorMessage.setOperation(this.CONTENT_STATE_INFO);
           actorMessage.getRequest().put(this.CONTENT_STATE_INFO, contentStatusHolder);
-          ActorUtil.tell(actorMessage);
+          //ActorUtil.tell(actorMessage);
+          utilityActorRef.tell(actorMessage ,  ActorRef.noSender());
         } else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
           ProjectCommonException exception =

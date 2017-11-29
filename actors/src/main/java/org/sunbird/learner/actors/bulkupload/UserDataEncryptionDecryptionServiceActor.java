@@ -47,6 +47,9 @@ public class UserDataEncryptionDecryptionServiceActor extends UntypedAbstractAct
     ProjectLogger.log(
         "DecryptUserData API called by " + actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
     long start = System.currentTimeMillis();
+    Response resp = new Response();
+    resp.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    sender().tell(resp, self());
     Response response =
         cassandraOperation.getAllRecords(usrDbInfo.getKeySpace(), usrDbInfo.getTableName());
     List<Map<String, Object>> userList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
@@ -57,9 +60,6 @@ public class UserDataEncryptionDecryptionServiceActor extends UntypedAbstractAct
         i++;
       }
     }
-    Response resp = new Response();
-    resp.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    sender().tell(resp, self());
     ProjectLogger.log("Total No. of user data to decrypt ::: " + i);
     long end = System.currentTimeMillis();
     ProjectLogger.log("total time taken by application to decrypt user data:::: " + (end - start));
@@ -99,6 +99,9 @@ public class UserDataEncryptionDecryptionServiceActor extends UntypedAbstractAct
     ProjectLogger.log(
         "EncryptUserData API called by " + actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
     long start = System.currentTimeMillis();
+    Response resp = new Response();
+    resp.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    sender().tell(resp, self());
     Response response =
         cassandraOperation.getAllRecords(usrDbInfo.getKeySpace(), usrDbInfo.getTableName());
     List<Map<String, Object>> userList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
@@ -109,9 +112,6 @@ public class UserDataEncryptionDecryptionServiceActor extends UntypedAbstractAct
         i++;
       }
     }
-    Response resp = new Response();
-    resp.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    sender().tell(resp, self());
     ProjectLogger.log("Total No. of user data to encrypt ::: " + i);
     long end = System.currentTimeMillis();
     ProjectLogger.log("total time taken by application to encrypt user data:::: " + (end - start));

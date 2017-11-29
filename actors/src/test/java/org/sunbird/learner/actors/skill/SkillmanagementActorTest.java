@@ -45,9 +45,9 @@ public class SkillmanagementActorTest {
   private static Util.DbInfo skillsListDbInfo = Util.dbInfoMap.get(JsonKey.SKILLS_LIST_DB);
   private static Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private final String REF_SKILLS_DB_ID = "001";
-  private static final String USER_ID = "vcurc633r89";
-  private static final String ROOT_ORG_ID = "7838hhucy83";
-  private static final String ENDORSED_USER_ID = "nmnkfiiuvcehuy";
+  private static final String USER_ID = "vcurc633r89yv";
+  private static final String ROOT_ORG_ID = "7838hhucy83yuuy";
+  private static final String ENDORSED_USER_ID = "nmnkfiiuvcehuybgu";
   private static final String SKILL_NAME="Java";
   private static List<String> skillsList = new ArrayList<>();
 

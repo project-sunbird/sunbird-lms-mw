@@ -111,6 +111,87 @@ public class CourseMetricsActorTest {
   }
 
   @Test
+  public void testUnsupportedMessageType(){
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    subject.tell("Invalid Oject Type", probe.getRef());
+    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+
+  }
+
+  @Test
+  public void testCourseProgress001(){
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request actorMessage = new Request();
+    actorMessage.put(JsonKey.REQUESTED_BY , userId);
+    actorMessage.put(JsonKey.BATCH_ID , batchId);
+    actorMessage.put(JsonKey.PERIOD , "7d");
+    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS.getValue());
+
+    subject.tell(actorMessage, probe.getRef());
+    Response res= probe.expectMsgClass(duration("100 second"),Response.class);
+    System.out.println("SUCCESS");
+    System.out.println("SUCCESS");
+
+  }
+
+  @Test
+  public void testCourseProgressWithInvalidBatch(){
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request actorMessage = new Request();
+    actorMessage.put(JsonKey.REQUESTED_BY , userId);
+    actorMessage.put(JsonKey.BATCH_ID , batchId+"8ud38cuy");
+    actorMessage.put(JsonKey.PERIOD , "fromBegining");
+    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS.getValue());
+
+    subject.tell(actorMessage, probe.getRef());
+    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+
+  }
+
+  @Test
+  public void testCourseProgressWithInvalidBatchIdNull(){
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request actorMessage = new Request();
+    actorMessage.put(JsonKey.REQUESTED_BY , userId);
+    actorMessage.put(JsonKey.BATCH_ID , null);
+    actorMessage.put(JsonKey.PERIOD , "fromBegining");
+    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS.getValue());
+
+    subject.tell(actorMessage, probe.getRef());
+    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+
+  }
+
+  @Test
+  public void testCourseProgressWithInvalidOperationName(){
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request actorMessage = new Request();
+    actorMessage.put(JsonKey.REQUESTED_BY , userId);
+    actorMessage.put(JsonKey.BATCH_ID , null);
+    actorMessage.put(JsonKey.PERIOD , "fromBegining");
+    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS.getValue()+"-Invalid");
+
+    subject.tell(actorMessage, probe.getRef());
+    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+
+  }
+
+  @Test
   public void testCourseProgressReport(){
 
     TestKit probe = new TestKit(system);
@@ -125,8 +206,60 @@ public class CourseMetricsActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     Response res= probe.expectMsgClass(duration("100 second"),Response.class);
-    System.out.println("SUCCESS");
-    System.out.println("SUCCESS");
+
+  }
+
+  @Test
+  public void testCourseProgressReport001(){
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request actorMessage = new Request();
+    actorMessage.put(JsonKey.REQUESTED_BY , userId);
+    actorMessage.put(JsonKey.BATCH_ID , batchId);
+    actorMessage.put(JsonKey.PERIOD , "7d");
+    actorMessage.put(JsonKey.FORMAT, "csv");
+    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue());
+
+    subject.tell(actorMessage, probe.getRef());
+    Response res= probe.expectMsgClass(duration("100 second"),Response.class);
+
+  }
+
+  @Test
+  public void testCourseProgressReportWithInvalidBatch(){
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request actorMessage = new Request();
+    actorMessage.put(JsonKey.REQUESTED_BY , userId);
+    actorMessage.put(JsonKey.BATCH_ID , batchId+"ug8er73");
+    actorMessage.put(JsonKey.PERIOD , "fromBegining");
+    actorMessage.put(JsonKey.FORMAT, "csv");
+    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue());
+
+    subject.tell(actorMessage, probe.getRef());
+    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+
+  }
+
+  @Test
+  public void testCourseProgressReportWithInvalidBatchIdNull(){
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request actorMessage = new Request();
+    actorMessage.put(JsonKey.REQUESTED_BY , userId);
+    actorMessage.put(JsonKey.BATCH_ID , "");
+    actorMessage.put(JsonKey.PERIOD , "fromBegining");
+    actorMessage.put(JsonKey.FORMAT, "csv");
+    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue());
+
+    subject.tell(actorMessage, probe.getRef());
+    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
 
   }
   

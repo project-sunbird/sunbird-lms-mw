@@ -82,15 +82,15 @@
     <dependency>
       <groupId>org.powermock</groupId>
       <artifactId>powermock-module-junit4</artifactId>
-      <version>1.6.4</version>
-      <scope>test</scope>
+      <version>1.6.5</version>
+      <!--<scope>test</scope>-->
     </dependency>
 
     <dependency>
       <groupId>org.powermock</groupId>
       <artifactId>powermock-api-mockito</artifactId>
-      <version>1.6.4</version>
-      <scope>test</scope>
+      <version>1.6.5</version>
+      <!--<scope>test</scope>-->
     </dependency>
 
     <dependency>
@@ -155,9 +155,6 @@
     </dependency>
 
 
-
-
-
   </dependencies>
 
   <build>
@@ -202,6 +199,25 @@
           </execution>
         </executions>
       </plugin>
+
+      <plugin>
+        <groupId>org.openclover</groupId>
+        <artifactId>clover-maven-plugin</artifactId>
+        <version>4.2.0</version>
+        <configuration>
+          <targetPercentage>0%</targetPercentage>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>verify</phase>
+            <goals>
+              <goal>instrument</goal>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
     </plugins>
     <pluginManagement>
       <plugins>
@@ -265,11 +281,26 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.19.1</version>
         <configuration>
-            <skipTests>true</skipTests>
+            <skipTests>false</skipTests>
         </configuration>
     </plugin>
 
       </plugins>
     </pluginManagement>
+
   </build>
+
+  <reporting>
+    <plugins>
+      <plugin>
+        <groupId>org.openclover</groupId>
+        <artifactId>clover-maven-plugin</artifactId>
+        <configuration>
+          <generatePdf>true</generatePdf>
+          <generateXml>true</generateXml>
+        </configuration>
+      </plugin>
+    </plugins>
+  </reporting>
+
 </project>

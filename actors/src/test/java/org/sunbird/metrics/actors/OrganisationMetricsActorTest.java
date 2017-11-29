@@ -155,7 +155,7 @@ public class OrganisationMetricsActorTest {
       subject.tell(actorMessage, probe.getRef());
       ProjectCommonException e =
           probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-      Assert.assertEquals("INVALID_PERIOD", e.getCode());
+      Assert.assertEquals("INVALID_ORGANIZATION_DATA", e.getCode());
     }
 
     @SuppressWarnings("deprecation")
@@ -172,7 +172,7 @@ public class OrganisationMetricsActorTest {
       subject.tell(actorMessage, probe.getRef());
       ProjectCommonException e =
           probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-      Assert.assertEquals("INVALID_PERIOD", e.getCode());
+      Assert.assertEquals("INVALID_ORGANIZATION_DATA", e.getCode());
     }
 
     private static void insertUserDataToES() {

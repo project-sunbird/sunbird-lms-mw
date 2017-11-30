@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -135,11 +136,24 @@ public class KeyCloakSyncActor extends UntypedAbstractActor {
     Map<String, Object> userMap = (Map<String, Object>) entry.getValue();
     // Decrypt user data
     UserUtility.decryptUserData(userMap);
-    
+    Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     if(isSSOEnabled){
       try {
         String res = ssoManager.syncUserData(userMap);
         if (!(!ProjectUtil.isStringNullOREmpty(res) && res.equalsIgnoreCase(JsonKey.SUCCESS))) {
+          if(null == userMap.get(JsonKey.EMAIL_VERIFIED)){
+            Map<String,Object> map = new HashMap<>();
+           if(SSOServiceFactory.getInstance().isEmailVerified(userId)){
+             map.put(JsonKey.EMAIL_VERIFIED, true);
+             map.put(JsonKey.ID, userId);
+           }else{
+             map.put(JsonKey.EMAIL_VERIFIED, false);
+             map.put(JsonKey.ID, userId);
+           }
+           cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), map);
+           ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+               ProjectUtil.EsType.user.getTypeName(), userId, map);
+          }
           ProjectLogger.log("User sync failed in KeyCloakSyncActor for userID : "+ userId);
         }
       } catch (Exception e) {

@@ -157,6 +157,7 @@ public class Util {
       dbInfoMap.put(JsonKey.GEO_LOCATION_DB , getDbInfoObject(KEY_SPACE_NAME, "geo_location"));
 
       dbInfoMap.put(JsonKey.CLIENT_INFO_DB, getDbInfoObject(KEY_SPACE_NAME, "client_info"));
+      dbInfoMap.put(JsonKey.SYSTEM_SETTINGS_DB, getDbInfoObject(KEY_SPACE_NAME, "system_settings"));
     }
     
     

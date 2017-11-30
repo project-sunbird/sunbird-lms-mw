@@ -15,6 +15,7 @@ import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.sunbird.common.config.ApplicationConfigActor;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -107,6 +108,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ActorRef clientManagementActor;
   private ActorRef geoLocationManagementActor;
   private ActorRef keyCloakSyncActor;
+  private ActorRef applicationConfigActor;
 
   private ExecutionContext ec;
 
@@ -143,6 +145,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private static final String CLIENT_MANAGEMENT_ACTOR = "clientManagementActor";
   private static final String GEO_LOCATION_MANAGEMENT_ACTOR = "geoLocationManagementActor";
   private static final String KEYCLOAK_SYNC_ACTOR = "keyCloakSyncActor";
+  private static final String APPLICATION_CONFIG_ACTOR = "applicationConfigActor";
 
 
 
@@ -232,6 +235,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
     keyCloakSyncActor = getContext().actorOf(
         FromConfig.getInstance().props(Props.create(KeyCloakSyncActor.class)),
         KEYCLOAK_SYNC_ACTOR);
+    applicationConfigActor = getContext().actorOf(
+        FromConfig.getInstance().props(Props.create(ApplicationConfigActor.class)),
+        APPLICATION_CONFIG_ACTOR);
     ec = getContext().dispatcher();
     initializeRouterMap();
   }
@@ -363,6 +369,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.DELETE_GEO_LOCATION.getValue(), geoLocationManagementActor);
     routerMap.put(ActorOperations.SEND_NOTIFICATION.getValue(), geoLocationManagementActor);
     routerMap.put(ActorOperations.SYNC_KEYCLOAK.getValue(), keyCloakSyncActor);
+    routerMap.put(ActorOperations.UPDATE_SYSTEM_SETTINGS.getValue(), applicationConfigActor);
   }
 
 

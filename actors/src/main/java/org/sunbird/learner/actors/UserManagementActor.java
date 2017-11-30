@@ -1735,8 +1735,8 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   private void checkEmailUniqueness(Map<String, Object> userMap, String opType) {
   //Get Email configuration if not found , by default Email can be duplicate across the application
-    String emailSetting  = DataCacheHandler.getConfigSettings().get(JsonKey.EMAIL);
-    if(null != emailSetting && JsonKey.UNIQUE.equalsIgnoreCase(emailSetting)){
+    String emailSetting  = DataCacheHandler.getConfigSettings().get(JsonKey.EMAIL_UNIQUE);
+    if(null != emailSetting && Boolean.parseBoolean(emailSetting)){
       String email  = (String) userMap.get(JsonKey.EMAIL);
       if(!ProjectUtil.isStringNullOREmpty(email)){
         try{
@@ -1773,8 +1773,8 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   private void checkPhoneUniqueness(Map<String,Object> userMap,String opType) {
     //Get Phone configuration if not found , by default phone will be unique across the application
-    String phoneSetting  = DataCacheHandler.getConfigSettings().get(JsonKey.PHONE);
-    if(null != phoneSetting && JsonKey.UNIQUE.equalsIgnoreCase(phoneSetting)){
+    String phoneSetting  = DataCacheHandler.getConfigSettings().get(JsonKey.PHONE_UNIQUE);
+    if(null != phoneSetting && Boolean.parseBoolean(phoneSetting)){
       String phone  = (String) userMap.get(JsonKey.PHONE);
       if(!ProjectUtil.isStringNullOREmpty(phone)){
         try{

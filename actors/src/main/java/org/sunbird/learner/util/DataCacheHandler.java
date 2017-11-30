@@ -48,20 +48,20 @@ public class DataCacheHandler implements Runnable {
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (null != responseList && !responseList.isEmpty()) {
       for (Map<String, Object> resultMap : responseList) {
-        if (((String) resultMap.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.PHONE)
+        if (((String) resultMap.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.PHONE_UNIQUE)
             && ProjectUtil.isStringNullOREmpty((String) resultMap.get(JsonKey.VALUE))) {
-          configSettings.put(((String) resultMap.get(JsonKey.FIELD)), JsonKey.UNIQUE);
-        } else if (((String) resultMap.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.EMAIL)
+          configSettings.put(((String) resultMap.get(JsonKey.FIELD)), String.valueOf(true));
+        } else if (((String) resultMap.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.EMAIL_UNIQUE)
             && ProjectUtil.isStringNullOREmpty((String) resultMap.get(JsonKey.VALUE))) {
-          configSettings.put(((String) resultMap.get(JsonKey.FIELD)), JsonKey.DUPLICATE);
+          configSettings.put(((String) resultMap.get(JsonKey.FIELD)), String.valueOf(false));
         } else {
           configSettings.put(((String) resultMap.get(JsonKey.FIELD)),
               (String) resultMap.get(JsonKey.VALUE));
         }
       }
     }else{
-      configSettings.put(JsonKey.PHONE, JsonKey.UNIQUE);
-      configSettings.put(JsonKey.EMAIL, JsonKey.DUPLICATE);
+      configSettings.put(JsonKey.PHONE_UNIQUE, String.valueOf(true));
+      configSettings.put(JsonKey.EMAIL_UNIQUE, String.valueOf(false));
     }
   }
 

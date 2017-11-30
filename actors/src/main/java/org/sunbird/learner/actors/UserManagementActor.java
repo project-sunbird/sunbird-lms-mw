@@ -1205,7 +1205,13 @@ public class UserManagementActor extends UntypedAbstractActor {
     if(!resList.isEmpty()){
      Map<String, Object> res = resList.get(0);
      String email = (String) res.get(JsonKey.EMAIL);
-     if(((String)userMap.get(JsonKey.EMAIL)).equalsIgnoreCase(email)){
+     String encEmail = (String)userMap.get(JsonKey.EMAIL);
+     try{
+       encEmail = encryptionService.encryptData((String)userMap.get(JsonKey.EMAIL));
+     }catch(Exception ex){
+       ProjectLogger.log("Exception occurred while encrypting user email.");
+     }
+     if((encEmail).equalsIgnoreCase(email)){
        return true;
      }else{
        return false;

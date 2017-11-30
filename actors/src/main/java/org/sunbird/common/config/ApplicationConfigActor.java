@@ -105,6 +105,7 @@ public class ApplicationConfigActor extends UntypedAbstractActor {
     SearchDTO searchDto = null;
     if (keys.contains(JsonKey.PHONE_UNIQUE) && (!dbPhoneUniqueValue) && (reqPhoneUniqueValue)) {
       searchDto = new SearchDTO();
+      searchDto.setLimit(0);
       Map<String, String> facets = new HashMap<>();
       facets.put(JsonKey.ENC_PHONE, null);
       List<Map<String, String>> list = new ArrayList<>();
@@ -133,6 +134,7 @@ public class ApplicationConfigActor extends UntypedAbstractActor {
 
     if (keys.contains(JsonKey.EMAIL_UNIQUE) && (!dbEmailUniqueValue) && (reqEmailUniqueValue)) {
       searchDto = new SearchDTO();
+      searchDto.setLimit(0);
       Map<String, String> facets = new HashMap<>();
       facets.put(JsonKey.ENC_EMAIL, null);
       List<Map<String, String>> list = new ArrayList<>();

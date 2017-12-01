@@ -122,8 +122,8 @@ public class ApplicationConfigActor extends UntypedAbstractActor {
           for (Map<String, Object> result : values) {
             long count = (long) result.get(JsonKey.COUNT);
             if (count > 1) {
-              throw new ProjectCommonException(ResponseCode.duplicateData.getErrorCode(),
-                  MessageFormat.format(ResponseCode.duplicateData.getErrorMessage(), JsonKey.PHONE),
+              throw new ProjectCommonException(ResponseCode.duplicatePhoneData.getErrorCode(),
+                  MessageFormat.format(ResponseCode.duplicatePhoneData.getErrorMessage(), JsonKey.PHONE),
                   ResponseCode.CLIENT_ERROR.getResponseCode());
             }
           }
@@ -151,8 +151,8 @@ public class ApplicationConfigActor extends UntypedAbstractActor {
           for (Map<String, Object> result : values) {
             long count = (long) result.get(JsonKey.COUNT);
             if (count > 1) {
-              throw new ProjectCommonException(ResponseCode.duplicateData.getErrorCode(),
-                  MessageFormat.format(ResponseCode.duplicateData.getErrorMessage(), JsonKey.EMAIL),
+              throw new ProjectCommonException(ResponseCode.duplicateEmailData.getErrorCode(),
+                  MessageFormat.format(ResponseCode.duplicateEmailData.getErrorMessage(), JsonKey.EMAIL),
                   ResponseCode.CLIENT_ERROR.getResponseCode());
             }
           }

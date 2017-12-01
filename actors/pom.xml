@@ -160,7 +160,6 @@
   <build>
     <sourceDirectory>${basedir}/src/main/java</sourceDirectory>
     <testSourceDirectory>${basedir}/src/test/java</testSourceDirectory>
-    <pluginManagement>
     <plugins>
       <!-- to create executable jar -->
       <plugin>
@@ -251,7 +250,6 @@
           </configuration>
         </plugin>
       </plugins>
-    </pluginManagement>
 
   </build>
 

@@ -69,7 +69,8 @@ public class FileUploadServiceActor extends UntypedAbstractActor {
     }
     String fName = "File-" + processId;
     if(!ProjectUtil.isStringNullOREmpty(fileExtension)){
-      fName = fName+"."+fileExtension;
+      fName = fName+"."+fileExtension.toLowerCase();
+      ProjectLogger.log("File - "+fName+" Extension is "+fileExtension);
     }
 
     File file = new File(fName);

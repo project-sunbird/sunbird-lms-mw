@@ -114,6 +114,7 @@ public class Application {
   }
 
   public static ActorRef startLocalActorSystem() {
+    try{
     system = ActorSystem.create(LOCAL_ACTOR_SYSTEM_NAME,
         ConfigFactory.load().getConfig(ACTOR_LOCAL_CONFIG_NAME));
     ActorRef learnerActorSelectorRef = system.actorOf(Props.create(RequestRouterActor.class),
@@ -128,12 +129,17 @@ public class Application {
       startBackgroundLocalActorSystem();
     }
     return learnerActorSelectorRef;
+    }catch(Exception ex){
+      ProjectLogger.log("Exception occurred while starting local Actor System in Application.java startLocalActorSystem method "+ex);
+    }
+    return null;
   }
 
   /**
    * This method will do the basic setup for actors.
    */
   private static void startBackgroundRemoteActorSystem() {
+    try{
     Config con = null;
     String host = System.getenv(JsonKey.BKG_SUNBIRD_ACTOR_SERVICE_IP);
     String port = System.getenv(JsonKey.BKG_SUNBIRD_ACTOR_SERVICE_PORT);
@@ -155,6 +161,9 @@ public class Application {
     ProjectLogger.log("BACKGROUND ACTORS STARTED " + learnerActorSelectorRef,
         LoggerEnum.INFO.name());
     checkCassandraConnection();
+    }catch(Exception ex){
+      ProjectLogger.log("Exception occurred while starting BackgroundRemoteActorSystem  in Application.java "+ex);
+    }
   }
 
   public static ActorRef startBackgroundLocalActorSystem() {

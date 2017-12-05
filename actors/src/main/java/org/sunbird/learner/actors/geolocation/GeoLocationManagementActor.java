@@ -56,6 +56,9 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.SEND_NOTIFICATION.getValue())) {
           sendNotification(actorMessage);
+        } else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.GET_USER_COUNT.getValue())) {
+          getUserCount(actorMessage);
         }else {
           ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
           ProjectCommonException exception =
@@ -76,6 +79,36 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
               ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
     }
+  }
+
+
+  private void getUserCount(Request actorMessage) {
+    ProjectLogger.log("sendnotification actor method called.");
+    List<String> locationIds = (List<String>) actorMessage.getRequest().get(JsonKey.LOCATION_IDS);
+    List<Map<String, Object>> result = new ArrayList<>(); 
+    List<String> dbIdList = new ArrayList<>();
+    Map<String, Object> responseMap = null;
+    Response response = cassandraOperation.getRecordsByProperty(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(),
+           JsonKey.ID, locationIds);
+    List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    for(Map<String, Object> map : list){
+      responseMap = new HashMap<>();
+      responseMap.put(JsonKey.ID, map.get(JsonKey.ID));
+      responseMap.put(JsonKey.USER_COUNT, map.get(JsonKey.USER_COUNT));
+      result.add(responseMap);
+      dbIdList.add((String)map.get(JsonKey.ID));
+    }
+    //For Invalid Location Id
+    for(String str : locationIds){
+      if(!dbIdList.contains(str)){
+        responseMap = new HashMap<>();
+        responseMap.put(JsonKey.ID, str);
+        responseMap.put(JsonKey.USER_COUNT, 0);
+        result.add(responseMap);
+      }
+    }
+    response.getResult().put(JsonKey.LOCATIONS, result);
+    sender().tell(response , self());
   }
 
 

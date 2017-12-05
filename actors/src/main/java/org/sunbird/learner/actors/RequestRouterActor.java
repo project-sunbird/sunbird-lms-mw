@@ -370,6 +370,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.SEND_NOTIFICATION.getValue(), geoLocationManagementActor);
     routerMap.put(ActorOperations.SYNC_KEYCLOAK.getValue(), keyCloakSyncActor);
     routerMap.put(ActorOperations.UPDATE_SYSTEM_SETTINGS.getValue(), applicationConfigActor);
+    routerMap.put(ActorOperations.GET_USER_COUNT.getValue(), geoLocationManagementActor);
   }
 
 

@@ -658,3 +658,5 @@ CREATE TABLE IF NOT EXISTS sunbird.system_settings (id text ,field text ,value t
 
 ALTER TABLE sunbird.geo_location ADD userCount int;
 
+insert into sunbird.system_settings (id,field,value) values ('phoneUnique','phoneUnique',true);
+insert into sunbird.system_settings (id,field,value) values ('emailUnique','emailUnique',false);

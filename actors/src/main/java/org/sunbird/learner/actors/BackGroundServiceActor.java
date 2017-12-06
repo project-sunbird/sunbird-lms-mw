@@ -95,7 +95,7 @@ public class BackGroundServiceActor extends UntypedAbstractActor {
     searchDto.setFields(list);
     searchDto.setLimit(0);
     Map<String, Object> filter2 = new HashMap<>();
-    filter.put(JsonKey.REGISTERED_ORG_ID, orgIdList);
+    filter2.put(JsonKey.REGISTERED_ORG_ID, orgIdList);
     searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter2);
     Map<String, Object> esResponse2 = ElasticSearchUtil.complexSearch(searchDto,
         ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName());

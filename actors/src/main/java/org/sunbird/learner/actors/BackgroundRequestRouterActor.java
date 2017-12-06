@@ -34,6 +34,8 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
   private ActorRef courseMetricsBackgroundActor;
 
   private ActorRef emailServiceActor;
+  
+  private ActorRef backGroundServiceActor;
 
 
  
@@ -48,6 +50,7 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
   private static final String ORG_METRICS_BACKGROUND_ACTOR = "organisationMetricsBackgroundActor";
   private static final String COURSE_METRICS_BACKGROUND_ACTOR = "courseMetricsBackgroundActor";
   private static final String EMAIL_SERVICE_ACTOR = "emailServiceActor";
+  private static final String BACKGROUND_SERVICE_ACTOR = "backGroundServiceActor";
 
 
   /**
@@ -80,6 +83,9 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
 
     emailServiceActor = getContext().actorOf(
         FromConfig.getInstance().props(Props.create(EmailServiceActor.class)), EMAIL_SERVICE_ACTOR);
+    
+    backGroundServiceActor = getContext().actorOf(
+        FromConfig.getInstance().props(Props.create(EmailServiceActor.class)), BACKGROUND_SERVICE_ACTOR);
 
     initializeRouterMap();
   }
@@ -113,6 +119,7 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.ORG_CONSUMPTION_METRICS_DATA.getValue(), organisationMetricsBackgroundActor);
     routerMap.put(ActorOperations.COURSE_PROGRESS_METRICS_DATA.getValue(), courseMetricsBackgroundActor);
     routerMap.put(ActorOperations.EMAIL_SERVICE.getValue(), emailServiceActor);
+    routerMap.put(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue(), backGroundServiceActor);
   }
 
 

@@ -20,6 +20,7 @@ import org.sunbird.common.models.util.fcm.Notification;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -109,6 +110,9 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
     }
     response.getResult().put(JsonKey.LOCATIONS, result);
     sender().tell(response , self());
+    //Update user count in background
+    actorMessage.setOperation(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue());
+    ActorUtil.tell(actorMessage);
   }
 
 

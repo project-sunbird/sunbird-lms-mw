@@ -43,7 +43,7 @@ public class BackGroundServiceActor extends UntypedAbstractActor {
 
   private void updateUserCount(Request actorMessage) {
     Util.DbInfo locDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
-    List<String> locationIds = (List<String>) actorMessage.getRequest().get(JsonKey.LOCATION_IDS);
+    List<Object> locationIds = (List<Object>) actorMessage.getRequest().get(JsonKey.LOCATION_IDS);
     Response response = cassandraOperation.getRecordsByProperty(locDbInfo.getKeySpace(),
         locDbInfo.getTableName(), JsonKey.ID, locationIds);
     List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);

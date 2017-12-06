@@ -85,29 +85,31 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
 
   private void getUserCount(Request actorMessage) {
     ProjectLogger.log("sendnotification actor method called.");
-    List<String> locationIds = (List<String>) actorMessage.getRequest().get(JsonKey.LOCATION_IDS);
+    List<Object> locationIds = (List<Object>) actorMessage.getRequest().get(JsonKey.LOCATION_IDS);
     List<Map<String, Object>> result = new ArrayList<>(); 
     List<String> dbIdList = new ArrayList<>();
     Map<String, Object> responseMap = null;
+    
     Response response = cassandraOperation.getRecordsByProperty(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(),
            JsonKey.ID, locationIds);
     List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     for(Map<String, Object> map : list){
       responseMap = new HashMap<>();
       responseMap.put(JsonKey.ID, map.get(JsonKey.ID));
-      responseMap.put(JsonKey.USER_COUNT, map.get(JsonKey.USER_COUNT));
+      responseMap.put(JsonKey.USER_COUNT, ((map.get(JsonKey.USER_COUNT) == null) ? 0 : map.get(JsonKey.USER_COUNT)));
       result.add(responseMap);
       dbIdList.add((String)map.get(JsonKey.ID));
     }
     //For Invalid Location Id
-    for(String str : locationIds){
-      if(!dbIdList.contains(str)){
+    for(Object str : locationIds){
+      if(!dbIdList.contains((String)str)){
         responseMap = new HashMap<>();
         responseMap.put(JsonKey.ID, str);
         responseMap.put(JsonKey.USER_COUNT, 0);
         result.add(responseMap);
       }
     }
+    response = new Response();
     response.getResult().put(JsonKey.LOCATIONS, result);
     sender().tell(response , self());
     //Update user count in background

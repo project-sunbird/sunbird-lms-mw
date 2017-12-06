@@ -85,7 +85,7 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
         FromConfig.getInstance().props(Props.create(EmailServiceActor.class)), EMAIL_SERVICE_ACTOR);
     
     backGroundServiceActor = getContext().actorOf(
-        FromConfig.getInstance().props(Props.create(EmailServiceActor.class)), BACKGROUND_SERVICE_ACTOR);
+        FromConfig.getInstance().props(Props.create(BackGroundServiceActor.class)), BACKGROUND_SERVICE_ACTOR);
 
     initializeRouterMap();
   }

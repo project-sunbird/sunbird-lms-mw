@@ -1609,7 +1609,14 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
     if (!(ProjectUtil.isStringNullOREmpty((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
 
-      emailTemplateMap.put(JsonKey.SUBJECT, "Welcome to DIKSHA");
+      String envName = System.getenv(JsonKey.SUNBIRD_INSTALLATION);
+      if(ProjectUtil.isStringNullOREmpty(envName)){
+        envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
+      }
+
+      String welcomeSubject = propertiesCache.getProperty("onboarding_mail_subject");
+      emailTemplateMap.put(JsonKey.SUBJECT, ProjectUtil
+          .formatMessage(welcomeSubject, envName));
       List<String> reciptientsMail = new ArrayList<>();
       reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
       emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
@@ -1634,10 +1641,10 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       emailTemplateMap.put(JsonKey.BODY,
           propertiesCache.getProperty(JsonKey.ONBOARDING_WELCOME_MAIL_BODY));
       emailTemplateMap.put(JsonKey.NOTE, propertiesCache.getProperty(JsonKey.MAIL_NOTE));
-      emailTemplateMap.put(JsonKey.ORG_NAME, propertiesCache.getProperty(JsonKey.ORG_NAME));
+      emailTemplateMap.put(JsonKey.ORG_NAME, envName);
       String welcomeMessage = propertiesCache.getProperty("onboarding_welcome_message");
       emailTemplateMap.put(JsonKey.WELCOME_MESSAGE, ProjectUtil
-          .formatMessage(welcomeMessage, propertiesCache.getProperty(JsonKey.ORG_NAME)).trim());
+          .formatMessage(welcomeMessage, envName));
 
       emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
 

@@ -106,7 +106,7 @@ public class BackGroundServiceActor extends UntypedAbstractActor {
     ProjectLogger.log("fetching user count start ");
     SearchDTO searchDto = new SearchDTO();
     List<String> list = new ArrayList<>();
-    list.add(JsonKey.ORGANISATION_ID);
+    list.add(JsonKey.ID);
     searchDto.setFields(list);
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.LOCATION_ID, locationId);
@@ -117,20 +117,20 @@ public class BackGroundServiceActor extends UntypedAbstractActor {
 
     List<String> orgIdList = new ArrayList<>();
     for (Map<String, Object> map : orgList) {
-      orgIdList.add((String) map.get(JsonKey.ORGANISATION_ID));
+      orgIdList.add((String) map.get(JsonKey.ID));
     }
     ProjectLogger
         .log("Total No of Organisation for Location Id " + locationId + " , " + orgIdList.size());
     searchDto = new SearchDTO();
     List<String> list2 = new ArrayList<>();
-    list2.add(JsonKey.USER_ID);
+    list2.add(JsonKey.ID);
     searchDto.setFields(list);
     searchDto.setLimit(0);
     Map<String, Object> filter2 = new HashMap<>();
     filter2.put(JsonKey.REGISTERED_ORG_ID, orgIdList);
     searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter2);
     Map<String, Object> esResponse2 = ElasticSearchUtil.complexSearch(searchDto,
-        ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName());
+        ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName());
     long userCount = (long) esResponse2.get(JsonKey.COUNT);
     ProjectLogger.log("Total No of User for Location Id " + locationId + " , " + userCount);
     return (int) userCount;

@@ -2,7 +2,6 @@ package org.sunbird.common.quartz.scheduler;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.quartz.Job;

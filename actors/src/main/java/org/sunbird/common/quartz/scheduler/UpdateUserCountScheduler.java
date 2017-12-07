@@ -33,19 +33,12 @@ public class UpdateUserCountScheduler implements Job {
     List<Object> locIdList = new ArrayList<>();
     Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
     CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-    Map<String,Object> locMap = new HashMap<>();
-    locMap.put(JsonKey.USER_COUNT, null);
-    ProjectLogger.log("fetching data from cassandra where userCount is NULL.");
-    Response response = cassandraOperation.getRecordsByProperties(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), locMap);
+    Response response = cassandraOperation.getAllRecords(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName());
     List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    ProjectLogger.log("size of data from cassandra where userCount is NULL. = "+list.size());
-    locMap.put(JsonKey.USER_COUNT, 0);
-    ProjectLogger.log("fetching data from cassandra where userCount is ZERO.");
-    Response response2 = cassandraOperation.getRecordsByProperties(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), locMap);
-    ProjectLogger.log("size of data from cassandra where userCount is NULL. = "+((List<Map<String, Object>>) response2.get(JsonKey.RESPONSE)).size());
-    list.addAll((List<Map<String, Object>>) response2.get(JsonKey.RESPONSE));
     for(Map<String, Object> map : list){
-      locIdList.add(map.get(JsonKey.ID));
+      if(null == map.get(JsonKey.USER_COUNT) || 0 == ((int)map.get(JsonKey.USER_COUNT))){
+       locIdList.add(map.get(JsonKey.ID));
+      }
     }
     ProjectLogger.log("size of total locId to processed = "+locIdList.size());
     Request request = new Request();

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.poi.ddf.EscherColorRef.SysIndexSource;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
@@ -79,11 +80,14 @@ public class BackGroundServiceActor extends UntypedAbstractActor {
           } catch (Exception ex) {
             ProjectLogger.log("Exception occurred while converting string to long "
                 + (String) map.get(JsonKey.USER_COUNT_TTL));
+            userCountTTL=0L;
           }
+          ProjectLogger.log("userCountTTL == "+userCountTTL);
           Long currentTime = System.currentTimeMillis();
           Long diff = currentTime - userCountTTL;
           int hours = (int) (diff / (1000 * 60 * 60));
           if (hours >= 24) {
+            ProjectLogger.log("Updating user count for LocnId "+locationId);
             int usrCount = getUserCount(locationId);
             Map<String, Object> reqMap = new HashMap<>();
             reqMap.put(JsonKey.ID, locationId);
@@ -131,5 +135,9 @@ public class BackGroundServiceActor extends UntypedAbstractActor {
     ProjectLogger.log("Total No of User for Location Id " + locationId + " , " + userCount);
     return (int) userCount;
   }
-
+public static void main(String[] args) {
+  long time = System.currentTimeMillis();
+  int hours = (int) (time / (1000 * 60 * 60));
+  System.out.println(hours);
+}
 }

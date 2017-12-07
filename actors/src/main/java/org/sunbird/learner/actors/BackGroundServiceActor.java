@@ -58,7 +58,7 @@ public class BackGroundServiceActor extends UntypedAbstractActor {
         int userCount =
             (map.get(JsonKey.USER_COUNT) == null) ? 0 : (int) (map.get(JsonKey.USER_COUNT));
         ProjectLogger.log("userCount is " + userCount + "for location id " + locationId);
-        if (userCount == 0 && ProjectUtil.isStringNullOREmpty(operation)
+        if (userCount == 0 && !ProjectUtil.isStringNullOREmpty(operation)
             && operation.equalsIgnoreCase("UpdateUserCountScheduler")) {
           ProjectLogger.log("Processing start for LocationId for Scheduler " + locationId);
           int count = getUserCount(locationId);
@@ -68,7 +68,7 @@ public class BackGroundServiceActor extends UntypedAbstractActor {
           reqMap.put(JsonKey.USER_COUNT_TTL, String.valueOf(System.currentTimeMillis()));
           cassandraOperation.updateRecord(locDbInfo.getKeySpace(), locDbInfo.getTableName(),
               reqMap);
-        } else if (userCount > 0 && ProjectUtil.isStringNullOREmpty(operation)
+        } else if (!ProjectUtil.isStringNullOREmpty(operation)
             && operation.equalsIgnoreCase("GeoLocationManagementActor")) {
           ProjectLogger
               .log("Processing start for LocationId for GeoLocationManagementActor " + locationId);

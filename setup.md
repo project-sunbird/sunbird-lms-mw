@@ -1,77 +1,109 @@
 ## Pre-requisites
-1. Cassandra
-    1. Install Cassandra database and start the server
-    2. Run [cassandra.cql](https://github.com/project-sunbird/sunbird-lms-mw/blob/master/actors/src/main/resources/cassandra.cql) file to create the required keyspaces, tables and indices
-    3. Copy pageMgmt.csv and pageSection.csv to a temp folder on cassandra machine. e.g.: /tmp/cql/pageMgmt.csv and /tmp/cql/pageSection.csv.
-    4. Execute the command: cqlsh -e "COPY sunbird.page_management(id, appmap,createdby ,createddate ,name ,organisationid ,portalmap ,updatedby ,updateddate ) FROM '/tmp/cql/pageMgmt.csv'"
-    5. Execute the command: cqlsh -e "COPY sunbird.page_section(id, alt,createdby ,createddate ,description ,display ,imgurl ,name,searchquery , sectiondatatype ,status , updatedby ,updateddate) FROM '/tmp/cql/pageSection.csv'"
-	
-2. ElasticSearch
-    1. Install ElasticSearch database and start the server
-	2. Run this curl command
-	curl -X PUT \
-	  http://localhost:9200/sunbird/org/ORG_001 \
-	  -H 'cache-control: no-cache' \
-	  -H 'content-type: application/json' \
-	  -H 'postman-token: caa7eaa7-2a08-d1f3-1eb2-bf7c73bef663' \
-	  -d '{}'
+1. [Setup Cassandra](#setup-cassandra)
+2. [Setup Elasticsearch](#setup-elasticsearch)
+3. [Set Configuration](#set-configurations)
 
-## Configuration
-1. Environment Variables:
-    1. sunbird_cassandra_host: host running the cassandra server
-    2. sunbird_cassandra_port: port on which cassandra server is running
-    3. sunbird_cassandra_username (optional): username for cassandra database, if authentication is enabled
-    4. sunbird_cassandra_password (optional): password for cassandra database, if authentication is enabled
-    5. sunbird_es_host: host running the elasticsearch server
-    6. sunbird_es_port: port on which elasticsearch server is running
-    7. sunbird_es_cluster (optional): name of the elasticsearch cluster
-    8. sunbird_learner_actor_host: host running for learner actor
-    9. sunbird_learner_actor_port: port on which learner actor is running.
-    10. sunbird_sso_url: url for keycloak server
-    11. sunbird_sso_realm: keycloak realm name
-    12. sunbird_sso_username: keycloak user name
-    13. sunbird_sso_password: keycloak password
-    14. sunbird_sso_client_id: key cloak client id
-    15. sunbird_sso_client_secret : keycloak client secret (not mandatory)
-    16. ekstep_content_search_base_url : provide base url for EkStep content search
-    17. ekstep_authorization : provide authorization for value for content search
-    18. sunbird_pg_host: postgres host name or ip
-    19. sunbird_pg_port: postgres port number
-    20. sunbird_pg_db: postgres db name
-    21. sunbird_pg_user: postgres db user name
-    22. sunbird_pg_password: postgress db password 
-    23. sunbird_installation
-    24. ekstep_api_base_url
-    25. sunbird_mail_server_host
-    26. sunbird_mail_server_port
-    27. sunbird_mail_server_username
-    28. sunbird_mail_server_password
-    29. sunbird_mail_server_from_email
-    30. sunbird_account_name : account name of azure blob storage.
-    31. sunbird_account_key : azure blob storage account key
-    32. sunbird_quartz_mode: put this value {"embedded" to run quartz without any data base, "any other value" to run with postgres db }
-    33. sunbird_encryption_key
-    34. sunbird_encryption_mode : mode value is either local or remote
-    35. sunbird_sso_publickey : sso public key
-    36. sunbird_env_logo_url : logo url for sending email.(http://www.paramountias.com/media/images/current-affairs/diksha-portal.jpg) 
-    37. sunird_web_url : web page url
-    38. sunbird_app_url : paly store url to downlaod the app
-    39. sunbird_msg_91_auth : msg 91 auth
-	
-## Do the below env setup , if you are planing to run background actor in remote mode.
-	1. sunbird_background_actor_host: host running for learner background actor
-    2. sunbird_background_actor_port: port on which learner background actor is running.
-	
-## Do the below env setup , to start a actor system on a machine {"RemoteMiddlewareActorSystem" it will start Normal Actor System on that machine,             ##"BackGroundRemoteMiddlewareActorSystem" , it will start background actor}.
+### Setup Cassandra
+1. Install Cassandra database and start the server
+2. Run [cassandra.cql](https://github.com/project-sunbird/sunbird-lms-mw/blob/master/actors/src/main/resources/cassandra.cql) file to create the required keyspaces, tables and indices
+3. Copy pageMgmt.csv and pageSection.csv to a temp folder on cassandra machine. 
+    - e.g.: /tmp/cql/pageMgmt.csv and /tmp/cql/pageSection.csv.
+4. Execute the below commands. 
+```cql
+cqlsh -e "COPY sunbird.page_management(id, appmap,createdby ,createddate ,name ,organisationid ,portalmap ,updatedby ,updateddate ) FROM '/tmp/cql/pageMgmt.csv'"
+cqlsh -e "COPY sunbird.page_section(id, alt,createdby ,createddate ,description ,display ,imgurl ,name,searchquery , sectiondatatype ,status , updatedby ,updateddate) FROM '/tmp/cql/pageSection.csv'"
+```
+    
+### Setup Elasticsearch
+1. Install ElasticSearch database and start the server
+2. Run the below curl command.
+```sh
+curl -X PUT \
+  http://localhost:9200/searchindex/org/ORG_001 \
+  -H 'cache-control: no-cache' \
+  -H 'content-type: application/json' \
+  -H 'postman-token: caa7eaa7-2a08-d1f3-1eb2-bf7c73bef663' \
+  -d '{}'
+```
 
-   1.  sunbird_actor_system_name : actor system name to start{values are "RemoteMiddlewareActorSystem" , "BackGroundRemoteMiddlewareActorSystem"}
+### Set Configurations
+
+Below are the list of environment variables to setup.
+
+| variable                              | description                                                                                                 |
+|---------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| sunbird_cassandra_host                | host running the Cassandra server                                                                           |
+| sunbird_cassandra_port                | port on which cassandra server is running                                                                   |
+| sunbird_cassandra_username (optional) | username for Cassandra database, if authentication is enabled                                               |
+| sunbird_cassandra_password (optional) | password for Cassandra database, if authentication is enabled                                               |
+| sunbird_es_host                       | host running the Elasticsearch server                                                                       |
+| sunbird_es_port                       | port on which Elasticsearch server is running                                                               |
+| sunbird_es_cluster (optional)         | name of the Elasticsearch cluster                                                                           |
+| sunbird_learner_actor_host            | host running for learner actor                                                                              |
+| sunbird_learner_actor_port            | port on which learner actor is running                                                                      |
+| sunbird_sso_url                       | url for keycloak server                                                                                     |
+| sunbird_sso_realm                     | keycloak realm name                                                                                         |
+| sunbird_sso_username                  | keycloak user name                                                                                          |
+| sunbird_sso_password                  | keycloak password                                                                                           |
+| sunbird_sso_client_id                 | key cloak client id                                                                                         |
+| sunbird_sso_client_secret             | keycloak client secret (not mandatory)                                                                      |
+| ekstep_content_search_base_url        | provide base url for EkStep content search                                                                  |
+| ekstep_authorization                  | provide Authorization for value for content search                                                          |
+| sunbird_pg_host                       | Postgres host name or ip                                                                                    |
+| sunbird_pg_port                       | Postgres port number                                                                                        |
+| sunbird_pg_db                         | Postgres db name                                                                                            |
+| sunbird_pg_user                       | Postgres db user name                                                                                       |
+| sunbird_pg_password                   | Postgress db password                                                                                       |
+| sunbird_installation                  |                                                                                                             |
+| ekstep_api_base_url                   |                                                                                                             |
+| sunbird_mail_server_host              |                                                                                                             |
+| sunbird_mail_server_port              |                                                                                                             |
+| sunbird_mail_server_username          |                                                                                                             |
+| sunbird_mail_server_password          |                                                                                                             |
+| sunbird_mail_server_from_email        |                                                                                                             |
+| sunbird_account_name                  | account name of azure blob storage                                                                          |
+| sunbird_account_key                   | azure blob storage account key                                                                              |
+| sunbird_quartz_mode                   | put this value {"embedded" to run quartz without any data base, "any other value" to run with postgres db } |
+| sunbird_encryption_key                |                                                                                                             |
+| sunbird_encryption_mode               | mode value is either local or remote                                                                        |
+| sunbird_sso_publickey                 | SSO public key                                                                                              |
+| sunbird_env_logo_url                  | logo url for sending email.(http://www.paramountias.com/media/images/current-affairs/diksha-portal.jpg)     |
+| sunird_web_url                        | web page url                                                                                                |
+| sunbird_app_url                       | Play store url to download the app                                                                          |
+| sunbird_msg_91_auth                   | msg 91 auth                                                                         |
+   
+
+- Do the below env setup, if you are planing to run background actor in remote mode.
+
+| Variable                      | Description                                       |
+|-------------------------------|---------------------------------------------------|
+| sunbird_background_actor_host | host running for learner background actor         |
+| sunbird_background_actor_port | port on which learner background actor is running |
+
+    
+- Do the below env setup, to start a actor system on a machine.
+
+| Variable                  | Description                |
+|---------------------------|----------------------------|
+| sunbird_actor_system_name | actor system name to start |
+
+Below are the details of the actor systems.
+
+| Actor System Type                     | Description                                      |
+|---------------------------------------|--------------------------------------------------|
+| RemoteMiddlewareActorSystem           | It will start normal ActorSystem on that machine |
+| BackGroundRemoteMiddlewareActorSystem | It will start background actor                   |
 
 ## Build
-1. Clone the repository "sunbird-lms-mw"
-1. Run "git submodule foreach git pull origin master" to pull the latest sunbird-utils submodule.
+1. Clone the repository (sunbird-lms-mw)[https://github.com/project-sunbird/sunbird-lms-mw]
+1. Run `git submodule foreach git pull origin master` to pull the latest sunbird-utils submodule
 2. Run "mvn clean install" to build the actors.
-3. The build file is a executable jar file "learner-actor-1.0-SNAPSHOT.jar" generated in "sunbird-lms-mw/actors/target" folder
+3. The build file is a executable jar file **learner-actor-1.0-SNAPSHOT.jar** generated in `sunbird-lms-mw/actors/target` folder
 
 ## Run
-1. Actors can be started by running **java -cp "learner-actor-1.0-SNAPSHOT.jar" org.sunbird.learner.Application**	
-	
+Actors can be started by running the below statement.
+
+```shell
+java -cp "learner-actor-1.0-SNAPSHOT.jar" org.sunbird.learner.Application
+```
+    

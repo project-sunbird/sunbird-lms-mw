@@ -114,6 +114,7 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
     sender().tell(response , self());
     //Update user count in background
     actorMessage.setOperation(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue());
+    actorMessage.getRequest().put(JsonKey.OPERATION, "GeoLocationManagementActor");
     ActorUtil.tell(actorMessage);
   }
 

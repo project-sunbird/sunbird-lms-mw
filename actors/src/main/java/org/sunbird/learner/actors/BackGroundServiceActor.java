@@ -42,38 +42,64 @@ public class BackGroundServiceActor extends UntypedAbstractActor {
   }
 
   private void updateUserCount(Request actorMessage) {
+    ProjectLogger.log("In BackgroundService actor in updateUserCount method.");
     Util.DbInfo locDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
     List<Object> locationIds = (List<Object>) actorMessage.getRequest().get(JsonKey.LOCATION_IDS);
+    String operation = (String) actorMessage.getRequest().get(JsonKey.OPERATION);
+    ProjectLogger.log("operation for updating UserCount" + operation);
     Response response = cassandraOperation.getRecordsByProperty(locDbInfo.getKeySpace(),
         locDbInfo.getTableName(), JsonKey.ID, locationIds);
     List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (null != list && !list.isEmpty()) {
       for (Map<String, Object> map : list) {
         String locationId = (String) map.get(JsonKey.ID);
+        ProjectLogger.log("Processing start for LocationId " + locationId);
         Long userCountTTL = 0L;
-        try {
-          userCountTTL = Long.valueOf((String) map.get(JsonKey.USER_COUNT_TTL));
-        } catch (Exception ex) {
-          ProjectLogger.log("Exception occurred while converting string to long "
-              + (String) map.get(JsonKey.USER_COUNT_TTL));
-        }
-        Long currentTime = System.currentTimeMillis();
-        Long diff = currentTime - userCountTTL;
-        int hours = (int) (diff / (1000 * 60 * 60));
-        if (hours >= 24) {
-          int userCount = getUserCount(locationId);
+        int userCount =
+            (map.get(JsonKey.USER_COUNT) == null) ? 0 : (int) (map.get(JsonKey.USER_COUNT));
+        ProjectLogger.log("userCount is " + userCount + "for location id " + locationId);
+        if (userCount == 0 && ProjectUtil.isStringNullOREmpty(operation)
+            && operation.equalsIgnoreCase("UpdateUserCountScheduler")) {
+          ProjectLogger.log("Processing start for LocationId for Scheduler " + locationId);
+          int count = getUserCount(locationId);
           Map<String, Object> reqMap = new HashMap<>();
           reqMap.put(JsonKey.ID, locationId);
-          reqMap.put(JsonKey.USER_COUNT, userCount);
+          reqMap.put(JsonKey.USER_COUNT, count);
           reqMap.put(JsonKey.USER_COUNT_TTL, String.valueOf(System.currentTimeMillis()));
           cassandraOperation.updateRecord(locDbInfo.getKeySpace(), locDbInfo.getTableName(),
               reqMap);
+        } else if (userCount > 0 && ProjectUtil.isStringNullOREmpty(operation)
+            && operation.equalsIgnoreCase("GeoLocationManagementActor")) {
+          ProjectLogger
+              .log("Processing start for LocationId for GeoLocationManagementActor " + locationId);
+          try {
+            if (!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.USER_COUNT_TTL))) {
+              userCountTTL = Long.valueOf((String) map.get(JsonKey.USER_COUNT_TTL));
+            }
+          } catch (Exception ex) {
+            ProjectLogger.log("Exception occurred while converting string to long "
+                + (String) map.get(JsonKey.USER_COUNT_TTL));
+          }
+          Long currentTime = System.currentTimeMillis();
+          Long diff = currentTime - userCountTTL;
+          int hours = (int) (diff / (1000 * 60 * 60));
+          if (hours >= 24) {
+            int usrCount = getUserCount(locationId);
+            Map<String, Object> reqMap = new HashMap<>();
+            reqMap.put(JsonKey.ID, locationId);
+            reqMap.put(JsonKey.USER_COUNT, usrCount);
+            reqMap.put(JsonKey.USER_COUNT_TTL, String.valueOf(System.currentTimeMillis()));
+            cassandraOperation.updateRecord(locDbInfo.getKeySpace(), locDbInfo.getTableName(),
+                reqMap);
+          }
         }
       }
+      ProjectLogger.log("Processing end user count update ");
     }
   }
 
   private static int getUserCount(String locationId) {
+    ProjectLogger.log("fetching user count start ");
     SearchDTO searchDto = new SearchDTO();
     List<String> list = new ArrayList<>();
     list.add(JsonKey.ORGANISATION_ID);
@@ -89,6 +115,8 @@ public class BackGroundServiceActor extends UntypedAbstractActor {
     for (Map<String, Object> map : orgList) {
       orgIdList.add((String) map.get(JsonKey.ORGANISATION_ID));
     }
+    ProjectLogger
+        .log("Total No of Organisation for Location Id " + locationId + " , " + orgIdList.size());
     searchDto = new SearchDTO();
     List<String> list2 = new ArrayList<>();
     list2.add(JsonKey.USER_ID);
@@ -100,6 +128,7 @@ public class BackGroundServiceActor extends UntypedAbstractActor {
     Map<String, Object> esResponse2 = ElasticSearchUtil.complexSearch(searchDto,
         ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName());
     long userCount = (long) esResponse2.get(JsonKey.COUNT);
+    ProjectLogger.log("Total No of User for Location Id " + locationId + " , " + userCount);
     return (int) userCount;
   }
 

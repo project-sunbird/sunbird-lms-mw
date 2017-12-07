@@ -156,7 +156,6 @@ public class SchedulerManager {
         ProjectLogger.log("MetricsReportJob schedular started", LoggerEnum.INFO.name());
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);
-        e.printStackTrace();
       }
 
       // add another job for verifying the course published details from EKStep.
@@ -183,10 +182,33 @@ public class SchedulerManager {
         ProjectLogger.log("Error occured", e);
       }
 
+      
+      // add another job for updating user count to Location Table.
+      // 1- create a job and bind with class which is implementing Job
+      // interface.
+      JobDetail updateUserCountJob = JobBuilder.newJob(UpdateUserCountScheduler.class)
+          .requestRecovery(true).withIdentity("updateUserCountScheduler", identifier).build();
+
+      // 2- Create a trigger object that will define frequency of run.
+      // This will run every day 2:00 AM 
+      Trigger updateUserCountTrigger =
+          TriggerBuilder.newTrigger().withIdentity("updateUserCountTrigger", identifier)
+              .withSchedule(CronScheduleBuilder
+                  .cronSchedule(PropertiesCache.getInstance().getProperty("quartz_update_user_count_timer")))
+              .build();
+      try {
+        if (scheduler.checkExists(updateUserCountJob.getKey())) {
+          scheduler.deleteJob(updateUserCountJob.getKey());
+        }
+        scheduler.scheduleJob(updateUserCountJob, updateUserCountTrigger);
+        scheduler.start();
+        ProjectLogger.log("UpdateUserCount schedular started", LoggerEnum.INFO.name());
+      } catch (Exception e) {
+        ProjectLogger.log(e.getMessage(), e);
+      }
 
     } catch (Exception e) {
       ProjectLogger.log("Error in properties cache", e);
-      e.printStackTrace();
     } finally {
       registerShutDownHook();
     }

@@ -124,7 +124,7 @@ public class BackGroundServiceActor extends UntypedAbstractActor {
     searchDto = new SearchDTO();
     List<String> list2 = new ArrayList<>();
     list2.add(JsonKey.ID);
-    searchDto.setFields(list);
+    searchDto.setFields(list2);
     searchDto.setLimit(0);
     Map<String, Object> filter2 = new HashMap<>();
     filter2.put(JsonKey.REGISTERED_ORG_ID, orgIdList);
@@ -135,9 +135,4 @@ public class BackGroundServiceActor extends UntypedAbstractActor {
     ProjectLogger.log("Total No of User for Location Id " + locationId + " , " + userCount);
     return (int) userCount;
   }
-public static void main(String[] args) {
-  long time = System.currentTimeMillis();
-  int hours = (int) (time / (1000 * 60 * 60));
-  System.out.println(hours);
-}
 }

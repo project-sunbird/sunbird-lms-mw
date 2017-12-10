@@ -613,10 +613,10 @@ ALTER TABLE sunbird.user ADD tcstatus text;
 CREATE KEYSPACE IF NOT EXISTS sunbirdplugin WITH replication = {'class':'SimpleStrategy','replication_factor':1};
 //CREATE TYPE IF NOT EXISTS sunbirdplugin.attachment (id text,filename text,mimetype text);
 CREATE TABLE sunbirdplugin.announcement (id text,userid text,sourceid text,details map<text, text>,links list<text>,attachments list<text>,target text,sentcount int,priority text,expiry text,status text,createddate text,updateddate text, PRIMARY KEY (id));
-CREATE TABLE sunbirdplugin.attachment (id text,file text,filename text,mimetype text,createdby text,status text,createddate text, PRIMARY KEY (id));
+//CREATE TABLE sunbirdplugin.attachment (id text,file text,filename text,mimetype text,createdby text,status text,createddate text, PRIMARY KEY (id));
 CREATE TABLE sunbirdplugin.metrics (id text,userid text,announcementid text,activity text,channel text,createddate text, PRIMARY KEY (id));
 CREATE TABLE sunbirdplugin.announcementtype (id text,rootorgid text,name text,status text,createddate text, PRIMARY KEY (id));
-CREATE TABLE sunbirdplugin.announcementauth (id text,userid text,rootorgid text,permissions map<text, text>,status text,createddate text, PRIMARY KEY (id));
+//CREATE TABLE sunbirdplugin.announcementauth (id text,userid text,rootorgid text,permissions map<text, text>,status text,createddate text, PRIMARY KEY (id));
 
 //CLIENT_INFO table for master key
 CREATE TABLE IF NOT EXISTS sunbird.client_info(id text, clientname text, masterkey text, createddate text, updateddate text, PRIMARY KEY (id));

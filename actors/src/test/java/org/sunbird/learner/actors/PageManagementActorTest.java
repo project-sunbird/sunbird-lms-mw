@@ -59,6 +59,18 @@ public class PageManagementActorTest {
     }
 
     @Test
+    public void testAAAInvalidRequest(){
+        TestKit probe = new TestKit(system);
+        ActorRef subject = system.actorOf(props);
+
+        Request reqObj = new Request();
+        //reqObj.setOperation("INVALID_OPERATION");
+
+        subject.tell(reqObj, probe.getRef());
+        probe.expectMsgClass(NullPointerException.class);
+    }
+    
+    @Test
     public void testAAInvalidOperation(){
         TestKit probe = new TestKit(system);
         ActorRef subject = system.actorOf(props);

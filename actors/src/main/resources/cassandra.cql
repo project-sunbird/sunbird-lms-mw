@@ -663,3 +663,7 @@ insert into sunbird.system_settings (id,field,value) values ('emailUnique','emai
 
 // Dec 6th 2017
 ALTER TABLE sunbird.geo_location ADD userCountTTL text;
+
+//Dec 19, 2017 ---
+ALTER TABLE sunbird.client_info ADD channel text;
+CREATE INDEX inx_ci_clientchannel ON sunbird.client_info(channel);

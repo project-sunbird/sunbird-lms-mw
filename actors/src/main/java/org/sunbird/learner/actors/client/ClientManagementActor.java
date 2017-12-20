@@ -78,6 +78,19 @@ public class ClientManagementActor extends UntypedAbstractActor {
           ResponseCode.invalidClientName.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
+
+    // check uniqueness of channel , channel is optional ...
+    String channel = (String) actorMessage.getRequest().get(JsonKey.CHANNEL);
+    if(!ProjectUtil.isStringNullOREmpty(channel)) {
+      data = getDataFromCassandra(JsonKey.CHANNEL, channel);
+      dataList = (List<Map<String, Object>>) data.getResult().get(JsonKey.RESPONSE);
+      if (!dataList.isEmpty() && dataList.size() > 0) {
+        throw new ProjectCommonException(ResponseCode.channelUniquenessInvalid.getErrorCode(),
+            ResponseCode.channelUniquenessInvalid.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
+
     Map<String,Object> req = new HashMap<>();
     String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
     req.put(JsonKey.CLIENT_NAME, StringUtils.remove(clientName.toLowerCase()," "));
@@ -86,6 +99,7 @@ public class ClientManagementActor extends UntypedAbstractActor {
     req.put(JsonKey.MASTER_KEY, masterKey);
     req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     req.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+    req.put(JsonKey.CHANNEL , channel);
     Response result = cassandraOperation.insertRecord(clientDbInfo.getKeySpace(),
         clientDbInfo.getTableName(), req);
     ProjectLogger.log("Client data saved into cassandra.");
@@ -111,12 +125,49 @@ public class ClientManagementActor extends UntypedAbstractActor {
           ResponseCode.invalidRequestData.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
+
+    // check uniqueness of channel , channel is optional ...
+    String channel = (String) actorMessage.getRequest().get(JsonKey.CHANNEL);
+    if(!ProjectUtil.isStringNullOREmpty(channel)) {
+      if(!channel.equalsIgnoreCase((String)dataList.get(0).get(JsonKey.CHANNEL))) {
+        data = getDataFromCassandra(JsonKey.CHANNEL, channel);
+        List<Map<String, Object>> dataList1 = (List<Map<String, Object>>) data.getResult()
+            .get(JsonKey.RESPONSE);
+        if (!dataList1.isEmpty() && dataList1.size() > 0) {
+          throw new ProjectCommonException(ResponseCode.channelUniquenessInvalid.getErrorCode(),
+              ResponseCode.channelUniquenessInvalid.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
+      }
+    }
+
+    String clientName = (String) actorMessage.getRequest().get(JsonKey.CLIENT_NAME);
+    if(!ProjectUtil.isStringNullOREmpty(clientName)) {
+      if(!clientName.equalsIgnoreCase((String)dataList.get(0).get(JsonKey.CLIENT_NAME))) {
+        data = getDataFromCassandra(JsonKey.CLIENT_NAME, clientName);
+        List<Map<String, Object>> dataList1 = (List<Map<String, Object>>) data.getResult()
+            .get(JsonKey.RESPONSE);
+        if (!dataList1.isEmpty() && dataList1.size() > 0) {
+          throw new ProjectCommonException(ResponseCode.invalidClientName.getErrorCode(),
+              ResponseCode.invalidClientName.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
+      }
+    }
+
+
     Map<String,Object> req = new HashMap<>();
     req.put(JsonKey.CLIENT_ID, clientId);
     String newMasterKey = ProjectUtil.createAuthToken((String)dataList.get(0).get(JsonKey.CLIENT_NAME), clientId);
     req.put(JsonKey.MASTER_KEY, newMasterKey);
     req.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     req.put(JsonKey.ID, clientId);
+    if(!ProjectUtil.isStringNullOREmpty(channel)) {
+      req.put(JsonKey.CHANNEL, channel);
+    }
+    if(!ProjectUtil.isStringNullOREmpty(clientName)){
+      req.put(JsonKey.CLIENT_NAME, clientName);
+    }
     req.remove(JsonKey.CLIENT_ID);
     Response result = cassandraOperation.updateRecord(clientDbInfo.getKeySpace(),
         clientDbInfo.getTableName(), req);
@@ -134,10 +185,28 @@ public class ClientManagementActor extends UntypedAbstractActor {
   @SuppressWarnings("unchecked")
   private void getClientKey(Request actorMessage) {
     ProjectLogger.log("Get client key method call start");
-    String clientId = (String) actorMessage.getRequest().get(JsonKey.CLIENT_ID);
-    Response data = getDataFromCassandra(JsonKey.ID, clientId);
-    List<Map<String,Object>> dataList = (List<Map<String,Object>>) data.getResult().get(JsonKey.RESPONSE);
-    if(dataList.isEmpty()){
+    String id = (String) actorMessage.getRequest().get(JsonKey.CLIENT_ID);
+    String type = (String) actorMessage.getRequest().get(JsonKey.TYPE);
+    Response data = null;
+    if(JsonKey.CLIENT_ID.equalsIgnoreCase(type)) {
+      data = getDataFromCassandra(JsonKey.ID, id);
+      List<Map<String, Object>> dataList = (List<Map<String, Object>>) data.getResult()
+          .get(JsonKey.RESPONSE);
+      if (dataList.isEmpty()) {
+        throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+            ResponseCode.invalidRequestData.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }else if(JsonKey.CHANNEL.equalsIgnoreCase(type)){
+      data = getDataFromCassandra(JsonKey.CHANNEL, id);
+      List<Map<String, Object>> dataList = (List<Map<String, Object>>) data.getResult()
+          .get(JsonKey.RESPONSE);
+      if (dataList.isEmpty()) {
+        throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+            ResponseCode.invalidRequestData.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }else{
       throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
           ResponseCode.invalidRequestData.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -160,6 +229,9 @@ public class ClientManagementActor extends UntypedAbstractActor {
     }else if(StringUtils.equalsIgnoreCase(JsonKey.ID, propertyName)){
       result = cassandraOperation.getRecordsByProperty(clientDbInfo.getKeySpace(),
           clientDbInfo.getTableName(), JsonKey.ID, propertyValue);
+    }else if(StringUtils.equalsIgnoreCase(JsonKey.CHANNEL, propertyName)){
+      result = cassandraOperation.getRecordsByProperty(clientDbInfo.getKeySpace(),
+          clientDbInfo.getTableName(), JsonKey.CHANNEL, propertyValue);
     }
     if(null == result || result.getResult().isEmpty()){
       throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),

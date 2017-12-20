@@ -201,7 +201,7 @@ public class EmailServiceActor extends UntypedAbstractActor {
         ProjectUtil.getTemplate(request));
     Response res = new Response();
     res.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    sender().tell(res, self());
+    //sender().tell(res, self());
   }
 
   private void checkEmailValidity(String[] emails) {

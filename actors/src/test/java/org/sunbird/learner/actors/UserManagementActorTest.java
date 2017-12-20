@@ -245,10 +245,19 @@ public class UserManagementActorTest {
   
   @Test
   public void TestACreateUser3() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
+    
     DataCacheHandler.getConfigSettings().put(JsonKey.EMAIL_UNIQUE, "TRUE");
     DataCacheHandler.getConfigSettings().put(JsonKey.PHONE_UNIQUE, "TRUE");
+    
+    try {
+      Thread.sleep(2000);
+    } catch (InterruptedException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
@@ -1559,12 +1568,6 @@ public class UserManagementActorTest {
     reqObj.setRequest(request);
     subject.tell(reqObj, probe.getRef());
     probe.expectMsgClass(duration("200 second"), Response.class);
-    try {
-      Thread.sleep(4000);
-    } catch (InterruptedException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
   }
   
   @Test
@@ -1597,7 +1600,7 @@ public class UserManagementActorTest {
     request.put(JsonKey.PROVIDER, "BLR");
     List<String> roles = new ArrayList<>();
     roles.add("CONTENT_REVIEWER");
-    request.put(JsonKey.ROLES, roles);
+    request.put(JsonKey.ROLES, roles); 
     reqObj.setRequest(request);
     subject.tell(reqObj, probe.getRef());
     probe.expectMsgClass(duration("200 second"), Response.class);

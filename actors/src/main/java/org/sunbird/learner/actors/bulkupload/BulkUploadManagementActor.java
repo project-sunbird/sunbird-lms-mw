@@ -481,8 +481,8 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
   }
 
   private void validateUserProperty(String[] property) {
-    ArrayList<String> properties = new ArrayList<>(Arrays.asList(JsonKey.FIRST_NAME,
-        JsonKey.LAST_NAME, JsonKey.PHONE, JsonKey.EMAIL, JsonKey.PASSWORD, JsonKey.USERNAME,
+    ArrayList<String> properties = new ArrayList<>(Arrays.asList(JsonKey.FIRST_NAME, JsonKey.COUNTRY_CODE, 
+        JsonKey.LAST_NAME, JsonKey.PHONE, JsonKey.COUNTRY_CODE , JsonKey.EMAIL, JsonKey.PASSWORD, JsonKey.USERNAME,
         JsonKey.PROVIDER, JsonKey.PHONE_VERIFIED, JsonKey.EMAIL_VERIFIED, JsonKey.ROLES,
         JsonKey.POSITION, JsonKey.GRADE, JsonKey.LOCATION, JsonKey.DOB, JsonKey.GENDER,
         JsonKey.LANGUAGE, JsonKey.PROFILE_SUMMARY, JsonKey.SUBJECT, JsonKey.WEB_PAGES));
@@ -500,7 +500,6 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
   private void validateBatchProperty(String[] property) {
     ArrayList<String> properties =
         new ArrayList<>(Arrays.asList(JsonKey.BATCH_ID, JsonKey.USER_IDs));
-
     for (String key : property) {
       if (!properties.contains(key)) {
         throw new ProjectCommonException(ResponseCode.InvalidColumnError.getErrorCode(),
@@ -513,12 +512,9 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
 
   private Map<String, Object> elasticSearchComplexSearch(Map<String, Object> filters, String index,
       String type) {
-
     SearchDTO searchDTO = new SearchDTO();
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
-
     return ElasticSearchUtil.complexSearch(searchDTO, index, type);
-
   }
 
 }

@@ -1,11 +1,11 @@
 package org.sunbird.learner.actors.geolocation;
 
 import static akka.testkit.JavaTestKit.duration;
+import static org.junit.Assert.assertEquals;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
-import akka.testkit.TestActorRef;
 import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,7 +24,6 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.LearnerStateActor;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -353,8 +352,41 @@ public class GeoLocationManagementActorTest {
   }
 
 
+  @Test
+  public void getUserCount(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request actorMessage = new Request();
+    List<Object> list = new ArrayList<>();
+    list.add("locId1");
+    actorMessage.getRequest().put(JsonKey.LOCATION_IDS, list);
+    actorMessage.setOperation(ActorOperations.GET_USER_COUNT.getValue());
 
+    subject.tell(actorMessage, probe.getRef());
+    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
+    List<Map<String, Object>> result = (List<Map<String, Object>>) res.getResult().get(JsonKey.LOCATIONS);
+    Map<String, Object> map = result.get(0);
+    int count = (int) map.get(JsonKey.USER_COUNT);
+    assertEquals(0,count);
+  }
 
+  @Test
+  public void getUserCount2(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request actorMessage = new Request();
+    List<Object> list = new ArrayList<>();
+    list.add(id);
+    actorMessage.getRequest().put(JsonKey.LOCATION_IDS, list);
+    actorMessage.setOperation(ActorOperations.GET_USER_COUNT.getValue());
+
+    subject.tell(actorMessage, probe.getRef());
+    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
+    List<Map<String, Object>> result = (List<Map<String, Object>>) res.getResult().get(JsonKey.LOCATIONS);
+    Map<String, Object> map = result.get(0);
+    int count = (int) map.get(JsonKey.USER_COUNT);
+    assertEquals(0,count);
+  }
 
   @AfterClass
   public static void destroy(){

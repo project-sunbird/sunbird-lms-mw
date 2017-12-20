@@ -5,15 +5,15 @@ node('build-slave') {
    currentBuild.result = "SUCCESS"
 
    try {
-          
-      stage('Checkout'){
+      cleanWs()
+      stage('Checkout'){         
          checkout scm
        }
 
       stage('Build'){
         env.NODE_ENV = "build"
         print "Environment will be : ${env.NODE_ENV}"
-        sh('git submodule foreach git pull origin master')
+        sh('git submodule foreach git pull origin release-1.3')
         sh('sudo mvn clean install -DskipTests=true')
          sh('chmod 777 ./build.sh')
          sh('./build.sh')
@@ -28,6 +28,7 @@ node('build-slave') {
         sh 'cat metadata.json'
         archive includes: "metadata.json"
       }
+
       }
     catch (err) {
         currentBuild.result = "FAILURE"

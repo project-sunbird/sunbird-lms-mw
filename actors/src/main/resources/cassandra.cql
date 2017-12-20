@@ -1,3 +1,4 @@
+
 CREATE KEYSPACE IF NOT EXISTS sunbird WITH replication = {'class':'SimpleStrategy','replication_factor':1};
 
 //to change cluster name
@@ -60,7 +61,8 @@ here id and userId both are same
 email and username is unique
 */
 CREATE TABLE IF NOT EXISTS  sunbird.user(id text,userId text,userName text, email text,phone text,aadhaarNo text,createdDate text,updatedDate text,updatedBy text,
-lastLoginTime text,status int,firstName text,lastName text,password text,avatar text,gender text,language text,state text,city text,zipcode text,PRIMARY KEY (id));
+lastLoginTime text,status int,firstName text,lastName text,password text,avatar text,gender text,language list<text>,subject list<text>,grade list<text>,regOrgId text,
+dob text,thumbnail text,PRIMARY KEY (id));
 
 CREATE INDEX inx_u_email ON sunbird.user (email);
 CREATE INDEX inx_u_phone ON sunbird.user (phone);
@@ -75,8 +77,8 @@ CREATE INDEX inx_ua_userId ON sunbird.user_auth (userId);
 CREATE INDEX inx_ua_source ON sunbird.user_auth (source);
 
 //organisation
-CREATE TABLE IF NOT EXISTS sunbird.organisation(id text, orgName text, description text,communityId text,createdBy text,createdByName text,createdDate text,
-updatedDate text,updatedBy text,status int,relation text,parentOrgId text,orgType text,state text,city text,zipcode text,orgCode text,dateTime timestamp,PRIMARY KEY (id));
+CREATE TABLE IF NOT EXISTS sunbird.organisation(id text, orgName text, description text,communityId text,createdBy text,createdDate text,
+updatedDate text,updatedBy text,status int,parentOrgId text,orgType text,orgCode text,dateTime timestamp,PRIMARY KEY (id));
 
 CREATE INDEX inx_org_orgName ON sunbird.organisation (orgName);
 CREATE INDEX inx_org_status ON sunbird.organisation (status);
@@ -97,12 +99,11 @@ CREATE INDEX inx_ps_sectionName ON sunbird.page_section (name);
 
 //Assessment Eval
 //id=  using timestamp and env 
-CREATE TABLE IF NOT EXISTS sunbird.assessment_eval(id text, contentId text, courseId text, userId text,assessmentItemId text,
+CREATE TABLE IF NOT EXISTS sunbird.assessment_eval(id text, contentId text, courseId text, userId text,
 createdDate text,result text,score text,attemptId text,attemptedCount int,PRIMARY KEY (id));
 
 CREATE INDEX inx_ae_userId ON sunbird.assessment_eval (userId);
 CREATE INDEX inx_ae_contentId ON sunbird.assessment_eval (contentId);
-CREATE INDEX inx_ae_assessmentItemId ON sunbird.assessment_eval (assessmentItemId);
 CREATE INDEX inx_ae_courseId ON sunbird.assessment_eval (courseId);
 
 //Assessment item 
@@ -117,31 +118,11 @@ CREATE INDEX inx_ai_assessmentItemId ON sunbird.assessment_item (assessmentItemI
 CREATE INDEX inx_ai_courseId ON sunbird.assessment_item (courseId);
 CREATE INDEX inx_ai_processingStatus ON sunbird.assessment_item (processingStatus);
 
-ALTER TABLE sunbird.course_management DROP noOfLectures;
-ALTER TABLE sunbird.course_management ADD noOfLectures int;
-ALTER TABLE sunbird.assessment_item DROP evaluationStatus;
-//ALTER TABLE sunbird.assessment_item DROP processingStatus;
-ALTER TABLE sunbird.assessment_item ADD evaluationStatus boolean;
-//ALTER TABLE sunbird.assessment_item ADD processingStatus boolean;
-//ALTER TABLE sunbird.assessment_eval DROP assessmentItemId;
-//ALTER TABLE sunbird.assessment_eval DROP maxScore;
-//ALTER TABLE sunbird.page_management ADD organisationId text;
-//ALTER TABLE sunbird.organisation ADD orgCode text;
-
-//2017-06-30 changes for user and organisation
-ALTER TABLE sunbird.user DROP zipcode;
-ALTER TABLE sunbird.user DROP city;
-ALTER TABLE sunbird.user DROP state;
-ALTER TABLE sunbird.user DROP language;
-ALTER TABLE sunbird.user ADD thumbnail text;
- ALTER TABLE sunbird.user ADD dob text;
- ALTER TABLE sunbird.user ADD regOrgId text;
- ALTER TABLE sunbird.user ADD subject list<text>;
- ALTER TABLE sunbird.user ADD language list<text>;
- ALTER TABLE sunbird.user ADD grade list<text>;
+DROP INDEX IF EXISTS sunbird.inx_ai_processingStatus; 
+DROP INDEX IF EXISTS sunbird.inx_ae_assessmentitemid;
 
  
- CREATE TABLE IF NOT EXISTS sunbird.user_external_identity(id text, userId text, externalId text,source text,isVerified boolean,PRIMARY KEY (id));
+CREATE TABLE IF NOT EXISTS sunbird.user_external_identity(id text, userId text, externalId text,source text,isVerified boolean,PRIMARY KEY (id));
 CREATE INDEX inx_uei_userid ON sunbird.user_external_identity (userId);
 CREATE INDEX inx_uei_externalId ON sunbird.user_external_identity (externalId);
 CREATE INDEX inx_uei_source ON sunbird.user_external_identity (source);
@@ -165,14 +146,6 @@ CREATE INDEX inx_uorg_orgId ON sunbird.user_org(orgId);
 CREATE TABLE IF NOT EXISTS sunbird.subject(id text, name text, PRIMARY KEY (id));
 CREATE INDEX inx_sb_name ON sunbird.subject(name); 
 
-CREATE TABLE IF NOT EXISTS sunbird.role(id text, name text, PRIMARY KEY (id));
-CREATE INDEX inx_role_name ON sunbird.role(name);
-
-ALTER TABLE sunbird.organisation DROP city;
-ALTER TABLE sunbird.organisation DROP state;
-ALTER TABLE sunbird.organisation DROP zipcode;
-ALTER TABLE sunbird.organisation DROP relation;
-ALTER TABLE sunbird.organisation DROP createdbyname;
 
 ALTER TABLE sunbird.organisation ADD imgUrl text;
 ALTER TABLE sunbird.organisation ADD thumbnail text;
@@ -182,11 +155,10 @@ ALTER TABLE sunbird.organisation ADD homeUrl text;
 ALTER TABLE sunbird.organisation ADD isRootOrg boolean;
 ALTER TABLE sunbird.organisation ADD addId text;
 ALTER TABLE sunbird.organisation ADD noOfmembers int;
-//ALTER TABLE sunbird.organisation ADD orgCode text;
 ALTER TABLE sunbird.organisation ADD isApproved boolean;
 ALTER TABLE sunbird.organisation ADD approvedBy text;
 ALTER TABLE sunbird.organisation ADD approvedDate text;
-//ALTER TABLE sunbird.organisation ADD isRejected boolean;
+
 
 CREATE INDEX inx_org_channel ON sunbird.organisation(channel);
 CREATE INDEX inx_org_orgType ON sunbird.organisation(orgType);
@@ -199,37 +171,13 @@ CREATE TABLE IF NOT EXISTS sunbird.org_mapping(id text, orgIdOne text,relation t
 CREATE INDEX inx_om_orgIdOne ON sunbird.org_mapping(orgIdOne);  
 CREATE INDEX inx_om_orgIdTwo ON sunbird.org_mapping(orgIdTwo);    
 
-CREATE TABLE IF NOT EXISTS sunbird.role(id text, name text,status int, PRIMARY KEY (id));
-//CREATE INDEX inx_ro_master_name ON sunbird.role(name);
-
-//insert into role (id,name,status) values ('r_101','ADMIN',1);
-//insert into role (id,name,status) values ('r_102','ORG_ADMIN',1);
-//insert into role (id,name,status) values ('r_103','ORG_MODERATOR',1);
-//insert into role (id,name,status) values ('r_104','CONTENT_CREATOR',1);
-//insert into role (id,name,status) values ('r_105','CONTENT_REVIEWER',1);
-//insert into role (id,name,status) values ('r_106','ORG_MEMBER',1);
-
-
 ALTER TABLE sunbird.user ADD rootOrgId text;
 ALTER TABLE sunbird.address ADD addressLine1 text;
 ALTER TABLE sunbird.address ADD addressLine2 text;
 ALTER TABLE sunbird.user_education ADD degree text;
 
-//insert into sunbird.role (id,name,status) values ('r_101','SYSTEM_ADMINISTRATION',1);
-//insert into sunbird.role (id,name,status) values ('r_102','ORG_MANAGEMENT',1);
-//insert into sunbird.role (id,name,status) values ('r_103','MEMBERSHIP_MANAGEMENT',1);
-//insert into sunbird.role (id,name,status) values ('r_104','CONTENT_CREATION',1);
-//insert into sunbird.role (id,name,status) values ('r_105','CONTENT_REVIEW',1);
-//insert into sunbird.role (id,name,status) values ('r_106','CONTENT_CURATION',1);
-//insert into sunbird.role (id,name,status) values ('r_107','PUBLIC',1);
-
-
 CREATE TABLE IF NOT EXISTS sunbird.master_action(id text, name text, PRIMARY KEY (id));
 CREATE INDEX inx_ma_name ON sunbird.master_action(name); 
-
-CREATE TABLE IF NOT EXISTS sunbird.url_action(id text, url text,name text, PRIMARY KEY (id));
-CREATE INDEX inx_ua_name ON sunbird.url_action(name);
-CREATE INDEX inx_ua_url ON sunbird.url_action(url);
 
 CREATE TABLE IF NOT EXISTS sunbird.action_group(id text, actionId list<text>,groupName text, PRIMARY KEY (id));
 CREATE INDEX inx_uacg_groupName ON sunbird.action_group(groupName);
@@ -237,34 +185,6 @@ CREATE INDEX inx_uacg_groupName ON sunbird.action_group(groupName);
 CREATE TABLE IF NOT EXISTS sunbird.user_action_role(id text, actionGroupId list<text>,roleId text, PRIMARY KEY (id));
 CREATE INDEX inx_uactr_roleId ON sunbird.user_action_role(roleId);
 
-insert into sunbird.url_action(id,url,name) values ('1','','suspendOrg');
-insert into sunbird.url_action(id,url,name) values ('2','','suspendUser');
-insert into sunbird.url_action(id,url,name) values ('3','','createOrg');
-insert into sunbird.url_action(id,url,name) values ('4','','updateOrg');
-insert into sunbird.url_action(id,url,name) values ('5','','updateUser');
-insert into sunbird.url_action(id,url,name) values ('6','','addMember');
-insert into sunbird.url_action(id,url,name) values ('7','','removeOrg');
-insert into sunbird.url_action(id,url,name) values ('8','','createUser');
-
-insert into sunbird.url_action(id,url,name) values ('9','','removeMember');
-insert into sunbird.url_action(id,url,name) values ('10','','suspendMember');
-insert into sunbird.url_action(id,url,name) values ('11','','createCourse');
-insert into sunbird.url_action(id,url,name) values ('12','','updateCourse');
-insert into sunbird.url_action(id,url,name) values ('13','','createContent');
-insert into sunbird.url_action(id,url,name) values ('14','','updateContent');
-insert into sunbird.url_action(id,url,name) values ('15','','publishCourse');
-insert into sunbird.url_action(id,url,name) values ('16','','publishContent');
-
-insert into sunbird.url_action(id,url,name) values ('17','','flagCourse');
-insert into sunbird.url_action(id,url,name) values ('18','','flagContent');
-insert into sunbird.url_action(id,url,name) values ('19','','getProfile');
-insert into sunbird.url_action(id,url,name) values ('20','','updateProfile');
-insert into sunbird.url_action(id,url,name) values ('21','','readCourse');
-insert into sunbird.url_action(id,url,name) values ('22','','readContent');
-insert into sunbird.url_action(id,url,name) values ('23','','rateCourse');
-insert into sunbird.url_action(id,url,name) values ('24','','rateContent');
-insert into sunbird.url_action(id,url,name) values ('25','','searchCourse');
-insert into sunbird.url_action(id,url,name) values ('26','','searchContent');
 
 insert into sunbird.action_group(id,actionId,groupName) values ('ag_12',['1','2'],'SYSTEM_ADMINISTRATION');
 insert into sunbird.action_group(id,actionId,groupName) values ('ag_13',['3','4','7','8','5'],'ORG_MANAGEMENT');	
@@ -298,7 +218,7 @@ ALTER TABLE sunbird.user ADD roles List<text>;
  insert into sunbird.role_group (id,name) values ('CONTENT_CREATION','Content Creation');
  insert into sunbird.role_group (id,name) values ('CONTENT_CURATION','Content Curation');
  insert into sunbird.role_group (id,name) values ('CONTENT_REVIEW','Content Review');
- drop table sunbird.role;
+
 CREATE TABLE IF NOT EXISTS sunbird.role(id text, name text,roleGroupId List<text>,status int, PRIMARY KEY (id));
 CREATE INDEX inx_ro_master_name ON sunbird.role(name);
  insert into sunbird.role (id,name,rolegroupid,status) values ('ADMIN','Admin',['SYSTEM_ADMINISTRATION','ORG_MANAGEMENT'],1);
@@ -306,7 +226,7 @@ CREATE INDEX inx_ro_master_name ON sunbird.role(name);
  insert into sunbird.role (id,name,rolegroupid,status) values ('ORG_MODERATOR','Org Moderator',['MEMBERSHIP_MANAGEMENT'],1);
  insert into sunbird.role (id,name,rolegroupid,status) values ('CONTENT_CREATOR','Content Creator',['CONTENT_CREATION'],1);
  insert into sunbird.role (id,name,rolegroupid,status) values ('CONTENT_REVIEWER','Content Reviewer',['CONTENT_CREATION','CONTENT_CURATION','CONTENT_REVIEW'],1);
- drop table sunbird.url_action;
+ 
  CREATE TABLE IF NOT EXISTS sunbird.url_action(id text, url list<text>,name text, PRIMARY KEY (id));
  CREATE INDEX inx_ua_name ON sunbird.url_action(name);
 CREATE INDEX inx_ua_url ON sunbird.url_action(url);
@@ -371,10 +291,10 @@ CREATE INDEX inx_ucs_batchId ON sunbird.user_courses (batchId);
 CREATE INDEX inx_ucs_course_name ON sunbird.user_courses (courseName);
 CREATE INDEX inx_ucs_status ON sunbird.user_courses (status);
 
-//ALTER TABLE sunbird.user_external_identity DROP source;
+DROP INDEX IF EXISTS inx_uei_source;
+ALTER TABLE sunbird.user_external_identity DROP source;
 ALTER TABLE sunbird.user_external_identity ADD provider text;
 ALTER TABLE sunbird.user_external_identity ADD externalIdValue text;
-DROP INDEX inx_uei_source;
 CREATE INDEX inx_uei_provider ON sunbird.user_external_identity (provider);
 
 //changes 7 July 2017 updated organization table
@@ -403,8 +323,8 @@ ALTER TABLE sunbird.user ADD profileSummary text;
 ALTER TABLE sunbird.organisation ADD source text;
 ALTER TABLE sunbird.organisation ADD externalId text;
 
-//ALTER TABLE sunbird.user_org drop role;
-//ALTER TABLE sunbird.user_org ADD roles list<text>;
+ALTER TABLE sunbird.user_org drop role;
+ALTER TABLE sunbird.user_org ADD roles list<text>;
 
 //to export data from csv to cassandra table run below command(for page_section and page_management table) 
 // change the path of csv file
@@ -412,15 +332,8 @@ ALTER TABLE sunbird.organisation ADD externalId text;
 
 //COPY sunbird.page_section(id, alt,createdby ,createddate ,description ,display ,imgurl ,name,searchquery , sectiondatatype ,status , updatedby ,updateddate) FROM '/tmp/cql/pageSection.csv';
 
-//changes on 14th july 2017
-
-ALTER TABLE sunbird.user_org DROP role;
-ALTER TABLE sunbird.user_org ADD roles List<text>;
-
 // insert default root organisation -- July 15,2017
 ALTER TABLE sunbird.organisation ADD isDefault boolean;
-
-//INSERT INTO sunbird.organisation(id , isRootOrg , isDefault, status) values('ORG_001' , true , true, 1);
 
 ALTER TABLE sunbird.user_courses ADD leafNodesCount int;
 // change organisation status field from text to int -- July 19,2017
@@ -428,6 +341,7 @@ drop index inx_org_status;
 ALTER TABLE sunbird.organisation DROP status ;
 ALTER TABLE sunbird.organisation ADD status int;
 CREATE INDEX inx_org_status ON sunbird.organisation (status);
+INSERT INTO sunbird.organisation(id , isRootOrg , isDefault, status) values('ORG_001' , true , true, 1);
 
 // add isdeleted field to user table -- July 31,2017
 ALTER TABLE sunbird.user ADD isDeleted boolean;
@@ -438,15 +352,13 @@ CREATE INDEX inx_cou_bat_status ON sunbird.course_batch (status);
 CREATE INDEX inx_cou_bat_courseId ON sunbird.course_batch (courseId);     
 CREATE INDEX inx_cou_bat_courseCreator ON sunbird.course_batch (courseCreator); 
 CREATE INDEX inx_cou_bat_createdBy ON sunbird.course_batch (createdBy); 
-//CREATE INDEX inx_cou_bat_enrolmentType ON sunbird.course_batch (enrolmentType);
+CREATE INDEX inx_cou_bat_enrolmentType ON sunbird.course_batch (enrollmentType); 
 ALTER TABLE sunbird.course_batch DROP createdon;
 ALTER TABLE sunbird.course_batch ADD createdDate text;
 ALTER TABLE sunbird.course_batch DROP lastupdatedon;
 ALTER TABLE sunbird.course_batch ADD updatedDate text;
 
 ALTER TABLE sunbird.organisation add provider text;
-//COPY  sunbird.organisation (id,source) TO '/tmp/cql/source.csv';
-//COPY  sunbird.organisation (id,provider) FROM '/tmp/cql/source.csv';
 ALTER TABLE sunbird.organisation DROP source;
 //Id is courseId
 CREATE TABLE IF NOT EXISTS sunbird.course_publish_status(id text,submitDate text,status int,PRIMARY KEY (id));
@@ -456,10 +368,6 @@ ALTER TABLE sunbird.course_batch DROP participants;
 ALTER TABLE sunbird.course_batch ADD participant map<text,boolean>;
 
 ALTER TABLE sunbird.course_batch ADD courseAdditionalInfo map<text,text>;
-//DROP INDEX inx_cou_bat_enrolmentType;
-//ALTER TABLE sunbird.course_batch DROP enrolmentType;
-//ALTER TABLE sunbird.course_batch ADD enrollmentType text;
-CREATE INDEX inx_cou_bat_enrollmentType ON sunbird.course_batch (enrollmentType);
 
 // adding the batchId column to content consumption table -- Aug 8,2017
 ALTER TABLE sunbird.content_consumption ADD batchId text;
@@ -494,31 +402,19 @@ CREATE INDEX inx_cps_status ON sunbird.course_publish_status (status);
 ALTER TABLE sunbird.user ADD location text;
 ALTER TABLE sunbird.organisation ADD contactDetails map<text,text>;
 insert into sunbird.role_group (id,name) values ('FLAG_REVIEWER ','Flag Reviewer');
+insert into sunbird.url_action (id,name) values ('FLAG_REVIEWER','flag Review');
 insert into sunbird.role (id,name,rolegroupid,status) values ('FLAG_REVIEWER','Flag Reviewer',['FLAG_REVIEWER'],1);
 update sunbird.role_group set url_action_ids=['flagReview'] where id='FLAG_REVIEWER';
 ALTER TABLE sunbird.organisation DROP contactdetails;
 ALTER TABLE sunbird.organisation ADD contactdetail text;
+
+//update course_batch set countdecrementstatus=false ,countincrementstatus=false where id in ('01231295903433523233', '01231300152093900880', '01231362610791219226', '012311485318971392184', '012311507396763648187', '01231446621414195215', '012311399697334272167', '012310182931898368117', '01231437156529766411', '0123143731552501769', '012315729890295808125', '01231515693522124824', '012315105801404416176', '012315113121030144181', '0123156336446914560', '0123152537517178880', '012311452395159552176', '012310182079651840116', '01231365904918118428', '012315115229880320201', '01231297804052070441', '01231295967369625632', '01231437649992908813', '01231298538289561658', '01231290682958643227', '012310176900218880115', '012311394333097984166', '012311400451145728168', '01231513667683942421', '012315115088601088183', '0123153123053158404', '01231363201368064027', '01231290412171264026', '0123151248760258560', '01231514986607411223', '012311580166266880203', '01231217800957952058', '01231304911540224098', '0123152769465384961', '012310190924496896119', '01231569596413542494', '01231299360593510461', '01231437480674099212', '012310195742662656126', '012311489586135040185', '01231298390404300857', '012311415973486592169', '01231298670022656060', '01231569429976678493', '01231294824787148831', '012310173385113600114', '01231385960518451255', '012315785629794304137', '01231296418316288037', '012310193544601600118', '012311447751262208177', '012311507213688832188', '01231437595463680010', '0123156778024960005', '012311505273479168186', '01231300602153369682', '01231298422152396859', '0123152820520222722', '012311511755972608189', '012315179912159232103', '012315751464787968136', '012315736241045504130', '01231288911727001615', '01231514371529113622', '01231366031184691229', '01231383864920473645', '012315107363119104182', '012311574182944768202', '01231516784369664088', '01231443633637785614', '01231300661683814481' );
 insert into sunbird.role_group (id,name) values ('COURSE_ADMIN','Course Admin');
 update sunbird.role_group set url_action_ids=['courseAdmin'] where id='COURSE_ADMIN';
 insert into sunbird.role (id,name,rolegroupid,status) values ('COURSE_ADMIN','Course Admin',['COURSE_ADMIN'],1);
 insert into sunbird.role_group (id,name) values ('COURSE_CREATOR','Course Creator');
 update sunbird.role_group set url_action_ids=['courseCreator'] where id='COURSE_CREATOR';
 insert into sunbird.role (id,name,rolegroupid,status) values ('COURSE_CREATOR','Course Creator',['COURSE_CREATOR'],1);
-
-
-// Table for tracking report status -- Aug 29, 2017
-
-CREATE TABLE IF NOT EXISTS sunbird.report_tracking(id text, status int,type text,createdDate text,userId text,uploadedDate text,email text,fileUrl text,emailTryCount int, PRIMARY KEY (id));
-CREATE INDEX inx_report_tracking_status ON sunbird.report_tracking(status);
-CREATE INDEX inx_report_tracking_userId ON sunbird.report_tracking(userId);
-ALTER TABLE sunbird.report_tracking ADD firstName text;
-ALTER TABLE sunbird.report_tracking ADD batchId text;
-ALTER TABLE sunbird.report_tracking ADD period text;
-ALTER TABLE sunbird.report_tracking ADD data text;
-
-
-
-DELETE FROM url_action where id='FLAG_REVIEWER';
 update sunbird.role_group set name='Flag Reviewer' where id='FLAG_REVIEWER';
 //changes on Aug 29,2017
 CREATE TABLE IF NOT EXISTS sunbird.badge(id text, name text, description text, isActive boolean, PRIMARY KEY (id));
@@ -528,6 +424,17 @@ CREATE TABLE IF NOT EXISTS sunbird.user_badge(id text, createdDate text, created
  CREATE INDEX inx_usr_badg_receiverid ON sunbird.user_badge (receiverid);
 CREATE INDEX inx_uei_externalIdValue ON sunbird.user_external_identity (externalIdValue);
 
+//adding for report tracking
+CREATE TABLE IF NOT EXISTS sunbird.report_tracking(id text, status int,type text,createdDate text,userId text,uploadedDate text,email text,fileUrl text,emailTryCount int, PRIMARY KEY (id));
+CREATE INDEX inx_report_tracking_status ON sunbird.report_tracking(status);
+CREATE INDEX inx_report_tracking_userId ON sunbird.report_tracking(userId);
+ALTER TABLE sunbird.report_tracking ADD firstName text;
+ALTER TABLE sunbird.report_tracking ADD batchId text;
+ALTER TABLE sunbird.report_tracking ADD period text;
+ALTER TABLE sunbird.report_tracking ADD data text;
+insert into sunbird.role_group (id,name) values ('PUBLIC','Public');
+update sunbird.role_group set url_action_ids=['public'] where id='PUBLIC';
+insert into sunbird.role (id,name,rolegroupid,status) values ('PUBLIC','Public',['PUBLIC'],1);
 ALTER TABLE sunbird.report_tracking ADD tryCount int;
 ALTER TABLE sunbird.report_tracking DROP emailTryCount;
 ALTER TABLE sunbird.report_tracking ADD updatedDate text;
@@ -538,10 +445,8 @@ ALTER TABLE sunbird.report_tracking ADD resourceId text;
 
 // adding fileFormat for dashboard metrics report tracking -- Sep 1,2017
 ALTER TABLE sunbird.report_tracking ADD format text;
-insert into sunbird.role_group (id,name) values ('PUBLIC','Public');
-update sunbird.role_group set url_action_ids=['public'] where id='PUBLIC';
-insert into sunbird.role (id,name,rolegroupid,status) values ('PUBLIC','Public',['PUBLIC'],1);
- ALTER TABLE sunbird.user DROP aadhaarno;
+
+ALTER TABLE sunbird.user DROP aadhaarno;
 update organisation set channel='ROOT_ORG' where id='ORG_001';
 
 // Sept 18th 2017
@@ -549,17 +454,13 @@ ALTER TABLE sunbird.org_type ADD createdDate text;
 ALTER TABLE sunbird.org_type ADD createdBy text;
 ALTER TABLE sunbird.org_type ADD updatedDate text;
 ALTER TABLE sunbird.org_type ADD updatedBy text;
-
 //Adding table user_notes --Sep 13th 2017
 CREATE TABLE IF NOT EXISTS sunbird.user_notes(id text, userId text, courseId text, 
 contentId text, title text, note text, tags list<text>, createdDate text, createdBy text, 
 updatedDate text, updatedBy text, isDeleted boolean, PRIMARY KEY (id));
-
 CREATE INDEX inx_un_userId ON sunbird.user_notes(userId);
 CREATE INDEX inx_un_courseId ON sunbird.user_notes(courseId);
 CREATE INDEX inx_un_contentId ON sunbird.user_notes(contentId);
-
-//Sept 25th 2017
 ALTER TABLE sunbird.user ADD createdBy text;
 
 //Adding changes related to social media in user table
@@ -568,7 +469,7 @@ CREATE TABLE IF NOT EXISTS sunbird.media_type(id text, name text, PRIMARY KEY (i
 
 insert into media_type(id,name) values('fb', 'facebook');
 insert into media_type(id,name) values('twitter','twitter');
-insert into media_type(id,name) values('in','linkedin'); 
+insert into media_type(id,name) values('in','linkedin');
 insert into media_type(id,name) values('blog','blog');
 //Oct 12th
 ALTER TABLE sunbird.user ADD tempPassword text;
@@ -593,23 +494,11 @@ CREATE INDEX inx_us_userId ON sunbird.user_skills(userId);
 creation of id = one way hash of (userId##skillnametolowercase)
 */
 CREATE TABLE IF NOT EXISTS sunbird.skills(id text,skills list<text>, PRIMARY KEY (id));
+
+//25th Oct
 ALTER TABLE sunbird.organisation ADD orgTypeId text;
 
-ALTER TABLE sunbird.user ADD profileVisibility map<text,text>;
-
-insert into sunbird.role_group (id,name) values ('ANNOUNCEMENT_SENDER','Announcement Sender');
-update sunbird.role_group set url_action_ids=['Announcement Sender'] where id='ANNOUNCEMENT_SENDER';
-insert into sunbird.role (id,name,rolegroupid,status) values ('ANNOUNCEMENT_SENDER','Announcement Sender',['ANNOUNCEMENT_SENDER'],1);
-//Announcement apis -27th Oct
-// T&C - Oct 27,2017
-CREATE TABLE IF NOT EXISTS sunbird.tenant_preference(id text,tenantName text,orgId text,role text, data text, PRIMARY KEY (id));
-CREATE INDEX inx_tp_userId ON sunbird.tenant_preference(orgId);
-
-ALTER TABLE sunbird.user ADD tcstatus text;
-
-
-
-//Announcement apis -27th Oct
+//Announcement apis -27th Oct 
 CREATE KEYSPACE IF NOT EXISTS sunbirdplugin WITH replication = {'class':'SimpleStrategy','replication_factor':1};
 //CREATE TYPE IF NOT EXISTS sunbirdplugin.attachment (id text,filename text,mimetype text);
 CREATE TABLE sunbirdplugin.announcement (id text,userid text,sourceid text,details map<text, text>,links list<text>,attachments list<text>,target text,sentcount int,priority text,expiry text,status text,createddate text,updateddate text, PRIMARY KEY (id));
@@ -618,12 +507,21 @@ CREATE TABLE sunbirdplugin.metrics (id text,userid text,announcementid text,acti
 CREATE TABLE sunbirdplugin.announcementtype (id text,rootorgid text,name text,status text,createddate text, PRIMARY KEY (id));
 CREATE TABLE sunbirdplugin.announcementauth (id text,userid text,rootorgid text,permissions map<text, text>,status text,createddate text, PRIMARY KEY (id));
 
+insert into sunbird.role_group (id,name) values ('ANNOUNCEMENT_SENDER','Announcement Sender');
+update sunbird.role_group set url_action_ids=['Announcement Sender'] where id='ANNOUNCEMENT_SENDER';
+insert into sunbird.role (id,name,rolegroupid,status) values ('ANNOUNCEMENT_SENDER','Announcement Sender',['ANNOUNCEMENT_SENDER'],1);
+ 
+//mongodb import , env var is taken from group_vars
+//COPY sunbird.user_notes(id, userid,courseid,contentid,title,note,tags,createddate,updateddate,isdeleted) FROM '/tmp/notes-{{env}}.csv'; 
+//2nd Nov 
+CREATE TABLE IF NOT EXISTS sunbird.tenant_preference(id text,tenantName text,orgId text,role text, data text, PRIMARY KEY (id));
+CREATE INDEX inx_tp_userId ON sunbird.tenant_preference(orgId);
+ALTER TABLE sunbird.user ADD tcstatus text;
 //CLIENT_INFO table for master key
 CREATE TABLE IF NOT EXISTS sunbird.client_info(id text, clientname text, masterkey text, createddate text, updateddate text, PRIMARY KEY (id));
 CREATE INDEX inx_ci_clientname ON sunbird.client_info(clientname);
 // Geo Location - Oct 31,2017
 
-ALTER TABLE sunbird.user DROP tcupdatedat ;
 ALTER TABLE sunbird.user ADD tcupdateddate text;
 
 CREATE TABLE IF NOT EXISTS sunbird.geo_location(id text,locationName text,rootOrgId text,type text, createdDate  text,createdBy text,updatedDate text,updatedBy text,topicName text,topicId text, PRIMARY KEY (id));
@@ -633,16 +531,33 @@ ALTER TABLE sunbird.geo_location DROP topicName ;
 ALTER TABLE sunbird.geo_location ADD topic text;
 ALTER TABLE sunbird.geo_location DROP locationName ;
 ALTER TABLE sunbird.geo_location ADD location text;
-
 // 3rd Nov 2017
 ALTER TABLE sunbird.organisation ADD locationId text;
+
+ALTER TABLE sunbird.user ADD profileVisibility map<text,text>;
+
 // 9th Nov 2017
 ALTER TABLE sunbirdplugin.announcement DROP target ;
 ALTER TABLE sunbirdplugin.announcement ADD target map<text, frozen<map<text ,frozen<list<text>>>>>;
 //adding default one Skills.
 insert into skills (id,skills) values ('001',['java']);
-
-// Nov 17,2017
 ALTER TABLE sunbird.user_skills drop endorsers;
 ALTER TABLE sunbird.user_skills ADD endorsersList frozen<List<Map<text , text>>>;
+// 16th Nov 2017
+ALTER TABLE sunbird.user ADD emailVerified boolean;
 
+// 23rd Nov 2017
+ALTER TABLE sunbird.user ADD countryCode text;
+CREATE TABLE IF NOT EXISTS sunbird.system_settings (id text ,field text ,value text ,PRIMARY KEY (id));
+
+// Dec 5th 2017
+
+ALTER TABLE sunbird.geo_location ADD userCount int;
+
+insert into sunbird.system_settings (id,field,value) values ('phoneUnique','phoneUnique','false');
+insert into sunbird.system_settings (id,field,value) values ('emailUnique','emailUnique','false');
+// Dec 6th 2017
+ALTER TABLE sunbird.geo_location ADD userCountTTL text;
+// adding new column in client-info to save the channel
+ALTER TABLE sunbird.client_info ADD channel text;
+CREATE INDEX inx_ci_clientchannel ON sunbird.client_info(channel);

@@ -59,7 +59,21 @@ public class FileUploadServiceActor extends UntypedAbstractActor {
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.DATA);
 
     Response response = new Response();
-    File file = new File("File-" + processId);
+    String fileExtension = "";
+    String fileName = (String) req.get(JsonKey.FILE_NAME);
+    if(!ProjectUtil.isStringNullOREmpty(fileName)){
+      String[] split = fileName.split("\\.");
+      if(split.length>1) {
+        fileExtension = split[split.length - 1];
+      }
+    }
+    String fName = "File-" + processId;
+    if(!ProjectUtil.isStringNullOREmpty(fileExtension)){
+      fName = fName+"."+fileExtension.toLowerCase();
+      ProjectLogger.log("File - "+fName+" Extension is "+fileExtension);
+    }
+
+    File file = new File(fName);
     FileOutputStream fos = null;
     String avatarUrl = null;
     try {

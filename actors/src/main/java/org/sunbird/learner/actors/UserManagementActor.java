@@ -3,6 +3,7 @@ package org.sunbird.learner.actors;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
+import akka.actor.UntypedAbstractActor;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,7 +11,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import java.util.Set;
 import org.apache.velocity.VelocityContext;
 import org.sunbird.cassandra.CassandraOperation;
@@ -36,14 +36,15 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
+import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
+import org.sunbird.notification.sms.provider.ISmsProvider;
+import org.sunbird.notification.utils.SMSFactory;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
-
-import akka.actor.UntypedAbstractActor;
 
 /**
  * This actor will handle course enrollment operation .
@@ -58,15 +59,16 @@ public class UserManagementActor extends UntypedAbstractActor {
   private EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
           .getEncryptionServiceInstance(null);
-  private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
-      .getDecryptionServiceInstance(null);
+  private DecryptionService decryptionService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
+          .getDecryptionServiceInstance(null);
   private PropertiesCache propertiesCache = PropertiesCache.getInstance();
   boolean isSSOEnabled =
       Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
   private Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
-  private final String SUNBIRD_WEB_URL = "sunbird_web_url";
-  private final String SUNBIRD_APP_URL = "sunbird_app_url";
+  private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
+  private static final String SUNBIRD_APP_URL = "sunbird_app_url";
 
 
   /**
@@ -127,12 +129,13 @@ public class UserManagementActor extends UntypedAbstractActor {
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.GET_MEDIA_TYPES.getValue())) {
           getMediaTypes(actorMessage);
-       }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.FORGOT_PASSWORD.getValue())) {
-         forgotPassword(actorMessage);
-      }else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.PROFILE_VISIBILITY.getValue())) {
-        profileVisibility(actorMessage);
-      }
-       else {
+        } else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.FORGOT_PASSWORD.getValue())) {
+          forgotPassword(actorMessage);
+        } else if (actorMessage.getOperation()
+            .equalsIgnoreCase(ActorOperations.PROFILE_VISIBILITY.getValue())) {
+          profileVisibility(actorMessage);
+        } else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
           ProjectCommonException exception =
               new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
@@ -146,63 +149,60 @@ public class UserManagementActor extends UntypedAbstractActor {
       }
     }
   }
-  
+
   /**
-   * This method will first check user exist with us or not.
-   *  after that it will create private filed Map,
-   *  for creating private field map it will take store value 
-   *  from ES and then a separate map for private field and remove those
-   *  field from original map.
-   *  if will user is sending some public field list as well then it will 
-   *  take private field values from another ES index and update values under 
-   *  original data. 
+   * This method will first check user exist with us or not. after that it will create private filed
+   * Map, for creating private field map it will take store value from ES and then a separate map
+   * for private field and remove those field from original map. if will user is sending some public
+   * field list as well then it will take private field values from another ES index and update
+   * values under original data.
+   * 
    * @param actorMessage
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
   private void profileVisibility(Request actorMessage) {
     Map<String, Object> map = (Map) actorMessage.getRequest().get(JsonKey.USER);
-    String userId  = (String)map.get(JsonKey.USER_ID);
-    List<String> privateList  = (List)map.get(JsonKey.PRIVATE);
-    List<String> publicList  = (List)map.get(JsonKey.PUBLIC);
-    Map<String, Object> esResult =
-        ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(), userId);
-    if (esResult == null || esResult.size()==0) {
+    String userId = (String) map.get(JsonKey.USER_ID);
+    List<String> privateList = (List) map.get(JsonKey.PRIVATE);
+    List<String> publicList = (List) map.get(JsonKey.PUBLIC);
+    Map<String, Object> esResult = ElasticSearchUtil.getDataByIdentifier(
+        ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(), userId);
+    if (esResult == null || esResult.size() == 0) {
       throw new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(),
-          ResponseCode.userNotFound.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode()); 
+          ResponseCode.userNotFound.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-    Map<String, Object> esPrivateResult = ElasticSearchUtil
-        .getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+    Map<String, Object> esPrivateResult =
+        ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId);
-    Map<String,Object> responseMap = new HashMap<>();
-    if(privateList != null && privateList.size()>0) {
-        responseMap = handlePrivateVisibility(privateList, esResult,esPrivateResult);
+    Map<String, Object> responseMap = new HashMap<>();
+    if (privateList != null && privateList.size() > 0) {
+      responseMap = handlePrivateVisibility(privateList, esResult, esPrivateResult);
     }
     if (responseMap != null && responseMap.size() > 0) {
-      Map<String, Object> privateDataMap =
-          (Map<String, Object>) responseMap.get(JsonKey.DATA);
+      Map<String, Object> privateDataMap = (Map<String, Object>) responseMap.get(JsonKey.DATA);
       if (privateDataMap != null && privateDataMap.size() >= esPrivateResult.size()) {
         // this will indicate some extra private data is added
         esPrivateResult = privateDataMap;
         UserUtility.updateProfileVisibilityFields(privateDataMap, esResult);
       }
     }
-    // now have a check for public field.    
+    // now have a check for public field.
     if (publicList != null && publicList.size() > 0) {
-      //this estype will hold all private data of user.
-      //now collecting values from private filed and it will update 
-      //under original index with public field.
+      // this estype will hold all private data of user.
+      // now collecting values from private filed and it will update
+      // under original index with public field.
       for (String field : publicList) {
         if (esPrivateResult.containsKey(field)) {
-          esResult.put(field,esPrivateResult.get(field) ); 
+          esResult.put(field, esPrivateResult.get(field));
           esPrivateResult.remove(field);
         } else {
-          ProjectLogger.log("field value not found inside private index =="+field);
+          ProjectLogger.log("field value not found inside private index ==" + field);
         }
       }
     }
-    Map<String,String> privateFieldMap = (Map<String, String>) esResult.get(JsonKey.PROFILE_VISIBILITY);
-    if(null == privateFieldMap){
+    Map<String, String> privateFieldMap =
+        (Map<String, String>) esResult.get(JsonKey.PROFILE_VISIBILITY);
+    if (null == privateFieldMap) {
       privateFieldMap = new HashMap<>();
     }
     if (privateList != null) {
@@ -217,11 +217,11 @@ public class UserManagementActor extends UntypedAbstractActor {
       updateCassandraWithPrivateFiled(userId, privateFieldMap);
       esResult.put(JsonKey.PROFILE_VISIBILITY, privateFieldMap);
     }
-    if (privateFieldMap.size()>0) {
+    if (privateFieldMap.size() > 0) {
       updateCassandraWithPrivateFiled(userId, privateFieldMap);
       esResult.put(JsonKey.PROFILE_VISIBILITY, privateFieldMap);
     }
-    boolean updateResponse =true; 
+    boolean updateResponse = true;
     updateResponse = updateDataInES(esResult, esPrivateResult, userId);
     Response response = new Response();
     if (updateResponse) {
@@ -229,157 +229,94 @@ public class UserManagementActor extends UntypedAbstractActor {
     } else {
       response.put(JsonKey.RESPONSE, JsonKey.FAILURE);
     }
-    sender().tell(response, self()); 
+    sender().tell(response, self());
   }
 
-  
-  private Map<String,Object> handlePrivateVisibility(
-      List<String> privateFieldList, Map<String, Object> data,
-      Map<String, Object> oldPrivateData) {
-    Map<String, Object> privateFiledMap =
-        createPrivateFiledMap(data, privateFieldList);
+
+  private Map<String, Object> handlePrivateVisibility(List<String> privateFieldList,
+      Map<String, Object> data, Map<String, Object> oldPrivateData) {
+    Map<String, Object> privateFiledMap = createPrivateFiledMap(data, privateFieldList);
     privateFiledMap.putAll(oldPrivateData);
- /*   Map<String, String> privateField = new HashMap<>();
-    if (privateFieldList != null) {
-      for (String key : privateFieldList) {
-        privateField.put(key, JsonKey.PRIVATE);
-      }
-    }
-    // update old private field with new requested one.
-    Set<Entry<String, Object>> set = privateFiledMap.entrySet();
-    Iterator<Entry<String, Object>> itr = set.iterator();
-    while (itr.hasNext()) {
-      Entry<String, Object> entry = itr.next();
-      if (!privateField.containsKey(entry.getKey())) {
-        privateField.put(entry.getKey(), JsonKey.PRIVATE);
-      }
-    }*/
-    
-    Map<String,Object> map = new HashMap<>();
-    //map.put(JsonKey.PRIVATE, privateField);
+    Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.DATA, privateFiledMap);
     return map;
   }
-  
-  
-  private void handlePublicVisibility (String userId, List<String> publicFieldList,Map<String,Object> data) {
-    
-  }
-  
+
   /**
-   * This method will create a private field map and remove those filed from 
-   * original map.
+   * This method will create a private field map and remove those filed from original map.
+   * 
    * @param map Map<String, Object> complete save data Map
    * @param fields List<String> list of private fields
    * @return Map<String, Object> map of private field with their original values.
    */
-  private Map<String, Object> createPrivateFiledMap(Map<String, Object> map,
-      List<String> fields) {
+  private Map<String, Object> createPrivateFiledMap(Map<String, Object> map, List<String> fields) {
     Map<String, Object> privateMap = new HashMap<>();
-    if(fields != null && fields.size()>0) {
+    if (fields != null && !fields.isEmpty()) {
       for (String field : fields) {
-       // now if field contains {address.someField,education.someField,jobprofile.someField}
-        //then we need to remove those filed 
-       if (field.contains(JsonKey.ADDRESS+".")){
-         privateMap.put(JsonKey.ADDRESS, map.get(JsonKey.ADDRESS));
-         //tempMap = addPrivateField(JsonKey.ADDRESS, tempMap, field);
-       } else if (field.contains(JsonKey.EDUCATION+"."))  {
-         privateMap.put(JsonKey.EDUCATION, map.get(JsonKey.EDUCATION));
-         //tempMap = addPrivateField(JsonKey.EDUCATION, tempMap, field);
-       }else if (field.contains(JsonKey.JOB_PROFILE+".")) {
-         privateMap.put(JsonKey.JOB_PROFILE, map.get(JsonKey.JOB_PROFILE));
-         //tempMap = addPrivateField(JsonKey.EDUCATION, tempMap, field);
-       } else if (field.contains(JsonKey.SKILLS+".")) {
-         privateMap.put(JsonKey.SKILLS, map.get(JsonKey.SKILLS));
-         //tempMap = addPrivateField(JsonKey.EDUCATION, tempMap, field);
-       } else {
-         if(!map.containsKey(field)){
-           throw new ProjectCommonException(ResponseCode.InvalidColumnError.getErrorCode(),
-               ResponseCode.InvalidColumnError.getErrorMessage(),
-               ResponseCode.CLIENT_ERROR.getResponseCode());
-         }
-        privateMap.put(field, map.get(field));
-        //map.remove(field);
-       }
+        /*
+         * now if field contains {address.someField,education.someField,jobprofile.someField} then
+         * we need to remove those filed
+         */
+        if (field.contains(JsonKey.ADDRESS + ".")) {
+          privateMap.put(JsonKey.ADDRESS, map.get(JsonKey.ADDRESS));
+        } else if (field.contains(JsonKey.EDUCATION + ".")) {
+          privateMap.put(JsonKey.EDUCATION, map.get(JsonKey.EDUCATION));
+        } else if (field.contains(JsonKey.JOB_PROFILE + ".")) {
+          privateMap.put(JsonKey.JOB_PROFILE, map.get(JsonKey.JOB_PROFILE));
+        } else if (field.contains(JsonKey.SKILLS + ".")) {
+          privateMap.put(JsonKey.SKILLS, map.get(JsonKey.SKILLS));
+        } else {
+          if (!map.containsKey(field)) {
+            throw new ProjectCommonException(ResponseCode.InvalidColumnError.getErrorCode(),
+                ResponseCode.InvalidColumnError.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+          }
+          privateMap.put(field, map.get(field));
+        }
       }
     }
     return privateMap;
   }
-  
-  
-  private Map<String, List<String>> addPrivateField(String key,
-      Map<String, List<String>> map, String privateField) {
-    if (map.containsKey(key)) {
-      List<String> list = (List) map.get(key);
-      list.add(privateField);
-    } else {
-      List<String> list = new ArrayList<>();
-      list.add(privateField);
-      map.put(key, list);
-    }
-    return map;
-  }
-  
-  @SuppressWarnings("unchecked")
-  private void updatePrivateKey(List<String> keys, Map<String, Object> data,
-      Map<String, Object> privateMap, String attribute) {
-    if (keys == null || keys.isEmpty())
-      return;
-    List<Map<String, Object>> reqData =
-        (List<Map<String, Object>>) data.get(attribute);
-    List<Map<String, Object>> privateList = new ArrayList<>();
-    if (reqData != null && !reqData.isEmpty()) {
-      for (Map<String, Object> map : reqData) {
-        Map<String, Object> innerPrivateMap = new HashMap<>();
-        for (String key : keys) {
-          innerPrivateMap.put(key, map.get(key));
-          map.remove(key);
-        }
-        privateList.add(innerPrivateMap);
-      }
-      privateMap.put(attribute, privateList);
-    }
-  }
-  
-  
-  
+
   /**
    * THis methods will update user private field under cassandra.
+   * 
    * @param userId Stirng
    * @param privateFieldMap Map<String,String>
    */
-  private void updateCassandraWithPrivateFiled (String userId, Map<String,String> privateFieldMap) {
+  private void updateCassandraWithPrivateFiled(String userId, Map<String, String> privateFieldMap) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Map<String,Object> reqMap = new HashMap<>();
+    Map<String, Object> reqMap = new HashMap<>();
     reqMap.put(JsonKey.ID, userId);
     reqMap.put(JsonKey.PROFILE_VISIBILITY, privateFieldMap);
-    Response response = cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(),reqMap);
-    String val  =(String)response.get(JsonKey.RESPONSE);
+    Response response =
+        cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), reqMap);
+    String val = (String) response.get(JsonKey.RESPONSE);
     ProjectLogger.log("Private field updated under cassandra==" + val);
   }
-  
+
   /**
-   * This method will first removed the remove the saved private data for the user and then
-   * it will create new private data for that user.
+   * This method will first removed the remove the saved private data for the user and then it will
+   * create new private data for that user.
+   * 
    * @param dataMap Map<String, Object> allData
    * @param privateDataMap Map<String, Object> only private data.
    * @param userId String
    * @return boolean
    */
-  private boolean updateDataInES(Map<String, Object> dataMap,
-      Map<String, Object> privateDataMap, String userId) {
+  private boolean updateDataInES(Map<String, Object> dataMap, Map<String, Object> privateDataMap,
+      String userId) {
     ElasticSearchUtil.createData(ProjectUtil.EsIndex.sunbird.getIndexName(),
-        ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId,
-        privateDataMap);
+        ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId, privateDataMap);
     ElasticSearchUtil.createData(ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(), userId, dataMap);
+        ProjectUtil.EsType.user.getTypeName(), userId, dataMap);
     return true;
-  } 
-  
+  }
+
   /**
-   * This method will verify the loginId or email key against cassandra db.
-   * if user is found then it will send temporary password to user 
-   * register email.
+   * This method will verify the loginId or email key against cassandra db. if user is found then it
+   * will send temporary password to user register email.
+   * 
    * @param actorMessage Request
    */
   private void forgotPassword(Request actorMessage) {
@@ -395,23 +332,20 @@ public class UserManagementActor extends UntypedAbstractActor {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Response response = null;
     try {
-      response = cassandraOperation.getRecordsByProperty(
-          usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), searchedKey,
-          encryptionService.encryptData(userName));
+      response = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),
+          usrDbInfo.getTableName(), searchedKey, encryptionService.encryptData(userName));
       if (response != null) {
-        List<Map<String, Object>> list =
-            (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+        List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
         if (list != null && list.size() == 1) {
           Map<String, Object> userMap = list.get(0);
-          String email = decryptionService
-              .decryptData((String) userMap.get(JsonKey.EMAIL));
-          String name = (String)userMap.get(JsonKey.FIRST_NAME);
+          String email = decryptionService.decryptData((String) userMap.get(JsonKey.EMAIL));
+          String name = (String) userMap.get(JsonKey.FIRST_NAME);
           String userId = (String) userMap.get(JsonKey.USER_ID);
           if (!ProjectUtil.isStringNullOREmpty(email)) {
             response = new Response();
             response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
             sender().tell(response, self());
-            sendForgotPasswordEmail(name, email, userId); 
+            sendForgotPasswordEmail(name, email, userId);
             return;
           }
         }
@@ -419,14 +353,13 @@ public class UserManagementActor extends UntypedAbstractActor {
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
-    ProjectCommonException exception =
-        new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(),
-            ResponseCode.userNotFound.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+    ProjectCommonException exception = new ProjectCommonException(
+        ResponseCode.userNotFound.getErrorCode(), ResponseCode.userNotFound.getErrorMessage(),
+        ResponseCode.CLIENT_ERROR.getResponseCode());
     sender().tell(exception, self());
   }
-  
-  
+
+
   /**
    * This method will update user current login time in keycloak
    * 
@@ -437,18 +370,78 @@ public class UserManagementActor extends UntypedAbstractActor {
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
-    if (Boolean.parseBoolean(
-        PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED))) {
-      SSOManager ssoManager = SSOServiceFactory.getInstance();
+    if (Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED))) {
       boolean addedResponse = ssoManager.addUserLoginTime(userId);
       ProjectLogger.log("user login time added response is ==" + addedResponse);
+      
+      // read value for emailVerified
+      boolean emailVerified = ssoManager.isEmailVerified(userId);
+      if (emailVerified
+          && "false".equalsIgnoreCase(ssoManager.getEmailVerifiedUpdatedFlag(userId))) {
+        Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+        Map<String, Object> map = new HashMap<>();
+        map.put(JsonKey.ID, userId);
+        map.put(JsonKey.EMAIL_VERIFIED, true);
+        cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), map);
+        // update user Ext Db
+        updateUserAndExtIdTable(userId);
+        ssoManager.setEmailVerifiedUpdatedFlag(userId, "true");
+        boolean flag = ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(), userId, map);
+        if (flag) {
+          ProjectLogger.log("User data updated to ES for EMAIL_VERIFIED for userId :: " + userId);
+        } else {
+          ProjectLogger
+              .log("User data update failed to ES for EMAIL_VERIFIED for userId :: " + userId);
+        }
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void updateUserAndExtIdTable(String userId) {
+    String email = "";
+    String phone = "";
+    Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    Response usrResponse =
+        cassandraOperation.getRecordById(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userId);
+    if (!(((List<Map<String, Object>>) usrResponse.get(JsonKey.RESPONSE)).isEmpty())) {
+      Map<String, Object> dbusrMap =
+          ((List<Map<String, Object>>) usrResponse.get(JsonKey.RESPONSE)).get(0);
+      email = (String) dbusrMap.get(JsonKey.EMAIL);
+      phone = (String) dbusrMap.get(JsonKey.PHONE);
+    }
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.USER_ID, userId);
+    Response usrExtDbResponse = cassandraOperation.getRecordsByProperties(usrDbInfo.getKeySpace(),
+        usrDbInfo.getTableName(), map);
+    if (!(((List<Map<String, Object>>) usrExtDbResponse.get(JsonKey.RESPONSE)).isEmpty())) {
+      List<Map<String, Object>> extDbResList =
+          ((List<Map<String, Object>>) usrExtDbResponse.get(JsonKey.RESPONSE));
+      for (Map<String, Object> extDbRes : extDbResList) {
+        if ((JsonKey.PHONE).equalsIgnoreCase((String) extDbRes.get(JsonKey.EXTERNAL_ID))
+            && !phone.equalsIgnoreCase((String) extDbRes.get(JsonKey.EXTERNAL_ID_VALUE))) {
+          cassandraOperation.deleteRecord(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(),
+              (String) extDbRes.get(JsonKey.ID));
+        }
+        if ((JsonKey.EMAIL).equalsIgnoreCase((String) extDbRes.get(JsonKey.EXTERNAL_ID))) {
+          if (email.equalsIgnoreCase((String) extDbRes.get(JsonKey.EXTERNAL_ID_VALUE))) {
+            Map<String, Object> extDbmap = new HashMap<>();
+            extDbmap.put(JsonKey.ID, (String) extDbRes.get(JsonKey.ID));
+            extDbmap.put(JsonKey.IS_VERIFIED, true);
+            cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), map);
+          } else if (!(email.equalsIgnoreCase((String) extDbRes.get(JsonKey.EXTERNAL_ID_VALUE)))) {
+            cassandraOperation.deleteRecord(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(),
+                (String) extDbRes.get(JsonKey.ID));
+          }
+        }
+      }
     }
   }
 
   @SuppressWarnings("unchecked")
   private void getUserDetailsByLoginId(Request actorMessage) {
-
-    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> userMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
     if (null != userMap.get(JsonKey.LOGIN_ID)) {
       String loginId = (String) userMap.get(JsonKey.LOGIN_ID);
@@ -462,109 +455,120 @@ public class UserManagementActor extends UntypedAbstractActor {
         sender().tell(exception, self());
         return;
       }
-      Response resultFrLoginId = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),
-          usrDbInfo.getTableName(), JsonKey.LOGIN_ID, loginId);
-      if (!((List<Map<String, Object>>) resultFrLoginId.get(JsonKey.RESPONSE)).isEmpty()) {
-        Map<String, Object> map =
-            ((List<Map<String, Object>>) resultFrLoginId.get(JsonKey.RESPONSE)).get(0);
-        Map<String, Object> result =
-            ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName(), (String) map.get(JsonKey.USER_ID));
 
-        if (result == null || result.size() == 0) {
-          throw new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(),
-              ResponseCode.userNotFound.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-        }
+      SearchDTO searchDto = new SearchDTO();
+      Map<String, Object> filter = new HashMap<>();
+      filter.put(JsonKey.LOGIN_ID, loginId);
+      searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
+      Map<String, Object> esResponse = ElasticSearchUtil.complexSearch(searchDto,
+          ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName());
+      List<Map<String, Object>> userList =
+          (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
+      Map<String, Object> result = null;
+      if (null != userList && !userList.isEmpty()) {
+        result = userList.get(0);
+      } else {
+        throw new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(),
+            ResponseCode.userNotFound.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+      if (result == null || result.size() == 0) {
+        throw new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(),
+            ResponseCode.userNotFound.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
 
-        // check whether is_deletd true or false
-        if (ProjectUtil.isNotNull(result) && result.containsKey(JsonKey.IS_DELETED)
-            && ProjectUtil.isNotNull(result.get(JsonKey.IS_DELETED))
-            && (Boolean) result.get(JsonKey.IS_DELETED)) {
-          throw new ProjectCommonException(ResponseCode.userAccountlocked.getErrorCode(),
-              ResponseCode.userAccountlocked.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
+      // check whether is_deletd true or false
+      if (ProjectUtil.isNotNull(result) && result.containsKey(JsonKey.IS_DELETED)
+          && ProjectUtil.isNotNull(result.get(JsonKey.IS_DELETED))
+          && (Boolean) result.get(JsonKey.IS_DELETED)) {
+        throw new ProjectCommonException(ResponseCode.userAccountlocked.getErrorCode(),
+            ResponseCode.userAccountlocked.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+      fetchRootAndRegisterOrganisation(result);
+      // having check for removing private filed from user , if call user and response
+      // user data id is not same.
+      String requestedById =
+          (String) actorMessage.getRequest().getOrDefault(JsonKey.REQUESTED_BY, "");
+      ProjectLogger.log("requested By and requested user id == " + requestedById + "  "
+          + (String) result.get(JsonKey.USER_ID));
+      // Decrypt user data
+      UserUtility.decryptUserDataFrmES(result);
+      try {
+        if (!(((String) result.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById))) {
+          result = removeUserPrivateField(result);
+        } else {
+          // If the user requests his data then we are fetching the private data from
+          // userprofilevisibility index
+          // and merge it with user index data
+          Map<String, Object> privateResult =
+              ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+                  ProjectUtil.EsType.userprofilevisibility.getTypeName(),
+                  (String) userMap.get(JsonKey.USER_ID));
+          UserUtility.decryptUserDataFrmES(privateResult);
+          result.putAll(privateResult);
         }
-        fetchRootAndRegisterOrganisation(result);
-        // having check for removing private filed from user , if call user and response
-        // user data id is not same.
-        String requestedById =
-            (String) actorMessage.getRequest().getOrDefault(JsonKey.REQUESTED_BY, "");
-        ProjectLogger.log("requested By and requested user id == " + requestedById + "  "
-            + (String) map.get(JsonKey.USER_ID));
-        // Decrypt user data
-        UserUtility.decryptUserDataFrmES(result);
-        try {
-          if (!(((String) map.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById))) {
-            result = removeUserPrivateField(result);
-          } else {
-            //If the user requests his data then we are fetching the private data from userprofilevisibility index
-            //and merge it with user index data
-            Map<String, Object> privateResult =
-                ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
-                    ProjectUtil.EsType.userprofilevisibility.getTypeName(), (String) userMap.get(JsonKey.USER_ID));
-            UserUtility.decryptUserDataFrmES(privateResult);
-            result.putAll(privateResult);
-          }
-        } catch (Exception e) {
-          ProjectCommonException exception =
-              new ProjectCommonException(ResponseCode.userDataEncryptionError.getErrorCode(),
-                  ResponseCode.userDataEncryptionError.getErrorMessage(),
-                  ResponseCode.SERVER_ERROR.getResponseCode());
-          sender().tell(exception, self());
-          return;
-        }
+      } catch (Exception e) {
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.userDataEncryptionError.getErrorCode(),
+                ResponseCode.userDataEncryptionError.getErrorMessage(),
+                ResponseCode.SERVER_ERROR.getResponseCode());
+        sender().tell(exception, self());
+        return;
+      }
 
-        Response response = new Response();
-        if (null != result) {
-          // remove email and phone no from response
-          result.remove(JsonKey.ENC_EMAIL);
-          result.remove(JsonKey.ENC_PHONE);
-          if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
-            List<String> requestFields = (List) actorMessage.getRequest().get(JsonKey.FIELDS);
-            if (requestFields != null) {
-              if (!requestFields.contains(JsonKey.COMPLETENESS)) {
-                result.remove(JsonKey.COMPLETENESS);
-              }
-              if (!requestFields.contains(JsonKey.MISSING_FIELDS)) {
-                result.remove(JsonKey.MISSING_FIELDS);
-              }
-              if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
-                SSOManager manager = SSOServiceFactory.getInstance();
-                String lastLoginTime =
-                    manager.getLastLoginTime((String) userMap.get(JsonKey.USER_ID));
-                if (ProjectUtil.isStringNullOREmpty(lastLoginTime)) {
-                  lastLoginTime = "0";
-                }
-                result.put(JsonKey.LAST_LOGIN_TIME, Long.parseLong(lastLoginTime));
-              }if(requestFields.contains(JsonKey.TOPIC)){
-                // fetch the topic details of all user associated orgs and append in the result
-                fetchTopicOfAssociatedOrgs(result);
-              }
-            } else {
-              result.remove(JsonKey.MISSING_FIELDS);
+      Response response = new Response();
+      if (null != result) {
+        // remove email and phone no from response
+        result.remove(JsonKey.ENC_EMAIL);
+        result.remove(JsonKey.ENC_PHONE);
+        if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
+          List<String> requestFields = (List) actorMessage.getRequest().get(JsonKey.FIELDS);
+          if (requestFields != null) {
+            if (!requestFields.contains(JsonKey.COMPLETENESS)) {
               result.remove(JsonKey.COMPLETENESS);
+            }
+            if (!requestFields.contains(JsonKey.MISSING_FIELDS)) {
+              result.remove(JsonKey.MISSING_FIELDS);
+            }
+            if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
+              SSOManager manager = SSOServiceFactory.getInstance();
+              String lastLoginTime =
+                  manager.getLastLoginTime((String) userMap.get(JsonKey.USER_ID));
+              if (ProjectUtil.isStringNullOREmpty(lastLoginTime)) {
+                lastLoginTime = "0";
+              }
+              result.put(JsonKey.LAST_LOGIN_TIME, Long.parseLong(lastLoginTime));
+            }
+            if (requestFields.contains(JsonKey.TOPIC)) {
+              // fetch the topic details of all user associated orgs and append in the result
+              fetchTopicOfAssociatedOrgs(result);
             }
           } else {
             result.remove(JsonKey.MISSING_FIELDS);
             result.remove(JsonKey.COMPLETENESS);
           }
-          response.put(JsonKey.RESPONSE, result);
         } else {
-          result = new HashMap<>();
-          response.put(JsonKey.RESPONSE, result);
+          result.remove(JsonKey.MISSING_FIELDS);
+          result.remove(JsonKey.COMPLETENESS);
         }
-        sender().tell(response, self());
-        return;
+        response.put(JsonKey.RESPONSE, result);
       } else {
-        ProjectCommonException exception = new ProjectCommonException(
-            ResponseCode.userNotFound.getErrorCode(), ResponseCode.userNotFound.getErrorMessage(),
-            ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
-        sender().tell(exception, self());
-        return;
+        result = new HashMap<>();
+        response.put(JsonKey.RESPONSE, result);
       }
+      sender().tell(response, self());
+      return;
+    } else {
+      ProjectCommonException exception = new ProjectCommonException(
+          ResponseCode.userNotFound.getErrorCode(), ResponseCode.userNotFound.getErrorMessage(),
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+      sender().tell(exception, self());
+      return;
     }
   }
+
 
   private void fetchRootAndRegisterOrganisation(Map<String, Object> result) {
     try {
@@ -628,11 +632,13 @@ public class UserManagementActor extends UntypedAbstractActor {
       if (!((String) userMap.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById)) {
         result = removeUserPrivateField(result);
       } else {
-        //If the user requests his data then we are fetching the private data from userprofilevisibility index
-        //and merge it with user index data
+        // If the user requests his data then we are fetching the private data from
+        // userprofilevisibility index
+        // and merge it with user index data
         Map<String, Object> privateResult =
             ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.userprofilevisibility.getTypeName(), (String) userMap.get(JsonKey.USER_ID));
+                ProjectUtil.EsType.userprofilevisibility.getTypeName(),
+                (String) userMap.get(JsonKey.USER_ID));
         UserUtility.decryptUserDataFrmES(privateResult);
         result.putAll(privateResult);
       }
@@ -644,28 +650,29 @@ public class UserManagementActor extends UntypedAbstractActor {
       sender().tell(exception, self());
       return;
     }
-    if(null != actorMessage.getRequest().get(JsonKey.FIELDS)){
-    	String requestFields = (String)actorMessage.getRequest().get(JsonKey.FIELDS);
-    	if(!ProjectUtil.isStringNullOREmpty(requestFields)){
-    		if(!requestFields.contains(JsonKey.COMPLETENESS)){
-    			result.remove(JsonKey.COMPLETENESS);
-        	} 
-    		if(!requestFields.contains(JsonKey.MISSING_FIELDS)){
-        		result.remove(JsonKey.MISSING_FIELDS);
+    if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
+      String requestFields = (String) actorMessage.getRequest().get(JsonKey.FIELDS);
+      if (!ProjectUtil.isStringNullOREmpty(requestFields)) {
+        if (!requestFields.contains(JsonKey.COMPLETENESS)) {
+          result.remove(JsonKey.COMPLETENESS);
+        }
+        if (!requestFields.contains(JsonKey.MISSING_FIELDS)) {
+          result.remove(JsonKey.MISSING_FIELDS);
         }
         if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
           result.put(JsonKey.LAST_LOGIN_TIME,
-              Long.parseLong(
-                  getLastLoginTime((String) userMap.get(JsonKey.USER_ID),
-                      (String) result.get(JsonKey.LAST_LOGIN_TIME))));
-        }if (!requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
+              Long.parseLong(getLastLoginTime((String) userMap.get(JsonKey.USER_ID),
+                  (String) result.get(JsonKey.LAST_LOGIN_TIME))));
+        }
+        if (!requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
           result.remove(JsonKey.LAST_LOGIN_TIME);
-        }if(requestFields.contains(JsonKey.TOPIC)){
-    		  // fetch the topic details of all user associated orgs and append in the result
+        }
+        if (requestFields.contains(JsonKey.TOPIC)) {
+          // fetch the topic details of all user associated orgs and append in the result
           fetchTopicOfAssociatedOrgs(result);
         }
-    	}
-    }else {
+      }
+    } else {
       result.remove(JsonKey.MISSING_FIELDS);
       result.remove(JsonKey.COMPLETENESS);
     }
@@ -689,9 +696,8 @@ public class UserManagementActor extends UntypedAbstractActor {
     Set<String> topicSet = new HashSet<>();
 
     // fetch all associated user orgs
-    Response response1 = cassandraOperation
-        .getRecordsByProperty(userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName(),
-            JsonKey.USER_ID, userId);
+    Response response1 = cassandraOperation.getRecordsByProperty(userOrgDbInfo.getKeySpace(),
+        userOrgDbInfo.getTableName(), JsonKey.USER_ID, userId);
 
     List<Map<String, Object>> list = (List<Map<String, Object>>) response1.get(JsonKey.RESPONSE);
 
@@ -717,11 +723,10 @@ public class UserManagementActor extends UntypedAbstractActor {
         searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
         searchDTO.setFields(orgfields);
 
-        Map<String, Object> esresult = ElasticSearchUtil
-            .complexSearch(searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(),
-                EsType.organisation.getTypeName());
-        List<Map<String, Object>> esContent = (List<Map<String, Object>>) esresult
-            .get(JsonKey.CONTENT);
+        Map<String, Object> esresult = ElasticSearchUtil.complexSearch(searchDTO,
+            ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
+        List<Map<String, Object>> esContent =
+            (List<Map<String, Object>>) esresult.get(JsonKey.CONTENT);
 
         if (!esContent.isEmpty()) {
           for (Map<String, Object> m : esContent) {
@@ -731,11 +736,10 @@ public class UserManagementActor extends UntypedAbstractActor {
                 topicSet.add((String) locationCache.get(locationId));
               } else {
                 // get the location id info from db and set to the cacche and topicSet
-                Response response3 = cassandraOperation
-                    .getRecordById(geoLocationDbInfo.getKeySpace(),
-                        geoLocationDbInfo.getTableName(), locationId);
-                List<Map<String, Object>> list3 = (List<Map<String, Object>>) response3
-                    .get(JsonKey.RESPONSE);
+                Response response3 = cassandraOperation.getRecordById(
+                    geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), locationId);
+                List<Map<String, Object>> list3 =
+                    (List<Map<String, Object>>) response3.get(JsonKey.RESPONSE);
                 if (!list3.isEmpty()) {
                   Map<String, Object> locationInfoMap = list3.get(0);
                   String topic = (String) locationInfoMap.get(JsonKey.TOPIC);
@@ -754,36 +758,6 @@ public class UserManagementActor extends UntypedAbstractActor {
   }
 
   /**
-   * Gets the organisation details for the given user Id from cassandra
-   *
-   * @return List<Map<String,Object>>
-   */
-  @SuppressWarnings("unchecked")
-  private List<Map<String, Object>> getOrganisationDetailsByUserId(String userId) {
-    List<Map<String, Object>> organisations = new ArrayList<>();
-
-    Map<String, Object> reqMap = new HashMap<>();
-    reqMap.put(JsonKey.USER_ID, userId);
-    reqMap.put(JsonKey.IS_DELETED, false);
-
-    Util.DbInfo orgUsrDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
-    Response result = cassandraOperation.getRecordsByProperties(orgUsrDbInfo.getKeySpace(),
-        orgUsrDbInfo.getTableName(), reqMap);
-    List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-    Map<String, Object> orgDb = null;
-    if (!(list.isEmpty())) {
-      for (Map<String, Object> map : list) {
-        Map<String, Object> orgData = new HashMap<>();
-        orgDb = (Map<String, Object>) map;
-        orgData.put(JsonKey.ORGANISATION_ID, orgDb.get(JsonKey.ORGANISATION_ID));
-        orgData.put(JsonKey.ROLES, orgDb.get(JsonKey.ROLES));
-        organisations.add(orgData);
-      }
-    }
-    return organisations;
-  }
-
-  /**
    * Method to change the user password .
    *
    * @param actorMessage Request
@@ -791,14 +765,12 @@ public class UserManagementActor extends UntypedAbstractActor {
   @SuppressWarnings("unchecked")
   private void changePassword(Request actorMessage) {
     Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Map<String, Object> userMap =
-        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
+    Map<String, Object> userMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
     String currentPassword = (String) userMap.get(JsonKey.PASSWORD);
     String newPassword = (String) userMap.get(JsonKey.NEW_PASSWORD);
     Response result = cassandraOperation.getRecordById(userDbInfo.getKeySpace(),
         userDbInfo.getTableName(), (String) userMap.get(JsonKey.USER_ID));
-    List<Map<String, Object>> list =
-        (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+    List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
     if (!(list.isEmpty())) {
       Map<String, Object> resultMap = list.get(0);
       boolean passwordMatched = ((String) resultMap.get(JsonKey.PASSWORD))
@@ -809,18 +781,17 @@ public class UserManagementActor extends UntypedAbstractActor {
         Map<String, Object> queryMap = new LinkedHashMap<>();
         queryMap.put(JsonKey.ID, userMap.get(JsonKey.USER_ID));
         queryMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-        queryMap.put(JsonKey.UPDATED_BY,
-            actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
+        queryMap.put(JsonKey.UPDATED_BY, actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
         queryMap.put(JsonKey.PASSWORD, newHashedPassword);
         queryMap.put(JsonKey.TEMPORARY_PASSWORD, "");
         result = cassandraOperation.updateRecord(userDbInfo.getKeySpace(),
             userDbInfo.getTableName(), queryMap);
         sender().tell(result, self());
       } else {
-        ProjectCommonException exception = new ProjectCommonException(
-            ResponseCode.invalidCredentials.getErrorCode(),
-            ResponseCode.invalidCredentials.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.invalidCredentials.getErrorCode(),
+                ResponseCode.invalidCredentials.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
       }
     }
@@ -853,17 +824,17 @@ public class UserManagementActor extends UntypedAbstractActor {
    * @param actorMessage Request
    */
   @SuppressWarnings("unchecked")
-  private void login(Request actorMessage) throws Exception{
+  private void login(Request actorMessage) throws Exception {
     Map<String, Object> reqMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
-     String data =(String) reqMap.get(JsonKey.USERNAME);
-     Response result =  null;
-     if (ProjectUtil.isEmailvalid(data)){
-       result = loginWithEmail(data);
-     }else if (ProjectUtil.validatePhoneNumber(data)){
-        result = loginWithPhone(data);
-     } else {
-       result = loginWithLoginId(data);
-     }
+    String data = (String) reqMap.get(JsonKey.USERNAME);
+    Response result = null;
+    if (ProjectUtil.isEmailvalid(data)) {
+      result = loginWithEmail(data);
+    } else if (ProjectUtil.validatePhoneNumber(data)) {
+      result = loginWithPhone(data);
+    } else {
+      result = loginWithLoginId(data);
+    }
     List<Map<String, Object>> list = ((List<Map<String, Object>>) result.get(JsonKey.RESPONSE));
     if (null != list && list.size() == 1) {
       Map<String, Object> resultMap = list.get(0);
@@ -895,11 +866,10 @@ public class UserManagementActor extends UntypedAbstractActor {
             reqMap.put(JsonKey.ACCESSTOKEN, userAuthMap.get(JsonKey.ID));
             reqMap.put(JsonKey.USER_ID, resultMap.get(JsonKey.USER_ID));
             if (isChangePasswordReqquired) {
-              reqMap.put(JsonKey.STATUS_CODE,
-                  ResponseCode.REDIRECTION_REQUIRED.getResponseCode());
+              reqMap.put(JsonKey.STATUS_CODE, ResponseCode.REDIRECTION_REQUIRED.getResponseCode());
             }
             Response response = new Response();
-            response.put(Constants.RESPONSE, reqMap);
+            response.put(JsonKey.RESPONSE, reqMap);
             sender().tell(response, self());
             updateUserLoginTime(resultMap);
           } else {
@@ -934,7 +904,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
   }
 
-  
+
   /**
    * 
    * @param email
@@ -944,43 +914,40 @@ public class UserManagementActor extends UntypedAbstractActor {
   private Response loginWithEmail(String email) throws Exception {
     Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     return cassandraOperation.getRecordsByProperty(userDbInfo.getKeySpace(),
-        userDbInfo.getTableName(), JsonKey.EMAIL,
-        encryptionService.encryptData(email));
+        userDbInfo.getTableName(), JsonKey.EMAIL, encryptionService.encryptData(email));
   }
-  
+
   /**
    * 
    * @param phone
    * @return Response
    * @throws Exception
    */
-  private Response loginWithPhone (String phone) throws Exception{
+  private Response loginWithPhone(String phone) throws Exception {
     Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Response resposne = null;
     try {
-     resposne = cassandraOperation.getRecordsByProperty(userDbInfo.getKeySpace(),
-        userDbInfo.getTableName(), JsonKey.PHONE,
-        encryptionService.encryptData(phone));
+      resposne = cassandraOperation.getRecordsByProperty(userDbInfo.getKeySpace(),
+          userDbInfo.getTableName(), JsonKey.PHONE, encryptionService.encryptData(phone));
     } catch (Exception e) {
       e.printStackTrace();
     }
     return resposne;
   }
-  
+
   /**
    * 
    * @param loginId
    * @return Response
    * @throws Exception
    */
-  private Response loginWithLoginId (String loginId) throws Exception{
+  private Response loginWithLoginId(String loginId) throws Exception {
     Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     return cassandraOperation.getRecordsByProperty(userDbInfo.getKeySpace(),
-        userDbInfo.getTableName(), JsonKey.LOGIN_ID,
-        encryptionService.encryptData(loginId));
+        userDbInfo.getTableName(), JsonKey.LOGIN_ID, encryptionService.encryptData(loginId));
   }
-  
-  
+
+
   /**
    * Method to update the user profile.
    */
@@ -990,7 +957,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
     Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
-    Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
@@ -1002,15 +968,15 @@ public class UserManagementActor extends UntypedAbstractActor {
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
+    userMap.remove(JsonKey.EMAIL_VERIFIED);
+
     if (null != userMap.get(JsonKey.USER_ID)) {
       userMap.put(JsonKey.ID, userMap.get(JsonKey.USER_ID));
     } else {
       userMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
     }
-    checkPhoneUniqueness(userMap,JsonKey.UPDATE);
-    if (null != userMap.get(JsonKey.EMAIL)) {
-      checkForEmailAndUserNameUniqueness(userMap, usrDbInfo);
-    }
+    checkPhoneUniqueness(userMap, JsonKey.UPDATE);
+    checkEmailUniqueness(userMap, JsonKey.UPDATE);
     // validating roles
     if (null != userMap.get(JsonKey.ROLES)
         && !((List<String>) userMap.get(JsonKey.ROLES)).isEmpty()) {
@@ -1029,6 +995,13 @@ public class UserManagementActor extends UntypedAbstractActor {
     userMap.remove(JsonKey.REGISTERED_ORG_ID);
     userMap.remove(JsonKey.ROOT_ORG_ID);
     userMap.remove(JsonKey.LOGIN_ID);
+
+    if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EMAIL))) {
+      boolean flag = checkEmailSameOrDiff(userMap);
+      if (flag) {
+        userMap.remove(JsonKey.EMAIL);
+      }
+    }
 
     if (isSSOEnabled) {
       updateKeyCloakUserBase(userMap);
@@ -1122,7 +1095,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       }
     }
 
-    updateUserExtId(requestMap, usrExtIdDb);
+    updateUserExtId(requestMap, JsonKey.UPDATE);
     sender().tell(result, self());
 
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
@@ -1137,6 +1110,29 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
   }
 
+
+  private boolean checkEmailSameOrDiff(Map<String, Object> userMap) {
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    Response response = cassandraOperation.getRecordById(usrDbInfo.getKeySpace(),
+        usrDbInfo.getTableName(), (String) userMap.get(JsonKey.ID));
+    List<Map<String, Object>> resList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if (!resList.isEmpty()) {
+      Map<String, Object> res = resList.get(0);
+      String email = (String) res.get(JsonKey.EMAIL);
+      String encEmail = (String) userMap.get(JsonKey.EMAIL);
+      try {
+        encEmail = encryptionService.encryptData((String) userMap.get(JsonKey.EMAIL));
+      } catch (Exception ex) {
+        ProjectLogger.log("Exception occurred while encrypting user email.");
+      }
+      if ((encEmail).equalsIgnoreCase(email)) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+    return false;
+  }
 
   private void processUserAddress(Map<String, Object> reqMap, Map<String, Object> req,
       Map<String, Object> userMap, DbInfo addrDbInfo) {
@@ -1275,13 +1271,14 @@ public class UserManagementActor extends UntypedAbstractActor {
       reqMap.remove(JsonKey.ADDRESS);
     }
     try {
-      if(null != reqMap.get(JsonKey.YEAR_OF_PASSING)){
+      if (null != reqMap.get(JsonKey.YEAR_OF_PASSING)) {
         reqMap.put(JsonKey.YEAR_OF_PASSING,
             ((BigInteger) reqMap.get(JsonKey.YEAR_OF_PASSING)).intValue());
-      }else{
-        reqMap.put(JsonKey.YEAR_OF_PASSING,0);
+      } else {
+        reqMap.put(JsonKey.YEAR_OF_PASSING, 0);
       }
     } catch (Exception ex) {
+      reqMap.put(JsonKey.YEAR_OF_PASSING, 0);
       ProjectLogger.log(ex.getMessage(), ex);
     }
 
@@ -1308,28 +1305,6 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   }
 
-  @SuppressWarnings("unchecked")
-  private void checkForEmailAndUserNameUniqueness(Map<String, Object> userMap, DbInfo usrDbInfo) {
-    if (null != userMap.get(JsonKey.USERNAME)) {
-      String userName = (String) userMap.get(JsonKey.USERNAME);
-      Response resultFruserName = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),
-          usrDbInfo.getTableName(), JsonKey.USERNAME, userName);
-      if (!(((List<Map<String, Object>>) resultFruserName.get(JsonKey.RESPONSE)).isEmpty())) {
-        Map<String, Object> dbusrMap =
-            ((List<Map<String, Object>>) resultFruserName.get(JsonKey.RESPONSE)).get(0);
-        String usrId = (String) dbusrMap.get(JsonKey.USER_ID);
-        if (!(usrId.equals(userMap.get(JsonKey.ID)))) {
-          ProjectCommonException exception =
-              new ProjectCommonException(ResponseCode.userNameAlreadyExistError.getErrorCode(),
-                  ResponseCode.userNameAlreadyExistError.getErrorMessage(),
-                  ResponseCode.SERVER_ERROR.getResponseCode());
-          sender().tell(exception, self());
-          return;
-        }
-      }
-    }
-  }
-
   private void updateKeyCloakUserBase(Map<String, Object> userMap) {
     try {
       String userId = ssoManager.updateUser(userMap);
@@ -1337,6 +1312,13 @@ public class UserManagementActor extends UntypedAbstractActor {
         throw new ProjectCommonException(ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
             ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
             ResponseCode.SERVER_ERROR.getResponseCode());
+      } else if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EMAIL))) {
+        // if Email is Null or Empty , it means we are not updating email
+        Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+        Map<String, Object> map = new HashMap<>();
+        map.put(JsonKey.ID, userId);
+        map.put(JsonKey.EMAIL_VERIFIED, false);
+        cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), map);
       }
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
@@ -1356,16 +1338,13 @@ public class UserManagementActor extends UntypedAbstractActor {
     ProjectLogger.log("create user method started..");
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-    Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
-    Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
-    Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
     Util.DbInfo orgDb = Util.dbInfoMap.get(JsonKey.ORG_DB);
-    Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
     ProjectLogger.log("collected all the DB setup..");
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
-    checkPhoneUniqueness(userMap,JsonKey.CREATE);
+    checkPhoneUniqueness(userMap, JsonKey.CREATE);
+    checkEmailUniqueness(userMap, JsonKey.CREATE);
     Map<String, Object> emailTemplateMap = new HashMap<>(userMap);
     if (userMap.containsKey(JsonKey.WEB_PAGES)) {
       SocialMediaType
@@ -1375,6 +1354,8 @@ public class UserManagementActor extends UntypedAbstractActor {
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
+    userMap.remove(JsonKey.EMAIL_VERIFIED);
+
     if (userMap.containsKey(JsonKey.PROVIDER)
         && !ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PROVIDER))) {
       userMap.put(JsonKey.LOGIN_ID,
@@ -1552,11 +1533,18 @@ public class UserManagementActor extends UntypedAbstractActor {
     requestMap = new HashMap<>();
     requestMap.putAll(userMap);
     removeUnwanted(requestMap);
-    Map<String,String> profileVisbility = new HashMap<>(); 
-    for(String field: ProjectUtil.defaultPrivateFields){
+    // update db with emailVerified as false (default)
+    requestMap.put(JsonKey.EMAIL_VERIFIED, false);
+
+    Map<String, String> profileVisbility = new HashMap<>();
+    for (String field : ProjectUtil.defaultPrivateFields) {
       profileVisbility.put(field, JsonKey.PRIVATE);
     }
     requestMap.put(JsonKey.PROFILE_VISIBILITY, profileVisbility);
+    if (!ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.COUNTRY_CODE))) {
+      requestMap.put(JsonKey.COUNTRY_CODE,
+          propertiesCache.getProperty("sunbird_default_country_code"));
+    }
     Response response = null;
     try {
       response = cassandraOperation.insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(),
@@ -1604,11 +1592,11 @@ public class UserManagementActor extends UntypedAbstractActor {
       }
       ProjectLogger.log("User insertation on DB started--.....");
       if (userMap.containsKey(JsonKey.EDUCATION)) {
-        insertEducationDetails(userMap, addrDbInfo, eduDbInfo);
+        insertEducationDetails(userMap);
         ProjectLogger.log("User insertation for Education done--.....");
       }
       if (userMap.containsKey(JsonKey.JOB_PROFILE)) {
-        insertJobProfileDetails(userMap, addrDbInfo, jobProDbInfo);
+        insertJobProfileDetails(userMap);
         ProjectLogger.log("User insertation for Job profile done--.....");
       }
       if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.REGISTERED_ORG_ID))) {
@@ -1621,7 +1609,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         }
         if (null != orgResponse
             && (!((List<Map<String, Object>>) orgResponse.get(JsonKey.RESPONSE)).isEmpty())) {
-          insertOrganisationDetails(userMap, usrOrgDb);
+          insertOrganisationDetails(userMap);
         } else {
           ProjectLogger.log("Reg Org Id :" + (String) userMap.get(JsonKey.REGISTERED_ORG_ID)
               + " for user id " + userMap.get(JsonKey.ID) + " is not valid.");
@@ -1629,7 +1617,8 @@ public class UserManagementActor extends UntypedAbstractActor {
       }
       // update the user external identity data
       ProjectLogger.log("User insertation for extrenal identity started--.....");
-      updateUserExtId(requestMap, usrExtIdDb);
+      requestMap.put(JsonKey.EMAIL_VERIFIED, false);
+      updateUserExtId(requestMap, JsonKey.CREATE);
       ProjectLogger.log("User insertation for extrenal identity completed--.....");
     }
 
@@ -1639,7 +1628,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 
     // user created successfully send the onboarding mail
     sendOnboardingMail(emailTemplateMap);
-
+    sendSMS(userMap);
 
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       ProjectLogger.log("method call going to satrt for ES--.....");
@@ -1658,32 +1647,138 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   }
 
-  private void checkPhoneUniqueness(Map<String,Object> userMap,String opType) {
-    String phone  = (String) userMap.get(JsonKey.PHONE);
-    if(!ProjectUtil.isStringNullOREmpty(phone)){
-      try{
-        phone = encryptionService.encryptData(phone);
-      }catch(Exception e){
-        ProjectLogger.log("Exception occured while encrypting phone number ", e);
+  private void sendSMS(Map<String, Object> userMap) {
+    if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EMAIL))
+        && !ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PHONE))) {
+    UserUtility.decryptUserData(userMap);
+    String orgName = "";
+    String rootOrgName = "";
+    String regOrgId = (String) userMap.get(JsonKey.REGISTERED_ORG_ID);
+    if (!ProjectUtil.isStringNullOREmpty(regOrgId)) {
+      Map<String, Object> result =
+          ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.organisation.getTypeName(), regOrgId);
+      if (!result.isEmpty()) {
+        orgName = (String) result.get(JsonKey.ORG_NAME);
+        result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.organisation.getTypeName(),
+            (String) result.get(JsonKey.ROOT_ORG_ID));
+        if (!result.isEmpty()) {
+          rootOrgName = (String) result.get(JsonKey.ORG_NAME);
+        }
       }
-      Map<String,Object> filters = new HashMap<>();
-      filters.put(JsonKey.ENC_PHONE, phone);
-      Map<String,Object> map = new HashMap<>();
-      map.put(JsonKey.FILTERS, filters);
-      SearchDTO searchDto = Util.createSearchDto(map);
-      Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto,
-          ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName());
+    }
+    String loginId = (String) userMap.get(JsonKey.USERNAME);
+    if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PROVIDER))) {
+      loginId = loginId + "@" + (String) userMap.get(JsonKey.PROVIDER);
+    }
+    String envName = System.getenv(JsonKey.SUNBIRD_INSTALLATION);
+    if (ProjectUtil.isStringNullOREmpty(envName)) {
+      envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
+    }
+
+    String webUrl = System.getenv(SUNBIRD_WEB_URL);
+    if (ProjectUtil.isStringNullOREmpty(webUrl)) {
+      webUrl = propertiesCache.getProperty(SUNBIRD_WEB_URL);
+    }
+    ProjectLogger.log("shortened url :: " + webUrl);
+
+    String appUrl = System.getenv(SUNBIRD_APP_URL);
+    if (ProjectUtil.isStringNullOREmpty(appUrl)) {
+      appUrl = propertiesCache.getProperty(SUNBIRD_APP_URL);
+    }
+    String sms = ProjectUtil.getSMSBody(orgName, rootOrgName, loginId, webUrl, appUrl, envName);
+    if (ProjectUtil.isStringNullOREmpty((String) sms)) {
+      sms = PropertiesCache.getInstance().getProperty("sunbird_default_welcome_sms");
+    }
+    ProjectLogger.log("SMS text : " + sms);
+      String countryCode = "";
+      if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.COUNTRY_CODE))) {
+        countryCode = PropertiesCache.getInstance().getProperty("sunbird_default_country_code");
+      } else {
+        countryCode = (String) userMap.get(JsonKey.COUNTRY_CODE);
+      }
+      ISmsProvider smsProvider = SMSFactory.getInstance("91SMS");
+      boolean response = smsProvider.send((String) userMap.get(JsonKey.PHONE), countryCode, sms);
+      if (response) {
+        ProjectLogger
+            .log("Welcome Message sent successfully to ." + (String) userMap.get(JsonKey.PHONE));
+      } else {
+        ProjectLogger.log("Welcome Message failed for ." + (String) userMap.get(JsonKey.PHONE));
+      }
+    }
+  }
+
+  private void checkEmailUniqueness(Map<String, Object> userMap, String opType) {
+    // Get Email configuration if not found , by default Email can be duplicate across the
+    // application
+    String emailSetting = DataCacheHandler.getConfigSettings().get(JsonKey.EMAIL_UNIQUE);
+    if (null != emailSetting && Boolean.parseBoolean(emailSetting)) {
+      String email = (String) userMap.get(JsonKey.EMAIL);
+      if (!ProjectUtil.isStringNullOREmpty(email)) {
+        try {
+          email = encryptionService.encryptData(email);
+        } catch (Exception e) {
+          ProjectLogger.log("Exception occured while encrypting Email ", e);
+        }
+        Map<String, Object> filters = new HashMap<>();
+        filters.put(JsonKey.ENC_EMAIL, email);
+        Map<String, Object> map = new HashMap<>();
+        map.put(JsonKey.FILTERS, filters);
+        SearchDTO searchDto = Util.createSearchDto(map);
+        Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto,
+            ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName());
         List<Map<String, Object>> userMapList =
             (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-        if(!userMapList.isEmpty()){
-          if(opType.equalsIgnoreCase(JsonKey.CREATE)){
-            throw  new ProjectCommonException(ResponseCode.PhoneNumberInUse.getErrorCode(),
-                  ResponseCode.PhoneNumberInUse.getErrorMessage(),
+        if (!userMapList.isEmpty()) {
+          if (opType.equalsIgnoreCase(JsonKey.CREATE)) {
+            throw new ProjectCommonException(ResponseCode.emailInUse.getErrorCode(),
+                ResponseCode.emailInUse.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+          } else {
+            Map<String, Object> user = userMapList.get(0);
+            if (!(((String) user.get(JsonKey.ID))
+                .equalsIgnoreCase((String) userMap.get(JsonKey.ID)))) {
+              throw new ProjectCommonException(ResponseCode.emailInUse.getErrorCode(),
+                  ResponseCode.emailInUse.getErrorMessage(),
                   ResponseCode.CLIENT_ERROR.getResponseCode());
-          }else{
-            Map<String,Object> user = userMapList.get(0);
-            if(!(((String)user.get(JsonKey.ID)).equalsIgnoreCase((String)userMap.get(JsonKey.ID)))){
-              throw  new ProjectCommonException(ResponseCode.PhoneNumberInUse.getErrorCode(),
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private void checkPhoneUniqueness(Map<String, Object> userMap, String opType) {
+    // Get Phone configuration if not found , by default phone will be unique across the application
+    String phoneSetting = DataCacheHandler.getConfigSettings().get(JsonKey.PHONE_UNIQUE);
+    if (null != phoneSetting && Boolean.parseBoolean(phoneSetting)) {
+      String phone = (String) userMap.get(JsonKey.PHONE);
+      if (!ProjectUtil.isStringNullOREmpty(phone)) {
+        try {
+          phone = encryptionService.encryptData(phone);
+        } catch (Exception e) {
+          ProjectLogger.log("Exception occured while encrypting phone number ", e);
+        }
+        Map<String, Object> filters = new HashMap<>();
+        filters.put(JsonKey.ENC_PHONE, phone);
+        Map<String, Object> map = new HashMap<>();
+        map.put(JsonKey.FILTERS, filters);
+        SearchDTO searchDto = Util.createSearchDto(map);
+        Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto,
+            ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName());
+        List<Map<String, Object>> userMapList =
+            (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+        if (!userMapList.isEmpty()) {
+          if (opType.equalsIgnoreCase(JsonKey.CREATE)) {
+            throw new ProjectCommonException(ResponseCode.PhoneNumberInUse.getErrorCode(),
+                ResponseCode.PhoneNumberInUse.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+          } else {
+            Map<String, Object> user = userMapList.get(0);
+            if (!(((String) user.get(JsonKey.ID))
+                .equalsIgnoreCase((String) userMap.get(JsonKey.ID)))) {
+              throw new ProjectCommonException(ResponseCode.PhoneNumberInUse.getErrorCode(),
                   ResponseCode.PhoneNumberInUse.getErrorMessage(),
                   ResponseCode.CLIENT_ERROR.getResponseCode());
             }
@@ -1691,8 +1786,9 @@ public class UserManagementActor extends UntypedAbstractActor {
         }
       }
     }
+  }
 
-  private void insertOrganisationDetails(Map<String, Object> userMap, DbInfo usrOrgDb) {
+  private void insertOrganisationDetails(Map<String, Object> userMap) {
 
     Map<String, Object> reqMap = new HashMap<>();
     reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
@@ -1700,7 +1796,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     reqMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.REGISTERED_ORG_ID));
     reqMap.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
     reqMap.put(JsonKey.IS_DELETED, false);
-
+    Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
     try {
       cassandraOperation.insertRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), reqMap);
     } catch (Exception e) {
@@ -1709,9 +1805,9 @@ public class UserManagementActor extends UntypedAbstractActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void insertJobProfileDetails(Map<String, Object> userMap, DbInfo addrDbInfo,
-      DbInfo jobProDbInfo) {
-
+  private void insertJobProfileDetails(Map<String, Object> userMap) {
+    Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
+    Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
     List<Map<String, Object>> reqList =
         (List<Map<String, Object>>) userMap.get(JsonKey.JOB_PROFILE);
     for (int i = 0; i < reqList.size(); i++) {
@@ -1752,9 +1848,9 @@ public class UserManagementActor extends UntypedAbstractActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void insertEducationDetails(Map<String, Object> userMap, DbInfo addrDbInfo,
-      DbInfo eduDbInfo) {
-
+  private void insertEducationDetails(Map<String, Object> userMap) {
+    Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
+    Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
     List<Map<String, Object>> reqList = (List<Map<String, Object>>) userMap.get(JsonKey.EDUCATION);
     for (int i = 0; i < reqList.size(); i++) {
       Map<String, Object> reqMap = reqList.get(i);
@@ -1780,14 +1876,15 @@ public class UserManagementActor extends UntypedAbstractActor {
         reqMap.remove(JsonKey.ADDRESS);
       }
       try {
-        if(null != reqMap.get(JsonKey.YEAR_OF_PASSING)){
+        if (null != reqMap.get(JsonKey.YEAR_OF_PASSING)) {
           reqMap.put(JsonKey.YEAR_OF_PASSING,
               ((BigInteger) reqMap.get(JsonKey.YEAR_OF_PASSING)).intValue());
-        }else{
-          reqMap.put(JsonKey.YEAR_OF_PASSING,0);
+        } else {
+          reqMap.put(JsonKey.YEAR_OF_PASSING, 0);
         }
       } catch (Exception ex) {
         ProjectLogger.log(ex.getMessage(), ex);
+        reqMap.put(JsonKey.YEAR_OF_PASSING, 0);
       }
       if (null != reqMap.get(JsonKey.PERCENTAGE)) {
         reqMap.put(JsonKey.PERCENTAGE,
@@ -1806,14 +1903,15 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   }
 
-  private void updateUserExtId(Map<String, Object> requestMap, DbInfo usrExtIdDb) {
+  private void updateUserExtId(Map<String, Object> requestMap, String opType) {
+    Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
     Map<String, Object> map = new HashMap<>();
     Map<String, Object> reqMap = new HashMap<>();
     reqMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
     /*
-     * update table for userName,phone,email,Aadhar No for each of these parameter insert a record
-     * into db for username update isVerified as true and for others param this will be false once
-     * verified will update this flag to true
+     * update table for userName,phone,email for each of these parameter insert a record into db for
+     * username update isVerified as true and for others param this will be false once verified will
+     * update this flag to true
      */
 
     map.put(JsonKey.USER_ID, requestMap.get(JsonKey.ID));
@@ -1855,11 +1953,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
       map.put(JsonKey.EXTERNAL_ID, JsonKey.EMAIL);
       map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.EMAIL));
-
-      if (!ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.EMAIL_VERIFIED))
-          && (boolean) requestMap.get(JsonKey.EMAIL_VERIFIED)) {
-        map.put(JsonKey.IS_VERIFIED, true);
-      }
+      map.put(JsonKey.IS_VERIFIED, false);
       reqMap.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EMAIL));
       List<Map<String, Object>> mapList = checkDataUserExtTable(map);
       if (mapList.isEmpty()) {
@@ -2042,14 +2136,13 @@ public class UserManagementActor extends UntypedAbstractActor {
   }
 
   /**
-   * Method to join the user with organisation ...
+   * Method to join the user with organization ...
    */
   @SuppressWarnings({"rawtypes", "unchecked"})
   private void joinUserOrganisation(Request actorMessage) {
 
     Response response = null;
 
-    Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
     Map<String, Object> req = actorMessage.getRequest();
@@ -2131,7 +2224,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     usrOrgData.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
     usrOrgData.put(JsonKey.IS_REJECTED, false);
     usrOrgData.put(JsonKey.IS_APPROVED, false);
-
+    usrOrgData.remove(JsonKey.REQUESTED_BY);
     response = cassandraOperation.insertRecord(userOrgDbInfo.getKeySpace(),
         userOrgDbInfo.getTableName(), usrOrgData);
     sender().tell(response, self());
@@ -2336,21 +2429,20 @@ public class UserManagementActor extends UntypedAbstractActor {
   /**
    * @param actorMessage
    */
-  private Map<String, Object> getUserDetails(Request actorMessage) {
+  private void getUserDetails(Request actorMessage) {
     Map<String, Object> requestMap = actorMessage.getRequest();
     SearchDTO dto = new SearchDTO();
-    Map<String, Object> map = new HashMap<String, Object>();
-    map.put(JsonKey.REGISTERED_ORG_ID, "some value");
-    map.put(JsonKey.ROOT_ORG_ID, "");
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.REGISTERED_ORG_ID, requestMap.get(JsonKey.REGISTERED_ORG_ID));
+    map.put(JsonKey.ROOT_ORG_ID, requestMap.get(JsonKey.ROOT_ORG_ID));
     Map<String, Object> additionalProperty = new HashMap<>();
     additionalProperty.put(JsonKey.FILTERS, map);
     dto.setAdditionalProperties(additionalProperty);
     Map<String, Object> responseMap = ElasticSearchUtil.complexSearch(dto,
         ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName());
-    if (requestMap != null) {
-      return responseMap;
-    }
-    return null;
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, responseMap);
+    sender().tell(response, self());
   }
 
   /**
@@ -2432,18 +2524,42 @@ public class UserManagementActor extends UntypedAbstractActor {
     String externalId = (String) requestMap.get(JsonKey.EXTERNAL_ID);
     String provider = (String) requestMap.get(JsonKey.PROVIDER);
     String userName = (String) requestMap.get(JsonKey.USERNAME);
+    String loginId = "";
     if (ProjectUtil.isStringNullOREmpty(userId)) {
-      if (ProjectUtil.isStringNullOREmpty(userName) || ProjectUtil.isStringNullOREmpty(provider)) {
-        ProjectCommonException exception = new ProjectCommonException(
-            ResponseCode.invalidUserId.getErrorCode(), ResponseCode.invalidUserId.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+      if (ProjectUtil.isStringNullOREmpty(userName)) {
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.userNameRequired.getErrorCode(),
+                ResponseCode.userNameRequired.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
         return;
       }
-      tempMap.put(JsonKey.LOGIN_ID, userName + JsonKey.LOGIN_ID_DELIMETER + provider);
-      Response response = cassandraOperation.getRecordsByProperties(usrDbInfo.getKeySpace(),
-          usrDbInfo.getTableName(), tempMap);
-      List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+      if (!ProjectUtil.isStringNullOREmpty(userName)
+          && !ProjectUtil.isStringNullOREmpty(provider)) {
+        loginId = userName + JsonKey.LOGIN_ID_DELIMETER + provider;
+      } else {
+        loginId = userName;
+      }
+      try {
+        loginId = encryptionService.encryptData(loginId);
+        System.out.println("loginId in actor : " + loginId);
+      } catch (Exception e) {
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.userDataEncryptionError.getErrorCode(),
+                ResponseCode.userDataEncryptionError.getErrorMessage(),
+                ResponseCode.SERVER_ERROR.getResponseCode());
+        sender().tell(exception, self());
+        return;
+      }
+
+      SearchDTO searchDto = new SearchDTO();
+      Map<String, Object> filter = new HashMap<>();
+      filter.put(JsonKey.LOGIN_ID, loginId);
+      searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
+      Map<String, Object> esResponse = ElasticSearchUtil.complexSearch(searchDto,
+          ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName());
+      List<Map<String, Object>> list = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
+
       if (list.isEmpty()) {
         ProjectCommonException exception =
             new ProjectCommonException(ResponseCode.invalidUsrData.getErrorCode(),
@@ -2458,13 +2574,17 @@ public class UserManagementActor extends UntypedAbstractActor {
     if (ProjectUtil.isStringNullOREmpty(orgId)) {
       if (!ProjectUtil.isStringNullOREmpty(externalId)
           && !ProjectUtil.isStringNullOREmpty(provider)) {
-        tempMap.remove(JsonKey.LOGIN_ID);
-        tempMap.put(JsonKey.EXTERNAL_ID, externalId);
-        tempMap.put(JsonKey.PROVIDER, provider);
-        Util.DbInfo orgDBInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-        Response result = cassandraOperation.getRecordsByProperties(orgDBInfo.getKeySpace(),
-            orgDBInfo.getTableName(), tempMap);
-        List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+
+        SearchDTO searchDto = new SearchDTO();
+        Map<String, Object> filter = new HashMap<>();
+        filter.put(JsonKey.EXTERNAL_ID, externalId);
+        filter.put(JsonKey.PROVIDER, provider);
+        searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
+        Map<String, Object> esResponse =
+            ElasticSearchUtil.complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(),
+                ProjectUtil.EsType.organisation.getTypeName());
+        List<Map<String, Object>> list =
+            (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
 
         if (list.isEmpty()) {
           ProjectCommonException exception =
@@ -2481,6 +2601,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     // if organisationid is coming it means need to update userOrg role.
     // if organisationId is not coming then need to update only userRole.
     if (requestMap.containsKey(JsonKey.ORGANISATION_ID)) {
+      tempMap.remove(JsonKey.PROVIDER);
       tempMap.remove(JsonKey.EXTERNAL_ID);
       tempMap.remove(JsonKey.SOURCE);
       tempMap.put(JsonKey.ORGANISATION_ID, requestMap.get(JsonKey.ORGANISATION_ID));
@@ -2654,12 +2775,9 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   private Map<String, Object> elasticSearchComplexSearch(Map<String, Object> filters, String index,
       String type) {
-
     SearchDTO searchDTO = new SearchDTO();
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
-
     return ElasticSearchUtil.complexSearch(searchDTO, index, type);
-
   }
 
   private List<Map<String, Object>> checkDataUserExtTable(Map<String, Object> map) {
@@ -2691,16 +2809,23 @@ public class UserManagementActor extends UntypedAbstractActor {
 
     if (!(ProjectUtil.isStringNullOREmpty((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
 
-      emailTemplateMap.put(JsonKey.SUBJECT, "Welcome to DIKSHA");
+      String envName = System.getenv(JsonKey.SUNBIRD_INSTALLATION);
+      if (ProjectUtil.isStringNullOREmpty(envName)) {
+        envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
+      }
+
+      String welcomeSubject = propertiesCache.getProperty("onboarding_mail_subject");
+      emailTemplateMap.put(JsonKey.SUBJECT, ProjectUtil.formatMessage(welcomeSubject, envName));
       List<String> reciptientsMail = new ArrayList<>();
       reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
       emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
 
       String webUrl = System.getenv(SUNBIRD_WEB_URL);
-      if(ProjectUtil.isStringNullOREmpty(webUrl)){
+      if (ProjectUtil.isStringNullOREmpty(webUrl)) {
         webUrl = propertiesCache.getProperty(SUNBIRD_WEB_URL);
       }
-      if ((!ProjectUtil.isStringNullOREmpty(webUrl)) && (!SUNBIRD_WEB_URL.equalsIgnoreCase(webUrl))) {
+      if ((!ProjectUtil.isStringNullOREmpty(webUrl))
+          && (!SUNBIRD_WEB_URL.equalsIgnoreCase(webUrl))) {
         emailTemplateMap.put(JsonKey.WEB_URL, webUrl);
       }
 
@@ -2709,17 +2834,18 @@ public class UserManagementActor extends UntypedAbstractActor {
         appUrl = propertiesCache.getProperty(SUNBIRD_APP_URL);
       }
 
-      if ((!ProjectUtil.isStringNullOREmpty(appUrl)) && (!SUNBIRD_APP_URL.equalsIgnoreCase(appUrl))) {
-          emailTemplateMap.put(JsonKey.APP_URL, appUrl);
+      if ((!ProjectUtil.isStringNullOREmpty(appUrl))
+          && (!SUNBIRD_APP_URL.equalsIgnoreCase(appUrl))) {
+        emailTemplateMap.put(JsonKey.APP_URL, appUrl);
       }
 
       emailTemplateMap.put(JsonKey.BODY,
           propertiesCache.getProperty(JsonKey.ONBOARDING_WELCOME_MAIL_BODY));
       emailTemplateMap.put(JsonKey.NOTE, propertiesCache.getProperty(JsonKey.MAIL_NOTE));
-      emailTemplateMap.put(JsonKey.ORG_NAME, propertiesCache.getProperty(JsonKey.ORG_NAME));
+      emailTemplateMap.put(JsonKey.ORG_NAME, envName);
       String welcomeMessage = propertiesCache.getProperty("onboarding_welcome_message");
-      emailTemplateMap.put(JsonKey.WELCOME_MESSAGE, ProjectUtil
-          .formatMessage(welcomeMessage, propertiesCache.getProperty(JsonKey.ORG_NAME)).trim());
+      emailTemplateMap.put(JsonKey.WELCOME_MESSAGE,
+          ProjectUtil.formatMessage(welcomeMessage, envName));
 
       emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
 
@@ -2733,36 +2859,40 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   /**
    * This method will send forgot password email
+   * 
    * @param name String
    * @param email String
    * @param userId String
    */
-  private void sendForgotPasswordEmail (String name,String email,String userId) {
+  private void sendForgotPasswordEmail(String name, String email, String userId) {
     VelocityContext context = new VelocityContext();
     context.put(JsonKey.NAME, name);
     context.put(JsonKey.TEMPORARY_PASSWORD, ProjectUtil.generateRandomPassword());
-    context.put(JsonKey.NOTE , propertiesCache.getProperty(JsonKey.MAIL_NOTE));
-    context.put(JsonKey.ORG_NAME , propertiesCache.getProperty(JsonKey.ORG_NAME));
+    context.put(JsonKey.NOTE, propertiesCache.getProperty(JsonKey.MAIL_NOTE));
+    context.put(JsonKey.ORG_NAME, propertiesCache.getProperty(JsonKey.ORG_NAME));
     String appUrl = System.getenv(JsonKey.SUNBIRD_APP_URL);
     if (ProjectUtil.isStringNullOREmpty(appUrl)) {
-       appUrl = propertiesCache.getProperty(JsonKey.SUNBIRD_APP_URL);
+      appUrl = propertiesCache.getProperty(JsonKey.SUNBIRD_APP_URL);
     }
-    context.put(JsonKey.WEB_URL, ProjectUtil.isStringNullOREmpty(System.getenv(SUNBIRD_WEB_URL)) ? propertiesCache.getProperty(SUNBIRD_WEB_URL) : System.getenv(SUNBIRD_WEB_URL));
-    if(!ProjectUtil.isStringNullOREmpty(appUrl)) {
-       if (!JsonKey.SUNBIRD_APP_URL.equalsIgnoreCase(appUrl)) {
-         context.put(JsonKey.APP_URL, appUrl);
-       }
+    context.put(JsonKey.WEB_URL, ProjectUtil.isStringNullOREmpty(System.getenv(SUNBIRD_WEB_URL))
+        ? propertiesCache.getProperty(SUNBIRD_WEB_URL) : System.getenv(SUNBIRD_WEB_URL));
+    if (!ProjectUtil.isStringNullOREmpty(appUrl)) {
+      if (!JsonKey.SUNBIRD_APP_URL.equalsIgnoreCase(appUrl)) {
+        context.put(JsonKey.APP_URL, appUrl);
+      }
     }
-    ProjectLogger.log("Starting to update password inside cassandra" , LoggerEnum.INFO.name());
-    updatePassword(userId, (String)context.get(JsonKey.TEMPORARY_PASSWORD));
-    ProjectLogger.log("Password updated in cassandra and start sending email" , LoggerEnum.INFO.name());
-    boolean response = SendMail.sendMail(new String[]{email}, "Forgot password", context, "forgotpassword.vm");
-    ProjectLogger.log("email sent resposne==" + response , LoggerEnum.INFO.name());
+    ProjectLogger.log("Starting to update password inside cassandra", LoggerEnum.INFO.name());
+    updatePassword(userId, (String) context.get(JsonKey.TEMPORARY_PASSWORD));
+    ProjectLogger.log("Password updated in cassandra and start sending email",
+        LoggerEnum.INFO.name());
+    boolean response =
+        SendMail.sendMail(new String[] {email}, "Forgot password", context, "forgotpassword.vm");
+    ProjectLogger.log("email sent resposne==" + response, LoggerEnum.INFO.name());
   }
-  
+
   /**
-   * This method will update user temporary password inside
-   * cassandra db.
+   * This method will update user temporary password inside cassandra db.
+   * 
    * @param userId String
    * @param password Stirng
    */
@@ -2772,41 +2902,37 @@ public class UserManagementActor extends UntypedAbstractActor {
     map.put(JsonKey.ID, userId);
     map.put(JsonKey.PASSWORD, OneWayHashing.encryptVal(password));
     map.put(JsonKey.TEMPORARY_PASSWORD, map.get(JsonKey.PASSWORD));
-    cassandraOperation.updateRecord(usrDbInfo.getKeySpace(),
-        usrDbInfo.getTableName(), map);
+    cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), map);
   }
- 
+
   /**
    * This method will update user login time under cassandra and Elasticsearch.
+   * 
    * @param reqMap Map<String, Object>
    * @return boolean
    */
   private boolean updateUserLoginTime(Map<String, Object> reqMap) {
-    ProjectLogger.log("Start saving user login time==" , LoggerEnum.INFO.name());
+    ProjectLogger.log("Start saving user login time==", LoggerEnum.INFO.name());
     boolean response = false;
     String lastLoginTime = (String) reqMap.get(JsonKey.CURRENT_LOGIN_TIME);
     String userId = (String) reqMap.get(JsonKey.USER_ID);
     reqMap.clear();
     reqMap.put(JsonKey.LAST_LOGIN_TIME, lastLoginTime);
-    reqMap.put(JsonKey.CURRENT_LOGIN_TIME, System.currentTimeMillis() + "");
-    response =
-        ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(), userId, reqMap);
+    reqMap.put(JsonKey.CURRENT_LOGIN_TIME, Long.toString(System.currentTimeMillis()));
+    response = ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.user.getTypeName(), userId, reqMap);
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     reqMap.put(JsonKey.ID, userId);
-    cassandraOperation.updateRecord(usrDbInfo.getKeySpace(),
-        usrDbInfo.getTableName(), reqMap);
-    ProjectLogger.log("End saving user login time== " + response , LoggerEnum.INFO.name());
+    cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), reqMap);
+    ProjectLogger.log("End saving user login time== " + response, LoggerEnum.INFO.name());
     return response;
   }
-  
-  private String getLastLoginTime(String userId,String time) {
+
+  private String getLastLoginTime(String userId, String time) {
     String lastLoginTime = "0";
-    if (Boolean.parseBoolean(
-        PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED))) {
+    if (Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED))) {
       SSOManager manager = SSOServiceFactory.getInstance();
-      lastLoginTime =
-          manager.getLastLoginTime(userId);
+      lastLoginTime = manager.getLastLoginTime(userId);
     } else {
       lastLoginTime = time;
     }
@@ -2815,6 +2941,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
     return lastLoginTime;
   }
-  
-  
+
+
 }

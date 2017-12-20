@@ -15,6 +15,7 @@ import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.sunbird.common.config.ApplicationConfigActor;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -38,6 +39,7 @@ import org.sunbird.learner.actors.search.CourseSearchActor;
 import org.sunbird.learner.actors.search.SearchHandlerActor;
 import org.sunbird.learner.actors.skill.SkillmanagementActor;
 import org.sunbird.learner.actors.syncjobmanager.EsSyncActor;
+import org.sunbird.learner.actors.syncjobmanager.KeyCloakSyncActor;
 import org.sunbird.learner.actors.tenantpreference.TenantPreferenceManagementActor;
 import org.sunbird.learner.audit.impl.ActorAuditLogServiceImpl;
 import org.sunbird.learner.util.AuditOperation;
@@ -105,6 +107,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ActorRef tenantPrefManagementActor;
   private ActorRef clientManagementActor;
   private ActorRef geoLocationManagementActor;
+  private ActorRef keyCloakSyncActor;
+  private ActorRef applicationConfigActor;
 
   private ExecutionContext ec;
 
@@ -140,6 +144,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private static final String TENANT_PREFERENCE_MNGT_ACTOR = "tenantPreferenceManagementActor";
   private static final String CLIENT_MANAGEMENT_ACTOR = "clientManagementActor";
   private static final String GEO_LOCATION_MANAGEMENT_ACTOR = "geoLocationManagementActor";
+  private static final String KEYCLOAK_SYNC_ACTOR = "keyCloakSyncActor";
+  private static final String APPLICATION_CONFIG_ACTOR = "applicationConfigActor";
 
 
 
@@ -226,6 +232,12 @@ public class RequestRouterActor extends UntypedAbstractActor {
     geoLocationManagementActor = getContext().actorOf(
         FromConfig.getInstance().props(Props.create(GeoLocationManagementActor.class)),
         GEO_LOCATION_MANAGEMENT_ACTOR);
+    keyCloakSyncActor = getContext().actorOf(
+        FromConfig.getInstance().props(Props.create(KeyCloakSyncActor.class)),
+        KEYCLOAK_SYNC_ACTOR);
+    applicationConfigActor = getContext().actorOf(
+        FromConfig.getInstance().props(Props.create(ApplicationConfigActor.class)),
+        APPLICATION_CONFIG_ACTOR);
     ec = getContext().dispatcher();
     initializeRouterMap();
   }
@@ -356,6 +368,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.UPDATE_GEO_LOCATION.getValue(), geoLocationManagementActor);
     routerMap.put(ActorOperations.DELETE_GEO_LOCATION.getValue(), geoLocationManagementActor);
     routerMap.put(ActorOperations.SEND_NOTIFICATION.getValue(), geoLocationManagementActor);
+    routerMap.put(ActorOperations.SYNC_KEYCLOAK.getValue(), keyCloakSyncActor);
+    routerMap.put(ActorOperations.UPDATE_SYSTEM_SETTINGS.getValue(), applicationConfigActor);
+    routerMap.put(ActorOperations.GET_USER_COUNT.getValue(), geoLocationManagementActor);
   }
 
 
@@ -453,19 +468,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
     String bkghost = System.getenv(JsonKey.BKG_SUNBIRD_ACTOR_SERVICE_IP);
     String bkgport = System.getenv(JsonKey.BKG_SUNBIRD_ACTOR_SERVICE_PORT);
     Config con = null;
-    String host = System.getenv(JsonKey.SUNBIRD_ACTOR_SERVICE_IP);
-    String port = System.getenv(JsonKey.SUNBIRD_ACTOR_SERVICE_PORT);
     if ("local"
         .equalsIgnoreCase(PropertiesCache.getInstance().getProperty("api_actor_provider"))) {
-      /*if (!ProjectUtil.isStringNullOREmpty(host) && !ProjectUtil.isStringNullOREmpty(port)) {
-        con = ConfigFactory
-            .parseString(
-                "akka.remote.netty.tcp.hostname=" + host + ",akka.remote.netty.tcp.port=" + port + "")
-            .withFallback(ConfigFactory.load().getConfig(ACTOR_CONFIG_NAME));
-      } else {*/
-        con = ConfigFactory.load().getConfig(ACTOR_CONFIG_NAME);
-      //}
-
+      con = ConfigFactory.load().getConfig(ACTOR_CONFIG_NAME);
       system = akka.actor.ActorSystem.create(REMOTE_ACTOR_SYSTEM_NAME, con);
     }else{
       system = RequestRouterActor.getSystem();

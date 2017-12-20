@@ -1648,6 +1648,8 @@ public class UserManagementActor extends UntypedAbstractActor {
   }
 
   private void sendSMS(Map<String, Object> userMap) {
+    if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EMAIL))
+        && !ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PHONE))) {
     UserUtility.decryptUserData(userMap);
     String orgName = "";
     String rootOrgName = "";
@@ -1690,8 +1692,6 @@ public class UserManagementActor extends UntypedAbstractActor {
       sms = PropertiesCache.getInstance().getProperty("sunbird_default_welcome_sms");
     }
     ProjectLogger.log("SMS text : " + sms);
-    if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EMAIL))
-        && !ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PHONE))) {
       String countryCode = "";
       if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.COUNTRY_CODE))) {
         countryCode = PropertiesCache.getInstance().getProperty("sunbird_default_country_code");
@@ -2136,7 +2136,7 @@ public class UserManagementActor extends UntypedAbstractActor {
   }
 
   /**
-   * Method to join the user with organisation ...
+   * Method to join the user with organization ...
    */
   @SuppressWarnings({"rawtypes", "unchecked"})
   private void joinUserOrganisation(Request actorMessage) {
@@ -2918,7 +2918,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     String userId = (String) reqMap.get(JsonKey.USER_ID);
     reqMap.clear();
     reqMap.put(JsonKey.LAST_LOGIN_TIME, lastLoginTime);
-    reqMap.put(JsonKey.CURRENT_LOGIN_TIME, System.currentTimeMillis() + "");
+    reqMap.put(JsonKey.CURRENT_LOGIN_TIME, Long.toString(System.currentTimeMillis()));
     response = ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.user.getTypeName(), userId, reqMap);
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);

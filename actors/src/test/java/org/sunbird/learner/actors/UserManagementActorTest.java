@@ -60,6 +60,7 @@ public class UserManagementActorTest {
   static Util.DbInfo orgDB = null;
   static Util.DbInfo userOrgDB = null;
   private static String userId = "";
+  private static String userId2 = "";
   private static String addressId = "";
   private static String eduId = "";
   private static String jobId = "";
@@ -208,10 +209,130 @@ public class UserManagementActorTest {
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
-    Map<String,Object> map = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(), userId);
-    System.out.println("Login Id "+map.get(JsonKey.LOGIN_ID));
   }
 
+  @Test
+  public void TestACreateUser2() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_2121211");
+    innerMap.put(JsonKey.PASSWORD, "password");
+    innerMap.put(JsonKey.PROVIDER, "BLR");
+    innerMap.put(JsonKey.PHONE, "9874561231");
+    innerMap.put(JsonKey.PHONE_VERIFIED, true);
+    innerMap.put(JsonKey.EMAIL_VERIFIED, true);
+    innerMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
+    
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+
+    subject.tell(reqObj, probe.getRef());
+    Response response = probe.expectMsgClass(duration("200 second"), Response.class);
+    userId2 = (String) response.get(JsonKey.USER_ID);
+    System.out.println(userId2);
+    innerMap.put(JsonKey.ID, userId2);
+    try {
+      Thread.sleep(5000);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
+  }
+  
+  @Test
+  public void TestACreateUser3() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    DataCacheHandler.getConfigSettings().put(JsonKey.EMAIL_UNIQUE, "TRUE");
+    DataCacheHandler.getConfigSettings().put(JsonKey.PHONE_UNIQUE, "TRUE");
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_21212112");
+    innerMap.put(JsonKey.PASSWORD, "password");
+    innerMap.put(JsonKey.PROVIDER, "BLR");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_212121@gmail.com");
+    innerMap.put(JsonKey.PHONE_VERIFIED, true);
+    innerMap.put(JsonKey.EMAIL_VERIFIED, true);
+    innerMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
+    
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+   
+  }
+  
+  @Test
+  public void TestACreateUser4() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    DataCacheHandler.getConfigSettings().put(JsonKey.EMAIL_UNIQUE, "TRUE");
+    DataCacheHandler.getConfigSettings().put(JsonKey.PHONE_UNIQUE, "TRUE");
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_21212113");
+    innerMap.put(JsonKey.PASSWORD, "password");
+    innerMap.put(JsonKey.PROVIDER, "BLR");
+    innerMap.put(JsonKey.PHONE, "9874561231");
+    innerMap.put(JsonKey.PHONE_VERIFIED, true);
+    innerMap.put(JsonKey.EMAIL_VERIFIED, true);
+    innerMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
+    
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+  }
+  
+  @Test
+  public void TestACreateUser5() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.UPDATE_USER.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.ID, userId2);
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_212121@gmail.com");
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+  }
+  
+  @Test
+  public void TestACreateUser6() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.UPDATE_USER.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.ID, userId2);
+    innerMap.put(JsonKey.PHONE, "9874561231");
+    
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    
+    DataCacheHandler.getConfigSettings().put(JsonKey.EMAIL_UNIQUE, "FALSE");
+    DataCacheHandler.getConfigSettings().put(JsonKey.PHONE_UNIQUE, "FALSE");
+  }
   
   @Test
   public void TestACreateUserWithInvalidOrgId() {
@@ -985,10 +1106,10 @@ public class UserManagementActorTest {
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_2121210");
+    innerMap.put(JsonKey.PHONE, "9742501111");
     innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_2121210@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.ID, userId);
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_2121210@gmail.com");
     List<Map<String,String>> webPage = new ArrayList<>();
     Map<String,String> webPageData = new HashMap<>();
     webPageData.put(JsonKey.TYPE, "fb");
@@ -1015,8 +1136,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_1919");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_1919@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_2121210");
     innerMap.put(JsonKey.PASSWORD, "password");
     List<Map<String,String>> webPage = new ArrayList<>();
     Map<String,String> webPageData = new HashMap<>();
@@ -1045,8 +1165,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_1919");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_1919@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_2121210");
     innerMap.put(JsonKey.PASSWORD, "password");
     List<Map<String,String>> webPage = new ArrayList<>();
     Map<String,String> webPageData = new HashMap<>();
@@ -1721,8 +1840,13 @@ public class UserManagementActorTest {
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.USER_ID, userId);
     ssoManager.removeUser(innerMap);
+    
+    innerMap.put(JsonKey.USER_ID, userId2);
+    ssoManager.removeUser(innerMap);
 
     operation.deleteRecord(userManagementDB.getKeySpace(), userManagementDB.getTableName(), userId);
+    
+    operation.deleteRecord(userManagementDB.getKeySpace(), userManagementDB.getTableName(), userId2);
 
     operation.deleteRecord(addressDB.getKeySpace(), addressDB.getTableName(), addressId);
 
@@ -1740,6 +1864,9 @@ public class UserManagementActorTest {
         ProjectUtil.EsType.user.getTypeName(), userId);
     
     ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.user.getTypeName(), userId2);
+    
+    ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.organisation.getTypeName(), orgId);
     
     ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
@@ -1753,6 +1880,12 @@ public class UserManagementActorTest {
       }
       
       response = operation.getRecordsByProperty(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), JsonKey.USER_ID, userIdnew);
+      mapList = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
+      for(Map<String,Object> map : mapList){
+        operation.deleteRecord(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), (String)map.get(JsonKey.ID));
+      }
+      
+      response = operation.getRecordsByProperty(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), JsonKey.USER_ID, userId2);
       mapList = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
       for(Map<String,Object> map : mapList){
         operation.deleteRecord(usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), (String)map.get(JsonKey.ID));

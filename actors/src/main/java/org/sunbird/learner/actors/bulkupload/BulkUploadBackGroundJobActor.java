@@ -1412,13 +1412,12 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
   
   private String validateUser(Map<String, Object> map) {
-    /*if (!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.PHONE))) {
-      validatePhoneNo((String) map.get(JsonKey.PHONE));
+    if(null != map.get(JsonKey.DOB)){
+      boolean bool = ProjectUtil.isDateValidFormat(ProjectUtil.YEAR_MONTH_DATE_FORMAT, (String)map.get(JsonKey.DOB));
+      if(!bool){
+        return "Incorrect DOB date format.";
+      }
     }
-    if (map.get(JsonKey.EMAIL) == null
-        || (ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.EMAIL)))) {
-      return ResponseCode.emailRequired.getErrorMessage();
-    }*/
     if (!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.PHONE))) {
       if(((String) map.get(JsonKey.PHONE)).contains("+")){
         return ResponseCode.invalidPhoneNumber.getErrorMessage();

@@ -1289,10 +1289,10 @@ public class UserManagementActor extends UntypedAbstractActor {
         reqMap.put(JsonKey.PERCENTAGE,
             Double.parseDouble(String.valueOf(reqMap.get(JsonKey.PERCENTAGE))));
       } else {
-        reqMap.put(JsonKey.PERCENTAGE, 0);
+        reqMap.put(JsonKey.PERCENTAGE, Double.parseDouble(String.valueOf("0")));
       }
     } catch (Exception ex) {
-      reqMap.put(JsonKey.PERCENTAGE, 0);
+      reqMap.put(JsonKey.PERCENTAGE, Double.parseDouble(String.valueOf("0")));
       ProjectLogger.log(ex.getMessage(), ex);
     }
     
@@ -1901,10 +1901,10 @@ public class UserManagementActor extends UntypedAbstractActor {
           reqMap.put(JsonKey.PERCENTAGE,
               Double.parseDouble(String.valueOf(reqMap.get(JsonKey.PERCENTAGE))));
         } else {
-          reqMap.put(JsonKey.PERCENTAGE, 0);
+          reqMap.put(JsonKey.PERCENTAGE, Double.parseDouble(String.valueOf("0")));
         }
       } catch (Exception ex) {
-        reqMap.put(JsonKey.PERCENTAGE, 0);
+        reqMap.put(JsonKey.PERCENTAGE, Double.parseDouble(String.valueOf("0")));
         ProjectLogger.log(ex.getMessage(), ex);
       }
       reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());

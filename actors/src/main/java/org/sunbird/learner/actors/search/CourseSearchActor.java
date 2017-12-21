@@ -56,7 +56,6 @@ public class CourseSearchActor extends UntypedAbstractActor {
                     ResponseCode.internalError.getErrorMessage(),
                     ResponseCode.internalError.getResponseCode());
             sender().tell(projectCommonException, self());
-
           }
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.GET_COURSE_BY_ID.getValue())) {

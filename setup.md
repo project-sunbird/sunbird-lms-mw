@@ -70,7 +70,8 @@ Below are the list of environment variables to setup.
 | sunbird_env_logo_url                  | logo url for sending email.(http://www.paramountias.com/media/images/current-affairs/diksha-portal.jpg)     |
 | sunird_web_url                        | web page url                                                                                                |
 | sunbird_app_url                       | Play store url to download the app                                                                          |
-| sunbird_msg_91_auth                   | msg 91 auth                                                                         |
+| sunbird_msg_91_auth                   | msg 91 auth  
+  sunbird_msg_sender                      message sender name                                                   |
    
 
 - Do the below env setup, if you are planing to run background actor in remote mode.

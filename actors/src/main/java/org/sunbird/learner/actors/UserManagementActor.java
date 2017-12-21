@@ -1284,11 +1284,18 @@ public class UserManagementActor extends UntypedAbstractActor {
       reqMap.put(JsonKey.YEAR_OF_PASSING, 0);
       ProjectLogger.log(ex.getMessage(), ex);
     }
-
-    if (null != reqMap.get(JsonKey.PERCENTAGE)) {
-      reqMap.put(JsonKey.PERCENTAGE,
-          Double.parseDouble(String.valueOf(reqMap.get(JsonKey.PERCENTAGE))));
+    try {
+      if (null != reqMap.get(JsonKey.PERCENTAGE)) {
+        reqMap.put(JsonKey.PERCENTAGE,
+            Double.parseDouble(String.valueOf(reqMap.get(JsonKey.PERCENTAGE))));
+      } else {
+        reqMap.put(JsonKey.PERCENTAGE, 0);
+      }
+    } catch (Exception ex) {
+      reqMap.put(JsonKey.PERCENTAGE, 0);
+      ProjectLogger.log(ex.getMessage(), ex);
     }
+    
     if (reqMap.containsKey(JsonKey.ID)) {
       reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
       reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
@@ -1878,7 +1885,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         reqMap.put(JsonKey.ADDRESS_ID, addrId);
         reqMap.remove(JsonKey.ADDRESS);
       }
-      try {
+      try { 
         if (null != reqMap.get(JsonKey.YEAR_OF_PASSING)) {
           reqMap.put(JsonKey.YEAR_OF_PASSING,
               ((BigInteger) reqMap.get(JsonKey.YEAR_OF_PASSING)).intValue());
@@ -1889,9 +1896,16 @@ public class UserManagementActor extends UntypedAbstractActor {
         ProjectLogger.log(ex.getMessage(), ex);
         reqMap.put(JsonKey.YEAR_OF_PASSING, 0);
       }
-      if (null != reqMap.get(JsonKey.PERCENTAGE)) {
-        reqMap.put(JsonKey.PERCENTAGE,
-            Double.parseDouble(String.valueOf(reqMap.get(JsonKey.PERCENTAGE))));
+      try {
+        if (null != reqMap.get(JsonKey.PERCENTAGE)) {
+          reqMap.put(JsonKey.PERCENTAGE,
+              Double.parseDouble(String.valueOf(reqMap.get(JsonKey.PERCENTAGE))));
+        } else {
+          reqMap.put(JsonKey.PERCENTAGE, 0);
+        }
+      } catch (Exception ex) {
+        reqMap.put(JsonKey.PERCENTAGE, 0);
+        ProjectLogger.log(ex.getMessage(), ex);
       }
       reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
       reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));

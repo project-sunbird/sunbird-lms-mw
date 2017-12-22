@@ -68,7 +68,7 @@ public class ApplicationConfigActor extends UntypedAbstractActor {
 
   private void updateSystemSettings(Request message) {
 
-    ProjectLogger.log("USER DB data sync operation to keycloak started ");
+    ProjectLogger.log("Update System Settings started ");
     long startTime = System.currentTimeMillis();
     Map<String, Object> req = message.getRequest();
     Map<String, Object> dataMap = (Map<String, Object>) req.get(JsonKey.DATA);
@@ -157,9 +157,7 @@ public class ApplicationConfigActor extends UntypedAbstractActor {
             }
           }
         }
-
       }
-
     }
 
     for (String str : keys) {

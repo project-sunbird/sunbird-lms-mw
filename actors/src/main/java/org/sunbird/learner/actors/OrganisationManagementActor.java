@@ -1160,46 +1160,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     sender().tell(response, self());
   }
 
-  /**
-   * Get the details of the Organization
-   */
-  @SuppressWarnings({"unchecked", "unused"})
-  private void getOrgData(Request actorMessage) {
-
-    Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-
-    Map<String, Object> req =
-        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
-    if (!(validateOrgRequest(req))) {
-      ProjectLogger.log("REQUESTED DATA IS NOT VALID");
-      return;
-    }
-    Map<String, Object> orgDBO;
-    String orgId = (String) req.get(JsonKey.ORGANISATION_ID);
-    Response result =
-        cassandraOperation.getRecordById(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), orgId);
-    List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-    if (!(list.isEmpty())) {
-      orgDBO = list.get(0);
-    } else {
-      ProjectLogger.log("Invalid Org Id");
-      ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-
-    if (orgDBO.get(JsonKey.ADDRESS_ID) != null) {
-      String addressId = (String) orgDBO.get(JsonKey.ADDRESS_ID);
-      Map<String, Object> address = getAddress(addressId);
-      orgDBO.put(JsonKey.ADDRESS, address);
-    }
-    sender().tell(result, self());
-
-  }
-
+ 
   /**
    * Method to join the user with organisation ...
    */
@@ -1436,7 +1397,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Response response = new Response();
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
 
-    Map<String, Object> updateUserOrgDBO = new HashMap<String, Object>();
+    Map<String, Object> updateUserOrgDBO = new HashMap<>();
     Map<String, Object> req = actorMessage.getRequest();
     String updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
 

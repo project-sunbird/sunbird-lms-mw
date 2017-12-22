@@ -107,6 +107,9 @@ public class CourseBatchManagementActorTest {
     testE2UpdateBatchWithExistingHashTagId();
     testE2UpdateBatchAsStartDateBeforeTodayDate();
     testE3UpdateBatchAsStartDateAfterEndDate();
+    testE4addUserToBatch();
+    testE5addUserToBatch();
+    testE6CreateBatch();
   }
   
   public void createUser() {
@@ -521,6 +524,83 @@ public class CourseBatchManagementActorTest {
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
     probe.expectMsgClass(duration("1000 second"),ProjectCommonException.class);
+  }
+  
+  
+  public void testE4addUserToBatch(){
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
+    Map<String , Object> request = new HashMap<>();
+    request.put(JsonKey.ID, batchId);
+    request.put(JsonKey.COURSE_CREATED_FOR, null);
+    //request.put(JsonKey.ENROLLMENT_TYPE, null);
+    cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), request);
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.ADD_USER_TO_BATCH.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.BATCH_ID ,batchId );
+    List<String> userids = new ArrayList<>();
+    userids.add(userId);
+    innerMap.put(JsonKey.USERIDS ,userids );
+    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(ProjectCommonException.class);
+  }
+  
+  public void testE5addUserToBatch(){
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
+    Map<String , Object> request = new HashMap<>();
+    request.put(JsonKey.ID, batchId);
+    //request.put(JsonKey.COURSE_CREATED_FOR, null);
+    request.put(JsonKey.ENROLLMENT_TYPE, null);
+    cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), request);
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.ADD_USER_TO_BATCH.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.BATCH_ID ,batchId );
+    List<String> userids = new ArrayList<>();
+    userids.add(userId);
+    innerMap.put(JsonKey.USERIDS ,userids );
+    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(ProjectCommonException.class);
+  }
+  
+  public void testE6CreateBatch(){
+    PowerMockito.mockStatic(EkStepRequestUtil.class);
+    Map<String , Object> ekstepResponse = new HashMap<String , Object>();
+    ekstepResponse.put("count" , 10);
+    Object[] ekstepMockResult = {ekstepResponse};
+    when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
+    
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.CREATE_BATCH.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.COURSE_ID, courseId);
+    innerMap.put(JsonKey.NAME, "DUMMY_COURSE_NAME1");
+    innerMap.put(JsonKey.ENROLLMENT_TYPE, "invite-only");
+    innerMap.put(JsonKey.START_DATE , (String)format.format(new Date()));
+    innerMap.put(JsonKey.HASHTAGID ,hashTagId );
+    Calendar now =  Calendar.getInstance();
+    now.add(Calendar.DAY_OF_MONTH, 5);
+    Date after5Days = now.getTime();
+    innerMap.put(JsonKey.END_DATE , (String)format.format(after5Days));
+    List<String> createdFr = new ArrayList<>();
+    createdFr.add("ORG_00123456");
+    innerMap.put(JsonKey.COURSE_CREATED_FOR, createdFr);
+    List<String> mentors = new ArrayList<>();
+    mentors.add(userId);
+    innerMap.put(JsonKey.MENTORS, mentors);
+    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(ProjectCommonException.class);
   }
   
   @AfterClass

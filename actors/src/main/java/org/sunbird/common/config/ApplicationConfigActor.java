@@ -97,9 +97,9 @@ public class ApplicationConfigActor extends UntypedAbstractActor {
     Set<String> keys = dataMap.keySet();
     for (String str : keys) {
       if ((JsonKey.PHONE_UNIQUE).equalsIgnoreCase(str)) {
-        reqPhoneUniqueValue = Boolean.parseBoolean((String) dataMap.get(str));
+        reqPhoneUniqueValue = Boolean.parseBoolean(String.valueOf(dataMap.get(str)));
       } else if ((JsonKey.EMAIL_UNIQUE).equalsIgnoreCase(str)) {
-        reqEmailUniqueValue = Boolean.parseBoolean((String) dataMap.get(str));
+        reqEmailUniqueValue = Boolean.parseBoolean(String.valueOf(dataMap.get(str)));
       }
     }
     SearchDTO searchDto = null;
@@ -161,7 +161,7 @@ public class ApplicationConfigActor extends UntypedAbstractActor {
     }
 
     for (String str : keys) {
-      String value = (String) dataMap.get(str);
+      String value = String.valueOf(dataMap.get(str));
       Map<String, Object> map = new HashMap<>();
       map.put(JsonKey.ID, str);
       map.put(JsonKey.FIELD, str);
@@ -172,7 +172,7 @@ public class ApplicationConfigActor extends UntypedAbstractActor {
     long stopTime = System.currentTimeMillis();
     long elapsedTime = stopTime - startTime;
     ProjectLogger
-        .log("total time taken to sync db data for user to keycloak " + elapsedTime + " ms.");
+        .log("total time taken to Update System Settings  " + elapsedTime + " ms.");
 
   }
 

@@ -1821,28 +1821,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   }
 
   /**
-   * @param actorMessage
-   */
-  private Map<String, Object> getOrgsData(Request actorMessage) {
-    Map<String, Object> requestMap = actorMessage.getRequest();
-    SearchDTO dto = new SearchDTO();
-    Map<String, Object> map = new HashMap<String, Object>();
-    // TODO need to check with request body what data we will get
-    // map.put(JsonKey.REGISTERED_ORG_ID, "some value");
-    // map.put(JsonKey.ROOT_ORG_ID, "");
-    Map<String, Object> additionalProperty = new HashMap<>();
-    additionalProperty.put(JsonKey.FILTERS, map);
-    dto.setAdditionalProperties(additionalProperty);
-    Map<String, Object> responseMap = ElasticSearchUtil.complexSearch(dto,
-        ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName());
-    if (requestMap != null) {
-      return responseMap;
-    }
-    return null;
-
-  }
-
-  /**
    * 
    * @param externalId
    * @param provider

@@ -1661,23 +1661,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EMAIL))
         && !ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PHONE))) {
     UserUtility.decryptUserData(userMap);
-    String orgName = "";
-    String rootOrgName = "";
-    String regOrgId = (String) userMap.get(JsonKey.REGISTERED_ORG_ID);
-    if (!ProjectUtil.isStringNullOREmpty(regOrgId)) {
-      Map<String, Object> result =
-          ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.organisation.getTypeName(), regOrgId);
-      if (!result.isEmpty()) {
-        orgName = (String) result.get(JsonKey.ORG_NAME);
-        result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName(),
-            (String) result.get(JsonKey.ROOT_ORG_ID));
-        if (!result.isEmpty()) {
-          rootOrgName = (String) result.get(JsonKey.ORG_NAME);
-        }
-      }
-    }
     String loginId = (String) userMap.get(JsonKey.USERNAME);
     if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PROVIDER))) {
       loginId = loginId + "@" + (String) userMap.get(JsonKey.PROVIDER);
@@ -1686,18 +1669,12 @@ public class UserManagementActor extends UntypedAbstractActor {
     if (ProjectUtil.isStringNullOREmpty(envName)) {
       envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
     }
-
     String webUrl = System.getenv(SUNBIRD_WEB_URL);
     if (ProjectUtil.isStringNullOREmpty(webUrl)) {
       webUrl = propertiesCache.getProperty(SUNBIRD_WEB_URL);
     }
     ProjectLogger.log("shortened url :: " + webUrl);
-
-    String appUrl = System.getenv(SUNBIRD_APP_URL);
-    if (ProjectUtil.isStringNullOREmpty(appUrl)) {
-      appUrl = propertiesCache.getProperty(SUNBIRD_APP_URL);
-    }
-    String sms = ProjectUtil.getSMSBody(orgName, rootOrgName, loginId, webUrl, appUrl, envName);
+    String sms = ProjectUtil.getSMSBody(loginId, webUrl, envName);
     if (ProjectUtil.isStringNullOREmpty((String) sms)) {
       sms = PropertiesCache.getInstance().getProperty("sunbird_default_welcome_sms");
     }

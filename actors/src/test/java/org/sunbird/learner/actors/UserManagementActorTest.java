@@ -34,6 +34,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.Application;
+import org.sunbird.learner.actors.badges.BadgesActor;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.services.sso.SSOManager;
@@ -52,6 +53,7 @@ public class UserManagementActorTest {
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
   final static Props props = Props.create(UserManagementActor.class);
   final static Props orgProps = Props.create(OrganisationManagementActor.class);
+  final static Props badgeProps = Props.create(BadgesActor.class);
   static EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
   static Util.DbInfo userManagementDB = null;
   static Util.DbInfo addressDB = null;
@@ -73,6 +75,7 @@ public class UserManagementActorTest {
   private static String encryption = "";
   private static String userIdnew = "";
   private static String authToken =  "";
+  private static String usrBadgeId = "";
 
   @BeforeClass
   public static void setUp() {
@@ -1114,9 +1117,9 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_2121210");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_21212100");
     innerMap.put(JsonKey.PHONE, "9742501111");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_2121210@gmail.com");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_21212100@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.ID, userId);
     List<Map<String,String>> webPage = new ArrayList<>();
@@ -1202,8 +1205,6 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.UPDATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_2121210");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_2121210@gmail.com");
     innerMap.put(JsonKey.ID, userIdnew);
     List<Map<String,String>> webPage = new ArrayList<>();
     Map<String,String> webPageData = new HashMap<>();
@@ -1822,6 +1823,78 @@ public class UserManagementActorTest {
     reqObj.setRequest(request);
     subject.tell(reqObj, probe.getRef());
     probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+  }
+  
+  @Test
+  public void Z21TestAddUserBadge(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(badgeProps);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.ADD_USER_BADGE.getValue());    reqObj.getRequest().put(JsonKey.RECEIVER_ID,userId);
+    reqObj.getRequest().put(JsonKey.BADGE_TYPE_ID,"0123206539020943360");
+    reqObj.getRequest().put(JsonKey.REQUESTED_BY,userIdnew);
+    subject.tell(reqObj, probe.getRef());
+    
+    try {
+      Thread.sleep(10000);
+    } catch (InterruptedException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    Response reponse = probe.expectMsgClass(duration("200 second"), Response.class);
+    usrBadgeId = (String) reponse.getResult().get(JsonKey.ID);
+  }
+  
+  @Test
+  public void Z21TestAddUserBadge2(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(badgeProps);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.ADD_USER_BADGE.getValue());
+    reqObj.getRequest().put(JsonKey.RECEIVER_ID,"46789123");
+    reqObj.getRequest().put(JsonKey.BADGE_TYPE_ID,"0123206539020943360");
+    reqObj.getRequest().put(JsonKey.REQUESTED_BY,userIdnew);
+    subject.tell(reqObj, probe.getRef());
+    
+    probe.expectMsgClass(ProjectCommonException.class);
+  }
+  
+  @Test
+  public void Z21TestAddUserBadge3(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(badgeProps);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.ADD_USER_BADGE.getValue());
+    reqObj.getRequest().put(JsonKey.RECEIVER_ID,userId);
+    reqObj.getRequest().put(JsonKey.BADGE_TYPE_ID,"87915");
+    reqObj.getRequest().put(JsonKey.REQUESTED_BY,userIdnew);
+    subject.tell(reqObj, probe.getRef());
+    
+    probe.expectMsgClass(ProjectCommonException.class);
+  }
+  
+  @Test
+  public void Z22TestgetUserBadge(){
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    Util.DbInfo userBadgesDbInfo = Util.dbInfoMap.get(JsonKey.USER_BADGES_DB);
+    try {
+      Thread.sleep(3000);
+    } catch (InterruptedException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    
+    Map<String, Object> esResult =
+        ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(), userId);
+    List<Map<String, Object>> result = (List<Map<String, Object>>) esResult.get(JsonKey.BADGES);
+    Map<String, Object> badge = result.get(0);
+    assertTrue(((String)badge.get(JsonKey.BADGE_TYPE_ID)).equalsIgnoreCase("0123206539020943360"));
+    if(((String)badge.get(JsonKey.BADGE_TYPE_ID)).equalsIgnoreCase("0123206539020943360")){
+      cassandraOperation.deleteRecord(userBadgesDbInfo.getKeySpace(),
+          userBadgesDbInfo.getTableName(), ((String)badge.get(JsonKey.ID)));
+    }
+    
   }
   
   @AfterClass

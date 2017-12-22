@@ -227,7 +227,6 @@ public class BadgesActor extends UntypedAbstractActor {
   @SuppressWarnings("unchecked")
   private void saveUserBadges(Request actorMessage) {
     Map<String, Object> req = actorMessage.getRequest();
-    Response assmntResponse = new Response();
     String receiverId = (String) req.get(JsonKey.RECEIVER_ID);
     String badgeTypeId = (String) req.get(JsonKey.BADGE_TYPE_ID);
     Map<String, Object> map =
@@ -247,7 +246,7 @@ public class BadgesActor extends UntypedAbstractActor {
     if (response != null && response.get(JsonKey.RESPONSE) != null) {
       List<Map<String, Object>> badgesListMap =
           (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-      if (badgesListMap == null || badgesListMap.size() == 0) {
+      if (badgesListMap == null || badgesListMap.isEmpty()) {
         ProjectCommonException ex =
             new ProjectCommonException(ResponseCode.invalidBadgeTypeId.getErrorCode(),
                 ResponseCode.invalidBadgeTypeId.getErrorMessage(),
@@ -263,6 +262,7 @@ public class BadgesActor extends UntypedAbstractActor {
       sender().tell(ex, self());
       return;
     }
+    Response result = new Response();
     try {
       map = new HashMap<>();
       map.put(JsonKey.RECEIVER_ID, receiverId);
@@ -272,13 +272,13 @@ public class BadgesActor extends UntypedAbstractActor {
       map.put(JsonKey.CREATED_BY, (String) req.get(JsonKey.REQUESTED_BY));
       cassandraOperation.insertRecord(userBadgesDbInfo.getKeySpace(),
           userBadgesDbInfo.getTableName(), map);
-      assmntResponse.put(JsonKey.ID, map.get(JsonKey.ID));
-      assmntResponse.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+      result.put(JsonKey.ID, map.get(JsonKey.ID));
+      result.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     } catch (Exception e) {
-      assmntResponse.put(JsonKey.RESPONSE, JsonKey.FAILURE);
-      sender().tell(assmntResponse, self());
+      result.put(JsonKey.RESPONSE, JsonKey.FAILURE);
+      sender().tell(result, self());
     }
-    sender().tell(assmntResponse, self());
+    sender().tell(result, self());
     try {
       ProjectLogger.log("Start background job to save user badge.");
       Request request = new Request();

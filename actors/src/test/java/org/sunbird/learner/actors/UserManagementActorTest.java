@@ -35,6 +35,7 @@ import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.Application;
 import org.sunbird.learner.actors.badges.BadgesActor;
+import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.services.sso.SSOManager;
@@ -53,6 +54,7 @@ public class UserManagementActorTest {
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
   final static Props props = Props.create(UserManagementActor.class);
   final static Props orgProps = Props.create(OrganisationManagementActor.class);
+  final static Props emailServiceProps = Props.create(EmailServiceActor.class);
   final static Props badgeProps = Props.create(BadgesActor.class);
   static EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
   static Util.DbInfo userManagementDB = null;
@@ -1897,6 +1899,52 @@ public class UserManagementActorTest {
     
   }
   
+  @Test
+  public void z33TestsendEmail() {
+      TestKit probe = new TestKit(system);
+      ActorRef subject = system.actorOf(emailServiceProps);
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.EMAIL_SERVICE.getValue());
+      HashMap<String, Object> innerMap = new HashMap<>();
+      Map<String, Object> map = new HashMap<String, Object>();
+      List<String> userids = new ArrayList<>();
+      userids.add(userId);
+      userids.add(userIdnew);
+      userids.add("47867");
+      map.put(JsonKey.RECIPIENT_USERIDS, userids);
+      List<String> emails = new ArrayList<>();
+      emails.add("sunbird_dummy_user_212121@gmail.com");
+      emails.add("sunbird_dummy_user_21212100@gmail.com");
+      map.put(JsonKey.RECIPIENT_EMAILS, emails);
+      innerMap.put(JsonKey.EMAIL_REQUEST, map);
+      reqObj.setRequest(innerMap);
+      subject.tell(reqObj, probe.getRef());
+      Response res = probe.expectMsgClass(duration("200 second"),Response.class);
+    }
+  
+  
+  @Test
+  public void z33TestsendEmail2() {
+      TestKit probe = new TestKit(system);
+      ActorRef subject = system.actorOf(emailServiceProps);
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.EMAIL_SERVICE.getValue());
+      HashMap<String, Object> innerMap = new HashMap<>();
+      Map<String, Object> map = new HashMap<String, Object>();
+      List<String> userids = new ArrayList<>();
+      userids.add(userId);
+      userids.add(userIdnew);
+      map.put(JsonKey.RECIPIENT_USERIDS, userids);
+      List<String> emails = new ArrayList<>();
+      emails.add("sunbird_dummy_user_212121@gmail.com");
+      emails.add("sunbird_dummy_user_21212100@gmail.com");
+      map.put(JsonKey.RECIPIENT_EMAILS, emails);
+      innerMap.put(JsonKey.EMAIL_REQUEST, map);
+      reqObj.setRequest(innerMap);
+      subject.tell(reqObj, probe.getRef());
+      Response res = probe.expectMsgClass(duration("200 second"),Response.class);
+    }
+ 
   @AfterClass
   public static void deleteUser() {
     try{

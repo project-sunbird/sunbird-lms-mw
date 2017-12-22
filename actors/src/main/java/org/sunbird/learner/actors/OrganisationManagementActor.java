@@ -825,16 +825,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
     }
-    if (isNull(usrOrgData)) {
-      // create exception here and sender.tell the exception and return
-      ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-
     // remove source and external id
     usrOrgData.remove(JsonKey.EXTERNAL_ID);
     usrOrgData.remove(JsonKey.SOURCE);
@@ -1006,37 +996,12 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
 
     Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
-    if (!(validateOrgRequestForMembers(usrOrgData))) {
-      ProjectLogger.log("REQUESTED DATA IS NOT VALID");
-      return;
-    }
     if (!(validateUsrRequest(usrOrgData))) {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
     }
-    if (isNull(usrOrgData)) {
-      // create exception here and sender.tell the exception and return
-      ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      // update ES with latest data through background job manager
-      if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-        ProjectLogger.log("method call going to satrt for ES--.....");
-        Request request = new Request();
-        request.setOperation(ActorOperations.REMOVE_USER_ORG_ES.getValue());
-        request.getRequest().put(JsonKey.USER, usrOrgData);
-        ProjectLogger.log("making a call to save user data to ES");
-        try {
-          ActorUtil.tell(request);
-        } catch (Exception ex) {
-          ProjectLogger
-              .log("Exception Occured during saving user to Es while removeMeOrganisation : ", ex);
-        }
-      } else {
-        ProjectLogger.log("no call for ES to save user");
-      }
+    if (!(validateOrgRequestForMembers(usrOrgData))) {
+      ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
     }
 
@@ -1299,22 +1264,13 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Response response = new Response();
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
 
-    Map<String, Object> updateUserOrgDBO = new HashMap<String, Object>();
+    Map<String, Object> updateUserOrgDBO = new HashMap<>();
     Map<String, Object> req = actorMessage.getRequest();
     String updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
 
     Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
     if (!(validateOrgRequest(usrOrgData))) {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
-      return;
-    }
-    if (isNull(usrOrgData)) {
-      // create exception here and sender.tell the exception and return
-      ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
       return;
     }
 
@@ -1406,15 +1362,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
     }
-    if (isNull(usrOrgData)) {
-      // create exception here and sender.tell the exception and return
-      ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
 
     // remove source and external id
     usrOrgData.remove(JsonKey.EXTERNAL_ID);
@@ -1482,42 +1429,12 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   }
 
   /**
-   * Gets the address
-   */
-  @SuppressWarnings("unchecked")
-  private Map<String, Object> getAddress(String addressId) {
-
-    Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-    Response result = cassandraOperation.getRecordById(orgDbInfo.getKeySpace(),
-        orgDbInfo.getTableName(), addressId);
-    Map<String, Object> addressDBO = new HashMap<String, Object>();
-
-    List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-    if (!(list.isEmpty())) {
-      addressDBO = (Map<String, Object>) list.get(0);
-    }
-    return addressDBO;
-  }
-
-  /**
    * Inserts an address if not present, else updates the existing address
    */
   private void upsertAddress(Map<String, Object> addressReq) {
 
     Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     cassandraOperation.upsertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), addressReq);
-  }
-
-
-  @SuppressWarnings({"unused", "unchecked"})
-  private void removeUnwantedProperties(Response response, List<String> removableAttributes) {
-    List<Map<String, Object>> list =
-        (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
-    for (Map<String, Object> map : list) {
-      for (String attr : removableAttributes) {
-        map.remove(attr);
-      }
-    }
   }
 
   /**
@@ -1740,20 +1657,13 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     // fetch orgid from database on basis of source and external id and put orgid into request .
     Util.DbInfo orgDBInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
-    Map<String, Object> requestDbMap = new HashMap<String, Object>();
+    Map<String, Object> requestDbMap = new HashMap<>();
     if (!ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ORGANISATION_ID))) {
       requestDbMap.put(JsonKey.ID, req.get(JsonKey.ORGANISATION_ID));
-    } else if (!ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.PROVIDER))
-        && !ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.EXTERNAL_ID))) {
+    } else {
       requestDbMap.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
       requestDbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
-    } else {
-      ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.sourceAndExternalIdValidationError.getErrorCode(),
-              ResponseCode.sourceAndExternalIdValidationError.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-    }
+    } 
 
     Response result = cassandraOperation.getRecordsByProperties(orgDBInfo.getKeySpace(),
         orgDBInfo.getTableName(), requestDbMap);
@@ -1791,7 +1701,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       sender().tell(exception, self());
       return false;
     }
-    Map<String, Object> data = new TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
+    Map<String, Object> data = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     data.putAll(req);
     if (isNull(req.get(JsonKey.USER_ID))) {
       if (isNull(data.get(JsonKey.USERNAME)) || isNull(data.get(JsonKey.PROVIDER))) {
@@ -1806,20 +1716,13 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     // fetch orgid from database on basis of source and external id and put orgid into request .
     Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
 
-    Map<String, Object> requestDbMap = new HashMap<String, Object>();
+    Map<String, Object> requestDbMap = new HashMap<>();
     if (!ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.USER_ID))) {
       requestDbMap.put(JsonKey.ID, req.get(JsonKey.USER_ID));
-    } else if (!ProjectUtil.isStringNullOREmpty((String) data.get(JsonKey.PROVIDER))
-        && !ProjectUtil.isStringNullOREmpty((String) data.get(JsonKey.USERNAME))) {
+    } else {
       requestDbMap.put(JsonKey.PROVIDER, data.get(JsonKey.PROVIDER));
       requestDbMap.put(JsonKey.USERNAME, data.get(JsonKey.USERNAME));
-    } else {
-      ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.usrValidationError.getErrorCode(),
-              ResponseCode.usrValidationError.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-    }
+    } 
 
     Response result = cassandraOperation.getRecordsByProperties(userdbInfo.getKeySpace(),
         userdbInfo.getTableName(), requestDbMap);

@@ -653,8 +653,8 @@ public class UserManagementActor extends UntypedAbstractActor {
       return;
     }
     if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
-      List<String> requestFields = (List<String>)  actorMessage.getRequest().get(JsonKey.FIELDS);
-      if (requestFields != null) {
+      String requestFields = (String)  actorMessage.getRequest().get(JsonKey.FIELDS);
+      if (!ProjectUtil.isStringNullOREmpty(requestFields)) {
         if (!requestFields.contains(JsonKey.COMPLETENESS)) {
           result.remove(JsonKey.COMPLETENESS);
         }

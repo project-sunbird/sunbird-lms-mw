@@ -1551,11 +1551,11 @@ public class UserManagementActorTest {
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);
     request.put(JsonKey.REQUESTED_BY, userId);
-    List<String> fields = new ArrayList<>();
+    String fields = JsonKey.LAST_LOGIN_TIME+","+JsonKey.TOPIC;
     //fields.add(JsonKey.COMPLETENESS);
     //fields.add(JsonKey.MISSING_FIELDS);
-    fields.add(JsonKey.LAST_LOGIN_TIME);
-    fields.add(JsonKey.TOPIC);
+    //fields.add(JsonKey.LAST_LOGIN_TIME);
+    //fields.add(JsonKey.TOPIC);
     request.put(JsonKey.FIELDS, fields);
     reqObj.setRequest(request);
 

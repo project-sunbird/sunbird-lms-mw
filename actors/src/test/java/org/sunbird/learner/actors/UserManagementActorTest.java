@@ -94,7 +94,17 @@ public class UserManagementActorTest {
     new DataCacheHandler().run();
   }
 
+  @Test
+  public void testAAAInvalidOperation(){
+      TestKit probe = new TestKit(system);
+      ActorRef subject = system.actorOf(props);
 
+      Request reqObj = new Request();
+      reqObj.setOperation("INVALID_OPERATION");
+
+      subject.tell(reqObj, probe.getRef());
+      probe.expectMsgClass(ProjectCommonException.class);
+  }
 
   @Test
   public void TestAAcreateOrgForId() {
@@ -227,7 +237,7 @@ public class UserManagementActorTest {
     innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_2121211");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
-    innerMap.put(JsonKey.PHONE, "9874561231");
+    innerMap.put(JsonKey.PHONE, "9874561233");
     innerMap.put(JsonKey.PHONE_VERIFIED, true);
     innerMap.put(JsonKey.EMAIL_VERIFIED, true);
     innerMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
@@ -710,10 +720,8 @@ public class UserManagementActorTest {
   public void TestJGetUserInfoByLoginId() {
     
     String encLoginId = "sunbird_dummy_user_212121@BLR";
-    String enccity = "new city";
     if("ON".equalsIgnoreCase(encryption)){
       try {
-        enccity = encryptionService.encryptData("new city");
       } catch (Exception e) {
         // TODO Auto-generated catch block
         e.printStackTrace();
@@ -1352,6 +1360,25 @@ public class UserManagementActorTest {
     }
   } 
   
+  @SuppressWarnings({"deprecation"})
+  @Test
+  public void Z14TestuserLoginWithValidPhone(){
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.LOGIN.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.USERNAME, "9874561233");
+    innerMap.put(JsonKey.PASSWORD, "password");
+    innerMap.put(JsonKey.SOURCE, "web");
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
+
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(duration("200 second"), Response.class);
+  }
+  
   @SuppressWarnings("deprecation")
   @Test
   public void userchangePasswordFailure(){
@@ -1478,7 +1505,10 @@ public class UserManagementActorTest {
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.USER_ID,userId);
     List<String> privateFields = new ArrayList<>();
-    privateFields.add(JsonKey.ADDRESS);
+    privateFields.add(JsonKey.ADDRESS+"."+JsonKey.CITY);
+    privateFields.add(JsonKey.EDUCATION+"."+JsonKey.YEAR_OF_PASSING);
+    privateFields.add(JsonKey.JOB_PROFILE+"."+JsonKey.JOB_NAME);
+    privateFields.add(JsonKey.SKILLS+"."+JsonKey.SKILL_NAME);
     List<String> publicFields = new ArrayList<>();
     publicFields.add(JsonKey.EDUCATION);
     innerMap.put(JsonKey.PRIVATE, privateFields);
@@ -1488,6 +1518,57 @@ public class UserManagementActorTest {
     reqObj.setRequest(request);
     subject.tell(reqObj, probe.getRef());
     probe.expectMsgClass(duration("200 second"), Response.class);
+  }
+  
+  
+  @Test
+  public void Z12TestprofileVisibilityWithGetDetailsByLoginId() {
+    
+    String encLoginId = "sunbird_dummy_user_212121@BLR";
+    
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.LOGIN_ID, encLoginId);
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    List<String> fields = new ArrayList<>();
+    //fields.add(JsonKey.COMPLETENESS);
+    //fields.add(JsonKey.MISSING_FIELDS);
+    fields.add(JsonKey.LAST_LOGIN_TIME);
+    fields.add(JsonKey.TOPIC);
+    request.put(JsonKey.FIELDS, fields);
+    reqObj.setRequest(request);
+    request.put(JsonKey.REQUESTED_BY, userId);
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(duration("200 second"), Response.class);
+  }
+  
+  @Test
+  public void Z12TestprofileVisibilityWithGetUserInfo() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.GET_PROFILE.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.USER_ID, userId);
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    request.put(JsonKey.REQUESTED_BY, userId);
+    List<String> fields = new ArrayList<>();
+    //fields.add(JsonKey.COMPLETENESS);
+    //fields.add(JsonKey.MISSING_FIELDS);
+    fields.add(JsonKey.LAST_LOGIN_TIME);
+    fields.add(JsonKey.TOPIC);
+    request.put(JsonKey.FIELDS, fields);
+    reqObj.setRequest(request);
+
+    subject.tell(reqObj, probe.getRef());
+   probe.expectMsgClass(duration("200 second"), Response.class);
   }
   
   @Test

@@ -527,7 +527,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         result.remove(JsonKey.ENC_EMAIL);
         result.remove(JsonKey.ENC_PHONE);
         if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
-          List<String> requestFields = (List) actorMessage.getRequest().get(JsonKey.FIELDS);
+          List<String> requestFields = (List<String>) actorMessage.getRequest().get(JsonKey.FIELDS);
           if (requestFields != null) {
             if (!requestFields.contains(JsonKey.COMPLETENESS)) {
               result.remove(JsonKey.COMPLETENESS);
@@ -536,13 +536,12 @@ public class UserManagementActor extends UntypedAbstractActor {
               result.remove(JsonKey.MISSING_FIELDS);
             }
             if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
-              SSOManager manager = SSOServiceFactory.getInstance();
-              String lastLoginTime =
-                  manager.getLastLoginTime((String) userMap.get(JsonKey.USER_ID));
-              if (ProjectUtil.isStringNullOREmpty(lastLoginTime)) {
-                lastLoginTime = "0";
-              }
-              result.put(JsonKey.LAST_LOGIN_TIME, Long.parseLong(lastLoginTime));
+              result.put(JsonKey.LAST_LOGIN_TIME,
+                  Long.parseLong(getLastLoginTime((String) userMap.get(JsonKey.USER_ID),
+                      (String) result.get(JsonKey.LAST_LOGIN_TIME))));
+            }
+            if (!requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
+              result.remove(JsonKey.LAST_LOGIN_TIME);
             }
             if (requestFields.contains(JsonKey.TOPIC)) {
               // fetch the topic details of all user associated orgs and append in the result
@@ -654,8 +653,8 @@ public class UserManagementActor extends UntypedAbstractActor {
       return;
     }
     if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
-      String requestFields = (String) actorMessage.getRequest().get(JsonKey.FIELDS);
-      if (!ProjectUtil.isStringNullOREmpty(requestFields)) {
+      List<String> requestFields = (List<String>)  actorMessage.getRequest().get(JsonKey.FIELDS);
+      if (requestFields != null) {
         if (!requestFields.contains(JsonKey.COMPLETENESS)) {
           result.remove(JsonKey.COMPLETENESS);
         }

@@ -169,8 +169,8 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_212121");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_212121@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_313131");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_313131@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
     innerMap.put(JsonKey.PHONE, "9874561231");
@@ -217,7 +217,7 @@ public class UserManagementActorTest {
     subject.tell(reqObj, probe.getRef());
     Response response = probe.expectMsgClass(duration("200 second"), Response.class);
     userId = (String) response.get(JsonKey.USER_ID);
-    System.out.println(userId);
+    System.out.println("userId "+userId);
     innerMap.put(JsonKey.ID, userId);
     try {
       Thread.sleep(5000);
@@ -234,7 +234,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_2121211");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_3131311");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
     innerMap.put(JsonKey.PHONE, "9874561233");
@@ -276,10 +276,10 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_21212112");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_31313112");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_212121@gmail.com");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_313131@gmail.com");
     innerMap.put(JsonKey.PHONE_VERIFIED, true);
     innerMap.put(JsonKey.EMAIL_VERIFIED, true);
     innerMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
@@ -302,7 +302,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_21212113");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_31313113");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
     innerMap.put(JsonKey.PHONE, "9874561231");
@@ -327,7 +327,7 @@ public class UserManagementActorTest {
     reqObj.setOperation(ActorOperations.UPDATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.ID, userId2);
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_212121@gmail.com");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_313131@gmail.com");
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
@@ -366,8 +366,8 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_212121");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_212121@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_313131");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_313131@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
     innerMap.put(JsonKey.PHONE, "9874561230");
@@ -392,9 +392,9 @@ public class UserManagementActorTest {
     reqObj.setOperation(ActorOperations.UPDATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.LAST_NAME, "user_last_name_updated");
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_212121");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_313131");
     innerMap.put(JsonKey.ID, userId);
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_212121@gmail.com");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_313131@gmail.com");
     //Add Roles
     List<String> roleList = new ArrayList<>();
     roleList.add("CONTENT_CURATION");
@@ -424,7 +424,7 @@ public class UserManagementActorTest {
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.LAST_NAME, "user_last_name_updated");
     innerMap.put(JsonKey.ID, userId);
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_212121@gmail.com");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_313131@gmail.com");
     //Add Roles
     List<String> roleList = new ArrayList<>();
     roleList.add("CONTENT_CURATION_1");
@@ -447,8 +447,8 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_2121211");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_2121211@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_3131311");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_3131311@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     //Add Roles
     List<String> roleList = new ArrayList<>();
@@ -719,15 +719,7 @@ public class UserManagementActorTest {
   @Test
   public void TestJGetUserInfoByLoginId() {
     
-    String encLoginId = "sunbird_dummy_user_212121@BLR";
-    if("ON".equalsIgnoreCase(encryption)){
-      try {
-      } catch (Exception e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
-    }
-    
+    String encLoginId = "sunbird_dummy_user_313131@BLR";
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -743,7 +735,7 @@ public class UserManagementActorTest {
     Response userResponse = probe.expectMsgClass(duration("200 second"), Response.class);
     Map<String, Object> result = (Map<String, Object>) (userResponse.getResult());
     Map<String, Object> response = (Map<String, Object>) result.get(JsonKey.RESPONSE);
-    System.out.println("user Response : "+response.get(JsonKey.ID));
+    System.out.println("user Response : "+response.get(JsonKey.USER_ID));
     assertEquals((String)response.get(JsonKey.ID) ,userId);
     assertEquals(userResponse.getResponseCode().getResponseCode(), ResponseCode.OK.getResponseCode());
   }
@@ -756,7 +748,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.LOGIN_ID, "sunbird_dummy_user_212121@BLR1324564");
+    innerMap.put(JsonKey.LOGIN_ID, "sunbird_dummy_user_313131@BLR1324564");
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
@@ -779,7 +771,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.LOGIN_ID, "sunbird_dummy_user_212121@BLR");
+    innerMap.put(JsonKey.LOGIN_ID, "sunbird_dummy_user_313131@BLR");
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
@@ -825,7 +817,7 @@ public class UserManagementActorTest {
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_181");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_212121@gmail.com");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_313131@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
     Map<String, Object> request = new HashMap<String, Object>();
@@ -845,8 +837,8 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_212121");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_212121@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_313131");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_313131@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
     Map<String, Object> request = new HashMap<String, Object>();
@@ -1127,9 +1119,9 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_21212100");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_31313100");
     innerMap.put(JsonKey.PHONE, "9742501111");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_21212100@gmail.com");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_31313100@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.ID, userId);
     List<Map<String,String>> webPage = new ArrayList<>();
@@ -1158,7 +1150,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_2121210");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_3131310");
     innerMap.put(JsonKey.PASSWORD, "password");
     List<Map<String,String>> webPage = new ArrayList<>();
     Map<String,String> webPageData = new HashMap<>();
@@ -1187,7 +1179,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_2121210");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_3131310");
     innerMap.put(JsonKey.PASSWORD, "password");
     List<Map<String,String>> webPage = new ArrayList<>();
     Map<String,String> webPageData = new HashMap<>();
@@ -1344,7 +1336,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.LOGIN.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_2121210@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_313131@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.SOURCE, "web");
     Map<String, Object> request = new HashMap<String, Object>();
@@ -1387,7 +1379,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CHANGE_PASSWORD.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_212121@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_313131@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password2");
     innerMap.put(JsonKey.NEW_PASSWORD, "password1");
     Map<String, Object> request = new HashMap<String, Object>();
@@ -1423,7 +1415,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.FORGOT_PASSWORD.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME,("sunbird_dummy_user_212121@gmail.com"));
+    innerMap.put(JsonKey.USERNAME,("sunbird_dummy_user_313131@gmail.com"));
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
@@ -1438,7 +1430,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.FORGOT_PASSWORD.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME,("sunbird_dummy_user_212121"));
+    innerMap.put(JsonKey.USERNAME,("sunbird_dummy_user_313131"));
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
@@ -1453,7 +1445,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.FORGOT_PASSWORD.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME,("sunbird_dummy_user_2121212"));
+    innerMap.put(JsonKey.USERNAME,("sunbird_dummy_user_3131312"));
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
@@ -1524,7 +1516,7 @@ public class UserManagementActorTest {
   @Test
   public void Z12TestprofileVisibilityWithGetDetailsByLoginId() {
     
-    String encLoginId = "sunbird_dummy_user_212121@BLR";
+    String encLoginId = "sunbird_dummy_user_313131@BLR";
     
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -1661,7 +1653,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.ASSIGN_ROLES.getValue());
     Map<String, Object> request = new HashMap<String, Object>();
-    request.put(JsonKey.USERNAME,"sunbird_dummy_user_212121");
+    request.put(JsonKey.USERNAME,"sunbird_dummy_user_313131");
     request.put(JsonKey.PROVIDER,"BLR");
     request.put(JsonKey.ORGANISATION_ID, orgId);
     List<String> roles = new ArrayList<>();
@@ -1679,7 +1671,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.ASSIGN_ROLES.getValue());
     Map<String, Object> request = new HashMap<String, Object>();
-    request.put(JsonKey.USERNAME,"sunbird_dummy_user_212121");
+    request.put(JsonKey.USERNAME,"sunbird_dummy_user_313131");
     request.put(JsonKey.EXTERNAL_ID, "EXT_ID_DUMMY");
     request.put(JsonKey.PROVIDER, "BLR");
     List<String> roles = new ArrayList<>();
@@ -1994,8 +1986,8 @@ public class UserManagementActorTest {
       userids.add("47867");
       map.put(JsonKey.RECIPIENT_USERIDS, userids);
       List<String> emails = new ArrayList<>();
-      emails.add("sunbird_dummy_user_212121@gmail.com");
-      emails.add("sunbird_dummy_user_21212100@gmail.com");
+      emails.add("sunbird_dummy_user_313131@gmail.com");
+      emails.add("sunbird_dummy_user_31313100@gmail.com");
       map.put(JsonKey.RECIPIENT_EMAILS, emails);
       innerMap.put(JsonKey.EMAIL_REQUEST, map);
       reqObj.setRequest(innerMap);
@@ -2017,8 +2009,8 @@ public class UserManagementActorTest {
       userids.add(userIdnew);
       map.put(JsonKey.RECIPIENT_USERIDS, userids);
       List<String> emails = new ArrayList<>();
-      emails.add("sunbird_dummy_user_212121@gmail.com");
-      emails.add("sunbird_dummy_user_21212100@gmail.com");
+      emails.add("sunbird_dummy_user_313131@gmail.com");
+      emails.add("sunbird_dummy_user_31313100@gmail.com");
       map.put(JsonKey.RECIPIENT_EMAILS, emails);
       innerMap.put(JsonKey.EMAIL_REQUEST, map);
       reqObj.setRequest(innerMap);
@@ -2031,7 +2023,7 @@ public class UserManagementActorTest {
     try{
       if("ON".equalsIgnoreCase(encryption)){
       Response res = operation.getRecordsByProperty(userManagementDB.getKeySpace(), userManagementDB.getTableName(),
-          JsonKey.USERNAME,encryptionService.encryptData("sunbird_dummy_user_212121"));
+          JsonKey.USERNAME,encryptionService.encryptData("sunbird_dummy_user_313131"));
       Map<String,Object> usrMap = ((Map<String,Object>)res.getResult().get(JsonKey.RESPONSE));
       if(null != usrMap.get(JsonKey.ID)){
         userId = (String) usrMap.get(JsonKey.ID);

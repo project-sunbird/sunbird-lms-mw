@@ -42,6 +42,7 @@ import org.sunbird.learner.actors.syncjobmanager.EsSyncActor;
 import org.sunbird.learner.actors.syncjobmanager.KeyCloakSyncActor;
 import org.sunbird.learner.actors.tenantpreference.TenantPreferenceManagementActor;
 import org.sunbird.learner.audit.impl.ActorAuditLogServiceImpl;
+import org.sunbird.learner.datapersistence.DbOperationActor;
 import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.util.Util;
 import org.sunbird.metrics.actors.CourseMetricsActor;
@@ -109,6 +110,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ActorRef geoLocationManagementActor;
   private ActorRef keyCloakSyncActor;
   private ActorRef applicationConfigActor;
+  private ActorRef dbOperationActor;
 
   private ExecutionContext ec;
 
@@ -146,6 +148,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private static final String GEO_LOCATION_MANAGEMENT_ACTOR = "geoLocationManagementActor";
   private static final String KEYCLOAK_SYNC_ACTOR = "keyCloakSyncActor";
   private static final String APPLICATION_CONFIG_ACTOR = "applicationConfigActor";
+  private static final String DBOPERATION_ACTOR = "dbOperationActor";
 
 
 
@@ -238,6 +241,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
     applicationConfigActor = getContext().actorOf(
         FromConfig.getInstance().props(Props.create(ApplicationConfigActor.class)),
         APPLICATION_CONFIG_ACTOR);
+    dbOperationActor = getContext().actorOf(
+        FromConfig.getInstance().props(Props.create(DbOperationActor.class)),
+        DBOPERATION_ACTOR);
     ec = getContext().dispatcher();
     initializeRouterMap();
   }
@@ -371,6 +377,14 @@ public class RequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.SYNC_KEYCLOAK.getValue(), keyCloakSyncActor);
     routerMap.put(ActorOperations.UPDATE_SYSTEM_SETTINGS.getValue(), applicationConfigActor);
     routerMap.put(ActorOperations.GET_USER_COUNT.getValue(), geoLocationManagementActor);
+    
+    routerMap.put(ActorOperations.CREATE_DATA.getValue(), dbOperationActor);
+    routerMap.put(ActorOperations.UPDATE_DATA.getValue(), dbOperationActor);
+    routerMap.put(ActorOperations.DELETE_DATA.getValue(), dbOperationActor);
+    routerMap.put(ActorOperations.READ_DATA.getValue(), dbOperationActor);
+    routerMap.put(ActorOperations.READ_ALL_DATA.getValue(), dbOperationActor);
+    routerMap.put(ActorOperations.SEARCH_DATA.getValue(), dbOperationActor);
+    routerMap.put(ActorOperations.GET_METRICS.getValue(), dbOperationActor);
   }
 
 

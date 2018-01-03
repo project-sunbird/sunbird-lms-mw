@@ -1660,10 +1660,8 @@ public class UserManagementActor extends UntypedAbstractActor {
     if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EMAIL))
         && !ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PHONE))) {
     UserUtility.decryptUserData(userMap);
-    String loginId = (String) userMap.get(JsonKey.USERNAME);
-    if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PROVIDER))) {
-      loginId = loginId + "@" + (String) userMap.get(JsonKey.PROVIDER);
-    }
+    String name = (String) userMap.get(JsonKey.FIRST_NAME)+" "+(String) userMap.get(JsonKey.LAST_NAME);
+    
     String envName = System.getenv(JsonKey.SUNBIRD_INSTALLATION);
     if (ProjectUtil.isStringNullOREmpty(envName)) {
       envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
@@ -1673,7 +1671,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       webUrl = propertiesCache.getProperty(SUNBIRD_WEB_URL);
     }
     ProjectLogger.log("shortened url :: " + webUrl);
-    String sms = ProjectUtil.getSMSBody(loginId, webUrl, envName);
+    String sms = ProjectUtil.getSMSBody(name, webUrl, envName);
     if (ProjectUtil.isStringNullOREmpty((String) sms)) {
       sms = PropertiesCache.getInstance().getProperty("sunbird_default_welcome_sms");
     }

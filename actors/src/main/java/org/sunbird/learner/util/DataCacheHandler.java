@@ -50,7 +50,7 @@ public class DataCacheHandler implements Runnable {
       for (Map<String, Object> resultMap : responseList) {
         if (((String) resultMap.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.PHONE_UNIQUE)
             && ProjectUtil.isStringNullOREmpty((String) resultMap.get(JsonKey.VALUE))) {
-          configSettings.put(((String) resultMap.get(JsonKey.FIELD)), String.valueOf(true));
+          configSettings.put(((String) resultMap.get(JsonKey.FIELD)), String.valueOf(false));
         } else if (((String) resultMap.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.EMAIL_UNIQUE)
             && ProjectUtil.isStringNullOREmpty((String) resultMap.get(JsonKey.VALUE))) {
           configSettings.put(((String) resultMap.get(JsonKey.FIELD)), String.valueOf(false));
@@ -60,7 +60,7 @@ public class DataCacheHandler implements Runnable {
         }
       }
     }else{
-      configSettings.put(JsonKey.PHONE_UNIQUE, String.valueOf(true));
+      configSettings.put(JsonKey.PHONE_UNIQUE, String.valueOf(false));
       configSettings.put(JsonKey.EMAIL_UNIQUE, String.valueOf(false));
     }
   }

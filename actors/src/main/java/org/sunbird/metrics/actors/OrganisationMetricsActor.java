@@ -100,7 +100,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
     backGroundRequest.setRequest(innerMap);
     ActorUtil.tell(backGroundRequest);
-    return;
   }
 
   private String createReportTrackingEntry(Request actorMessage) {

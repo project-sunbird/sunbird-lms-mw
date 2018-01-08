@@ -2219,7 +2219,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     response = cassandraOperation.insertRecord(userOrgDbInfo.getKeySpace(),
         userOrgDbInfo.getTableName(), usrOrgData);
     sender().tell(response, self());
-    return;
   }
 
   /**

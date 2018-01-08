@@ -21,8 +21,6 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
-import org.sunbird.helper.CassandraConnectionManager;
-import org.sunbird.helper.CassandraConnectionMngrFactory;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.Application;
 import org.sunbird.learner.datapersistence.DbOperationActor;
@@ -32,8 +30,6 @@ import org.sunbird.learner.util.Util;
 public class DbOperationActorTest {
   static ActorSystem system;
   static CassandraOperation operation= ServiceFactory.getInstance();
-  private static CassandraConnectionManager manager = CassandraConnectionMngrFactory
-      .getObject(PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_CASSANDRA_MODE));
   static PropertiesCache cach = PropertiesCache.getInstance();
   final static Props props = Props.create(DbOperationActor.class);
   
@@ -62,7 +58,7 @@ public class DbOperationActorTest {
       TestKit probe = new TestKit(system);
       ActorRef subject = system.actorOf(props);
 
-      subject.tell(new String("Invelid Type"), probe.getRef());
+      subject.tell("Invalid Type", probe.getRef());
       probe.expectMsgClass(ProjectCommonException.class);
   }
   

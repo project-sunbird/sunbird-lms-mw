@@ -466,7 +466,7 @@ public class OrganisationManagementActorTest {
         TestKit probe = new TestKit(system);
         ActorRef subject = system.actorOf(props);
 
-        subject.tell(new String("Invalid Type"), probe.getRef());
+        subject.tell("Invalid Type", probe.getRef());
         probe.expectMsgClass(ProjectCommonException.class);
     }
     

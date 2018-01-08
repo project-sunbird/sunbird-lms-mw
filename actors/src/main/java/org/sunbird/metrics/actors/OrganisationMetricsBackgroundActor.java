@@ -131,7 +131,6 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
           ResponseCode.internalError.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
-    return;
   }
 
   @SuppressWarnings("unchecked")

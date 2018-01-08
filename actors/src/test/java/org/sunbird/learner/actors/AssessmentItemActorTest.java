@@ -1,14 +1,15 @@
 package org.sunbird.learner.actors;
 
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.testkit.TestActorRef;
+import akka.testkit.javadsl.TestKit;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import akka.actor.ActorRef;
-import akka.testkit.javadsl.TestKit;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -19,21 +20,15 @@ import org.sunbird.common.request.Request;
 import org.sunbird.learner.actors.assessment.AssessmentItemActor;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.testkit.TestActorRef;
-
 public class AssessmentItemActorTest {
 
     static ActorSystem system;
     final static  Props props = Props.create(AssessmentItemActor.class);
-    private static TestActorRef<AssessmentItemActor> ref;
 
     @BeforeClass
     public static void setUp() {
         system = ActorSystem.create("system");
         Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-        ref = TestActorRef.create(system, props, "testActor");
     }
 
 
@@ -148,7 +143,7 @@ public class AssessmentItemActorTest {
         TestKit probe = new TestKit(system);
         ActorRef subject = system.actorOf(props);
 
-        subject.tell(new String("UNSUPPORTED"), probe.getRef());
+        subject.tell("UNSUPPORTED", probe.getRef());
         probe.expectMsgClass(ProjectCommonException.class);
 
     }

@@ -978,8 +978,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     } else {
       ProjectLogger.log("no call for ES to save user");
     }
-    return;
-
   }
 
   /**

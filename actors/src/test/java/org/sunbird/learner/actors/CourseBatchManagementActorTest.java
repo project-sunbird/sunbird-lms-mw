@@ -139,7 +139,7 @@ public class CourseBatchManagementActorTest {
       TestKit probe = new TestKit(system);
       ActorRef subject = system.actorOf(props);
 
-      subject.tell(new String("Invelid Type"), probe.getRef());
+      subject.tell("Invelid Type", probe.getRef());
       probe.expectMsgClass(ProjectCommonException.class);
   }
   

@@ -89,7 +89,6 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
       metricsRequest.setRequest(request);
       ActorUtil.tell(metricsRequest);
     }
-    return;
   }
 
   @SuppressWarnings("unchecked")

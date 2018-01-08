@@ -55,8 +55,8 @@ public class Application {
      * 
      * actorSystemToStart : reading this value from properties file to start any actor system as remote
      * only one actor system , can run remotely at a time with this change (other actor system should run locally)
-     * if you want to run background actor remotely then change the value of actorSystemToStart to BackGroundRemoteMiddlewareActorSystem
-     * OR if you want to run normal actor remotely then change the value of actorSystemToStart to RemoteMiddlewareActorSystem
+     * if you want to run background actor remotely then change the value of sunbird_actor_system_name to BackGroundRemoteMiddlewareActorSystem
+     * OR if you want to run normal actor remotely then change the value of sunbird_actor_system_name to RemoteMiddlewareActorSystem
      */
     if(!ProjectUtil.isStringNullOREmpty(PropertiesCache.getInstance().getProperty(JsonKey.ACTOR_SERVICE_INSTANCE))){
       actorSystemToStart = PropertiesCache.getInstance().getProperty(JsonKey.ACTOR_SERVICE_INSTANCE);

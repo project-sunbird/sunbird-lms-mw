@@ -590,7 +590,7 @@ public class Util {
       Map<String,Object> roleMap = DataCacheHandler.getRoleMap();
       if(null != roleMap && !roleMap.isEmpty()){
         for (String role : roleList){
-          if(null == roleMap.get(role)){
+          if(null == roleMap.get(role.trim())){
             return role+" is not a valid role.";
           }
         }
@@ -599,13 +599,4 @@ public class Util {
       }
       return JsonKey.SUCCESS;
     }
-
-  public static void main(String[] args) {
-    System.out.println("MAIN STARTED");
-    checkCassandraDbConnections(JsonKey.SUNBIRD);
-    checkCassandraDbConnections(JsonKey.SUNBIRD_PLUGIN);
-    System.out.println("MAIN END");
-  }
-    
-    
 }

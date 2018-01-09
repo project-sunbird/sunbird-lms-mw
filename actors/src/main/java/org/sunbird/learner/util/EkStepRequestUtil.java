@@ -6,7 +6,10 @@ package org.sunbird.learner.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
-
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.json.JSONArray;
@@ -33,10 +36,11 @@ public class EkStepRequestUtil {
 	 * 
 	 * @param params String
 	 * @param headers Map<String, String>
-	 * @return Object[]
+	 * @return Map<String,Object>
 	 */
-	public static Object[] searchContent(String params, Map<String, String> headers) {
+	public static Map<String,Object> searchContent(String params, Map<String, String> headers) {
 		Object[] result = null;
+		Map<String,Object> resMap = new HashMap<>();
 		String response = "";
 		JSONObject data;
 		JSONObject jObject;
@@ -53,13 +57,20 @@ public class EkStepRequestUtil {
 			response = HttpUtil.sendPostRequest(baseSearchUrl+
 					PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_URL), params, headers);
 			jObject = new JSONObject(response);
+			String resmsgId = (String) jObject.getJSONObject("params").get("resmsgid");
+			String apiId = jObject.getString("id");
 			data = jObject.getJSONObject(JsonKey.RESULT);
 			ProjectLogger.log("Total number of content fetched from Ekstep while assembling page data : "+data.get("count"));
 			JSONArray contentArray = data.getJSONArray(JsonKey.CONTENT);
 			result = mapper.readValue(contentArray.toString(), Object[].class);
+			Map<String,Object> param = new HashMap<>();
+			param.put(JsonKey.RES_MSG_ID,resmsgId);
+			param.put(JsonKey.API_ID,apiId);
+			resMap.put(JsonKey.PARAMS, param);
+			resMap.put(JsonKey.CONTENTS, result);
 		} catch (IOException | JSONException e) {
 			ProjectLogger.log(e.getMessage(), e);
 		} 
-		return result;
+		return resMap;
 	}
 }

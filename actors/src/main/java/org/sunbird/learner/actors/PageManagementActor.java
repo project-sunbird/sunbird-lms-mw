@@ -244,7 +244,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 
     Map<String, Object> pageMap = DataCacheHandler.getPageMap().get(orgId + ":" + pageName);
     /**
-     * if requested page for this organisation is not found, return default NTP page
+     * if requested page for this organization is not found, return default NTP page
      */
     if (null == pageMap) {
       pageMap = DataCacheHandler.getPageMap().get("NA" + ":" + pageName);
@@ -478,9 +478,10 @@ public class PageManagementActor extends UntypedAbstractActor {
     }
     ProjectLogger
         .log("search query after applying filter for ekstep for page data assemble api : " + query);
-    Object[] result = EkStepRequestUtil.searchContent(query, headers);
-    if (null != result) {
-      section.put(JsonKey.CONTENTS, result);
+    Map<String,Object> result = EkStepRequestUtil.searchContent(query, headers);
+    if (null != result && !result.isEmpty()) {
+      section.put(JsonKey.CONTENTS, result.get(JsonKey.CONTENTS));
+      section.put(JsonKey.PARAMS, result.get(JsonKey.PARAMS));
     }
   }
 

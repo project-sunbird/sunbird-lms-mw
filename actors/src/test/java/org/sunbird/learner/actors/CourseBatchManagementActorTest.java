@@ -139,7 +139,7 @@ public class CourseBatchManagementActorTest {
       TestKit probe = new TestKit(system);
       ActorRef subject = system.actorOf(props);
 
-      subject.tell("Invelid Type", probe.getRef());
+      subject.tell("Invalid Type", probe.getRef());
       probe.expectMsgClass(ProjectCommonException.class);
   }
   
@@ -148,7 +148,9 @@ public class CourseBatchManagementActorTest {
     PowerMockito.mockStatic(EkStepRequestUtil.class);
     Map<String , Object> ekstepResponse = new HashMap<String , Object>();
     ekstepResponse.put("count" , 10);
-    Object[] ekstepMockResult = {ekstepResponse};
+    Object[] arr = {ekstepResponse};
+    Map<String,Object> ekstepMockResult = new HashMap<>();
+    ekstepMockResult.put(JsonKey.CONTENTS, arr);
     when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
     
     TestKit probe = new TestKit(system);
@@ -182,7 +184,9 @@ public class CourseBatchManagementActorTest {
     PowerMockito.mockStatic(EkStepRequestUtil.class);
     Map<String , Object> ekstepResponse = new HashMap<String , Object>();
     ekstepResponse.put("count" , 10);
-    Object[] ekstepMockResult = {ekstepResponse};
+    Object[] arr = {ekstepResponse};
+    Map<String,Object> ekstepMockResult = new HashMap<>();
+    ekstepMockResult.put(JsonKey.CONTENTS, arr);
     when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
     
     TestKit probe = new TestKit(system);
@@ -216,7 +220,9 @@ public class CourseBatchManagementActorTest {
     PowerMockito.mockStatic(EkStepRequestUtil.class);
     Map<String , Object> ekstepResponse = new HashMap<String , Object>();
     ekstepResponse.put("count" , 10);
-    Object[] ekstepMockResult = {ekstepResponse};
+    Object[] arr = {ekstepResponse};
+    Map<String,Object> ekstepMockResult = new HashMap<>();
+    ekstepMockResult.put(JsonKey.CONTENTS, arr);
     when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
     
     PowerMockito.mockStatic(CourseEnrollmentActor.class);
@@ -292,7 +298,9 @@ public class CourseBatchManagementActorTest {
     PowerMockito.mockStatic(EkStepRequestUtil.class);
     Map<String , Object> ekstepResponse = new HashMap<String , Object>();
     ekstepResponse.put("count" , 10);
-    Object[] ekstepMockResult = {ekstepResponse};
+    Object[] arr = {ekstepResponse};
+    Map<String,Object> ekstepMockResult = new HashMap<>();
+    ekstepMockResult.put(JsonKey.CONTENTS, arr);
     when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
     
     TestKit probe = new TestKit(system);
@@ -322,7 +330,9 @@ public class CourseBatchManagementActorTest {
     PowerMockito.mockStatic(EkStepRequestUtil.class);
     Map<String , Object> ekstepResponse = new HashMap<String , Object>();
     ekstepResponse.put("count" , 10);
-    Object[] ekstepMockResult = {ekstepResponse};
+    Object[] arr = {ekstepResponse};
+    Map<String,Object> ekstepMockResult = new HashMap<>();
+    ekstepMockResult.put(JsonKey.CONTENTS, arr);
     when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
     
     TestKit probe = new TestKit(system);
@@ -575,7 +585,9 @@ public class CourseBatchManagementActorTest {
     PowerMockito.mockStatic(EkStepRequestUtil.class);
     Map<String , Object> ekstepResponse = new HashMap<String , Object>();
     ekstepResponse.put("count" , 10);
-    Object[] ekstepMockResult = {ekstepResponse};
+    Object[] arr = {ekstepResponse};
+    Map<String,Object> ekstepMockResult = new HashMap<>();
+    ekstepMockResult.put(JsonKey.CONTENTS, arr);
     when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
     
     TestKit probe = new TestKit(system);

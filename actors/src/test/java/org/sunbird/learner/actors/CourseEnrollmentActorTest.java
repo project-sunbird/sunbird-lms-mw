@@ -107,7 +107,9 @@ public class CourseEnrollmentActorTest {
     PowerMockito.mockStatic(EkStepRequestUtil.class);
     Map<String , Object> ekstepResponse = new HashMap<String , Object>();
     ekstepResponse.put("count" , 10);
-    Object[] ekstepMockResult = {ekstepResponse};
+    Object[] arr = {ekstepResponse};
+    Map<String,Object> ekstepMockResult = new HashMap<>();
+    ekstepMockResult.put(JsonKey.CONTENTS, arr);
     when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
 
 
@@ -143,7 +145,9 @@ public class CourseEnrollmentActorTest {
 
     PowerMockito.mockStatic(EkStepRequestUtil.class);
 
-    Object[] ekstepMockResult = {};
+    Object[] arr = {};
+    Map<String,Object> ekstepMockResult = new HashMap<>();
+    ekstepMockResult.put(JsonKey.CONTENTS, arr);
     when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
 
     Request reqObj = new Request();

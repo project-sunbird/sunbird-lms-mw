@@ -3,7 +3,6 @@ package org.sunbird.learner.actors;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
-import akka.testkit.TestActorRef;
 import akka.testkit.javadsl.TestKit;
 import java.math.BigInteger;
 import java.util.ArrayList;

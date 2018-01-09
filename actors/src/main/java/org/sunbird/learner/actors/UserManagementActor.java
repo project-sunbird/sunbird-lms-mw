@@ -932,7 +932,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       resposne = cassandraOperation.getRecordsByProperty(userDbInfo.getKeySpace(),
           userDbInfo.getTableName(), JsonKey.PHONE, encryptionService.encryptData(phone));
     } catch (Exception e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(), e);
     }
     return resposne;
   }

@@ -95,9 +95,9 @@ public class EsSyncActor extends UntypedAbstractActor {
     List<Map<String, Object>> result = new ArrayList<>();
     Map<String, Object> dataMap = (Map<String, Object>) req.get(JsonKey.DATA);
     String objectType = (String) dataMap.get(JsonKey.OBJECT_TYPE);
-    List<String> objectIds = null;
+    List<Object> objectIds = null;
     if (dataMap.containsKey(JsonKey.OBJECT_IDS) && null != dataMap.get(JsonKey.OBJECT_IDS)) {
-      objectIds = (List<String>) dataMap.get(JsonKey.OBJECT_IDS);
+      objectIds = (List<Object>) dataMap.get(JsonKey.OBJECT_IDS);
     }
     Util.DbInfo dbInfo = getDbInfoObj(objectType);
     if (null == dbInfo) {

@@ -84,9 +84,9 @@ public class KeyCloakSyncActor extends UntypedAbstractActor {
     Map<String, Object> responseMap = new HashMap<>();
     List<Map<String, Object>> reponseList = null;
     Map<String, Object> dataMap = (Map<String, Object>) req.get(JsonKey.DATA);
-    List<String> userIds = null;
+    List<Object> userIds = null;
     if (dataMap.containsKey(JsonKey.OBJECT_IDS) && null != dataMap.get(JsonKey.OBJECT_IDS)) {
-      userIds = (List<String>) dataMap.get(JsonKey.OBJECT_IDS);
+      userIds = (List<Object>) dataMap.get(JsonKey.OBJECT_IDS);
     }
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     

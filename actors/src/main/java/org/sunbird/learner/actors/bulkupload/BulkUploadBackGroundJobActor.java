@@ -206,7 +206,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           Map<String, Object> usrOrgDetail = userOrgResult.get(i);
           if (createdFor.contains((String) usrOrgDetail.get(JsonKey.ORGANISATION_ID))) {
             participants.put(userId,
-                addUserCourses(batchId, (String) courseBatchObject.get(JsonKey.COURSE_ID), null,
+                addUserCourses(batchId, (String) courseBatchObject.get(JsonKey.COURSE_ID),
                     userId,
                     (Map<String, String>) (courseBatchObject.get(JsonKey.COURSE_ADDITIONAL_INFO))));
             flag = true;
@@ -247,7 +247,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
   }
 
-  private Boolean addUserCourses(String batchId, String courseId, String updatedBy, String userId,
+  private Boolean addUserCourses(String batchId, String courseId, String userId,
       Map<String, String> additionalCourseInfo) {
 
     Util.DbInfo courseEnrollmentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);

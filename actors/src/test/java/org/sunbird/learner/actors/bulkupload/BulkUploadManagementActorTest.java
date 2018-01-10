@@ -303,7 +303,6 @@ public class BulkUploadManagementActorTest {
         map = (Map<String, Object>) list1[0];
 
         orgId = (String)map.get(JsonKey.ID);
-        System.out.println("ORG ID "+orgId);
 
       }
     }

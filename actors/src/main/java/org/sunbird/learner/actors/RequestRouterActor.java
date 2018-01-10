@@ -476,7 +476,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     if ("local"
         .equalsIgnoreCase(PropertiesCache.getInstance().getProperty("api_actor_provider"))) {
       con = ConfigFactory.load().getConfig(ACTOR_CONFIG_NAME);
-      system = akka.actor.ActorSystem.create(REMOTE_ACTOR_SYSTEM_NAME, con);
+      system = ActorSystem.create(REMOTE_ACTOR_SYSTEM_NAME, con);
     }else{
       system = RequestRouterActor.getSystem();
     }

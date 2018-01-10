@@ -84,7 +84,7 @@ public class SkillmanagementActorTest {
     actorMessage.setOperation(ActorOperations.ADD_SKILL.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res= probe.expectMsgClass(duration("100 second"),Response.class);
+    probe.expectMsgClass(duration("100 second"),Response.class);
 
   }
 
@@ -101,7 +101,7 @@ public class SkillmanagementActorTest {
     actorMessage.setOperation(ActorOperations.ADD_SKILL.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res= probe.expectMsgClass(duration("100 second"),Response.class);
+    probe.expectMsgClass(duration("100 second"),Response.class);
 
   }
 
@@ -118,7 +118,7 @@ public class SkillmanagementActorTest {
     actorMessage.setOperation(ActorOperations.ADD_SKILL.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
+    probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
 
   }
 

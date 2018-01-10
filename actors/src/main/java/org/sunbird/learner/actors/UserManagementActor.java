@@ -2697,8 +2697,6 @@ public class UserManagementActor extends UntypedAbstractActor {
       ProjectLogger.log("Exception Occured during saving user to Es while joinUserOrganisation : ",
           ex);
     }
-
-    return;
   }
 
 

@@ -202,7 +202,7 @@ public class OrganisationManagementActorTest {
 
       reqObj.setRequest(innerMap);
       subject.tell(reqObj, probe.getRef());
-      ProjectCommonException resp = probe.expectMsgClass(duration("200 second"),ProjectCommonException.class);
+      probe.expectMsgClass(duration("200 second"),ProjectCommonException.class);
       /*orgId = (String) resp.getResult().get(JsonKey.ORGANISATION_ID);
       System.out.println("orgId with dpl hashtag id : "+orgId);*/
       try {
@@ -231,7 +231,7 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ROLES, roles);
 
     subject.tell(reqObj, probe.getRef());
-    Response resp = probe.expectMsgClass(duration("200 second"),Response.class);
+    probe.expectMsgClass(duration("200 second"),Response.class);
   }
 
   @Test

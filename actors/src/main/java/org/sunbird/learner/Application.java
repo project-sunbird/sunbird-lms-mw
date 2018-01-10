@@ -32,7 +32,7 @@ public class Application {
   private static final String BKG_LOCAL_ACTOR_SYSTEM_NAME = "BackGroundLocalMiddlewareActorSystem";
   private static final String BKG_REMOTE_ACTOR_SYSTEM_NAME =
       "BackGroundRemoteMiddlewareActorSystem";
-  static PropertiesCache cache = PropertiesCache.getInstance();
+  private static PropertiesCache cache = PropertiesCache.getInstance();
 
   public static void main(String[] args) {
     /*

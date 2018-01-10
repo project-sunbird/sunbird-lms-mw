@@ -5,7 +5,6 @@ import static akka.testkit.JavaTestKit.duration;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
-import akka.testkit.TestActorRef;
 import akka.testkit.javadsl.TestKit;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -30,22 +29,20 @@ import org.sunbird.learner.util.Util;
  */
 public class LearnerStateActorTest {
 
-    static ActorSystem system;
-    final static Props props = Props.create(LearnerStateActor.class);
-    static TestActorRef<LearnerStateActor> ref;
+    private static ActorSystem system;
+    private static final Props props = Props.create(LearnerStateActor.class);
     private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     private static Util.DbInfo contentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
     private static Util.DbInfo coursedbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
-    static String userId = "user121gama";
-    static String courseId = "alpha01crs12";
-    static String batchId ="115";
+    private static String userId = "user121gama";
+    private static String courseId = "alpha01crs12";
+    private static String batchId ="115";
     private static final String contentId = "cont3544TeBuk";
 
     @BeforeClass
     public static void setUp() {
         system = ActorSystem.create("system");
         Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-        ref = TestActorRef.create(system, props, "testActor");
         insertCourse();
         insertContent();
     }

@@ -14,7 +14,7 @@ import org.sunbird.learner.util.actorutility.impl.RemoteActorSystem;
 
 public class ActorSystemTest {
   
-  static String provider = null;
+  private static String provider = null;
       
   @BeforeClass
   public static void setUp() {

@@ -27,8 +27,8 @@ import org.sunbird.learner.util.Util;
 public class BackgroundServiceActorTest {
 
   
-  static ActorSystem system;
-  final static Props props = Props.create(BackGroundServiceActor.class);
+  private static ActorSystem system;
+  private static final Props props = Props.create(BackGroundServiceActor.class);
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private static final String locnId = "hhjcjrdf4scdv56vf79fw4p89";

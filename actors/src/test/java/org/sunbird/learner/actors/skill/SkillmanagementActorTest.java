@@ -5,7 +5,6 @@ import static akka.testkit.JavaTestKit.duration;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
-import akka.testkit.TestActorRef;
 import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,7 +26,6 @@ import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.LearnerStateActor;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -36,9 +34,8 @@ import org.sunbird.learner.util.Util;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class SkillmanagementActorTest {
 
-  static ActorSystem system;
-  final static Props props = Props.create(SkillmanagementActor.class);
-  static TestActorRef<LearnerStateActor> ref;
+  private static ActorSystem system;
+  private static final Props props = Props.create(SkillmanagementActor.class);
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
   private static Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
@@ -51,7 +48,6 @@ public class SkillmanagementActorTest {
   @BeforeClass
   public static void setUp(){
     system = ActorSystem.create("system");
-
     skillsList.add("Java");
     Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
     insertUserDataInCassandraAndEs();

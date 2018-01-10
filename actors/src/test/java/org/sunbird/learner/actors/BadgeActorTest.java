@@ -20,7 +20,6 @@ public class BadgeActorTest {
 
   static ActorSystem system;
   final static Props props = Props.create(BadgesActor.class);
-  String courseId = "";
 
   @BeforeClass
   public static void setUp() {

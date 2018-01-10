@@ -27,9 +27,9 @@ import org.sunbird.learner.util.Util;
  *
  */
 public class CourseSearchActorTest {
-    static ActorSystem system;
-    final static Props props = Props.create(CourseSearchActor.class);
-    String courseId = "";
+    private static ActorSystem system;
+    private final static Props props = Props.create(CourseSearchActor.class);
+    private String courseId = "";
 
     @BeforeClass
     public static void setUp() {

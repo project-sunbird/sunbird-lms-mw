@@ -16,9 +16,8 @@ import org.sunbird.learner.util.Util;
 
 public class EmailServiceActorTest {
 
-  static ActorSystem system;
-  final static Props props = Props.create(EmailServiceActor.class);
-  String courseId = "";
+  private static ActorSystem system;
+  private final static Props props = Props.create(EmailServiceActor.class);
 
   @BeforeClass
   public static void setUp() {

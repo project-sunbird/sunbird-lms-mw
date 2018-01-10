@@ -4,6 +4,7 @@ import akka.actor.UntypedAbstractActor;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -32,9 +33,8 @@ import org.sunbird.learner.util.Util;
  */
 public class MetricsBackGroundJobActor extends UntypedAbstractActor {
 
-  Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
+  private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static FileUtil fileUtil;
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -167,7 +167,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
     }
     Map<String, Object> reportDbInfo = responseList.get(0);
     String fileFormat = (String) reportDbInfo.get(JsonKey.FORMAT);
-    fileUtil = FileUtil.getFileUtil(fileFormat);
+    FileUtil fileUtil = FileUtil.getFileUtil(fileFormat);
 
     Map<String, Object> dbReqMap = new HashMap<>();
     dbReqMap.put(JsonKey.ID, requestId);
@@ -249,7 +249,7 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
 
     return SendMail.sendMail(new String[] {(String) reportDbInfo.get(JsonKey.EMAIL)},
         reportDbInfo.get(JsonKey.TYPE) + " for " + reportDbInfo.get(JsonKey.RESOURCE_ID), context,
-        ProjectUtil.getTemplate(new HashMap()));
+        ProjectUtil.getTemplate(Collections.emptyMap()));
   }
 
   private String processFileUpload(File file, String container) throws IOException {

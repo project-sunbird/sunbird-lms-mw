@@ -37,7 +37,7 @@ public class SkillmanagementActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
   private Util.DbInfo skillsListDbInfo = Util.dbInfoMap.get(JsonKey.SKILLS_LIST_DB);
-  Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+  private Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private static final String REF_SKILLS_DB_ID = "001";
 
   @Override

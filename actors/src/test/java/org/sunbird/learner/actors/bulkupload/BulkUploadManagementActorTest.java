@@ -43,9 +43,9 @@ import org.sunbird.services.sso.SSOServiceFactory;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class BulkUploadManagementActorTest {
 
-  static ActorSystem system;
-  static CassandraOperation operation = ServiceFactory.getInstance();
-  final static Props props = Props.create(BulkUploadManagementActor.class);
+  private static ActorSystem system;
+  private static CassandraOperation operation = ServiceFactory.getInstance();
+  private static final Props props = Props.create(BulkUploadManagementActor.class);
   private static Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private static final String USER_ID = "bcic783gfu239";
   private static  String orgUploadProcessId = null;
@@ -56,7 +56,7 @@ public class BulkUploadManagementActorTest {
   private static String orgId;
   private static String orgId1;
   private static String userId;
-  static Util.DbInfo orgDB = Util.dbInfoMap.get(JsonKey.ORG_DB);
+  private static Util.DbInfo orgDB = Util.dbInfoMap.get(JsonKey.ORG_DB);
   private static Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
   private static final String refOrgId = "id34fy";
   private static final String batchId = "batch78575ir8478";

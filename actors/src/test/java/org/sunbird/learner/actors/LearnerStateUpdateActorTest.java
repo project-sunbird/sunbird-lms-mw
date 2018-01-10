@@ -35,10 +35,10 @@ import org.sunbird.learner.util.Util;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class LearnerStateUpdateActorTest {
 
-    static ActorSystem system;
-    final static Props props = Props.create(LearnerStateUpdateActor.class);
-    static String userId = "user121gama";
-    static String courseId = "alpha01crs";
+    private static ActorSystem system;
+    private static final Props props = Props.create(LearnerStateUpdateActor.class);
+    private static String userId = "user121gama";
+    private static String courseId = "alpha01crs";
     private static final String contentId = "cont3544TeBukGame";
     private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     private static Util.DbInfo contentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);

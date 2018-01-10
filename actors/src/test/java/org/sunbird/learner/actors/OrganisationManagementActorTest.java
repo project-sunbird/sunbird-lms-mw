@@ -41,30 +41,30 @@ import org.sunbird.learner.util.Util;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class OrganisationManagementActorTest {
 
-    static ActorSystem system;
-    static CassandraOperation operation = ServiceFactory.getInstance();
-    final static Props props = Props.create(OrganisationManagementActor.class);
-    final static Props propsUser = Props.create(UserManagementActor.class);
-    static Util.DbInfo orgTypeDbInfo = null;
-    static Util.DbInfo userManagementDB = null;
-    static Util.DbInfo addressDB = null;
-    static Util.DbInfo orgDB = null;
-    static Util.DbInfo locationDB = null;
-    private static String orgTypeId1 = "";
-    private static String orgTypeId2 = "";
-    public static String orgId = "";
-    public static String addressId = "";
-    public static String usrId = "123";//TODO:change while committing
-    public static String OrgIDWithoutSourceAndExternalId = "";
-    public static String OrgIdWithSourceAndExternalId = "";
-    public final static String source = "Test";
-    public final static String externalId = "test123";
-    public static final String HASH_TAG_ID = "hashTag011";
-    public static final String LOCATION_ID = "icu9289w";
-    public static final String EXTERNAL_ID = "ex00001lvervk";
-    public static final String PROVIDER = "pr00001kfej";
-    public static final String CHANNEL = "hjryr9349";
-    public static final String parentOrgId = "778euffnvrj";
+  private static ActorSystem system;
+  private static CassandraOperation operation = ServiceFactory.getInstance();
+  private static final Props props = Props.create(OrganisationManagementActor.class);
+  private static final Props propsUser = Props.create(UserManagementActor.class);
+  private static Util.DbInfo orgTypeDbInfo = null;
+  //private static Util.DbInfo userManagementDB = null;
+  private static Util.DbInfo addressDB = null;
+  private static Util.DbInfo orgDB = null;
+  private static Util.DbInfo locationDB = null;
+  private static String orgTypeId1 = "";
+  private static String orgTypeId2 = "";
+  private static String orgId = "";
+  private static String addressId = "";
+  private static String usrId = "123";//TODO:change while committing
+  private static String OrgIDWithoutSourceAndExternalId = "";
+  private static String OrgIdWithSourceAndExternalId = "";
+  private static final String source = "Test";
+  private static final String externalId = "test123";
+  private static final String HASH_TAG_ID = "hashTag011";
+  private static final String LOCATION_ID = "icu9289w";
+  private static final String EXTERNAL_ID = "ex00001lvervk";
+  private static final String PROVIDER = "pr00001kfej";
+  private static final String CHANNEL = "hjryr9349";
+  private static final String parentOrgId = "778euffnvrj";
   private static final String USER_ID = "vcurc633r89";
   private static Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private static Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
@@ -75,7 +75,7 @@ public class OrganisationManagementActorTest {
         Application.startLocalActorSystem();
         system = ActorSystem.create("system");
         Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-        userManagementDB = Util.dbInfoMap.get(JsonKey.USER_DB);
+       // userManagementDB = Util.dbInfoMap.get(JsonKey.USER_DB);
         addressDB = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
         orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
         orgDB = Util.dbInfoMap.get(JsonKey.ORG_DB);

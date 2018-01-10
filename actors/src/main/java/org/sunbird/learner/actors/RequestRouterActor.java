@@ -61,20 +61,6 @@ import scala.concurrent.duration.Duration;
 public class RequestRouterActor extends UntypedAbstractActor {
 
   private static ActorSystem system = null;
-  /**
-   * @return the system
-   */
-  public static ActorSystem getSystem() {
-    return system;
-  }
-
-  /**
-   * @param system the system to set
-   */
-  public static void setSystem(ActorSystem system) {
-    RequestRouterActor.system = system;
-  }
-
   private static ActorSelection selection = null;
   private static final String ACTOR_CONFIG_NAME = "RemoteMWConfig";
   private static final String REMOTE_ACTOR_SYSTEM_NAME = "RemoteMiddlewareActorSystem";
@@ -113,7 +99,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ExecutionContext ec;
 
 
-  public static Map<String, ActorRef> routerMap = new HashMap<>();
+  public static final Map<String, ActorRef> routerMap = new HashMap<>();
   private static final int WAIT_TIME_VALUE = 9;
   private static final String COURSE_ENROLLMENT_ROUTER = "courseEnrollmentRouter";
   private static final String LEARNER_ACTOR_ROUTER = "learnerActorRouter";
@@ -147,7 +133,19 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private static final String APPLICATION_CONFIG_ACTOR = "applicationConfigActor";
   private static final String DBOPERATION_ACTOR = "dbOperationActor";
 
+  /**
+   * @return the system
+   */
+  public static ActorSystem getSystem() {
+    return system;
+  }
 
+  /**
+   * @param system the system to set
+   */
+  public static void setSystem(ActorSystem system) {
+    RequestRouterActor.system = system;
+  }
 
   /**
    * constructor to initialize router actor with child actor pool

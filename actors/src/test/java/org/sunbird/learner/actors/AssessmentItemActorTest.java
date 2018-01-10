@@ -21,8 +21,8 @@ import org.sunbird.learner.util.Util;
 
 public class AssessmentItemActorTest {
 
-    static ActorSystem system;
-    final static  Props props = Props.create(AssessmentItemActor.class);
+    private static ActorSystem system;
+    private static final Props props = Props.create(AssessmentItemActor.class);
 
     @BeforeClass
     public static void setUp() {

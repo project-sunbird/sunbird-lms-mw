@@ -1,8 +1,6 @@
 package org.sunbird.common.quartz.scheduler;
 
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.text.ParseException;
@@ -33,7 +31,7 @@ import org.sunbird.learner.util.Util;
 public class MetricsReportJob implements Job {
 
 
-  Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
+  private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private int time = -30;
 
@@ -80,15 +78,9 @@ public class MetricsReportJob implements Job {
             backGroundRequest.setRequest(innerMap);
             ActorUtil.tell(backGroundRequest);
           }
-        } catch (ParseException e) {
+        } catch (ParseException | IOException e) {
           ProjectLogger.log(e.getMessage(), e);
-        } catch (JsonParseException e) {
-          ProjectLogger.log(e.getMessage(), e);
-        } catch (JsonMappingException e) {
-          ProjectLogger.log(e.getMessage(), e);
-        } catch (IOException e) {
-          ProjectLogger.log(e.getMessage(), e);
-        }
+        } 
       }
     }
 

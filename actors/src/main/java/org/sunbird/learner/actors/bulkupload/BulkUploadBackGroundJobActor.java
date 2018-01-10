@@ -55,7 +55,7 @@ import org.sunbird.services.sso.SSOServiceFactory;
 public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
   private String processId = "";
-  Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
+  private Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
   private EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
           .getEncryptionServiceInstance(null);

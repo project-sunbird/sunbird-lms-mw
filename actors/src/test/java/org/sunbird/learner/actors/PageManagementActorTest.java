@@ -22,7 +22,6 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
@@ -34,17 +33,16 @@ import org.sunbird.learner.util.Util;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class PageManagementActorTest {
 
-    static ActorSystem system;
-    static CassandraOperation operation= ServiceFactory.getInstance();
-    static PropertiesCache cach = PropertiesCache.getInstance();
-    final static Props props = Props.create(PageManagementActor.class);
-    static Util.DbInfo pageMgmntDbInfo = null;
-    static Util.DbInfo pageSectionDbInfo = null;
-    static String sectionId = null;
-    static String sectionId2 = null;
-    static String pageId = null;
-    static String pageIdWithOrg = null;
-    static String pageIdWithOrg2 = null;
+    private static ActorSystem system;
+    private static CassandraOperation operation= ServiceFactory.getInstance();
+    private static final Props props = Props.create(PageManagementActor.class);
+    private static Util.DbInfo pageMgmntDbInfo = null;
+    private static Util.DbInfo pageSectionDbInfo = null;
+    private static String sectionId = null;
+    private static String sectionId2 = null;
+    private static String pageId = null;
+    private static String pageIdWithOrg = null;
+    private static String pageIdWithOrg2 = null;
     
     @BeforeClass
     public static void setUp() {

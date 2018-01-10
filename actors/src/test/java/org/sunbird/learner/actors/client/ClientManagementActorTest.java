@@ -2,10 +2,13 @@ package org.sunbird.learner.actors.client;
 
 import static akka.testkit.JavaTestKit.duration;
 
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.testkit.javadsl.TestKit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -21,28 +24,19 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.NotesManagementActor;
 import org.sunbird.learner.util.Util;
-
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.testkit.TestActorRef;
-import akka.testkit.javadsl.TestKit;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class ClientManagementActorTest {
   
-  static ActorSystem system;
-  final static Props props = Props.create(ClientManagementActor.class);
-  static TestActorRef<NotesManagementActor> ref;
+  private static ActorSystem system;
+  private static final Props props = Props.create(ClientManagementActor.class);
   private static String masterKey = "";
   private static String clientId = "";
  
   @BeforeClass
   public static void setUp() {
     system = ActorSystem.create("system");
-    ref = TestActorRef.create(system, props, "testActor");
     Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
   }
   

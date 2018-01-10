@@ -33,7 +33,6 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.EkStepRequestUtil;
@@ -51,12 +50,11 @@ import org.sunbird.learner.util.Util;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class CourseBatchManagementActorTest {
   
-  static ActorSystem system;
-  static CassandraOperation operation= ServiceFactory.getInstance();
-  static PropertiesCache cach = PropertiesCache.getInstance();
-  final static Props props = Props.create(CourseBatchManagementActor.class);
-  static Util.DbInfo batchDbInfo = null;
-  static Util.DbInfo userOrgdbInfo = null;
+  private static ActorSystem system;
+  private static CassandraOperation operation= ServiceFactory.getInstance();
+  private static final Props props = Props.create(CourseBatchManagementActor.class);
+  private static Util.DbInfo batchDbInfo = null;
+  private static Util.DbInfo userOrgdbInfo = null;
   private String courseId = "do_212282810555342848180";
   private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
   private static String batchId = "";

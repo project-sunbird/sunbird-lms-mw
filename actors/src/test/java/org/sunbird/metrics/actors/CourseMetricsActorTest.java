@@ -5,7 +5,6 @@ import static akka.testkit.JavaTestKit.duration;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
-import akka.testkit.TestActorRef;
 import akka.testkit.javadsl.TestKit;
 import java.util.HashMap;
 import java.util.List;
@@ -28,19 +27,16 @@ import org.sunbird.learner.util.Util;
  */
 public class CourseMetricsActorTest {
 
-  static ActorSystem system;
-  final static Props props = Props.create(CourseMetricsActor.class);
-  static TestActorRef<CourseMetricsActor> ref;
-  static String userId = "dnk298voopir80249";
-  static String courseId = "mclr309f39";
-  static String batchId ="jkwf6t3r083fp4h";
-  static final String orgId = "vdckcyigc68569";
+  private static ActorSystem system;
+  private static final Props props = Props.create(CourseMetricsActor.class);
+  private static String userId = "dnk298voopir80249";
+  private static String batchId ="jkwf6t3r083fp4h";
+  private static final String orgId = "vdckcyigc68569";
 
   @BeforeClass
   public static void setUp() {
     system = ActorSystem.create("system");
     Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-    ref = TestActorRef.create(system, props, "testActor");
     insertBatchDataToES();
     insertOrgDataToES();
     insertUserCoursesDataToES();

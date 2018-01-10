@@ -177,7 +177,6 @@ public class CourseBatchManagementActorTest {
     subject.tell(reqObj, probe.getRef());
     Response response = probe.expectMsgClass(duration("1000 second"),Response.class);
     batchId = (String) response.getResult().get(JsonKey.BATCH_ID);
-    System.out.println("batchId1 : "+batchId);
   }
   
   public void testA2CreateBatch(){
@@ -213,7 +212,6 @@ public class CourseBatchManagementActorTest {
     subject.tell(reqObj, probe.getRef());
     Response response = probe.expectMsgClass(duration("1000 second"),Response.class);
     batchId2 = (String) response.getResult().get(JsonKey.BATCH_ID);
-    System.out.println("batchId2 : "+batchId2);
   }
   
   public void testA1CreateBatchWithInvalidCorsId(){
@@ -424,7 +422,7 @@ public class CourseBatchManagementActorTest {
      innerMap.put(JsonKey.USERIDS ,userids );
      reqObj.getRequest().put(JsonKey.BATCH, innerMap);
      subject.tell(reqObj, probe.getRef());
-     Response response = probe.expectMsgClass(duration("1000 second"),Response.class);
+     probe.expectMsgClass(duration("1000 second"),Response.class);
    }
   
   public void testD2addUserToBatchWithInvalidBatchId(){
@@ -460,7 +458,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.MENTORS, mentors);
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    Response response = probe.expectMsgClass(duration("1000 second"),Response.class);
+    probe.expectMsgClass(duration("1000 second"),Response.class);
   }
   
   public void testE2UpdateBatchWithExistingHashTagId(){

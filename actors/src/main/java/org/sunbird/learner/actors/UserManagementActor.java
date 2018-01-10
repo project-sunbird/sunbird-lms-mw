@@ -128,7 +128,7 @@ public class UserManagementActor extends UntypedAbstractActor {
           updateUserLoginTime(actorMessage);
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.GET_MEDIA_TYPES.getValue())) {
-          getMediaTypes(actorMessage);
+          getMediaTypes();
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.FORGOT_PASSWORD.getValue())) {
           forgotPassword(actorMessage);
@@ -2813,7 +2813,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     return responseList;
   }
 
-  private void getMediaTypes(Request actorMessage) {
+  private void getMediaTypes() {
     Response response = SocialMediaType.getMediaTypeFromDB();
     sender().tell(response, self());
   }

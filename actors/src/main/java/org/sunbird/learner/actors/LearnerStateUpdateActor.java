@@ -25,7 +25,6 @@ import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -36,7 +35,7 @@ import org.sunbird.learner.util.Util;
  */
 public class LearnerStateUpdateActor extends UntypedAbstractActor {
 
-  private final String CONTENT_STATE_INFO = "contentStateInfo";
+  private static final String CONTENT_STATE_INFO = "contentStateInfo";
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ActorRef utilityActorRef = context().actorOf(Props.create(UtilityActor.class) , "utilityActor");
@@ -61,10 +60,10 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
           List<Map<String, Object>> requestedcontentList =
               (List<Map<String, Object>>) actorMessage.getRequest().get(JsonKey.CONTENTS);
           CopyOnWriteArrayList<Map<String, Object>> contentList =
-              new CopyOnWriteArrayList<Map<String, Object>>(requestedcontentList);
+              new CopyOnWriteArrayList<>(requestedcontentList);
           actorMessage.getRequest().put(JsonKey.CONTENTS, contentList);
           // map to hold the status of requested state of contents
-          Map<String, Integer> contentStatusHolder = new HashMap<String, Integer>();
+          Map<String, Integer> contentStatusHolder = new HashMap<>();
 
           if (!(contentList.isEmpty())) {
             for (Map<String, Object> map : contentList) {
@@ -111,8 +110,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
           }
           sender().tell(response, self());
           // call to update the corresponding course
-          //actorMessage.setOperation(this.CONTENT_STATE_INFO);
-          actorMessage.getRequest().put(this.CONTENT_STATE_INFO, contentStatusHolder);
+          actorMessage.getRequest().put(CONTENT_STATE_INFO, contentStatusHolder);
           //ActorUtil.tell(actorMessage);
           utilityActorRef.tell(actorMessage ,  ActorRef.noSender());
         } else {
@@ -155,7 +153,6 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
         endDate = format.parse(end);
       }
     } catch (ParseException e) {
-      e.printStackTrace();
       ProjectLogger.log("Date parse exception while parsing batch start and end date", e);
       return false;
     }
@@ -300,7 +297,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
     try {
       date = formatter.parse((String) obj);
     } catch (ParseException ex) {
-      ex.printStackTrace();
+      ProjectLogger.log(ex.getMessage(), ex);
       throw new ProjectCommonException(ResponseCode.invalidDateFormat.getErrorCode(),
           ResponseCode.invalidDateFormat.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());

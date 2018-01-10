@@ -44,7 +44,7 @@ public class BadgesActor extends UntypedAbstractActor {
         Request actorMessage = (Request) message;
         if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.GET_ALL_BADGE.getValue())) {
-          getBadges(actorMessage);
+          getBadges();
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.ADD_USER_BADGE.getValue())) {
           saveUserBadges(actorMessage);
@@ -52,12 +52,12 @@ public class BadgesActor extends UntypedAbstractActor {
             .equalsIgnoreCase(ActorOperations.HEALTH_CHECK.getValue())) {
           checkAllComponentHealth();
         } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ACTOR.getValue())) {
-          actorhealthCheck(actorMessage);
+          actorhealthCheck();
         } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ES.getValue())) {
-          esHealthCheck(actorMessage);
+          esHealthCheck();
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.CASSANDRA.getValue())) {
-          cassandraHealthCheck(actorMessage);
+          cassandraHealthCheck();
         }
 
         else {
@@ -87,7 +87,7 @@ public class BadgesActor extends UntypedAbstractActor {
   /**
    * @param actorMessage
    */
-  private void cassandraHealthCheck(Request actorMessage) {
+  private void cassandraHealthCheck() {
     Map<String, Object> finalResponseMap = new HashMap<>();
     List<Map<String, Object>> responseList = new ArrayList<>();
     boolean isallHealthy = false;
@@ -115,7 +115,7 @@ public class BadgesActor extends UntypedAbstractActor {
   /**
    * @param actorMessage
    */
-  private void esHealthCheck(Request actorMessage) {
+  private void esHealthCheck() {
     // check the elastic search
     boolean isallHealthy = true;
     Map<String, Object> finalResponseMap = new HashMap<>();
@@ -144,7 +144,7 @@ public class BadgesActor extends UntypedAbstractActor {
   /**
    * @param actorMessage
    */
-  private void actorhealthCheck(Request actorMessage) {
+  private void actorhealthCheck() {
     Map<String, Object> finalResponseMap = new HashMap<>();
     List<Map<String, Object>> responseList = new ArrayList<>();
     responseList.add(ProjectUtil.createCheckResponse(JsonKey.LEARNER_SERVICE, false, null));
@@ -291,8 +291,7 @@ public class BadgesActor extends UntypedAbstractActor {
   }
 
 
-  @SuppressWarnings("unchecked")
-  private void getBadges(Request actorMessage) {
+  private void getBadges() {
     try {
       Response response =
           cassandraOperation.getAllRecords(badgesDbInfo.getKeySpace(), badgesDbInfo.getTableName());

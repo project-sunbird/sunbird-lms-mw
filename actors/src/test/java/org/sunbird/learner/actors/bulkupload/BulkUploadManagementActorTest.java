@@ -53,7 +53,6 @@ public class BulkUploadManagementActorTest {
   private static  String orgUploadProcessId1 = null;
   private static  String orgUploadProcessId2 = null;
   private static  String userUploadProcessId1 = null;
-  private static  String batchUploadProcessId = null;
   private static String orgId;
   private static String orgId1;
   private static String userId;
@@ -521,9 +520,7 @@ public class BulkUploadManagementActorTest {
     if(battchProcessFlag){
 
       subject.tell(reqObj, probe.getRef());
-      Response res =  probe.expectMsgClass(duration("3000 second"),Response.class);
-      batchUploadProcessId = (String)res.get(JsonKey.PROCESS_ID);
-
+     probe.expectMsgClass(duration("3000 second"),Response.class);
     }
   }
 

@@ -15,7 +15,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-import org.json.simple.parser.JSONParser;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -64,8 +63,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   private List<String> locnIdList = new ArrayList<>();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
-  private final String SUNBIRD_WEB_URL = "sunbird_web_url";
-  private final String SUNBIRD_APP_URL = "sunbird_app_url";
+  private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
+  private static final String SUNBIRD_APP_URL = "sunbird_app_url";
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -435,7 +434,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
       contactDetails = (String) concurrentHashMap.get(JsonKey.CONTACT_DETAILS);
       contactDetails = contactDetails.replaceAll("'", "\"");
-      JSONParser parser = new JSONParser();
       try {
         ObjectMapper mapper = new ObjectMapper();
         orgContactList = mapper.readValue(contactDetails, Object[].class);

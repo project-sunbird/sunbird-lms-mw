@@ -81,7 +81,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           removeMemberOrganisation(actorMessage);
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.GET_ORG_TYPE_LIST.getValue())) {
-          getOrgTypeList(actorMessage);
+          getOrgTypeList();
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.CREATE_ORG_TYPE.getValue())) {
           createOrgType(actorMessage);
@@ -192,7 +192,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
   }
 
-  private void getOrgTypeList(Request actorMessage) {
+  private void getOrgTypeList() {
     ProjectLogger.log("getOrgTypeList method call start");
     try {
       Util.DbInfo orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);

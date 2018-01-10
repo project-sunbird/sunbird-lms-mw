@@ -48,8 +48,7 @@ public class ApplicationConfigActorTest {
     innerMap.put(JsonKey.EMAIL_UNIQUE, dbEmailUniqueValue);
     reqObj.getRequest().put(JsonKey.DATA, innerMap);
     subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("200 second"),Response.class);
-    System.out.println("asd");
+    probe.expectMsgClass(duration("200 second"),Response.class);
   }
 
   @Test

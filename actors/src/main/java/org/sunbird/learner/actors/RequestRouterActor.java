@@ -47,7 +47,6 @@ import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.util.Util;
 import org.sunbird.metrics.actors.CourseMetricsActor;
 import org.sunbird.metrics.actors.OrganisationMetricsActor;
-import org.sunbird.metrics.actors.UserMetricsActor;
 import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
@@ -93,7 +92,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ActorRef searchHandlerActor;
   private ActorRef bulkUploadManagementActor;
   private ActorRef courseBatchActor;
-  private ActorRef userMetricsRouter;
   private ActorRef esSyncActor;
   private ActorRef emailServiceActor;
   private ActorRef fileUploadServiceActor;
@@ -132,7 +130,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private static final String COURSE_BATCH_MANAGEMENT_ACTOR = "courseBatchActor";
   private static final String ORGANISATION_METRICS_ROUTER = "organisationMetricsRouter";
   private static final String COURSE_METRICS_ROUTER = "courseMetricsRouter";
-  private static final String USER_METRICS_ROUTER = "userMetricsRouter";
   private static final String ES_SYNC_ROUTER = "esSyncActor";
   private static final String SCHEDULAR_ACTOR = "schedularActor";
   private static final String EMAIL_SERVICE_ACTOR = "emailServiceActor";
@@ -201,8 +198,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
     courseMetricsRouter =
         getContext().actorOf(FromConfig.getInstance().props(Props.create(CourseMetricsActor.class)),
             COURSE_METRICS_ROUTER);
-    userMetricsRouter = getContext().actorOf(
-        FromConfig.getInstance().props(Props.create(UserMetricsActor.class)), USER_METRICS_ROUTER);
     esSyncActor = getContext()
         .actorOf(FromConfig.getInstance().props(Props.create(EsSyncActor.class)), ES_SYNC_ROUTER);
     fileUploadServiceActor = getContext().actorOf(
@@ -324,8 +319,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.ORG_CONSUMPTION_METRICS.getValue(), organisationMetricsRouter);
     routerMap.put(ActorOperations.COURSE_PROGRESS_METRICS.getValue(), courseMetricsRouter);
     routerMap.put(ActorOperations.COURSE_CREATION_METRICS.getValue(), courseMetricsRouter);
-    routerMap.put(ActorOperations.USER_CREATION_METRICS.getValue(), userMetricsRouter);
-    routerMap.put(ActorOperations.USER_CONSUMPTION_METRICS.getValue(), userMetricsRouter);
 
     routerMap.put(ActorOperations.ORG_CREATION_METRICS_REPORT.getValue(),
         organisationMetricsRouter);

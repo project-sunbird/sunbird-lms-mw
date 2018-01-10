@@ -50,7 +50,7 @@ public class BadgesActor extends UntypedAbstractActor {
           saveUserBadges(actorMessage);
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.HEALTH_CHECK.getValue())) {
-          checkAllComponentHealth(actorMessage);
+          checkAllComponentHealth();
         } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ACTOR.getValue())) {
           actorhealthCheck(actorMessage);
         } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ES.getValue())) {
@@ -160,7 +160,7 @@ public class BadgesActor extends UntypedAbstractActor {
   /**
    * 
    */
-  private void checkAllComponentHealth(Request actorMessage) {
+  private void checkAllComponentHealth() {
     boolean isallHealthy = true;
     Map<String, Object> finalResponseMap = new HashMap<>();
     List<Map<String, Object>> responseList = new ArrayList<>();

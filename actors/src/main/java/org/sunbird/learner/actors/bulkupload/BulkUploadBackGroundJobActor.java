@@ -1479,35 +1479,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           return ResponseCode.phoneVerifiedError.getErrorMessage();
         }
       }
-      /*if (null != map.get(JsonKey.EMAIL_VERIFIED)) {
-        if (map.get(JsonKey.EMAIL_VERIFIED) instanceof Boolean) {
-          if (!((boolean) map.get(JsonKey.EMAIL_VERIFIED))) {
-            return ResponseCode.emailVerifiedError.getErrorMessage();
-          }
-        } else {
-          return "property emailVerified should be instanceOf type Boolean.";
-        }
-      } else {
-        return ResponseCode.emailVerifiedError.getErrorMessage();
-      }*/
     }
 
     return JsonKey.SUCCESS;
-  }
-
-  private static boolean validatePhoneNo(String phone) {
-    if (phone.contains("+")) {
-      phone = phone.replace("+", "");
-    }
-    try {
-      Long.parseLong(phone);
-    } catch (Exception ex) {
-      ProjectLogger.log(phone + "this phone no. is not a valid one.");
-      throw new ProjectCommonException(ResponseCode.phoneNoFormatError.getErrorCode(),
-          ResponseCode.phoneNoFormatError.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
-    return true;
   }
 
   private String generatePrimaryKey(Map<String, Object> req) {

@@ -1097,7 +1097,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       }
     }
 
-    updateUserExtId(requestMap, JsonKey.UPDATE);
+    updateUserExtId(requestMap);
     sender().tell(result, self());
 
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
@@ -1627,7 +1627,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       // update the user external identity data
       ProjectLogger.log("User insertation for extrenal identity started--.....");
       requestMap.put(JsonKey.EMAIL_VERIFIED, false);
-      updateUserExtId(requestMap, JsonKey.CREATE);
+      updateUserExtId(requestMap);
       ProjectLogger.log("User insertation for extrenal identity completed--.....");
     }
 
@@ -1894,7 +1894,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 
   }
 
-  private void updateUserExtId(Map<String, Object> requestMap, String opType) {
+  private void updateUserExtId(Map<String, Object> requestMap) {
     Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
     Map<String, Object> map = new HashMap<>();
     Map<String, Object> reqMap = new HashMap<>();

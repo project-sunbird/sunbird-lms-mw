@@ -2390,8 +2390,6 @@ public class UserManagementActor extends UntypedAbstractActor {
     response = cassandraOperation.updateRecord(userOrgDbInfo.getKeySpace(),
         userOrgDbInfo.getTableName(), updateUserOrgDBO);
     sender().tell(response, self());
-    return;
-
   }
 
   /**

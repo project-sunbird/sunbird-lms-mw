@@ -487,7 +487,6 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
     dbReqMap.put(JsonKey.TYPE, type);
     cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(),
         reportTrackingdbInfo.getTableName(), dbReqMap);
-    return;
   }
   
   @SuppressWarnings("unchecked")

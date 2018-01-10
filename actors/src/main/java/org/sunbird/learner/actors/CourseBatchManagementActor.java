@@ -126,7 +126,6 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
 
     ProjectLogger.log("Add user to course batch - called");
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
-    String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
     Response response = new Response();
 
     String batchId = (String) req.get(JsonKey.BATCH_ID);
@@ -184,7 +183,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
           if (createdFor.contains((String) usrOrgDetail.get(JsonKey.ORGANISATION_ID))) {
             participants.put(userId,
                 addUserCourses(batchId, (String) courseBatchObject.get(JsonKey.COURSE_ID),
-                    updatedBy, userId,
+                     userId,
                     (Map<String, String>) (courseBatchObject.get(JsonKey.COURSE_ADDITIONAL_INFO))));
             flag = true;
           }
@@ -217,7 +216,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     }
   }
 
-  private Boolean addUserCourses(String batchId, String courseId, String updatedBy, String userId,
+  private Boolean addUserCourses(String batchId, String courseId, String userId,
       Map<String, String> additionalCourseInfo) {
 
     Util.DbInfo courseEnrollmentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);

@@ -38,8 +38,7 @@ public class SkillmanagementActor extends UntypedAbstractActor {
   private Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
   private Util.DbInfo skillsListDbInfo = Util.dbInfoMap.get(JsonKey.SKILLS_LIST_DB);
   Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-  private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-  private final String REF_SKILLS_DB_ID = "001";
+  private static final String REF_SKILLS_DB_ID = "001";
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -54,7 +53,7 @@ public class SkillmanagementActor extends UntypedAbstractActor {
           getSkill(actorMessage);
         }else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.GET_SKILLS_LIST.getValue())) {
-          getSkillsList(actorMessage);
+          getSkillsList();
         } else {
           ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
           ProjectCommonException exception =
@@ -81,7 +80,7 @@ public class SkillmanagementActor extends UntypedAbstractActor {
    * Method will return all the list of skills , it is type of reference data ...
    * @param actorMessage
    */
-  private void getSkillsList(Request actorMessage) {
+  private void getSkillsList() {
 
     ProjectLogger.log("SkillmanagementActor-getSkillsList called");
     Map<String, Object> skills = new HashMap<>();
@@ -142,7 +141,7 @@ public class SkillmanagementActor extends UntypedAbstractActor {
   private void endorseSkill(Request actorMessage) {
 
     ProjectLogger.log("SkillmanagementActor-endorseSkill called");
-    format = new SimpleDateFormat("yyyy-MM-dd");
+    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     String endoresedUserId  = (String) actorMessage.getRequest().get(JsonKey.ENDORSED_USER_ID);
     List<String> list = (List<String>) actorMessage.getRequest().get(JsonKey.SKILL_NAME);
     CopyOnWriteArraySet<String> skillset = new CopyOnWriteArraySet<>(list);
@@ -254,7 +253,7 @@ public class SkillmanagementActor extends UntypedAbstractActor {
   private void updateSkillsList(CopyOnWriteArraySet<String> skillset) {
 
     Map<String , Object> skills = new HashMap<>();
-    List<String> skillsList = new ArrayList<>();
+    List<String> skillsList = null;
     Response skilldbresponse=cassandraOperation.getRecordById(skillsListDbInfo.getKeySpace(), skillsListDbInfo.getTableName(), REF_SKILLS_DB_ID);
     List<Map<String, Object>> list =  (List<Map<String, Object>>) skilldbresponse.get(JsonKey.RESPONSE);
 

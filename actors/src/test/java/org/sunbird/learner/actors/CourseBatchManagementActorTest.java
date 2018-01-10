@@ -117,7 +117,7 @@ public class CourseBatchManagementActorTest {
     userMap.put(JsonKey.USER_ID, userId);
     userMap.put(JsonKey.ORGANISATION_ID, "ORG_001");
     userMap.put(JsonKey.ID, usrOrgId);
-    Response res =ServiceFactory.getInstance().insertRecord(userOrgdbInfo.getKeySpace(), userOrgdbInfo.getTableName(), userMap); 
+    ServiceFactory.getInstance().insertRecord(userOrgdbInfo.getKeySpace(), userOrgdbInfo.getTableName(), userMap); 
     ElasticSearchUtil.createData(ProjectUtil.EsIndex.sunbird.getIndexName(),
                 ProjectUtil.EsType.user.getTypeName(), userId, userMap);
   }

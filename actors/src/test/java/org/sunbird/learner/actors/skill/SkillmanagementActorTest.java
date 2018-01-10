@@ -22,7 +22,6 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
@@ -42,9 +41,7 @@ public class SkillmanagementActorTest {
   static TestActorRef<LearnerStateActor> ref;
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
-  private static Util.DbInfo skillsListDbInfo = Util.dbInfoMap.get(JsonKey.SKILLS_LIST_DB);
   private static Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-  private final String REF_SKILLS_DB_ID = "001";
   private static final String USER_ID = "vcurc633r89yv";
   private static final String ROOT_ORG_ID = "7838hhucy83yuuy";
   private static final String ENDORSED_USER_ID = "nmnkfiiuvcehuybgu";
@@ -141,7 +138,7 @@ public class SkillmanagementActorTest {
     actorMessage.setOperation(ActorOperations.GET_SKILL.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res= probe.expectMsgClass(duration("10 second"),Response.class);
+    probe.expectMsgClass(duration("10 second"),Response.class);
 
   }
 
@@ -157,7 +154,7 @@ public class SkillmanagementActorTest {
     actorMessage.setOperation(ActorOperations.GET_SKILL.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
+    probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
 
   }
 
@@ -171,7 +168,7 @@ public class SkillmanagementActorTest {
     actorMessage.setOperation(ActorOperations.GET_SKILLS_LIST.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res= probe.expectMsgClass(duration("10 second"),Response.class);
+    probe.expectMsgClass(duration("10 second"),Response.class);
 
   }
 
@@ -185,7 +182,7 @@ public class SkillmanagementActorTest {
     actorMessage.setOperation(ActorOperations.GET_SKILLS_LIST.getValue()+"Invalid");
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
+    probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
 
   }
 
@@ -196,7 +193,7 @@ public class SkillmanagementActorTest {
     ActorRef subject = system.actorOf(props);
 
     subject.tell("UNSUPPORTED OJECT STRING", probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
+    probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
 
   }
 

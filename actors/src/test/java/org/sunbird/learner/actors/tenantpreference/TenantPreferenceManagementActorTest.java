@@ -27,7 +27,6 @@ import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.LearnerStateActor;
-import org.sunbird.learner.actors.skill.SkillmanagementActor;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -85,7 +84,7 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.CREATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res= probe.expectMsgClass(duration("100 second"),Response.class);
+    probe.expectMsgClass(duration("100 second"),Response.class);
   }
 
   @Test
@@ -106,7 +105,7 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.CREATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res= probe.expectMsgClass(duration("100 second"),Response.class);
+    probe.expectMsgClass(duration("100 second"),Response.class);
   }
 
   @Test
@@ -127,7 +126,7 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.CREATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
   }
 
   @Test
@@ -148,7 +147,7 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.CREATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
   }
 
   @Test
@@ -165,7 +164,7 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.CREATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
   }
 
 
@@ -187,7 +186,7 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.UPDATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res= probe.expectMsgClass(duration("100 second"),Response.class);
+    probe.expectMsgClass(duration("100 second"),Response.class);
   }
 
 
@@ -205,7 +204,7 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.UPDATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
   }
 
   @Test
@@ -222,7 +221,7 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.UPDATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
   }
 
   @Test
@@ -237,7 +236,7 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.GET_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res= probe.expectMsgClass(duration("100 second"),Response.class);
+    probe.expectMsgClass(duration("100 second"),Response.class);
   }
 
   @Test
@@ -252,7 +251,7 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.GET_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
   }
 
   @Test
@@ -267,7 +266,7 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.GET_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
   }
 
   @Test
@@ -287,7 +286,7 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.UPDATE_TC_STATUS_OF_USER.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res= probe.expectMsgClass(duration("100 second"),Response.class);
+    probe.expectMsgClass(duration("100 second"),Response.class);
   }
 
   @Test
@@ -307,7 +306,7 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation("InvalidOperation");
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
   }
 
   @Test
@@ -317,7 +316,7 @@ public class TenantPreferenceManagementActorTest {
     ActorRef subject = system.actorOf(props);
 
     subject.tell("Invalid message", probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
   }
 
   @AfterClass

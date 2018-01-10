@@ -639,31 +639,31 @@ public class PageManagementActorTest {
     @AfterClass
     public static void deletePageAndSection() {
       if(pageId != null) {
-        Response response = operation
+        operation
             .deleteRecord(pageMgmntDbInfo.getKeySpace(), pageMgmntDbInfo.getTableName(), pageId);
       }
 
       //assertEquals("SUCCESS", response.get("response"));
       if(pageIdWithOrg != null) {
-        Response response1 = operation
+        operation
             .deleteRecord(pageMgmntDbInfo.getKeySpace(), pageMgmntDbInfo.getTableName(),
                 pageIdWithOrg);
       }
       //assertEquals("SUCCESS", response1.get("response"));
       if(pageIdWithOrg2 != null) {
-        Response response11 = operation
+        operation
             .deleteRecord(pageMgmntDbInfo.getKeySpace(), pageMgmntDbInfo.getTableName(),
                 pageIdWithOrg2);
       }
       //assertEquals("SUCCESS", response11.get("response"));
       if(sectionId != null) {
-        Response response2 = operation
+        operation
             .deleteRecord(pageSectionDbInfo.getKeySpace(), pageSectionDbInfo.getTableName(),
                 sectionId);
       }
       //assertEquals("SUCCESS", response2.get("response"));
       if(sectionId2 != null) {
-        Response response3 = operation
+        operation
             .deleteRecord(pageSectionDbInfo.getKeySpace(), pageSectionDbInfo.getTableName(),
                 sectionId2);
       }

@@ -63,7 +63,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
           .getDecryptionServiceInstance(null);
   private PropertiesCache propertiesCache = PropertiesCache.getInstance();
-  boolean isSSOEnabled =
+  private boolean isSSOEnabled =
       Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
   private Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);

@@ -191,7 +191,6 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
           ResponseCode.internalError.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
-    return;
   }
   
   private List<List<Object>> generateDataList(List<Map<String, Object>> aggregationMap,

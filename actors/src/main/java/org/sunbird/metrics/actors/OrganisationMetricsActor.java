@@ -163,7 +163,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     innerMap.put(JsonKey.REQUEST, JsonKey.OrgCreation);
     backGroundRequest.setRequest(innerMap);
     ActorUtil.tell(backGroundRequest);
-    return;
   }
 
   protected Map<String, Object> getViewData(String orgId, Object orgName) {

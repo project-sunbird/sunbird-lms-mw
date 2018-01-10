@@ -233,7 +233,6 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
 
     backGroundRequest.setRequest(innerMap);
     self().tell(backGroundRequest, self());
-    return;
   }
 
   private boolean processMailSending(Map<String, Object> reportDbInfo) {

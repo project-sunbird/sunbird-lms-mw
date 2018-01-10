@@ -1249,8 +1249,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
 
     sender().tell(response, self());
-    return;
-
   }
 
   /**

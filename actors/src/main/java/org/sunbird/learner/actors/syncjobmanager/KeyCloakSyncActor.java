@@ -32,7 +32,7 @@ import org.sunbird.services.sso.SSOServiceFactory;
 public class KeyCloakSyncActor extends UntypedAbstractActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  boolean isSSOEnabled =
+  private boolean isSSOEnabled =
       Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
   

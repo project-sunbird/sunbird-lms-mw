@@ -373,14 +373,13 @@ public class UserManagementActor extends UntypedAbstractActor {
     if (Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED))) {
       boolean addedResponse = ssoManager.addUserLoginTime(userId);
       ProjectLogger.log("user login time added response is ==" + addedResponse);
-      
+
       // read value for emailVerified
       boolean emailVerified = ssoManager.isEmailVerified(userId);
       ProjectLogger.log("user emailVerified response ==" + emailVerified);
       String emailVerifiedUpdatedFlag = ssoManager.getEmailVerifiedUpdatedFlag(userId);
       ProjectLogger.log("user emailVerifiedUpdatedFlag response ==" + emailVerifiedUpdatedFlag);
-      if (emailVerified
-          && "false".equalsIgnoreCase(emailVerifiedUpdatedFlag)) {
+      if (emailVerified && "false".equalsIgnoreCase(emailVerifiedUpdatedFlag)) {
         Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
         Map<String, Object> map = new HashMap<>();
         map.put(JsonKey.ID, userId);
@@ -653,7 +652,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       return;
     }
     if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
-      String requestFields = (String)  actorMessage.getRequest().get(JsonKey.FIELDS);
+      String requestFields = (String) actorMessage.getRequest().get(JsonKey.FIELDS);
       if (!ProjectUtil.isStringNullOREmpty(requestFields)) {
         if (!requestFields.contains(JsonKey.COMPLETENESS)) {
           result.remove(JsonKey.COMPLETENESS);
@@ -1294,7 +1293,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       reqMap.put(JsonKey.PERCENTAGE, Double.parseDouble(String.valueOf("0")));
       ProjectLogger.log(ex.getMessage(), ex);
     }
-    
+
     if (reqMap.containsKey(JsonKey.ID)) {
       reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
       reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
@@ -1659,23 +1658,24 @@ public class UserManagementActor extends UntypedAbstractActor {
   private void sendSMS(Map<String, Object> userMap) {
     if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EMAIL))
         && !ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PHONE))) {
-    UserUtility.decryptUserData(userMap);
-    String name = (String) userMap.get(JsonKey.FIRST_NAME)+" "+(String) userMap.get(JsonKey.LAST_NAME);
-    
-    String envName = System.getenv(JsonKey.SUNBIRD_INSTALLATION);
-    if (ProjectUtil.isStringNullOREmpty(envName)) {
-      envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
-    }
-    String webUrl = System.getenv(SUNBIRD_WEB_URL);
-    if (ProjectUtil.isStringNullOREmpty(webUrl)) {
-      webUrl = propertiesCache.getProperty(SUNBIRD_WEB_URL);
-    }
-    ProjectLogger.log("shortened url :: " + webUrl);
-    String sms = ProjectUtil.getSMSBody(name, webUrl, envName);
-    if (ProjectUtil.isStringNullOREmpty((String) sms)) {
-      sms = PropertiesCache.getInstance().getProperty("sunbird_default_welcome_sms");
-    }
-    ProjectLogger.log("SMS text : " + sms);
+      UserUtility.decryptUserData(userMap);
+      String name =
+          (String) userMap.get(JsonKey.FIRST_NAME) + " " + (String) userMap.get(JsonKey.LAST_NAME);
+
+      String envName = System.getenv(JsonKey.SUNBIRD_INSTALLATION);
+      if (ProjectUtil.isStringNullOREmpty(envName)) {
+        envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
+      }
+      String webUrl = System.getenv(SUNBIRD_WEB_URL);
+      if (ProjectUtil.isStringNullOREmpty(webUrl)) {
+        webUrl = propertiesCache.getProperty(SUNBIRD_WEB_URL);
+      }
+      ProjectLogger.log("shortened url :: " + webUrl);
+      String sms = ProjectUtil.getSMSBody(name, webUrl, envName);
+      if (ProjectUtil.isStringNullOREmpty((String) sms)) {
+        sms = PropertiesCache.getInstance().getProperty("sunbird_default_welcome_sms");
+      }
+      ProjectLogger.log("SMS text : " + sms);
       String countryCode = "";
       if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.COUNTRY_CODE))) {
         countryCode = PropertiesCache.getInstance().getProperty("sunbird_default_country_code");
@@ -1859,7 +1859,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         reqMap.put(JsonKey.ADDRESS_ID, addrId);
         reqMap.remove(JsonKey.ADDRESS);
       }
-      try { 
+      try {
         if (null != reqMap.get(JsonKey.YEAR_OF_PASSING)) {
           reqMap.put(JsonKey.YEAR_OF_PASSING,
               ((BigInteger) reqMap.get(JsonKey.YEAR_OF_PASSING)).intValue());
@@ -2512,16 +2512,17 @@ public class UserManagementActor extends UntypedAbstractActor {
     String userName = (String) requestMap.get(JsonKey.USERNAME);
     String loginId = "";
     if (ProjectUtil.isStringNullOREmpty(userId) && ProjectUtil.isStringNullOREmpty(userName)) {
-        ProjectCommonException exception =
-            new ProjectCommonException(ResponseCode.userNameOrUserIdRequired.getErrorCode(),
-                ResponseCode.userNameOrUserIdRequired.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-        sender().tell(exception, self());
-        return;
-      }
-    if(!ProjectUtil.isStringNullOREmpty(userId) ){
-      esUsrRes = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(), userId);
-    }else {
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.userNameOrUserIdRequired.getErrorCode(),
+              ResponseCode.userNameOrUserIdRequired.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
+    if (!ProjectUtil.isStringNullOREmpty(userId)) {
+      esUsrRes = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+          ProjectUtil.EsType.user.getTypeName(), userId);
+    } else {
       if (!ProjectUtil.isStringNullOREmpty(userName)
           && !ProjectUtil.isStringNullOREmpty(provider)) {
         loginId = userName + JsonKey.LOGIN_ID_DELIMETER + provider;
@@ -2545,7 +2546,8 @@ public class UserManagementActor extends UntypedAbstractActor {
       searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
       Map<String, Object> esResponse = ElasticSearchUtil.complexSearch(searchDto,
           ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName());
-      List<Map<String, Object>> esUsrList = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
+      List<Map<String, Object>> esUsrList =
+          (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
 
       if (esUsrList.isEmpty()) {
         ProjectCommonException exception =
@@ -2556,37 +2558,38 @@ public class UserManagementActor extends UntypedAbstractActor {
         return;
       }
       esUsrRes = esUsrList.get(0);
-      requestMap.put(JsonKey.USER_ID,esUsrRes.get(JsonKey.ID));
+      requestMap.put(JsonKey.USER_ID, esUsrRes.get(JsonKey.ID));
     }
 
-    if (ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.ORGANISATION_ID)) && !ProjectUtil.isStringNullOREmpty(externalId)
-          && !ProjectUtil.isStringNullOREmpty(provider)) {
-        SearchDTO searchDto = new SearchDTO();
-        Map<String, Object> filter = new HashMap<>();
-        filter.put(JsonKey.EXTERNAL_ID, externalId);
-        filter.put(JsonKey.PROVIDER, provider);
-        searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
-        Map<String, Object> esResponse =
-            ElasticSearchUtil.complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.organisation.getTypeName());
-        List<Map<String, Object>> list =
-            (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
+    if (ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.ORGANISATION_ID))
+        && !ProjectUtil.isStringNullOREmpty(externalId)
+        && !ProjectUtil.isStringNullOREmpty(provider)) {
+      SearchDTO searchDto = new SearchDTO();
+      Map<String, Object> filter = new HashMap<>();
+      filter.put(JsonKey.EXTERNAL_ID, externalId);
+      filter.put(JsonKey.PROVIDER, provider);
+      searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
+      Map<String, Object> esResponse =
+          ElasticSearchUtil.complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.organisation.getTypeName());
+      List<Map<String, Object>> list = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
 
-        if (list.isEmpty()) {
-          ProjectCommonException exception =
-              new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
-                  ResponseCode.invalidOrgData.getErrorMessage(),
-                  ResponseCode.CLIENT_ERROR.getResponseCode());
-          sender().tell(exception, self());
-          return;
-        }
-        requestMap.put(JsonKey.ORGANISATION_ID, list.get(0).get(JsonKey.ID));
+      if (list.isEmpty()) {
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.invalidOrgData.getErrorCode(),
+                ResponseCode.invalidOrgData.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+        sender().tell(exception, self());
+        return;
       }
-    
+      requestMap.put(JsonKey.ORGANISATION_ID, list.get(0).get(JsonKey.ID));
+    }
+
     // now we have valid userid , roles and need to check organisation id is also coming.
     // if organisationid is coming it means need to update userOrg role.
     // if organisationId is not coming then need to update only userRole.
-    if (requestMap.containsKey(JsonKey.ORGANISATION_ID) && !ProjectUtil.isStringNullOREmpty((String)requestMap.get(JsonKey.ORGANISATION_ID))) {
+    if (requestMap.containsKey(JsonKey.ORGANISATION_ID)
+        && !ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.ORGANISATION_ID))) {
       tempMap.remove(JsonKey.PROVIDER);
       tempMap.remove(JsonKey.EXTERNAL_ID);
       tempMap.remove(JsonKey.SOURCE);
@@ -2613,21 +2616,21 @@ public class UserManagementActor extends UntypedAbstractActor {
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
       }
-      
+
       List<String> roles = (List<String>) list.get(0).get(JsonKey.ROLES);
-      if(null != roles && !roles.isEmpty()){
+      if (null != roles && !roles.isEmpty()) {
         List<String> requestedRoles = (List<String>) requestMap.get(JsonKey.ROLES);
-        for(String role : requestedRoles){
-          if(!roles.contains(role)){
+        for (String role : requestedRoles) {
+          if (!roles.contains(role)) {
             roles.add(role);
             tempMap.put(JsonKey.ROLES, roles);
           }
         }
-      }else{
+      } else {
         tempMap.put(JsonKey.ROLES, requestMap.get(JsonKey.ROLES));
       }
       tempMap.put(JsonKey.ID, list.get(0).get(JsonKey.ID));
-     
+
       response = cassandraOperation.updateRecord(userOrgDb.getKeySpace(), userOrgDb.getTableName(),
           tempMap);
       sender().tell(response, self());
@@ -2655,15 +2658,15 @@ public class UserManagementActor extends UntypedAbstractActor {
       }
       tempMap.put(JsonKey.ID, requestMap.get(JsonKey.USER_ID));
       List<String> roles = (List<String>) esUsrRes.get(JsonKey.ROLES);
-      if(null != roles && !roles.isEmpty()){
+      if (null != roles && !roles.isEmpty()) {
         List<String> requestedRoles = (List<String>) requestMap.get(JsonKey.ROLES);
-        for(String role : requestedRoles){
-          if(!roles.contains(role)){
+        for (String role : requestedRoles) {
+          if (!roles.contains(role)) {
             roles.add(role);
             tempMap.put(JsonKey.ROLES, roles);
           }
         }
-      }else{
+      } else {
         tempMap.put(JsonKey.ROLES, requestMap.get(JsonKey.ROLES));
       }
       Response response = cassandraOperation.updateRecord(usrDbInfo.getKeySpace(),
@@ -2885,10 +2888,9 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
     context.put(JsonKey.WEB_URL, ProjectUtil.isStringNullOREmpty(System.getenv(SUNBIRD_WEB_URL))
         ? propertiesCache.getProperty(SUNBIRD_WEB_URL) : System.getenv(SUNBIRD_WEB_URL));
-    if (!ProjectUtil.isStringNullOREmpty(appUrl)) {
-      if (!JsonKey.SUNBIRD_APP_URL.equalsIgnoreCase(appUrl)) {
-        context.put(JsonKey.APP_URL, appUrl);
-      }
+    if (!ProjectUtil.isStringNullOREmpty(appUrl)
+        && !JsonKey.SUNBIRD_APP_URL.equalsIgnoreCase(appUrl)) {
+      context.put(JsonKey.APP_URL, appUrl);
     }
     ProjectLogger.log("Starting to update password inside cassandra", LoggerEnum.INFO.name());
     updatePassword(userId, (String) context.get(JsonKey.TEMPORARY_PASSWORD));

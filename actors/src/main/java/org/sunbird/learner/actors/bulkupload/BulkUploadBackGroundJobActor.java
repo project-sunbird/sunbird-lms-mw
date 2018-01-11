@@ -206,8 +206,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           Map<String, Object> usrOrgDetail = userOrgResult.get(i);
           if (createdFor.contains((String) usrOrgDetail.get(JsonKey.ORGANISATION_ID))) {
             participants.put(userId,
-                addUserCourses(batchId, (String) courseBatchObject.get(JsonKey.COURSE_ID),
-                    userId,
+                addUserCourses(batchId, (String) courseBatchObject.get(JsonKey.COURSE_ID), userId,
                     (Map<String, String>) (courseBatchObject.get(JsonKey.COURSE_ADDITIONAL_INFO))));
             flag = true;
           }
@@ -483,20 +482,23 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           return;
         }
 
-        // check logic here to check the hashtag id ... if in db null and requested one not exist in db only then we are going to update the new one...
+        // check logic here to check the hashtag id ... if in db null and requested one not exist in
+        // db only then we are going to update the new one...
 
-        if(!ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.HASHTAGID))){
-          String requestedHashTagId = (String)concurrentHashMap.get(JsonKey.HASHTAGID);
-          //if both are not equal ...
-          if(! requestedHashTagId.equals(orgResult.get(JsonKey.HASHTAGID))){
+        if (!ProjectUtil.isStringNullOREmpty((String) concurrentHashMap.get(JsonKey.HASHTAGID))) {
+          String requestedHashTagId = (String) concurrentHashMap.get(JsonKey.HASHTAGID);
+          // if both are not equal ...
+          if (!requestedHashTagId.equals(orgResult.get(JsonKey.HASHTAGID))) {
             Map<String, Object> dbMap1 = new HashMap<>();
             dbMap1.put(JsonKey.HASHTAGID, concurrentHashMap.get(JsonKey.HASHTAGID));
             Response result1 = cassandraOperation.getRecordsByProperties(orgDbInfo.getKeySpace(),
                 orgDbInfo.getTableName(), dbMap1);
-            List<Map<String, Object>> list1 = (List<Map<String, Object>>) result1.get(JsonKey.RESPONSE);
-            if(!list1.isEmpty()){
+            List<Map<String, Object>> list1 =
+                (List<Map<String, Object>>) result1.get(JsonKey.RESPONSE);
+            if (!list1.isEmpty()) {
               ProjectLogger.log("Can not update hashtag value , since it is already exist ");
-              concurrentHashMap.put(JsonKey.ERROR_MSG, "Hash Tag ID already exist for another org ");
+              concurrentHashMap.put(JsonKey.ERROR_MSG,
+                  "Hash Tag ID already exist for another org ");
               failureList.add(concurrentHashMap);
               return;
             }
@@ -579,18 +581,20 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         }
 
         // check for duplicate hashtag id ...
-        if(!ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.HASHTAGID))){
-          String requestedHashTagId = (String)concurrentHashMap.get(JsonKey.HASHTAGID);
-          //if both are not equal ...
-          if(! requestedHashTagId.equalsIgnoreCase((String)rootOrgInfo.get(JsonKey.HASHTAGID))){
+        if (!ProjectUtil.isStringNullOREmpty((String) concurrentHashMap.get(JsonKey.HASHTAGID))) {
+          String requestedHashTagId = (String) concurrentHashMap.get(JsonKey.HASHTAGID);
+          // if both are not equal ...
+          if (!requestedHashTagId.equalsIgnoreCase((String) rootOrgInfo.get(JsonKey.HASHTAGID))) {
             Map<String, Object> dbMap1 = new HashMap<>();
             dbMap1.put(JsonKey.HASHTAGID, concurrentHashMap.get(JsonKey.HASHTAGID));
             Response result1 = cassandraOperation.getRecordsByProperties(orgDbInfo.getKeySpace(),
                 orgDbInfo.getTableName(), dbMap1);
-            List<Map<String, Object>> list1 = (List<Map<String, Object>>) result1.get(JsonKey.RESPONSE);
-            if(!list1.isEmpty()){
+            List<Map<String, Object>> list1 =
+                (List<Map<String, Object>>) result1.get(JsonKey.RESPONSE);
+            if (!list1.isEmpty()) {
               ProjectLogger.log("Can not update hashtag value , since it is already exist ");
-              concurrentHashMap.put(JsonKey.ERROR_MSG, "Hash Tag ID already exist for another org ");
+              concurrentHashMap.put(JsonKey.ERROR_MSG,
+                  "Hash Tag ID already exist for another org ");
               failureList.add(concurrentHashMap);
               return;
             }
@@ -682,19 +686,20 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
     }
 
-    // we can put logic here to check uniqueness of hash tag id in order to create new organisation ...
-    if(!ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.HASHTAGID))){
+    // we can put logic here to check uniqueness of hash tag id in order to create new organisation
+    // ...
+    if (!ProjectUtil.isStringNullOREmpty((String) concurrentHashMap.get(JsonKey.HASHTAGID))) {
 
-        Map<String, Object> dbMap1 = new HashMap<>();
-        dbMap1.put(JsonKey.HASHTAGID, concurrentHashMap.get(JsonKey.HASHTAGID));
-        Response result1 = cassandraOperation.getRecordsByProperties(orgDbInfo.getKeySpace(),
-            orgDbInfo.getTableName(), dbMap1);
-        List<Map<String, Object>> list1 = (List<Map<String, Object>>) result1.get(JsonKey.RESPONSE);
-        if(!list1.isEmpty()){
-          ProjectLogger.log("Can not update hashtag value , since it is already exist ");
-          concurrentHashMap.put(JsonKey.ERROR_MSG, "Hash Tag ID already exist for another org ");
-          failureList.add(concurrentHashMap);
-          return;
+      Map<String, Object> dbMap1 = new HashMap<>();
+      dbMap1.put(JsonKey.HASHTAGID, concurrentHashMap.get(JsonKey.HASHTAGID));
+      Response result1 = cassandraOperation.getRecordsByProperties(orgDbInfo.getKeySpace(),
+          orgDbInfo.getTableName(), dbMap1);
+      List<Map<String, Object>> list1 = (List<Map<String, Object>>) result1.get(JsonKey.RESPONSE);
+      if (!list1.isEmpty()) {
+        ProjectLogger.log("Can not update hashtag value , since it is already exist ");
+        concurrentHashMap.put(JsonKey.ERROR_MSG, "Hash Tag ID already exist for another org ");
+        failureList.add(concurrentHashMap);
+        return;
       }
     }
 
@@ -716,7 +721,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     concurrentHashMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     concurrentHashMap.put(JsonKey.CREATED_BY, dataMap.get(JsonKey.UPLOADED_BY));
     // if user does not provide hash tag id in the file set it to equivalent to org id
-    if(ProjectUtil.isStringNullOREmpty((String)concurrentHashMap.get(JsonKey.HASHTAGID))) {
+    if (ProjectUtil.isStringNullOREmpty((String) concurrentHashMap.get(JsonKey.HASHTAGID))) {
       concurrentHashMap.put(JsonKey.HASHTAGID, uniqueId);
     }
     // Remove the slug key if coming form user input.
@@ -731,7 +736,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       concurrentHashMap.put(JsonKey.IS_ROOT_ORG, false);
     }
     try {
-      cassandraOperation.upsertRecord(orgDbInfo.getKeySpace() , orgDbInfo.getTableName(), concurrentHashMap);
+      cassandraOperation.upsertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(),
+          concurrentHashMap);
       Response orgResponse = new Response();
 
       // sending the org contact as List if it is null simply remove from map
@@ -1254,12 +1260,12 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         userMap.put(JsonKey.USER_ID, map.get(JsonKey.ID));
         userMap.put(JsonKey.OPERATION, JsonKey.UPDATE);
         if (userMap.get(JsonKey.REGISTERED_ORG_ID).equals(map.get(JsonKey.REGISTERED_ORG_ID))) {
-          checkEmailUniqueness(userMap,JsonKey.UPDATE);
-          checkPhoneUniqueness(userMap,JsonKey.UPDATE);
+          checkEmailUniqueness(userMap, JsonKey.UPDATE);
+          checkPhoneUniqueness(userMap, JsonKey.UPDATE);
           String email = "";
-          try{
+          try {
             email = encryptionService.encryptData((String) userMap.get(JsonKey.EMAIL));
-          }catch(Exception ex){
+          } catch (Exception ex) {
             ProjectLogger.log(
                 "Exception occurred while bulk user upload in BulkUploadBackGroundJobActor during encryption of loginId:",
                 ex);
@@ -1267,8 +1273,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
                 ResponseCode.userDataEncryptionError.getErrorMessage(),
                 ResponseCode.SERVER_ERROR.getResponseCode());
           }
-          if(null != (String)map.get(JsonKey.EMAIL) && ((String)map.get(JsonKey.EMAIL)).equalsIgnoreCase(email)){
-            //DB email value and req email value both are same , no need to update
+          if (null != (String) map.get(JsonKey.EMAIL)
+              && ((String) map.get(JsonKey.EMAIL)).equalsIgnoreCase(email)) {
+            // DB email value and req email value both are same , no need to update
             userMap.remove(JsonKey.EMAIL);
           }
           UpdateKeyCloakUserBase(userMap);
@@ -1283,8 +1290,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         try {
           String userId = "";
           userMap.put(JsonKey.BULK_USER_UPLOAD, true);
-          checkEmailUniqueness(userMap,JsonKey.CREATE);
-          checkPhoneUniqueness(userMap,JsonKey.CREATE);
+          checkEmailUniqueness(userMap, JsonKey.CREATE);
+          checkPhoneUniqueness(userMap, JsonKey.CREATE);
           Map<String, String> userKeyClaokResp = ssoManager.createUser(userMap);
           userMap.remove(JsonKey.BULK_USER_UPLOAD);
           userId = userKeyClaokResp.get(JsonKey.USER_ID);
@@ -1303,8 +1310,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
         userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
         userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
-        if(!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.COUNTRY_CODE))){
-          userMap.put(JsonKey.COUNTRY_CODE, propertiesCache.getProperty("sunbird_default_country_code"));
+        if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.COUNTRY_CODE))) {
+          userMap.put(JsonKey.COUNTRY_CODE,
+              propertiesCache.getProperty("sunbird_default_country_code"));
         }
         /**
          * set role as PUBLIC by default if role is empty in request body. And if roles are coming
@@ -1332,108 +1340,113 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
     return userMap;
   }
-  
+
   private void checkEmailUniqueness(Map<String, Object> userMap, String opType) {
-  //Get Email configuration if not found , by default Email can be duplicate across the application
-    String emailSetting  = DataCacheHandler.getConfigSettings().get(JsonKey.EMAIL);
-    if(null != emailSetting && JsonKey.UNIQUE.equalsIgnoreCase(emailSetting)){
-      String email  = (String) userMap.get(JsonKey.EMAIL);
-      if(!ProjectUtil.isStringNullOREmpty(email)){
-        try{
+    // Get Email configuration if not found , by default Email can be duplicate across the
+    // application
+    String emailSetting = DataCacheHandler.getConfigSettings().get(JsonKey.EMAIL);
+    if (null != emailSetting && JsonKey.UNIQUE.equalsIgnoreCase(emailSetting)) {
+      String email = (String) userMap.get(JsonKey.EMAIL);
+      if (!ProjectUtil.isStringNullOREmpty(email)) {
+        try {
           email = encryptionService.encryptData(email);
-        }catch(Exception e){
+        } catch (Exception e) {
           ProjectLogger.log("Exception occured while encrypting Email ", e);
         }
-        Map<String,Object> filters = new HashMap<>();
+        Map<String, Object> filters = new HashMap<>();
         filters.put(JsonKey.ENC_EMAIL, email);
-        Map<String,Object> map = new HashMap<>();
+        Map<String, Object> map = new HashMap<>();
         map.put(JsonKey.FILTERS, filters);
         SearchDTO searchDto = Util.createSearchDto(map);
         Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto,
             ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName());
-          List<Map<String, Object>> userMapList =
-              (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-          if(!userMapList.isEmpty()){
-            if(opType.equalsIgnoreCase(JsonKey.CREATE)){
-              throw  new ProjectCommonException(ResponseCode.emailInUse.getErrorCode(),
-                    ResponseCode.emailInUse.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
-            }else{
-              Map<String,Object> user = userMapList.get(0);
-              if(!(((String)user.get(JsonKey.ID)).equalsIgnoreCase((String)userMap.get(JsonKey.ID)))){
-                throw  new ProjectCommonException(ResponseCode.emailInUse.getErrorCode(),
-                    ResponseCode.emailInUse.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
-              }
+        List<Map<String, Object>> userMapList =
+            (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+        if (!userMapList.isEmpty()) {
+          if (opType.equalsIgnoreCase(JsonKey.CREATE)) {
+            throw new ProjectCommonException(ResponseCode.emailInUse.getErrorCode(),
+                ResponseCode.emailInUse.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+          } else {
+            Map<String, Object> user = userMapList.get(0);
+            if (!(((String) user.get(JsonKey.ID))
+                .equalsIgnoreCase((String) userMap.get(JsonKey.ID)))) {
+              throw new ProjectCommonException(ResponseCode.emailInUse.getErrorCode(),
+                  ResponseCode.emailInUse.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
             }
           }
         }
       }
     }
-  
-  private void checkPhoneUniqueness(Map<String,Object> userMap,String opType) {
-    //Get Phone configuration if not found , by default phone will be unique across the application
-    String phoneSetting  = DataCacheHandler.getConfigSettings().get(JsonKey.PHONE);
-    if(null != phoneSetting && JsonKey.UNIQUE.equalsIgnoreCase(phoneSetting)){
-      String phone  = (String) userMap.get(JsonKey.PHONE);
-      if(!ProjectUtil.isStringNullOREmpty(phone)){
-        try{
+  }
+
+  private void checkPhoneUniqueness(Map<String, Object> userMap, String opType) {
+    // Get Phone configuration if not found , by default phone will be unique across the application
+    String phoneSetting = DataCacheHandler.getConfigSettings().get(JsonKey.PHONE);
+    if (null != phoneSetting && JsonKey.UNIQUE.equalsIgnoreCase(phoneSetting)) {
+      String phone = (String) userMap.get(JsonKey.PHONE);
+      if (!ProjectUtil.isStringNullOREmpty(phone)) {
+        try {
           phone = encryptionService.encryptData(phone);
-        }catch(Exception e){
+        } catch (Exception e) {
           ProjectLogger.log("Exception occured while encrypting phone number ", e);
         }
-        Map<String,Object> filters = new HashMap<>();
+        Map<String, Object> filters = new HashMap<>();
         filters.put(JsonKey.ENC_PHONE, phone);
-        Map<String,Object> map = new HashMap<>();
+        Map<String, Object> map = new HashMap<>();
         map.put(JsonKey.FILTERS, filters);
         SearchDTO searchDto = Util.createSearchDto(map);
         Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto,
             ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName());
-          List<Map<String, Object>> userMapList =
-              (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-          if(!userMapList.isEmpty()){
-            if(opType.equalsIgnoreCase(JsonKey.CREATE)){
-              throw  new ProjectCommonException(ResponseCode.PhoneNumberInUse.getErrorCode(),
-                    ResponseCode.PhoneNumberInUse.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
-            }else{
-              Map<String,Object> user = userMapList.get(0);
-              if(!(((String)user.get(JsonKey.ID)).equalsIgnoreCase((String)userMap.get(JsonKey.ID)))){
-                throw  new ProjectCommonException(ResponseCode.PhoneNumberInUse.getErrorCode(),
-                    ResponseCode.PhoneNumberInUse.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
-              }
+        List<Map<String, Object>> userMapList =
+            (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+        if (!userMapList.isEmpty()) {
+          if (opType.equalsIgnoreCase(JsonKey.CREATE)) {
+            throw new ProjectCommonException(ResponseCode.PhoneNumberInUse.getErrorCode(),
+                ResponseCode.PhoneNumberInUse.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+          } else {
+            Map<String, Object> user = userMapList.get(0);
+            if (!(((String) user.get(JsonKey.ID))
+                .equalsIgnoreCase((String) userMap.get(JsonKey.ID)))) {
+              throw new ProjectCommonException(ResponseCode.PhoneNumberInUse.getErrorCode(),
+                  ResponseCode.PhoneNumberInUse.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
             }
           }
         }
       }
     }
-  
+  }
+
   private String validateUser(Map<String, Object> map) {
-    if(null != map.get(JsonKey.DOB)){
-      boolean bool = ProjectUtil.isDateValidFormat(ProjectUtil.YEAR_MONTH_DATE_FORMAT, (String)map.get(JsonKey.DOB));
-      if(!bool){
+    if (null != map.get(JsonKey.DOB)) {
+      boolean bool = ProjectUtil.isDateValidFormat(ProjectUtil.YEAR_MONTH_DATE_FORMAT,
+          (String) map.get(JsonKey.DOB));
+      if (!bool) {
         return "Incorrect DOB date format.";
       }
     }
     if (!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.PHONE))) {
-      if(((String) map.get(JsonKey.PHONE)).contains("+")){
+      if (((String) map.get(JsonKey.PHONE)).contains("+")) {
         return ResponseCode.invalidPhoneNumber.getErrorMessage();
       }
-      boolean bool = ProjectUtil.validatePhone((String) map.get(JsonKey.PHONE),(String) map.get(JsonKey.COUNTRY_CODE));
-      if(!bool){
+      boolean bool = ProjectUtil.validatePhone((String) map.get(JsonKey.PHONE),
+          (String) map.get(JsonKey.COUNTRY_CODE));
+      if (!bool) {
         return ResponseCode.phoneNoFormatError.getErrorMessage();
       }
     }
     if (!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.COUNTRY_CODE))) {
       boolean bool = ProjectUtil.validateCountryCode((String) map.get(JsonKey.COUNTRY_CODE));
-      if(!bool){
+      if (!bool) {
         return ResponseCode.invalidCountryCode.getErrorMessage();
       }
     }
     if (ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.EMAIL))
         && ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.PHONE))) {
-          return ResponseCode.emailorPhoneRequired.getErrorMessage();
+      return ResponseCode.emailorPhoneRequired.getErrorMessage();
     }
     if (map.get(JsonKey.USERNAME) == null
         || (ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.USERNAME)))) {
@@ -1463,19 +1476,18 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         return "property emailVerified should be instanceOf type Boolean.";
       }
     }
-    if (!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.PROVIDER))) {
-      if (!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.PHONE))) {
-        if (null != map.get(JsonKey.PHONE_VERIFIED)) {
-          if (map.get(JsonKey.PHONE_VERIFIED) instanceof Boolean) {
-            if (!((boolean) map.get(JsonKey.PHONE_VERIFIED))) {
-              return ResponseCode.phoneVerifiedError.getErrorMessage();
-            }
-          } else {
-            return "property phoneVerified should be instanceOf type Boolean.";
+    if (!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.PROVIDER))
+        && !ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.PHONE))) {
+      if (null != map.get(JsonKey.PHONE_VERIFIED)) {
+        if (map.get(JsonKey.PHONE_VERIFIED) instanceof Boolean) {
+          if (!((boolean) map.get(JsonKey.PHONE_VERIFIED))) {
+            return ResponseCode.phoneVerifiedError.getErrorMessage();
           }
         } else {
-          return ResponseCode.phoneVerifiedError.getErrorMessage();
+          return "property phoneVerified should be instanceOf type Boolean.";
         }
+      } else {
+        return ResponseCode.phoneVerifiedError.getErrorMessage();
       }
     }
 
@@ -1525,14 +1537,13 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         throw new ProjectCommonException(ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
             ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
             ResponseCode.SERVER_ERROR.getResponseCode());
-      }else if(!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EMAIL))){
-        //if Email is Null or Empty , it means we are not updating email
+      } else if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EMAIL))) {
+        // if Email is Null or Empty , it means we are not updating email
         Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-        Map<String,Object> map = new HashMap<>();
+        Map<String, Object> map = new HashMap<>();
         map.put(JsonKey.ID, userId);
         map.put(JsonKey.EMAIL_VERIFIED, false);
-        cassandraOperation.updateRecord(usrDbInfo.getKeySpace(),
-        usrDbInfo.getTableName(), map);
+        cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), map);
       }
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
@@ -1583,22 +1594,22 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     if (!(ProjectUtil.isStringNullOREmpty((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
 
       String envName = System.getenv(JsonKey.SUNBIRD_INSTALLATION);
-      if(ProjectUtil.isStringNullOREmpty(envName)){
+      if (ProjectUtil.isStringNullOREmpty(envName)) {
         envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
       }
 
       String welcomeSubject = propertiesCache.getProperty("onboarding_mail_subject");
-      emailTemplateMap.put(JsonKey.SUBJECT, ProjectUtil
-          .formatMessage(welcomeSubject, envName));
+      emailTemplateMap.put(JsonKey.SUBJECT, ProjectUtil.formatMessage(welcomeSubject, envName));
       List<String> reciptientsMail = new ArrayList<>();
       reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
       emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
 
       String webUrl = System.getenv(SUNBIRD_WEB_URL);
-      if(ProjectUtil.isStringNullOREmpty(webUrl)){
+      if (ProjectUtil.isStringNullOREmpty(webUrl)) {
         webUrl = propertiesCache.getProperty(SUNBIRD_WEB_URL);
       }
-      if ((!ProjectUtil.isStringNullOREmpty(webUrl)) && (!SUNBIRD_WEB_URL.equalsIgnoreCase(webUrl))) {
+      if ((!ProjectUtil.isStringNullOREmpty(webUrl))
+          && (!SUNBIRD_WEB_URL.equalsIgnoreCase(webUrl))) {
         emailTemplateMap.put(JsonKey.WEB_URL, webUrl);
       }
 
@@ -1607,7 +1618,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         appUrl = propertiesCache.getProperty(SUNBIRD_APP_URL);
       }
 
-      if ((!ProjectUtil.isStringNullOREmpty(appUrl)) && (!SUNBIRD_APP_URL.equalsIgnoreCase(appUrl))) {
+      if ((!ProjectUtil.isStringNullOREmpty(appUrl))
+          && (!SUNBIRD_APP_URL.equalsIgnoreCase(appUrl))) {
         emailTemplateMap.put(JsonKey.APP_URL, appUrl);
       }
 
@@ -1616,8 +1628,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       emailTemplateMap.put(JsonKey.NOTE, propertiesCache.getProperty(JsonKey.MAIL_NOTE));
       emailTemplateMap.put(JsonKey.ORG_NAME, envName);
       String welcomeMessage = propertiesCache.getProperty("onboarding_welcome_message");
-      emailTemplateMap.put(JsonKey.WELCOME_MESSAGE, ProjectUtil
-          .formatMessage(welcomeMessage, envName));
+      emailTemplateMap.put(JsonKey.WELCOME_MESSAGE,
+          ProjectUtil.formatMessage(welcomeMessage, envName));
 
       emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
 
@@ -1627,28 +1639,29 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       ActorUtil.tell(request);
     }
   }
-  
+
   private void sendSMS(Map<String, Object> userMap) {
     if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EMAIL))
         && !ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PHONE))) {
-    UserUtility.decryptUserData(userMap);
-    String name = (String) userMap.get(JsonKey.FIRST_NAME)+" "+(String) userMap.get(JsonKey.LAST_NAME);
-    String envName = System.getenv(JsonKey.SUNBIRD_INSTALLATION);
-    if (ProjectUtil.isStringNullOREmpty(envName)) {
-      envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
-    }
+      UserUtility.decryptUserData(userMap);
+      String name =
+          (String) userMap.get(JsonKey.FIRST_NAME) + " " + (String) userMap.get(JsonKey.LAST_NAME);
+      String envName = System.getenv(JsonKey.SUNBIRD_INSTALLATION);
+      if (ProjectUtil.isStringNullOREmpty(envName)) {
+        envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
+      }
 
-    String webUrl = System.getenv(SUNBIRD_WEB_URL);
-    if (ProjectUtil.isStringNullOREmpty(webUrl)) {
-      webUrl = propertiesCache.getProperty(SUNBIRD_WEB_URL);
-    }
-    ProjectLogger.log("shortened url :: " + webUrl);
-    String sms = ProjectUtil.getSMSBody(name, webUrl,envName);
-    if (ProjectUtil.isStringNullOREmpty((String) sms)) {
-      sms = PropertiesCache.getInstance().getProperty("sunbird_default_welcome_sms");
-    }
-    ProjectLogger.log("SMS text : " + sms);
-    
+      String webUrl = System.getenv(SUNBIRD_WEB_URL);
+      if (ProjectUtil.isStringNullOREmpty(webUrl)) {
+        webUrl = propertiesCache.getProperty(SUNBIRD_WEB_URL);
+      }
+      ProjectLogger.log("shortened url :: " + webUrl);
+      String sms = ProjectUtil.getSMSBody(name, webUrl, envName);
+      if (ProjectUtil.isStringNullOREmpty((String) sms)) {
+        sms = PropertiesCache.getInstance().getProperty("sunbird_default_welcome_sms");
+      }
+      ProjectLogger.log("SMS text : " + sms);
+
       String countryCode = "";
       if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.COUNTRY_CODE))) {
         countryCode = PropertiesCache.getInstance().getProperty("sunbird_default_country_code");

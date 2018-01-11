@@ -41,7 +41,7 @@ public class CoursePublishedUpdate implements Job {
   private static Util.DbInfo coursePublishDBInfo =
       Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
   private Util.DbInfo courseBatchDBInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
-  static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   private static String requestData =
       "{\"request\":{\"filters\":{\"identifier\":dataVal},\"fields\":[\"status\"]}}";

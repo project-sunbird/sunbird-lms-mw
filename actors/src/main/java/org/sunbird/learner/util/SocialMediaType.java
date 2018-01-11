@@ -133,12 +133,7 @@ public class SocialMediaType {
     }
   }
   private static boolean validateUrls(String url){
-
-    if(invalidUrls.containsKey(url.toLowerCase())){
-      return true;
-    }
-    return false;
-
+     return invalidUrls.containsKey(url.toLowerCase());
   }
 
   private static void initInvalidUrlMap () {

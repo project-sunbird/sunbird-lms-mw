@@ -274,6 +274,7 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
       default :
         operationMap.put("dateKey", "");
         operationMap.put("status",  "");
+        break;
     }
     Map<String, Object> requestObject = new HashMap<>();
     Map<String, Object> filterMap = new HashMap<>();

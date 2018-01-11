@@ -203,6 +203,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         operationMap.put("dateKey", "");
         operationMap.put("status", "");
         operationMap.put("userActionKey", "");
+        break;
     }
     StringBuilder builder = new StringBuilder();
     builder.append("{\"request\":{\"rawQuery\":{\"query\":{\"filtered\":")

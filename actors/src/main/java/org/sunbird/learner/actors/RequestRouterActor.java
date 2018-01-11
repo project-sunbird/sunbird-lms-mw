@@ -447,8 +447,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
               + (System.currentTimeMillis() - startTime), LoggerEnum.PERF_LOG);
           parent.tell(result, ActorRef.noSender());
           // Audit log method call
-          if (result instanceof Response) {
-            if (Util.auditLogUrlMap.containsKey(message.getOperation())) {
+            if (result instanceof Response && Util.auditLogUrlMap.containsKey(message.getOperation())) {
               AuditOperation auditOperation =
                   (AuditOperation) Util.auditLogUrlMap.get(message.getOperation());
               Map<String, Object> map = new HashMap<>();
@@ -460,7 +459,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
               request.setRequest(map);
               auditLogManagementActor.tell(request, self());
             }
-          }
         }
       }
     }, ec);

@@ -161,12 +161,7 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
       return false;
     }
 
-    if (null != endDate && todaydate.compareTo(endDate) > 0) {
-      return false;
-    }
-
-    return true;
-
+    return (!(null != endDate && todaydate.compareTo(endDate) > 0));
   }
 
   /**

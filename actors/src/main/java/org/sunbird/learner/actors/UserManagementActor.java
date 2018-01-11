@@ -1126,11 +1126,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       } catch (Exception ex) {
         ProjectLogger.log("Exception occurred while encrypting user email.");
       }
-      if ((encEmail).equalsIgnoreCase(email)) {
-        return true;
-      } else {
-        return false;
-      }
+      return ((encEmail).equalsIgnoreCase(email));
     }
     return false;
   }

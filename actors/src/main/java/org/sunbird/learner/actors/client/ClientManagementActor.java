@@ -146,8 +146,8 @@ public class ClientManagementActor extends UntypedAbstractActor {
     }
 
     String clientName = (String) actorMessage.getRequest().get(JsonKey.CLIENT_NAME);
-    if (!ProjectUtil.isStringNullOREmpty(clientName)) {
-      if (!clientName.equalsIgnoreCase((String) dataList.get(0).get(JsonKey.CLIENT_NAME))) {
+      if (!ProjectUtil.isStringNullOREmpty(clientName) 
+          && !clientName.equalsIgnoreCase((String) dataList.get(0).get(JsonKey.CLIENT_NAME))) {
         data = getDataFromCassandra(JsonKey.CLIENT_NAME, clientName);
         List<Map<String, Object>> dataList1 =
             (List<Map<String, Object>>) data.getResult().get(JsonKey.RESPONSE);
@@ -157,7 +157,6 @@ public class ClientManagementActor extends UntypedAbstractActor {
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
       }
-    }
 
 
     Map<String, Object> req = new HashMap<>();

@@ -680,10 +680,8 @@ public class BackgroundJobManager extends UntypedAbstractActor {
     Response resposne = cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(),
         updateRequestMap);
     ProjectLogger.log(resposne.toString());
-    if (!(resposne.get(JsonKey.RESPONSE) instanceof ProjectCommonException)) {
-      return true;
-    }
-    return false;
+    
+    return (!(resposne.get(JsonKey.RESPONSE) instanceof ProjectCommonException));
   }
 
   /**

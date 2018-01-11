@@ -1640,8 +1640,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       sender().tell(exception, self());
       return false;
     }
-    if (isNull(req.get(JsonKey.ORGANISATION_ID))) {
-      if (isNull(req.get(JsonKey.PROVIDER)) || isNull(req.get(JsonKey.EXTERNAL_ID))) {
+      if (isNull(req.get(JsonKey.ORGANISATION_ID)) 
+          && (isNull(req.get(JsonKey.PROVIDER)) || isNull(req.get(JsonKey.EXTERNAL_ID)))) {
         ProjectCommonException exception = new ProjectCommonException(
             ResponseCode.sourceAndExternalIdValidationError.getErrorCode(),
             ResponseCode.sourceAndExternalIdValidationError.getErrorMessage(),
@@ -1649,7 +1649,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         sender().tell(exception, self());
         return false;
       }
-    }
     // fetch orgid from database on basis of source and external id and put orgid into request .
     Util.DbInfo orgDBInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 

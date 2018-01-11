@@ -280,8 +280,7 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ROLES, roles);
 
     subject.tell(reqObj, probe.getRef());
-    ProjectCommonException resp =
-        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
   }
 
   @Test
@@ -1679,6 +1678,7 @@ public class OrganisationManagementActorTest {
         }
       }
     } catch (Exception e) {
+      e.printStackTrace();
     }
     dbMap = new HashMap<>();
     dbMap.put(JsonKey.CHANNEL, CHANNEL);

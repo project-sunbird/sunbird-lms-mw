@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.stream.Collectors;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -22,11 +23,13 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * Class to provide functionality for Add and Endorse the user skills .
@@ -40,15 +43,29 @@ public class SkillmanagementActor extends UntypedAbstractActor {
   Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
   private final String REF_SKILLS_DB_ID = "001";
+  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
 
   @Override
   public void onReceive(Object message) throws Throwable {
+
     if (message instanceof Request) {
+
+      try {
+        Thread.sleep(2000);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+
       try {
         ProjectLogger.log("SkillmanagementActor-onReceive called");
         Request actorMessage = (Request) message;
+        initializeContext(actorMessage, JsonKey.USER, "USER_ENV");
+        //set request id fto thread loacl...
+        ExecutionContext.setRequestId(actorMessage.getRequestId());
         if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ADD_SKILL.getValue())) {
           endorseSkill(actorMessage);
+
+          //testDisruptor();
         } else if (actorMessage.getOperation()
               .equalsIgnoreCase(ActorOperations.GET_SKILL.getValue())) {
           getSkill(actorMessage);
@@ -66,6 +83,9 @@ public class SkillmanagementActor extends UntypedAbstractActor {
       } catch (Exception ex) {
         ProjectLogger.log(ex.getMessage(), ex);
         sender().tell(ex, self());
+      }finally{
+        // clean up the request level context info...
+        //ExecutionContext.getCurrent().cleanup();
       }
     } else {
       ProjectLogger.log("UNSUPPORTED MESSAGE");
@@ -75,6 +95,32 @@ public class SkillmanagementActor extends UntypedAbstractActor {
               ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
     }
+  }
+
+  private void testDisruptor() {
+
+    System.out.println("TESTING LMAX DISRUPTOR");
+    //lmaxWriter.submitMessage("hello");
+  }
+
+  private void initializeContext(Request actorMessage, String actorType, String env) {
+
+    ExecutionContext context = ExecutionContext.getCurrent();
+    Map<String , Object> requestContext = new HashMap<>();
+    // request level info ...
+    Map<String , Object> req = actorMessage.getRequest();
+    String requestedby = (String) req.get(JsonKey.REQUESTED_BY);
+    String channel = (String) req.get(JsonKey.CHANNEL);
+    String mid = (String) req.get(JsonKey.REQUEST_ID);
+    requestContext.put(JsonKey.REQUEST_ID ,(String) req.get(JsonKey.REQUEST_ID));
+    requestContext.put(JsonKey.CHANNEL, channel);
+    requestContext.put("ACTOR_ID", requestedby);
+    requestContext.put("ACTOR_TYPE" , actorType);
+    requestContext.put("env",env);
+    context.setRequestContext(requestContext);
+
+    // and global context will be set at the time of creation of thread local automatically ...
+
   }
 
   /**
@@ -143,7 +189,15 @@ public class SkillmanagementActor extends UntypedAbstractActor {
 
     ProjectLogger.log("SkillmanagementActor-endorseSkill called");
     format = new SimpleDateFormat("yyyy-MM-dd");
+    // target object of telemetry event...
+    Map<String, Object> targetObject = new HashMap<>();
+    // correlated object of telemetry event...
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
     String endoresedUserId  = (String) actorMessage.getRequest().get(JsonKey.ENDORSED_USER_ID);
+
+    targetObject = generateTargetObject(endoresedUserId, JsonKey.USER);
+
     List<String> list = (List<String>) actorMessage.getRequest().get(JsonKey.SKILL_NAME);
     CopyOnWriteArraySet<String> skillset = new CopyOnWriteArraySet<>(list);
     String requestedByUserId = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
@@ -155,6 +209,8 @@ public class SkillmanagementActor extends UntypedAbstractActor {
 
     // check whether both userid exist or not if not throw exception
     if (endoresedList.isEmpty() || requestedUserList.isEmpty()) {
+      //  generate context and params here ...
+      Map<String, Object> context = getTelemetryContext();
       throw new ProjectCommonException(ResponseCode.invalidUserId.getErrorCode(),
           ResponseCode.invalidUserId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -183,6 +239,9 @@ public class SkillmanagementActor extends UntypedAbstractActor {
             .getRecordById(userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), id);
         List<Map<String, Object>> responseList = (List<Map<String, Object>>) response
             .get(JsonKey.RESPONSE);
+
+        // prepare correlted object ...
+        generateCorrelatedObject(id, "skill", "user.skill",correlatedObject);
 
         if (responseList.isEmpty()) {
           // means this is first time skill coming so add this one
@@ -248,7 +307,67 @@ public class SkillmanagementActor extends UntypedAbstractActor {
     Response response3 = new Response();
     response3.getResult().put(JsonKey.RESULT, "SUCCESS");
     sender().tell(response3 , self());
+    //TODO: group all information at one place and send it to background actor for processing , we have context full info, we have target obbject , correlated object info just pass all these to ackground actor it will take care of all these ...
+    Request request = new Request();
+    //request.setOperation("TELEMETRY_EVENT");
+
+    Map<String, Object> params = new HashMap<>();
+    // set additional props for edata related things ...
+    params.put("props", actorMessage.getRequest().entrySet().stream().map(entry -> entry.getKey()).collect(
+        Collectors.toList()));
+    request.setRequest(genarateTelemetryRequest(targetObject , correlatedObject , "AUDIT", params));
+    System.out.println("ACTOR SIDE TELEMETRY PROCESS STARTED ");
+    lmaxWriter.submitMessage(request);
+    //request.setOperation("TELEMETRY_EVENT");
+    //ActorUtil.tell(request);
+    // TODO: actor call
     updateSkillsList(skillset);
+  }
+
+  private Map<String,Object> getTelemetryContext() {
+
+    Map<String, Object> context = new HashMap<>();
+    context.putAll(ExecutionContext.getCurrent().getRequestContext());
+    context.putAll(ExecutionContext.getCurrent().getGlobalContext());
+    return context;
+  }
+
+  private Map<String, Object> generateTargetObject(String id, String type) {
+
+    Map<String, Object> target = new HashMap<>();
+    target.put(JsonKey.ID , id);
+    target.put(JsonKey.TYPE , type);
+    return target;
+  }
+
+  public void generateCorrelatedObject(String id, String type, String corelation, List<Map<String, Object>> correlationList){
+
+    Map<String , Object> correlatedObject = new HashMap<String , Object>();
+    correlatedObject.put(JsonKey.ID , id);
+    correlatedObject.put(JsonKey.TYPE, type);
+    correlatedObject.put(JsonKey.RELATION , corelation);
+
+    correlationList.add(correlatedObject);
+
+  }
+
+  public Map<String, Object> genarateTelemetryRequest(Map<String, Object> targetObject,
+      List<Map<String, Object>> correlatedObject, String eventType,
+      Map<String, Object> params){
+
+    Map<String, Object> map = new HashMap<>();
+    map.put("TARGET_OBJECT", targetObject);
+    map.put("CORRELATED_OBJECTS", correlatedObject);
+    map.put("TELEMETRY_EVENT_TYPE", eventType);
+    map.put("params", params);
+
+    // combine context info into one i.e. request level and system level info into one place...
+
+    Map<String, Object> context = getTelemetryContext();
+    map.put("context", context);
+    return map;
+
+
   }
 
   private void updateSkillsList(CopyOnWriteArraySet<String> skillset) {

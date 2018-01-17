@@ -43,10 +43,10 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
 
   private static final String CSV_FILE_EXTENSION = ".csv";
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
-  int userDataSize = 0;
-  int orgDataSize = 0;
-  int batchDataSize = 0;
+  private Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
+  private int userDataSize = 0;
+  private int orgDataSize = 0;
+  private int batchDataSize = 0;
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -85,8 +85,9 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
 
   private void getUploadStatus(Request actorMessage) {
     String processId = (String) actorMessage.getRequest().get(JsonKey.PROCESS_ID);
-    DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
-        .getDecryptionServiceInstance(null);
+    DecryptionService decryptionService =
+        org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
+            .getDecryptionServiceInstance(null);
     Response response = null;
     response =
         cassandraOperation.getRecordById(bulkDb.getKeySpace(), bulkDb.getTableName(), processId);
@@ -111,13 +112,15 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
         Object[] failureMap = null;
         try {
           if (null != resMap.get(JsonKey.SUCCESS_RESULT)) {
-            successMap =
-                mapper.readValue(decryptionService.decryptData((String) resMap.get(JsonKey.SUCCESS_RESULT)), Object[].class);
+            successMap = mapper.readValue(
+                decryptionService.decryptData((String) resMap.get(JsonKey.SUCCESS_RESULT)),
+                Object[].class);
             resMap.put(JsonKey.SUCCESS_RESULT, successMap);
           }
           if (null != resMap.get(JsonKey.FAILURE_RESULT)) {
-            failureMap =
-                mapper.readValue(decryptionService.decryptData((String) resMap.get(JsonKey.FAILURE_RESULT)), Object[].class);
+            failureMap = mapper.readValue(
+                decryptionService.decryptData((String) resMap.get(JsonKey.FAILURE_RESULT)),
+                Object[].class);
             resMap.put(JsonKey.FAILURE_RESULT, failureMap);
           }
         } catch (IOException e) {
@@ -255,10 +258,11 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
   }
 
   private void validateOrgProperty(String[] property) {
-    ArrayList<String> properties = new ArrayList<>(Arrays.asList(JsonKey.ORGANISATION_NAME,
-        JsonKey.CHANNEL, JsonKey.IS_ROOT_ORG, JsonKey.PROVIDER, JsonKey.EXTERNAL_ID,
-        JsonKey.DESCRIPTION, JsonKey.HOME_URL, JsonKey.ORG_CODE, JsonKey.ORG_TYPE,
-        JsonKey.PREFERRED_LANGUAGE, JsonKey.THEME, JsonKey.CONTACT_DETAILS, JsonKey.LOC_ID, JsonKey.HASHTAGID));
+    ArrayList<String> properties =
+        new ArrayList<>(Arrays.asList(JsonKey.ORGANISATION_NAME, JsonKey.CHANNEL,
+            JsonKey.IS_ROOT_ORG, JsonKey.PROVIDER, JsonKey.EXTERNAL_ID, JsonKey.DESCRIPTION,
+            JsonKey.HOME_URL, JsonKey.ORG_CODE, JsonKey.ORG_TYPE, JsonKey.PREFERRED_LANGUAGE,
+            JsonKey.THEME, JsonKey.CONTACT_DETAILS, JsonKey.LOC_ID, JsonKey.HASHTAGID));
 
     for (String key : property) {
       if (!properties.contains(key)) {
@@ -481,11 +485,12 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
   }
 
   private void validateUserProperty(String[] property) {
-    ArrayList<String> properties = new ArrayList<>(Arrays.asList(JsonKey.FIRST_NAME, JsonKey.COUNTRY_CODE, 
-        JsonKey.LAST_NAME, JsonKey.PHONE, JsonKey.COUNTRY_CODE , JsonKey.EMAIL, JsonKey.PASSWORD, JsonKey.USERNAME,
-        JsonKey.PROVIDER, JsonKey.PHONE_VERIFIED, JsonKey.EMAIL_VERIFIED, JsonKey.ROLES,
-        JsonKey.POSITION, JsonKey.GRADE, JsonKey.LOCATION, JsonKey.DOB, JsonKey.GENDER,
-        JsonKey.LANGUAGE, JsonKey.PROFILE_SUMMARY, JsonKey.SUBJECT, JsonKey.WEB_PAGES));
+    ArrayList<String> properties =
+        new ArrayList<>(Arrays.asList(JsonKey.FIRST_NAME, JsonKey.COUNTRY_CODE, JsonKey.LAST_NAME,
+            JsonKey.PHONE, JsonKey.COUNTRY_CODE, JsonKey.EMAIL, JsonKey.PASSWORD, JsonKey.USERNAME,
+            JsonKey.PROVIDER, JsonKey.PHONE_VERIFIED, JsonKey.EMAIL_VERIFIED, JsonKey.ROLES,
+            JsonKey.POSITION, JsonKey.GRADE, JsonKey.LOCATION, JsonKey.DOB, JsonKey.GENDER,
+            JsonKey.LANGUAGE, JsonKey.PROFILE_SUMMARY, JsonKey.SUBJECT, JsonKey.WEB_PAGES));
 
     for (String key : property) {
       if (!properties.contains(key)) {

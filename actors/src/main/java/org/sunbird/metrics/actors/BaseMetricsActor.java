@@ -150,6 +150,10 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
         days = 35;
         break;
       }
+      
+      default:
+        days = 0;
+        break;
     }
     if(days == 0){
       throw new ProjectCommonException(ResponseCode.invalidPeriod.getErrorCode(),

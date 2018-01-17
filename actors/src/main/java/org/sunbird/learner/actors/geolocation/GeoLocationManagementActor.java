@@ -29,9 +29,9 @@ import org.sunbird.learner.util.Util;
  */
 public class GeoLocationManagementActor extends UntypedAbstractActor {
 
-  Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
+  private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+  private Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
   private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 
   @Override

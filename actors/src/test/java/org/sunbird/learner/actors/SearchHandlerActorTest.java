@@ -18,15 +18,13 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.Application;
-import org.sunbird.learner.actors.search.CourseSearchActor;
 import org.sunbird.learner.actors.search.SearchHandlerActor;
 import org.sunbird.learner.util.Util;
 
 public class SearchHandlerActorTest {
 
-  static ActorSystem system;
-  final static Props props = Props.create(SearchHandlerActor.class);
-  String courseId = "";
+  private static ActorSystem system;
+  private static final Props props = Props.create(SearchHandlerActor.class);
 
   @BeforeClass
   public static void setUp() {
@@ -53,8 +51,7 @@ public class SearchHandlerActorTest {
       innerMap.put(JsonKey.LIMIT,1);
       reqObj.setRequest(innerMap);
       subject.tell(reqObj, probe.getRef());
-      Response res = probe.expectMsgClass(duration("200 second"),Response.class);
-      System.out.println("");
+      probe.expectMsgClass(duration("200 second"),Response.class);
     }
   
   @Test

@@ -19,8 +19,6 @@ import org.sunbird.common.models.util.datasecurity.impl.ServiceFactory;
  */
 public class UserUtility {
 
-  private UserUtility() {}
-
   private static List<String> userKeyToEncrypt = new ArrayList<>();
   private static List<String> addressKeyToEncrypt = new ArrayList<>();
   private static List<String> userKeyToDecrypt = new ArrayList<>();
@@ -32,7 +30,8 @@ public class UserUtility {
     String userKeyDecrypt = PropertiesCache.getInstance().getProperty("userkey.decryption");
     userKeyToDecrypt = new ArrayList<>(Arrays.asList(userKeyDecrypt.split(",")));
   }
-
+  
+  private UserUtility() {}
 
   public static Map<String, Object> encryptUserData(Map<String, Object> userMap) throws Exception {
     EncryptionService service = ServiceFactory.getEncryptionServiceInstance(null);

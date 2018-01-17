@@ -31,10 +31,10 @@ import org.sunbird.learner.util.Util;
 public class EmailServiceActor extends UntypedAbstractActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  DecryptionService decryptionService =
+  private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
           .getDecryptionServiceInstance(null);
-  EncryptionService encryptionService =
+  private EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
           .getEncryptionServiceInstance(null);
 

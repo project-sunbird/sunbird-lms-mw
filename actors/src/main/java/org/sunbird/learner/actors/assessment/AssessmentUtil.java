@@ -23,9 +23,9 @@ public class AssessmentUtil{
   
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	
-	Util.DbInfo assmntEvalDbInfo = Util.dbInfoMap.get(JsonKey.ASSESSMENT_EVAL_DB);
-	Util.DbInfo assmntItemDbInfo = Util.dbInfoMap.get(JsonKey.ASSESSMENT_ITEM_DB);
-	Util.DbInfo contentConsumptionDbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
+	private Util.DbInfo assmntEvalDbInfo = Util.dbInfoMap.get(JsonKey.ASSESSMENT_EVAL_DB);
+	private Util.DbInfo assmntItemDbInfo = Util.dbInfoMap.get(JsonKey.ASSESSMENT_ITEM_DB);
+	private Util.DbInfo contentConsumptionDbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
 	
 	/**
 	 * This method will do the user assessment evaluation.once 
@@ -34,12 +34,12 @@ public class AssessmentUtil{
 	 * @param request Map<String, Object>
 	 */
 	public void evalAssessment(Map<String, Object> request) {
-		Map<String, List<Map<String, Object>>> evalAssmntReq = new HashMap<String, List<Map<String,Object>>>();
+		Map<String, List<Map<String, Object>>> evalAssmntReq = null;
 		List<Map<String, Object>> assmntListResult = null;
 		DefaultAssessmentEvaluator evaluator = new DefaultAssessmentEvaluator();
 		evalAssmntReq = createReqFrEvalAssmnt(request);
 			assmntListResult = evaluator.evaluateResult(evalAssmntReq);
-			if(null != assmntListResult && assmntListResult.size() > 0){ 
+			if(null != assmntListResult && !assmntListResult.isEmpty()){ 
 				updateScoreIntoContentConsumptionTable(assmntListResult);
 				
 				insertRecordIntoAssmntEvalTable(assmntListResult,request);

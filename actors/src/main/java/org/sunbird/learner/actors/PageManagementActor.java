@@ -31,10 +31,10 @@ import org.sunbird.learner.util.Util;
  */
 public class PageManagementActor extends UntypedAbstractActor {
 
-  Util.DbInfo pageDbInfo = Util.dbInfoMap.get(JsonKey.PAGE_MGMT_DB);
-  Util.DbInfo sectionDbInfo = Util.dbInfoMap.get(JsonKey.SECTION_MGMT_DB);
-  Util.DbInfo pageSectionDbInfo = Util.dbInfoMap.get(JsonKey.PAGE_SECTION_DB);
-  Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+  private Util.DbInfo pageDbInfo = Util.dbInfoMap.get(JsonKey.PAGE_MGMT_DB);
+  private Util.DbInfo sectionDbInfo = Util.dbInfoMap.get(JsonKey.SECTION_MGMT_DB);
+  private Util.DbInfo pageSectionDbInfo = Util.dbInfoMap.get(JsonKey.PAGE_SECTION_DB);
+  private Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   @Override
@@ -244,7 +244,7 @@ public class PageManagementActor extends UntypedAbstractActor {
 
     Map<String, Object> pageMap = DataCacheHandler.getPageMap().get(orgId + ":" + pageName);
     /**
-     * if requested page for this organisation is not found, return default NTP page
+     * if requested page for this organization is not found, return default NTP page
      */
     if (null == pageMap) {
       pageMap = DataCacheHandler.getPageMap().get("NA" + ":" + pageName);
@@ -478,9 +478,12 @@ public class PageManagementActor extends UntypedAbstractActor {
     }
     ProjectLogger
         .log("search query after applying filter for ekstep for page data assemble api : " + query);
-    Object[] result = EkStepRequestUtil.searchContent(query, headers);
-    if (null != result) {
-      section.put(JsonKey.CONTENTS, result);
+    Map<String,Object> result = EkStepRequestUtil.searchContent(query, headers);
+    if (null != result && !result.isEmpty()) {
+      section.put(JsonKey.CONTENTS, result.get(JsonKey.CONTENTS));
+      Map<String,Object> tempMap = (Map<String, Object>) result.get(JsonKey.PARAMS);
+      section.put(JsonKey.RES_MSG_ID, tempMap.get(JsonKey.RES_MSG_ID));
+      section.put(JsonKey.API_ID, tempMap.get(JsonKey.API_ID));
     }
   }
 

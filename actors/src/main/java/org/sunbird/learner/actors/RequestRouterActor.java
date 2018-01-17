@@ -47,7 +47,6 @@ import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.util.Util;
 import org.sunbird.metrics.actors.CourseMetricsActor;
 import org.sunbird.metrics.actors.OrganisationMetricsActor;
-import org.sunbird.metrics.actors.UserMetricsActor;
 import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
@@ -62,20 +61,6 @@ import scala.concurrent.duration.Duration;
 public class RequestRouterActor extends UntypedAbstractActor {
 
   private static ActorSystem system = null;
-  /**
-   * @return the system
-   */
-  public static ActorSystem getSystem() {
-    return system;
-  }
-
-  /**
-   * @param system the system to set
-   */
-  public static void setSystem(ActorSystem system) {
-    RequestRouterActor.system = system;
-  }
-
   private static ActorSelection selection = null;
   private static final String ACTOR_CONFIG_NAME = "RemoteMWConfig";
   private static final String REMOTE_ACTOR_SYSTEM_NAME = "RemoteMiddlewareActorSystem";
@@ -93,7 +78,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ActorRef searchHandlerActor;
   private ActorRef bulkUploadManagementActor;
   private ActorRef courseBatchActor;
-  private ActorRef userMetricsRouter;
   private ActorRef esSyncActor;
   private ActorRef emailServiceActor;
   private ActorRef fileUploadServiceActor;
@@ -115,7 +99,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ExecutionContext ec;
 
 
-  public static Map<String, ActorRef> routerMap = new HashMap<>();
+  public static final Map<String, ActorRef> routerMap = new HashMap<>();
   private static final int WAIT_TIME_VALUE = 9;
   private static final String COURSE_ENROLLMENT_ROUTER = "courseEnrollmentRouter";
   private static final String LEARNER_ACTOR_ROUTER = "learnerActorRouter";
@@ -132,7 +116,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private static final String COURSE_BATCH_MANAGEMENT_ACTOR = "courseBatchActor";
   private static final String ORGANISATION_METRICS_ROUTER = "organisationMetricsRouter";
   private static final String COURSE_METRICS_ROUTER = "courseMetricsRouter";
-  private static final String USER_METRICS_ROUTER = "userMetricsRouter";
   private static final String ES_SYNC_ROUTER = "esSyncActor";
   private static final String SCHEDULAR_ACTOR = "schedularActor";
   private static final String EMAIL_SERVICE_ACTOR = "emailServiceActor";
@@ -150,7 +133,19 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private static final String APPLICATION_CONFIG_ACTOR = "applicationConfigActor";
   private static final String DBOPERATION_ACTOR = "dbOperationActor";
 
+  /**
+   * @return the system
+   */
+  public static ActorSystem getSystem() {
+    return system;
+  }
 
+  /**
+   * @param system the system to set
+   */
+  public static void setSystem(ActorSystem system) {
+    RequestRouterActor.system = system;
+  }
 
   /**
    * constructor to initialize router actor with child actor pool
@@ -201,8 +196,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
     courseMetricsRouter =
         getContext().actorOf(FromConfig.getInstance().props(Props.create(CourseMetricsActor.class)),
             COURSE_METRICS_ROUTER);
-    userMetricsRouter = getContext().actorOf(
-        FromConfig.getInstance().props(Props.create(UserMetricsActor.class)), USER_METRICS_ROUTER);
     esSyncActor = getContext()
         .actorOf(FromConfig.getInstance().props(Props.create(EsSyncActor.class)), ES_SYNC_ROUTER);
     fileUploadServiceActor = getContext().actorOf(
@@ -324,8 +317,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.ORG_CONSUMPTION_METRICS.getValue(), organisationMetricsRouter);
     routerMap.put(ActorOperations.COURSE_PROGRESS_METRICS.getValue(), courseMetricsRouter);
     routerMap.put(ActorOperations.COURSE_CREATION_METRICS.getValue(), courseMetricsRouter);
-    routerMap.put(ActorOperations.USER_CREATION_METRICS.getValue(), userMetricsRouter);
-    routerMap.put(ActorOperations.USER_CONSUMPTION_METRICS.getValue(), userMetricsRouter);
 
     routerMap.put(ActorOperations.ORG_CREATION_METRICS_REPORT.getValue(),
         organisationMetricsRouter);
@@ -456,8 +447,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
               + (System.currentTimeMillis() - startTime), LoggerEnum.PERF_LOG);
           parent.tell(result, ActorRef.noSender());
           // Audit log method call
-          if (result instanceof Response) {
-            if (Util.auditLogUrlMap.containsKey(message.getOperation())) {
+            if (result instanceof Response && Util.auditLogUrlMap.containsKey(message.getOperation())) {
               AuditOperation auditOperation =
                   (AuditOperation) Util.auditLogUrlMap.get(message.getOperation());
               Map<String, Object> map = new HashMap<>();
@@ -469,7 +459,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
               request.setRequest(map);
               auditLogManagementActor.tell(request, self());
             }
-          }
         }
       }
     }, ec);
@@ -485,7 +474,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     if ("local"
         .equalsIgnoreCase(PropertiesCache.getInstance().getProperty("api_actor_provider"))) {
       con = ConfigFactory.load().getConfig(ACTOR_CONFIG_NAME);
-      system = akka.actor.ActorSystem.create(REMOTE_ACTOR_SYSTEM_NAME, con);
+      system = ActorSystem.create(REMOTE_ACTOR_SYSTEM_NAME, con);
     }else{
       system = RequestRouterActor.getSystem();
     }

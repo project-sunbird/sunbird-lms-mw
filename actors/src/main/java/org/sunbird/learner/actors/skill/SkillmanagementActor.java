@@ -71,7 +71,7 @@ public class SkillmanagementActor extends UntypedAbstractActor {
           getSkill(actorMessage);
         }else if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.GET_SKILLS_LIST.getValue())) {
-          getSkillsList(actorMessage);
+          getSkillsList();
         } else {
           ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
           ProjectCommonException exception =
@@ -127,7 +127,7 @@ public class SkillmanagementActor extends UntypedAbstractActor {
    * Method will return all the list of skills , it is type of reference data ...
    * @param actorMessage
    */
-  private void getSkillsList(Request actorMessage) {
+  private void getSkillsList() {
 
     ProjectLogger.log("SkillmanagementActor-getSkillsList called");
     Map<String, Object> skills = new HashMap<>();
@@ -373,7 +373,7 @@ public class SkillmanagementActor extends UntypedAbstractActor {
   private void updateSkillsList(CopyOnWriteArraySet<String> skillset) {
 
     Map<String , Object> skills = new HashMap<>();
-    List<String> skillsList = new ArrayList<>();
+    List<String> skillsList = null;
     Response skilldbresponse=cassandraOperation.getRecordById(skillsListDbInfo.getKeySpace(), skillsListDbInfo.getTableName(), REF_SKILLS_DB_ID);
     List<Map<String, Object>> list =  (List<Map<String, Object>>) skilldbresponse.get(JsonKey.RESPONSE);
 

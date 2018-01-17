@@ -33,8 +33,6 @@ import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.Application;
-import org.sunbird.learner.actors.OrganisationManagementActor;
-import org.sunbird.learner.actors.UserManagementActor;
 import org.sunbird.learner.util.Util;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
@@ -45,12 +43,9 @@ import org.sunbird.services.sso.SSOServiceFactory;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class BulkUploadManagementActorTest {
 
-  static ActorSystem system;
-  static CassandraOperation operation = ServiceFactory.getInstance();
-  final static Props props = Props.create(BulkUploadManagementActor.class);
-  private static boolean orgProcessFlag = true;
-  private static boolean userProcessFlag = true;
-  private static boolean battchProcessFlag = true;
+  private static ActorSystem system;
+  private static CassandraOperation operation = ServiceFactory.getInstance();
+  private static final Props props = Props.create(BulkUploadManagementActor.class);
   private static Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private static final String USER_ID = "bcic783gfu239";
   private static  String orgUploadProcessId = null;
@@ -58,12 +53,10 @@ public class BulkUploadManagementActorTest {
   private static  String orgUploadProcessId1 = null;
   private static  String orgUploadProcessId2 = null;
   private static  String userUploadProcessId1 = null;
-  private static  String batchUploadProcessId = null;
-  private static  String batchUploadProcessId1 = null;
   private static String orgId;
   private static String orgId1;
   private static String userId;
-  static Util.DbInfo orgDB = Util.dbInfoMap.get(JsonKey.ORG_DB);
+  private static Util.DbInfo orgDB = Util.dbInfoMap.get(JsonKey.ORG_DB);
   private static Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
   private static final String refOrgId = "id34fy";
   private static final String batchId = "batch78575ir8478";
@@ -138,7 +131,6 @@ public class BulkUploadManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.BULK_UPLOAD.getValue());
     HashMap<String, Object> innerMap = new HashMap<>();
-    Map<String , Object> orgMap = new HashMap<String , Object>();
 
     innerMap.put(JsonKey.CREATED_BY , USER_ID);
     innerMap.put(JsonKey.OBJECT_TYPE , JsonKey.ORGANISATION);
@@ -180,7 +172,6 @@ public class BulkUploadManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.BULK_UPLOAD.getValue());
     HashMap<String, Object> innerMap = new HashMap<>();
-    Map<String , Object> orgMap = new HashMap<String , Object>();
 
     innerMap.put(JsonKey.CREATED_BY , USER_ID);
     innerMap.put(JsonKey.OBJECT_TYPE , JsonKey.ORGANISATION);
@@ -222,7 +213,6 @@ public class BulkUploadManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.BULK_UPLOAD.getValue());
     HashMap<String, Object> innerMap = new HashMap<>();
-    Map<String , Object> orgMap = new HashMap<String , Object>();
 
     innerMap.put(JsonKey.CREATED_BY , USER_ID);
     innerMap.put(JsonKey.OBJECT_TYPE , JsonKey.ORGANISATION);
@@ -233,9 +223,7 @@ public class BulkUploadManagementActorTest {
     if(orgProcessFlag){
 
       subject.tell(reqObj, probe.getRef());
-      Response res =  probe.expectMsgClass(Response.class);
-      /*orgUploadProcessId2 = (String)res.get(JsonKey.PROCESS_ID);
-      System.out.println("PROCESS ID IS "+ orgUploadProcessId);*/
+      probe.expectMsgClass(Response.class);
 
     }
   }
@@ -271,7 +259,6 @@ public class BulkUploadManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.BULK_UPLOAD.getValue());
     HashMap<String, Object> innerMap = new HashMap<>();
-    Map<String , Object> orgMap = new HashMap<String , Object>();
 
     innerMap.put(JsonKey.CREATED_BY , USER_ID);
     innerMap.put(JsonKey.OBJECT_TYPE , JsonKey.ORGANISATION);
@@ -303,16 +290,12 @@ public class BulkUploadManagementActorTest {
 
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_BULK_OP_STATUS.getValue());
-    HashMap<String, Object> innerMap = new HashMap<>();
-    Map<String , Object> orgMap = new HashMap<String , Object>();
 
     reqObj.getRequest().put(JsonKey.PROCESS_ID , orgUploadProcessId);
 
     if(null != orgUploadProcessId){
       subject.tell(reqObj, probe.getRef());
       Response res =  probe.expectMsgClass(duration("200 second"),Response.class);
-      /*String respon = (String)res.get(JsonKey.RESPONSE);
-      System.out.println(respon);*/
       List<Map<String , Object>> list = (List<Map<String, Object>>) res.get(JsonKey.RESPONSE);
       if(!list.isEmpty()){
         Map<String , Object> map = list.get(0);
@@ -320,7 +303,6 @@ public class BulkUploadManagementActorTest {
         map = (Map<String, Object>) list1[0];
 
         orgId = (String)map.get(JsonKey.ID);
-        System.out.println("ORG ID "+orgId);
 
       }
     }
@@ -347,8 +329,6 @@ public class BulkUploadManagementActorTest {
     if(null != orgUploadProcessId2){
       subject.tell(reqObj, probe.getRef());
       Response res =  probe.expectMsgClass(duration("200 second"),Response.class);
-      /*String respon = (String)res.get(JsonKey.RESPONSE);
-      System.out.println(respon);*/
       List<Map<String , Object>> list = (List<Map<String, Object>>) res.get(JsonKey.RESPONSE);
       if(!list.isEmpty()){
         Map<String , Object> map = list.get(0);
@@ -393,7 +373,6 @@ public class BulkUploadManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.BULK_UPLOAD.getValue());
     HashMap<String, Object> innerMap = new HashMap<>();
-    Map<String , Object> orgMap = new HashMap<String , Object>();
 
     innerMap.put(JsonKey.CREATED_BY , USER_ID);
     innerMap.put(JsonKey.OBJECT_TYPE , JsonKey.USER);
@@ -443,7 +422,6 @@ public class BulkUploadManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.BULK_UPLOAD.getValue());
     HashMap<String, Object> innerMap = new HashMap<>();
-    Map<String , Object> orgMap = new HashMap<String , Object>();
 
     innerMap.put(JsonKey.CREATED_BY , USER_ID);
     innerMap.put(JsonKey.OBJECT_TYPE , JsonKey.USER);
@@ -476,8 +454,6 @@ public class BulkUploadManagementActorTest {
 
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_BULK_OP_STATUS.getValue());
-    HashMap<String, Object> innerMap = new HashMap<>();
-    Map<String , Object> orgMap = new HashMap<String , Object>();
 
     reqObj.getRequest().put(JsonKey.PROCESS_ID , userUploadProcessId);
     System.out.println("USER UPLOAD PROCESS ID "+userUploadProcessId);
@@ -531,7 +507,6 @@ public class BulkUploadManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.BULK_UPLOAD.getValue());
     HashMap<String, Object> innerMap = new HashMap<>();
-    Map<String , Object> orgMap = new HashMap<String , Object>();
 
     innerMap.put(JsonKey.CREATED_BY , USER_ID);
     innerMap.put(JsonKey.OBJECT_TYPE , JsonKey.BATCH);
@@ -544,10 +519,7 @@ public class BulkUploadManagementActorTest {
     if(battchProcessFlag){
 
       subject.tell(reqObj, probe.getRef());
-      Response res =  probe.expectMsgClass(duration("3000 second"),Response.class);
-      batchUploadProcessId = (String)res.get(JsonKey.PROCESS_ID);
-      System.out.println("BATCH PROCESS ID IS "+ batchUploadProcessId);
-
+     probe.expectMsgClass(duration("3000 second"),Response.class);
     }
   }
 

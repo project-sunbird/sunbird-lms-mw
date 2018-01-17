@@ -1,7 +1,5 @@
 package org.sunbird.learner.actors;
 
-import static akka.testkit.JavaTestKit.duration;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import akka.actor.ActorRef;
@@ -18,7 +16,6 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -30,8 +27,8 @@ import org.sunbird.learner.util.Util;
 public class BackgroundServiceActorTest {
 
   
-  static ActorSystem system;
-  final static Props props = Props.create(BackGroundServiceActor.class);
+  private static ActorSystem system;
+  private static final Props props = Props.create(BackGroundServiceActor.class);
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private static final String locnId = "hhjcjrdf4scdv56vf79fw4p89";

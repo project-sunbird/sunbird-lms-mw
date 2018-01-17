@@ -2,14 +2,16 @@ package org.sunbird.metrics.actors;
 
 import static akka.testkit.JavaTestKit.duration;
 
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.testkit.javadsl.TestKit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -18,37 +20,23 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
-import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.testkit.TestActorRef;
-import akka.testkit.javadsl.TestKit;
 
 /**
  * Created by arvind on 8/9/17.
  */
 public class CourseMetricsActorTest {
 
-  static ActorSystem system;
-  final static Props props = Props.create(CourseMetricsActor.class);
-  static TestActorRef<CourseMetricsActor> ref;
-  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static Util.DbInfo batchDbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
-  private static Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
-  static String userId = "dnk298voopir80249";
-  static String courseId = "mclr309f39";
-  static String batchId ="jkwf6t3r083fp4h";
-  static final String orgId = "vdckcyigc68569";
-  private static final String contentId = "nnci3u9f97mxcfu";
+  private static ActorSystem system;
+  private static final Props props = Props.create(CourseMetricsActor.class);
+  private static String userId = "dnk298voopir80249";
+  private static String batchId ="jkwf6t3r083fp4h";
+  private static final String orgId = "vdckcyigc68569";
 
   @BeforeClass
   public static void setUp() {
     system = ActorSystem.create("system");
     Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-    ref = TestActorRef.create(system, props, "testActor");
     insertBatchDataToES();
     insertOrgDataToES();
     insertUserCoursesDataToES();
@@ -104,10 +92,7 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res= probe.expectMsgClass(duration("100 second"),Response.class);
-    System.out.println("SUCCESS");
-    System.out.println("SUCCESS");
-
+    probe.expectMsgClass(duration("100 second"),Response.class);
   }
 
   @Test
@@ -117,7 +102,7 @@ public class CourseMetricsActorTest {
     ActorRef subject = system.actorOf(props);
 
     subject.tell("Invalid Oject Type", probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
 
   }
 
@@ -134,10 +119,7 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res= probe.expectMsgClass(duration("100 second"),Response.class);
-    System.out.println("SUCCESS");
-    System.out.println("SUCCESS");
-
+    probe.expectMsgClass(duration("100 second"),Response.class);
   }
 
   @Test
@@ -153,8 +135,7 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
-
+    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
   }
 
   @Test
@@ -170,8 +151,7 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
-
+    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
   }
 
   @Test
@@ -187,8 +167,7 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS.getValue()+"-Invalid");
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
-
+    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
   }
 
   @Test
@@ -205,8 +184,7 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res= probe.expectMsgClass(duration("100 second"),Response.class);
-
+    probe.expectMsgClass(duration("100 second"),Response.class);
   }
 
   @Test
@@ -223,8 +201,7 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res= probe.expectMsgClass(duration("100 second"),Response.class);
-
+    probe.expectMsgClass(duration("100 second"),Response.class);
   }
 
   @Test
@@ -241,7 +218,7 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
 
   }
 
@@ -259,8 +236,7 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res= probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
-
+    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
   }
   
   @SuppressWarnings({"unchecked", "deprecation"})

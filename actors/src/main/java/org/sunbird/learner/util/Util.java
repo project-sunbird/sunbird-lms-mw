@@ -41,7 +41,7 @@ import org.sunbird.helper.ServiceFactory;
  */
 public class Util {
 
-    public static Map<String, DbInfo> dbInfoMap = new HashMap<>();
+    public static final Map<String, DbInfo> dbInfoMap = new HashMap<>();
     public static final int RECOMENDED_LIST_SIZE = 10;
     
     private static final String KEY_SPACE_NAME = "sunbird";
@@ -49,7 +49,6 @@ public class Util {
     private static Map<String, String> headers = new HashMap<>();
     private static Map<Integer , List<Integer>> orgStatusTransition = new HashMap<>();
     public static final Map<String,Object> auditLogUrlMap  = new HashMap<>();
-   // private static final AuditOperation auditOperation = null;
     
     
     static {
@@ -215,7 +214,7 @@ public class Util {
               .getObject(JsonKey.STANDALONE_MODE);
           String[] ipList = prop.getProperty(JsonKey.DB_IP).split(",");
           String[] portList = prop.getProperty(JsonKey.DB_PORT).split(",");
-          String[] keyspaceList = prop.getProperty(JsonKey.DB_KEYSPACE).split(",");
+         // String[] keyspaceList = prop.getProperty(JsonKey.DB_KEYSPACE).split(",");
 
           String userName = prop.getProperty(JsonKey.DB_USERNAME);
           String password = prop.getProperty(JsonKey.DB_PASSWORD);
@@ -331,12 +330,12 @@ public class Util {
      * class to hold cassandra db info.
      */
     public static class DbInfo {
-        String keySpace;
-        String tableName;
-        String userName;
-        String password;
-        String ip;
-        String port;
+        private String keySpace;
+        private String tableName;
+        private String userName;
+        private String password;
+        private String ip;
+        private String port;
 
         /**
          * @param keySpace
@@ -590,7 +589,7 @@ public class Util {
       Map<String,Object> roleMap = DataCacheHandler.getRoleMap();
       if(null != roleMap && !roleMap.isEmpty()){
         for (String role : roleList){
-          if(null == roleMap.get(role)){
+          if(null == roleMap.get(role.trim())){
             return role+" is not a valid role.";
           }
         }
@@ -599,13 +598,4 @@ public class Util {
       }
       return JsonKey.SUCCESS;
     }
-
-  public static void main(String[] args) {
-    System.out.println("MAIN STARTED");
-    checkCassandraDbConnections(JsonKey.SUNBIRD);
-    checkCassandraDbConnections(JsonKey.SUNBIRD_PLUGIN);
-    System.out.println("MAIN END");
-  }
-    
-    
 }

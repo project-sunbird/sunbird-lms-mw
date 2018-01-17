@@ -28,7 +28,7 @@ import org.sunbird.learner.util.Util;
  */
 public class NotesManagementActor extends UntypedAbstractActor {
 
-  Util.DbInfo userNotesDbInfo = Util.dbInfoMap.get(JsonKey.USER_NOTES_DB);
+  private Util.DbInfo userNotesDbInfo = Util.dbInfoMap.get(JsonKey.USER_NOTES_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   /**

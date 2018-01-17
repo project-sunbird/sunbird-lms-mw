@@ -48,21 +48,20 @@ import org.sunbird.services.sso.SSOServiceFactory;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class UserManagementActorTest {
 
-  static ActorSystem system;
-  static CassandraOperation operation = ServiceFactory.getInstance();
-  static PropertiesCache cach = PropertiesCache.getInstance();
+  private static ActorSystem system;
+  private static CassandraOperation operation = ServiceFactory.getInstance();
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
-  final static Props props = Props.create(UserManagementActor.class);
-  final static Props orgProps = Props.create(OrganisationManagementActor.class);
-  final static Props emailServiceProps = Props.create(EmailServiceActor.class);
-  final static Props badgeProps = Props.create(BadgesActor.class);
-  static EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
-  static Util.DbInfo userManagementDB = null;
-  static Util.DbInfo addressDB = null;
-  static Util.DbInfo jobDB = null;
-  static Util.DbInfo eduDB = null;
-  static Util.DbInfo orgDB = null;
-  static Util.DbInfo userOrgDB = null;
+  private final static Props props = Props.create(UserManagementActor.class);
+  private final static Props orgProps = Props.create(OrganisationManagementActor.class);
+  private final static Props emailServiceProps = Props.create(EmailServiceActor.class);
+  private final static Props badgeProps = Props.create(BadgesActor.class);
+  private static EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
+  private static Util.DbInfo userManagementDB = null;
+  private static Util.DbInfo addressDB = null;
+  private static Util.DbInfo jobDB = null;
+  private static Util.DbInfo eduDB = null;
+  private static Util.DbInfo orgDB = null;
+  private static Util.DbInfo userOrgDB = null;
   private static String userId = "";
   private static String userId2 = "";
   private static String addressId = "";
@@ -77,7 +76,6 @@ public class UserManagementActorTest {
   private static String encryption = "";
   private static String userIdnew = "";
   private static String authToken =  "";
-  private static String usrBadgeId = "";
 
   @BeforeClass
   public static void setUp() {
@@ -1106,7 +1104,7 @@ public class UserManagementActorTest {
     reqObj.setOperation(ActorOperations.GET_ROLES.getValue());
     
     subject.tell(reqObj, probe.getRef());
-    Response response = probe.expectMsgClass(duration("200 second"), Response.class);
+    probe.expectMsgClass(duration("200 second"), Response.class);
 
   }
   
@@ -1916,8 +1914,7 @@ public class UserManagementActorTest {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
-    Response reponse = probe.expectMsgClass(duration("200 second"), Response.class);
-    usrBadgeId = (String) reponse.getResult().get(JsonKey.ID);
+    probe.expectMsgClass(duration("200 second"), Response.class);
   }
   
   @Test
@@ -1992,7 +1989,7 @@ public class UserManagementActorTest {
       innerMap.put(JsonKey.EMAIL_REQUEST, map);
       reqObj.setRequest(innerMap);
       subject.tell(reqObj, probe.getRef());
-      Response res = probe.expectMsgClass(duration("200 second"),Response.class);
+      probe.expectMsgClass(duration("200 second"),Response.class);
     }
   
   
@@ -2015,7 +2012,7 @@ public class UserManagementActorTest {
       innerMap.put(JsonKey.EMAIL_REQUEST, map);
       reqObj.setRequest(innerMap);
       subject.tell(reqObj, probe.getRef());
-      Response res = probe.expectMsgClass(duration("200 second"),Response.class);
+      probe.expectMsgClass(duration("200 second"),Response.class);
     }
  
   @AfterClass

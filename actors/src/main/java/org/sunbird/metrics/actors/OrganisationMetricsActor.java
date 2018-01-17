@@ -37,7 +37,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   private static final String view = "org";
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
-  DecryptionService decryptionService =
+  private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
           .getDecryptionServiceInstance(null);
 
@@ -163,7 +163,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     innerMap.put(JsonKey.REQUEST, JsonKey.OrgCreation);
     backGroundRequest.setRequest(innerMap);
     ActorUtil.tell(backGroundRequest);
-    return;
   }
 
   protected Map<String, Object> getViewData(String orgId, Object orgName) {
@@ -199,6 +198,12 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         operationMap.put("userActionKey", "lastPublishedBy");
         break;
       }
+      
+      default :
+        operationMap.put("dateKey", "");
+        operationMap.put("status", "");
+        operationMap.put("userActionKey", "");
+        break;
     }
     StringBuilder builder = new StringBuilder();
     builder.append("{\"request\":{\"rawQuery\":{\"query\":{\"filtered\":")

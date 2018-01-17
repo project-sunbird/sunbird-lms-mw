@@ -41,7 +41,7 @@ public class CoursePublishedUpdate implements Job {
   private static Util.DbInfo coursePublishDBInfo =
       Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
   private Util.DbInfo courseBatchDBInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
-  static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   private static String requestData =
       "{\"request\":{\"filters\":{\"identifier\":dataVal},\"fields\":[\"status\"]}}";
@@ -221,10 +221,11 @@ public class CoursePublishedUpdate implements Job {
       }
     }
     identifier.append(" ] ");
-    Object[] result = EkStepRequestUtil.searchContent(
+    Map<String,Object> result = EkStepRequestUtil.searchContent(
         requestData.replace("dataVal", identifier.toString()), CourseBatchSchedulerUtil.headerMap);
-    for (int i = 0; i < result.length; i++) {
-      Map<String, Object> map = (Map<String, Object>) result[i];
+    Object[] reslt = (Object[])result.get(JsonKey.CONTENTS);
+    for (int i = 0; i < reslt.length; i++) {
+      Map<String, Object> map = (Map<String, Object>) reslt[i];
       String status = (String) map.get(JsonKey.STATUS);
       if (ProjectUtil.CourseMgmtStatus.LIVE.getValue().equalsIgnoreCase(status)) {
         liveCourseIds.add((String) map.get(JsonKey.IDENTIFIER));

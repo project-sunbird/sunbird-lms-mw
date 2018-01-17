@@ -33,7 +33,6 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.EkStepRequestUtil;
@@ -51,12 +50,11 @@ import org.sunbird.learner.util.Util;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class CourseBatchManagementActorTest {
   
-  static ActorSystem system;
-  static CassandraOperation operation= ServiceFactory.getInstance();
-  static PropertiesCache cach = PropertiesCache.getInstance();
-  final static Props props = Props.create(CourseBatchManagementActor.class);
-  static Util.DbInfo batchDbInfo = null;
-  static Util.DbInfo userOrgdbInfo = null;
+  private static ActorSystem system;
+  private static CassandraOperation operation= ServiceFactory.getInstance();
+  private static final Props props = Props.create(CourseBatchManagementActor.class);
+  private static Util.DbInfo batchDbInfo = null;
+  private static Util.DbInfo userOrgdbInfo = null;
   private String courseId = "do_212282810555342848180";
   private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
   private static String batchId = "";
@@ -117,7 +115,7 @@ public class CourseBatchManagementActorTest {
     userMap.put(JsonKey.USER_ID, userId);
     userMap.put(JsonKey.ORGANISATION_ID, "ORG_001");
     userMap.put(JsonKey.ID, usrOrgId);
-    Response res =ServiceFactory.getInstance().insertRecord(userOrgdbInfo.getKeySpace(), userOrgdbInfo.getTableName(), userMap); 
+    ServiceFactory.getInstance().insertRecord(userOrgdbInfo.getKeySpace(), userOrgdbInfo.getTableName(), userMap); 
     ElasticSearchUtil.createData(ProjectUtil.EsIndex.sunbird.getIndexName(),
                 ProjectUtil.EsType.user.getTypeName(), userId, userMap);
   }
@@ -139,7 +137,7 @@ public class CourseBatchManagementActorTest {
       TestKit probe = new TestKit(system);
       ActorRef subject = system.actorOf(props);
 
-      subject.tell("Invelid Type", probe.getRef());
+      subject.tell("Invalid Type", probe.getRef());
       probe.expectMsgClass(ProjectCommonException.class);
   }
   
@@ -148,7 +146,9 @@ public class CourseBatchManagementActorTest {
     PowerMockito.mockStatic(EkStepRequestUtil.class);
     Map<String , Object> ekstepResponse = new HashMap<String , Object>();
     ekstepResponse.put("count" , 10);
-    Object[] ekstepMockResult = {ekstepResponse};
+    Object[] arr = {ekstepResponse};
+    Map<String,Object> ekstepMockResult = new HashMap<>();
+    ekstepMockResult.put(JsonKey.CONTENTS, arr);
     when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
     
     TestKit probe = new TestKit(system);
@@ -175,14 +175,15 @@ public class CourseBatchManagementActorTest {
     subject.tell(reqObj, probe.getRef());
     Response response = probe.expectMsgClass(duration("1000 second"),Response.class);
     batchId = (String) response.getResult().get(JsonKey.BATCH_ID);
-    System.out.println("batchId1 : "+batchId);
   }
   
   public void testA2CreateBatch(){
     PowerMockito.mockStatic(EkStepRequestUtil.class);
     Map<String , Object> ekstepResponse = new HashMap<String , Object>();
     ekstepResponse.put("count" , 10);
-    Object[] ekstepMockResult = {ekstepResponse};
+    Object[] arr = {ekstepResponse};
+    Map<String,Object> ekstepMockResult = new HashMap<>();
+    ekstepMockResult.put(JsonKey.CONTENTS, arr);
     when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
     
     TestKit probe = new TestKit(system);
@@ -209,14 +210,15 @@ public class CourseBatchManagementActorTest {
     subject.tell(reqObj, probe.getRef());
     Response response = probe.expectMsgClass(duration("1000 second"),Response.class);
     batchId2 = (String) response.getResult().get(JsonKey.BATCH_ID);
-    System.out.println("batchId2 : "+batchId2);
   }
   
   public void testA1CreateBatchWithInvalidCorsId(){
     PowerMockito.mockStatic(EkStepRequestUtil.class);
     Map<String , Object> ekstepResponse = new HashMap<String , Object>();
     ekstepResponse.put("count" , 10);
-    Object[] ekstepMockResult = {ekstepResponse};
+    Object[] arr = {ekstepResponse};
+    Map<String,Object> ekstepMockResult = new HashMap<>();
+    ekstepMockResult.put(JsonKey.CONTENTS, arr);
     when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
     
     PowerMockito.mockStatic(CourseEnrollmentActor.class);
@@ -292,7 +294,9 @@ public class CourseBatchManagementActorTest {
     PowerMockito.mockStatic(EkStepRequestUtil.class);
     Map<String , Object> ekstepResponse = new HashMap<String , Object>();
     ekstepResponse.put("count" , 10);
-    Object[] ekstepMockResult = {ekstepResponse};
+    Object[] arr = {ekstepResponse};
+    Map<String,Object> ekstepMockResult = new HashMap<>();
+    ekstepMockResult.put(JsonKey.CONTENTS, arr);
     when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
     
     TestKit probe = new TestKit(system);
@@ -322,7 +326,9 @@ public class CourseBatchManagementActorTest {
     PowerMockito.mockStatic(EkStepRequestUtil.class);
     Map<String , Object> ekstepResponse = new HashMap<String , Object>();
     ekstepResponse.put("count" , 10);
-    Object[] ekstepMockResult = {ekstepResponse};
+    Object[] arr = {ekstepResponse};
+    Map<String,Object> ekstepMockResult = new HashMap<>();
+    ekstepMockResult.put(JsonKey.CONTENTS, arr);
     when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
     
     TestKit probe = new TestKit(system);
@@ -414,7 +420,7 @@ public class CourseBatchManagementActorTest {
      innerMap.put(JsonKey.USERIDS ,userids );
      reqObj.getRequest().put(JsonKey.BATCH, innerMap);
      subject.tell(reqObj, probe.getRef());
-     Response response = probe.expectMsgClass(duration("1000 second"),Response.class);
+     probe.expectMsgClass(duration("1000 second"),Response.class);
    }
   
   public void testD2addUserToBatchWithInvalidBatchId(){
@@ -450,7 +456,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.MENTORS, mentors);
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    Response response = probe.expectMsgClass(duration("1000 second"),Response.class);
+    probe.expectMsgClass(duration("1000 second"),Response.class);
   }
   
   public void testE2UpdateBatchWithExistingHashTagId(){
@@ -575,7 +581,9 @@ public class CourseBatchManagementActorTest {
     PowerMockito.mockStatic(EkStepRequestUtil.class);
     Map<String , Object> ekstepResponse = new HashMap<String , Object>();
     ekstepResponse.put("count" , 10);
-    Object[] ekstepMockResult = {ekstepResponse};
+    Object[] arr = {ekstepResponse};
+    Map<String,Object> ekstepMockResult = new HashMap<>();
+    ekstepMockResult.put(JsonKey.CONTENTS, arr);
     when( EkStepRequestUtil.searchContent(Mockito.anyString() , Mockito.anyMap()) ).thenReturn(ekstepMockResult);
     
     TestKit probe = new TestKit(system);

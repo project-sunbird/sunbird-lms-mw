@@ -7,28 +7,22 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.config.ApplicationConfigActor;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
-import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.Application;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 
 public class ApplicationConfigActorTest {
 
-  static ActorSystem system;
-  final static Props props = Props.create(ApplicationConfigActor.class);
-  String courseId = "";
+  private static ActorSystem system;
+  private final static Props props = Props.create(ApplicationConfigActor.class);
 
   @BeforeClass
   public static void setUp() {
@@ -53,8 +47,7 @@ public class ApplicationConfigActorTest {
     innerMap.put(JsonKey.EMAIL_UNIQUE, dbEmailUniqueValue);
     reqObj.getRequest().put(JsonKey.DATA, innerMap);
     subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("200 second"),Response.class);
-    System.out.println("asd");
+    probe.expectMsgClass(duration("200 second"),Response.class);
   }
 
   @Test

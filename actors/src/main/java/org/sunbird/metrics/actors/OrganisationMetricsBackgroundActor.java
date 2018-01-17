@@ -191,7 +191,6 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
           ResponseCode.internalError.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
-    return;
   }
   
   private List<List<Object>> generateDataList(List<Map<String, Object>> aggregationMap,
@@ -272,6 +271,10 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
         operationMap.put("status", ContentStatus.Live.name());
         break;
       }
+      default :
+        operationMap.put("dateKey", "");
+        operationMap.put("status",  "");
+        break;
     }
     Map<String, Object> requestObject = new HashMap<>();
     Map<String, Object> filterMap = new HashMap<>();
@@ -488,7 +491,6 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
     dbReqMap.put(JsonKey.TYPE, type);
     cassandraOperation.updateRecord(reportTrackingdbInfo.getKeySpace(),
         reportTrackingdbInfo.getTableName(), dbReqMap);
-    return;
   }
   
   @SuppressWarnings("unchecked")

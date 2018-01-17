@@ -5,14 +5,11 @@ import static akka.testkit.JavaTestKit.duration;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
-import akka.testkit.TestActorRef;
 import akka.testkit.javadsl.TestKit;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.cassandra.cql3.Json;
-import org.json.JSONArray;
-import org.junit.AfterClass;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -23,11 +20,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.learner.Application;
 import org.sunbird.learner.actors.search.CourseSearchActor;
 import org.sunbird.learner.util.Util;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * 
@@ -35,9 +27,9 @@ import java.util.Map;
  *
  */
 public class CourseSearchActorTest {
-    static ActorSystem system;
-    final static Props props = Props.create(CourseSearchActor.class);
-    String courseId = "";
+    private static ActorSystem system;
+    private final static Props props = Props.create(CourseSearchActor.class);
+    private String courseId = "";
 
     @BeforeClass
     public static void setUp() {

@@ -25,6 +25,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.Slug;
+import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
@@ -43,7 +44,10 @@ import org.sunbird.learner.util.Util;
 public class OrganisationManagementActor extends UntypedAbstractActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-
+  private EncryptionService encryptionService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
+          .getEncryptionServiceInstance(null);
+  
   @Override
   public void onReceive(Object message) throws Throwable {
     if (message instanceof Request) {
@@ -813,7 +817,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   @SuppressWarnings({"rawtypes", "unchecked"})
   private void addMemberOrganisation(Request actorMessage) {
 
-    Response response = new Response();
+    Response response = null;
 
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
@@ -1698,8 +1702,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
     Map<String, Object> data = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     data.putAll(req);
-    if (isNull(req.get(JsonKey.USER_ID)) && isNull(data.get(JsonKey.USERNAME))
-        || isNull(data.get(JsonKey.PROVIDER))) {
+    if (isNull(data.get(JsonKey.USER_ID)) && isNull(data.get(JsonKey.USERNAME))) {
       ProjectCommonException exception =
           new ProjectCommonException(ResponseCode.usrValidationError.getErrorCode(),
               ResponseCode.usrValidationError.getErrorMessage(),
@@ -1707,21 +1710,38 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       sender().tell(exception, self());
       return false;
     }
-    // fetch orgid from database on basis of source and external id and put orgid into request .
-    Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-
+    Response result = null;
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> requestDbMap = new HashMap<>();
-    if (!ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.USER_ID))) {
-      requestDbMap.put(JsonKey.ID, req.get(JsonKey.USER_ID));
+    if (!ProjectUtil.isStringNullOREmpty((String) data.get(JsonKey.USER_ID))) {
+      requestDbMap.put(JsonKey.ID, data.get(JsonKey.USER_ID));
+      result = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),
+          usrDbInfo.getTableName(), JsonKey.ID, data.get(JsonKey.USER_ID));
     } else {
       requestDbMap.put(JsonKey.PROVIDER, data.get(JsonKey.PROVIDER));
       requestDbMap.put(JsonKey.USERNAME, data.get(JsonKey.USERNAME));
+      if (data.containsKey(JsonKey.PROVIDER)
+          && !ProjectUtil.isStringNullOREmpty((String) data.get(JsonKey.PROVIDER))) {
+        data.put(JsonKey.LOGIN_ID,
+            (String) data.get(JsonKey.USERNAME) + "@" + (String) data.get(JsonKey.PROVIDER));
+      } else {
+        data.put(JsonKey.LOGIN_ID, (String) data.get(JsonKey.USERNAME));
+      }
+      
+      String loginId = "";
+        try {
+          loginId = encryptionService.encryptData((String) data.get(JsonKey.LOGIN_ID));
+        } catch (Exception e) {
+          ProjectCommonException exception =
+              new ProjectCommonException(ResponseCode.userDataEncryptionError.getErrorCode(),
+                  ResponseCode.userDataEncryptionError.getErrorMessage(),
+                  ResponseCode.SERVER_ERROR.getResponseCode());
+          sender().tell(exception, self());
+        }
+        result = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),
+            usrDbInfo.getTableName(), JsonKey.LOGIN_ID, loginId);
     }
-
-    Response result = cassandraOperation.getRecordsByProperties(userdbInfo.getKeySpace(),
-        userdbInfo.getTableName(), requestDbMap);
     List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-
     if (list.isEmpty()) {
       ProjectCommonException exception = new ProjectCommonException(
           ResponseCode.invalidUsrData.getErrorCode(), ResponseCode.invalidUsrData.getErrorMessage(),

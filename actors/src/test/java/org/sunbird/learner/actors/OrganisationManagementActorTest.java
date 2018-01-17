@@ -1090,25 +1090,6 @@ public class OrganisationManagementActorTest {
     probe.expectMsgClass(duration("200 second"), Response.class);
   }
   
-  @Test
-  public void test26AddMemberToOrg() {
-    TestKit probe = new TestKit(system);
-
-    ActorRef subject = system.actorOf(props);
-
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.ADD_MEMBER_ORGANISATION.getValue());
-    HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.ORGANISATION_ID, orgId);
-    innerMap.put(JsonKey.USERNAME, "USER_NAME_USR");
-    innerMap.put(JsonKey.PROVIDER, "ZXCVB");
-    innerMap.put(JsonKey.ROLE, "content-reviewer");
-
-    reqObj.getRequest().put(JsonKey.USER_ORG, innerMap);
-    reqObj.setRequest(innerMap);
-    subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), Response.class);
-  }
 
   @Test
   public void test27AddMemberToOrgSuc001AddAgain() {

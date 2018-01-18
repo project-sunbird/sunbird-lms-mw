@@ -59,7 +59,7 @@ public class UtilityActor extends UntypedAbstractActor {
               innerMap.put(JsonKey.PROGRESS, (Integer) innerMap.get(JsonKey.PROGRESS) + 1);
             }
           } else {
-            Map<String, Object> innerMap = new HashMap<String, Object>();
+            Map<String, Object> innerMap = new HashMap<>();
             innerMap.put(JsonKey.CONTENT, map);
             if (((int) map.get(JsonKey.COMPLETED_COUNT)) == 1
                 && contentStateInfo.get(contentid) == 2) {
@@ -69,8 +69,6 @@ public class UtilityActor extends UntypedAbstractActor {
             }
             temp.put(primary, innerMap);
           }
-        } else {
-          // no need to update since content does not belong to any course
         }
       }
       // logic to update the course

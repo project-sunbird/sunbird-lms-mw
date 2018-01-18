@@ -134,7 +134,7 @@ public class LearnerStateUpdateActorTest {
     }
 
     @Test
-    public void updateContentTest_001() throws Throwable {
+    public void updateContentTest001() throws Throwable {
 
         TestKit probe = new TestKit(system);
         ActorRef subject = system.actorOf(props);

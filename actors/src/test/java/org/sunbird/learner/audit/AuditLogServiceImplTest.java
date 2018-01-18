@@ -51,7 +51,7 @@ public class AuditLogServiceImplTest {
 
   @SuppressWarnings({"deprecation", "unchecked"})
   @Test
-  public void TestACreateUserAuditLog() {
+  public void testACreateUserAuditLog() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 

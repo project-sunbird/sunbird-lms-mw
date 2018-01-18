@@ -154,7 +154,7 @@ public class EmailServiceActor extends UntypedAbstractActor {
     if (emailIds.size() > 1) {
       name = "All";
     } else if (ProjectUtil.isStringNullOREmpty(name)) {
-      // name = "Hi";
+       name = ""; 
     } else {
       name = StringUtils.capitalize(name);
     }

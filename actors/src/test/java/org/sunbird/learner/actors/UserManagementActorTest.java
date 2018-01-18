@@ -108,7 +108,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestAAcreateOrgForId() {
+  public void testAAcreateOrgForId() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(orgProps);
 
@@ -136,7 +136,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestAAcreateOrgForId1() {
+  public void testAAcreateOrgForId1() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(orgProps);
 
@@ -165,7 +165,7 @@ public class UserManagementActorTest {
 
 
   @Test
-  public void TestACreateUser() {
+  public void testACreateUser() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -231,7 +231,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestACreateUser2() {
+  public void testACreateUser2() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -264,7 +264,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestACreateUser3() {
+  public void testACreateUser3() {
 
     DataCacheHandler.getConfigSettings().put(JsonKey.EMAIL_UNIQUE, "TRUE");
     DataCacheHandler.getConfigSettings().put(JsonKey.PHONE_UNIQUE, "TRUE");
@@ -301,7 +301,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestACreateUser4() {
+  public void testACreateUser4() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     DataCacheHandler.getConfigSettings().put(JsonKey.EMAIL_UNIQUE, "TRUE");
@@ -328,7 +328,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestACreateUser5() {
+  public void testACreateUser5() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -348,7 +348,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestACreateUser6() {
+  public void testACreateUser6() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -372,7 +372,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestACreateUserWithInvalidOrgId() {
+  public void testACreateUserWithInvalidOrgId() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -399,7 +399,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestBUpdateUserInfo() {
+  public void testBUpdateUserInfo() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -431,7 +431,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestBUpdateUserInfoWithInvalidRole() {
+  public void testBUpdateUserInfoWithInvalidRole() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -458,7 +458,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestBCreateUserInfoWithInvalidRole() {
+  public void testBCreateUserInfoWithInvalidRole() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -485,7 +485,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestCgetUserAddressInfo() {
+  public void testCgetUserAddressInfo() {
     String encUserId = userId;
     if ("ON".equalsIgnoreCase(encryption)) {
       try {
@@ -505,7 +505,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestCgetUserAddressInfoAndDelete() {
+  public void testCgetUserAddressInfoAndDelete() {
 
     String encUserId = userId;
     if ("ON".equalsIgnoreCase(encryption)) {
@@ -550,7 +550,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestDUpdatedUserAddressInfo() {
+  public void testDUpdatedUserAddressInfo() {
     String addrLine1 = "addr line1";
     String encUserId = userId;
     if ("ON".equalsIgnoreCase(encryption)) {
@@ -572,7 +572,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestEUpdatedUserEducationInfo() {
+  public void testEUpdatedUserEducationInfo() {
     Response response = operation.getRecordsByProperty(eduDB.getKeySpace(), eduDB.getTableName(),
         JsonKey.USER_ID, userId);
     Map<String, Object> result = (Map<String, Object>) (response.getResult());
@@ -583,7 +583,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestFUpdatedUserJobProfileInfo() {
+  public void testFUpdatedUserJobProfileInfo() {
     Response response = operation.getRecordsByProperty(jobDB.getKeySpace(), jobDB.getTableName(),
         JsonKey.USER_ID, userId);
     Map<String, Object> result = (Map<String, Object>) (response.getResult());
@@ -595,7 +595,7 @@ public class UserManagementActorTest {
 
 
   @Test
-  public void TestGGetUserInfo() {
+  public void testGGetUserInfo() {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
@@ -627,7 +627,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestGGetUserInfoWithInvalidId() {
+  public void testGGetUserInfoWithInvalidId() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -647,7 +647,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestGUpdateUserAddressInfo() {
+  public void testGUpdateUserAddressInfo() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -679,7 +679,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestHUpdateUserEducationInfo() {
+  public void testHUpdateUserEducationInfo() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -712,7 +712,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestIUpdateUserJobProfileInfo() {
+  public void testIUpdateUserJobProfileInfo() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -744,7 +744,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestJGetUserInfoByLoginId() {
+  public void testJGetUserInfoByLoginId() {
 
     String encLoginId = "sunbird_dummy_user_313131@BLR";
     TestKit probe = new TestKit(system);
@@ -769,7 +769,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestJGetUserInfoByInvalidLoginId() {
+  public void testJGetUserInfoByInvalidLoginId() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -788,7 +788,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestJUserOrgInfo() {
+  public void testJUserOrgInfo() {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
@@ -821,7 +821,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestKUserOrgTableInfo() {
+  public void testKUserOrgTableInfo() {
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.USER_ID, userId);
     map.put(JsonKey.ORGANISATION_ID, orgId);
@@ -838,7 +838,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestKcreateUserTestWithDuplicateEmail() {
+  public void testKcreateUserTestWithDuplicateEmail() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -861,7 +861,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestLcreateUserTestWithDuplicateUserName() {
+  public void testLcreateUserTestWithDuplicateUserName() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -884,7 +884,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestMBlockUser() {
+  public void testMBlockUser() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -908,7 +908,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestNGetUserInfoAfterBlocking() {
+  public void testNGetUserInfoAfterBlocking() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -929,7 +929,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestOUnBlockUser() {
+  public void testOUnBlockUser() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -953,7 +953,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestPGetUserInfoAfterUnBlocking() {
+  public void testPGetUserInfoAfterUnBlocking() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -975,7 +975,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestQAddEducationDetailsWithAddress() {
+  public void testQAddEducationDetailsWithAddress() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -1022,7 +1022,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestQDeleteEducationDetailsWithAddress() {
+  public void testQDeleteEducationDetailsWithAddress() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -1057,7 +1057,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestRAddJobDetailsWithAddress() {
+  public void testRAddJobDetailsWithAddress() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -1102,7 +1102,7 @@ public class UserManagementActorTest {
 
 
   @Test
-  public void TestRDeleteJobDetailsWithAddress() {
+  public void testRDeleteJobDetailsWithAddress() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -1136,7 +1136,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void TestZGetRoles() {
+  public void testZGetRoles() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -1152,7 +1152,7 @@ public class UserManagementActorTest {
 
   @SuppressWarnings("deprecation")
   @Test
-  public void TestZACreateUserWithValidWebPage() {
+  public void testZACreateUserWithValidWebPage() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -1183,7 +1183,7 @@ public class UserManagementActorTest {
 
   @SuppressWarnings("deprecation")
   @Test
-  public void TestZBCreateUserWithInValidWebPageType() {
+  public void testZBCreateUserWithInValidWebPageType() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -1213,7 +1213,7 @@ public class UserManagementActorTest {
 
   @SuppressWarnings("deprecation")
   @Test
-  public void TestZCCreateUserWithInValidWebPageURL() {
+  public void testZCCreateUserWithInValidWebPageURL() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -1243,7 +1243,7 @@ public class UserManagementActorTest {
 
   @SuppressWarnings("deprecation")
   @Test
-  public void TestZDUpdateUserWithValidWebPage() {
+  public void testZDUpdateUserWithValidWebPage() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -1269,7 +1269,7 @@ public class UserManagementActorTest {
 
   @SuppressWarnings("deprecation")
   @Test
-  public void TestZEUpdateUserWithInValidWebPageType() {
+  public void testZEUpdateUserWithInValidWebPageType() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -1300,7 +1300,7 @@ public class UserManagementActorTest {
 
   @SuppressWarnings("deprecation")
   @Test
-  public void TestZFUpdateUserWithInValidWebPageURL() {
+  public void testZFUpdateUserWithInValidWebPageURL() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -1377,7 +1377,7 @@ public class UserManagementActorTest {
 
   @SuppressWarnings({"deprecation", "unchecked"})
   @Test
-  public void Z14TestuserLoginWithValidEmail() {
+  public void z14TestuserLoginWithValidEmail() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1403,7 +1403,7 @@ public class UserManagementActorTest {
 
   @SuppressWarnings({"deprecation"})
   @Test
-  public void Z14TestuserLoginWithValidPhone() {
+  public void z14TestuserLoginWithValidPhone() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1511,7 +1511,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z10TestUpdateUserLoginTime() {
+  public void z10TestUpdateUserLoginTime() {
     // setting emailVerified to true for testing
     String respo = ssoManager.setEmailVerifiedTrue(userId);
     System.out.println("respo " + respo);
@@ -1536,7 +1536,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z11TestgetMediaTypes() {
+  public void z11TestgetMediaTypes() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1547,7 +1547,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z12TestprofileVisibility() {
+  public void z12TestprofileVisibility() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1573,7 +1573,7 @@ public class UserManagementActorTest {
 
 
   @Test
-  public void Z12TestprofileVisibilityWithGetDetailsByLoginId() {
+  public void z12TestprofileVisibilityWithGetDetailsByLoginId() {
 
     String encLoginId = "sunbird_dummy_user_313131@BLR";
 
@@ -1600,7 +1600,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z12TestprofileVisibilityWithGetUserInfo() {
+  public void z12TestprofileVisibilityWithGetUserInfo() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -1625,7 +1625,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z12TestprofileVisibility2() {
+  public void z12TestprofileVisibility2() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1648,7 +1648,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z12TestprofileVisibilityForException() {
+  public void z12TestprofileVisibilityForException() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1671,7 +1671,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z13TestgetUserDetails() {
+  public void z13TestgetUserDetails() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1684,7 +1684,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z15TestLogout() {
+  public void z15TestLogout() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1696,7 +1696,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z16TestAssignRoles() {
+  public void z16TestAssignRoles() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1714,7 +1714,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z16TestAssignRolesWithoutUserId() {
+  public void z16TestAssignRolesWithoutUserId() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1733,7 +1733,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z17TestAssignRolesWithoutOrgId() {
+  public void z17TestAssignRolesWithoutOrgId() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1761,7 +1761,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z17TestAssignRolesWithoutOrgId2() {
+  public void z17TestAssignRolesWithoutOrgId2() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1778,7 +1778,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z18TestJoinUserOrganisation() {
+  public void z18TestJoinUserOrganisation() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1796,7 +1796,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z18TestJoinUserOrganisation2() {
+  public void z18TestJoinUserOrganisation2() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1816,7 +1816,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z18TestJoinUserOrganisation3() {
+  public void z18TestJoinUserOrganisation3() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1835,7 +1835,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z18TestJoinUserOrganisation4() {
+  public void z18TestJoinUserOrganisation4() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1854,7 +1854,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z19TestapproveUserOrg() {
+  public void z19TestapproveUserOrg() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1875,7 +1875,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z19TestapproveUserOrg2() {
+  public void z19TestapproveUserOrg2() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1897,7 +1897,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z19TestapproveUserOrg3() {
+  public void z19TestapproveUserOrg3() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1919,7 +1919,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z20TestRejectUserOrg() {
+  public void z20TestRejectUserOrg() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1938,7 +1938,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z20TestRejectUserOrg2() {
+  public void z20TestRejectUserOrg2() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1956,7 +1956,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z20TestRejectUserOrg3() {
+  public void z20TestRejectUserOrg3() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1975,7 +1975,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z20TestRejectUserOrg4() {
+  public void z20TestRejectUserOrg4() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1990,7 +1990,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z21TestAddUserBadge() {
+  public void z21TestAddUserBadge() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(badgeProps);
     Request reqObj = new Request();
@@ -2011,7 +2011,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z21TestAddUserBadge2() {
+  public void z21TestAddUserBadge2() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(badgeProps);
     Request reqObj = new Request();
@@ -2026,7 +2026,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z21TestAddUserBadge3() {
+  public void z21TestAddUserBadge3() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(badgeProps);
     Request reqObj = new Request();
@@ -2041,7 +2041,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void Z22TestgetUserBadge() {
+  public void z22TestgetUserBadge() {
     CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Util.DbInfo userBadgesDbInfo = Util.dbInfoMap.get(JsonKey.USER_BADGES_DB);
     try {

@@ -163,6 +163,7 @@ public class OrganisationManagementActorTest {
     Response resp = probe.expectMsgClass(duration("200 second"), Response.class);
     orgId = (String) resp.getResult().get(JsonKey.ORGANISATION_ID);
     System.out.println("orgId : " + orgId);
+    Assert.assertTrue(null != orgId);
     try {
       Thread.sleep(20000);
     } catch (InterruptedException e) {
@@ -205,16 +206,9 @@ public class OrganisationManagementActorTest {
 
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
-    /*
-     * orgId = (String) resp.getResult().get(JsonKey.ORGANISATION_ID); System.out.println(
-     * "orgId with dpl hashtag id : "+orgId);
-     */
-    try {
-      Thread.sleep(4000);
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    }
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -236,7 +230,8 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ROLES, roles);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -258,7 +253,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ROLES, roles);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -280,7 +277,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ROLES, roles);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -295,7 +294,9 @@ public class OrganisationManagementActorTest {
 
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -317,7 +318,8 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ROLES, roles);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -339,7 +341,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ROLES, roles);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -361,7 +365,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ROLES, roles);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -383,7 +389,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ROLES, roles);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -401,7 +409,8 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.USER_ID, USER_ID);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -419,7 +428,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.USER_ID, USER_ID);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -437,7 +448,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.USER_ID, USER_ID);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -451,7 +464,9 @@ public class OrganisationManagementActorTest {
     reqObj.getRequest().put(JsonKey.USER_ORG, null);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -463,7 +478,8 @@ public class OrganisationManagementActorTest {
     reqObj.setOperation("INVALID_OPERATION");
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -472,7 +488,8 @@ public class OrganisationManagementActorTest {
     ActorRef subject = system.actorOf(props);
 
     subject.tell("Invalid Type", probe.getRef());
-    probe.expectMsgClass(ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -522,12 +539,8 @@ public class OrganisationManagementActorTest {
 
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
-    try {
-      Thread.sleep(4000);
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    }
+    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -587,7 +600,8 @@ public class OrganisationManagementActorTest {
 
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -614,7 +628,8 @@ public class OrganisationManagementActorTest {
 
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -636,7 +651,8 @@ public class OrganisationManagementActorTest {
 
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
 
@@ -661,7 +677,8 @@ public class OrganisationManagementActorTest {
 
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -687,7 +704,8 @@ public class OrganisationManagementActorTest {
 
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -705,7 +723,8 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.REQUESTED_BY, "ALPHA");
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
 
@@ -723,7 +742,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -740,7 +761,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -758,7 +781,8 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -776,7 +800,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -795,7 +821,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -814,7 +842,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -832,7 +862,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -850,7 +882,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -869,7 +903,8 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -889,7 +924,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -919,7 +956,8 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -937,7 +975,8 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -955,7 +994,8 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -973,7 +1013,8 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @SuppressWarnings("unchecked")
@@ -995,6 +1036,7 @@ public class OrganisationManagementActorTest {
     try {
       addressId = (String) (((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE))
           .get(JsonKey.ADDRESS_ID));
+      Assert.assertTrue(null != addressId);
     } catch (Exception ex) {
       ex.printStackTrace();
     }
@@ -1013,7 +1055,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -1032,9 +1076,11 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
-  
+
   @Test
   public void test26AddMemberToOrgExc2() {
     TestKit probe = new TestKit(system);
@@ -1048,7 +1094,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, null);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -1068,7 +1116,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -1087,9 +1137,11 @@ public class OrganisationManagementActorTest {
     reqObj.getRequest().put(JsonKey.USER_ORG, innerMap);
     reqObj.getRequest().put(JsonKey.REQUESTED_BY, "user1");
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), Response.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
-  
+
 
   @Test
   public void test27AddMemberToOrgSuc001AddAgain() {
@@ -1111,7 +1163,8 @@ public class OrganisationManagementActorTest {
     reqObj.getRequest().put(JsonKey.REQUESTED_BY, "user1");
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -1132,7 +1185,8 @@ public class OrganisationManagementActorTest {
     reqObj.getRequest().put(JsonKey.REQUESTED_BY, "user1");
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -1153,7 +1207,8 @@ public class OrganisationManagementActorTest {
     reqObj.getRequest().put(JsonKey.REQUESTED_BY, "user1");
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -1176,7 +1231,8 @@ public class OrganisationManagementActorTest {
     reqObj.getRequest().put(JsonKey.REQUESTED_BY, "user1");
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -1195,7 +1251,8 @@ public class OrganisationManagementActorTest {
     reqObj.getRequest().put(JsonKey.REQUESTED_BY, "user1");
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -1214,7 +1271,8 @@ public class OrganisationManagementActorTest {
     reqObj.getRequest().put(JsonKey.REQUESTED_BY, "user1");
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -1233,7 +1291,8 @@ public class OrganisationManagementActorTest {
     reqObj.getRequest().put(JsonKey.REQUESTED_BY, "user1");
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -1252,7 +1311,9 @@ public class OrganisationManagementActorTest {
     reqObj.getRequest().put(JsonKey.REQUESTED_BY, "user1");
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+
   }
 
   @Test
@@ -1271,7 +1332,9 @@ public class OrganisationManagementActorTest {
     reqObj.getRequest().put(JsonKey.REQUESTED_BY, "user1");
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -1290,7 +1353,9 @@ public class OrganisationManagementActorTest {
     reqObj.getRequest().put(JsonKey.REQUESTED_BY, "user1");
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -1309,7 +1374,9 @@ public class OrganisationManagementActorTest {
     reqObj.getRequest().put(JsonKey.REQUESTED_BY, "user1");
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -1327,7 +1394,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -1345,7 +1414,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -1363,7 +1434,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -1381,7 +1454,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -1399,7 +1474,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -1417,7 +1494,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -1435,7 +1514,9 @@ public class OrganisationManagementActorTest {
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
 
@@ -1465,6 +1546,7 @@ public class OrganisationManagementActorTest {
         String name = (String) map.get(JsonKey.NAME);
         if (null != name && "ORG_TYPE_0001".equalsIgnoreCase(name)) {
           orgTypeId1 = (String) map.get(JsonKey.ID);
+          Assert.assertTrue(null != orgTypeId1);
         }
       }
     }
@@ -1496,6 +1578,7 @@ public class OrganisationManagementActorTest {
         String name = (String) map.get(JsonKey.NAME);
         if (null != name && "ORG_TYPE_0002".equalsIgnoreCase(name)) {
           orgTypeId2 = (String) map.get(JsonKey.ID);
+          Assert.assertTrue(null != orgTypeId2);
         }
       }
     }
@@ -1510,7 +1593,8 @@ public class OrganisationManagementActorTest {
     reqObj.setRequestId(ExecutionContext.getRequestId());
     reqObj.setEnv(1);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -1523,7 +1607,8 @@ public class OrganisationManagementActorTest {
     reqObj.setEnv(1);
     reqObj.getRequest().put(JsonKey.NAME, "ORG_TYPE_0001");
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -1552,7 +1637,8 @@ public class OrganisationManagementActorTest {
     reqObj.getRequest().put(JsonKey.NAME, "ORG_TYPE_0002");
     reqObj.getRequest().put(JsonKey.ID, orgTypeId1);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -1574,11 +1660,6 @@ public class OrganisationManagementActorTest {
 
   @AfterClass
   public static void delete() {
-    System.out.println("After class");
-    /*
-     * SSOManager ssoManager = SSOServiceFactory.getInstance(); Map<String, Object> innerMap = new
-     * HashMap<>(); innerMap.put(JsonKey.USER_ID, usrId); ssoManager.removeUser(innerMap);
-     */
     try {
       CassandraOperation operation = ServiceFactory.getInstance();
       operation.deleteRecord(orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName(), orgTypeId1);

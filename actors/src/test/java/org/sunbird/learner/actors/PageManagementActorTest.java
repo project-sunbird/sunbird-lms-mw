@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -61,7 +62,8 @@ public class PageManagementActorTest {
         //reqObj.setOperation("INVALID_OPERATION");
 
         subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(NullPointerException.class);
+        NullPointerException exc  = probe.expectMsgClass(NullPointerException.class);
+        Assert.assertTrue(null != exc);
     }
     
     @Test
@@ -73,7 +75,8 @@ public class PageManagementActorTest {
         reqObj.setOperation("INVALID_OPERATION");
 
         subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(ProjectCommonException.class);
+        ProjectCommonException exc  = probe.expectMsgClass(ProjectCommonException.class);
+        Assert.assertTrue(null != exc);
     }
 
     @Test
@@ -82,7 +85,8 @@ public class PageManagementActorTest {
         ActorRef subject = system.actorOf(props);
 
         subject.tell("Invalid Type", probe.getRef());
-        probe.expectMsgClass(ProjectCommonException.class);
+        ProjectCommonException exc  = probe.expectMsgClass(ProjectCommonException.class);
+        Assert.assertTrue(null != exc);
     }
     
     @Test
@@ -125,6 +129,7 @@ public class PageManagementActorTest {
       subject.tell(reqObj, probe.getRef());
       Response response = probe.expectMsgClass(Response.class);
       sectionId = (String) response.get(JsonKey.SECTION_ID);
+      Assert.assertTrue(null != sectionId);
     }
     
     @Test
@@ -158,6 +163,7 @@ public class PageManagementActorTest {
       subject.tell(reqObj, probe.getRef());
       Response response = probe.expectMsgClass(Response.class);
       sectionId2 = (String) response.get(JsonKey.SECTION_ID);
+      Assert.assertTrue(null != sectionId2);
     }
 
     @Test
@@ -196,6 +202,7 @@ public class PageManagementActorTest {
         subject.tell(reqObj, probe.getRef());
         Response response = probe.expectMsgClass(Response.class);
         pageIdWithOrg = (String) response.get(JsonKey.PAGE_ID);
+        Assert.assertTrue(null != pageIdWithOrg);
     }
     
     @Test
@@ -234,6 +241,7 @@ public class PageManagementActorTest {
         subject.tell(reqObj, probe.getRef());
         Response response = probe.expectMsgClass(Response.class);
         pageIdWithOrg2 = (String) response.get(JsonKey.PAGE_ID);
+        Assert.assertTrue(null != pageIdWithOrg2);
     }
 
     @Test
@@ -271,6 +279,7 @@ public class PageManagementActorTest {
         subject.tell(reqObj, probe.getRef());
         Response response = probe.expectMsgClass(Response.class);
         pageId = (String) response.get(JsonKey.PAGE_ID);
+        Assert.assertTrue(null != pageId);
     }
     
     @Test
@@ -306,7 +315,8 @@ public class PageManagementActorTest {
         reqObj.setRequest(innerMap);
 
         subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(ProjectCommonException.class);
+        ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+        Assert.assertTrue(null != exc);
     }
     
     @Test
@@ -403,7 +413,8 @@ public class PageManagementActorTest {
         reqObj.setRequest(innerMap);
 
         subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(duration("100 second"),Response.class);
+        Response res = probe.expectMsgClass(duration("100 second"),Response.class);
+        Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
     }
     
     @Test
@@ -423,7 +434,8 @@ public class PageManagementActorTest {
         reqObj.setRequest(innerMap);
 
         subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+        ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+        Assert.assertTrue(null != exc);
     }
     
     @Test
@@ -472,7 +484,8 @@ public class PageManagementActorTest {
         reqObj.setRequest(innerMap);
 
         subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(Response.class);
+        Response res = probe.expectMsgClass(Response.class);
+        Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
     }
     
     @Test
@@ -522,7 +535,8 @@ public class PageManagementActorTest {
       innerMap.put(JsonKey.SECTION , sectionMap);
       reqObj.setRequest(innerMap);
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(Response.class);
+      Response res = probe.expectMsgClass(Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
     }
 
     @Test
@@ -595,7 +609,8 @@ public class PageManagementActorTest {
       map.put(JsonKey.HEADER, header);
       reqObj.setRequest(map);
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("100 second"),Response.class);
+      Response res = probe.expectMsgClass(duration("100 second"),Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
     }
     
     @Test
@@ -630,7 +645,8 @@ public class PageManagementActorTest {
       map.put(JsonKey.HEADER, header);
       reqObj.setRequest(map);
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("100 second"),Response.class);
+      Response res = probe.expectMsgClass(duration("100 second"),Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
     }
     
     

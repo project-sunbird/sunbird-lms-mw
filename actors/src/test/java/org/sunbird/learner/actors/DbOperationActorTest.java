@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -50,7 +51,8 @@ public class DbOperationActorTest {
       reqObj.setOperation("INVALID_OPERATION");
 
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(ProjectCommonException.class);
+      ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+      Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -59,7 +61,8 @@ public class DbOperationActorTest {
       ActorRef subject = system.actorOf(props);
 
       subject.tell("Invalid Type", probe.getRef());
-      probe.expectMsgClass(ProjectCommonException.class);
+      ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+      Assert.assertTrue(null != exc);
   }
   
   @Test
@@ -79,7 +82,8 @@ public class DbOperationActorTest {
       map.put("payload", innerMap);
       reqObj.setRequest(map);
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("20 second"),Response.class);
+      Response res = probe.expectMsgClass(duration("20 second"),Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
   
   @Test
@@ -99,7 +103,8 @@ public class DbOperationActorTest {
       map.put("payload", innerMap);
       reqObj.setRequest(map);
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("20 second"),ProjectCommonException.class);
+      ProjectCommonException exc = probe.expectMsgClass(duration("20 second"),ProjectCommonException.class);
+      Assert.assertTrue(null != exc);
   }
   
   @Test
@@ -119,7 +124,8 @@ public class DbOperationActorTest {
       map.put("payload", innerMap);
       reqObj.setRequest(map);
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("20 second"),Response.class);
+      Response res = probe.expectMsgClass(duration("20 second"),Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
   
   @Test
@@ -139,7 +145,8 @@ public class DbOperationActorTest {
       map.put("payload", innerMap);
       reqObj.setRequest(map);
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("20 second"),ProjectCommonException.class);
+      ProjectCommonException exc = probe.expectMsgClass(duration("20 second"),ProjectCommonException.class);
+      Assert.assertTrue(null != exc);
   }
   
   @Test
@@ -153,7 +160,8 @@ public class DbOperationActorTest {
       map.put("id", "454ee9-17-a2-47-id");
       reqObj.setRequest(map);
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("20 second"),Response.class);
+      Response res = probe.expectMsgClass(duration("20 second"),Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
   
   @Test
@@ -167,7 +175,8 @@ public class DbOperationActorTest {
       map.put("id", "454ee9-17-a2-47-id");
       reqObj.setRequest(map);
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("20 second"),ProjectCommonException.class);
+      ProjectCommonException exc = probe.expectMsgClass(duration("20 second"),ProjectCommonException.class);
+      Assert.assertTrue(null != exc);
   }
   
   @Test
@@ -180,7 +189,8 @@ public class DbOperationActorTest {
       map.put("entityName", "announcement");
       reqObj.setRequest(map);
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("20 second"),Response.class);
+      Response res = probe.expectMsgClass(duration("20 second"),Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
   
   @Test
@@ -193,7 +203,8 @@ public class DbOperationActorTest {
       map.put("entityName", "announcement1");
       reqObj.setRequest(map);
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("20 second"),ProjectCommonException.class);
+      ProjectCommonException exc = probe.expectMsgClass(duration("20 second"),ProjectCommonException.class);
+      Assert.assertTrue(null != exc);
   }
   
   @Test
@@ -211,7 +222,8 @@ public class DbOperationActorTest {
       map.put(JsonKey.FILTERS, filter);
       reqObj.setRequest(map);
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("20 second"),Response.class);
+      Response res = probe.expectMsgClass(duration("20 second"),Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
   
   @Test
@@ -226,7 +238,8 @@ public class DbOperationActorTest {
       map.put("id", "454ee9-17-a2-47-id");
       reqObj.setRequest(map);
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("20 second"),Response.class);
+      Response res = probe.expectMsgClass(duration("20 second"),Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
   
   @Test
@@ -241,7 +254,8 @@ public class DbOperationActorTest {
       map.put("rawQuery", query);
       reqObj.setRequest(map);
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("20 second"),Response.class);
+      Response res = probe.expectMsgClass(duration("20 second"),Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
   
 }

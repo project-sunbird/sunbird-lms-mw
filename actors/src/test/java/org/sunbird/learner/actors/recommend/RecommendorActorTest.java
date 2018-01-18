@@ -7,6 +7,7 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import java.util.HashMap;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -44,8 +45,8 @@ public class RecommendorActorTest {
         reqObj.setRequest(innerMap);
 
         subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
-
+        ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+        Assert.assertTrue(null != exc);
     }
 
     @Test()
@@ -58,8 +59,8 @@ public class RecommendorActorTest {
         reqObj.setRequestId("1211");
         reqObj.setOperation("INVALID_OPERATION");
         subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(ProjectCommonException.class);
-
+        ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+        Assert.assertTrue(null != exc);
     }
 
 }

@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -144,8 +145,8 @@ public class BulkUploadManagementActorTest {
       Response res =  probe.expectMsgClass(Response.class);
       orgUploadProcessId = (String)res.get(JsonKey.PROCESS_ID);
       System.out.println("PROCESS ID IS "+ orgUploadProcessId);
-
     }
+    Assert.assertTrue(null != orgUploadProcessId);
   }
 
   @Test
@@ -187,6 +188,7 @@ public class BulkUploadManagementActorTest {
       System.out.println("ROOT ORG PROCESS ID IS "+ orgUploadProcessId2);
 
     }
+    Assert.assertTrue(null != orgUploadProcessId2);
   }
 
   @Test
@@ -223,9 +225,10 @@ public class BulkUploadManagementActorTest {
     if(orgProcessFlag){
 
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(Response.class);
-
+      Response res = probe.expectMsgClass(Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
     }
+    
   }
 
   @Test
@@ -272,7 +275,7 @@ public class BulkUploadManagementActorTest {
       Response res =  probe.expectMsgClass(Response.class);
       orgUploadProcessId1 = (String)res.get(JsonKey.PROCESS_ID);
       System.out.println("PROCESS ID IS "+ orgUploadProcessId);
-
+      Assert.assertTrue(null != orgUploadProcessId1);
     }
   }
 
@@ -303,7 +306,7 @@ public class BulkUploadManagementActorTest {
         map = (Map<String, Object>) list1[0];
 
         orgId = (String)map.get(JsonKey.ID);
-
+        Assert.assertTrue(null != orgId);
       }
     }
 
@@ -337,7 +340,7 @@ public class BulkUploadManagementActorTest {
 
         orgId1 = (String)map.get(JsonKey.ID);
         System.out.println("ROOT ORG ID "+orgId1);
-
+        Assert.assertTrue(null != orgId1);
       }
     }
 
@@ -388,6 +391,7 @@ public class BulkUploadManagementActorTest {
       Response res =  probe.expectMsgClass(Response.class);
       userUploadProcessId = (String)res.get(JsonKey.PROCESS_ID);
       System.out.println("PROCESS ID IS "+ userUploadProcessId);
+      Assert.assertTrue(null != userUploadProcessId);
 
     }
   }
@@ -436,6 +440,7 @@ public class BulkUploadManagementActorTest {
       Response res =  probe.expectMsgClass(Response.class);
       userUploadProcessId1 = (String)res.get(JsonKey.PROCESS_ID);
       System.out.println("PROCESS ID IS "+ userUploadProcessId);
+      Assert.assertTrue(null != userUploadProcessId1);
 
     }
   }
@@ -471,6 +476,7 @@ public class BulkUploadManagementActorTest {
 
         userId = (String)map.get(JsonKey.USER_ID);
         System.out.println("USER ID "+userId);
+        Assert.assertTrue(null != userId);
 
       }
     }
@@ -519,7 +525,8 @@ public class BulkUploadManagementActorTest {
     if(battchProcessFlag){
 
       subject.tell(reqObj, probe.getRef());
-     probe.expectMsgClass(duration("3000 second"),Response.class);
+      Response res = probe.expectMsgClass(duration("3000 second"),Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
     }
   }
 

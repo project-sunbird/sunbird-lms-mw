@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -72,6 +73,7 @@ public class CourseSearchActorTest {
           Map<String,Object> obj = (Map<String, Object>) objects[0];
           courseId = (String) obj.get(JsonKey.IDENTIFIER);
           System.out.println(courseId);
+          Assert.assertTrue(null != courseId);
         }
         getCourseByIdOnReceiveTest();
       }
@@ -87,7 +89,8 @@ public class CourseSearchActorTest {
       innerMap.put(JsonKey.REQUESTED_BY, "user-001");
       reqObj.setRequest(innerMap);
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("200 second"),Response.class);
+      Response res = probe.expectMsgClass(duration("200 second"),Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
     }
     
     @Test
@@ -99,7 +102,8 @@ public class CourseSearchActorTest {
         reqObj.setOperation("INVALID_OPERATION");
 
         subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(ProjectCommonException.class);
+        ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+        Assert.assertTrue(null != exc);
     }
     
     @Test
@@ -110,6 +114,7 @@ public class CourseSearchActorTest {
         Response resObj = new Response();
 
         subject.tell(resObj, probe.getRef());
-        probe.expectMsgClass(ProjectCommonException.class);
+        ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+        Assert.assertTrue(null != exc);
     }
 }

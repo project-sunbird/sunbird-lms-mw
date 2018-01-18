@@ -6,6 +6,7 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.sunbird.common.models.response.Response;
@@ -36,7 +37,8 @@ public class BadgeActorTest {
       Request reqObj = new Request();
       reqObj.setOperation(ActorOperations.GET_ALL_BADGE.getValue());
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("200 second"),Response.class);
+      Response res = probe.expectMsgClass(duration("200 second"),Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
     }
   
   @Test
@@ -47,7 +49,8 @@ public class BadgeActorTest {
       Request reqObj = new Request();
       reqObj.setOperation(ActorOperations.HEALTH_CHECK.getValue());
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("200 second"),Response.class);
+      Response res = probe.expectMsgClass(duration("200 second"),Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
     }
   
   @Test
@@ -58,7 +61,8 @@ public class BadgeActorTest {
       Request reqObj = new Request();
       reqObj.setOperation(ActorOperations.ACTOR.getValue());
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("200 second"),Response.class);
+      Response res = probe.expectMsgClass(duration("200 second"),Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
   
   @Test
@@ -69,7 +73,8 @@ public class BadgeActorTest {
       Request reqObj = new Request();
       reqObj.setOperation(ActorOperations.ES.getValue());
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("200 second"),Response.class);
+      Response res = probe.expectMsgClass(duration("200 second"),Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
   
   @Test
@@ -80,7 +85,8 @@ public class BadgeActorTest {
       Request reqObj = new Request();
       reqObj.setOperation(ActorOperations.CASSANDRA.getValue());
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(duration("200 second"),Response.class);
+      Response res = probe.expectMsgClass(duration("200 second"),Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
 }

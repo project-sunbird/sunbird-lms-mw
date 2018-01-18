@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -85,6 +86,7 @@ public class GeoLocationManagementActorTest {
       id = (String) createResponse.get(0).get(JsonKey.ID);
       createResponse.remove(createResponse.get(0));
     }
+    Assert.assertTrue(null != id);
   }
 
   @Test
@@ -109,7 +111,8 @@ public class GeoLocationManagementActorTest {
     actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , null);
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
 
   }
 
@@ -135,8 +138,8 @@ public class GeoLocationManagementActorTest {
     actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId+"jfjrrou");
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
-
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -155,8 +158,8 @@ public class GeoLocationManagementActorTest {
     actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId);
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
-
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -174,8 +177,8 @@ public class GeoLocationManagementActorTest {
     actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId);
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),Response.class);
-
+    Response res = probe.expectMsgClass(duration("100 second"),Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -193,8 +196,8 @@ public class GeoLocationManagementActorTest {
     actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId);
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),Response.class);
-
+    Response res = probe.expectMsgClass(duration("100 second"),Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -212,8 +215,8 @@ public class GeoLocationManagementActorTest {
     actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId);
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
-
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -231,8 +234,8 @@ public class GeoLocationManagementActorTest {
     actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId);
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
-
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -251,7 +254,8 @@ public class GeoLocationManagementActorTest {
       actorMessage.setOperation(ActorOperations.UPDATE_GEO_LOCATION.getValue());
 
       subject.tell(actorMessage, probe.getRef());
-      probe.expectMsgClass(duration("100 second"), Response.class);
+      Response res = probe.expectMsgClass(duration("100 second"), Response.class);
+      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
     }
 
   }
@@ -270,8 +274,8 @@ public class GeoLocationManagementActorTest {
       actorMessage.setOperation(ActorOperations.UPDATE_GEO_LOCATION.getValue());
 
       subject.tell(actorMessage, probe.getRef());
-      probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-
+      ProjectCommonException exc = probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+      Assert.assertTrue(null != exc);
 
   }
 
@@ -289,8 +293,8 @@ public class GeoLocationManagementActorTest {
     actorMessage.setOperation(ActorOperations.UPDATE_GEO_LOCATION.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
 
   }
 
@@ -305,8 +309,8 @@ public class GeoLocationManagementActorTest {
     actorMessage.setOperation(ActorOperations.DELETE_GEO_LOCATION.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"), Response.class);
-
+    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -320,8 +324,8 @@ public class GeoLocationManagementActorTest {
     actorMessage.setOperation(ActorOperations.DELETE_GEO_LOCATION.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -335,8 +339,8 @@ public class GeoLocationManagementActorTest {
     actorMessage.setOperation("invalid operation");
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -346,8 +350,8 @@ public class GeoLocationManagementActorTest {
     ActorRef subject = system.actorOf(props);
 
     subject.tell("Invalid Request", probe.getRef());
-    probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
 

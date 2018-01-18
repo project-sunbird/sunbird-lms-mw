@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -84,7 +85,8 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.CREATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),Response.class);
+    Response res = probe.expectMsgClass(duration("100 second"),Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -105,7 +107,8 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.CREATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),Response.class);
+    Response res = probe.expectMsgClass(duration("100 second"),Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -126,7 +129,8 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.CREATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -147,7 +151,8 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.CREATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -164,7 +169,8 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.CREATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
 
@@ -186,7 +192,8 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.UPDATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),Response.class);
+    Response res = probe.expectMsgClass(duration("100 second"),Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
 
@@ -204,7 +211,8 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.UPDATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -221,7 +229,8 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.UPDATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -236,7 +245,8 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.GET_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),Response.class);
+    Response res = probe.expectMsgClass(duration("100 second"),Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -251,7 +261,8 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.GET_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -266,7 +277,8 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.GET_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -286,7 +298,8 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.UPDATE_TC_STATUS_OF_USER.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),Response.class);
+    Response res = probe.expectMsgClass(duration("100 second"),Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -306,7 +319,8 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation("InvalidOperation");
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -316,7 +330,8 @@ public class TenantPreferenceManagementActorTest {
     ActorRef subject = system.actorOf(props);
 
     subject.tell("Invalid message", probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @AfterClass

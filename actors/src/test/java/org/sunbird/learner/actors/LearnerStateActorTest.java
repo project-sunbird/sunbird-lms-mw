@@ -102,7 +102,8 @@ public class LearnerStateActorTest {
         request.setRequest(map);
         request.setOperation("INVALID_OPERATION");
         subject.tell(request, probe.getRef());
-        probe.expectMsgClass(ProjectCommonException.class);
+        ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+        Assert.assertTrue(null != exc);
 
     }
 
@@ -113,7 +114,8 @@ public class LearnerStateActorTest {
         ActorRef subject = system.actorOf(props);
 
         subject.tell("INVALID REQUEST", probe.getRef());
-        probe.expectMsgClass(ProjectCommonException.class);
+        ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+        Assert.assertTrue(null != exc);
 
     }
 

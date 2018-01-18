@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -58,7 +59,8 @@ public class AssessmentItemActorTest {
         innerMap.put(JsonKey.ID, "");
         reqObj.setRequest(innerMap);
         subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(Response.class);
+        Response res = probe.expectMsgClass(Response.class);
+        Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
     }
 
     @Test()
@@ -85,7 +87,8 @@ public class AssessmentItemActorTest {
         innerMap.put(JsonKey.ID, "");
         reqObj.setRequest(innerMap);
         subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(Response.class);
+        Response res = probe.expectMsgClass(Response.class);
+        Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
     }
 
     @Test
@@ -113,8 +116,8 @@ public class AssessmentItemActorTest {
         innerMap.put(JsonKey.ASSESSMENT , assessmentMap);
         reqObj.setRequest(innerMap);
         subject.tell(reqObj, probe.getRef());
-       // probe.expectMsgClass(Response.class);
-
+        NullPointerException res = probe.expectMsgClass(NullPointerException.class);
+        Assert.assertTrue(null != res);
     }
 
     @Test
@@ -132,8 +135,8 @@ public class AssessmentItemActorTest {
         innerMap.put(JsonKey.ID, "");
         reqObj.setRequest(innerMap);
         subject.tell(reqObj, probe.getRef());
-        probe.expectMsgClass(ProjectCommonException.class);
-
+        ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+        Assert.assertTrue(null != exc);
     }
 
     @Test
@@ -143,7 +146,8 @@ public class AssessmentItemActorTest {
         ActorRef subject = system.actorOf(props);
 
         subject.tell("UNSUPPORTED", probe.getRef());
-        probe.expectMsgClass(ProjectCommonException.class);
+        ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+        Assert.assertTrue(null != exc);
 
     }
 

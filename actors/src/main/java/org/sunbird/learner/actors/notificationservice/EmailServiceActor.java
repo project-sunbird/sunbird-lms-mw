@@ -183,7 +183,7 @@ public class EmailServiceActor extends UntypedAbstractActor {
       try {
         encryptedMail = encryptionService.encryptData(i);
       } catch (Exception e) {
-        e.printStackTrace();
+        ProjectLogger.log(e.getMessage(), e);
       }
       return encryptedMail;
     }).collect(Collectors.toList()));

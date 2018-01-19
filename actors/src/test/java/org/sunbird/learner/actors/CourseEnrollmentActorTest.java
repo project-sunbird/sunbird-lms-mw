@@ -13,6 +13,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -81,12 +82,13 @@ public class CourseEnrollmentActorTest {
 
   @Test
   public void testAll() throws Throwable {
-    this.onReceiveTestWithInvalidOperation();
-    this.aonReceiveTestWithInvalidEkStepContent();
-    this.testAonReceive();
-    this.testBEnrollWithSameCourse();
-    this.onReceiveTestWithInvalidRequestType();
-    this.testWithInvalidCourseBatchId();
+    onReceiveTestWithInvalidOperation();
+    aonReceiveTestWithInvalidEkStepContent();
+    testAonReceive();
+    testBEnrollWithSameCourse();
+    onReceiveTestWithInvalidRequestType();
+    //this.testWithInvalidCourseBatchId();
+    Assert.assertTrue(testWithInvalidCourseBatchId() instanceof ProjectCommonException);
   }
 
   // @Test()
@@ -199,7 +201,7 @@ public class CourseEnrollmentActorTest {
 
   }
 
-  public void testWithInvalidCourseBatchId() {
+  public ProjectCommonException testWithInvalidCourseBatchId() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -215,7 +217,7 @@ public class CourseEnrollmentActorTest {
     reqObj.setRequest(innerMap);
 
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+    return probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
   }
 
   @AfterClass

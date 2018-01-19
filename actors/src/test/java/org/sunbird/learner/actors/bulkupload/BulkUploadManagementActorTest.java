@@ -27,6 +27,7 @@ import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
@@ -568,8 +569,7 @@ public class BulkUploadManagementActorTest {
         }
       }
     }catch (Exception ex){
-
-
+      ProjectLogger.log(ex.getMessage(), ex);
     }
 
     if(null != orgId) {

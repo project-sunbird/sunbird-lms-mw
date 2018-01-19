@@ -92,7 +92,8 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),Response.class);
+    Response res = probe.expectMsgClass(duration("100 second"),Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -102,8 +103,8 @@ public class CourseMetricsActorTest {
     ActorRef subject = system.actorOf(props);
 
     subject.tell("Invalid Oject Type", probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
-
+    ProjectCommonException exc  = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -119,7 +120,8 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),Response.class);
+    Response res = probe.expectMsgClass(duration("100 second"),Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -135,7 +137,8 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -151,7 +154,8 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -167,7 +171,8 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS.getValue()+"-Invalid");
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -184,7 +189,8 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),Response.class);
+    Response res = probe.expectMsgClass(duration("100 second"),Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -201,7 +207,8 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),Response.class);
+    Response res = probe.expectMsgClass(duration("100 second"),Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -218,7 +225,8 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
 
   }
 
@@ -236,7 +244,8 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
   
   @SuppressWarnings({"unchecked", "deprecation"})

@@ -2,6 +2,7 @@ package org.sunbird.learner.actors;
 
 import static akka.testkit.JavaTestKit.duration;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import akka.actor.ActorRef;
@@ -14,7 +15,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -831,7 +831,7 @@ public class UserManagementActorTest {
     List<String> roles =
         (List) ((Map<String, Object>) ((((List<Map<String, Object>>) result.get(JsonKey.RESPONSE))
             .get(0)))).get(JsonKey.ROLES);
-    assertTrue(!roles.contains(ProjectUtil.UserRole.CONTENT_CREATOR.getValue()));
+    assertFalse(roles.contains(ProjectUtil.UserRole.CONTENT_CREATOR.getValue()));
     userOrgId =
         (String) ((Map<String, Object>) ((((List<Map<String, Object>>) result.get(JsonKey.RESPONSE))
             .get(0)))).get(JsonKey.ID);
@@ -1207,7 +1207,7 @@ public class UserManagementActorTest {
     ProjectCommonException response =
         probe.expectMsgClass(duration("2000 second"), ProjectCommonException.class);
     if (null != response) {
-      Assert.assertEquals(ResponseMessage.Message.INVALID_MEDIA_TYPE, response.getMessage());
+      assertEquals(ResponseMessage.Message.INVALID_MEDIA_TYPE, response.getMessage());
     }
   }
 
@@ -1237,7 +1237,7 @@ public class UserManagementActorTest {
     ProjectCommonException response =
         probe.expectMsgClass(duration("2000 second"), ProjectCommonException.class);
     if (null != response) {
-      Assert.assertEquals(ResponseMessage.Key.INVALID_WEBPAGE_URL, response.getCode());
+      assertEquals(ResponseMessage.Key.INVALID_WEBPAGE_URL, response.getCode());
     }
   }
 
@@ -1294,7 +1294,7 @@ public class UserManagementActorTest {
     ProjectCommonException response =
         probe.expectMsgClass(duration("2000 second"), ProjectCommonException.class);
     if (null != response) {
-      Assert.assertEquals(ResponseMessage.Message.INVALID_MEDIA_TYPE, response.getMessage());
+      assertEquals(ResponseMessage.Message.INVALID_MEDIA_TYPE, response.getMessage());
     }
   }
 
@@ -1325,7 +1325,7 @@ public class UserManagementActorTest {
     ProjectCommonException response =
         probe.expectMsgClass(duration("2000 second"), ProjectCommonException.class);
     if (null != response) {
-      Assert.assertEquals("Invalid URL for facebook", response.getMessage());
+      assertEquals("Invalid URL for facebook", response.getMessage());
     }
   }
 
@@ -1348,7 +1348,7 @@ public class UserManagementActorTest {
     ProjectCommonException response =
         probe.expectMsgClass(duration("2000 second"), ProjectCommonException.class);
     if (null != response) {
-      Assert.assertEquals(ResponseCode.CLIENT_ERROR.getResponseCode(), response.getResponseCode());
+      assertEquals(ResponseCode.CLIENT_ERROR.getResponseCode(), response.getResponseCode());
     }
   }
 
@@ -1371,7 +1371,7 @@ public class UserManagementActorTest {
     ProjectCommonException response =
         probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
     if (null != response) {
-      Assert.assertEquals(ResponseCode.CLIENT_ERROR.getResponseCode(), response.getResponseCode());
+      assertEquals(ResponseCode.CLIENT_ERROR.getResponseCode(), response.getResponseCode());
     }
   }
 
@@ -1396,8 +1396,7 @@ public class UserManagementActorTest {
         (String) ((Map<String, Object>) response.get(JsonKey.RESPONSE)).get(JsonKey.ACCESSTOKEN);
     System.out.println("Auth token :: " + authToken);
     if (null != response) {
-      Assert.assertEquals(response.getResponseCode().getResponseCode(),
-          ResponseCode.OK.getResponseCode());
+      assertEquals(response.getResponseCode().getResponseCode(), ResponseCode.OK.getResponseCode());
     }
   }
 

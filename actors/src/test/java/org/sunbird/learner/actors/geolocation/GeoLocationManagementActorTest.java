@@ -34,38 +34,38 @@ import org.sunbird.learner.util.Util;
 public class GeoLocationManagementActorTest {
 
 
-  static ActorSystem system;
-  final static Props props = Props.create(GeoLocationManagementActor.class);
+  private static ActorSystem system;
+  private static final Props props = Props.create(GeoLocationManagementActor.class);
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private static Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
   private static final String orgId = "hhjcjr79fw4p89";
   private static final String type = "husvej";
   private static final String userId = "vcurc633r8911";
-  private static List<Map<String , Object>> createResponse ;
-  private static String id ;
+  private static List<Map<String, Object>> createResponse;
+  private static String id;
 
 
   @BeforeClass
-  public static void setUp(){
+  public static void setUp() {
 
     Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
     system = ActorSystem.create("system");
 
-    Map<String , Object> orgMap = new HashMap<String , Object>();
-    orgMap.put(JsonKey.ID , orgId);
+    Map<String, Object> orgMap = new HashMap<String, Object>();
+    orgMap.put(JsonKey.ID, orgId);
     cassandraOperation.insertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), orgMap);
 
   }
 
   @Test
-  public void acreateGeoLocationTest(){
+  public void acreateGeoLocationTest() {
 
-    List<Map<String , Object>> dataList = new ArrayList<>();
+    List<Map<String, Object>> dataList = new ArrayList<>();
 
-    Map<String , Object> dataMap = new HashMap<>();
-    dataMap.put(JsonKey.LOCATION , "location");
-    dataMap.put(JsonKey.TYPE , type);
+    Map<String, Object> dataMap = new HashMap<>();
+    dataMap.put(JsonKey.LOCATION, "location");
+    dataMap.put(JsonKey.TYPE, type);
 
     dataList.add(dataMap);
 
@@ -73,16 +73,16 @@ public class GeoLocationManagementActorTest {
     ActorRef subject = system.actorOf(props);
     Request actorMessage = new Request();
 
-    actorMessage.getRequest().put(JsonKey.REQUESTED_BY , userId);
+    actorMessage.getRequest().put(JsonKey.REQUESTED_BY, userId);
     actorMessage.setOperation(ActorOperations.CREATE_GEO_LOCATION.getValue());
 
-    actorMessage.getRequest().put(JsonKey.DATA , dataList);
-    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId);
+    actorMessage.getRequest().put(JsonKey.DATA, dataList);
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, orgId);
 
     subject.tell(actorMessage, probe.getRef());
-    Response res= probe.expectMsgClass(duration("100 second"),Response.class);
+    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
     createResponse = (List<Map<String, Object>>) res.getResult().get(JsonKey.RESPONSE);
-    if(createResponse!= null && createResponse.size()>0){
+    if (createResponse != null && createResponse.size() > 0) {
       id = (String) createResponse.get(0).get(JsonKey.ID);
       createResponse.remove(createResponse.get(0));
     }
@@ -90,40 +90,13 @@ public class GeoLocationManagementActorTest {
   }
 
   @Test
-  public void createGeoLocationTestWithNullOrgId(){
+  public void createGeoLocationTestWithNullOrgId() {
 
-    List<Map<String , Object>> dataList = new ArrayList<>();
+    List<Map<String, Object>> dataList = new ArrayList<>();
 
-    Map<String , Object> dataMap = new HashMap<>();
-    dataMap.put(JsonKey.LOCATION , "location");
-    dataMap.put(JsonKey.TYPE , type);
-
-    dataList.add(dataMap);
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    Request actorMessage = new Request();
-
-    actorMessage.getRequest().put(JsonKey.REQUESTED_BY , userId);
-    actorMessage.setOperation(ActorOperations.CREATE_GEO_LOCATION.getValue());
-
-    actorMessage.getRequest().put(JsonKey.DATA , dataList);
-    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , null);
-
-    subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
-    Assert.assertTrue(null != exc);
-
-  }
-
-  @Test
-  public void createGeoLocationTestWithInvalidOrgId(){
-
-    List<Map<String , Object>> dataList = new ArrayList<>();
-
-    Map<String , Object> dataMap = new HashMap<>();
-    dataMap.put(JsonKey.LOCATION , "location");
-    dataMap.put(JsonKey.TYPE , type);
+    Map<String, Object> dataMap = new HashMap<>();
+    dataMap.put(JsonKey.LOCATION, "location");
+    dataMap.put(JsonKey.TYPE, type);
 
     dataList.add(dataMap);
 
@@ -131,117 +104,149 @@ public class GeoLocationManagementActorTest {
     ActorRef subject = system.actorOf(props);
     Request actorMessage = new Request();
 
-    actorMessage.getRequest().put(JsonKey.REQUESTED_BY , userId);
+    actorMessage.getRequest().put(JsonKey.REQUESTED_BY, userId);
     actorMessage.setOperation(ActorOperations.CREATE_GEO_LOCATION.getValue());
 
-    actorMessage.getRequest().put(JsonKey.DATA , dataList);
-    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId+"jfjrrou");
+    actorMessage.getRequest().put(JsonKey.DATA, dataList);
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, null);
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
     Assert.assertTrue(null != exc);
+
   }
 
   @Test
-  public void createGeoLocationTestWithInvalidData(){
+  public void createGeoLocationTestWithInvalidOrgId() {
 
-    List<Map<String , Object>> dataList = new ArrayList<>();
+    List<Map<String, Object>> dataList = new ArrayList<>();
+
+    Map<String, Object> dataMap = new HashMap<>();
+    dataMap.put(JsonKey.LOCATION, "location");
+    dataMap.put(JsonKey.TYPE, type);
+
+    dataList.add(dataMap);
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request actorMessage = new Request();
 
-    actorMessage.getRequest().put(JsonKey.REQUESTED_BY , userId);
+    actorMessage.getRequest().put(JsonKey.REQUESTED_BY, userId);
     actorMessage.setOperation(ActorOperations.CREATE_GEO_LOCATION.getValue());
 
-    actorMessage.getRequest().put(JsonKey.DATA , dataList);
-    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId);
+    actorMessage.getRequest().put(JsonKey.DATA, dataList);
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, orgId + "jfjrrou");
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
     Assert.assertTrue(null != exc);
   }
 
   @Test
-  public void getGeoLocationTestyOrgId(){
+  public void createGeoLocationTestWithInvalidData() {
+
+    List<Map<String, Object>> dataList = new ArrayList<>();
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request actorMessage = new Request();
 
-    actorMessage.getRequest().put(JsonKey.REQUESTED_BY , userId);
-    actorMessage.getRequest().put(JsonKey.TYPE , JsonKey.ORGANISATION);
-    actorMessage.getRequest().put(JsonKey.ID , orgId);
+    actorMessage.getRequest().put(JsonKey.REQUESTED_BY, userId);
+    actorMessage.setOperation(ActorOperations.CREATE_GEO_LOCATION.getValue());
+
+    actorMessage.getRequest().put(JsonKey.DATA, dataList);
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, orgId);
+
+    subject.tell(actorMessage, probe.getRef());
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
+  }
+
+  @Test
+  public void getGeoLocationTestyOrgId() {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request actorMessage = new Request();
+
+    actorMessage.getRequest().put(JsonKey.REQUESTED_BY, userId);
+    actorMessage.getRequest().put(JsonKey.TYPE, JsonKey.ORGANISATION);
+    actorMessage.getRequest().put(JsonKey.ID, orgId);
     actorMessage.setOperation(ActorOperations.GET_GEO_LOCATION.getValue());
 
-    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId);
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, orgId);
 
     subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("100 second"),Response.class);
+    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
     Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
-  public void getGeoLocationTestyLocationId(){
+  public void getGeoLocationTestyLocationId() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request actorMessage = new Request();
 
-    actorMessage.getRequest().put(JsonKey.REQUESTED_BY , userId);
-    actorMessage.getRequest().put(JsonKey.TYPE , JsonKey.LOCATION);
-    actorMessage.getRequest().put(JsonKey.ID , id);
+    actorMessage.getRequest().put(JsonKey.REQUESTED_BY, userId);
+    actorMessage.getRequest().put(JsonKey.TYPE, JsonKey.LOCATION);
+    actorMessage.getRequest().put(JsonKey.ID, id);
     actorMessage.setOperation(ActorOperations.GET_GEO_LOCATION.getValue());
 
-    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId);
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, orgId);
 
     subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("100 second"),Response.class);
+    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
     Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
-  public void getGeoLocationTestWithNullType(){
+  public void getGeoLocationTestWithNullType() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request actorMessage = new Request();
 
-    actorMessage.getRequest().put(JsonKey.REQUESTED_BY , userId);
-    actorMessage.getRequest().put(JsonKey.TYPE , null);
-    actorMessage.getRequest().put(JsonKey.ID , orgId);
+    actorMessage.getRequest().put(JsonKey.REQUESTED_BY, userId);
+    actorMessage.getRequest().put(JsonKey.TYPE, null);
+    actorMessage.getRequest().put(JsonKey.ID, orgId);
     actorMessage.setOperation(ActorOperations.GET_GEO_LOCATION.getValue());
 
-    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId);
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, orgId);
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
     Assert.assertTrue(null != exc);
   }
 
   @Test
-  public void getGeoLocationTestWithInvalidType(){
+  public void getGeoLocationTestWithInvalidType() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request actorMessage = new Request();
 
-    actorMessage.getRequest().put(JsonKey.REQUESTED_BY , userId);
-    actorMessage.getRequest().put(JsonKey.TYPE , "Invalid type");
-    actorMessage.getRequest().put(JsonKey.ID , orgId);
+    actorMessage.getRequest().put(JsonKey.REQUESTED_BY, userId);
+    actorMessage.getRequest().put(JsonKey.TYPE, "Invalid type");
+    actorMessage.getRequest().put(JsonKey.ID, orgId);
     actorMessage.setOperation(ActorOperations.GET_GEO_LOCATION.getValue());
 
-    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID , orgId);
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, orgId);
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"),ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
     Assert.assertTrue(null != exc);
   }
 
   @Test
-  public void updateGeoLocationTest(){
+  public void updateGeoLocationTest() {
 
-    if(null != id) {
+    if (null != id) {
 
       TestKit probe = new TestKit(system);
       ActorRef subject = system.actorOf(props);
@@ -261,26 +266,7 @@ public class GeoLocationManagementActorTest {
   }
 
   @Test
-  public void updateGeoLocationTestWithNullId(){
-
-      TestKit probe = new TestKit(system);
-      ActorRef subject = system.actorOf(props);
-      Request actorMessage = new Request();
-
-      actorMessage.getRequest().put(JsonKey.REQUESTED_BY, userId);
-      actorMessage.getRequest().put(JsonKey.LOCATION, "updated location");
-      actorMessage.getRequest().put(JsonKey.TYPE, type);
-      actorMessage.getRequest().put(JsonKey.LOCATION_ID, null);
-      actorMessage.setOperation(ActorOperations.UPDATE_GEO_LOCATION.getValue());
-
-      subject.tell(actorMessage, probe.getRef());
-      ProjectCommonException exc = probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-      Assert.assertTrue(null != exc);
-
-  }
-
-  @Test
-  public void updateGeoLocationTestWithInvalidId(){
+  public void updateGeoLocationTestWithNullId() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -289,17 +275,38 @@ public class GeoLocationManagementActorTest {
     actorMessage.getRequest().put(JsonKey.REQUESTED_BY, userId);
     actorMessage.getRequest().put(JsonKey.LOCATION, "updated location");
     actorMessage.getRequest().put(JsonKey.TYPE, type);
-    actorMessage.getRequest().put(JsonKey.LOCATION_ID, id+"-invalid");
+    actorMessage.getRequest().put(JsonKey.LOCATION_ID, null);
     actorMessage.setOperation(ActorOperations.UPDATE_GEO_LOCATION.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
     Assert.assertTrue(null != exc);
 
   }
 
   @Test
-  public void zdeleteGeoLocationTest(){
+  public void updateGeoLocationTestWithInvalidId() {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request actorMessage = new Request();
+
+    actorMessage.getRequest().put(JsonKey.REQUESTED_BY, userId);
+    actorMessage.getRequest().put(JsonKey.LOCATION, "updated location");
+    actorMessage.getRequest().put(JsonKey.TYPE, type);
+    actorMessage.getRequest().put(JsonKey.LOCATION_ID, id + "-invalid");
+    actorMessage.setOperation(ActorOperations.UPDATE_GEO_LOCATION.getValue());
+
+    subject.tell(actorMessage, probe.getRef());
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
+
+  }
+
+  @Test
+  public void zdeleteGeoLocationTest() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -314,7 +321,7 @@ public class GeoLocationManagementActorTest {
   }
 
   @Test
-  public void deleteGeoLocationTestWithNullId(){
+  public void deleteGeoLocationTestWithNullId() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -324,12 +331,13 @@ public class GeoLocationManagementActorTest {
     actorMessage.setOperation(ActorOperations.DELETE_GEO_LOCATION.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
     Assert.assertTrue(null != exc);
   }
 
   @Test
-  public void geoLocationTestWithInvalidOperation(){
+  public void geoLocationTestWithInvalidOperation() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -339,24 +347,26 @@ public class GeoLocationManagementActorTest {
     actorMessage.setOperation("invalid operation");
 
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
     Assert.assertTrue(null != exc);
   }
 
   @Test
-  public void geoLocationTestWithInvalidObjectType(){
+  public void geoLocationTestWithInvalidObjectType() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
     subject.tell("Invalid Request", probe.getRef());
-    ProjectCommonException exc = probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
     Assert.assertTrue(null != exc);
   }
 
 
   @Test
-  public void getUserCount(){
+  public void getUserCount() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request actorMessage = new Request();
@@ -367,14 +377,15 @@ public class GeoLocationManagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-    List<Map<String, Object>> result = (List<Map<String, Object>>) res.getResult().get(JsonKey.LOCATIONS);
+    List<Map<String, Object>> result =
+        (List<Map<String, Object>>) res.getResult().get(JsonKey.LOCATIONS);
     Map<String, Object> map = result.get(0);
     int count = (int) map.get(JsonKey.USER_COUNT);
-    assertEquals(0,count);
+    assertEquals(0, count);
   }
 
   @Test
-  public void getUserCount2(){
+  public void getUserCount2() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request actorMessage = new Request();
@@ -385,21 +396,23 @@ public class GeoLocationManagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-    List<Map<String, Object>> result = (List<Map<String, Object>>) res.getResult().get(JsonKey.LOCATIONS);
+    List<Map<String, Object>> result =
+        (List<Map<String, Object>>) res.getResult().get(JsonKey.LOCATIONS);
     Map<String, Object> map = result.get(0);
     int count = (int) map.get(JsonKey.USER_COUNT);
-    assertEquals(0,count);
+    assertEquals(0, count);
   }
 
   @AfterClass
-  public static void destroy(){
+  public static void destroy() {
 
     cassandraOperation.deleteRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), orgId);
-    for(Map<String , Object> m : createResponse){
+    for (Map<String, Object> m : createResponse) {
 
       String id = (String) m.get(JsonKey.ID);
-      if(!ProjectUtil.isStringNullOREmpty(id)){
-        cassandraOperation.deleteRecord(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), id);
+      if (!ProjectUtil.isStringNullOREmpty(id)) {
+        cassandraOperation.deleteRecord(geoLocationDbInfo.getKeySpace(),
+            geoLocationDbInfo.getTableName(), id);
       }
 
     }

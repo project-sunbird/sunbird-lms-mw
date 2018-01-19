@@ -2,18 +2,20 @@ package org.sunbird.learner.audit;
 
 import static akka.testkit.JavaTestKit.duration;
 
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
-import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -24,23 +26,16 @@ import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.audit.impl.ActorAuditLogServiceImpl;
 import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.util.Util;
-
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.testkit.javadsl.TestKit;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class AuditLogServiceImplTest {
 
 
-  static ActorSystem system;
-  static CassandraOperation operation = ServiceFactory.getInstance();
-  final static Props props = Props.create(ActorAuditLogServiceImpl.class);
+  private static ActorSystem system;
+  private static final Props props = Props.create(ActorAuditLogServiceImpl.class);
   private static List<String> auditIds = new ArrayList<>();
 
   @BeforeClass

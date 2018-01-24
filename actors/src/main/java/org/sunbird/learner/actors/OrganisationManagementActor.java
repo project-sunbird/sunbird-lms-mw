@@ -47,7 +47,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   private EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
           .getEncryptionServiceInstance(null);
-  
+
   @Override
   public void onReceive(Object message) throws Throwable {
     if (message instanceof Request) {
@@ -354,9 +354,19 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           }
         }
       }
-      if (ProjectUtil.isNull(req.get(JsonKey.IS_ROOT_ORG))) {
+      if ((Boolean) req.get(JsonKey.IS_ROOT_ORG)) {
+        boolean bool = Util.registerChannel(req);
+        if (!bool) {
+          ProjectCommonException exception =
+              new ProjectCommonException(ResponseCode.channelRegFailed.getErrorCode(),
+                  ResponseCode.channelRegFailed.getErrorMessage(),
+                  ResponseCode.SERVER_ERROR.getResponseCode());
+          sender().tell(exception, self());
+        }
+      } else {
         req.put(JsonKey.IS_ROOT_ORG, false);
       }
+
       Response result =
           cassandraOperation.insertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), req);
       ProjectLogger.log("Org data saved into cassandra.");
@@ -1644,15 +1654,15 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       sender().tell(exception, self());
       return false;
     }
-      if (isNull(req.get(JsonKey.ORGANISATION_ID)) 
-          && (isNull(req.get(JsonKey.PROVIDER)) || isNull(req.get(JsonKey.EXTERNAL_ID)))) {
-        ProjectCommonException exception = new ProjectCommonException(
-            ResponseCode.sourceAndExternalIdValidationError.getErrorCode(),
-            ResponseCode.sourceAndExternalIdValidationError.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-        sender().tell(exception, self());
-        return false;
-      }
+    if (isNull(req.get(JsonKey.ORGANISATION_ID))
+        && (isNull(req.get(JsonKey.PROVIDER)) || isNull(req.get(JsonKey.EXTERNAL_ID)))) {
+      ProjectCommonException exception =
+          new ProjectCommonException(ResponseCode.sourceAndExternalIdValidationError.getErrorCode(),
+              ResponseCode.sourceAndExternalIdValidationError.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return false;
+    }
     // fetch orgid from database on basis of source and external id and put orgid into request .
     Util.DbInfo orgDBInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
@@ -1727,19 +1737,19 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       } else {
         data.put(JsonKey.LOGIN_ID, (String) data.get(JsonKey.USERNAME));
       }
-      
+
       String loginId = "";
-        try {
-          loginId = encryptionService.encryptData((String) data.get(JsonKey.LOGIN_ID));
-        } catch (Exception e) {
-          ProjectCommonException exception =
-              new ProjectCommonException(ResponseCode.userDataEncryptionError.getErrorCode(),
-                  ResponseCode.userDataEncryptionError.getErrorMessage(),
-                  ResponseCode.SERVER_ERROR.getResponseCode());
-          sender().tell(exception, self());
-        }
-        result = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),
-            usrDbInfo.getTableName(), JsonKey.LOGIN_ID, loginId);
+      try {
+        loginId = encryptionService.encryptData((String) data.get(JsonKey.LOGIN_ID));
+      } catch (Exception e) {
+        ProjectCommonException exception =
+            new ProjectCommonException(ResponseCode.userDataEncryptionError.getErrorCode(),
+                ResponseCode.userDataEncryptionError.getErrorMessage(),
+                ResponseCode.SERVER_ERROR.getResponseCode());
+        sender().tell(exception, self());
+      }
+      result = cassandraOperation.getRecordsByProperty(usrDbInfo.getKeySpace(),
+          usrDbInfo.getTableName(), JsonKey.LOGIN_ID, loginId);
     }
     List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
     if (list.isEmpty()) {

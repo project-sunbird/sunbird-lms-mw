@@ -10,24 +10,36 @@ import org.sunbird.common.models.util.ProjectLogger;
 
 
 /**
- * @author Manzarul
- *All the scheduler job will be handle by this class.
+ * @author Manzarul All the scheduler job will be handle by this class.
  */
 public class SchedulerManager {
-  
-	 private static final int PAGE_DATA_TTL = 24;
-	    /*
-	     * service ScheduledExecutorService object
-	     */
-	    public static ScheduledExecutorService service = ExecutorManager
-		    .getExecutorService();
 
-	    /**
-	     * all scheduler job will be configure here.
-	     */
-	    public static void schedule() {
-	    ProjectLogger.log("started scheduler job.");	
-		service.scheduleWithFixedDelay(new DataCacheHandler(), 0, PAGE_DATA_TTL, TimeUnit.HOURS);
-	    }
+  private static final int PAGE_DATA_TTL = 24;
+  private static boolean executed = false;
+
+  /*
+   * service ScheduledExecutorService object
+   */
+  public static ScheduledExecutorService service = ExecutorManager.getExecutorService();
+
+  /**
+   * all scheduler job will be configure here.
+   */
+  public static void schedule() {
+    ProjectLogger.log("started scheduler job.");
+    service.scheduleWithFixedDelay(new DataCacheHandler(), 0, PAGE_DATA_TTL, TimeUnit.HOURS);
+
+  }
+
+  public static void scheduleChannelReg() {
+    if (!executed) {
+      synchronized (SchedulerManager.class) {
+        if (!executed) {
+          executed = true;
+          service.submit(new ChannelRegHandler());
+        }
+      }
+    }
+  }
 
 }

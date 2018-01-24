@@ -362,6 +362,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
                   ResponseCode.channelRegFailed.getErrorMessage(),
                   ResponseCode.SERVER_ERROR.getResponseCode());
           sender().tell(exception, self());
+          return;
         }
       } else {
         req.put(JsonKey.IS_ROOT_ORG, false);

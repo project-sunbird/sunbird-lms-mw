@@ -126,8 +126,7 @@ public class ChannelRegistrationActor extends UntypedAbstractActor {
     Object[] result = null;
     try {
       ProjectLogger.log("start call for getting List of channel from Ekstep");
-      String ekStepBaseUrl =
-          "https://dev.ekstep.in/api"/* System.getenv(JsonKey.EKSTEP_BASE_URL) */;
+      String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
       if (ProjectUtil.isStringNullOREmpty(ekStepBaseUrl)) {
         ekStepBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
       }

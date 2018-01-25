@@ -115,7 +115,6 @@ public class Application {
     Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
     Util.checkCassandraDbConnections(JsonKey.SUNBIRD_PLUGIN);
     SchedulerManager.schedule();
-    SchedulerManager.scheduleChannelReg();
   }
 
   public static ActorRef startLocalActorSystem() {

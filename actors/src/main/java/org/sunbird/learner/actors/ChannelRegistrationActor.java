@@ -55,7 +55,9 @@ public class ChannelRegistrationActor extends UntypedAbstractActor {
     List<String> ekstepChannelList = getEkstepChannelList();
     List<Map<String, Object>> sunbirdChannelList = null;
     if (null != ekstepChannelList) {
+      ProjectLogger.log("channel list size from ekstep : " + ekstepChannelList.size());
       sunbirdChannelList = getSunbirdChannelList();
+      ProjectLogger.log("channel list size from sunbird : " + sunbirdChannelList.size());
       if (!ekstepChannelList.isEmpty()) {
         processChannelReg(ekstepChannelList, sunbirdChannelList);
       }
@@ -66,6 +68,7 @@ public class ChannelRegistrationActor extends UntypedAbstractActor {
       List<Map<String, Object>> sunbirdChannelList) {
     Boolean bool = true;
     for (Map<String, Object> map : sunbirdChannelList) {
+      ProjectLogger.log("processing start for hashTagId " + map.get(JsonKey.HASHTAGID));
       if ((!ekstepChannelList.contains(map.get(JsonKey.HASHTAGID)))
           && (!Util.registerChannel(map))) {
         bool = false;
@@ -140,8 +143,9 @@ public class ChannelRegistrationActor extends UntypedAbstractActor {
           reqString, headerMap);
       jObject = new JSONObject(response);
       data = jObject.getJSONObject(JsonKey.RESULT);
-      ProjectLogger.log("Total number of content fetched from Ekstep while assembling page data : "
-          + data.get("count"));
+      ProjectLogger
+          .log("Total number of content fetched from Ekstep while getting List of channel : "
+              + data.get("count"));
       JSONArray contentArray = data.getJSONArray(JsonKey.CHANNELS);
       result = mapper.readValue(contentArray.toString(), Object[].class);
       for (Object object : result) {

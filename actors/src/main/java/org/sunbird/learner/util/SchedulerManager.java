@@ -5,7 +5,6 @@ package org.sunbird.learner.util;
 
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
 import org.sunbird.common.models.util.ProjectLogger;
 
 
@@ -15,7 +14,6 @@ import org.sunbird.common.models.util.ProjectLogger;
 public class SchedulerManager {
 
   private static final int PAGE_DATA_TTL = 24;
-  private static boolean executed = false;
 
   /*
    * service ScheduledExecutorService object
@@ -28,18 +26,5 @@ public class SchedulerManager {
   public static void schedule() {
     ProjectLogger.log("started scheduler job.");
     service.scheduleWithFixedDelay(new DataCacheHandler(), 0, PAGE_DATA_TTL, TimeUnit.HOURS);
-
   }
-
-  public static void scheduleChannelReg() {
-    if (!executed) {
-      synchronized (SchedulerManager.class) {
-        if (!executed) {
-          executed = true;
-          service.submit(new ChannelRegHandler());
-        }
-      }
-    }
-  }
-
 }

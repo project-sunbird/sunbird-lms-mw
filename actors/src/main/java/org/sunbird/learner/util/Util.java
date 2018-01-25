@@ -654,7 +654,7 @@ public class Util {
     if (ProjectUtil.isStringNullOREmpty(header)) {
       header = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION);
     } else {
-      header = JsonKey.BEARER + header;
+      header = JsonKey.BEARER + "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiI2NWU2MTUxNzdkODY0MGJkYWNmMWE4MWEwM2Y5MmNjYSJ9.yST4a-kA0K-r-86m0gx45IMTTZP0ujQnjFDEjv2wU0A";
     }
     headerMap.put(JsonKey.AUTHORIZATION, header);
     headerMap.put("Content-Type", "application/json");
@@ -681,7 +681,7 @@ public class Util {
       reqString = mapper.writeValueAsString(map);
 
       regStatus = HttpUtil.sendPostRequest(
-          (ekStepBaseUrl
+          ("https://dev.ekstep.in/api"
               + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CHANNEL_REG_API_URL)),
           reqString, headerMap);
       ProjectLogger

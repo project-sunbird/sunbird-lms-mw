@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -84,8 +85,8 @@ public class SkillmanagementActorTest {
     actorMessage.setOperation(ActorOperations.ADD_SKILL.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),Response.class);
-
+    Response res = probe.expectMsgClass(duration("100 second"),Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -101,8 +102,8 @@ public class SkillmanagementActorTest {
     actorMessage.setOperation(ActorOperations.ADD_SKILL.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("100 second"),Response.class);
-
+    Response res = probe.expectMsgClass(duration("100 second"),Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -118,8 +119,8 @@ public class SkillmanagementActorTest {
     actorMessage.setOperation(ActorOperations.ADD_SKILL.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
-
+    ProjectCommonException exc = probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -134,8 +135,8 @@ public class SkillmanagementActorTest {
     actorMessage.setOperation(ActorOperations.GET_SKILL.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("10 second"),Response.class);
-
+    Response res = probe.expectMsgClass(duration("10 second"),Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -150,8 +151,8 @@ public class SkillmanagementActorTest {
     actorMessage.setOperation(ActorOperations.GET_SKILL.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
-
+    ProjectCommonException exc = probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -164,8 +165,8 @@ public class SkillmanagementActorTest {
     actorMessage.setOperation(ActorOperations.GET_SKILLS_LIST.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("10 second"),Response.class);
-
+    Response res = probe.expectMsgClass(duration("10 second"),Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -178,8 +179,8 @@ public class SkillmanagementActorTest {
     actorMessage.setOperation(ActorOperations.GET_SKILLS_LIST.getValue()+"Invalid");
 
     subject.tell(actorMessage, probe.getRef());
-    probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
-
+    ProjectCommonException exc = probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @Test
@@ -189,8 +190,8 @@ public class SkillmanagementActorTest {
     ActorRef subject = system.actorOf(props);
 
     subject.tell("UNSUPPORTED OJECT STRING", probe.getRef());
-    probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
-
+    ProjectCommonException exc = probe.expectMsgClass(duration("10 second"),ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
   }
 
   @AfterClass

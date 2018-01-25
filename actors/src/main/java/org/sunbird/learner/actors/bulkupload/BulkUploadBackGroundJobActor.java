@@ -1293,7 +1293,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             // DB email value and req email value both are same , no need to update
             userMap.remove(JsonKey.EMAIL);
           }
-          UpdateKeyCloakUserBase(userMap);
+          updateKeyCloakUserBase(userMap);
         } else {
           throw new ProjectCommonException(ResponseCode.userRegOrgError.getErrorCode(),
               ResponseCode.userRegOrgError.getErrorMessage(),
@@ -1545,7 +1545,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 
   }
 
-  private void UpdateKeyCloakUserBase(Map<String, Object> userMap) {
+  private void updateKeyCloakUserBase(Map<String, Object> userMap) {
     try {
       String userId = ssoManager.updateUser(userMap);
       if (!(!ProjectUtil.isStringNullOREmpty(userId) && userId.equalsIgnoreCase(JsonKey.SUCCESS))) {

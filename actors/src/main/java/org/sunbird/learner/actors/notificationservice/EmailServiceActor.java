@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
 import java.util.stream.Collectors;
 import org.apache.commons.lang.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
@@ -119,31 +118,12 @@ public class EmailServiceActor extends UntypedAbstractActor {
     // fetch user id om basis of email provided
     if (!emails.isEmpty()) {
       // fetch usr info on basis of email ids
-      SearchDTO searchDTO = new SearchDTO();
-      Map<String, Object> additionalProperties = new HashMap<>();
-      additionalProperties.put(JsonKey.ENC_EMAIL, emails.stream().map(i -> {
-        String encryptedMail = null;
-        try {
-          encryptedMail = encryptionService.encryptData(i);
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
-        return encryptedMail;
-      }).collect(Collectors.toList()));
-      searchDTO.addAdditionalProperty(JsonKey.FILTERS, additionalProperties);
-
-      Map<String, Object> esResult = ElasticSearchUtil.complexSearch(searchDTO,
-          EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
-
+      Map<String, Object> esResult = getUserInfo(emails);
       if (esResult.get(JsonKey.CONTENT) != null
           && !((List) esResult.get(JsonKey.CONTENT)).isEmpty()) {
         List<Map<String, Object>> esSource =
             (List<Map<String, Object>>) esResult.get(JsonKey.CONTENT);
         for (Map<String, Object> m : esSource) {
-
-          // String decryptedEmail =
-          // decryptionService.decryptData((String)m.get(JsonKey.ENC_EMAIL));
-          // emailIds.add(decryptedEmail);
           tempUserIdList.add((String) m.get(JsonKey.ID));
           name = (String) m.get(JsonKey.FIRST_NAME);
         }
@@ -154,43 +134,16 @@ public class EmailServiceActor extends UntypedAbstractActor {
     if (emailIds.size() > 1) {
       name = "All";
     } else if (ProjectUtil.isStringNullOREmpty(name)) {
-      // name = "Hi";
+      name = "";
     } else {
       name = StringUtils.capitalize(name);
     }
 
     // fetch orgname inorder to set in the Template context
     String orgName = (String) request.get(JsonKey.ORG_NAME);
-    if (null == orgName) {
-      if (tempUserIdList.size() > 1) {
-        Map<String, Object> esUserResult = ElasticSearchUtil.getDataByIdentifier(
-            EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), tempUserIdList.get(0));
-        if (null != esUserResult) {
-          String rootOrgId = (String) esUserResult.get(JsonKey.ROOT_ORG_ID);
-          if (!(ProjectUtil.isStringNullOREmpty(rootOrgId))) {
-            Map<String, Object> esOrgResult = ElasticSearchUtil.getDataByIdentifier(
-                EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), rootOrgId);
-            if (null != esOrgResult) {
-              orgName = (esOrgResult.get(JsonKey.ORG_NAME) != null
-                  ? (String) esOrgResult.get(JsonKey.ORGANISATION_NAME) : "");
-            }
-          }
-        }
-      } else if (tempUserIdList.size() == 1) {
-        Map<String, Object> esUserResult = ElasticSearchUtil.getDataByIdentifier(
-            EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), tempUserIdList.get(0));
-        if (null != esUserResult) {
-          String rootOrgId = (String) esUserResult.get(JsonKey.ROOT_ORG_ID);
-          if (!(ProjectUtil.isStringNullOREmpty(rootOrgId))) {
-            Map<String, Object> esOrgResult = ElasticSearchUtil.getDataByIdentifier(
-                EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), rootOrgId);
-            if (null != esOrgResult) {
-              orgName = (esOrgResult.get(JsonKey.ORG_NAME) != null
-                  ? (String) esOrgResult.get(JsonKey.ORGANISATION_NAME) : "");
-            }
-          }
-        }
-      }
+    if (null == orgName && !tempUserIdList.isEmpty()) {
+      String usrId = tempUserIdList.get(0);
+      orgName = getOrgName(usrId);
     }
     request.put(JsonKey.NAME, name);
     if (orgName != null) {
@@ -202,6 +155,41 @@ public class EmailServiceActor extends UntypedAbstractActor {
     Response res = new Response();
     res.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(res, self());
+  }
+
+  private String getOrgName(String usrId) {
+    String orgName = "";
+    Map<String, Object> esUserResult = ElasticSearchUtil
+        .getDataByIdentifier(EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), usrId);
+    if (null != esUserResult) {
+      String rootOrgId = (String) esUserResult.get(JsonKey.ROOT_ORG_ID);
+      if (!(ProjectUtil.isStringNullOREmpty(rootOrgId))) {
+        Map<String, Object> esOrgResult = ElasticSearchUtil.getDataByIdentifier(
+            EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), rootOrgId);
+        if (null != esOrgResult) {
+          orgName = (esOrgResult.get(JsonKey.ORG_NAME) != null
+              ? (String) esOrgResult.get(JsonKey.ORGANISATION_NAME) : "");
+        }
+      }
+    }
+    return orgName;
+  }
+
+  private Map<String, Object> getUserInfo(List<String> emails) {
+    SearchDTO searchDTO = new SearchDTO();
+    Map<String, Object> additionalProperties = new HashMap<>();
+    additionalProperties.put(JsonKey.ENC_EMAIL, emails.stream().map(i -> {
+      String encryptedMail = null;
+      try {
+        encryptedMail = encryptionService.encryptData(i);
+      } catch (Exception e) {
+        ProjectLogger.log(e.getMessage(), e);
+      }
+      return encryptedMail;
+    }).collect(Collectors.toList()));
+    searchDTO.addAdditionalProperty(JsonKey.FILTERS, additionalProperties);
+    return ElasticSearchUtil.complexSearch(searchDTO, EsIndex.sunbird.getIndexName(),
+        EsType.user.getTypeName());
   }
 
   private void checkEmailValidity(String[] emails) {

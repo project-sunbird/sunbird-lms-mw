@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -107,7 +108,7 @@ public class CourseBatchManagementActorTest {
     testE3UpdateBatchAsStartDateAfterEndDate();
     testE4addUserToBatch();
     testE5addUserToBatch();
-    testE6CreateBatch();
+    Assert.assertTrue(testE6CreateBatch() instanceof ProjectCommonException);
   }
   
   public void createUser() {
@@ -577,7 +578,7 @@ public class CourseBatchManagementActorTest {
     probe.expectMsgClass(ProjectCommonException.class);
   }
   
-  public void testE6CreateBatch(){
+  public ProjectCommonException testE6CreateBatch(){
     PowerMockito.mockStatic(EkStepRequestUtil.class);
     Map<String , Object> ekstepResponse = new HashMap<String , Object>();
     ekstepResponse.put("count" , 10);
@@ -608,7 +609,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.MENTORS, mentors);
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(ProjectCommonException.class);
+    return probe.expectMsgClass(ProjectCommonException.class);
   }
   
   @AfterClass

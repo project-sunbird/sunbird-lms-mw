@@ -4,6 +4,7 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -36,7 +37,8 @@ public class EmailServiceActorTest {
       reqObj.setOperation("INVALID_OPERATION");
 
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(ProjectCommonException.class);
+      ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+      Assert.assertTrue(null != exc);
   }
   
   @Test
@@ -47,6 +49,7 @@ public class EmailServiceActorTest {
       Response reqObj = new Response();
 
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(ProjectCommonException.class);
+      ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+      Assert.assertTrue(null != exc);
   }
 }

@@ -37,6 +37,7 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
   
   private ActorRef backGroundServiceActor;
 
+  private ActorRef channelRegistrationActor;
   private ActorRef telemetryProcessorActor;
 
 
@@ -53,6 +54,8 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
   private static final String COURSE_METRICS_BACKGROUND_ACTOR = "courseMetricsBackgroundActor";
   private static final String EMAIL_SERVICE_ACTOR = "emailServiceActor";
   private static final String BACKGROUND_SERVICE_ACTOR = "backGroundServiceActor";
+  private static final String CHANNEL_REG_ACTOR = "channelRegistrationActor";
+
   private static final String TELEMETRY_PROCESSOR_ACTOR = "telemetryProcessorActor";
 
 
@@ -90,6 +93,9 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
     backGroundServiceActor = getContext().actorOf(
         FromConfig.getInstance().props(Props.create(BackGroundServiceActor.class)), BACKGROUND_SERVICE_ACTOR);
 
+    channelRegistrationActor = getContext().actorOf(
+        FromConfig.getInstance().props(Props.create(ChannelRegistrationActor.class)), CHANNEL_REG_ACTOR);
+
     telemetryProcessorActor = getContext().actorOf(
         FromConfig.getInstance().props(Props.create(TelemetryProcessorActor.class)), TELEMETRY_PROCESSOR_ACTOR);
 
@@ -126,6 +132,7 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.COURSE_PROGRESS_METRICS_DATA.getValue(), courseMetricsBackgroundActor);
     routerMap.put(ActorOperations.EMAIL_SERVICE.getValue(), emailServiceActor);
     routerMap.put(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue(), backGroundServiceActor);
+    routerMap.put(ActorOperations.REG_CHANNEL.getValue(), channelRegistrationActor);
     routerMap.put(ActorOperations.TELEMETRY_PROCESSING.getValue(), telemetryProcessorActor);
   }
 

@@ -77,7 +77,7 @@ public class SocialMediaType {
         if(url.contains("http")){
           //pattern = "http(?:s)?:\\/\\/(?:www.)?facebook.com\\/(?:(?:\\w)*#!\\/)?(?:pages\\/)?(?:[?\\w\\-]*\\/)?(?:profile.php\\?id=(?=\\d.*))?([\\w\\-]*)?";
           pattern = "http(?:s)?:\\/\\/(?:www.)?facebook.com\\/(?:(?:\\w\\.)*#!\\/)?(?:pages\\/)?(?:[\\w\\-\\.]*\\/)*([\\w\\-\\.]*)?(?:profile.php\\?id=(?=\\d.*))?([\\w\\-\\.]*)?";
-          if(!IsMatch(url, pattern)){
+          if(!isMatch(url, pattern)){
            url = ""; 
           }
         } else {
@@ -91,7 +91,7 @@ public class SocialMediaType {
       case "twitter":{
         if(url.contains("http")){
           pattern = "http(?:s)?:\\/\\/(?:www.)?twitter\\.com\\/([a-zA-Z0-9_]+)";
-          if(!IsMatch(url, pattern)){
+          if(!isMatch(url, pattern)){
             url = ""; 
            }
         } else {
@@ -105,7 +105,7 @@ public class SocialMediaType {
       case "in":{
         if(url.contains("http")){
           pattern = "http(?:s)?:\\/\\/(?:www.)?linkedin+\\.[a-zA-Z0-9/~\\-_,&=\\?\\.;]+[^\\.,\\s<]";
-          if(!IsMatch(url, pattern)){
+          if(!isMatch(url, pattern)){
             url = ""; 
            }
         } else {
@@ -118,14 +118,14 @@ public class SocialMediaType {
       }
       case "blog": {
         pattern = "http(?:s)?://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]";
-        if(!IsMatch(url, pattern)){
+        if(!isMatch(url, pattern)){
           url = "";
         }
         return url;
       }
       default: {
         pattern = "\\b(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]";
-        if(!IsMatch(url, pattern)){
+        if(!isMatch(url, pattern)){
           url = ""; 
          }
         return url;
@@ -161,7 +161,7 @@ public class SocialMediaType {
 
   }
 
-  private static boolean IsMatch(String s, String pattern) {
+  private static boolean isMatch(String s, String pattern) {
     try {
       Pattern patt = Pattern.compile(pattern);
       Matcher matcher = patt.matcher(s);

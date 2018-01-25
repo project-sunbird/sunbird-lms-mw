@@ -7,6 +7,7 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import java.util.HashMap;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.sunbird.common.config.ApplicationConfigActor;
@@ -47,7 +48,8 @@ public class ApplicationConfigActorTest {
     innerMap.put(JsonKey.EMAIL_UNIQUE, dbEmailUniqueValue);
     reqObj.getRequest().put(JsonKey.DATA, innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("200 second"),Response.class);
+    Response res = probe.expectMsgClass(duration("200 second"),Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
@@ -59,7 +61,8 @@ public class ApplicationConfigActorTest {
       reqObj.setOperation("INVALID_OPERATION");
 
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(ProjectCommonException.class);
+      ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+      Assert.assertTrue(null != exc);
   }
   
   @Test
@@ -70,7 +73,8 @@ public class ApplicationConfigActorTest {
       Response reqObj = new Response();
 
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(ProjectCommonException.class);
+      ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+      Assert.assertTrue(null != exc);
   }
   
   @Test
@@ -80,6 +84,7 @@ public class ApplicationConfigActorTest {
       Request reqObj = new Request();
       reqObj.setOperation(null);
       subject.tell(reqObj, probe.getRef());
-      probe.expectMsgClass(NullPointerException.class);
+      NullPointerException exc = probe.expectMsgClass(NullPointerException.class);
+      Assert.assertTrue(null != exc);
   }
 }

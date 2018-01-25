@@ -134,7 +134,7 @@ public class LearnerStateUpdateActorTest {
     }
 
     @Test
-    public void updateContentTest_001() throws Throwable {
+    public void updateContentTest001() throws Throwable {
 
         TestKit probe = new TestKit(system);
         ActorRef subject = system.actorOf(props);
@@ -180,7 +180,8 @@ public class LearnerStateUpdateActorTest {
         req.setRequest(innerMap);
 
         subject.tell(req, probe.getRef());
-        probe.expectMsgClass(ProjectCommonException.class);
+        ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+        Assert.assertTrue(null != exc);
 
     }
 
@@ -192,7 +193,8 @@ public class LearnerStateUpdateActorTest {
         Request req = new Request();
         req.setOperation("INVALID_OPERATION");
         subject.tell(req, probe.getRef());
-        probe.expectMsgClass(ProjectCommonException.class);
+        ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+        Assert.assertTrue(null != exc);
     }
 
     @Test
@@ -201,7 +203,8 @@ public class LearnerStateUpdateActorTest {
         TestKit probe = new TestKit(system);
         ActorRef subject = system.actorOf(props);
         subject.tell("INVALID REQUEST", probe.getRef());
-        probe.expectMsgClass(ProjectCommonException.class);
+        ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+        Assert.assertTrue(null != exc);
     }
 
 

@@ -385,7 +385,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           }
         }
       }
-      if ((Boolean) req.get(JsonKey.IS_ROOT_ORG)) {
+
+      Boolean isRootOrg = (Boolean) req.get(JsonKey.IS_ROOT_ORG);
+      if (null != isRootOrg && isRootOrg) {
         boolean bool = Util.registerChannel(req);
         if (!bool) {
           ProjectCommonException exception =
@@ -887,8 +889,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
    */
   @SuppressWarnings({"rawtypes", "unchecked"})
   private void addMemberOrganisation(Request actorMessage) {
-
-    Response response = null;
     // object of telemetry event...
     Map<String, Object> targetObject = new HashMap<>();
     List<Map<String, Object>> correlatedObject = new ArrayList<>();

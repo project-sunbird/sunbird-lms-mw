@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -23,7 +24,9 @@ import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
+import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * Created by arvind on 30/8/17.
@@ -34,11 +37,15 @@ public class MetricsReportJob implements Job {
   private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private int time = -30;
+  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
 
   @Override
   public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
     ProjectLogger.log("METRICS JOB TRIGGERED #############-----------");
+    Util.initializeContextForSchedulerJob( JsonKey.SYSTEM, "scheduler id",JsonKey.SCHEDULER_JOB);
+    Map<String, Object> logInfo = genarateLogInfo(JsonKey.SYSTEM, "SCHEDULER JOB MetricsReportJob");
     performReportJob();
+    TelemetryUtil.telemetryProcessingCall(logInfo,null, null, "LOG");
   }
 
   private void performReportJob() {
@@ -119,5 +126,26 @@ public class MetricsReportJob implements Job {
       }
 
     }
+  }
+
+  private Map<String,Object> generateTelemetryRequest(String eventType, Map<String, Object> params,
+      Map<String, Object> context) {
+
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.TELEMETRY_EVENT_TYPE , eventType);
+    map.put(JsonKey.CONTEXT, context);
+    map.put(JsonKey.PARAMS , params);
+    return map;
+  }
+
+  private Map<String,Object> genarateLogInfo(String logType, String message) {
+
+    Map<String, Object> info = new HashMap<>();
+    info.put("LOG_TYPE", logType);
+    long startTime = System.currentTimeMillis();
+    info.put("start-time", startTime);
+    info.put(JsonKey.MESSAGE , message);
+
+    return info;
   }
 }

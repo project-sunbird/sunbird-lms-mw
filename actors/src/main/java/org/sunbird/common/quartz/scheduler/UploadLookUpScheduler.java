@@ -6,9 +6,11 @@ package org.sunbird.common.quartz.scheduler;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -22,7 +24,9 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
+import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * This class will lookup into bulk process table. if process type is new or in progress (more than
@@ -33,10 +37,13 @@ import org.sunbird.learner.util.Util;
  */
 public class UploadLookUpScheduler implements Job {
   private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSSZ");
+  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
 
   public void execute(JobExecutionContext ctx) throws JobExecutionException {
     ProjectLogger.log("Running Upload Scheduler Job at: " + Calendar.getInstance().getTime()
         + " triggered by: " + ctx.getJobDetail().toString(), LoggerEnum.INFO.name());
+    Util.initializeContextForSchedulerJob( JsonKey.SYSTEM, "scheduler id",JsonKey.SCHEDULER_JOB);
+    Map<String, Object> logInfo = genarateLogInfo(JsonKey.SYSTEM, "SCHEDULER JOB UploadLookUpScheduler");
     Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     List<Map<String, Object>> result = null;
@@ -81,6 +88,7 @@ public class UploadLookUpScheduler implements Job {
         process(result);
       }
     }
+    TelemetryUtil.telemetryProcessingCall(logInfo,null, null, "LOG");
   }
 
   private void process(List<Map<String, Object>> result) {
@@ -88,5 +96,26 @@ public class UploadLookUpScheduler implements Job {
     request.put(JsonKey.DATA, result);
     request.setOperation(ActorOperations.SCHEDULE_BULK_UPLOAD.getValue());
     ActorUtil.tell(request);
+  }
+
+  private Map<String,Object> generateTelemetryRequest(String eventType, Map<String, Object> params,
+      Map<String, Object> context) {
+
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.TELEMETRY_EVENT_TYPE , eventType);
+    map.put(JsonKey.CONTEXT, context);
+    map.put(JsonKey.PARAMS , params);
+    return map;
+  }
+
+  private Map<String,Object> genarateLogInfo(String logType, String message) {
+
+    Map<String, Object> info = new HashMap<>();
+    info.put("LOG_TYPE", logType);
+    long startTime = System.currentTimeMillis();
+    info.put("start-time", startTime);
+    info.put(JsonKey.MESSAGE , message);
+
+    return info;
   }
 }

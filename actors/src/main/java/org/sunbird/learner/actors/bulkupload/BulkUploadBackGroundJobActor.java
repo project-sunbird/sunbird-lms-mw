@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -31,6 +32,7 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.Slug;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
@@ -39,6 +41,7 @@ import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.SocialMediaType;
+import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
@@ -46,6 +49,7 @@ import org.sunbird.notification.sms.provider.ISmsProvider;
 import org.sunbird.notification.utils.SMSFactory;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
+import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * This actor will handle bulk upload operation .
@@ -65,6 +69,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String SUNBIRD_APP_URL = "sunbird_app_url";
+  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -72,6 +77,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       try {
         ProjectLogger.log("BulkUploadBackGroundJobActor onReceive called");
         Request actorMessage = (Request) message;
+        //set request id fto thread loacl...
+        ExecutionContext.setRequestId(actorMessage.getRequestId());
         if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.PROCESS_BULK_UPLOAD.getValue())) {
           process(actorMessage);
@@ -387,6 +394,10 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
     Object[] orgContactList = null;
     String contactDetails = null;
+
+    // object of telemetry event...
+    Map<String, Object> targetObject = new HashMap<>();
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     if (concurrentHashMap.containsKey(JsonKey.ORG_TYPE)
         && !ProjectUtil.isStringNullOREmpty((String) concurrentHashMap.get(JsonKey.ORG_TYPE))) {
@@ -764,6 +775,10 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       return;
     }
 
+    targetObject = TelemetryUtil
+        .generateTargetObject(uniqueId, JsonKey.ORGANISATION, JsonKey.CREATE, null);
+    TelemetryUtil.generateCorrelatedObject(uniqueId, JsonKey.ORGANISATION , null , correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(map, targetObject, correlatedObject);
   }
 
   private String validateLocationId(String locId) {

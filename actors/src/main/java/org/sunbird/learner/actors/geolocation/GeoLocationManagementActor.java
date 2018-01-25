@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import java.util.stream.Collectors;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -17,11 +18,14 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.fcm.Notification;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
+import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * Class for providing Geo Location for Organisation
@@ -33,6 +37,7 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
   private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -40,6 +45,8 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
       try {
         ProjectLogger.log("GeoLocationManagementActor-onReceive called");
         Request actorMessage = (Request) message;
+        ExecutionContext.setRequestId(actorMessage.getRequestId());
+        Util.initializeContext(actorMessage, JsonKey.LOCATION);
         if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.CREATE_GEO_LOCATION.getValue())) {
           createGeoLocation(actorMessage);
@@ -153,6 +160,11 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
   private void deleteGeoLocation(Request actorMessage) {
 
     ProjectLogger.log("GeoLocationManagementActor-updateGeoLocation called");
+
+    // object of telemetry event...
+    Map<String, Object> targetObject = new HashMap<>();
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
     String locationId = (String) actorMessage.getRequest().get(JsonKey.LOCATION_ID);
     Response finalResponse = new Response();
 
@@ -166,6 +178,10 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
     finalResponse.getResult().put(JsonKey.RESPONSE , JsonKey.SUCCESS);
     sender().tell(finalResponse , self());
 
+    targetObject = TelemetryUtil
+        .generateTargetObject(locationId, JsonKey.LOCATION, JsonKey.DELETE, null);
+    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
+
   }
 
   /**
@@ -175,6 +191,11 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
   private void updateGeoLocation(Request actorMessage) {
 
     ProjectLogger.log("GeoLocationManagementActor-updateGeoLocation called");
+
+    // object of telemetry event...
+    Map<String, Object> targetObject = new HashMap<>();
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
     String requestedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
     String locationId = (String) actorMessage.getRequest().get(JsonKey.LOCATION_ID);
     String type = (String) actorMessage.getRequest().get(JsonKey.TYPE);
@@ -197,7 +218,6 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
     }
     Map<String , Object> dbResult = list.get(0);
 
-
     Map<String , Object> dbMap = new HashMap<>();
     if(!ProjectUtil.isStringNullOREmpty(type)){
       dbMap.put(JsonKey.TYPE , type);
@@ -214,6 +234,10 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
 
     finalResponse.put(JsonKey.RESPONSE , JsonKey.SUCCESS);
     sender().tell(finalResponse , self());
+
+    targetObject = TelemetryUtil
+        .generateTargetObject(locationId, JsonKey.LOCATION, JsonKey.UPDATE, null);
+    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
 
   }
 
@@ -265,6 +289,11 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
   private void createGeoLocation(Request actorMessage) {
 
     ProjectLogger.log("GeoLocationManagementActor-createGeoLocation called");
+
+    // object of telemetry event...
+    Map<String, Object> targetObject = new HashMap<>();
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
     List<Map<String, Object>> dataList = (List<Map<String, Object>>) actorMessage.getRequest().get(
         JsonKey.DATA);
 
@@ -323,9 +352,18 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
       responseMap.put(JsonKey.LOCATION , location);
       responseMap.put(JsonKey.STATUS , JsonKey.SUCCESS);
       responseList.add(responseMap);
+
+      targetObject = TelemetryUtil
+          .generateTargetObject(id, JsonKey.LOCATION, JsonKey.CREATE, null);
+      TelemetryUtil.generateCorrelatedObject(id, JsonKey.LOCATION , null , correlatedObject);
+      TelemetryUtil.generateCorrelatedObject(rootOrgId, JsonKey.ROOT_ORG , null , correlatedObject);
+      TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
+
     }
     finalResponse.getResult().put(JsonKey.RESPONSE , responseList);
     sender().tell(finalResponse , self());
+
+
 
   }
 

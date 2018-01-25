@@ -2,9 +2,12 @@ package org.sunbird.learner.actors;
 
 import akka.actor.UntypedAbstractActor;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -13,12 +16,15 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.EkStepRequestUtil;
+import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * This actor will handle course enrollment operation .
@@ -33,6 +39,7 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   private static final String DEFAULT_BATCH_ID = "1";
+  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
 
   /**
    * Receives the actor message and perform the course enrollment operation .
@@ -46,10 +53,20 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
       try {
         ProjectLogger.log("CourseEnrollmentActor  onReceive called");
         Request actorMessage = (Request) message;
+
+        Util.initializeContext(actorMessage, JsonKey.USER);
+        //set request id fto thread loacl...
+        ExecutionContext.setRequestId(actorMessage.getRequestId());
+
         if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.ENROLL_COURSE.getValue())) {
           Util.DbInfo courseEnrollmentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
           Util.DbInfo batchDbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
+
+          //objects of telemetry event...
+          Map<String, Object> targetObject = new HashMap<>();
+          List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
           Map<String, Object> req = actorMessage.getRequest();
           String addedBy = (String) req.get(JsonKey.REQUESTED_BY);
           Map<String, Object> courseMap = (Map<String, Object>) req.get(JsonKey.COURSE);
@@ -111,6 +128,13 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
             Response result = cassandraOperation.insertRecord(courseEnrollmentdbInfo.getKeySpace(),
                 courseEnrollmentdbInfo.getTableName(), courseMap);
             sender().tell(result, self());
+
+            targetObject = TelemetryUtil
+                .generateTargetObject((String) courseMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
+            TelemetryUtil.generateCorrelatedObject((String) courseMap.get(JsonKey.COURSE_ID), JsonKey.COURSE, "user.batch.course",correlatedObject);
+            TelemetryUtil.generateCorrelatedObject((String) courseMap.get(JsonKey.BATCH_ID), JsonKey.BATCH, "user.batch",correlatedObject);
+
+            TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
             // TODO: for some reason, ES indexing is failing with Timestamp value. need to check and
             // correct it.
             courseMap.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));

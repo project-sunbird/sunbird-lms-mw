@@ -17,11 +17,13 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.EkStepRequestUtil;
+import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -43,6 +45,9 @@ public class PageManagementActor extends UntypedAbstractActor {
       try {
         ProjectLogger.log("PageManagementActor onReceive called");
         Request actorMessage = (Request) message;
+        Util.initializeContext(actorMessage, JsonKey.PAGE);
+        //set request id fto thread loacl...
+        ExecutionContext.setRequestId(actorMessage.getRequestId());
         if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_PAGE.getValue())) {
           createPage(actorMessage);
         } else if (actorMessage.getOperation()
@@ -129,6 +134,9 @@ public class PageManagementActor extends UntypedAbstractActor {
 
   private void updatePageSection(Request actorMessage) {
     Map<String, Object> req = actorMessage.getRequest();
+    //object of telemetry event...
+    Map<String, Object> targetObject = new HashMap<>();
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
     @SuppressWarnings("unchecked")
     Map<String, Object> sectionMap = (Map<String, Object>) req.get(JsonKey.SECTION);
     if (null != sectionMap.get(JsonKey.SEARCH_QUERY)) {
@@ -153,6 +161,11 @@ public class PageManagementActor extends UntypedAbstractActor {
     Response response = cassandraOperation.updateRecord(sectionDbInfo.getKeySpace(),
         sectionDbInfo.getTableName(), sectionMap);
     sender().tell(response, self());
+    targetObject = TelemetryUtil
+        .generateTargetObject((String)sectionMap.get(JsonKey.ID), JsonKey.PAGE_SECTION, JsonKey.CREATE, null);
+    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
+    //TelemetryUtil.generateCorrelatedObject(endoresedUserId, JsonKey.USER , null , correlatedObject);
+
     // update DataCacheHandler section map with updated page section data
     new Thread() {
       @Override
@@ -168,6 +181,9 @@ public class PageManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
     @SuppressWarnings("unchecked")
     Map<String, Object> sectionMap = (Map<String, Object>) req.get(JsonKey.SECTION);
+    //object of telemetry event...
+    Map<String, Object> targetObject = new HashMap<>();
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
     String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
     if (null != sectionMap.get(JsonKey.SEARCH_QUERY)) {
       ObjectMapper mapper = new ObjectMapper();
@@ -194,6 +210,11 @@ public class PageManagementActor extends UntypedAbstractActor {
         sectionDbInfo.getTableName(), sectionMap);
     response.put(JsonKey.SECTION_ID, uniqueId);
     sender().tell(response, self());
+    targetObject = TelemetryUtil
+        .generateTargetObject(uniqueId, JsonKey.PAGE_SECTION, JsonKey.CREATE, null);
+    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
+    //TelemetryUtil.generateCorrelatedObject(endoresedUserId, JsonKey.USER , null , correlatedObject);
+
     // update DataCacheHandler section map with new page section data
     new Thread() {
       @Override
@@ -323,6 +344,9 @@ public class PageManagementActor extends UntypedAbstractActor {
   private void updatePage(Request actorMessage) {
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> pageMap = (Map<String, Object>) req.get(JsonKey.PAGE);
+    //object of telemetry event...
+    Map<String, Object> targetObject = new HashMap<>();
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
     // default value for orgId
     if (ProjectUtil.isStringNullOREmpty((String) pageMap.get(JsonKey.ORGANISATION_ID))) {
       pageMap.put(JsonKey.ORGANISATION_ID, "NA");
@@ -366,6 +390,11 @@ public class PageManagementActor extends UntypedAbstractActor {
     Response response = cassandraOperation.updateRecord(pageDbInfo.getKeySpace(),
         pageDbInfo.getTableName(), pageMap);
     sender().tell(response, self());
+
+    targetObject = TelemetryUtil
+        .generateTargetObject((String)pageMap.get(JsonKey.ID), JsonKey.PAGE, JsonKey.CREATE, null);
+    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
+    //TelemetryUtil.generateCorrelatedObject(endoresedUserId, JsonKey.USER , null , correlatedObject);
     // update DataCacheHandler page map with updated page data
     new Thread() {
       @Override
@@ -386,6 +415,9 @@ public class PageManagementActor extends UntypedAbstractActor {
   private void createPage(Request actorMessage) {
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> pageMap = (Map<String, Object>) req.get(JsonKey.PAGE);
+    //object of telemetry event...
+    Map<String, Object> targetObject = new HashMap<>();
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
     // default value for orgId
     if (ProjectUtil.isStringNullOREmpty((String) pageMap.get(JsonKey.ORGANISATION_ID))) {
       pageMap.put(JsonKey.ORGANISATION_ID, "NA");
@@ -429,6 +461,10 @@ public class PageManagementActor extends UntypedAbstractActor {
         pageDbInfo.getTableName(), pageMap);
     response.put(JsonKey.PAGE_ID, uniqueId);
     sender().tell(response, self());
+    targetObject = TelemetryUtil
+        .generateTargetObject(uniqueId, JsonKey.PAGE, JsonKey.CREATE, null);
+    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
+    //TelemetryUtil.generateCorrelatedObject(endoresedUserId, JsonKey.USER , null , correlatedObject);
     // update DataCacheHandler page map with new page data
     new Thread() {
       @Override

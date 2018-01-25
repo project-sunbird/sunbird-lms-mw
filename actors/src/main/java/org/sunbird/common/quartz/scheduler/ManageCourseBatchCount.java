@@ -5,10 +5,12 @@ package org.sunbird.common.quartz.scheduler;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
+import java.util.stream.Collectors;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -16,7 +18,11 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.request.Request;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
+import org.sunbird.learner.util.TelemetryUtil;
+import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * This class will update course batch count in EKStep.
@@ -25,9 +31,13 @@ import org.sunbird.learner.util.CourseBatchSchedulerUtil;
  *
  */
 public class ManageCourseBatchCount implements Job {
+  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
   public void execute(JobExecutionContext ctx) throws JobExecutionException {
     ProjectLogger.log("Executing at: " + Calendar.getInstance().getTime() + " triggered by: "
         + ctx.getJobDetail().toString());
+    Util.initializeContextForSchedulerJob( JsonKey.SYSTEM, "scheduler id",JsonKey.SCHEDULER_JOB);
+    Map<String, Object> logInfo = genarateLogInfo(JsonKey.SYSTEM, "SCHEDULER JOB ManageCourseBatchCount");
+    logInfo.put("LOG_LEVEL", "info");
     // Collect all those batches from ES whose start date is today and countIncrementStatus value is
     // false.
     // and all those batches whose end date was yesterday and countDecrementStatus value is false.
@@ -81,8 +91,28 @@ public class ManageCourseBatchCount implements Job {
       ProjectLogger.log("No data found in Elasticsearch for course batch update.",
           LoggerEnum.INFO.name());
     }
-
-
-
+    TelemetryUtil.telemetryProcessingCall(logInfo,null, null, "LOG");
   }
+
+  private Map<String,Object> genarateLogInfo(String logType, String message) {
+
+    Map<String, Object> info = new HashMap<>();
+    info.put("LOG_TYPE", logType);
+    long startTime = System.currentTimeMillis();
+    info.put("start-time", startTime);
+    info.put(JsonKey.MESSAGE , message);
+
+    return info;
+  }
+
+  private Map<String,Object> generateTelemetryRequest(String eventType, Map<String, Object> params,
+      Map<String, Object> context) {
+
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.TELEMETRY_EVENT_TYPE , eventType);
+    map.put(JsonKey.CONTEXT, context);
+    map.put(JsonKey.PARAMS , params);
+    return map;
+  }
+
 }

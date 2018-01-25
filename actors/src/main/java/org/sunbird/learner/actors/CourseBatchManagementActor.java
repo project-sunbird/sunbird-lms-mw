@@ -9,6 +9,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -21,12 +22,15 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
 import org.sunbird.common.models.util.ProjectUtil.Status;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
+import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * This actor will handle course batch related operations.
@@ -39,6 +43,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo dbInfo = null;
   private Util.DbInfo userOrgdbInfo = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
+  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
 
   /**
    * Receives the actor message and perform the course enrollment operation .
@@ -52,6 +57,11 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
         ProjectLogger.log("Batch Management -onReceive called");
         dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
         Request actorMessage = (Request) message;
+
+        Util.initializeContext(actorMessage, JsonKey.BATCH);
+        //set request id fto thread loacl...
+        ExecutionContext.setRequestId(actorMessage.getRequestId());
+
         String requestedOperation = actorMessage.getOperation();
         if (requestedOperation.equalsIgnoreCase(ActorOperations.CREATE_BATCH.getValue())) {
           createCourseBatch(actorMessage);
@@ -128,7 +138,12 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
     Response response = new Response();
 
+    //objects of telemetry event...
+    Map<String, Object> targetObject = new HashMap<>();
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
     String batchId = (String) req.get(JsonKey.BATCH_ID);
+    TelemetryUtil.generateCorrelatedObject(batchId, JsonKey.BATCH, "user.batch",correlatedObject);
     // check batch exist in db or not
     Response courseBatchResult =
         cassandraOperation.getRecordById(dbInfo.getKeySpace(), dbInfo.getTableName(), batchId);
@@ -190,7 +205,10 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
         }
         if (flag) {
           response.getResult().put(userId, JsonKey.SUCCESS);
-        } else {
+          // create audit log for user here that user associated to the batch here , here user is the targer object ...
+          targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+          TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
+           } else {
           response.getResult().put(userId, ResponseCode.userNotAssociatedToOrg.getErrorMessage());
         }
 
@@ -292,6 +310,11 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
     Map<String, String> headers =
         (Map<String, String>) actorMessage.getRequest().get(JsonKey.HEADER);
+
+    // objects of telemetry event...
+    Map<String, Object> targetObject = new HashMap<>();
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
     String courseId = (String) req.get(JsonKey.COURSE_ID);
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     Map<String, Object> ekStepContent =
@@ -370,6 +393,8 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
 
     Response result =
         cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), req);
+
+
     ProjectLogger.log("Course Batch data saving to ES started-- for Id  " + uniqueId,
         LoggerEnum.INFO.name());
     String esResponse = ElasticSearchUtil.createData(ProjectUtil.EsIndex.sunbird.getIndexName(),
@@ -378,6 +403,10 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
         + " with response ==" + esResponse, LoggerEnum.INFO.name());
     result.put(JsonKey.BATCH_ID, uniqueId);
     sender().tell(result, self());
+
+    targetObject = TelemetryUtil.generateTargetObject(uniqueId, JsonKey.BATCH, JsonKey.CREATE, null);
+    TelemetryUtil.generateCorrelatedObject(courseId, JsonKey.COURSE, "batch.course",correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
 
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       ProjectLogger.log("method call going to satrt for ES--.....");
@@ -453,6 +482,9 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
   private void updateCourseBatch(Request actorMessage) {
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
+    // objects of telemetry event...
+    Map<String, Object> targetObject = new HashMap<>();
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
     Response response = cassandraOperation.getRecordById(dbInfo.getKeySpace(),
         dbInfo.getTableName(), (String) req.get(JsonKey.ID));
     req.remove(JsonKey.IDENTIFIER);
@@ -647,6 +679,9 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
       Response result =
           cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), req);
       sender().tell(result, self());
+
+      targetObject = TelemetryUtil.generateTargetObject((String)req.get(JsonKey.ID), JsonKey.BATCH, JsonKey.UPDATE, null);
+      TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
 
       if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
         ProjectLogger.log("method call going to satrt for ES--.....");

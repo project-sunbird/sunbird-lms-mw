@@ -1,9 +1,11 @@
 package org.sunbird.learner.actors.client;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -13,17 +15,21 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
 import akka.actor.UntypedAbstractActor;
+import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 public class ClientManagementActor extends UntypedAbstractActor {
 
   private Util.DbInfo clientDbInfo = Util.dbInfoMap.get(JsonKey.CLIENT_INFO_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -31,6 +37,10 @@ public class ClientManagementActor extends UntypedAbstractActor {
       try {
         ProjectLogger.log("ClientManagementActor-onReceive called");
         Request actorMessage = (Request) message;
+        Util.initializeContext(actorMessage,"MASTER_KEY");
+        //set request id fto thread loacl...
+        ExecutionContext.setRequestId(actorMessage.getRequestId());
+
         if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.REGISTER_CLIENT.getValue())) {
           registerClient(actorMessage);
@@ -72,6 +82,11 @@ public class ClientManagementActor extends UntypedAbstractActor {
   private void registerClient(Request actorMessage) {
     ProjectLogger.log("Register client method call start");
     String clientName = (String) actorMessage.getRequest().get(JsonKey.CLIENT_NAME);
+
+    // object of telemetry event...
+    Map<String, Object> targetObject = new HashMap<>();
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
     Response data = getDataFromCassandra(JsonKey.CLIENT_NAME, clientName);
     List<Map<String, Object>> dataList =
         (List<Map<String, Object>>) data.getResult().get(JsonKey.RESPONSE);
@@ -108,7 +123,12 @@ public class ClientManagementActor extends UntypedAbstractActor {
     result.getResult().put(JsonKey.CLIENT_ID, uniqueId);
     result.getResult().put(JsonKey.MASTER_KEY, masterKey);
     result.getResult().remove(JsonKey.RESPONSE);
+    // telemetry related data
+    targetObject = TelemetryUtil.generateTargetObject(uniqueId, JsonKey.MASTER_KEY, JsonKey.CREATE, null);
+    TelemetryUtil.generateCorrelatedObject(channel, "channel", "client.channel",correlatedObject);
+
     sender().tell(result, self());
+    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
   }
 
   /**
@@ -121,6 +141,14 @@ public class ClientManagementActor extends UntypedAbstractActor {
     ProjectLogger.log("Update client key method call start");
     String clientId = (String) actorMessage.getRequest().get(JsonKey.CLIENT_ID);
     String masterKey = (String) actorMessage.getRequest().get(JsonKey.MASTER_KEY);
+
+    Map<String, Object> targetObject = new HashMap<>();
+    // correlated object of telemetry event...
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
+    // telemetry related data
+    targetObject = TelemetryUtil.generateTargetObject(clientId, JsonKey.MASTER_KEY, JsonKey.UPDATE, null);
+
     Response data = getDataFromCassandra(JsonKey.ID, clientId);
     List<Map<String, Object>> dataList =
         (List<Map<String, Object>>) data.getResult().get(JsonKey.RESPONSE);
@@ -180,6 +208,7 @@ public class ClientManagementActor extends UntypedAbstractActor {
     result.getResult().put(JsonKey.MASTER_KEY, newMasterKey);
     result.getResult().remove(JsonKey.RESPONSE);
     sender().tell(result, self());
+    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
   }
 
   /**

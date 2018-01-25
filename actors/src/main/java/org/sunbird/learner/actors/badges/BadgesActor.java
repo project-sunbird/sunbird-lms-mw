@@ -3,11 +3,13 @@
  */
 package org.sunbird.learner.actors.badges;
 
+import akka.actor.ActorRef;
 import akka.actor.UntypedAbstractActor;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -18,11 +20,14 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
+import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * @author Manzarul
@@ -35,6 +40,7 @@ public class BadgesActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo badgesDbInfo = Util.dbInfoMap.get(JsonKey.BADGES_DB);
   private Util.DbInfo userBadgesDbInfo = Util.dbInfoMap.get(JsonKey.USER_BADGES_DB);
+  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -42,6 +48,9 @@ public class BadgesActor extends UntypedAbstractActor {
       try {
         ProjectLogger.log("AssessmentItemActor onReceive called");
         Request actorMessage = (Request) message;
+        Util.initializeContext(actorMessage, JsonKey.USER);
+        //set request id fto thread loacl...
+        ExecutionContext.setRequestId(actorMessage.getRequestId());
         if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.GET_ALL_BADGE.getValue())) {
           getBadges();
@@ -85,7 +94,6 @@ public class BadgesActor extends UntypedAbstractActor {
   }
 
   /**
-   * @param actorMessage
    */
   private void cassandraHealthCheck() {
     Map<String, Object> finalResponseMap = new HashMap<>();
@@ -113,7 +121,6 @@ public class BadgesActor extends UntypedAbstractActor {
   }
 
   /**
-   * @param actorMessage
    */
   private void esHealthCheck() {
     // check the elastic search
@@ -142,7 +149,6 @@ public class BadgesActor extends UntypedAbstractActor {
   }
 
   /**
-   * @param actorMessage
    */
   private void actorhealthCheck() {
     Map<String, Object> finalResponseMap = new HashMap<>();
@@ -227,8 +233,18 @@ public class BadgesActor extends UntypedAbstractActor {
   @SuppressWarnings("unchecked")
   private void saveUserBadges(Request actorMessage) {
     Map<String, Object> req = actorMessage.getRequest();
+
+    Map<String, Object> targetObject = new HashMap<>();
+    // correlated object of telemetry event...
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
     String receiverId = (String) req.get(JsonKey.RECEIVER_ID);
+    // Telemetry target object
+    targetObject = TelemetryUtil.generateTargetObject(receiverId, JsonKey.USER, JsonKey.CREATE, null);
     String badgeTypeId = (String) req.get(JsonKey.BADGE_TYPE_ID);
+    // correlated object for telemetry...
+    TelemetryUtil.generateCorrelatedObject(badgeTypeId, "badge", "user.badge",correlatedObject);
+
     Map<String, Object> map =
         ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.user.getTypeName(), receiverId);
@@ -278,6 +294,7 @@ public class BadgesActor extends UntypedAbstractActor {
       result.put(JsonKey.RESPONSE, JsonKey.FAILURE);
       sender().tell(result, self());
     }
+    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
     sender().tell(result, self());
     try {
       ProjectLogger.log("Start background job to save user badge.");
@@ -302,4 +319,5 @@ public class BadgesActor extends UntypedAbstractActor {
     }
 
   }
+
 }

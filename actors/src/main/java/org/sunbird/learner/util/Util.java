@@ -687,7 +687,7 @@ public class Util {
       ProjectLogger
           .log("end call for channel registration for hashTag id ==" + req.get(JsonKey.HASHTAGID));
     } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log("Exception occurred while registarting channel in ekstep.", e);
     }
 
     return regStatus.contains("OK");

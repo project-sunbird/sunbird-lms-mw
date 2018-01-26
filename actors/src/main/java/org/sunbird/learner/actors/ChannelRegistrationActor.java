@@ -69,7 +69,8 @@ public class ChannelRegistrationActor extends UntypedAbstractActor {
     Boolean bool = true;
     for (Map<String, Object> map : sunbirdChannelList) {
       ProjectLogger.log("processing start for hashTagId " + map.get(JsonKey.HASHTAGID));
-      if ((!ekstepChannelList.contains(map.get(JsonKey.HASHTAGID)))
+      if (!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.HASHTAGID))
+          && (!ekstepChannelList.contains(map.get(JsonKey.HASHTAGID)))
           && (!Util.registerChannel(map))) {
         bool = false;
       }

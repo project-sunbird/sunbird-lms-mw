@@ -9,6 +9,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
+import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 
 /**
  * Created by arvind on 17/1/18.
@@ -25,12 +26,12 @@ public class TelemetryUtil {
     map.put(JsonKey.TARGET_OBJECT, targetObject);
     map.put(JsonKey.CORRELATED_OBJECTS, correlatedObject);
     map.put(JsonKey.TELEMETRY_EVENT_TYPE, eventType);
-    map.put("params", params);
+    map.put(JsonKey.PARAMS, params);
 
     // combine context info into one i.e. request level and system level info into one place...
 
     Map<String, Object> context = getTelemetryContext();
-    map.put("context", context);
+    map.put(JsonKey.CONTEXT, context);
     return map;
   }
 
@@ -62,7 +63,7 @@ public class TelemetryUtil {
 
     Map<String, Object> params = new HashMap<>();
     params.put(JsonKey.OBJECT_TYPE , objectType);
-    params.put("errtype", "API_ACCESS");
+    params.put(JsonKey.ERR_TYPE, JsonKey.API_ACCESS);
 
     map.put(JsonKey.CONTEXT, contextInfo);
     map.put(JsonKey.PARAMS , params);
@@ -88,7 +89,7 @@ public class TelemetryUtil {
     params.put(JsonKey.PROPS, request);
     Request req = new Request();
     req.setRequest(
-        TelemetryUtil.genarateTelemetryRequest(targetObject , correlatedObject , "AUDIT", params));
+        TelemetryUtil.genarateTelemetryRequest(targetObject , correlatedObject , TelemetryEvents.AUDIT.getName(), params));
     System.out.println("ACTOR SIDE TELEMETRY PROCESS STARTED ");
     req.setOperation(ActorOperations.TELEMETRY_PROCESSING.getValue());
     ActorUtil.tell(req);
@@ -98,7 +99,7 @@ public class TelemetryUtil {
   public static void telemetryProcessingCall(Map<String, Object> request,Map<String, Object> targetObject,
       List<Map<String, Object>> correlatedObject, String eventType) {
 
-    if(eventType.equalsIgnoreCase("AUDIT")) {
+    if(eventType.equalsIgnoreCase(TelemetryEvents.AUDIT.getName())) {
       Map<String, Object> params = new HashMap<>();
       // set additional props for edata related things ...
       params.put(JsonKey.PROPS, request.entrySet().stream().map(entry -> entry.getKey()).collect(
@@ -106,14 +107,14 @@ public class TelemetryUtil {
 
       Request req = new Request();
       req.setRequest(
-          TelemetryUtil.genarateTelemetryRequest(targetObject, correlatedObject, "AUDIT", params));
+          TelemetryUtil.genarateTelemetryRequest(targetObject, correlatedObject, TelemetryEvents.AUDIT.getName(), params));
       System.out.println("ACTOR SIDE TELEMETRY PROCESS STARTED ");
       req.setOperation(ActorOperations.TELEMETRY_PROCESSING.getValue());
       ActorUtil.tell(req);
-    }else if(eventType.equalsIgnoreCase("LOG")){
+    }else if(eventType.equalsIgnoreCase(TelemetryEvents.LOG.getName())){
       Map<String, Object> logInfo = request;
       long endTime = System.currentTimeMillis();
-      logInfo.put("END_TIME", endTime);
+      logInfo.put(JsonKey.END_TIME, endTime);
       Request req = new Request();
       req.setRequest(generateTelemetryRequest(eventType, logInfo, TelemetryUtil.getTelemetryContext()));
       req.setOperation(ActorOperations.TELEMETRY_PROCESSING.getValue());

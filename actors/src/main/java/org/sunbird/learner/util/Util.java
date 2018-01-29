@@ -718,7 +718,7 @@ public class Util {
       requestContext.put(JsonKey.ACTOR_TYPE, actorMessage.getContext().get(JsonKey.ACTOR_TYPE));
       requestContext.put(JsonKey.ENV, env);
       requestContext.put(JsonKey.REQUEST_ID, actorMessage.getRequestId());
-      requestContext.put(JsonKey.REQUEST_TYPE, "API_CALL");
+      requestContext.put(JsonKey.REQUEST_TYPE, JsonKey.API_CALL);
       if (JsonKey.USER.equalsIgnoreCase((String)actorMessage.getContext().get(JsonKey.ACTOR_TYPE))) {
         // assign rollup of user ...
         Map<String, Object> result = ElasticSearchUtil
@@ -732,11 +732,11 @@ public class Util {
               .isStringNullOREmpty(registeredOrgId))) {
             Map<String, String> rollup = new HashMap<>();
 
-            rollup.put("L1", rootOrgId);
+            rollup.put("l1", rootOrgId);
             if (!(ProjectUtil.isStringNullOREmpty(registeredOrgId))) {
-              rollup.put("L2", registeredOrgId);
+              rollup.put("l2", registeredOrgId);
             }
-            requestContext.put("rollup", rollup);
+            requestContext.put(JsonKey.ROLLUP, rollup);
           }
         }
       }

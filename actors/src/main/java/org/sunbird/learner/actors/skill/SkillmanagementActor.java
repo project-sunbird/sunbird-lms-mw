@@ -75,9 +75,6 @@ public class SkillmanagementActor extends UntypedAbstractActor {
       } catch (Exception ex) {
         ProjectLogger.log(ex.getMessage(), ex,TelemetryUtil.genarateTelemetryInfoForError(JsonKey.USER));
         sender().tell(ex, self());
-      }finally{
-        // clean up the request level context info...
-        //ExecutionContext.getCurrent().cleanup();
       }
     } else {
       ProjectLogger.log("UNSUPPORTED MESSAGE");

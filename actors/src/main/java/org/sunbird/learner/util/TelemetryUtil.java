@@ -8,13 +8,15 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
+import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 
 /**
  * Created by arvind on 17/1/18.
  */
 public class TelemetryUtil {
 
-  private TelemetryUtil() {}
+  private TelemetryUtil() {
+  }
 
   public static Map<String, Object> genarateTelemetryRequest(Map<String, Object> targetObject,
       List<Map<String, Object>> correlatedObject, String eventType, Map<String, Object> params) {
@@ -61,7 +63,7 @@ public class TelemetryUtil {
     Map<String, Object> contextInfo = TelemetryUtil.getTelemetryContext();
 
     Map<String, Object> params = new HashMap<>();
-    params.put(JsonKey.OBJECT_TYPE , objectType);
+    params.put(JsonKey.OBJECT_TYPE, objectType);
     params.put(JsonKey.ERR_TYPE, JsonKey.API_ACCESS);
 
     map.put(JsonKey.CONTEXT, contextInfo);
@@ -98,7 +100,7 @@ public class TelemetryUtil {
       Map<String, Object> targetObject, List<Map<String, Object>> correlatedObject,
       String eventType) {
 
-    if(eventType.equalsIgnoreCase(TelemetryEvents.AUDIT.getName())) {
+    if (eventType.equalsIgnoreCase(TelemetryEvents.AUDIT.getName())) {
       Map<String, Object> params = new HashMap<>();
       // set additional props for edata related things ...
       params.put(JsonKey.PROPS,
@@ -109,7 +111,7 @@ public class TelemetryUtil {
           TelemetryUtil.genarateTelemetryRequest(targetObject, correlatedObject, "AUDIT", params));
       req.setOperation(ActorOperations.TELEMETRY_PROCESSING.getValue());
       ActorUtil.tell(req);
-    }else if(eventType.equalsIgnoreCase(TelemetryEvents.LOG.getName())){
+    } else if (eventType.equalsIgnoreCase(TelemetryEvents.LOG.getName())) {
       Map<String, Object> logInfo = request;
       long endTime = System.currentTimeMillis();
       logInfo.put(JsonKey.END_TIME, endTime);

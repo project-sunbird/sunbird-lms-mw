@@ -1,12 +1,7 @@
 package org.sunbird.learner.actors;
 
 import akka.actor.UntypedAbstractActor;
-import java.util.List;
-import java.util.Map;
-import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
-import org.sunbird.learner.util.ActorUtil;
-import org.sunbird.telemetry.collector.TelemetryDataAssembler;
 import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**

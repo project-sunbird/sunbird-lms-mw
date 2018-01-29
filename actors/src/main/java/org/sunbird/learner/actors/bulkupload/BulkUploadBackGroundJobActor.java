@@ -48,7 +48,6 @@ import org.sunbird.notification.sms.provider.ISmsProvider;
 import org.sunbird.notification.utils.SMSFactory;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
-import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * This actor will handle bulk upload operation .
@@ -68,7 +67,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String SUNBIRD_APP_URL = "sunbird_app_url";
-  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
 
   @Override
   public void onReceive(Object message) throws Throwable {

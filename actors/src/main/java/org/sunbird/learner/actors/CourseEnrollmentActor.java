@@ -7,7 +7,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -24,7 +23,6 @@ import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * This actor will handle course enrollment operation .
@@ -39,7 +37,6 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   private static final String DEFAULT_BATCH_ID = "1";
-  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
 
   /**
    * Receives the actor message and perform the course enrollment operation .
@@ -55,7 +52,7 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
         Request actorMessage = (Request) message;
 
         Util.initializeContext(actorMessage, JsonKey.USER);
-        //set request id fto thread loacl...
+        // set request id fto thread loacl...
         ExecutionContext.setRequestId(actorMessage.getRequestId());
 
         if (actorMessage.getOperation()
@@ -63,7 +60,7 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
           Util.DbInfo courseEnrollmentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
           Util.DbInfo batchDbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
 
-          //objects of telemetry event...
+          // objects of telemetry event...
           Map<String, Object> targetObject = new HashMap<>();
           List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
@@ -129,12 +126,15 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
                 courseEnrollmentdbInfo.getTableName(), courseMap);
             sender().tell(result, self());
 
-            targetObject = TelemetryUtil
-                .generateTargetObject((String) courseMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
-            TelemetryUtil.generateCorrelatedObject((String) courseMap.get(JsonKey.COURSE_ID), JsonKey.COURSE, "user.batch.course",correlatedObject);
-            TelemetryUtil.generateCorrelatedObject((String) courseMap.get(JsonKey.BATCH_ID), JsonKey.BATCH, "user.batch",correlatedObject);
+            targetObject = TelemetryUtil.generateTargetObject(
+                (String) courseMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
+            TelemetryUtil.generateCorrelatedObject((String) courseMap.get(JsonKey.COURSE_ID),
+                JsonKey.COURSE, "user.batch.course", correlatedObject);
+            TelemetryUtil.generateCorrelatedObject((String) courseMap.get(JsonKey.BATCH_ID),
+                JsonKey.BATCH, "user.batch", correlatedObject);
 
-            TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
+            TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
+                correlatedObject);
             // TODO: for some reason, ES indexing is failing with Timestamp value. need to check and
             // correct it.
             courseMap.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
@@ -181,9 +181,9 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
     if (!ProjectUtil.isStringNullOREmpty(courseId)) {
       try {
         String query = EKSTEP_COURSE_SEARCH_QUERY.replaceAll("COURSE_ID_PLACEHOLDER", courseId);
-        Map<String,Object> result = EkStepRequestUtil.searchContent(query, headers);
+        Map<String, Object> result = EkStepRequestUtil.searchContent(query, headers);
         if (null != result && !result.isEmpty()) {
-          Object contentObject = ((Object[])result.get(JsonKey.CONTENTS))[0];
+          Object contentObject = ((Object[]) result.get(JsonKey.CONTENTS))[0];
           return (Map<String, Object>) contentObject;
         }
       } catch (Exception e) {

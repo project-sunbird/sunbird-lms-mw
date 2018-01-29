@@ -15,7 +15,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -30,7 +29,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * This actor to handle learner's state update operation .
@@ -43,8 +41,8 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
   private static final String CONTENT_STATE_INFO = "contentStateInfo";
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private ActorRef utilityActorRef = context().actorOf(Props.create(UtilityActor.class) , "utilityActor");
-  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
+  private ActorRef utilityActorRef =
+      context().actorOf(Props.create(UtilityActor.class), "utilityActor");
 
   /**
    * Receives the actor message and perform the add content operation .
@@ -59,16 +57,16 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
         ProjectLogger.log("LearnerStateUpdateActor onReceive called");
         Request actorMessage = (Request) message;
         Util.initializeContext(actorMessage, JsonKey.USER);
-        //set request id fto thread loacl...
+        // set request id fto thread loacl...
         ExecutionContext.setRequestId(actorMessage.getRequestId());
 
         Response response = new Response();
         if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ADD_CONTENT.getValue())) {
           Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
           Util.DbInfo batchdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
-          //objects of telemetry event...
-          Map<String, Object> targetObject = new HashMap<>();
-          List<Map<String, Object>> correlatedObject = new ArrayList<>();
+          // objects of telemetry event...
+          Map<String, Object> targetObject = null;
+          List<Map<String, Object>> correlatedObject = null;
 
           String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
           List<Map<String, Object>> requestedcontentList =
@@ -117,14 +115,19 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
                 cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), map);
                 response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.SUCCESS);
                 // create telemetry for user for each content ...
-                targetObject = TelemetryUtil
-                    .generateTargetObject(userId, JsonKey.USER, JsonKey.CREATE, null);
-                // since this event will generate multiple times so nedd to recreate correlated objects every time ...
+                targetObject =
+                    TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.CREATE, null);
+                // since this event will generate multiple times so nedd to recreate correlated
+                // objects every time ...
                 correlatedObject = new ArrayList<>();
-                TelemetryUtil.generateCorrelatedObject((String) map.get(JsonKey.CONTENT_ID), JsonKey.CONTENT, "course.content",correlatedObject);
-                TelemetryUtil.generateCorrelatedObject((String) map.get(JsonKey.COURSE_ID), JsonKey.COURSE, "batch.course",correlatedObject);
-                TelemetryUtil.generateCorrelatedObject((String) map.get(JsonKey.BATCH_ID), JsonKey.BATCH, "user.batch",correlatedObject);
-                TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
+                TelemetryUtil.generateCorrelatedObject((String) map.get(JsonKey.CONTENT_ID),
+                    JsonKey.CONTENT, "course.content", correlatedObject);
+                TelemetryUtil.generateCorrelatedObject((String) map.get(JsonKey.COURSE_ID),
+                    JsonKey.COURSE, "batch.course", correlatedObject);
+                TelemetryUtil.generateCorrelatedObject((String) map.get(JsonKey.BATCH_ID),
+                    JsonKey.BATCH, "user.batch", correlatedObject);
+                TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
+                    correlatedObject);
 
               } catch (Exception ex) {
                 response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.FAILED);
@@ -135,8 +138,8 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
           sender().tell(response, self());
           // call to update the corresponding course
           actorMessage.getRequest().put(CONTENT_STATE_INFO, contentStatusHolder);
-          //ActorUtil.tell(actorMessage);
-          utilityActorRef.tell(actorMessage ,  ActorRef.noSender());
+          // ActorUtil.tell(actorMessage);
+          utilityActorRef.tell(actorMessage, ActorRef.noSender());
         } else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
           ProjectCommonException exception =

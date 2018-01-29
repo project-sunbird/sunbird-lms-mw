@@ -10,7 +10,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -26,7 +25,6 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * Created by arvind on 30/8/17.
@@ -37,15 +35,14 @@ public class MetricsReportJob implements Job {
   private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private int time = -30;
-  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
 
   @Override
   public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
     ProjectLogger.log("METRICS JOB TRIGGERED #############-----------");
-    Util.initializeContextForSchedulerJob( JsonKey.SYSTEM, "scheduler id",JsonKey.SCHEDULER_JOB);
+    Util.initializeContextForSchedulerJob(JsonKey.SYSTEM, "scheduler id", JsonKey.SCHEDULER_JOB);
     Map<String, Object> logInfo = genarateLogInfo(JsonKey.SYSTEM, "SCHEDULER JOB MetricsReportJob");
     performReportJob();
-    TelemetryUtil.telemetryProcessingCall(logInfo,null, null, "LOG");
+    TelemetryUtil.telemetryProcessingCall(logInfo, null, null, "LOG");
   }
 
   private void performReportJob() {
@@ -60,8 +57,6 @@ public class MetricsReportJob implements Job {
 
     List<Map<String, Object>> dbResult = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (!(dbResult.isEmpty())) {
-      // TODO: perform logic here 1. the updated date value should be older than 30 minutes then
-      // pick that one
       Calendar now = Calendar.getInstance();
       now.add(Calendar.MINUTE, time);
       Date thirtyMinutesBefore = now.getTime();
@@ -87,7 +82,7 @@ public class MetricsReportJob implements Job {
           }
         } catch (ParseException | IOException e) {
           ProjectLogger.log(e.getMessage(), e);
-        } 
+        }
       }
     }
 
@@ -97,8 +92,6 @@ public class MetricsReportJob implements Job {
 
     dbResult = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (!(dbResult.isEmpty())) {
-      // TODO: perform logic here 1. the updated value should be older than 30 minutes then pick
-      // that one
       Calendar now = Calendar.getInstance();
       now.add(Calendar.MINUTE, time);
       Date thirtyMinutesBefore = now.getTime();
@@ -128,23 +121,14 @@ public class MetricsReportJob implements Job {
     }
   }
 
-  private Map<String,Object> generateTelemetryRequest(String eventType, Map<String, Object> params,
-      Map<String, Object> context) {
 
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.TELEMETRY_EVENT_TYPE , eventType);
-    map.put(JsonKey.CONTEXT, context);
-    map.put(JsonKey.PARAMS , params);
-    return map;
-  }
-
-  private Map<String,Object> genarateLogInfo(String logType, String message) {
+  private Map<String, Object> genarateLogInfo(String logType, String message) {
 
     Map<String, Object> info = new HashMap<>();
     info.put("LOG_TYPE", logType);
     long startTime = System.currentTimeMillis();
     info.put("start-time", startTime);
-    info.put(JsonKey.MESSAGE , message);
+    info.put(JsonKey.MESSAGE, message);
 
     return info;
   }

@@ -124,7 +124,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   private void updateOrgType(Request actorMessage) {
     ProjectLogger.log("updateOrgType method call start");
     // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     try {
@@ -173,7 +173,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   private void createOrgType(Request actorMessage) {
 
     // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     ProjectLogger.log("createOrgType method call start");
@@ -253,7 +253,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   private void createOrg(Request actorMessage) {
     ProjectLogger.log("Create org method call start");
     // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     try {
@@ -519,7 +519,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   private void approveOrg(Request actorMessage) {
 
     // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     try {
@@ -591,7 +591,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   private void updateOrgStatus(Request actorMessage) {
 
     // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     try {
@@ -674,7 +674,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
     Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
     // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     try {
@@ -782,7 +782,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         isValidParent = true;
       }
       Map<String, Object> orgDBO;
-      Map<String, Object> updateOrgDBO = new HashMap<String, Object>();
+      Map<String, Object> updateOrgDBO = new HashMap<>();
       updateOrgDBO.putAll(req);
       updateOrgDBO.remove(JsonKey.ORGANISATION_ID);
       updateOrgDBO.remove(JsonKey.IS_APPROVED);
@@ -875,7 +875,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       if (listOfMap != null) {
         updateOrgDBO.put(JsonKey.CONTACT_DETAILS, listOfMap);
       } else {
-        listOfMap = new ArrayList<Map<String, Object>>();
+        listOfMap = new ArrayList<>();
         updateOrgDBO.put(JsonKey.CONTACT_DETAILS, listOfMap);
       }
       Request request = new Request();
@@ -894,10 +894,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   @SuppressWarnings({"rawtypes", "unchecked"})
   private void addMemberOrganisation(Request actorMessage) {
     // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
-    Response response = new Response();
+    Response response = null;
 
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
@@ -1081,11 +1081,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
    */
   @SuppressWarnings({"rawtypes", "unchecked"})
   private void removeMemberOrganisation(Request actorMessage) {
-
-    Response response = new Response();
-
+    Response response = null;
     // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
@@ -1176,7 +1173,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       }
       sender().tell(response, self());
 
-      targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.DELETE, null);
+      //Map<String, Object> targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.DELETE, null);
       TelemetryUtil.generateCorrelatedObject(userId, "userOrgMember", null, correlatedObject);
       TelemetryUtil.generateCorrelatedObject(orgId, "orgUserMember", null, correlatedObject);
 
@@ -1234,9 +1231,9 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   @SuppressWarnings({"rawtypes", "unchecked"})
   private void joinUserOrganisation(Request actorMessage) {
 
-    Response response = new Response();
+    Response response = null;
     // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
@@ -1371,10 +1368,10 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   private void approveUserOrg(Request actorMessage) {
 
     // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
-    Response response = new Response();
+    Response response = null;
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
 
     Map<String, Object> updateUserOrgDBO = new HashMap<>();
@@ -1468,11 +1465,11 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
   @SuppressWarnings("unchecked")
   private void rejectUserOrg(Request actorMessage) {
 
-    Response response = new Response();
+    Response response = null;
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
 
     // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     Map<String, Object> updateUserOrgDBO = new HashMap<>();

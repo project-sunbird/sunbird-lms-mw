@@ -12,7 +12,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.apache.velocity.VelocityContext;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.Constants;
@@ -48,7 +47,6 @@ import org.sunbird.notification.sms.provider.ISmsProvider;
 import org.sunbird.notification.utils.SMSFactory;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
-import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * This actor will handle course enrollment operation .
@@ -73,7 +71,6 @@ public class UserManagementActor extends UntypedAbstractActor {
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String SUNBIRD_APP_URL = "sunbird_app_url";
-  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
 
 
   /**
@@ -86,7 +83,7 @@ public class UserManagementActor extends UntypedAbstractActor {
         ProjectLogger.log("UserManagementActor  onReceive called");
         Request actorMessage = (Request) message;
         Util.initializeContext(actorMessage, JsonKey.USER);
-        //set request id fto thread loacl...
+        // set request id fto thread loacl...
         ExecutionContext.setRequestId(actorMessage.getRequestId());
         if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_USER.getValue())) {
           createUser(actorMessage);
@@ -183,10 +180,10 @@ public class UserManagementActor extends UntypedAbstractActor {
         ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId);
     Map<String, Object> responseMap = new HashMap<>();
-    if (privateList != null && privateList.size() > 0) {
+    if (privateList != null && !privateList.isEmpty()) {
       responseMap = handlePrivateVisibility(privateList, esResult, esPrivateResult);
     }
-    if (responseMap != null && responseMap.size() > 0) {
+    if (responseMap != null && !responseMap.isEmpty()) {
       Map<String, Object> privateDataMap = (Map<String, Object>) responseMap.get(JsonKey.DATA);
       if (privateDataMap != null && privateDataMap.size() >= esPrivateResult.size()) {
         // this will indicate some extra private data is added
@@ -195,7 +192,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       }
     }
     // now have a check for public field.
-    if (publicList != null && publicList.size() > 0) {
+    if (publicList != null && !publicList.isEmpty()) {
       // this estype will hold all private data of user.
       // now collecting values from private filed and it will update
       // under original index with public field.
@@ -971,7 +968,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
 
     // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     if (userMap.containsKey(JsonKey.WEB_PAGES)) {
@@ -1111,9 +1108,10 @@ public class UserManagementActor extends UntypedAbstractActor {
     updateUserExtId(requestMap);
     sender().tell(result, self());
 
-    targetObject = TelemetryUtil
-        .generateTargetObject((String)userMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
-    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
+    targetObject = TelemetryUtil.generateTargetObject((String) userMap.get(JsonKey.USER_ID),
+        JsonKey.USER, JsonKey.UPDATE, null);
+    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
+        correlatedObject);
 
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       Request userRequest = new Request();
@@ -1647,12 +1645,13 @@ public class UserManagementActor extends UntypedAbstractActor {
     sender().tell(response, self());
 
     // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
-    targetObject = TelemetryUtil
-        .generateTargetObject((String) userMap.get(JsonKey.ID), JsonKey.USER, JsonKey.CREATE, null);
-    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
+    targetObject = TelemetryUtil.generateTargetObject((String) userMap.get(JsonKey.ID),
+        JsonKey.USER, JsonKey.CREATE, null);
+    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
+        correlatedObject);
 
     // user created successfully send the onboarding mail
     sendOnboardingMail(emailTemplateMap);
@@ -2159,7 +2158,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     Map<String, Object> req = actorMessage.getRequest();
 
     // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
@@ -2244,11 +2243,11 @@ public class UserManagementActor extends UntypedAbstractActor {
         userOrgDbInfo.getTableName(), usrOrgData);
     sender().tell(response, self());
 
-    targetObject = TelemetryUtil
-        .generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-    TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER , null , correlatedObject);
-    TelemetryUtil.generateCorrelatedObject(orgId, JsonKey.ORGANISATION , null , correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
+    targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+    TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
+    TelemetryUtil.generateCorrelatedObject(orgId, JsonKey.ORGANISATION, null, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
+        correlatedObject);
 
   }
 
@@ -2259,10 +2258,8 @@ public class UserManagementActor extends UntypedAbstractActor {
   private void approveUserOrg(Request actorMessage) {
 
     Response response = null;
-    Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
-
     // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     Map<String, Object> updateUserOrgDBO = new HashMap<>();
@@ -2342,11 +2339,11 @@ public class UserManagementActor extends UntypedAbstractActor {
         userOrgDbInfo.getTableName(), updateUserOrgDBO);
     sender().tell(response, self());
 
-    targetObject = TelemetryUtil
-        .generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-    TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER , null , correlatedObject);
-    TelemetryUtil.generateCorrelatedObject(orgId, JsonKey.ORGANISATION , null , correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
+    targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+    TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
+    TelemetryUtil.generateCorrelatedObject(orgId, JsonKey.ORGANISATION, null, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
+        correlatedObject);
   }
 
   /**
@@ -2355,14 +2352,13 @@ public class UserManagementActor extends UntypedAbstractActor {
   private void rejectUserOrg(Request actorMessage) {
 
     Response response = null;
-    Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
 
     Map<String, Object> updateUserOrgDBO = new HashMap<>();
     Map<String, Object> req = actorMessage.getRequest();
     String updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
 
     // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     @SuppressWarnings("unchecked")
@@ -2436,11 +2432,11 @@ public class UserManagementActor extends UntypedAbstractActor {
         userOrgDbInfo.getTableName(), updateUserOrgDBO);
     sender().tell(response, self());
 
-    targetObject = TelemetryUtil
-        .generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-    TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER , null , correlatedObject);
-    TelemetryUtil.generateCorrelatedObject(orgId, JsonKey.ORGANISATION , null , correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
+    targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+    TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
+    TelemetryUtil.generateCorrelatedObject(orgId, JsonKey.ORGANISATION, null, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
+        correlatedObject);
   }
 
   /**

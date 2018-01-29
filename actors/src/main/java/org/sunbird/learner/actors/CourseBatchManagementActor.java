@@ -9,7 +9,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -30,7 +29,6 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * This actor will handle course batch related operations.
@@ -43,7 +41,6 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo dbInfo = null;
   private Util.DbInfo userOrgdbInfo = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
-  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
 
   /**
    * Receives the actor message and perform the course enrollment operation .
@@ -139,7 +136,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     Response response = new Response();
 
     //objects of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     String batchId = (String) req.get(JsonKey.BATCH_ID);
@@ -312,7 +309,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
         (Map<String, String>) actorMessage.getRequest().get(JsonKey.HEADER);
 
     // objects of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     String courseId = (String) req.get(JsonKey.COURSE_ID);
@@ -483,7 +480,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
     // objects of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     Response response = cassandraOperation.getRecordById(dbInfo.getKeySpace(),
         dbInfo.getTableName(), (String) req.get(JsonKey.ID));

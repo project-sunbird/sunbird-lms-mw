@@ -15,7 +15,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -49,7 +48,6 @@ import org.sunbird.notification.sms.provider.ISmsProvider;
 import org.sunbird.notification.utils.SMSFactory;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
-import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * This actor will handle bulk upload operation .
@@ -69,7 +67,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String SUNBIRD_APP_URL = "sunbird_app_url";
-  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -77,7 +74,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       try {
         ProjectLogger.log("BulkUploadBackGroundJobActor onReceive called");
         Request actorMessage = (Request) message;
-        //set request id fto thread loacl...
+        // set request id fto thread loacl...
         ExecutionContext.setRequestId(actorMessage.getRequestId());
         if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.PROCESS_BULK_UPLOAD.getValue())) {
@@ -714,10 +711,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       }
     }
 
-    String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(1);
-    if (ProjectUtil.isStringNullOREmpty((String) concurrentHashMap.get(JsonKey.ID))) {
-      concurrentHashMap.put(JsonKey.ID, uniqueId);
-    }
     concurrentHashMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     concurrentHashMap.put(JsonKey.STATUS, ProjectUtil.OrgStatus.ACTIVE.getValue());
     // allow lower case values for provider and externalId to the database
@@ -731,10 +724,28 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
     concurrentHashMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     concurrentHashMap.put(JsonKey.CREATED_BY, dataMap.get(JsonKey.UPLOADED_BY));
-    // if user does not provide hash tag id in the file set it to equivalent to org id
-    if (ProjectUtil.isStringNullOREmpty((String) concurrentHashMap.get(JsonKey.HASHTAGID))) {
-      concurrentHashMap.put(JsonKey.HASHTAGID, uniqueId);
+    String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(1);
+    if (ProjectUtil.isStringNullOREmpty((String) concurrentHashMap.get(JsonKey.ID))) {
+      concurrentHashMap.put(JsonKey.ID, uniqueId);
+      // if user does not provide hash tag id in the file set it to equivalent to org id
+      if (ProjectUtil.isStringNullOREmpty((String) concurrentHashMap.get(JsonKey.HASHTAGID))) {
+        concurrentHashMap.put(JsonKey.HASHTAGID, uniqueId);
+      }
+      if (ProjectUtil.isNull(concurrentHashMap.get(JsonKey.IS_ROOT_ORG))) {
+        concurrentHashMap.put(JsonKey.IS_ROOT_ORG, false);
+      }
+      Boolean isRootOrgFlag = (Boolean) concurrentHashMap.get(JsonKey.IS_ROOT_ORG);
+      if (null != isRootOrgFlag && isRootOrgFlag) {
+        boolean bool = Util.registerChannel(concurrentHashMap);
+        if (!bool) {
+          ProjectLogger.log("channel registration failed.");
+          concurrentHashMap.put(JsonKey.ERROR_MSG, "channel registration failed.");
+          failureList.add(concurrentHashMap);
+          return;
+        }
+      }
     }
+
     // Remove the slug key if coming form user input.
     concurrentHashMap.remove(JsonKey.SLUG);
     if (concurrentHashMap.containsKey(JsonKey.CHANNEL)) {
@@ -743,9 +754,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
     concurrentHashMap.put(JsonKey.CONTACT_DETAILS, contactDetails);
 
-    if (ProjectUtil.isNull(concurrentHashMap.get(JsonKey.IS_ROOT_ORG))) {
-      concurrentHashMap.put(JsonKey.IS_ROOT_ORG, false);
-    }
     try {
       cassandraOperation.upsertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(),
           concurrentHashMap);
@@ -755,7 +763,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       if (isNotNull(orgContactList)) {
         concurrentHashMap.put(JsonKey.CONTACT_DETAILS, Arrays.asList(orgContactList));
       }
-
       orgResponse.put(JsonKey.ORGANISATION, concurrentHashMap);
       orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
       ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
@@ -775,9 +782,9 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       return;
     }
 
-    targetObject = TelemetryUtil
-        .generateTargetObject(uniqueId, JsonKey.ORGANISATION, JsonKey.CREATE, null);
-    TelemetryUtil.generateCorrelatedObject(uniqueId, JsonKey.ORGANISATION , null , correlatedObject);
+    targetObject =
+        TelemetryUtil.generateTargetObject(uniqueId, JsonKey.ORGANISATION, JsonKey.CREATE, null);
+    TelemetryUtil.generateCorrelatedObject(uniqueId, JsonKey.ORGANISATION, null, correlatedObject);
     TelemetryUtil.telemetryProcessingCall(map, targetObject, correlatedObject);
   }
 

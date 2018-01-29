@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -698,38 +697,39 @@ public class Util {
 
 
 
-    public static void initializeContext(Request actorMessage, String env) {
+  public static void initializeContext(Request actorMessage, String env) {
 
-      ExecutionContext context = ExecutionContext.getCurrent();
-      Map<String, Object> requestContext = null;
-      if(actorMessage.getContext().get(JsonKey.TELEMETRY_CONTEXT) != null){
-        // means request context is already set by some other actor ...
-        requestContext = (Map<String, Object>) actorMessage.getContext().get(JsonKey.TELEMETRY_CONTEXT);
-      }else{
+    ExecutionContext context = ExecutionContext.getCurrent();
+    Map<String, Object> requestContext = null;
+    if (actorMessage.getContext().get(JsonKey.TELEMETRY_CONTEXT) != null) {
+      // means request context is already set by some other actor ...
+      requestContext =
+          (Map<String, Object>) actorMessage.getContext().get(JsonKey.TELEMETRY_CONTEXT);
+    } else {
       requestContext = new HashMap<>();
       // request level info ...
       Map<String, Object> req = actorMessage.getRequest();
       String requestedby = (String) req.get(JsonKey.REQUESTED_BY);
       // getting context from request context set y controller read from header...
       String channel = (String) actorMessage.getContext().get(JsonKey.CHANNEL);
-      //requestContext.put(JsonKey.REQUEST_ID, (String) req.get(JsonKey.REQUEST_ID));
+      // requestContext.put(JsonKey.REQUEST_ID, (String) req.get(JsonKey.REQUEST_ID));
       requestContext.put(JsonKey.CHANNEL, channel);
       requestContext.put(JsonKey.ACTOR_ID, actorMessage.getContext().get(JsonKey.ACTOR_ID));
       requestContext.put(JsonKey.ACTOR_TYPE, actorMessage.getContext().get(JsonKey.ACTOR_TYPE));
       requestContext.put(JsonKey.ENV, env);
       requestContext.put(JsonKey.REQUEST_ID, actorMessage.getRequestId());
-      requestContext.put(JsonKey.REQUEST_TYPE, JsonKey.API_CALL);
-      if (JsonKey.USER.equalsIgnoreCase((String)actorMessage.getContext().get(JsonKey.ACTOR_TYPE))) {
+      requestContext.put(JsonKey.REQUEST_TYPE, "API_CALL");
+      if (JsonKey.USER
+          .equalsIgnoreCase((String) actorMessage.getContext().get(JsonKey.ACTOR_TYPE))) {
         // assign rollup of user ...
-        Map<String, Object> result = ElasticSearchUtil
-            .getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
-                EsType.user.getTypeName(), requestedby);
+        Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(
+            ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), requestedby);
         if (result != null) {
           String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
           String registeredOrgId = (String) result.get(JsonKey.REGISTERED_ORG_ID);
 
-          if (!(ProjectUtil.isStringNullOREmpty(rootOrgId) && ProjectUtil
-              .isStringNullOREmpty(registeredOrgId))) {
+          if (!(ProjectUtil.isStringNullOREmpty(rootOrgId)
+              && ProjectUtil.isStringNullOREmpty(registeredOrgId))) {
             Map<String, String> rollup = new HashMap<>();
 
             rollup.put("l1", rootOrgId);
@@ -740,10 +740,10 @@ public class Util {
           }
         }
       }
-        context.setRequestContext(requestContext);
-        // and global context will be set at the time of creation of thread local automatically ...
-      }
+      context.setRequestContext(requestContext);
+      // and global context will be set at the time of creation of thread local automatically ...
     }
+  }
 
   public static void initializeContextForSchedulerJob(String actorType, String actorId,
       String environment) {

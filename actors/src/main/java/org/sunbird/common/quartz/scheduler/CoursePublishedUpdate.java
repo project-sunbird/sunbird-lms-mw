@@ -9,12 +9,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -22,16 +20,13 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * This class will call the EKstep get content api to know the status of course published. once
@@ -48,7 +43,6 @@ public class CoursePublishedUpdate implements Job {
       Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
   private Util.DbInfo courseBatchDBInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
 
   private static String requestData =
       "{\"request\":{\"filters\":{\"identifier\":dataVal},\"fields\":[\"status\"]}}";
@@ -57,8 +51,9 @@ public class CoursePublishedUpdate implements Job {
   public void execute(JobExecutionContext ctx) throws JobExecutionException {
     ProjectLogger.log("Fetching All unpublished course status.", LoggerEnum.INFO.name());
 
-    Util.initializeContextForSchedulerJob( JsonKey.SYSTEM, "scheduler id",JsonKey.SCHEDULER_JOB);
-    Map<String, Object> logInfo = genarateLogInfo(JsonKey.SYSTEM, "SCHEDULER JOB CoursePublishedUpdate");
+    Util.initializeContextForSchedulerJob(JsonKey.SYSTEM, "scheduler id", JsonKey.SCHEDULER_JOB);
+    Map<String, Object> logInfo =
+        genarateLogInfo(JsonKey.SYSTEM, "SCHEDULER JOB CoursePublishedUpdate");
     logInfo.put("LOG_LEVEL", "info");
 
     List<String> courseListWithStatusAsDraft = getAllUnPublishedCourseStatusId();
@@ -82,7 +77,8 @@ public class CoursePublishedUpdate implements Job {
             ProjectLogger.log("Add participants to user course table", LoggerEnum.INFO.name());
             addUserToUserCourseTable(batchList);
           } catch (Exception ex) {
-            ProjectLogger.log(ex.getMessage(), ex, genarateTelemetryInfoForError(JsonKey.SCHEDULER_JOB));
+            ProjectLogger.log(ex.getMessage(), ex,
+                genarateTelemetryInfoForError(JsonKey.SCHEDULER_JOB));
             logInfo.put("LOG_LEVEL", "error");
             logInfo.put("ERROR_OBJECT", ex);
           }
@@ -90,7 +86,7 @@ public class CoursePublishedUpdate implements Job {
       }
     }
 
-    TelemetryUtil.telemetryProcessingCall(logInfo,null, null, "LOG");
+    TelemetryUtil.telemetryProcessingCall(logInfo, null, null, "LOG");
 
 
   }
@@ -144,12 +140,16 @@ public class CoursePublishedUpdate implements Job {
               Map<String, Object> targetObject = new HashMap<>();
               List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
-              targetObject = TelemetryUtil
-                  .generateTargetObject(entry.getKey(), JsonKey.USER, JsonKey.CREATE, null);
-              TelemetryUtil.generateCorrelatedObject(entry.getKey(), JsonKey.USER , null , correlatedObject);
-              TelemetryUtil.generateCorrelatedObject((String)batch.get(JsonKey.ID), JsonKey.BATCH , null , correlatedObject);
-              TelemetryUtil.generateCorrelatedObject((String)batch.get(JsonKey.COURSE_ID), JsonKey.COURSE , null , correlatedObject);
-              TelemetryUtil.telemetryProcessingCall(userCourses,targetObject, correlatedObject, "AUDIT");
+              targetObject = TelemetryUtil.generateTargetObject(entry.getKey(), JsonKey.USER,
+                  JsonKey.CREATE, null);
+              TelemetryUtil.generateCorrelatedObject(entry.getKey(), JsonKey.USER, null,
+                  correlatedObject);
+              TelemetryUtil.generateCorrelatedObject((String) batch.get(JsonKey.ID), JsonKey.BATCH,
+                  null, correlatedObject);
+              TelemetryUtil.generateCorrelatedObject((String) batch.get(JsonKey.COURSE_ID),
+                  JsonKey.COURSE, null, correlatedObject);
+              TelemetryUtil.telemetryProcessingCall(userCourses, targetObject, correlatedObject,
+                  "AUDIT");
 
               userCourses.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
               insertUserCoursesToES(userCourses);
@@ -253,9 +253,9 @@ public class CoursePublishedUpdate implements Job {
       }
     }
     identifier.append(" ] ");
-    Map<String,Object> result = EkStepRequestUtil.searchContent(
+    Map<String, Object> result = EkStepRequestUtil.searchContent(
         requestData.replace("dataVal", identifier.toString()), CourseBatchSchedulerUtil.headerMap);
-    Object[] reslt = (Object[])result.get(JsonKey.CONTENTS);
+    Object[] reslt = (Object[]) result.get(JsonKey.CONTENTS);
     for (int i = 0; i < reslt.length; i++) {
       Map<String, Object> map = (Map<String, Object>) reslt[i];
       String status = (String) map.get(JsonKey.STATUS);
@@ -279,26 +279,16 @@ public class CoursePublishedUpdate implements Job {
     }
   }
 
-  private Map<String,Object> generateTelemetryRequest(String eventType, Map<String, Object> params,
-      Map<String, Object> context) {
-
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.TELEMETRY_EVENT_TYPE , eventType);
-    map.put(JsonKey.CONTEXT, context);
-    map.put(JsonKey.PARAMS , params);
-    return map;
-  }
-
   public static void main(String[] args) {
     CoursePublishedUpdate coursePublishedUpdate = new CoursePublishedUpdate();
     try {
       coursePublishedUpdate.execute(null);
     } catch (JobExecutionException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(), e);
     }
   }
 
-  private static Map<String, Object> genarateTelemetryInfoForError(String  errType) {
+  private static Map<String, Object> genarateTelemetryInfoForError(String errType) {
 
     Map<String, Object> map = new HashMap<>();
     Map<String, Object> contextInfo = TelemetryUtil.getTelemetryContext();
@@ -306,17 +296,17 @@ public class CoursePublishedUpdate implements Job {
     params.put("errtype", errType);
 
     map.put(JsonKey.CONTEXT, contextInfo);
-    map.put(JsonKey.PARAMS , params);
+    map.put(JsonKey.PARAMS, params);
     return map;
   }
 
-  private Map<String,Object> genarateLogInfo(String logType, String message) {
+  private Map<String, Object> genarateLogInfo(String logType, String message) {
 
     Map<String, Object> info = new HashMap<>();
     info.put("LOG_TYPE", logType);
     long startTime = System.currentTimeMillis();
     info.put("start-time", startTime);
-    info.put(JsonKey.MESSAGE , message);
+    info.put(JsonKey.MESSAGE, message);
 
     return info;
   }

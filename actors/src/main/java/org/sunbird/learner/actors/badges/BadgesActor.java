@@ -3,13 +3,11 @@
  */
 package org.sunbird.learner.actors.badges;
 
-import akka.actor.ActorRef;
 import akka.actor.UntypedAbstractActor;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -27,7 +25,6 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * @author Manzarul
@@ -40,7 +37,6 @@ public class BadgesActor extends UntypedAbstractActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo badgesDbInfo = Util.dbInfoMap.get(JsonKey.BADGES_DB);
   private Util.DbInfo userBadgesDbInfo = Util.dbInfoMap.get(JsonKey.USER_BADGES_DB);
-  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -49,7 +45,7 @@ public class BadgesActor extends UntypedAbstractActor {
         ProjectLogger.log("AssessmentItemActor onReceive called");
         Request actorMessage = (Request) message;
         Util.initializeContext(actorMessage, JsonKey.USER);
-        //set request id fto thread loacl...
+        // set request id fto thread loacl...
         ExecutionContext.setRequestId(actorMessage.getRequestId());
         if (actorMessage.getOperation()
             .equalsIgnoreCase(ActorOperations.GET_ALL_BADGE.getValue())) {
@@ -192,7 +188,8 @@ public class BadgesActor extends UntypedAbstractActor {
     try {
       String body = "{\"request\":{\"filters\":{\"identifier\":\"test\"}}}";
       Map<String, String> headers = new HashMap<>();
-      headers.put(JsonKey.AUTHORIZATION, JsonKey.BEARER+System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
+      headers.put(JsonKey.AUTHORIZATION,
+          JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
       if (ProjectUtil.isStringNullOREmpty((String) headers.get(JsonKey.AUTHORIZATION))) {
         headers.put(JsonKey.AUTHORIZATION,
             PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
@@ -234,16 +231,17 @@ public class BadgesActor extends UntypedAbstractActor {
   private void saveUserBadges(Request actorMessage) {
     Map<String, Object> req = actorMessage.getRequest();
 
-    Map<String, Object> targetObject = new HashMap<>();
+    Map<String, Object> targetObject = null;
     // correlated object of telemetry event...
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     String receiverId = (String) req.get(JsonKey.RECEIVER_ID);
     // Telemetry target object
-    targetObject = TelemetryUtil.generateTargetObject(receiverId, JsonKey.USER, JsonKey.CREATE, null);
+    targetObject =
+        TelemetryUtil.generateTargetObject(receiverId, JsonKey.USER, JsonKey.CREATE, null);
     String badgeTypeId = (String) req.get(JsonKey.BADGE_TYPE_ID);
     // correlated object for telemetry...
-    TelemetryUtil.generateCorrelatedObject(badgeTypeId, "badge", "user.badge",correlatedObject);
+    TelemetryUtil.generateCorrelatedObject(badgeTypeId, "badge", "user.badge", correlatedObject);
 
     Map<String, Object> map =
         ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
@@ -294,7 +292,8 @@ public class BadgesActor extends UntypedAbstractActor {
       result.put(JsonKey.RESPONSE, JsonKey.FAILURE);
       sender().tell(result, self());
     }
-    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
+        correlatedObject);
     sender().tell(result, self());
     try {
       ProjectLogger.log("Start background job to save user badge.");

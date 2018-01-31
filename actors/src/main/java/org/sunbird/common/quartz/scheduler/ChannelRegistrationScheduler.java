@@ -1,6 +1,7 @@
 package org.sunbird.common.quartz.scheduler;
 
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.quartz.Job;
@@ -16,6 +17,9 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
+import org.sunbird.learner.util.TelemetryUtil;
+import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 
 public class ChannelRegistrationScheduler implements Job {
 
@@ -25,6 +29,9 @@ public class ChannelRegistrationScheduler implements Job {
         + Calendar.getInstance().getTime() + " triggered by: " + ctx.getJobDetail().toString(),
         LoggerEnum.INFO.name());
 
+    Util.initializeContextForSchedulerJob(JsonKey.SYSTEM, ctx.getFireInstanceId(), JsonKey.SCHEDULER_JOB);
+    Map<String, Object> logInfo =
+        genarateLogInfo(JsonKey.SYSTEM, ctx.getJobDetail().getDescription());
     Request request = new Request();
     request.setOperation(ActorOperations.REG_CHANNEL.getValue());
     CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -48,7 +55,19 @@ public class ChannelRegistrationScheduler implements Job {
               + "entry for CHANNEL_REG_STATUS_ID (003) is null.");
       ActorUtil.tell(request);
     }
+    TelemetryUtil.telemetryProcessingCall(logInfo, null, null, TelemetryEvents.LOG.getName());
+  }
 
+  private Map<String, Object> genarateLogInfo(String logType, String message) {
+
+    Map<String, Object> info = new HashMap<>();
+    info.put(JsonKey.LOG_TYPE, logType);
+    long startTime = System.currentTimeMillis();
+    info.put(JsonKey.START_TIME, startTime);
+    info.put(JsonKey.MESSAGE, message);
+    info.put(JsonKey.LOG_LEVEL, JsonKey.INFO);
+
+    return info;
   }
 
 }

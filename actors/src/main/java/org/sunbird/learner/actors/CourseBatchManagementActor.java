@@ -140,7 +140,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     String batchId = (String) req.get(JsonKey.BATCH_ID);
-    TelemetryUtil.generateCorrelatedObject(batchId, JsonKey.BATCH, "user.batch",correlatedObject);
+    TelemetryUtil.generateCorrelatedObject(batchId, JsonKey.BATCH, null,correlatedObject);
     // check batch exist in db or not
     Response courseBatchResult =
         cassandraOperation.getRecordById(dbInfo.getKeySpace(), dbInfo.getTableName(), batchId);
@@ -204,6 +204,8 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
           response.getResult().put(userId, JsonKey.SUCCESS);
           // create audit log for user here that user associated to the batch here , here user is the targer object ...
           targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+          correlatedObject = new ArrayList<>();
+          TelemetryUtil.generateCorrelatedObject(batchId, JsonKey.BATCH ,null, correlatedObject );
           TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
            } else {
           response.getResult().put(userId, ResponseCode.userNotAssociatedToOrg.getErrorMessage());
@@ -402,8 +404,12 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     sender().tell(result, self());
 
     targetObject = TelemetryUtil.generateTargetObject(uniqueId, JsonKey.BATCH, JsonKey.CREATE, null);
-    TelemetryUtil.generateCorrelatedObject(courseId, JsonKey.COURSE, "batch.course",correlatedObject);
+    TelemetryUtil.generateCorrelatedObject(courseId, JsonKey.COURSE, null,correlatedObject);
     TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
+
+    Map<String, String> rollUp = new HashMap<>();
+    rollUp.put("l1", courseId);
+    TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
 
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       ProjectLogger.log("method call going to satrt for ES--.....");
@@ -679,6 +685,10 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
 
       targetObject = TelemetryUtil.generateTargetObject((String)req.get(JsonKey.ID), JsonKey.BATCH, JsonKey.UPDATE, null);
       TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
+
+      Map<String, String> rollUp = new HashMap<>();
+      rollUp.put("l1", (String) res.get(JsonKey.COURSE_ID));
+      TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
 
       if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
         ProjectLogger.log("method call going to satrt for ES--.....");

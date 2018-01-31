@@ -127,8 +127,8 @@ public class NotesManagementActor extends UntypedAbstractActor {
       TelemetryUtil.generateCorrelatedObject(updatedBy, JsonKey.USER, null, correlatedObject);
 
       Map<String, String> rollup = new HashMap<>();
-      rollup.put("L1", (String) req.get(JsonKey.COURSE_ID));
-      rollup.put("L2", (String) req.get(JsonKey.CONTENT_ID));
+      rollup.put("l1", (String) req.get(JsonKey.COURSE_ID));
+      rollup.put("l2", (String) req.get(JsonKey.CONTENT_ID));
       TelemetryUtil.addTargetObjectRollUp(rollup, targetObject);
 
       TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
@@ -196,9 +196,9 @@ public class NotesManagementActor extends UntypedAbstractActor {
       TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
 
       Map<String, String> rollup = new HashMap<>();
-      rollup.put("L1", (String) ((Map<String, Object>) actorMessage.getRequest().get(JsonKey.NOTE))
+      rollup.put("l1", (String) ((Map<String, Object>) actorMessage.getRequest().get(JsonKey.NOTE))
           .get(JsonKey.COURSE_ID));
-      rollup.put("L2", (String) ((Map<String, Object>) actorMessage.getRequest().get(JsonKey.NOTE))
+      rollup.put("l2", (String) ((Map<String, Object>) actorMessage.getRequest().get(JsonKey.NOTE))
           .get(JsonKey.CONTENT_ID));
       TelemetryUtil.addTargetObjectRollUp(rollup, targetObject);
 

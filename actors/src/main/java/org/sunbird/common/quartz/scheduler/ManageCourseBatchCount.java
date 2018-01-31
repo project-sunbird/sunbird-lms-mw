@@ -31,11 +31,11 @@ public class ManageCourseBatchCount implements Job {
   public void execute(JobExecutionContext ctx) throws JobExecutionException {
     ProjectLogger.log("Executing at: " + Calendar.getInstance().getTime() + " triggered by: "
         + ctx.getJobDetail().toString());
-    Util.initializeContextForSchedulerJob(JsonKey.SYSTEM, "scheduler id", JsonKey.SCHEDULER_JOB);
+    Util.initializeContextForSchedulerJob(JsonKey.SYSTEM, ctx.getFireInstanceId(), JsonKey.SCHEDULER_JOB);
     Map<String, Object> logInfo =
-        genarateLogInfo(JsonKey.SYSTEM, "SCHEDULER JOB ManageCourseBatchCount");
+        genarateLogInfo(JsonKey.SYSTEM, ctx.getJobDetail().getDescription());
     logInfo.put("LOG_LEVEL", "info");
-    // Collect all those batches from ES whose start date is today and countIncrementStatus value is
+        // Collect all those batches from ES whose start date is today and countIncrementStatus value is
     // false.
     // and all those batches whose end date was yesterday and countDecrementStatus value is false.
     // update the countIncrement or decrement status value as true , countIncrement or decrement
@@ -94,10 +94,11 @@ public class ManageCourseBatchCount implements Job {
   private Map<String, Object> genarateLogInfo(String logType, String message) {
 
     Map<String, Object> info = new HashMap<>();
-    info.put("LOG_TYPE", logType);
+    info.put(JsonKey.LOG_TYPE, logType);
     long startTime = System.currentTimeMillis();
-    info.put("start-time", startTime);
+    info.put(JsonKey.START_TIME, startTime);
     info.put(JsonKey.MESSAGE, message);
+    info.put(JsonKey.LOG_LEVEL, JsonKey.INFO);
 
     return info;
   }

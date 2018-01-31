@@ -464,7 +464,7 @@ public class PageManagementActor extends UntypedAbstractActor {
     targetObject = TelemetryUtil
         .generateTargetObject(uniqueId, JsonKey.PAGE, JsonKey.CREATE, null);
     TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
-    //TelemetryUtil.generateCorrelatedObject(endoresedUserId, JsonKey.USER , null , correlatedObject);
+
     // update DataCacheHandler page map with new page data
     new Thread() {
       @Override

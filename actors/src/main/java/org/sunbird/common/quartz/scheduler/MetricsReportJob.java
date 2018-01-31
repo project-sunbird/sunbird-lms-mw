@@ -25,6 +25,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 
 /**
  * Created by arvind on 30/8/17.
@@ -39,10 +40,10 @@ public class MetricsReportJob implements Job {
   @Override
   public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
     ProjectLogger.log("METRICS JOB TRIGGERED #############-----------");
-    Util.initializeContextForSchedulerJob(JsonKey.SYSTEM, "scheduler id", JsonKey.SCHEDULER_JOB);
-    Map<String, Object> logInfo = genarateLogInfo(JsonKey.SYSTEM, "SCHEDULER JOB MetricsReportJob");
+    Util.initializeContextForSchedulerJob(JsonKey.SYSTEM, jobExecutionContext.getFireInstanceId(), JsonKey.SCHEDULER_JOB);
+    Map<String, Object> logInfo = genarateLogInfo(JsonKey.SYSTEM, jobExecutionContext.getJobDetail().getDescription());
     performReportJob();
-    TelemetryUtil.telemetryProcessingCall(logInfo, null, null, "LOG");
+    TelemetryUtil.telemetryProcessingCall(logInfo, null, null, TelemetryEvents.LOG.getName());
   }
 
   private void performReportJob() {
@@ -125,10 +126,11 @@ public class MetricsReportJob implements Job {
   private Map<String, Object> genarateLogInfo(String logType, String message) {
 
     Map<String, Object> info = new HashMap<>();
-    info.put("LOG_TYPE", logType);
+    info.put(JsonKey.LOG_TYPE, logType);
     long startTime = System.currentTimeMillis();
     info.put("start-time", startTime);
     info.put(JsonKey.MESSAGE, message);
+    info.put(JsonKey.LOG_LEVEL, JsonKey.INFO);
 
     return info;
   }

@@ -718,7 +718,7 @@ public class Util {
       requestContext.put(JsonKey.ACTOR_TYPE, actorMessage.getContext().get(JsonKey.ACTOR_TYPE));
       requestContext.put(JsonKey.ENV, env);
       requestContext.put(JsonKey.REQUEST_ID, actorMessage.getRequestId());
-      requestContext.put(JsonKey.REQUEST_TYPE, "API_CALL");
+      requestContext.put(JsonKey.REQUEST_TYPE, JsonKey.API_CALL);
       if (JsonKey.USER
           .equalsIgnoreCase((String) actorMessage.getContext().get(JsonKey.ACTOR_TYPE))) {
         // assign rollup of user ...
@@ -750,7 +750,6 @@ public class Util {
 
     ExecutionContext context = ExecutionContext.getCurrent();
     Map<String, Object> requestContext = new HashMap<>();
-
     requestContext.put(JsonKey.CHANNEL, JsonKey.DEFAULT_ROOT_ORG_ID);
     requestContext.put(JsonKey.ACTOR_ID, actorId);
     requestContext.put(JsonKey.ACTOR_TYPE, actorType);

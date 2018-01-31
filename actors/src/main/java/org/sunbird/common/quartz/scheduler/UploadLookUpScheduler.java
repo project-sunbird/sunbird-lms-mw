@@ -25,6 +25,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 
 /**
  * This class will lookup into bulk process table. if process type is new or in progress (more than
@@ -39,9 +40,9 @@ public class UploadLookUpScheduler implements Job {
   public void execute(JobExecutionContext ctx) throws JobExecutionException {
     ProjectLogger.log("Running Upload Scheduler Job at: " + Calendar.getInstance().getTime()
         + " triggered by: " + ctx.getJobDetail().toString(), LoggerEnum.INFO.name());
-    Util.initializeContextForSchedulerJob(JsonKey.SYSTEM, "scheduler id", JsonKey.SCHEDULER_JOB);
+    Util.initializeContextForSchedulerJob(JsonKey.SYSTEM, ctx.getFireInstanceId(), JsonKey.SCHEDULER_JOB);
     Map<String, Object> logInfo =
-        genarateLogInfo(JsonKey.SYSTEM, "SCHEDULER JOB UploadLookUpScheduler");
+        genarateLogInfo(JsonKey.SYSTEM, ctx.getJobDetail().getDescription());
     Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     List<Map<String, Object>> result = null;
@@ -86,7 +87,7 @@ public class UploadLookUpScheduler implements Job {
         process(result);
       }
     }
-    TelemetryUtil.telemetryProcessingCall(logInfo, null, null, "LOG");
+    TelemetryUtil.telemetryProcessingCall(logInfo, null, null, TelemetryEvents.LOG.getName());
   }
 
   private void process(List<Map<String, Object>> result) {
@@ -99,10 +100,11 @@ public class UploadLookUpScheduler implements Job {
   private Map<String, Object> genarateLogInfo(String logType, String message) {
 
     Map<String, Object> info = new HashMap<>();
-    info.put("LOG_TYPE", logType);
+    info.put(JsonKey.LOG_TYPE, logType);
     long startTime = System.currentTimeMillis();
-    info.put("start-time", startTime);
+    info.put(JsonKey.START_TIME, startTime);
     info.put(JsonKey.MESSAGE, message);
+    info.put(JsonKey.LOG_LEVEL, JsonKey.INFO);
 
     return info;
   }

@@ -36,6 +36,7 @@ import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 
 /**
  * This actor will handle organisation related operation .
@@ -1173,9 +1174,11 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       }
       sender().tell(response, self());
 
-      //Map<String, Object> targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.DELETE, null);
+      Map<String, Object> targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
       TelemetryUtil.generateCorrelatedObject(userId, "userOrgMember", null, correlatedObject);
       TelemetryUtil.generateCorrelatedObject(orgId, "orgUserMember", null, correlatedObject);
+
+      TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(),targetObject ,correlatedObject);
 
       // update ES with latest data through background job manager
       if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {

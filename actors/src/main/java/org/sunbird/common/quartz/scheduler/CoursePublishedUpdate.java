@@ -27,6 +27,7 @@ import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 
 /**
  * This class will call the EKstep get content api to know the status of course published. once
@@ -51,10 +52,10 @@ public class CoursePublishedUpdate implements Job {
   public void execute(JobExecutionContext ctx) throws JobExecutionException {
     ProjectLogger.log("Fetching All unpublished course status.", LoggerEnum.INFO.name());
 
-    Util.initializeContextForSchedulerJob(JsonKey.SYSTEM, "scheduler id", JsonKey.SCHEDULER_JOB);
+    Util.initializeContextForSchedulerJob(JsonKey.SYSTEM, ctx.getFireInstanceId(), JsonKey.SCHEDULER_JOB);
     Map<String, Object> logInfo =
-        genarateLogInfo(JsonKey.SYSTEM, "SCHEDULER JOB CoursePublishedUpdate");
-    logInfo.put("LOG_LEVEL", "info");
+        genarateLogInfo(JsonKey.SYSTEM, ctx.getJobDetail().getDescription());
+    logInfo.put(JsonKey.LOG_LEVEL, JsonKey.INFO);
 
     List<String> courseListWithStatusAsDraft = getAllUnPublishedCourseStatusId();
     if (null != courseListWithStatusAsDraft && !courseListWithStatusAsDraft.isEmpty()) {
@@ -79,15 +80,13 @@ public class CoursePublishedUpdate implements Job {
           } catch (Exception ex) {
             ProjectLogger.log(ex.getMessage(), ex,
                 genarateTelemetryInfoForError(JsonKey.SCHEDULER_JOB));
-            logInfo.put("LOG_LEVEL", "error");
-            logInfo.put("ERROR_OBJECT", ex);
+            logInfo.put(JsonKey.LOG_LEVEL, "error");
           }
         }
       }
     }
 
-    TelemetryUtil.telemetryProcessingCall(logInfo, null, null, "LOG");
-
+    TelemetryUtil.telemetryProcessingCall(logInfo, null, null, TelemetryEvents.LOG.getName());
 
   }
 
@@ -301,13 +300,12 @@ public class CoursePublishedUpdate implements Job {
   }
 
   private Map<String, Object> genarateLogInfo(String logType, String message) {
-
     Map<String, Object> info = new HashMap<>();
-    info.put("LOG_TYPE", logType);
+    info.put(JsonKey.LOG_TYPE, logType);
     long startTime = System.currentTimeMillis();
     info.put("start-time", startTime);
     info.put(JsonKey.MESSAGE, message);
-
+    info.put(JsonKey.LOG_LEVEL, JsonKey.INFO);
     return info;
   }
 

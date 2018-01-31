@@ -91,7 +91,7 @@ public class TelemetryUtil {
     params.put(JsonKey.PROPS, request);
     Request req = new Request();
     req.setRequest(
-        TelemetryUtil.genarateTelemetryRequest(targetObject, correlatedObject, "AUDIT", params));
+        TelemetryUtil.genarateTelemetryRequest(targetObject, correlatedObject, TelemetryEvents.AUDIT.getName(), params));
     req.setOperation(ActorOperations.TELEMETRY_PROCESSING.getValue());
     ActorUtil.tell(req);
   }
@@ -108,7 +108,7 @@ public class TelemetryUtil {
 
       Request req = new Request();
       req.setRequest(
-          TelemetryUtil.genarateTelemetryRequest(targetObject, correlatedObject, "AUDIT", params));
+          TelemetryUtil.genarateTelemetryRequest(targetObject, correlatedObject, TelemetryEvents.AUDIT.getName(), params));
       req.setOperation(ActorOperations.TELEMETRY_PROCESSING.getValue());
       ActorUtil.tell(req);
     } else if (eventType.equalsIgnoreCase(TelemetryEvents.LOG.getName())) {

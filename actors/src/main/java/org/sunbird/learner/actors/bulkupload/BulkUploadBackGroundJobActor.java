@@ -979,6 +979,15 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             // process Audit Log
             processAuditLog(userMap, ActorOperations.CREATE_USER.getValue(), updatedBy,
                 JsonKey.USER);
+            // generate telemetry for new user creation
+            // object of telemetry event...
+            Map<String, Object> targetObject = null;
+            List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
+            targetObject = TelemetryUtil.generateTargetObject((String) userMap.get(JsonKey.ID),
+                JsonKey.USER, JsonKey.CREATE, null);
+            TelemetryUtil.telemetryProcessingCall(userMap, targetObject,
+                correlatedObject);
           } else {
             // update user record
             tempMap.remove(JsonKey.OPERATION);
@@ -1030,6 +1039,14 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           request.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
           request.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
           ActorUtil.tell(request);
+          // generate telemetry for update user
+          // object of telemetry event...
+          Map<String, Object> targetObject = null;
+          List<Map<String, Object>> correlatedObject = new ArrayList<>();
+          targetObject = TelemetryUtil.generateTargetObject((String) userMap.get(JsonKey.ID),
+              JsonKey.USER, JsonKey.UPDATE, null);
+          TelemetryUtil.telemetryProcessingCall(userMap, targetObject,
+              correlatedObject);
         } catch (Exception ex) {
           ProjectLogger.log(
               "Exception occurred while bulk user upload in BulkUploadBackGroundJobActor:", ex);

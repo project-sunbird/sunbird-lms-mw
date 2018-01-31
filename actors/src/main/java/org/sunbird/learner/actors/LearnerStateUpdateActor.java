@@ -116,18 +116,23 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
                 response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.SUCCESS);
                 // create telemetry for user for each content ...
                 targetObject =
-                    TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.CREATE, null);
+                    TelemetryUtil.generateTargetObject((String) map.get(JsonKey.BATCH_ID), JsonKey.BATCH, JsonKey.CREATE, null);
                 // since this event will generate multiple times so nedd to recreate correlated
                 // objects every time ...
                 correlatedObject = new ArrayList<>();
                 TelemetryUtil.generateCorrelatedObject((String) map.get(JsonKey.CONTENT_ID),
-                    JsonKey.CONTENT, "course.content", correlatedObject);
+                    JsonKey.CONTENT, null, correlatedObject);
                 TelemetryUtil.generateCorrelatedObject((String) map.get(JsonKey.COURSE_ID),
-                    JsonKey.COURSE, "batch.course", correlatedObject);
+                    JsonKey.COURSE, null, correlatedObject);
                 TelemetryUtil.generateCorrelatedObject((String) map.get(JsonKey.BATCH_ID),
-                    JsonKey.BATCH, "user.batch", correlatedObject);
+                    JsonKey.BATCH, null, correlatedObject);
                 TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
                     correlatedObject);
+
+                Map<String, String> rollUp = new HashMap<>();
+                rollUp.put("l1", (String) map.get(JsonKey.COURSE_ID));
+                rollUp.put("l2", (String) map.get(JsonKey.CONTENT_ID));
+                TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
 
               } catch (Exception ex) {
                 response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.FAILED);

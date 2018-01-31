@@ -35,7 +35,7 @@ public class KeyCloakSyncActor extends UntypedAbstractActor {
   private boolean isSSOEnabled =
       Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
-  
+
   @Override
   public void onReceive(Object message) throws Throwable {
     ProjectLogger.log("KeyCloakSyncActor  onReceive called");
@@ -56,7 +56,8 @@ public class KeyCloakSyncActor extends UntypedAbstractActor {
               new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
                   ResponseCode.invalidOperationName.getErrorMessage(),
                   ResponseCode.CLIENT_ERROR.getResponseCode());
-          ProjectLogger.log("Unsupported operation in Keycloak sync Background Job Manager", exception);
+          ProjectLogger.log("Unsupported operation in Keycloak sync Background Job Manager",
+              exception);
           sender().tell(exception, self());
           return;
         }
@@ -89,15 +90,15 @@ public class KeyCloakSyncActor extends UntypedAbstractActor {
       userIds = (List<Object>) dataMap.get(JsonKey.OBJECT_IDS);
     }
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    
+
     if (null != userIds && !userIds.isEmpty()) {
-      ProjectLogger.log("fetching data for user for these ids "
-          + Arrays.toString(userIds.toArray()) + " started");
+      ProjectLogger.log("fetching data for user for these ids " + Arrays.toString(userIds.toArray())
+          + " started");
       Response response = cassandraOperation.getRecordsByProperty(dbInfo.getKeySpace(),
           dbInfo.getTableName(), JsonKey.ID, userIds);
       reponseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-      ProjectLogger.log("fetching data for user for these ids "
-          + Arrays.toString(userIds.toArray()) + " done");
+      ProjectLogger.log(
+          "fetching data for user for these ids " + Arrays.toString(userIds.toArray()) + " done");
     }
     if (null != reponseList && !reponseList.isEmpty()) {
       for (Map<String, Object> map : reponseList) {
@@ -109,25 +110,24 @@ public class KeyCloakSyncActor extends UntypedAbstractActor {
           cassandraOperation.getAllRecords(dbInfo.getKeySpace(), dbInfo.getTableName());
       reponseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
       ProjectLogger.log("fetching all data for user done");
-      ProjectLogger.log(
-          "total db data to sync for user to keycloak " + reponseList.size());
+      ProjectLogger.log("total db data to sync for user to keycloak " + reponseList.size());
       if (null != reponseList) {
         for (Map<String, Object> map : reponseList) {
           responseMap.put((String) map.get(JsonKey.ID), map);
         }
       }
     }
-    
+
     Iterator<Entry<String, Object>> itr = responseMap.entrySet().iterator();
     while (itr.hasNext()) {
-        updateUserDetails(itr.next());
+      updateUserDetails(itr.next());
     }
-    
+
     long stopTime = System.currentTimeMillis();
     long elapsedTime = stopTime - startTime;
-    ProjectLogger.log("total time taken to sync db data for user to keycloak "
-        + elapsedTime + " ms.");
-    
+    ProjectLogger
+        .log("total time taken to sync db data for user to keycloak " + elapsedTime + " ms.");
+
   }
 
   private void updateUserDetails(Entry<String, Object> entry) {
@@ -137,30 +137,30 @@ public class KeyCloakSyncActor extends UntypedAbstractActor {
     // Decrypt user data
     UserUtility.decryptUserData(userMap);
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    if(isSSOEnabled){
+    if (isSSOEnabled) {
       try {
         String res = ssoManager.syncUserData(userMap);
         if (!(!ProjectUtil.isStringNullOREmpty(res) && res.equalsIgnoreCase(JsonKey.SUCCESS))) {
-          if(null == userMap.get(JsonKey.EMAIL_VERIFIED)){
-            Map<String,Object> map = new HashMap<>();
-           if(SSOServiceFactory.getInstance().isEmailVerified(userId)){
-             map.put(JsonKey.EMAIL_VERIFIED, true);
-             map.put(JsonKey.ID, userId);
-           }else{
-             map.put(JsonKey.EMAIL_VERIFIED, false);
-             map.put(JsonKey.ID, userId);
-           }
-           cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), map);
-           ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(),
-               ProjectUtil.EsType.user.getTypeName(), userId, map);
+          if (null == userMap.get(JsonKey.EMAIL_VERIFIED)) {
+            Map<String, Object> map = new HashMap<>();
+            if (SSOServiceFactory.getInstance().isEmailVerified(userId)) {
+              map.put(JsonKey.EMAIL_VERIFIED, true);
+              map.put(JsonKey.ID, userId);
+            } else {
+              map.put(JsonKey.EMAIL_VERIFIED, false);
+              map.put(JsonKey.ID, userId);
+            }
+            cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), map);
+            ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+                ProjectUtil.EsType.user.getTypeName(), userId, map);
           }
-          ProjectLogger.log("User sync failed in KeyCloakSyncActor for userID : "+ userId);
+          ProjectLogger.log("User sync failed in KeyCloakSyncActor for userID : " + userId);
         }
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);
-        ProjectLogger.log("User sync failed in KeyCloakSyncActor for userID : "+ userId);
+        ProjectLogger.log("User sync failed in KeyCloakSyncActor for userID : " + userId);
       }
-    }else{
+    } else {
       ProjectLogger.log("SSO is disabled , cann't sync user data to keycloak.");
     }
   }

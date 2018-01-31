@@ -40,10 +40,16 @@ import org.sunbird.learner.util.Util.DbInfo;
 public class EsSyncActor extends UntypedAbstractActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
   private EncryptionService service =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
           .getEncryptionServiceInstance(null);
-  private Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
+  private DataMaskingService maskingService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
+          .getMaskingServiceInstance(null);
+  private DecryptionService decService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
+          .getDecryptionServiceInstance(null);
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -184,8 +190,9 @@ public class EsSyncActor extends UntypedAbstractActor {
     ProjectLogger.log("fetching user data started");
     Map<String, Object> userMap = (Map<String, Object>) entry.getValue();
     Util.removeAttributes(userMap, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY));
-    if(ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.COUNTRY_CODE))){
-      userMap.put(JsonKey.COUNTRY_CODE, PropertiesCache.getInstance().getProperty("sunbird_default_country_code"));
+    if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.COUNTRY_CODE))) {
+      userMap.put(JsonKey.COUNTRY_CODE,
+          PropertiesCache.getInstance().getProperty("sunbird_default_country_code"));
     }
     ProjectLogger.log("fetching user address data started");
     String encryption = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_ENCRYPTION);
@@ -233,11 +240,6 @@ public class EsSyncActor extends UntypedAbstractActor {
     userMap.put(JsonKey.BADGES, badgesMap);
 
     // save masked email and phone number
-    DataMaskingService maskingService =
-        org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
-            .getMaskingServiceInstance(null);
-    DecryptionService decService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
-        .getDecryptionServiceInstance(null);
     String phone = (String) userMap.get(JsonKey.PHONE);
     String email = (String) userMap.get(JsonKey.EMAIL);
     if (!ProjectUtil.isStringNullOREmpty(phone)) {
@@ -249,12 +251,14 @@ public class EsSyncActor extends UntypedAbstractActor {
       userMap.put(JsonKey.EMAIL, maskingService.maskEmail(decService.decryptData(email)));
     }
     // add the skills column into ES
-    Response skillresponse = cassandraOperation.getRecordsByProperty(userSkillDbInfo.getKeySpace() , userSkillDbInfo.getTableName(), JsonKey.USER_ID , userId);
-    List<Map<String,Object>> responseList = (List<Map<String, Object>>) skillresponse.get(JsonKey.RESPONSE);
-    userMap.put(JsonKey.SKILLS , responseList);
+    Response skillresponse = cassandraOperation.getRecordsByProperty(userSkillDbInfo.getKeySpace(),
+        userSkillDbInfo.getTableName(), JsonKey.USER_ID, userId);
+    List<Map<String, Object>> responseList =
+        (List<Map<String, Object>>) skillresponse.get(JsonKey.RESPONSE);
+    userMap.put(JsonKey.SKILLS, responseList);
     // compute profile completeness and error field.
-    ProfileCompletenessService service = ProfileCompletenessFactory.getInstance();
-    Map<String, Object> profileResponse = service.computeProfile(userMap);
+    ProfileCompletenessService profileService = ProfileCompletenessFactory.getInstance();
+    Map<String, Object> profileResponse = profileService.computeProfile(userMap);
     userMap.putAll(profileResponse);
     Map<String, String> profileVisibility =
         (Map<String, String>) userMap.get(JsonKey.PROFILE_VISIBILITY);
@@ -266,7 +270,7 @@ public class EsSyncActor extends UntypedAbstractActor {
       ElasticSearchUtil.upsertData(ProjectUtil.EsIndex.sunbird.getIndexName(),
           ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId, profileVisibilityMap);
       UserUtility.updateProfileVisibilityFields(profileVisibilityMap, userMap);
-    }else{
+    } else {
       userMap.put(JsonKey.PROFILE_VISIBILITY, new HashMap<String, String>());
     }
     ProjectLogger.log("fetching user data completed");

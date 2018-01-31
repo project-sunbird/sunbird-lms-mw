@@ -2670,9 +2670,9 @@ public class UserManagementActor extends UntypedAbstractActor {
         for (String role : requestedRoles) {
           if (!roles.contains(role)) {
             roles.add(role);
-            tempMap.put(JsonKey.ROLES, roles);
           }
         }
+        tempMap.put(JsonKey.ROLES, roles);
       } else {
         tempMap.put(JsonKey.ROLES, requestMap.get(JsonKey.ROLES));
       }

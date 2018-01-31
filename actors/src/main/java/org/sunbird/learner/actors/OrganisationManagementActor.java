@@ -671,7 +671,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
    * Update the organization data
    */
   @SuppressWarnings("unchecked")
-  private void updateOrgData(Request actorMessage) throws ProjectCommonException {
+  private void updateOrgData(Request actorMessage) {
 
     Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
     // object of telemetry event...
@@ -902,7 +902,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-    Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
 
     Map<String, Object> req = actorMessage.getRequest();
 
@@ -973,54 +972,29 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
     if (!roles.isEmpty())
       usrOrgData.put(JsonKey.ROLES, roles);
-    // check org exist or not
-    Response orgResult = cassandraOperation.getRecordById(organisationDbInfo.getKeySpace(),
-        organisationDbInfo.getTableName(), orgId);
-
-    List orgList = (List) orgResult.get(JsonKey.RESPONSE);
-    if (orgList.isEmpty()) {
-      // user already enrolled for the organisation
-      ProjectLogger.log("Org does not exist");
-      ProjectCommonException exception = new ProjectCommonException(
-          ResponseCode.invalidOrgId.getErrorCode(), ResponseCode.invalidOrgId.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-
-    // check user exist or not
-    Response userResult = cassandraOperation.getRecordById(userDbInfo.getKeySpace(),
-        userDbInfo.getTableName(), userId);
-
-    List userList = (List) userResult.get(JsonKey.RESPONSE);
-    if (userList.isEmpty()) {
-      ProjectLogger.log("User does not exist");
-      ProjectCommonException exception = new ProjectCommonException(
-          ResponseCode.invalidUserId.getErrorCode(), ResponseCode.invalidUserId.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-
     // check user already exist for the org or not
     Map<String, Object> requestData = new HashMap<>();
     requestData.put(JsonKey.USER_ID, userId);
     requestData.put(JsonKey.ORGANISATION_ID, orgId);
-
     Response result = cassandraOperation.getRecordsByProperties(userOrgDbInfo.getKeySpace(),
         userOrgDbInfo.getTableName(), requestData);
 
     List list = (List) result.get(JsonKey.RESPONSE);
+    Map<String, Object> tempOrgap = null;
     if (!list.isEmpty()) {
-      // user already enrolled for the organisation
-      response = new Response();
-      response.getResult().put(JsonKey.RESPONSE, ResponseMessage.Message.EXISTING_ORG_MEMBER);
-      sender().tell(response, self());
-      return;
+      tempOrgap = (Map<String, Object>) list.get(0);
+      if (null != tempOrgap && !((boolean) tempOrgap.get(JsonKey.IS_DELETED))) {
+        // user already enrolled for the organisation
+        response = new Response();
+        response.getResult().put(JsonKey.RESPONSE, ResponseMessage.Message.EXISTING_ORG_MEMBER);
+        sender().tell(response, self());
+        return;
+      } else if (null != tempOrgap && ((boolean) tempOrgap.get(JsonKey.IS_DELETED))) {
+        usrOrgData.put(JsonKey.ID, tempOrgap.get(JsonKey.ID));
+      }
+    } else {
+      usrOrgData.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv()));
     }
-
-    String id = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
-    usrOrgData.put(JsonKey.ID, id);
     if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
       String updatedByName = Util.getUserNamebyUserId(updatedBy);
       usrOrgData.put(JsonKey.ADDED_BY, updatedBy);
@@ -1033,10 +1007,14 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     usrOrgData.put(JsonKey.APPROOVE_DATE, ProjectUtil.getFormattedDate());
     usrOrgData.put(JsonKey.IS_REJECTED, false);
     usrOrgData.put(JsonKey.IS_APPROVED, true);
-
+    usrOrgData.put(JsonKey.IS_DELETED, false);
     response = cassandraOperation.insertRecord(userOrgDbInfo.getKeySpace(),
         userOrgDbInfo.getTableName(), usrOrgData);
 
+    Response orgResult = cassandraOperation.getRecordById(organisationDbInfo.getKeySpace(),
+        organisationDbInfo.getTableName(), orgId);
+
+    List orgList = (List) orgResult.get(JsonKey.RESPONSE);
     Map<String, Object> newOrgMap = new HashMap<>();
     if (!orgList.isEmpty()) {
       Integer count = 0;
@@ -1173,7 +1151,6 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         }
       }
       sender().tell(response, self());
-
       Map<String, Object> targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
       TelemetryUtil.generateCorrelatedObject(userId, "userOrgMember", null, correlatedObject);
       TelemetryUtil.generateCorrelatedObject(orgId, "orgUserMember", null, correlatedObject);
@@ -1621,7 +1598,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
    * throws error
    */
   @SuppressWarnings("unchecked")
-  public void validateRootOrg(Map<String, Object> request) throws ProjectCommonException {
+  public void validateRootOrg(Map<String, Object> request) {
     ProjectLogger.log("Validating Root org started---");
     Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
     if (!ProjectUtil.isStringNullOREmpty((String) request.get(JsonKey.PARENT_ORG_ID))) {
@@ -1730,7 +1707,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       // fetch orgid from database on basis of source and external id and put orgid into request .
       Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
-      Map<String, Object> requestDbMap = new HashMap<String, Object>();
+      Map<String, Object> requestDbMap = new HashMap<>();
       requestDbMap.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
       requestDbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
 

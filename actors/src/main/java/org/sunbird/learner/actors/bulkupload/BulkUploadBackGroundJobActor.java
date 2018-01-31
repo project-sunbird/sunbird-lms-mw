@@ -74,6 +74,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       try {
         ProjectLogger.log("BulkUploadBackGroundJobActor onReceive called");
         Request actorMessage = (Request) message;
+        Util.initializeContext(actorMessage, JsonKey.USER);
         // set request id fto thread loacl...
         ExecutionContext.setRequestId(actorMessage.getRequestId());
         if (actorMessage.getOperation()

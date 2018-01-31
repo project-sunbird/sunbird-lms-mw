@@ -26,6 +26,7 @@ import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
@@ -55,6 +56,9 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
       try {
         ProjectLogger.log("BulkUploadManagementActor onReceive called");
         Request actorMessage = (Request) message;
+        Util.initializeContext(actorMessage, JsonKey.USER);
+        // set request id fto thread loacl...
+        ExecutionContext.setRequestId(actorMessage.getRequestId());
         if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.BULK_UPLOAD.getValue())) {
           upload(actorMessage);
         } else if (actorMessage.getOperation()

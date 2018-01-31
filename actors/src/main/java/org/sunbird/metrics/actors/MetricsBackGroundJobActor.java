@@ -22,6 +22,7 @@ import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
 import org.sunbird.common.models.util.azure.CloudService;
 import org.sunbird.common.models.util.azure.CloudServiceFactory;
 import org.sunbird.common.models.util.mail.SendMail;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -44,6 +45,9 @@ public class MetricsBackGroundJobActor extends UntypedAbstractActor {
         ProjectLogger.log("BackgroundJobManager  onReceive called");
 
         Request actorMessage = (Request) message;
+        Util.initializeContext(actorMessage, JsonKey.USER);
+        // set request id fto thread loacl...
+        ExecutionContext.setRequestId(actorMessage.getRequestId());
         String requestedOperation = actorMessage.getOperation();
         ProjectLogger.log("Operation name is ==" + requestedOperation);
         if (requestedOperation.equalsIgnoreCase(ActorOperations.PROCESS_DATA.getValue())) {

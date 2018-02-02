@@ -944,14 +944,15 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     if (isNotNull(usrOrgData.get(JsonKey.ROLE))) {
       String role = usrOrgData.get(JsonKey.ROLE).toString();
       // partners are going to send these role values
-      if (StringUtils.equalsIgnoreCase(role, "content-creator"))
+      if (StringUtils.equalsIgnoreCase(role, "content-creator")) {
         role = ProjectUtil.UserRole.CONTENT_CREATOR.getValue();
-      else if (StringUtils.equalsIgnoreCase(role, "member"))
+      } else if (StringUtils.equalsIgnoreCase(role, "member")) {
         role = ProjectUtil.UserRole.ORG_MEMBER.getValue();
-      else if (StringUtils.equalsIgnoreCase(role, "admin"))
+      } else if (StringUtils.equalsIgnoreCase(role, "admin")) {
         role = ProjectUtil.UserRole.ORG_ADMIN.getValue();
-      else if (StringUtils.equalsIgnoreCase(role, "content-reviewer"))
+      } else if (StringUtils.equalsIgnoreCase(role, "content-reviewer")) {
         role = ProjectUtil.UserRole.CONTENT_REVIEWER.getValue();
+      }
       roles.add(role);
     }
     usrOrgData.remove(JsonKey.ROLE);

@@ -93,8 +93,6 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
 
     Map<String, Object> reportDbInfo = responseList.get(0);
 
-    Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
-
     List<List<Object>> finalList = null;
     String periodStr = (String) reportDbInfo.get(JsonKey.PERIOD);
     String batchId = (String) reportDbInfo.get(JsonKey.RESOURCE_ID);
@@ -125,14 +123,14 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
         (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
 
     if (!(userCoursesContent.isEmpty())) {
-      List<String> userIds = new ArrayList<String>();
+      List<String> userIds = new ArrayList<>();
 
       for (Map<String, Object> entry : userCoursesContent) {
         String userId = (String) entry.get(JsonKey.USER_ID);
         userIds.add(userId);
       }
 
-      Set<String> uniqueUserIds = new HashSet<String>(userIds);
+      Set<String> uniqueUserIds = new HashSet<>(userIds);
       Map<String, Object> userfilter = new HashMap<>();
       userfilter.put(JsonKey.USER_ID, uniqueUserIds.stream().collect(Collectors.toList()));
       List<String> userfields = new ArrayList<>();

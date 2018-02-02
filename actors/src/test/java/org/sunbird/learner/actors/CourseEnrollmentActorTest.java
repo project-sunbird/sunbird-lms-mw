@@ -209,7 +209,7 @@ public class CourseEnrollmentActorTest {
     reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
     reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
     reqObj.put(JsonKey.USER_ID, "USR");
-    reqObj.put(JsonKey.BATCH_ID, batchId + Integer.toString(0123));
+    reqObj.put(JsonKey.BATCH_ID, batchId + "0123");
     HashMap<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.COURSE, reqObj.getRequest());
     innerMap.put(JsonKey.USER_ID, "USR");

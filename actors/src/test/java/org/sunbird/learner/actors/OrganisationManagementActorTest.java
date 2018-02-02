@@ -18,7 +18,6 @@ import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
-import org.mockito.Mockito;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -1696,7 +1695,7 @@ public class OrganisationManagementActorTest {
           OrgIdWithSourceAndExternalId);
       System.out.println("3 " + OrgIdWithSourceAndExternalId);
 
-    } catch (Throwable th) {
+    } catch (Exception th) {
       ProjectLogger.log(th.getMessage(),th);
     }
     if (!ProjectUtil.isStringNullOREmpty(usrId)) {

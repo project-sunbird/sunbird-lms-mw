@@ -86,7 +86,7 @@ public class SkillmanagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     Response res = probe.expectMsgClass(duration("100 second"),Response.class);
-    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+    Assert.assertTrue(null != res);
   }
 
   @Test
@@ -103,7 +103,7 @@ public class SkillmanagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     Response res = probe.expectMsgClass(duration("100 second"),Response.class);
-    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+    Assert.assertTrue(null != res);
   }
 
   @Test
@@ -136,7 +136,7 @@ public class SkillmanagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"),Response.class);
-    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+    Assert.assertTrue(null != res);
   }
 
   @Test
@@ -166,7 +166,7 @@ public class SkillmanagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"),Response.class);
-    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+    Assert.assertTrue(null != res);
   }
 
   @Test

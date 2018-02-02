@@ -88,6 +88,7 @@ public class ClientManagementActorTest {
     Request actorMessage = new Request();
     Map<String, Object> request = new HashMap<>();
     request.put(JsonKey.CLIENT_ID , clientId);
+    request.put(JsonKey.TYPE,JsonKey.CLIENT_ID );
     actorMessage.setRequest(request);
     actorMessage.setOperation(ActorOperations.GET_CLIENT_KEY.getValue());
 

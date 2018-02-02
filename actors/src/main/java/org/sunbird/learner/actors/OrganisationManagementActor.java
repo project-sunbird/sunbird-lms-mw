@@ -36,7 +36,6 @@ import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 
 /**
  * This actor will handle organisation related operation .
@@ -534,7 +533,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       }
 
       Map<String, Object> orgDBO;
-      Map<String, Object> updateOrgDBO = new HashMap<String, Object>();
+      Map<String, Object> updateOrgDBO = new HashMap<>();
       String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
 
       String orgId = (String) req.get(JsonKey.ORGANISATION_ID);
@@ -542,7 +541,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
           orgDbInfo.getTableName(), orgId);
       List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
       if (!(list.isEmpty())) {
-        orgDBO = (Map<String, Object>) list.get(0);
+        orgDBO = list.get(0);
       } else {
         ProjectLogger.log("Invalid Org Id");
         ProjectCommonException exception =
@@ -926,12 +925,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     String orgId = null;
     String userId = null;
     List<String> roles = new ArrayList<>();
-    if (isNotNull(usrOrgData.get(JsonKey.ORGANISATION_ID))) {
-      orgId = (String) usrOrgData.get(JsonKey.ORGANISATION_ID);
-    }
-    if (isNotNull(usrOrgData.get(JsonKey.USER_ID))) {
-      userId = (String) usrOrgData.get(JsonKey.USER_ID);
-    }
+    orgId = (String) usrOrgData.get(JsonKey.ORGANISATION_ID);
+    userId = (String) usrOrgData.get(JsonKey.USER_ID);
     if (isNotNull(req.get(JsonKey.REQUESTED_BY))) {
       updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
     }
@@ -960,8 +955,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       roles.add(role);
     }
     usrOrgData.remove(JsonKey.ROLE);
-
-    if ((isNull(orgId) || isNull(userId)) || isNull(roles)) {
+    if (isNull(roles) && roles.isEmpty()) {
       // create exception here invalid request data and tell the exception , then return
       ProjectCommonException exception =
           new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
@@ -1088,27 +1082,13 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     String updatedBy = null;
     String orgId = null;
     String userId = null;
-    if (isNotNull(usrOrgData.get(JsonKey.ORGANISATION_ID))) {
-      orgId = (String) usrOrgData.get(JsonKey.ORGANISATION_ID);
-    }
 
-    if (isNotNull(usrOrgData.get(JsonKey.USER_ID))) {
-      userId = (String) usrOrgData.get(JsonKey.USER_ID);
-    }
+    orgId = (String) usrOrgData.get(JsonKey.ORGANISATION_ID);
+    userId = (String) usrOrgData.get(JsonKey.USER_ID);
+
     if (isNotNull(req.get(JsonKey.REQUESTED_BY))) {
       updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
     }
-
-    if (isNull(orgId) || isNull(userId)) {
-      // create exception here invalid request data and tell the exception , ther return
-      ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-
     // check user already exist for the org or not
     Map<String, Object> requestData = new HashMap<>();
     requestData.put(JsonKey.USER_ID, userId);
@@ -1151,11 +1131,13 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         }
       }
       sender().tell(response, self());
-      Map<String, Object> targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+      Map<String, Object> targetObject =
+          TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
       TelemetryUtil.generateCorrelatedObject(userId, "userOrgMember", null, correlatedObject);
       TelemetryUtil.generateCorrelatedObject(orgId, "orgUserMember", null, correlatedObject);
 
-      TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(),targetObject ,correlatedObject);
+      TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
+          correlatedObject);
 
       // update ES with latest data through background job manager
       if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
@@ -1244,7 +1226,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     String updatedBy = null;
     String orgId = null;
     String userId = null;
-    List<String> roles = new ArrayList<String>();
+    List<String> roles = new ArrayList<>();
     if (isNotNull(usrOrgData.get(JsonKey.ORGANISATION_ID))) {
       orgId = (String) usrOrgData.get(JsonKey.ORGANISATION_ID);
     }
@@ -1279,7 +1261,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         organisationDbInfo.getTableName(), orgId);
 
     List orgList = (List) orgResult.get(JsonKey.RESPONSE);
-    if (orgList.size() == 0) {
+    if (orgList.isEmpty()) {
       // user already enrolled for the organisation
       ProjectLogger.log("Org does not exist");
       ProjectCommonException exception = new ProjectCommonException(
@@ -1290,7 +1272,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
 
     // check user already exist for the org or not
-    Map<String, Object> requestData = new HashMap<String, Object>();
+    Map<String, Object> requestData = new HashMap<>();
     requestData.put(JsonKey.USER_ID, userId);
     requestData.put(JsonKey.ORGANISATION_ID, orgId);
 
@@ -1298,7 +1280,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         userOrgDbInfo.getTableName(), requestData);
 
     List list = (List) result.get(JsonKey.RESPONSE);
-    if (list.size() > 0) {
+    if (!list.isEmpty()) {
       // user already enrolled for the organisation
       response = new Response();
       response.getResult().put(JsonKey.RESPONSE, ResponseMessage.Message.EXISTING_ORG_MEMBER);
@@ -1319,8 +1301,8 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
     response = cassandraOperation.insertRecord(userOrgDbInfo.getKeySpace(),
         userOrgDbInfo.getTableName(), usrOrgData);
-    Map<String, Object> newOrgMap = new HashMap<String, Object>();
-    if (orgList.size() > 0) {
+    Map<String, Object> newOrgMap = new HashMap<>();
+    if (!orgList.isEmpty()) {
       Integer count = 0;
       Map<String, Object> orgMap = (Map<String, Object>) orgList.get(0);
       if (isNotNull(orgMap.get(JsonKey.NO_OF_MEMBERS.toLowerCase()))) {
@@ -1393,7 +1375,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
 
     // check user already exist for the org or not
-    Map<String, Object> requestData = new HashMap<String, Object>();
+    Map<String, Object> requestData = new HashMap<>();
     requestData.put(JsonKey.USER_ID, userId);
     requestData.put(JsonKey.ORGANISATION_ID, orgId);
 
@@ -1401,7 +1383,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         userOrgDbInfo.getTableName(), requestData);
 
     List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-    if (list.size() == 0) {
+    if (list.isEmpty()) {
       // user already enrolled for the organisation
       ProjectLogger.log("User does not belong to org");
       ProjectCommonException exception = new ProjectCommonException(
@@ -1488,7 +1470,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     }
 
     // check user already exist for the org or not
-    Map<String, Object> requestData = new HashMap<String, Object>();
+    Map<String, Object> requestData = new HashMap<>();
     requestData.put(JsonKey.USER_ID, userId);
     requestData.put(JsonKey.ORGANISATION_ID, orgId);
 
@@ -1496,7 +1478,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         userOrgDbInfo.getTableName(), requestData);
 
     List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-    if (list.size() == 0) {
+    if (list.isEmpty()) {
       // user already enrolled for the organisation
       ProjectLogger.log("User does not belong to org");
       ProjectCommonException exception = new ProjectCommonException(
@@ -1587,10 +1569,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     Response result = cassandraOperation.getRecordsByProperties(userdbInfo.getKeySpace(),
         userdbInfo.getTableName(), properties);
     List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-    if (!(list.isEmpty())) {
-      return true;
-    }
-    return false;
+    return (!(list.isEmpty()));
   }
 
   /**

@@ -131,7 +131,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
   }
 

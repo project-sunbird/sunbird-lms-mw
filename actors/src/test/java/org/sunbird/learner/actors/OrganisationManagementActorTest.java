@@ -24,6 +24,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
@@ -167,7 +168,7 @@ public class OrganisationManagementActorTest {
     try {
       Thread.sleep(20000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(), e);
     }
   }
 
@@ -1038,7 +1039,7 @@ public class OrganisationManagementActorTest {
           .get(JsonKey.ADDRESS_ID));
       Assert.assertTrue(null != addressId);
     } catch (Exception ex) {
-      ex.printStackTrace();
+      ProjectLogger.log(ex.getMessage(),ex);
     }
   }
 
@@ -1682,7 +1683,7 @@ public class OrganisationManagementActorTest {
       System.out.println("3 " + OrgIdWithSourceAndExternalId);
 
     } catch (Throwable th) {
-      th.printStackTrace();
+      ProjectLogger.log(th.getMessage(),th);
     }
     if (!ProjectUtil.isStringNullOREmpty(usrId)) {
       ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),

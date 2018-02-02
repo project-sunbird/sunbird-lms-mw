@@ -126,10 +126,10 @@ public class BulkUploadManagementActorTest {
       Path path = Paths.get(file.getPath());
       bytes = Files.readAllBytes(path);
     } catch (FileNotFoundException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
       orgProcessFlag = false;
     } catch (IOException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
       orgProcessFlag = false;
     }
 

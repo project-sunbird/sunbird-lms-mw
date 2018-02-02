@@ -20,6 +20,7 @@ import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EnrolmentType;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
@@ -113,7 +114,7 @@ public class AuditLogServiceImplTest {
     try {
       Thread.sleep(4000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
 
     Request requestObj = new Request();

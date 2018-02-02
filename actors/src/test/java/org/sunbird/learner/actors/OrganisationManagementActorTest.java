@@ -518,7 +518,7 @@ public class OrganisationManagementActorTest {
     try {
       Thread.sleep(10000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
   }
 
@@ -550,7 +550,7 @@ public class OrganisationManagementActorTest {
     try {
       Thread.sleep(4000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
 
     TestKit probe = new TestKit(system);
@@ -581,7 +581,7 @@ public class OrganisationManagementActorTest {
     try {
       Thread.sleep(4000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
 
     TestKit probe = new TestKit(system);
@@ -610,7 +610,7 @@ public class OrganisationManagementActorTest {
     try {
       Thread.sleep(4000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -1744,7 +1744,7 @@ public class OrganisationManagementActorTest {
         }
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     dbMap = new HashMap<>();
     dbMap.put(JsonKey.CHANNEL, CHANNEL);

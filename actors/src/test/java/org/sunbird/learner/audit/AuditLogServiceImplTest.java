@@ -132,7 +132,7 @@ public class AuditLogServiceImplTest {
     try {
       Thread.sleep(4000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     List<Object> auditRecordList =
         (List<Object>) ((Map<String, Object>) responseObj.getResult().get(JsonKey.RESPONSE))
@@ -177,7 +177,7 @@ public class AuditLogServiceImplTest {
     try {
       Thread.sleep(2000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
 
     Request requestObj = new Request();
@@ -196,7 +196,7 @@ public class AuditLogServiceImplTest {
     try {
       Thread.sleep(4000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     List<Object> auditRecordList =
         (List<Object>) ((Map<String, Object>) responseObj.getResult().get(JsonKey.RESPONSE))
@@ -246,7 +246,7 @@ public class AuditLogServiceImplTest {
     try {
       Thread.sleep(2000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
 
     Request requestObj = new Request();
@@ -264,7 +264,7 @@ public class AuditLogServiceImplTest {
     try {
       Thread.sleep(4000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     List<Object> auditRecordList =
         (List<Object>) ((Map<String, Object>) responseObj.getResult().get(JsonKey.RESPONSE))

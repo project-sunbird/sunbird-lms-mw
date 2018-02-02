@@ -249,7 +249,7 @@ public class TenantPreferenceManagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+    Assert.assertTrue(null != res);
   }
 
   @Test

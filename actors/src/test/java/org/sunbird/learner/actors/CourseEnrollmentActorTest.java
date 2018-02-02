@@ -44,7 +44,6 @@ import org.sunbird.learner.util.Util;
 @PowerMockIgnore("javax.management.*")
 public class CourseEnrollmentActorTest {
 
-
   private static ActorSystem system;
   private static final Props props = Props.create(CourseEnrollmentActor.class);
   private static Util.DbInfo userCoursesdbInfo = null;

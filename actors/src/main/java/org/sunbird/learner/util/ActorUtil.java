@@ -15,7 +15,7 @@ import org.sunbird.learner.util.actorutility.ActorSystemFactory;
  * @author Amit Kumar
  *
  */
-public class ActorUtil {
+public final class ActorUtil {
 
   private ActorUtil() {}
 

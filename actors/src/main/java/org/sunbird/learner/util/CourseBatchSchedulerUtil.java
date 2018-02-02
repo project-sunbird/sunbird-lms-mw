@@ -28,7 +28,7 @@ import org.sunbird.learner.actors.CourseEnrollmentActor;
  * @author Manzarul
  *
  */
-public class CourseBatchSchedulerUtil {
+public final class CourseBatchSchedulerUtil {
   public static Map<String,String> headerMap = new HashMap<>();
   static {
     String header = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
@@ -40,6 +40,8 @@ public class CourseBatchSchedulerUtil {
      headerMap.put(JsonKey.AUTHORIZATION, header);
      headerMap.put("Content-Type", "application/json");
   }
+  
+  private CourseBatchSchedulerUtil(){}
   /**
    * 
    * @param startDate

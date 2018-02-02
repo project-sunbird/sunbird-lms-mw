@@ -74,7 +74,7 @@ public class LearnerStateActorTest {
     }
 
     //@Test
-    public void onReceiveTestForGetCourse() throws Exception {
+    public void onReceiveTestForGetCourse() {
 
         TestKit probe = new TestKit(system);
         ActorRef subject = system.actorOf(props);
@@ -92,7 +92,7 @@ public class LearnerStateActorTest {
     }
 
     @Test
-    public void onReceiveTestForGetCourseWithInvalidOperation() throws Exception {
+    public void onReceiveTestForGetCourseWithInvalidOperation() {
 
         TestKit probe = new TestKit(system);
         ActorRef subject = system.actorOf(props);
@@ -108,7 +108,7 @@ public class LearnerStateActorTest {
     }
 
     @Test
-    public void onReceiveTestForGetCourseWithInvalidRequestType() throws Exception {
+    public void onReceiveTestForGetCourseWithInvalidRequestType() {
 
         TestKit probe = new TestKit(system);
         ActorRef subject = system.actorOf(props);
@@ -120,7 +120,7 @@ public class LearnerStateActorTest {
     }
 
     @Test
-    public void onReceiveTestForGetContent() throws Exception {
+    public void onReceiveTestForGetContent() {
 
         TestKit probe = new TestKit(system);
         ActorRef subject = system.actorOf(props);
@@ -138,7 +138,7 @@ public class LearnerStateActorTest {
     }
 
     @Test
-    public void onReceiveTestForGetContentByCourse() throws Exception {
+    public void onReceiveTestForGetContentByCourse() {
 
         TestKit probe = new TestKit(system);
         ActorRef subject = system.actorOf(props);
@@ -158,7 +158,7 @@ public class LearnerStateActorTest {
     }
 
     @Test
-    public void onReceiveTestForGetContentByCourseIds() throws Exception {
+    public void onReceiveTestForGetContentByCourseIds() {
 
         TestKit probe = new TestKit(system);
         ActorRef subject = system.actorOf(props);

@@ -22,10 +22,10 @@ import org.sunbird.common.models.util.PropertiesCache;
  * @author Manzarul
  *
  */
-public class EkStepRequestUtil {
+public final class EkStepRequestUtil {
 
 	private static ObjectMapper mapper = new ObjectMapper();
-	
+	private EkStepRequestUtil(){}
 	/**
 	 * 
 	 * @param params String

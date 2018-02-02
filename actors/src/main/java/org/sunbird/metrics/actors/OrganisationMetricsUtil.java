@@ -17,11 +17,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 
-public class OrganisationMetricsUtil {
+public final class OrganisationMetricsUtil {
 
   public static List<String> operationList = new ArrayList<>();
   private static ObjectMapper mapper = new ObjectMapper();
 
+  private OrganisationMetricsUtil(){}
+  
   protected enum ContentStatus {
     Draft("Create"), Review("Review"), Live("Publish");
 

@@ -1,5 +1,8 @@
 package org.sunbird.metrics.actors;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -8,7 +11,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -27,9 +29,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class OrganisationMetricsActor extends BaseMetricsActor {
 
@@ -180,24 +179,24 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     Map<String, String> operationMap = new LinkedHashMap<>();
     ProjectLogger.log("period" + dateMap);
     switch (operation) {
-      case "Create": {
+      case "Create": 
         operationMap.put("dateKey", "createdOn");
         operationMap.put("status", OrganisationMetricsUtil.ContentStatus.Draft.name());
         operationMap.put("userActionKey", "createdBy");
         operationMap.put("contentCount", "required");
         break;
-      }
-      case "Review": {
+      
+      case "Review": 
         operationMap.put("dateKey", "lastSubmittedOn");
         operationMap.put("status", OrganisationMetricsUtil.ContentStatus.Review.name());
         break;
-      }
-      case "Publish": {
+      
+      case "Publish": 
         operationMap.put("dateKey", "lastPublishedOn");
         operationMap.put("status", OrganisationMetricsUtil.ContentStatus.Live.name());
         operationMap.put("userActionKey", "lastPublishedBy");
         break;
-      }
+      
       
       default :
         operationMap.put("dateKey", "");
@@ -209,7 +208,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     builder.append("{\"request\":{\"rawQuery\":{\"query\":{\"filtered\":")
         .append("{\"query\":{\"bool\":{\"must\":[{\"query\":{\"range\":{\"")
         .append(operationMap.get("dateKey")).append("\":{\"gte\":\"")
-        .append(dateMap.get(startDate) + "\",\"lte\":\"" + dateMap.get(endDate) + "\"}}}}")
+        .append(dateMap.get(STARTDATE) + "\",\"lte\":\"" + dateMap.get(ENDDATE) + "\"}}}}")
         .append(",{\"bool\":{\"should\":[{\"match\":{\"contentType.raw\":\"Story\"}}")
         .append(",{\"match\":{\"contentType.raw\":\"Worksheet\"}}")
         .append(",{\"match\":{\"contentType.raw\":\"Game\"}}")
@@ -227,8 +226,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
           .append("\",\"interval\":\"" + dateMap.get(INTERVAL) + "\",\"format\":\"")
           .append(dateMap.get(FORMAT) + "\"")
           .append(",\"time_zone\":\"+05:30\",\"extended_bounds\":{\"min\":")
-          .append(dateMap.get(startTimeMilis) + ",\"max\":")
-          .append(dateMap.get(endTimeMilis) + "}}},\"");
+          .append(dateMap.get(STARTTIMEMILIS) + ",\"max\":")
+          .append(dateMap.get(ENDTIMEMILIS) + "}}},\"");
     }
     builder.append("status\":{\"terms\":{\"field\":\"status.raw\",\"include\":[\"")
         .append(operationMap.get("status").toLowerCase() + "\"]},\"aggs\":{\"")
@@ -236,7 +235,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         .append(operationMap.get("dateKey") + "\",\"interval\":\"" + dateMap.get(INTERVAL))
         .append("\",\"format\":\"" + dateMap.get(FORMAT))
         .append("\",\"time_zone\":\"+05:30\",\"extended_bounds\":{\"min\":")
-        .append(dateMap.get(startTimeMilis) + ",\"max\":").append(dateMap.get(endTimeMilis))
+        .append(dateMap.get(STARTTIMEMILIS) + ",\"max\":").append(dateMap.get(ENDTIMEMILIS))
         .append("}}}}}");
     if (operationMap.containsKey("userActionKey")) {
       builder.append(",\"" + operationMap.get("userActionKey") + ".count\":")
@@ -284,7 +283,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
   @SuppressWarnings({"unchecked", "rawtypes"})
   private String orgCreationResponseGenerator(String periodStr, Map<String, Object> resultData) {
-    // String dataSet = "creation";
     String result = null;
     Map<String, Object> responseMap = new HashMap<>();
     try {
@@ -453,7 +451,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         return;
       }
 
-      // Map<String, Object> aggregationMap = getOrgCreationData(periodStr, orgId);
       Map<String, Object> aggregationMap =
           (Map<String, Object>) cache.getData(JsonKey.OrgCreation, orgId, periodStr);
       if (null == aggregationMap || aggregationMap.isEmpty()) {
@@ -476,12 +473,11 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     }
   }
 
-  private Map<String, Object> getOrgCreationData(String periodStr, String orgId) throws Exception {
+  private Map<String, Object> getOrgCreationData(String periodStr, String orgId) throws IOException  {
     Map<String, Object> aggregationMap = new HashMap<>();
     for (String operation : OrganisationMetricsUtil.operationList) {
       String request = getQueryRequest(periodStr, orgId, operation);
       String esResponse = makePostRequest(JsonKey.EKSTEP_ES_METRICS_API_URL, request);
-      // String esResponse = getDataFromEkstep(request, JsonKey.EKSTEP_ES_METRICS_URL);
       aggregationMap = putAggregationMap(esResponse, aggregationMap, operation);
     }
     return aggregationMap;
@@ -531,7 +527,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       }
       String channel = (String) rootOrgData.get(JsonKey.HASHTAGID);
       ProjectLogger.log("channel" + channel);
-      // String responseFormat = getOrgConsumptionData(actorMessage, periodStr, orgHashId, channel);
       String responseFormat = (String) cache.getData(JsonKey.OrgConsumption, orgId, periodStr);
       if (ProjectUtil.isStringNullOREmpty(responseFormat)) {
         responseFormat = getOrgConsumptionData(actorMessage, periodStr, orgHashId, channel);
@@ -554,11 +549,10 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   }
 
   private String getOrgConsumptionData(Request actorMessage, String periodStr, String orgHashId,
-      String channel) throws JsonProcessingException, Exception {
+      String channel) throws IOException {
     String requestStr = getOrgMetricsRequest(actorMessage, periodStr, orgHashId, null, channel);
     String ekStepResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, requestStr);
-    String responseFormat = orgConsumptionResponseGenerator(periodStr, ekStepResponse);
-    return responseFormat;
+    return orgConsumptionResponseGenerator(periodStr, ekStepResponse);
   }
 
   private String getOrgMetricsRequest(Request actorMessage, String periodStr, String orgHashId,
@@ -575,8 +569,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     requestObject.put(JsonKey.FILTER, filterMap);
     requestObject.put(JsonKey.CHANNEL, channel);
     request.setRequest(requestObject);
-    String requestStr = mapper.writeValueAsString(request);
-    return requestStr;
+    return mapper.writeValueAsString(request);
   }
 
   @SuppressWarnings("unchecked")
@@ -665,8 +658,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       responseMap.put(JsonKey.SERIES, series);
 
       result = mapper.writeValueAsString(responseMap);
-    } catch (JsonProcessingException e) {
-      ProjectLogger.log("Error occured", e);
     } catch (Exception e) {
       ProjectLogger.log("Error occured", e);
     }

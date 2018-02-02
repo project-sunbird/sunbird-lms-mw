@@ -13,7 +13,7 @@ import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 /**
  * Created by arvind on 17/1/18.
  */
-public class TelemetryUtil {
+public final class TelemetryUtil {
 
   private TelemetryUtil() {}
 

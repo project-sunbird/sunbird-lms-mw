@@ -106,8 +106,8 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
 
     if (!("fromBegining".equalsIgnoreCase(periodStr))) {
       Map<String, Object> dateRange = getStartAndEndDate(periodStr);
-      dateRangeFilter.put(GTE, (String) dateRange.get(startDate));
-      dateRangeFilter.put(LTE, (String) dateRange.get(endDate));
+      dateRangeFilter.put(GTE, (String) dateRange.get(STARTDATE));
+      dateRangeFilter.put(LTE, (String) dateRange.get(ENDDATE));
       filter.put(JsonKey.DATE_TIME, dateRangeFilter);
     }
 

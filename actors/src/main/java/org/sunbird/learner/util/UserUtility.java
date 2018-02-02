@@ -17,7 +17,7 @@ import org.sunbird.common.models.util.datasecurity.impl.ServiceFactory;
  * @author Amit Kumar
  *
  */
-public class UserUtility {
+public final class UserUtility {
 
   private static List<String> userKeyToEncrypt = new ArrayList<>();
   private static List<String> addressKeyToEncrypt = new ArrayList<>();
@@ -33,7 +33,7 @@ public class UserUtility {
   
   private UserUtility() {}
 
-  public static Map<String, Object> encryptUserData(Map<String, Object> userMap) throws Exception {
+  public static Map<String, Object> encryptUserData(Map<String, Object> userMap) throws Exception  {
     EncryptionService service = ServiceFactory.getEncryptionServiceInstance(null);
     // Encrypt user basic info
     for (String key : userKeyToEncrypt) {

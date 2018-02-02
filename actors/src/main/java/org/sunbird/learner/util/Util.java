@@ -42,7 +42,7 @@ import org.sunbird.helper.ServiceFactory;
  *
  * @author arvind .
  */
-public class Util {
+public final class Util {
 
   public static final Map<String, DbInfo> dbInfoMap = new HashMap<>();
   public static final int RECOMENDED_LIST_SIZE = 10;
@@ -71,6 +71,8 @@ public class Util {
 
   }
 
+  private Util(){}
+  
   /**
    * This method will a map of organization state transaction. which will help us to move the
    * organization status from one Valid state to another state.

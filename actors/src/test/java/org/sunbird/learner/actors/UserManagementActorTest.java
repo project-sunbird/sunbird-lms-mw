@@ -131,7 +131,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
   }
 
@@ -159,7 +159,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
   }
 
@@ -225,7 +225,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(5000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     assertTrue(null != userId);
   }
@@ -258,7 +258,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(5000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     assertTrue(null != userId2);
   }
@@ -272,8 +272,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(2000);
     } catch (InterruptedException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -426,7 +425,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
   }
 
@@ -492,7 +491,7 @@ public class UserManagementActorTest {
         encUserId = encryptionService.encryptData(encUserId);
       } catch (Exception e) {
         // TODO Auto-generated catch block
-        e.printStackTrace();
+        ProjectLogger.log(e.getMessage(),e);
       }
     }
     Response response = operation.getRecordsByProperty(addressDB.getKeySpace(),
@@ -512,8 +511,7 @@ public class UserManagementActorTest {
       try {
         encUserId = encryptionService.encryptData(encUserId);
       } catch (Exception e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+        ProjectLogger.log(e.getMessage(),e);
       }
     }
 
@@ -539,7 +537,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     Response response = operation.getRecordsByProperty(addressDB.getKeySpace(),
         addressDB.getTableName(), JsonKey.USER_ID, encUserId);
@@ -559,7 +557,7 @@ public class UserManagementActorTest {
         encUserId = encryptionService.encryptData(userId);
       } catch (Exception e) {
         // TODO Auto-generated catch block
-        e.printStackTrace();
+        ProjectLogger.log(e.getMessage(),e);
       }
     }
     Response response = operation.getRecordsByProperty(addressDB.getKeySpace(),
@@ -599,7 +597,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -673,7 +671,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
 
   }
@@ -705,7 +703,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
 
 
@@ -738,7 +736,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
 
   }
@@ -793,7 +791,7 @@ public class UserManagementActorTest {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
       // TODO Auto-generated catch block
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -812,7 +810,7 @@ public class UserManagementActorTest {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
       // TODO Auto-generated catch block
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     Map<String, Object> result = (Map<String, Object>) (userResponse.getResult());
     Map<String, Object> response = (Map<String, Object>) result.get(JsonKey.RESPONSE);
@@ -903,7 +901,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
   }
 
@@ -948,7 +946,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
   }
 
@@ -1006,7 +1004,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     Response response = operation.getRecordsByProperty(eduDB.getKeySpace(), eduDB.getTableName(),
         JsonKey.USER_ID, userId);
@@ -1046,7 +1044,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     Response response = operation.getRecordsByProperty(eduDB.getKeySpace(), eduDB.getTableName(),
         JsonKey.USER_ID, userId);
@@ -1086,7 +1084,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     Response response = operation.getRecordsByProperty(jobDB.getKeySpace(), jobDB.getTableName(),
         JsonKey.USER_ID, userId);
@@ -1518,7 +1516,7 @@ public class UserManagementActorTest {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
       // TODO Auto-generated catch block
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -2004,7 +2002,7 @@ public class UserManagementActorTest {
       Thread.sleep(10000);
     } catch (InterruptedException e) {
       // TODO Auto-generated catch block
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     Response res = probe.expectMsgClass(duration("200 second"), Response.class);
     assertTrue(null != res.get(JsonKey.RESPONSE));
@@ -2048,7 +2046,7 @@ public class UserManagementActorTest {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
       // TODO Auto-generated catch block
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
 
     Map<String, Object> esResult = ElasticSearchUtil.getDataByIdentifier(
@@ -2190,7 +2188,7 @@ public class UserManagementActorTest {
             (String) map.get(JsonKey.ID));
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     // To delete user data with webPage Data
     Map<String, Object> userMap = new HashMap<>();

@@ -126,10 +126,10 @@ public class BulkUploadManagementActorTest {
       Path path = Paths.get(file.getPath());
       bytes = Files.readAllBytes(path);
     } catch (FileNotFoundException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
       orgProcessFlag = false;
     } catch (IOException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
       orgProcessFlag = false;
     }
 
@@ -168,10 +168,10 @@ public class BulkUploadManagementActorTest {
       Path path = Paths.get(file.getPath());
       bytes = Files.readAllBytes(path);
     } catch (FileNotFoundException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
       orgProcessFlag = false;
     } catch (IOException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
       orgProcessFlag = false;
     }
 
@@ -211,10 +211,10 @@ public class BulkUploadManagementActorTest {
       Path path = Paths.get(file.getPath());
       bytes = Files.readAllBytes(path);
     } catch (FileNotFoundException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
       orgProcessFlag = false;
     } catch (IOException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
       orgProcessFlag = false;
     }
 
@@ -243,7 +243,7 @@ public class BulkUploadManagementActorTest {
     try {
       Thread.sleep(5000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
     }
 
     boolean orgProcessFlag = true;
@@ -259,10 +259,10 @@ public class BulkUploadManagementActorTest {
       Path path = Paths.get(file.getPath());
       bytes = Files.readAllBytes(path);
     } catch (FileNotFoundException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
       orgProcessFlag = false;
     } catch (IOException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
       orgProcessFlag = false;
     }
 
@@ -292,7 +292,7 @@ public class BulkUploadManagementActorTest {
     try {
       Thread.sleep(15000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
     }
 
     TestKit probe = new TestKit(system);
@@ -325,7 +325,7 @@ public class BulkUploadManagementActorTest {
     try {
       Thread.sleep(15000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
     }
 
     TestKit probe = new TestKit(system);
@@ -359,7 +359,7 @@ public class BulkUploadManagementActorTest {
     try {
       Thread.sleep(5000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
     }
 
     TestKit probe = new TestKit(system);
@@ -374,10 +374,10 @@ public class BulkUploadManagementActorTest {
       Path path = Paths.get(file.getPath());
       bytes = Files.readAllBytes(path);
     } catch (FileNotFoundException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
       userProcessFlag = false;
     } catch (IOException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
       userProcessFlag = false;
     }
 
@@ -410,7 +410,7 @@ public class BulkUploadManagementActorTest {
     try {
       Thread.sleep(5000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
     }
 
     TestKit probe = new TestKit(system);
@@ -425,10 +425,10 @@ public class BulkUploadManagementActorTest {
       Path path = Paths.get(file.getPath());
       bytes = Files.readAllBytes(path);
     } catch (FileNotFoundException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
       userProcessFlag = false;
     } catch (IOException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
       userProcessFlag = false;
     }
 
@@ -460,7 +460,7 @@ public class BulkUploadManagementActorTest {
     try {
       Thread.sleep(5000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
     }
 
     TestKit probe = new TestKit(system);
@@ -499,7 +499,7 @@ public class BulkUploadManagementActorTest {
     try {
       Thread.sleep(15000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
     }
 
     TestKit probe = new TestKit(system);
@@ -514,10 +514,10 @@ public class BulkUploadManagementActorTest {
       Path path = Paths.get(file.getPath());
       bytes = Files.readAllBytes(path);
     } catch (FileNotFoundException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
       battchProcessFlag = false;
     } catch (IOException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);;
       battchProcessFlag = false;
     }
 

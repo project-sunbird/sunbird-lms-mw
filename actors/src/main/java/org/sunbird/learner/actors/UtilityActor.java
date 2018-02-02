@@ -63,9 +63,9 @@ public class UtilityActor extends UntypedAbstractActor {
             innerMap.put(JsonKey.CONTENT, map);
             if (((int) map.get(JsonKey.COMPLETED_COUNT)) == 1
                 && contentStateInfo.get(contentid) == 2) {
-              innerMap.put(JsonKey.PROGRESS, new Integer(1));
+              innerMap.put(JsonKey.PROGRESS, Integer.valueOf(1));
             } else {
-              innerMap.put(JsonKey.PROGRESS, new Integer(0));
+              innerMap.put(JsonKey.PROGRESS, Integer.valueOf(0));
             }
             temp.put(primary, innerMap);
           }

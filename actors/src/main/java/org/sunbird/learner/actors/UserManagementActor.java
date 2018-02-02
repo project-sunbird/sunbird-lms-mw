@@ -754,7 +754,6 @@ public class UserManagementActor extends UntypedAbstractActor {
                 }
 
               }
-
             }
           }
         }
@@ -901,7 +900,6 @@ public class UserManagementActor extends UntypedAbstractActor {
         sender().tell(exception, self());
       }
     } else {
-      // TODO:need to implement code for other login like fb login, gmail login etc
       ProjectCommonException exception =
           new ProjectCommonException(ResponseCode.invalidCredentials.getErrorCode(),
               ResponseCode.invalidCredentials.getErrorMessage(),
@@ -960,9 +958,6 @@ public class UserManagementActor extends UntypedAbstractActor {
   @SuppressWarnings("unchecked")
   private void updateUser(Request actorMessage) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-    Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
-    Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
@@ -975,10 +970,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       SocialMediaType
           .validateSocialMedia((List<Map<String, String>>) userMap.get(JsonKey.WEB_PAGES));
     }
-    // remove these fields from req
-    userMap.remove(JsonKey.ENC_EMAIL);
-    userMap.remove(JsonKey.ENC_PHONE);
-    userMap.remove(JsonKey.EMAIL_VERIFIED);
+
 
     if (null != userMap.get(JsonKey.USER_ID)) {
       userMap.put(JsonKey.ID, userMap.get(JsonKey.USER_ID));
@@ -999,12 +991,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       }
     }
     // not allowing user to update the status,provider,userName
-    userMap.remove(JsonKey.STATUS);
-    userMap.remove(JsonKey.PROVIDER);
-    userMap.remove(JsonKey.USERNAME);
-    userMap.remove(JsonKey.REGISTERED_ORG_ID);
-    userMap.remove(JsonKey.ROOT_ORG_ID);
-    userMap.remove(JsonKey.LOGIN_ID);
+    removeFieldsFrmReq(userMap);
 
     if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EMAIL))) {
       boolean flag = checkEmailSameOrDiff(userMap);
@@ -1041,68 +1028,13 @@ public class UserManagementActor extends UntypedAbstractActor {
     }
     // update user address
     if (userMap.containsKey(JsonKey.ADDRESS)) {
-      List<Map<String, Object>> reqList = (List<Map<String, Object>>) userMap.get(JsonKey.ADDRESS);
-      for (int i = 0; i < reqList.size(); i++) {
-        Map<String, Object> reqMap = reqList.get(i);
-        if (reqMap.containsKey(JsonKey.IS_DELETED) && null != reqMap.get(JsonKey.IS_DELETED)
-            && ((boolean) reqMap.get(JsonKey.IS_DELETED))
-            && !ProjectUtil.isStringNullOREmpty((String) reqMap.get(JsonKey.ID))) {
-          deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(),
-              (String) reqMap.get(JsonKey.ID));
-          continue;
-        }
-        processUserAddress(reqMap, req, userMap, addrDbInfo);
-
-      }
+      updateUserAddress(req, userMap);
     }
     if (userMap.containsKey(JsonKey.EDUCATION)) {
-      List<Map<String, Object>> reqList =
-          (List<Map<String, Object>>) userMap.get(JsonKey.EDUCATION);
-      for (int i = 0; i < reqList.size(); i++) {
-        Map<String, Object> reqMap = reqList.get(i);
-        if (reqMap.containsKey(JsonKey.IS_DELETED) && null != reqMap.get(JsonKey.IS_DELETED)
-            && ((boolean) reqMap.get(JsonKey.IS_DELETED))
-            && !ProjectUtil.isStringNullOREmpty((String) reqMap.get(JsonKey.ID))) {
-          String addrsId = null;
-          if (reqMap.containsKey(JsonKey.ADDRESS) && null != reqMap.get(JsonKey.ADDRESS)) {
-            addrsId = (String) ((Map<String, Object>) reqMap.get(JsonKey.ADDRESS)).get(JsonKey.ID);
-            deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
-          } else {
-            addrsId = getAddressId((String) reqMap.get(JsonKey.ID), eduDbInfo);
-            if (null != addrsId) {
-              deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
-            }
-          }
-          deleteRecord(eduDbInfo.getKeySpace(), eduDbInfo.getTableName(),
-              (String) reqMap.get(JsonKey.ID));
-          continue;
-        }
-        processEducationInfo(reqMap, userMap, req, addrDbInfo, eduDbInfo);
-      }
+      updateUserEducation(req, userMap);
     }
     if (userMap.containsKey(JsonKey.JOB_PROFILE)) {
-      List<Map<String, Object>> reqList =
-          (List<Map<String, Object>>) userMap.get(JsonKey.JOB_PROFILE);
-      for (Map<String, Object> reqMap : reqList) {
-        if (reqMap.containsKey(JsonKey.IS_DELETED) && null != reqMap.get(JsonKey.IS_DELETED)
-            && ((boolean) reqMap.get(JsonKey.IS_DELETED))
-            && !ProjectUtil.isStringNullOREmpty((String) reqMap.get(JsonKey.ID))) {
-          String addrsId = null;
-          if (reqMap.containsKey(JsonKey.ADDRESS) && null != reqMap.get(JsonKey.ADDRESS)) {
-            addrsId = (String) ((Map<String, Object>) reqMap.get(JsonKey.ADDRESS)).get(JsonKey.ID);
-            deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
-          } else {
-            addrsId = getAddressId((String) reqMap.get(JsonKey.ID), jobProDbInfo);
-            if (null != addrsId) {
-              deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
-            }
-          }
-          deleteRecord(jobProDbInfo.getKeySpace(), jobProDbInfo.getTableName(),
-              (String) reqMap.get(JsonKey.ID));
-          continue;
-        }
-        processJobProfileInfo(reqMap, userMap, req, addrDbInfo, jobProDbInfo);
-      }
+      updateUserJobProfile(req, userMap);
     }
 
     updateUserExtId(requestMap);
@@ -1122,6 +1054,89 @@ public class UserManagementActor extends UntypedAbstractActor {
       } catch (Exception ex) {
         ProjectLogger.log("Exception Occured during saving user to Es while updating user : ", ex);
       }
+    }
+  }
+
+  private void removeFieldsFrmReq(Map<String, Object> userMap) {
+    userMap.remove(JsonKey.ENC_EMAIL);
+    userMap.remove(JsonKey.ENC_PHONE);
+    userMap.remove(JsonKey.EMAIL_VERIFIED);
+    userMap.remove(JsonKey.STATUS);
+    userMap.remove(JsonKey.PROVIDER);
+    userMap.remove(JsonKey.USERNAME);
+    userMap.remove(JsonKey.REGISTERED_ORG_ID);
+    userMap.remove(JsonKey.ROOT_ORG_ID);
+    userMap.remove(JsonKey.LOGIN_ID);
+  }
+
+  private void updateUserJobProfile(Map<String, Object> req, Map<String, Object> userMap) {
+    Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
+    Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
+    List<Map<String, Object>> reqList =
+        (List<Map<String, Object>>) userMap.get(JsonKey.JOB_PROFILE);
+    for (Map<String, Object> reqMap : reqList) {
+      if (reqMap.containsKey(JsonKey.IS_DELETED) && null != reqMap.get(JsonKey.IS_DELETED)
+          && ((boolean) reqMap.get(JsonKey.IS_DELETED))
+          && !ProjectUtil.isStringNullOREmpty((String) reqMap.get(JsonKey.ID))) {
+        String addrsId = null;
+        if (reqMap.containsKey(JsonKey.ADDRESS) && null != reqMap.get(JsonKey.ADDRESS)) {
+          addrsId = (String) ((Map<String, Object>) reqMap.get(JsonKey.ADDRESS)).get(JsonKey.ID);
+          deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
+        } else {
+          addrsId = getAddressId((String) reqMap.get(JsonKey.ID), jobProDbInfo);
+          if (null != addrsId) {
+            deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
+          }
+        }
+        deleteRecord(jobProDbInfo.getKeySpace(), jobProDbInfo.getTableName(),
+            (String) reqMap.get(JsonKey.ID));
+        continue;
+      }
+      processJobProfileInfo(reqMap, userMap, req, addrDbInfo, jobProDbInfo);
+    }
+  }
+
+  private void updateUserEducation(Map<String, Object> req, Map<String, Object> userMap) {
+    Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
+    Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
+    List<Map<String, Object>> reqList = (List<Map<String, Object>>) userMap.get(JsonKey.EDUCATION);
+    for (int i = 0; i < reqList.size(); i++) {
+      Map<String, Object> reqMap = reqList.get(i);
+      if (reqMap.containsKey(JsonKey.IS_DELETED) && null != reqMap.get(JsonKey.IS_DELETED)
+          && ((boolean) reqMap.get(JsonKey.IS_DELETED))
+          && !ProjectUtil.isStringNullOREmpty((String) reqMap.get(JsonKey.ID))) {
+        String addrsId = null;
+        if (reqMap.containsKey(JsonKey.ADDRESS) && null != reqMap.get(JsonKey.ADDRESS)) {
+          addrsId = (String) ((Map<String, Object>) reqMap.get(JsonKey.ADDRESS)).get(JsonKey.ID);
+          deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
+        } else {
+          addrsId = getAddressId((String) reqMap.get(JsonKey.ID), eduDbInfo);
+          if (null != addrsId) {
+            deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
+          }
+        }
+        deleteRecord(eduDbInfo.getKeySpace(), eduDbInfo.getTableName(),
+            (String) reqMap.get(JsonKey.ID));
+        continue;
+      }
+      processEducationInfo(reqMap, userMap, req, addrDbInfo, eduDbInfo);
+    }
+  }
+
+  private void updateUserAddress(Map<String, Object> req, Map<String, Object> userMap) {
+    Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
+    List<Map<String, Object>> reqList = (List<Map<String, Object>>) userMap.get(JsonKey.ADDRESS);
+    for (int i = 0; i < reqList.size(); i++) {
+      Map<String, Object> reqMap = reqList.get(i);
+      if (reqMap.containsKey(JsonKey.IS_DELETED) && null != reqMap.get(JsonKey.IS_DELETED)
+          && ((boolean) reqMap.get(JsonKey.IS_DELETED))
+          && !ProjectUtil.isStringNullOREmpty((String) reqMap.get(JsonKey.ID))) {
+        deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(),
+            (String) reqMap.get(JsonKey.ID));
+        continue;
+      }
+      processUserAddress(reqMap, req, userMap, addrDbInfo);
+
     }
   }
 
@@ -1409,61 +1424,7 @@ public class UserManagementActor extends UntypedAbstractActor {
     // validate root org and reg org
     userMap.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
     if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.REGISTERED_ORG_ID))) {
-      Response orgResponse = null;
-      try {
-        orgResponse = cassandraOperation.getRecordById(orgDb.getKeySpace(), orgDb.getTableName(),
-            (String) userMap.get(JsonKey.REGISTERED_ORG_ID));
-      } catch (Exception e) {
-        ProjectLogger.log("Exception occured while verifying regOrgId during create user : ", e);
-        throw new ProjectCommonException(ResponseCode.invalidOrgId.getErrorCode(),
-            ResponseCode.invalidOrgId.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-      }
-      List<Map<String, Object>> responseList =
-          (List<Map<String, Object>>) orgResponse.get(JsonKey.RESPONSE);
-      String rootOrgId = "";
-      if (null != responseList && !(responseList.isEmpty())) {
-        String orgId = (String) responseList.get(0).get(JsonKey.ID);
-        Map<String, Object> orgMap = responseList.get(0);
-        boolean isRootOrg = false;
-        if (null != orgMap.get(JsonKey.IS_ROOT_ORG)) {
-          isRootOrg = (boolean) orgMap.get(JsonKey.IS_ROOT_ORG);
-        } else {
-          isRootOrg = false;
-        }
-        if (isRootOrg) {
-          rootOrgId = orgId;
-        } else {
-          String channel = (String) orgMap.get(JsonKey.CHANNEL);
-          if (!ProjectUtil.isStringNullOREmpty(channel)) {
-            Map<String, Object> filters = new HashMap<>();
-            filters.put(JsonKey.CHANNEL, channel);
-            filters.put(JsonKey.IS_ROOT_ORG, true);
-            Map<String, Object> esResult = elasticSearchComplexSearch(filters,
-                EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
-            if (isNotNull(esResult) && esResult.containsKey(JsonKey.CONTENT)
-                && isNotNull(esResult.get(JsonKey.CONTENT))
-                && !(((List<String>) esResult.get(JsonKey.CONTENT)).isEmpty())) {
-              Map<String, Object> esContent =
-                  ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
-              rootOrgId = (String) esContent.get(JsonKey.ID);
-            } else {
-              throw new ProjectCommonException(
-                  ResponseCode.invalidRootOrgData.getErrorCode(), ProjectUtil
-                      .formatMessage(ResponseCode.invalidRootOrgData.getErrorMessage(), channel),
-                  ResponseCode.CLIENT_ERROR.getResponseCode());
-            }
-          } else {
-            rootOrgId = JsonKey.DEFAULT_ROOT_ORG_ID;
-          }
-        }
-        userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
-      } else {
-        throw new ProjectCommonException(ResponseCode.invalidOrgId.getErrorCode(),
-            ResponseCode.invalidOrgId.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-      }
-      // --------------------------------------------------
+      validateRegAndRootOrg(userMap);
     } else {
       String provider = (String) userMap.get(JsonKey.PROVIDER);
       String rootOrgId = Util.getRootOrgIdFromChannel(provider);
@@ -1672,6 +1633,62 @@ public class UserManagementActor extends UntypedAbstractActor {
       ProjectLogger.log("no call for ES to save user");
     }
 
+  }
+
+  private void validateRegAndRootOrg(Map<String, Object> userMap) {
+    Util.DbInfo orgDb = Util.dbInfoMap.get(JsonKey.ORG_DB);
+    Response orgResponse = null;
+    try {
+      orgResponse = cassandraOperation.getRecordById(orgDb.getKeySpace(), orgDb.getTableName(),
+          (String) userMap.get(JsonKey.REGISTERED_ORG_ID));
+    } catch (Exception e) {
+      ProjectLogger.log("Exception occured while verifying regOrgId during create user : ", e);
+      throw new ProjectCommonException(ResponseCode.invalidOrgId.getErrorCode(),
+          ResponseCode.invalidOrgId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    List<Map<String, Object>> responseList =
+        (List<Map<String, Object>>) orgResponse.get(JsonKey.RESPONSE);
+    String rootOrgId = "";
+    if (null != responseList && !(responseList.isEmpty())) {
+      String orgId = (String) responseList.get(0).get(JsonKey.ID);
+      Map<String, Object> orgMap = responseList.get(0);
+      boolean isRootOrg = false;
+      if (null != orgMap.get(JsonKey.IS_ROOT_ORG)) {
+        isRootOrg = (boolean) orgMap.get(JsonKey.IS_ROOT_ORG);
+      } else {
+        isRootOrg = false;
+      }
+      if (isRootOrg) {
+        rootOrgId = orgId;
+      } else {
+        String channel = (String) orgMap.get(JsonKey.CHANNEL);
+        if (!ProjectUtil.isStringNullOREmpty(channel)) {
+          Map<String, Object> filters = new HashMap<>();
+          filters.put(JsonKey.CHANNEL, channel);
+          filters.put(JsonKey.IS_ROOT_ORG, true);
+          Map<String, Object> esResult = elasticSearchComplexSearch(filters,
+              EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
+          if (isNotNull(esResult) && esResult.containsKey(JsonKey.CONTENT)
+              && isNotNull(esResult.get(JsonKey.CONTENT))
+              && !(((List<String>) esResult.get(JsonKey.CONTENT)).isEmpty())) {
+            Map<String, Object> esContent =
+                ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
+            rootOrgId = (String) esContent.get(JsonKey.ID);
+          } else {
+            throw new ProjectCommonException(
+                ResponseCode.invalidRootOrgData.getErrorCode(), ProjectUtil
+                    .formatMessage(ResponseCode.invalidRootOrgData.getErrorMessage(), channel),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+          }
+        } else {
+          rootOrgId = JsonKey.DEFAULT_ROOT_ORG_ID;
+        }
+      }
+      userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+    } else {
+      throw new ProjectCommonException(ResponseCode.invalidOrgId.getErrorCode(),
+          ResponseCode.invalidOrgId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
   }
 
   private void sendSMS(Map<String, Object> userMap) {
@@ -2987,7 +3004,7 @@ public class UserManagementActor extends UntypedAbstractActor {
   }
 
   private String getLastLoginTime(String userId, String time) {
-    String lastLoginTime = "0";
+    String lastLoginTime = "";
     if (Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED))) {
       SSOManager manager = SSOServiceFactory.getInstance();
       lastLoginTime = manager.getLastLoginTime(userId);

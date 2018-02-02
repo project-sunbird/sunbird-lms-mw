@@ -37,6 +37,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.Application;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
 
@@ -69,6 +70,7 @@ public class CourseBatchManagementActorTest {
   
   @BeforeClass
   public static void setUp() {
+      Application.startLocalActorSystem();
       hashTagId = String.valueOf(System.currentTimeMillis());
       hashTagId2 = String.valueOf(System.currentTimeMillis())+45;
       system = ActorSystem.create("system");

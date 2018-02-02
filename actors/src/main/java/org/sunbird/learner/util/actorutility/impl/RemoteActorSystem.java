@@ -10,7 +10,7 @@ import org.sunbird.learner.util.actorutility.ActorSystem;
  * @author Amit Kumar
  *
  */
-public class RemoteActorSystem implements ActorSystem {
+public final class RemoteActorSystem implements ActorSystem {
   private static ActorSystem actorSystem = null;
   private ActorSelection selection = null;
 

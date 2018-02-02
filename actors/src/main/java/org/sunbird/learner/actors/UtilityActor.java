@@ -30,7 +30,7 @@ import org.sunbird.learner.util.Util;
 public class UtilityActor extends UntypedAbstractActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private final String CONTENT_STATE_INFO = "contentStateInfo";
+  private static final String CONTENT_STATE_INFO = "contentStateInfo";
 
   @SuppressWarnings("unchecked")
   @Override

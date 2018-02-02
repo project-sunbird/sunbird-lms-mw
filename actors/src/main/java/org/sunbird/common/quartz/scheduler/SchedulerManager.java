@@ -30,7 +30,7 @@ import org.sunbird.metrics.actors.MetricsJobScheduler;
  * @author Manzarul
  *
  */
-public class SchedulerManager {
+public final class SchedulerManager {
 
   private static final String file = "quartz.properties";
   private static Scheduler scheduler = null;

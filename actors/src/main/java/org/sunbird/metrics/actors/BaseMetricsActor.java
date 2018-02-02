@@ -2,6 +2,8 @@ package org.sunbird.metrics.actors;
 
 import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 
+import akka.actor.UntypedAbstractActor;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -15,7 +17,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -32,19 +33,14 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import akka.actor.UntypedAbstractActor;
-
 public abstract class BaseMetricsActor extends UntypedAbstractActor {
   
   private static ObjectMapper mapper = new ObjectMapper();
 
-  public static final String startDate = "startDate";
-  public static final String endDate = "endDate";
-  public static final String startTimeMilis = "startTimeMilis";
-  public static final String endTimeMilis = "endTimeMilis";
+  public static final String STARTDATE = "startDate";
+  public static final String ENDDATE = "endDate";
+  public static final String STARTTIMEMILIS = "startTimeMilis";
+  public static final String ENDTIMEMILIS = "endTimeMilis";
   public static final String LTE = "<=";
   public static final String LT = "<";
   public static final String GTE = ">=";
@@ -56,10 +52,10 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   public static final String INTERVAL = "interval";
   public static final String FORMAT = "format";
   protected static final String USER_ID = "user_id";
-  protected static final String folderPath = "/data/";
+  protected static final String FOLDERPATH = "/data/";
   protected static final String FILENAMESEPARATOR = "_";
   protected static final MetricsCache cache = new MetricsCache();
-  private static final String Charsets_UTF_8 = "UTF-8";
+  private static final String CHARSETS_UTF_8 = "UTF-8";
   
 
   protected Map<String, Object> addSnapshot(String keyName, String name, Object value,
@@ -94,10 +90,10 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     String endDateStr = sdf.format(endDateValue.getTime());
     dateMap.put(INTERVAL, "1d");
     dateMap.put(FORMAT, "yyyy-MM-dd");
-    dateMap.put(startDate, startDateStr);
-    dateMap.put(endDate, endDateStr);
-    dateMap.put(startTimeMilis, cal.getTimeInMillis());
-    dateMap.put(endTimeMilis, endDateValue.getTime());
+    dateMap.put(STARTDATE, startDateStr);
+    dateMap.put(ENDDATE, endDateStr);
+    dateMap.put(STARTTIMEMILIS, cal.getTimeInMillis());
+    dateMap.put(ENDTIMEMILIS, endDateValue.getTime());
     return dateMap;
   }
 
@@ -119,8 +115,8 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     calendar.add(Calendar.WEEK_OF_YEAR, 1);
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
     String endDateStr = sdf.format(calendar.getTime());
-    dateMap.put(endDate, endDateStr);
-    dateMap.put(endTimeMilis, calendar.getTimeInMillis());
+    dateMap.put(ENDDATE, endDateStr);
+    dateMap.put(ENDTIMEMILIS, calendar.getTimeInMillis());
     calendar.add(periodMap.get(KEY), -(periodMap.get(VALUE)));
     calendar.add(Calendar.DATE, 1);
     calendar.set(Calendar.HOUR_OF_DAY,0);
@@ -130,26 +126,26 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     dateMap.put(INTERVAL, "1w");
     dateMap.put(FORMAT, "yyyy-ww");
     String startDateStr = sdf.format(calendar.getTime());
-    dateMap.put(startDate, startDateStr);
-    dateMap.put(startTimeMilis, calendar.getTimeInMillis());
+    dateMap.put(STARTDATE, startDateStr);
+    dateMap.put(STARTTIMEMILIS, calendar.getTimeInMillis());
     return dateMap;
   }
   
   protected static int getDaysByPeriod(String period) {
     int days = 0;
     switch (period) {
-      case "7d": {
+      case "7d": 
         days = 7;
         break;
-      }
-      case "14d": {
+      
+      case "14d": 
         days = 14;
         break;
-      }
-      case "5w": {
+      
+      case "5w": 
         days = 35;
         break;
-      }
+      
       
       default:
         days = 0;
@@ -166,21 +162,21 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   protected static Map<String, Integer> getDaysByPeriodStr(String period) {
     Map<String, Integer> dayPeriod = new HashMap<>();
     switch (period) {
-      case "7d": {
+      case "7d": 
         dayPeriod.put(KEY, Calendar.DATE);
         dayPeriod.put(VALUE, 7);
         break;
-      }
-      case "14d": {
+      
+      case "14d": 
         dayPeriod.put(KEY, Calendar.DATE);
         dayPeriod.put(VALUE, 14);
         break;
-      }
-      case "5w": {
+      
+      case "5w": 
         dayPeriod.put(KEY, Calendar.WEEK_OF_YEAR);
         dayPeriod.put(VALUE, 5);
         break;
-      }
+      
     }
     if (dayPeriod.isEmpty()) {
       throw new ProjectCommonException(ResponseCode.invalidPeriod.getErrorCode(),
@@ -193,34 +189,34 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   protected static String getEkstepPeriod(String period) {
     String days = "";
     switch (period) {
-      case "7d": {
+      case "7d": 
         days = "LAST_7_DAYS";
         break;
-      }
-      case "14d": {
+      
+      case "14d": 
         days = "LAST_14_DAYS";
         break;
-      }
-      case "5w": {
+      
+      case "5w": 
         days = "LAST_5_WEEKS";
         break;
-      }
-      default : {
+      
+      default : 
           throw new ProjectCommonException(ResponseCode.invalidPeriod.getErrorCode(),
               ResponseCode.invalidPeriod.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
-        }
+        
     }
     return days;
   }
   
   protected List<Map<String, Object>> createBucketStrForWeek(String periodStr) {
     Map<String, Object> periodMap = getStartAndEndDateForWeek(periodStr);
-    String date = (String) periodMap.get(startDate);
+    String date = (String) periodMap.get(STARTDATE);
     List<Map<String, Object>> bucket = new ArrayList<>();
     Calendar cal = Calendar.getInstance();
     for (int day = 0; day < 5; day++) {
-      Map<String, Object> bucketData = new LinkedHashMap<String, Object>();
+      Map<String, Object> bucketData = new LinkedHashMap<>();
       String keyName = "";
       String key = "";
       Date dateValue = null;
@@ -229,7 +225,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
         dateValue = new SimpleDateFormat("yyyy-MM-dd").parse(date);
         cal.setTime(dateValue);
         int week = cal.get(Calendar.WEEK_OF_YEAR);
-        key = cal.get(Calendar.YEAR) + "" + week;
+        key = cal.get(Calendar.YEAR) + Integer.toString(week);
         date = keyName.toLowerCase().split("to")[1];
         date = date.trim();
         dateValue = new SimpleDateFormat("yyyy-MM-dd").parse(date);
@@ -257,13 +253,13 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
 
   protected List<Map<String, Object>> createBucketStructureDays(String periodStr) {
     int days = getDaysByPeriod(periodStr);
-    Date date = new Date();
+    Date date = null;
     Calendar calendar = Calendar.getInstance();
     calendar.add(Calendar.DATE, -1);
     date = calendar.getTime();
     List<Map<String, Object>> bucket = new ArrayList<>();
     for (int day = days - 1; day >= 0; day--) {
-      Map<String, Object> bucketData = new LinkedHashMap<String, Object>();
+      Map<String, Object> bucketData = new LinkedHashMap<>();
       Calendar cal = Calendar.getInstance();
       cal.setTimeInMillis(date.getTime());
       cal.add(Calendar.DATE, -(day));
@@ -328,7 +324,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     return response;
   }
 
-  public static String makePostRequest(String url, String body) throws Exception {
+  public static String makePostRequest(String url, String body) throws IOException{
     ProjectLogger.log("Request to Ekstep for Metrics" + body);
     String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
     if (ProjectUtil.isStringNullOREmpty(baseSearchUrl)) {
@@ -344,7 +340,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
     HttpPost post = new HttpPost(baseSearchUrl + PropertiesCache.getInstance().getProperty(url));
     post.addHeader("Content-Type", "application/json; charset=utf-8");
     post.addHeader(JsonKey.AUTHORIZATION, authKey);
-    post.setEntity(new StringEntity(body, Charsets_UTF_8));
+    post.setEntity(new StringEntity(body, CHARSETS_UTF_8));
     HttpResponse response = client.execute(post);
     ProjectLogger.log("##ResponseCode" + response.getStatusLine().getStatusCode());
     if (response.getStatusLine().getStatusCode() != 200) {
@@ -353,9 +349,9 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
     BufferedReader rd = new BufferedReader(
-        new InputStreamReader(response.getEntity().getContent(), Charsets_UTF_8));
+        new InputStreamReader(response.getEntity().getContent(), CHARSETS_UTF_8));
 
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
     String line = "";
     while ((line = rd.readLine()) != null) {
       result.append(line);
@@ -367,7 +363,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   @SuppressWarnings({"rawtypes"})
   protected List<Map<String, Object>> getBucketData(Map aggKeyMap, String period) {
     if (null == aggKeyMap || aggKeyMap.isEmpty()) {
-      return new ArrayList<Map<String, Object>>();
+      return new ArrayList<>();
     }
     if ("5w".equalsIgnoreCase(period)) {
       return getBucketDataForWeeks(aggKeyMap);
@@ -378,10 +374,10 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   
   @SuppressWarnings({"unchecked", "rawtypes"})
   protected List<Map<String, Object>> getBucketDataForDays(Map aggKeyMap) {
-    List<Map<String, Object>> parentGroupList = new ArrayList<Map<String, Object>>();
+    List<Map<String, Object>> parentGroupList = new ArrayList<>();
     List<Map<String, Double>> aggKeyList = (List<Map<String, Double>>) aggKeyMap.get("buckets");
     for (Map aggKeyListMap : aggKeyList) {
-      Map<String, Object> parentCountObject = new LinkedHashMap<String, Object>();
+      Map<String, Object> parentCountObject = new LinkedHashMap<>();
       parentCountObject.put(KEY, aggKeyListMap.get(KEY));
       parentCountObject.put(KEYNAME, aggKeyListMap.get("key_as_string"));
       parentCountObject.put(VALUE, aggKeyListMap.get("doc_count"));
@@ -392,10 +388,10 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   
   @SuppressWarnings({"unchecked", "rawtypes"})
   protected List<Map<String, Object>> getBucketDataForWeeks(Map aggKeyMap) {
-    List<Map<String, Object>> parentGroupList = new ArrayList<Map<String, Object>>();
+    List<Map<String, Object>> parentGroupList = new ArrayList<>();
     List<Map<String, Double>> aggKeyList = (List<Map<String, Double>>) aggKeyMap.get("buckets");
     for (Map aggKeyListMap : aggKeyList) {
-      Map<String, Object> parentCountObject = new LinkedHashMap<String, Object>();
+      Map<String, Object> parentCountObject = new LinkedHashMap<>();
       parentCountObject.put(KEY, formatKeyString((String) aggKeyListMap.get("key_as_string")));
       parentCountObject.put(KEYNAME, formatKeyNameString(aggKeyListMap.get(KEY)));
       parentCountObject.put(VALUE, aggKeyListMap.get("doc_count"));
@@ -409,7 +405,7 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
   }
   
   protected String formatKeyNameString(Object keyName) {
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     Date date = new Date();
     if (keyName instanceof Long) {
       date = new Date((Long) keyName);
@@ -442,12 +438,8 @@ public abstract class BaseMetricsActor extends UntypedAbstractActor {
       responseData.put(JsonKey.PERIOD, periodStr);
       responseData.put(JsonKey.SNAPSHOT, esData.get(JsonKey.SNAPSHOT));
       responseData.put(JsonKey.SERIES, esData.get(JsonKey.SERIES));
-    } catch (JsonProcessingException e) {
-      ProjectLogger.log("Error occured", e);
-      // throw new ProjectCommonException("", "", ResponseCode.SERVER_ERROR.getResponseCode());
     } catch (IOException e) {
       ProjectLogger.log("Error occured", e);
-      // throw new ProjectCommonException("", "", ResponseCode.SERVER_ERROR.getResponseCode());
     }
     response.putAll(responseData);
     return response;

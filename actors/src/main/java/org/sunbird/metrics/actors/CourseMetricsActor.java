@@ -222,11 +222,11 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
       if (!("fromBegining".equalsIgnoreCase(periodStr))) {
         Map<String, Object> dateRange = getStartAndEndDate(periodStr);
-        dateRangeFilter.put(GTE, (String) dateRange.get(startDate));
-        dateRangeFilter.put(LTE, (String) dateRange.get(endDate));
+        dateRangeFilter.put(GTE, (String) dateRange.get(STARTDATE));
+        dateRangeFilter.put(LTE, (String) dateRange.get(ENDDATE));
         if ("5w".equalsIgnoreCase(periodStr)) {
           Map<String, Object> dateMap = getStartAndEndDateForDay(periodStr);
-          dateRangeFilter.put(LTE, (String) dateMap.get(endDate));
+          dateRangeFilter.put(LTE, (String) dateMap.get(ENDDATE));
         }
         filter.put(JsonKey.DATE_TIME, dateRangeFilter);
       }
@@ -503,8 +503,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
     Map<String, Object> resultMap = new HashMap<>();
     filter.put(JsonKey.COURSE_ID, courseId);
     Map<String, String> dateRangeFilter = new HashMap<>();
-    dateRangeFilter.put(GTE, (String) dateRange.get(startDate));
-    dateRangeFilter.put(LTE, (String) dateRange.get(endDate));
+    dateRangeFilter.put(GTE, (String) dateRange.get(STARTDATE));
+    dateRangeFilter.put(LTE, (String) dateRange.get(ENDDATE));
     filter.put(JsonKey.DATE_TIME, dateRangeFilter);
     filter.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.COMPLETED.getValue());
 

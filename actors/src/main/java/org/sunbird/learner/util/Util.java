@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,13 +47,14 @@ public final class Util {
 
   public static final Map<String, DbInfo> dbInfoMap = new HashMap<>();
   public static final int RECOMENDED_LIST_SIZE = 10;
-
+  private static PropertiesCache propertiesCache = PropertiesCache.getInstance();
   private static final String KEY_SPACE_NAME = "sunbird";
   private static Properties prop = new Properties();
   private static Map<String, String> headers = new HashMap<>();
   private static Map<Integer, List<Integer>> orgStatusTransition = new HashMap<>();
   public static final Map<String, Object> auditLogUrlMap = new HashMap<>();
-
+  private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
+  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   static {
     loadPropertiesFile();
@@ -714,7 +716,6 @@ public final class Util {
       String requestedby = (String) req.get(JsonKey.REQUESTED_BY);
       // getting context from request context set y controller read from header...
       String channel = (String) actorMessage.getContext().get(JsonKey.CHANNEL);
-      // requestContext.put(JsonKey.REQUEST_ID, (String) req.get(JsonKey.REQUEST_ID));
       requestContext.put(JsonKey.CHANNEL, channel);
       requestContext.put(JsonKey.ACTOR_ID, actorMessage.getContext().get(JsonKey.ACTOR_ID));
       requestContext.put(JsonKey.ACTOR_TYPE, actorMessage.getContext().get(JsonKey.ACTOR_TYPE));
@@ -757,6 +758,34 @@ public final class Util {
     requestContext.put(JsonKey.ACTOR_TYPE, actorType);
     requestContext.put(JsonKey.ENV, environment);
     context.setRequestContext(requestContext);
+  }
+  
+  public static String getSunbirdWebUrlPerTenent(Map<String, Object> userMap){
+    StringBuilder webUrl = new StringBuilder();
+    String slug = "";
+    if (ProjectUtil.isStringNullOREmpty(System.getenv(SUNBIRD_WEB_URL))) {
+       webUrl.append(propertiesCache.getProperty(SUNBIRD_WEB_URL));
+    } else {
+       webUrl.append(System.getenv(SUNBIRD_WEB_URL));
+    }
+    if(!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.ROOT_ORG_ID))){
+      Map<String,Object> orgMap = getOrgDetails((String) userMap.get(JsonKey.ROOT_ORG_ID));
+      slug = (String) orgMap.get(JsonKey.SLUG);
+    }
+    if(!ProjectUtil.isStringNullOREmpty((String) slug)){
+     webUrl.append("/"+slug);
+    }
+    return webUrl.toString();
+  }
+
+  private static Map<String, Object> getOrgDetails(String identifier) {
+    DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+    Response response = cassandraOperation.getRecordById(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), identifier);
+    List<Map<String, Object>> res = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if(null != res && !res.isEmpty()){
+      return res.get(0);
+    }
+    return Collections.emptyMap();
   }
 
 }

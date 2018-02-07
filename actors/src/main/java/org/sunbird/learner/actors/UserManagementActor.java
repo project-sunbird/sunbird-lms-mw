@@ -1615,6 +1615,8 @@ public class UserManagementActor extends UntypedAbstractActor {
         correlatedObject);
 
     // user created successfully send the onboarding mail
+    //putting rootOrgId to get web url per tenant while sending mail
+    emailTemplateMap.put(JsonKey.ROOT_ORG_ID, userMap.get(JsonKey.ROOT_ORG_ID));
     sendOnboardingMail(emailTemplateMap);
     sendSMS(userMap);
 
@@ -1702,10 +1704,8 @@ public class UserManagementActor extends UntypedAbstractActor {
       if (ProjectUtil.isStringNullOREmpty(envName)) {
         envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
       }
-      String webUrl = System.getenv(SUNBIRD_WEB_URL);
-      if (ProjectUtil.isStringNullOREmpty(webUrl)) {
-        webUrl = propertiesCache.getProperty(SUNBIRD_WEB_URL);
-      }
+      String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
+      
       ProjectLogger.log("shortened url :: " + webUrl);
       String sms = ProjectUtil.getSMSBody(name, webUrl, envName);
       if (ProjectUtil.isStringNullOREmpty((String) sms)) {
@@ -2896,10 +2896,7 @@ public class UserManagementActor extends UntypedAbstractActor {
       reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
       emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
 
-      String webUrl = System.getenv(SUNBIRD_WEB_URL);
-      if (ProjectUtil.isStringNullOREmpty(webUrl)) {
-        webUrl = propertiesCache.getProperty(SUNBIRD_WEB_URL);
-      }
+      String webUrl = Util.getSunbirdWebUrlPerTenent(emailTemplateMap);
       if ((!ProjectUtil.isStringNullOREmpty(webUrl))
           && (!SUNBIRD_WEB_URL.equalsIgnoreCase(webUrl))) {
         emailTemplateMap.put(JsonKey.WEB_URL, webUrl);

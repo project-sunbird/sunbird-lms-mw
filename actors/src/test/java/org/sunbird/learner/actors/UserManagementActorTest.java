@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -2109,6 +2110,24 @@ public class UserManagementActorTest {
     assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
+  
+  @Test
+  public void testGetSunbirdWebUrlPerTenent(){
+    Map<String,Object> userMap = new HashMap<>();
+    userMap.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
+    String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
+    Assert.assertNotNull(webUrl);
+  }
+  
+  @Test
+  public void testGetSunbirdWebUrlPerTenentWithRootOrgIdAsNull(){
+    Map<String,Object> userMap = new HashMap<>();
+    userMap.put(JsonKey.ROOT_ORG_ID, "1234567890");
+    String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
+    Assert.assertNotNull(webUrl);
+  }
+  
+  
   @AfterClass
   public static void deleteUser() {
     try {

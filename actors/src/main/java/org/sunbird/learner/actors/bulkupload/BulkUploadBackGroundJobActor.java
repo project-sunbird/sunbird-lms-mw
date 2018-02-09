@@ -1319,6 +1319,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
             userMap.remove(JsonKey.EMAIL);
           }
           updateKeyCloakUserBase(userMap);
+          userMap.put(JsonKey.EMAIL, (String) userMap.get(JsonKey.EMAIL));
         } else {
           throw new ProjectCommonException(ResponseCode.userRegOrgError.getErrorCode(),
               ResponseCode.userRegOrgError.getErrorMessage(),

@@ -506,12 +506,14 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
       Date todate = null;
       Date endDate = null;
       try {
-        endDate = format.parse((String) res.get(JsonKey.END_DATE));
+        if(!ProjectUtil.isStringNullOREmpty((String) res.get(JsonKey.END_DATE))){
+          endDate = format.parse((String) res.get(JsonKey.END_DATE));
+        }
         todate = format.parse((String) format.format(new Date()));
       } catch (ParseException e) {
         ProjectLogger.log("Exception occured while parsing date in CourseBatchManagementActor ", e);
       }
-      if (endDate.before(todate)) {
+      if (null != endDate && endDate.before(todate)) {
         throw new ProjectCommonException(ResponseCode.BatchCloseError.getErrorCode(),
             ResponseCode.BatchCloseError.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());

@@ -11,6 +11,7 @@ import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
+import org.quartz.SimpleScheduleBuilder;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 import org.quartz.impl.StdSchedulerFactory;
@@ -84,12 +85,10 @@ public final class SchedulerManager {
         .requestRecovery(true).withIdentity("channelRegistrationScheduler", identifier).build();
 
     // 2- Create a trigger object that will define frequency of run.
-    // This will run every day 2:00 AM
-    Trigger channelRegistrationTrigger = TriggerBuilder.newTrigger()
-        .withIdentity("channelRegistrationScheduler", identifier)
-        .withSchedule(CronScheduleBuilder
-            .cronSchedule(PropertiesCache.getInstance().getProperty("quartz_channel_reg_timer")))
-        .build();
+    //It will run only once after server startup
+    Trigger channelRegistrationTrigger =
+        TriggerBuilder.newTrigger().withIdentity("channelRegistrationScheduler", identifier)
+            .withSchedule(SimpleScheduleBuilder.repeatMinutelyForTotalCount(1)).build();
     try {
       if (scheduler.checkExists(channelRegistrationJob.getKey())) {
         scheduler.deleteJob(channelRegistrationJob.getKey());

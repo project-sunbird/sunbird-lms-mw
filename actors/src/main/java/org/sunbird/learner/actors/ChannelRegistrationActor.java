@@ -75,7 +75,9 @@ public class ChannelRegistrationActor extends UntypedAbstractActor {
         bool = false;
       }
     }
-    updateSystemSettingTable(bool);
+    if (bool) {
+      updateSystemSettingTable(bool);
+    }
   }
 
   private void updateSystemSettingTable(Boolean bool) {

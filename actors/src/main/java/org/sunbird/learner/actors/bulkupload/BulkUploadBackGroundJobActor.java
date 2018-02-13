@@ -1316,10 +1316,11 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           if (null != (String) map.get(JsonKey.EMAIL)
               && ((String) map.get(JsonKey.EMAIL)).equalsIgnoreCase(email)) {
             // DB email value and req email value both are same , no need to update
+            email = (String) userMap.get(JsonKey.EMAIL);
             userMap.remove(JsonKey.EMAIL);
           }
           updateKeyCloakUserBase(userMap);
-          userMap.put(JsonKey.EMAIL, (String) userMap.get(JsonKey.EMAIL));
+          userMap.put(JsonKey.EMAIL, email);
         } else {
           throw new ProjectCommonException(ResponseCode.userRegOrgError.getErrorCode(),
               ResponseCode.userRegOrgError.getErrorMessage(),

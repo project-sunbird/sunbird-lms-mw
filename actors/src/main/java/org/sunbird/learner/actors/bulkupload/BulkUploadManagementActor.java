@@ -107,7 +107,6 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
         resMap.remove(JsonKey.DATA);
         resMap.remove(JsonKey.UPLOADED_BY);
         resMap.remove(JsonKey.UPLOADED_DATE);
-        resMap.remove(JsonKey.OBJECT_TYPE);
         resMap.remove(JsonKey.ORGANISATION_ID);
         resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
         resMap.remove(JsonKey.ID);

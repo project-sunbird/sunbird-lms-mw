@@ -365,11 +365,28 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       } else {
         req.put(JsonKey.HASHTAGID, uniqueId);
       }
+      Boolean isRootOrg = (Boolean) req.get(JsonKey.IS_ROOT_ORG);
       // if channel is available then make slug for channel.
       // remove the slug key if coming from user input
       req.remove(JsonKey.SLUG);
       if (req.containsKey(JsonKey.CHANNEL)) {
-        req.put(JsonKey.SLUG, Slug.makeSlug((String) req.getOrDefault(JsonKey.CHANNEL, ""), true));
+        String slug = Slug.makeSlug((String) req.getOrDefault(JsonKey.CHANNEL, ""), true);
+        if (null != isRootOrg && isRootOrg) {
+          boolean bool = isSlugUnique(slug);
+          if (bool) {
+            req.put(JsonKey.SLUG, slug);
+          } else {
+            ProjectCommonException exception =
+                new ProjectCommonException(ResponseCode.slugIsNotUnique.getErrorCode(),
+                    ResponseCode.slugIsNotUnique.getErrorMessage(),
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;
+          }
+        } else {
+          req.put(JsonKey.SLUG, slug);
+        }
+
       }
       // check contactDetail filed is coming or not. it will always come as list of map
       List<Map<String, Object>> listOfMap = null;
@@ -385,7 +402,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
         }
       }
 
-      Boolean isRootOrg = (Boolean) req.get(JsonKey.IS_ROOT_ORG);
+
       if (null != isRootOrg && isRootOrg) {
         boolean bool = Util.registerChannel(req);
         if (!bool) {
@@ -842,8 +859,46 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       // remove the slug key if coming from user input
       updateOrgDBO.remove(JsonKey.SLUG);
       if (updateOrgDBO.containsKey(JsonKey.CHANNEL)) {
-        updateOrgDBO.put(JsonKey.SLUG,
-            Slug.makeSlug((String) updateOrgDBO.getOrDefault(JsonKey.CHANNEL, ""), true));
+
+        String slug = Slug.makeSlug((String) updateOrgDBO.getOrDefault(JsonKey.CHANNEL, ""), true);
+        if ((boolean) orgDBO.get(JsonKey.IS_ROOT_ORG)) {
+          String rootOrgId = getRootOrgIdFromSlug(slug);
+          if (ProjectUtil.isStringNullOREmpty(rootOrgId)
+              || (!ProjectUtil.isStringNullOREmpty(rootOrgId)
+                  && rootOrgId.equalsIgnoreCase((String) orgDBO.get(JsonKey.ID)))) {
+            updateOrgDBO.put(JsonKey.SLUG, slug);
+          } else {
+            ProjectCommonException exception =
+                new ProjectCommonException(ResponseCode.slugIsNotUnique.getErrorCode(),
+                    ResponseCode.slugIsNotUnique.getErrorMessage(),
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;
+          }
+        } else {
+          updateOrgDBO.put(JsonKey.SLUG, slug);
+        }
+      }
+
+      if (null != orgDBO.get(JsonKey.IS_ROOT_ORG) && (boolean) orgDBO.get(JsonKey.IS_ROOT_ORG)) {
+        String channel = (String) orgDBO.get(JsonKey.CHANNEL);
+        String updateOrgDBOChannel = (String) updateOrgDBO.get(JsonKey.CHANNEL);
+        if (null != updateOrgDBOChannel && null != channel
+            && !(updateOrgDBOChannel.equals(channel))) {
+          Map<String,Object> tempMap = new HashMap<>();
+          tempMap.put(JsonKey.CHANNEL, updateOrgDBOChannel);
+          tempMap.put(JsonKey.HASHTAGID, orgDBO.get(JsonKey.HASHTAGID));
+          tempMap.put(JsonKey.DESCRIPTION, orgDBO.get(JsonKey.DESCRIPTION));
+          boolean bool = Util.updateChannel(tempMap);
+          if (!bool) {
+            ProjectCommonException exception =
+                new ProjectCommonException(ResponseCode.channelRegFailed.getErrorCode(),
+                    ResponseCode.channelRegFailed.getErrorMessage(),
+                    ResponseCode.SERVER_ERROR.getResponseCode());
+            sender().tell(exception, self());
+            return;
+          }
+        }
       }
 
       // check contactDetail filed is coming or not. it will always come as list of map
@@ -1878,6 +1933,38 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     return "";
   }
 
+  private String getRootOrgIdFromSlug(String slug) {
+    if (!ProjectUtil.isStringNullOREmpty(slug)) {
+      Map<String, Object> filters = new HashMap<>();
+      filters.put(JsonKey.SLUG, slug);
+      filters.put(JsonKey.IS_ROOT_ORG, true);
+      Map<String, Object> esResult = elasticSearchComplexSearch(filters,
+          EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
+      if (isNotNull(esResult) && esResult.containsKey(JsonKey.CONTENT)
+          && isNotNull(esResult.get(JsonKey.CONTENT))
+          && (!((List) esResult.get(JsonKey.CONTENT)).isEmpty())) {
+        Map<String, Object> esContent =
+            ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
+        return (String) esContent.getOrDefault(JsonKey.ID, "");
+      }
+    }
+    return "";
+  }
+
+  private boolean isSlugUnique(String slug) {
+    if (!ProjectUtil.isStringNullOREmpty(slug)) {
+      Map<String, Object> filters = new HashMap<>();
+      filters.put(JsonKey.SLUG, slug);
+      filters.put(JsonKey.IS_ROOT_ORG, true);
+      Map<String, Object> esResult = elasticSearchComplexSearch(filters,
+          EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
+      if (isNotNull(esResult) && esResult.containsKey(JsonKey.CONTENT)
+          && isNotNull(esResult.get(JsonKey.CONTENT))) {
+        return (((List) esResult.get(JsonKey.CONTENT)).isEmpty());
+      }
+    }
+    return false;
+  }
 
   private Map<String, Object> elasticSearchComplexSearch(Map<String, Object> filters, String index,
       String type) {

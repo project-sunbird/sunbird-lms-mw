@@ -25,6 +25,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -35,6 +36,9 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
+  private DecryptionService decryptionService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
+          .getDecryptionServiceInstance(null);
 
   @Override
   public void onReceive(Object message) throws Throwable {
@@ -152,6 +156,8 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
 
       Map<String, Map<String, Object>> userInfoCache = new HashMap<>();
 
+      // decrypt the user info get from the elastic search
+      useresContent = decryptionService.decryptData(useresContent);
       for (Map<String, Object> map : useresContent) {
         String userId = (String) map.get(JsonKey.USER_ID);
         map.put("user", userId);

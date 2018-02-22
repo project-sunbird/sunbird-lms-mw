@@ -23,6 +23,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -36,6 +37,9 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   private static Map<String, String> conceptsList = new HashMap<>();
+  private DecryptionService decryptionService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
+          .getDecryptionServiceInstance(null);
   
 
   @Override
@@ -217,7 +221,9 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
       if (userData.containsKey("userId")) {
         userId = (String) userData.get("userId");
       } else {
-        return ekstepData;
+        data.putAll(userData);
+        userResult.add(data);
+        continue;
       }
       Map<String, Object> filter = new HashMap<>();
       filter.put(JsonKey.IDENTIFIER, userId);
@@ -242,7 +248,8 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
       }
 
     }
-    return userResult;
+    // decrypt the userdata and return
+    return decryptionService.decryptData(userResult);
   }
 
 
@@ -372,7 +379,9 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
     List<String> result = new ArrayList<>();
     for (String concept : data) {
       String conceptName = getConcept(concept);
-      result.add(conceptName);
+      if(!ProjectUtil.isStringNullOREmpty(conceptName)) {
+        result.add(conceptName);
+      }
     }
     return result;
   }
@@ -449,6 +458,8 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
           }
         }
       }
+      //decrypt the userdata
+      userResult = decryptionService.decryptData(userResult);
       return userResult;
     } catch (Exception e) {
       throw new ProjectCommonException(ResponseCode.esError.getErrorCode(),

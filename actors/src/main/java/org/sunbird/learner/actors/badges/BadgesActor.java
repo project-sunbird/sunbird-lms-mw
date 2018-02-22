@@ -178,7 +178,7 @@ public class BadgesActor extends UntypedAbstractActor {
     // check the elastic search
     try {
       boolean response = ElasticSearchUtil.healthCheck();
-      responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, response, null));
+      responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, !response, null));
       isallHealthy = response;
     } catch (Exception e) {
       responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, true, e));

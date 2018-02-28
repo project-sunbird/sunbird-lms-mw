@@ -171,6 +171,11 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     }
 
     String batchCreator = (String) courseBatchObject.get(JsonKey.CREATED_BY);
+    if(ProjectUtil.isStringNullOREmpty(batchCreator)){
+      throw new ProjectCommonException(ResponseCode.invalidCourseCreatorId.getErrorCode(),
+          ResponseCode.invalidCourseCreatorId.getErrorMessage(),
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+    }
     String batchCreatorRootOrgId = getRootOrg(batchCreator);
 
     Map<String, Boolean> participants =
@@ -187,7 +192,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
       if (!(participants.containsKey(userId))) {
         if (!participantWithRootOrgIds.containsKey(userId) || (!batchCreatorRootOrgId
             .equals(participantWithRootOrgIds.get(userId)))) {
-          response.put(userId, ResponseCode.userNotAssociatedToOrg.getErrorMessage());
+          response.put(userId, ResponseCode.userNotAssociatedToRootOrg.getErrorMessage());
           continue;
         }
 
@@ -248,37 +253,25 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
     List<Map<String, Object>> esContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
 
     for(Map<String, Object> user : esContent){
-      String rootOrg = null;
-      Map<String , Object> registeredOrgInfo = (Map<String, Object>) user.get(JsonKey.REGISTERED_ORG);
-      if(registeredOrgInfo != null && !registeredOrgInfo.isEmpty()){
-        if(null != registeredOrgInfo.get(JsonKey.IS_ROOT_ORG) && (Boolean)registeredOrgInfo.get(JsonKey.IS_ROOT_ORG)){
-          rootOrg = (String) registeredOrgInfo.get(JsonKey.ID);
-        }else{
-          rootOrg = (String) user.get(JsonKey.ROOT_ORG_ID);
-        }
-      }else{
-        rootOrg = (String) user.get(JsonKey.ROOT_ORG_ID);
-      }
-
+      String rootOrg = getRootOrgFromUserMap(user);
       userWithRootOrgs.put((String)user.get(JsonKey.ID), rootOrg);
     }
-
     return userWithRootOrgs;
-
   }
 
   private String getRootOrg(String batchCreator) {
-    String rootOrg = null;
     Map<String, Object> userInfo = ElasticSearchUtil.getDataByIdentifier(EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), batchCreator);
+    return getRootOrgFromUserMap(userInfo);
+  }
+
+  private String getRootOrgFromUserMap(Map<String, Object> userInfo){
+
+    String rootOrg = (String) userInfo.get(JsonKey.ROOT_ORG_ID);
     Map<String , Object> registeredOrgInfo = (Map<String, Object>) userInfo.get(JsonKey.REGISTERED_ORG);
     if(registeredOrgInfo != null && !registeredOrgInfo.isEmpty()){
       if(null != registeredOrgInfo.get(JsonKey.IS_ROOT_ORG) && (Boolean)registeredOrgInfo.get(JsonKey.IS_ROOT_ORG)){
         rootOrg = (String) registeredOrgInfo.get(JsonKey.ID);
-      }else{
-        rootOrg = (String) userInfo.get(JsonKey.ROOT_ORG_ID);
       }
-    }else{
-      rootOrg = (String) userInfo.get(JsonKey.ROOT_ORG_ID);
     }
     return rootOrg;
   }

@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,17 +43,18 @@ import org.sunbird.helper.ServiceFactory;
  *
  * @author arvind .
  */
-public class Util {
+public final class Util {
 
   public static final Map<String, DbInfo> dbInfoMap = new HashMap<>();
   public static final int RECOMENDED_LIST_SIZE = 10;
-
+  private static PropertiesCache propertiesCache = PropertiesCache.getInstance();
   private static final String KEY_SPACE_NAME = "sunbird";
   private static Properties prop = new Properties();
   private static Map<String, String> headers = new HashMap<>();
   private static Map<Integer, List<Integer>> orgStatusTransition = new HashMap<>();
   public static final Map<String, Object> auditLogUrlMap = new HashMap<>();
-
+  private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
+  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   static {
     loadPropertiesFile();
@@ -71,6 +73,8 @@ public class Util {
 
   }
 
+  private Util(){}
+  
   /**
    * This method will a map of organization state transaction. which will help us to move the
    * organization status from one Valid state to another state.
@@ -694,6 +698,56 @@ public class Util {
 
     return regStatus.contains("OK");
   }
+  
+  /**
+  *
+  * @param req Map<String,Object>
+  */
+ public static boolean updateChannel(Map<String, Object> req) {
+   ProjectLogger.log("channel update for hashTag Id = " + req.get(JsonKey.HASHTAGID) + "");
+   Map<String, String> headerMap = new HashMap<>();
+   String header = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
+   if (ProjectUtil.isStringNullOREmpty(header)) {
+     header = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION);
+   } else {
+     header = JsonKey.BEARER + header;
+   }
+   headerMap.put(JsonKey.AUTHORIZATION, header);
+   headerMap.put("Content-Type", "application/json");
+   headerMap.put("user-id", "");
+   String reqString = "";
+   String regStatus = "";
+   try {
+     ProjectLogger.log(
+         "start call for registering the channel for hashTag id ==" + req.get(JsonKey.HASHTAGID));
+     String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
+     if (ProjectUtil.isStringNullOREmpty(ekStepBaseUrl)) {
+       ekStepBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
+     }
+     Map<String, Object> map = new HashMap<>();
+     Map<String, Object> reqMap = new HashMap<>();
+     Map<String, Object> channelMap = new HashMap<>();
+     channelMap.put(JsonKey.NAME, req.get(JsonKey.CHANNEL));
+     channelMap.put(JsonKey.DESCRIPTION, req.get(JsonKey.DESCRIPTION));
+     channelMap.put(JsonKey.CODE, req.get(JsonKey.HASHTAGID));
+     reqMap.put(JsonKey.CHANNEL, channelMap);
+     map.put(JsonKey.REQUEST, reqMap);
+
+     ObjectMapper mapper = new ObjectMapper();
+     reqString = mapper.writeValueAsString(map);
+
+     regStatus = HttpUtil.sendPatchRequest(
+         (ekStepBaseUrl
+             + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CHANNEL_UPDATE_API_URL))+"/"+req.get(JsonKey.HASHTAGID),
+         reqString, headerMap);
+     ProjectLogger
+         .log("end call for channel registration for hashTag id ==" + req.get(JsonKey.HASHTAGID));
+   } catch (Exception e) {
+     ProjectLogger.log("Exception occurred while registarting channel in ekstep.", e);
+   }
+
+   return regStatus.contains("SUCCESS");
+ }
 
 
 
@@ -712,7 +766,6 @@ public class Util {
       String requestedby = (String) req.get(JsonKey.REQUESTED_BY);
       // getting context from request context set y controller read from header...
       String channel = (String) actorMessage.getContext().get(JsonKey.CHANNEL);
-      // requestContext.put(JsonKey.REQUEST_ID, (String) req.get(JsonKey.REQUEST_ID));
       requestContext.put(JsonKey.CHANNEL, channel);
       requestContext.put(JsonKey.ACTOR_ID, actorMessage.getContext().get(JsonKey.ACTOR_ID));
       requestContext.put(JsonKey.ACTOR_TYPE, actorMessage.getContext().get(JsonKey.ACTOR_TYPE));
@@ -755,6 +808,34 @@ public class Util {
     requestContext.put(JsonKey.ACTOR_TYPE, actorType);
     requestContext.put(JsonKey.ENV, environment);
     context.setRequestContext(requestContext);
+  }
+  
+  public static String getSunbirdWebUrlPerTenent(Map<String, Object> userMap){
+    StringBuilder webUrl = new StringBuilder();
+    String slug = "";
+    if (ProjectUtil.isStringNullOREmpty(System.getenv(SUNBIRD_WEB_URL))) {
+       webUrl.append(propertiesCache.getProperty(SUNBIRD_WEB_URL));
+    } else {
+       webUrl.append(System.getenv(SUNBIRD_WEB_URL));
+    }
+    if(!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.ROOT_ORG_ID))){
+      Map<String,Object> orgMap = getOrgDetails((String) userMap.get(JsonKey.ROOT_ORG_ID));
+      slug = (String) orgMap.get(JsonKey.SLUG);
+    }
+    if(!ProjectUtil.isStringNullOREmpty((String) slug)){
+     webUrl.append("/"+slug);
+    }
+    return webUrl.toString();
+  }
+
+  private static Map<String, Object> getOrgDetails(String identifier) {
+    DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+    Response response = cassandraOperation.getRecordById(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), identifier);
+    List<Map<String, Object>> res = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if(null != res && !res.isEmpty()){
+      return res.get(0);
+    }
+    return Collections.emptyMap();
   }
 
 }

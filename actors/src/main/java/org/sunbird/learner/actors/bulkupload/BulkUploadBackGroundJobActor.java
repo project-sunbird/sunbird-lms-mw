@@ -736,6 +736,26 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         concurrentHashMap.put(JsonKey.IS_ROOT_ORG, false);
       }
       Boolean isRootOrgFlag = (Boolean) concurrentHashMap.get(JsonKey.IS_ROOT_ORG);
+      
+   // Remove the slug key if coming form user input.
+      concurrentHashMap.remove(JsonKey.SLUG);
+      if (concurrentHashMap.containsKey(JsonKey.CHANNEL)) {
+        String slug = Slug.makeSlug((String) concurrentHashMap.getOrDefault(JsonKey.CHANNEL, ""), true);
+        if (null != isRootOrgFlag && isRootOrgFlag) {
+          boolean bool = isSlugUnique(slug);
+          if (bool) {
+            concurrentHashMap.put(JsonKey.SLUG, slug);
+          } else {
+            ProjectLogger.log(ResponseCode.slugIsNotUnique.getErrorMessage());
+            concurrentHashMap.put(JsonKey.ERROR_MSG, ResponseCode.slugIsNotUnique.getErrorMessage());
+            failureList.add(concurrentHashMap);
+            return;
+          }
+        } else {
+          concurrentHashMap.put(JsonKey.SLUG, slug);
+        }
+      }
+      
       if (null != isRootOrgFlag && isRootOrgFlag) {
         boolean bool = Util.registerChannel(concurrentHashMap);
         if (!bool) {
@@ -747,12 +767,6 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       }
     }
 
-    // Remove the slug key if coming form user input.
-    concurrentHashMap.remove(JsonKey.SLUG);
-    if (concurrentHashMap.containsKey(JsonKey.CHANNEL)) {
-      concurrentHashMap.put(JsonKey.SLUG,
-          Slug.makeSlug((String) concurrentHashMap.getOrDefault(JsonKey.CHANNEL, ""), true));
-    }
     concurrentHashMap.put(JsonKey.CONTACT_DETAILS, contactDetails);
 
     try {
@@ -1316,10 +1330,11 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
           if (null != (String) map.get(JsonKey.EMAIL)
               && ((String) map.get(JsonKey.EMAIL)).equalsIgnoreCase(email)) {
             // DB email value and req email value both are same , no need to update
+            email = (String) userMap.get(JsonKey.EMAIL);
             userMap.remove(JsonKey.EMAIL);
           }
           updateKeyCloakUserBase(userMap);
-          userMap.put(JsonKey.EMAIL, (String) userMap.get(JsonKey.EMAIL));
+          userMap.put(JsonKey.EMAIL, email);
         } else {
           throw new ProjectCommonException(ResponseCode.userRegOrgError.getErrorCode(),
               ResponseCode.userRegOrgError.getErrorMessage(),
@@ -1645,10 +1660,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
       reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
       emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
 
-      String webUrl = System.getenv(SUNBIRD_WEB_URL);
-      if (ProjectUtil.isStringNullOREmpty(webUrl)) {
-        webUrl = propertiesCache.getProperty(SUNBIRD_WEB_URL);
-      }
+      String webUrl = Util.getSunbirdWebUrlPerTenent(emailTemplateMap);
       if ((!ProjectUtil.isStringNullOREmpty(webUrl))
           && (!SUNBIRD_WEB_URL.equalsIgnoreCase(webUrl))) {
         emailTemplateMap.put(JsonKey.WEB_URL, webUrl);
@@ -1681,6 +1693,21 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
     }
   }
 
+  private boolean isSlugUnique(String slug) {
+    if (!ProjectUtil.isStringNullOREmpty(slug)) {
+      Map<String, Object> filters = new HashMap<>();
+      filters.put(JsonKey.SLUG, slug);
+      filters.put(JsonKey.IS_ROOT_ORG, true);
+      Map<String, Object> esResult = elasticSearchComplexSearch(filters,
+          EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
+      if (isNotNull(esResult) && esResult.containsKey(JsonKey.CONTENT)
+          && isNotNull(esResult.get(JsonKey.CONTENT))) {
+        return (((List) esResult.get(JsonKey.CONTENT)).isEmpty());
+      }
+    }
+    return false;
+  }
+  
   private void sendSMS(Map<String, Object> userMap) {
     if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EMAIL))
         && !ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PHONE))) {
@@ -1692,10 +1719,8 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
         envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
       }
 
-      String webUrl = System.getenv(SUNBIRD_WEB_URL);
-      if (ProjectUtil.isStringNullOREmpty(webUrl)) {
-        webUrl = propertiesCache.getProperty(SUNBIRD_WEB_URL);
-      }
+      String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
+      
       ProjectLogger.log("shortened url :: " + webUrl);
       String sms = ProjectUtil.getSMSBody(name, webUrl, envName);
       if (ProjectUtil.isStringNullOREmpty((String) sms)) {

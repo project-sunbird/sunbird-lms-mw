@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class AuditLogGenerator {
   
   private static ObjectMapper mapper = new ObjectMapper();
+  private AuditLogGenerator(){}
   
   @SuppressWarnings("unchecked")
   public static Map<String,Object> generateLogs(Map<String, Object> requestData){

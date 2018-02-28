@@ -8,7 +8,7 @@ import org.sunbird.learner.util.actorutility.ActorSystem;
  * @author Amit Kumar
  *
  */
-public class LocalActorSystem implements ActorSystem {
+public final class LocalActorSystem implements ActorSystem {
 
   private static ActorSystem actorSystem = null;
 

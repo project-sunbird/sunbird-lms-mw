@@ -11,6 +11,7 @@ import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
+import org.quartz.SimpleScheduleBuilder;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 import org.quartz.impl.StdSchedulerFactory;
@@ -30,13 +31,13 @@ import org.sunbird.metrics.actors.MetricsJobScheduler;
  * @author Manzarul
  *
  */
-public class SchedulerManager {
+public final class SchedulerManager {
 
-  private static final String file = "quartz.properties";
+  private static final String FILE = "quartz.properties";
   private static Scheduler scheduler = null;
   private static SchedulerManager schedulerManager = null;
 
-  private SchedulerManager() throws CloneNotSupportedException {
+  private SchedulerManager() {
     schedule();
   }
 
@@ -75,31 +76,29 @@ public class SchedulerManager {
       registerShutDownHook();
     }
   }
-  
-  public static void scheduleChannelReg(String identifier) {
-      // add another job for registering channel to ekstep.
-      // 1- create a job and bind with class which is implementing Job
-      // interface.
-      JobDetail channelRegistrationJob = JobBuilder.newJob(ChannelRegistrationScheduler.class)
-          .requestRecovery(true).withIdentity("channelRegistrationScheduler", identifier).build();
 
-      // 2- Create a trigger object that will define frequency of run.
-      // This will run every day 2:00 AM
-      Trigger channelRegistrationTrigger =
-          TriggerBuilder.newTrigger().withIdentity("channelRegistrationScheduler", identifier)
-              .withSchedule(CronScheduleBuilder.cronSchedule(
-                  PropertiesCache.getInstance().getProperty("quartz_channel_reg_timer")))
-              .build();
-      try {
-        if (scheduler.checkExists(channelRegistrationJob.getKey())) {
-          scheduler.deleteJob(channelRegistrationJob.getKey());
-        }
-        scheduler.scheduleJob(channelRegistrationJob, channelRegistrationTrigger);
-        scheduler.start();
-        ProjectLogger.log("channelRegistration schedular started", LoggerEnum.INFO.name());
-      } catch (Exception e) {
-        ProjectLogger.log(e.getMessage(), e);
+  public static void scheduleChannelReg(String identifier) {
+    // add another job for registering channel to ekstep.
+    // 1- create a job and bind with class which is implementing Job
+    // interface.
+    JobDetail channelRegistrationJob = JobBuilder.newJob(ChannelRegistrationScheduler.class)
+        .requestRecovery(true).withIdentity("channelRegistrationScheduler", identifier).build();
+
+    // 2- Create a trigger object that will define frequency of run.
+    //It will run only once after server startup
+    Trigger channelRegistrationTrigger =
+        TriggerBuilder.newTrigger().withIdentity("channelRegistrationScheduler", identifier)
+            .withSchedule(SimpleScheduleBuilder.repeatMinutelyForTotalCount(1)).build();
+    try {
+      if (scheduler.checkExists(channelRegistrationJob.getKey())) {
+        scheduler.deleteJob(channelRegistrationJob.getKey());
       }
+      scheduler.scheduleJob(channelRegistrationJob, channelRegistrationTrigger);
+      scheduler.start();
+      ProjectLogger.log("channelRegistration schedular started", LoggerEnum.INFO.name());
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
   }
 
   private void scheduleUpdateUserCountJob(String identifier) {
@@ -264,7 +263,7 @@ public class SchedulerManager {
    */
   public Properties setUpClusterMode() throws IOException {
     Properties configProp = new Properties();
-    InputStream in = this.getClass().getClassLoader().getResourceAsStream(file);
+    InputStream in = this.getClass().getClassLoader().getResourceAsStream(FILE);
     String host = System.getenv(JsonKey.SUNBIRD_PG_HOST);
     String port = System.getenv(JsonKey.SUNBIRD_PG_PORT);
     String db = System.getenv(JsonKey.SUNBIRD_PG_DB);
@@ -294,11 +293,8 @@ public class SchedulerManager {
   public static SchedulerManager getInstance() {
     if (schedulerManager != null) {
       return schedulerManager;
-    }
-    try {
+    } else {
       schedulerManager = new SchedulerManager();
-    } catch (CloneNotSupportedException e) {
-      ProjectLogger.log(e.getMessage(), e);
     }
     return schedulerManager;
   }

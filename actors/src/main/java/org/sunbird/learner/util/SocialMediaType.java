@@ -70,10 +70,8 @@ public class SocialMediaType {
       return "";
     }
     switch (type) {
-      case "fb": {
+      case "fb": 
         if (url.contains("http")) {
-          // pattern =
-          // "http(?:s)?:\\/\\/(?:www.)?facebook.com\\/(?:(?:\\w)*#!\\/)?(?:pages\\/)?(?:[?\\w\\-]*\\/)?(?:profile.php\\?id=(?=\\d.*))?([\\w\\-]*)?";
           pattern =
               "http(?:s)?:\\/\\/(?:www.)?facebook.com\\/(?:(?:\\w\\.)*#!\\/)?(?:pages\\/)?(?:[\\w\\-\\.]*\\/)*([\\w\\-\\.]*)?(?:profile.php\\?id=(?=\\d.*))?([\\w\\-\\.]*)?";
           if (!isMatch(url, pattern)) {
@@ -86,8 +84,8 @@ public class SocialMediaType {
           url = "https://www.facebook.com/" + url;
         }
         return url;
-      }
-      case "twitter": {
+      
+      case "twitter": 
         if (url.contains("http")) {
           pattern = "http(?:s)?:\\/\\/(?:www.)?twitter\\.com\\/([a-zA-Z0-9_]+)";
           if (!isMatch(url, pattern)) {
@@ -100,8 +98,8 @@ public class SocialMediaType {
           url = "https://twitter.com/" + url;
         }
         return url;
-      }
-      case "in": {
+      
+      case "in": 
         if (url.contains("http")) {
           pattern = "http(?:s)?:\\/\\/(?:www.)?linkedin+\\.[a-zA-Z0-9/~\\-_,&=\\?\\.;]+[^\\.,\\s<]";
           if (!isMatch(url, pattern)) {
@@ -114,21 +112,21 @@ public class SocialMediaType {
           url = "https://www.linkedin.com/in/" + url;
         }
         return url;
-      }
-      case "blog": {
+      
+      case "blog": 
         pattern = "http(?:s)?://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]";
         if (!isMatch(url, pattern)) {
           url = "";
         }
         return url;
-      }
-      default: {
+      
+      default: 
         pattern = "\\b(https?|ftp|file)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]";
         if (!isMatch(url, pattern)) {
           url = "";
         }
         return url;
-      }
+      
     }
   }
 

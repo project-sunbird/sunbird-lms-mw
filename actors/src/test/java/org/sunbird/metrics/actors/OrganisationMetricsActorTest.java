@@ -20,11 +20,13 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.Application;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
@@ -34,12 +36,32 @@ public class OrganisationMetricsActorTest {
     private final static Props prop = Props.create(OrganisationMetricsActor.class);
     private static CassandraOperation operation = ServiceFactory.getInstance();
     private static String userId = "456-123";
+  private static Util.DbInfo orgDB = null;
+  private static final String EXTERNAL_ID = "ex00001lvervk";
+  private static final String PROVIDER = "pr00001kfej";
+  private static final String CHANNEL = "hjryr9349";
+  private static final String orgId = "ofure8ofp9yfpf9ego";
 
     @BeforeClass
     public static void setUp() {
+      Application.startLocalActorSystem();
       system = ActorSystem.create("system");
       Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
       insertUserDataToES();
+      orgDB = Util.dbInfoMap.get(JsonKey.ORG_DB);
+
+      Map<String, Object> rootOrg = new HashMap<>();
+      rootOrg.put(JsonKey.ID, orgId);
+      rootOrg.put(JsonKey.IS_ROOT_ORG, true);
+      rootOrg.put(JsonKey.CHANNEL, CHANNEL);
+      rootOrg.put(JsonKey.PROVIDER, PROVIDER);
+      rootOrg.put(JsonKey.EXTERNAL_ID, EXTERNAL_ID);
+      rootOrg.put(JsonKey.HASHTAGID, orgId);
+      rootOrg.put(JsonKey.ORG_NAME, "rootOrg");
+
+      operation.upsertRecord(orgDB.getKeySpace(), orgDB.getTableName(), rootOrg);
+      ElasticSearchUtil.createData(EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), orgId,
+          rootOrg);
     }
 
     @SuppressWarnings({"deprecation", "unchecked"})
@@ -49,7 +71,7 @@ public class OrganisationMetricsActorTest {
       ActorRef subject = system.actorOf(prop);
 
       Request actorMessage = new Request();
-      actorMessage.put(JsonKey.ORG_ID, "ORG_001");
+      actorMessage.put(JsonKey.ORG_ID, orgId);
       actorMessage.put(JsonKey.PERIOD, "7d");
       actorMessage.setOperation(ActorOperations.ORG_CREATION_METRICS.getValue());
 
@@ -57,7 +79,7 @@ public class OrganisationMetricsActorTest {
       Response res = probe.expectMsgClass(duration("50 second"), Response.class);
       Map<String, Object> data = res.getResult();
       Assert.assertEquals("7d", data.get(JsonKey.PERIOD));
-      Assert.assertEquals("ORG_001", ((Map<String, Object>) data.get("org")).get(JsonKey.ORG_ID));
+      Assert.assertEquals(orgId, ((Map<String, Object>) data.get("org")).get(JsonKey.ORG_ID));
       Map<String, Object> series = (Map<String, Object>) data.get(JsonKey.SERIES);
       Assert.assertTrue(series.containsKey("org.creation.content[@status=draft].count"));
       Assert.assertTrue(series.containsKey("org.creation.content[@status=review].count"));
@@ -81,15 +103,15 @@ public class OrganisationMetricsActorTest {
       ActorRef subject = system.actorOf(prop);
 
       Request actorMessage = new Request();
-      actorMessage.put(JsonKey.ORG_ID, "ORG_001");
+      actorMessage.put(JsonKey.ORG_ID, orgId);
       actorMessage.put(JsonKey.PERIOD, "7d");
       actorMessage.setOperation(ActorOperations.ORG_CONSUMPTION_METRICS.getValue());
 
       subject.tell(actorMessage, probe.getRef());
-      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+      Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
       Map<String, Object> data = res.getResult();
       Assert.assertEquals("7d", data.get(JsonKey.PERIOD));
-      Assert.assertEquals("ORG_001", ((Map<String, Object>) data.get("org")).get(JsonKey.ORG_ID));
+      Assert.assertEquals(orgId, ((Map<String, Object>) data.get("org")).get(JsonKey.ORG_ID));
       Map<String, Object> series = (Map<String, Object>) data.get(JsonKey.SERIES);
       Assert.assertTrue(series.containsKey("org.consumption.content.users.count"));
       Assert.assertTrue(series.containsKey("org.consumption.content.time_spent.sum"));
@@ -143,7 +165,7 @@ public class OrganisationMetricsActorTest {
       ActorRef subject = system.actorOf(prop);
 
       Request actorMessage = new Request();
-      actorMessage.put(JsonKey.ORG_ID, "ORG_001");
+      actorMessage.put(JsonKey.ORG_ID, orgId);
       actorMessage.put(JsonKey.PERIOD, "10d");
       actorMessage.setOperation(ActorOperations.ORG_CREATION_METRICS.getValue());
 
@@ -160,7 +182,7 @@ public class OrganisationMetricsActorTest {
       ActorRef subject = system.actorOf(prop);
 
       Request actorMessage = new Request();
-      actorMessage.put(JsonKey.ORG_ID, "ORG_001");
+      actorMessage.put(JsonKey.ORG_ID, orgId);
       actorMessage.put(JsonKey.PERIOD, "10d");
       actorMessage.setOperation(ActorOperations.ORG_CONSUMPTION_METRICS.getValue());
 
@@ -189,7 +211,7 @@ public class OrganisationMetricsActorTest {
       ActorRef subject = system.actorOf(prop);
 
       Request actorMessage = new Request();
-      actorMessage.put(JsonKey.ORG_ID, "ORG_001");
+      actorMessage.put(JsonKey.ORG_ID, orgId);
       actorMessage.put(JsonKey.PERIOD, "7d");
       actorMessage.put(JsonKey.REQUESTED_BY, userId);
       actorMessage.put(JsonKey.FORMAT, "csv");
@@ -220,7 +242,7 @@ public class OrganisationMetricsActorTest {
       ActorRef subject = system.actorOf(prop);
 
       Request actorMessage = new Request();
-      actorMessage.put(JsonKey.ORG_ID, "ORG_001");
+      actorMessage.put(JsonKey.ORG_ID, orgId);
       actorMessage.put(JsonKey.PERIOD, "7d");
       actorMessage.put(JsonKey.REQUESTED_BY, userId);
       actorMessage.put(JsonKey.FORMAT, "csv");
@@ -247,6 +269,18 @@ public class OrganisationMetricsActorTest {
     @AfterClass
     public static void destroy() {
       ElasticSearchUtil.removeData(EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId);
+
+      Response result = operation.getRecordById(orgDB.getKeySpace(),
+          orgDB.getTableName(), orgId);
+      List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      if (!(list.isEmpty())) {
+        for (Map<String, Object> res : list) {
+          String id = (String) res.get(JsonKey.ID);
+          operation.deleteRecord(orgDB.getKeySpace(), orgDB.getTableName(), id);
+          ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.organisation.getTypeName(), id);
+        }
+      }
     }
 
 

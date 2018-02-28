@@ -1,5 +1,7 @@
 package org.sunbird.metrics.actors;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -8,7 +10,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
@@ -19,9 +20,10 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
+import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -29,15 +31,15 @@ import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.metrics.actors.OrganisationMetricsUtil.ContentStatus;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
   
   private static ObjectMapper mapper = new ObjectMapper();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   private static Map<String, String> conceptsList = new HashMap<>();
+  private DecryptionService decryptionService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
+          .getDecryptionServiceInstance(null);
   
 
   @Override
@@ -219,7 +221,9 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
       if (userData.containsKey("userId")) {
         userId = (String) userData.get("userId");
       } else {
-        return ekstepData;
+        data.putAll(userData);
+        userResult.add(data);
+        continue;
       }
       Map<String, Object> filter = new HashMap<>();
       filter.put(JsonKey.IDENTIFIER, userId);
@@ -244,7 +248,8 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
       }
 
     }
-    return userResult;
+    // decrypt the userdata and return
+    return decryptionService.decryptData(userResult);
   }
 
 
@@ -256,21 +261,21 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
     Map<String, Object> dateMap = getStartAndEndDate(periodStr);
     Map<String, String> operationMap = new LinkedHashMap<>();
     switch (operation) {
-      case "Create": {
+      case "Create": 
         operationMap.put("dateKey", "createdOn");
         operationMap.put("status", ContentStatus.Draft.name());
         break;
-      }
-      case "Review": {
+      
+      case "Review": 
         operationMap.put("dateKey", "lastSubmittedOn");
         operationMap.put("status", ContentStatus.Review.name());
         break;
-      }
-      case "Publish": {
+      
+      case "Publish": 
         operationMap.put("dateKey", "lastPublishedOn");
         operationMap.put("status", ContentStatus.Live.name());
         break;
-      }
+      
       default :
         operationMap.put("dateKey", "");
         operationMap.put("status",  "");
@@ -280,8 +285,8 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
     Map<String, Object> filterMap = new HashMap<>();
     List<String> fields = new ArrayList<>();
     Map<String, Object> dateValue = new HashMap<>();
-    dateValue.put("min", dateMap.get(startDate));
-    dateValue.put("max", dateMap.get(endDate));
+    dateValue.put("min", dateMap.get(STARTDATE));
+    dateValue.put("max", dateMap.get(ENDDATE));
     filterMap.put(operationMap.get("dateKey"), dateValue);
     List<String> contentType = new ArrayList<>();
     contentType.add("Story");
@@ -374,7 +379,9 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
     List<String> result = new ArrayList<>();
     for (String concept : data) {
       String conceptName = getConcept(concept);
-      result.add(conceptName);
+      if(!ProjectUtil.isStringNullOREmpty(conceptName)) {
+        result.add(conceptName);
+      }
     }
     return result;
   }
@@ -451,6 +458,8 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
           }
         }
       }
+      //decrypt the userdata
+      userResult = decryptionService.decryptData(userResult);
       return userResult;
     } catch (Exception e) {
       throw new ProjectCommonException(ResponseCode.esError.getErrorCode(),

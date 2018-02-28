@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -131,7 +132,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
   }
 
@@ -159,7 +160,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
   }
 
@@ -172,11 +173,11 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_313131");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_313131@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_414141");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_414141@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
-    innerMap.put(JsonKey.PHONE, "9874561231");
+    innerMap.put(JsonKey.PHONE, "9874561232");
     innerMap.put(JsonKey.PHONE_VERIFIED, true);
     innerMap.put(JsonKey.EMAIL_VERIFIED, true);
     innerMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
@@ -225,7 +226,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(5000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     assertTrue(null != userId);
   }
@@ -238,7 +239,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_3131311");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_4141411");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
     innerMap.put(JsonKey.PHONE, "9874561233");
@@ -258,7 +259,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(5000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     assertTrue(null != userId2);
   }
@@ -272,8 +273,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(2000);
     } catch (InterruptedException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -281,10 +281,10 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_31313112");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_41414112");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_313131@gmail.com");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_414141@gmail.com");
     innerMap.put(JsonKey.PHONE_VERIFIED, true);
     innerMap.put(JsonKey.EMAIL_VERIFIED, true);
     innerMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
@@ -309,7 +309,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_31313113");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_41414113");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
     innerMap.put(JsonKey.PHONE, "9874561231");
@@ -336,7 +336,7 @@ public class UserManagementActorTest {
     reqObj.setOperation(ActorOperations.UPDATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.ID, userId2);
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_313131@gmail.com");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_414141@gmail.com");
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
@@ -379,8 +379,8 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_313131");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_313131@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_414141");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_414141@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
     innerMap.put(JsonKey.PHONE, "9874561230");
@@ -407,9 +407,9 @@ public class UserManagementActorTest {
     reqObj.setOperation(ActorOperations.UPDATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.LAST_NAME, "user_last_name_updated");
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_313131");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_414141");
     innerMap.put(JsonKey.ID, userId);
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_313131@gmail.com");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_414141@gmail.com");
     // Add Roles
     List<String> roleList = new ArrayList<>();
     roleList.add("CONTENT_CURATION");
@@ -426,7 +426,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
   }
 
@@ -440,7 +440,7 @@ public class UserManagementActorTest {
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.LAST_NAME, "user_last_name_updated");
     innerMap.put(JsonKey.ID, userId);
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_313131@gmail.com");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_414141@gmail.com");
     // Add Roles
     List<String> roleList = new ArrayList<>();
     roleList.add("CONTENT_CURATION_1");
@@ -465,8 +465,8 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_3131311");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_3131311@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_4141411");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_4141411@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     // Add Roles
     List<String> roleList = new ArrayList<>();
@@ -492,7 +492,7 @@ public class UserManagementActorTest {
         encUserId = encryptionService.encryptData(encUserId);
       } catch (Exception e) {
         // TODO Auto-generated catch block
-        e.printStackTrace();
+        ProjectLogger.log(e.getMessage(),e);
       }
     }
     Response response = operation.getRecordsByProperty(addressDB.getKeySpace(),
@@ -512,8 +512,7 @@ public class UserManagementActorTest {
       try {
         encUserId = encryptionService.encryptData(encUserId);
       } catch (Exception e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+        ProjectLogger.log(e.getMessage(),e);
       }
     }
 
@@ -539,7 +538,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     Response response = operation.getRecordsByProperty(addressDB.getKeySpace(),
         addressDB.getTableName(), JsonKey.USER_ID, encUserId);
@@ -559,7 +558,7 @@ public class UserManagementActorTest {
         encUserId = encryptionService.encryptData(userId);
       } catch (Exception e) {
         // TODO Auto-generated catch block
-        e.printStackTrace();
+        ProjectLogger.log(e.getMessage(),e);
       }
     }
     Response response = operation.getRecordsByProperty(addressDB.getKeySpace(),
@@ -599,7 +598,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -673,7 +672,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
 
   }
@@ -705,7 +704,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
 
 
@@ -738,7 +737,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
 
   }
@@ -746,7 +745,7 @@ public class UserManagementActorTest {
   @Test
   public void testJGetUserInfoByLoginId() {
 
-    String encLoginId = "sunbird_dummy_user_313131@BLR";
+    String encLoginId = "sunbird_dummy_user_414141@BLR";
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -776,7 +775,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.LOGIN_ID, "sunbird_dummy_user_313131@BLR1324564");
+    innerMap.put(JsonKey.LOGIN_ID, "sunbird_dummy_user_414141@BLR1324564");
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
@@ -793,7 +792,7 @@ public class UserManagementActorTest {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
       // TODO Auto-generated catch block
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -801,7 +800,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.LOGIN_ID, "sunbird_dummy_user_313131@BLR");
+    innerMap.put(JsonKey.LOGIN_ID, "sunbird_dummy_user_414141@BLR");
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
@@ -812,7 +811,7 @@ public class UserManagementActorTest {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
       // TODO Auto-generated catch block
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     Map<String, Object> result = (Map<String, Object>) (userResponse.getResult());
     Map<String, Object> response = (Map<String, Object>) result.get(JsonKey.RESPONSE);
@@ -847,7 +846,7 @@ public class UserManagementActorTest {
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_181");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_313131@gmail.com");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_414141@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
     Map<String, Object> request = new HashMap<String, Object>();
@@ -869,8 +868,8 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_313131");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_313131@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_414141");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_414141@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.PROVIDER, "BLR");
     Map<String, Object> request = new HashMap<String, Object>();
@@ -903,7 +902,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
   }
 
@@ -948,7 +947,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
   }
 
@@ -1006,7 +1005,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     Response response = operation.getRecordsByProperty(eduDB.getKeySpace(), eduDB.getTableName(),
         JsonKey.USER_ID, userId);
@@ -1046,7 +1045,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     Response response = operation.getRecordsByProperty(eduDB.getKeySpace(), eduDB.getTableName(),
         JsonKey.USER_ID, userId);
@@ -1086,7 +1085,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     Response response = operation.getRecordsByProperty(jobDB.getKeySpace(), jobDB.getTableName(),
         JsonKey.USER_ID, userId);
@@ -1126,7 +1125,7 @@ public class UserManagementActorTest {
     try {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     Response response = operation.getRecordsByProperty(jobDB.getKeySpace(), jobDB.getTableName(),
         JsonKey.USER_ID, userId);
@@ -1159,9 +1158,9 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_31313100");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_41414100");
     innerMap.put(JsonKey.PHONE, "9742501111");
-    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_31313100@gmail.com");
+    innerMap.put(JsonKey.EMAIL, "sunbird_dummy_user_41414100@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.ID, userId);
     List<Map<String, String>> webPage = new ArrayList<>();
@@ -1190,7 +1189,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_3131310");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_4141410");
     innerMap.put(JsonKey.PASSWORD, "password");
     List<Map<String, String>> webPage = new ArrayList<>();
     Map<String, String> webPageData = new HashMap<>();
@@ -1220,7 +1219,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_3131310");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_4141410");
     innerMap.put(JsonKey.PASSWORD, "password");
     List<Map<String, String>> webPage = new ArrayList<>();
     Map<String, String> webPageData = new HashMap<>();
@@ -1361,7 +1360,7 @@ public class UserManagementActorTest {
     reqObj.setOperation(ActorOperations.LOGIN.getValue());
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.USERNAME, "test123@ntp");
-    innerMap.put(JsonKey.PASSWORD, "pass");
+    innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.SOURCE, "web");
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);
@@ -1369,7 +1368,7 @@ public class UserManagementActorTest {
 
     subject.tell(reqObj, probe.getRef());
     ProjectCommonException response =
-        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+        probe.expectMsgClass(duration("2000 second"), ProjectCommonException.class);
     if (null != response) {
       assertEquals(ResponseCode.CLIENT_ERROR.getResponseCode(), response.getResponseCode());
     }
@@ -1377,13 +1376,13 @@ public class UserManagementActorTest {
 
   @SuppressWarnings({"deprecation", "unchecked"})
   @Test
-  public void z14TestuserLoginWithValidEmail() {
+  public void testADuserLoginWithValidEmail() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.LOGIN.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_313131@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_414141@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.SOURCE, "web");
     Map<String, Object> request = new HashMap<String, Object>();
@@ -1402,13 +1401,13 @@ public class UserManagementActorTest {
 
   @SuppressWarnings({"deprecation"})
   @Test
-  public void z14TestuserLoginWithValidPhone() {
+  public void testADuserLoginWithValidPhone() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.LOGIN.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "9874561233");
+    innerMap.put(JsonKey.USERNAME, "9874561232");
     innerMap.put(JsonKey.PASSWORD, "password");
     innerMap.put(JsonKey.SOURCE, "web");
     Map<String, Object> request = new HashMap<String, Object>();
@@ -1428,7 +1427,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CHANGE_PASSWORD.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_313131@gmail.com");
+    innerMap.put(JsonKey.USERNAME, "sunbird_dummy_user_414141@gmail.com");
     innerMap.put(JsonKey.PASSWORD, "password2");
     innerMap.put(JsonKey.NEW_PASSWORD, "password1");
     Map<String, Object> request = new HashMap<String, Object>();
@@ -1451,7 +1450,7 @@ public class UserManagementActorTest {
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.USER_ID, userId);
     innerMap.put(JsonKey.PASSWORD, "password");
-    innerMap.put(JsonKey.NEW_PASSWORD, "password1");
+    innerMap.put(JsonKey.NEW_PASSWORD, "password");
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
@@ -1467,7 +1466,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.FORGOT_PASSWORD.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, ("sunbird_dummy_user_313131@gmail.com"));
+    innerMap.put(JsonKey.USERNAME, ("sunbird_dummy_user_414141@gmail.com"));
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
@@ -1483,7 +1482,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.FORGOT_PASSWORD.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, ("sunbird_dummy_user_313131"));
+    innerMap.put(JsonKey.USERNAME, ("sunbird_dummy_user_414141"));
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
@@ -1499,7 +1498,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.FORGOT_PASSWORD.getValue());
     Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.USERNAME, ("sunbird_dummy_user_3131312"));
+    innerMap.put(JsonKey.USERNAME, ("sunbird_dummy_user_4141412"));
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
@@ -1518,7 +1517,7 @@ public class UserManagementActorTest {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
       // TODO Auto-generated catch block
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -1574,7 +1573,7 @@ public class UserManagementActorTest {
   @Test
   public void z12TestprofileVisibilityWithGetDetailsByLoginId() {
 
-    String encLoginId = "sunbird_dummy_user_313131@BLR";
+    String encLoginId = "sunbird_dummy_user_414141@BLR";
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -1719,7 +1718,7 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.ASSIGN_ROLES.getValue());
     Map<String, Object> request = new HashMap<String, Object>();
-    request.put(JsonKey.USERNAME, "sunbird_dummy_user_313131");
+    request.put(JsonKey.USERNAME, "sunbird_dummy_user_414141");
     request.put(JsonKey.PROVIDER, "BLR");
     request.put(JsonKey.ORGANISATION_ID, orgId);
     List<String> roles = new ArrayList<>();
@@ -1738,9 +1737,10 @@ public class UserManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.ASSIGN_ROLES.getValue());
     Map<String, Object> request = new HashMap<String, Object>();
-    request.put(JsonKey.USERNAME, "sunbird_dummy_user_313131");
+    request.put(JsonKey.USER_ID, userId);
     request.put(JsonKey.EXTERNAL_ID, "EXT_ID_DUMMY");
     request.put(JsonKey.PROVIDER, "BLR");
+
     List<String> roles = new ArrayList<>();
     roles.add("CONTENT_REVIEWER");
     request.put(JsonKey.ROLES, roles);
@@ -2003,7 +2003,7 @@ public class UserManagementActorTest {
       Thread.sleep(10000);
     } catch (InterruptedException e) {
       // TODO Auto-generated catch block
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     Response res = probe.expectMsgClass(duration("200 second"), Response.class);
     assertTrue(null != res.get(JsonKey.RESPONSE));
@@ -2047,7 +2047,7 @@ public class UserManagementActorTest {
       Thread.sleep(3000);
     } catch (InterruptedException e) {
       // TODO Auto-generated catch block
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
 
     Map<String, Object> esResult = ElasticSearchUtil.getDataByIdentifier(
@@ -2076,8 +2076,8 @@ public class UserManagementActorTest {
     userids.add("47867");
     map.put(JsonKey.RECIPIENT_USERIDS, userids);
     List<String> emails = new ArrayList<>();
-    emails.add("sunbird_dummy_user_313131@gmail.com");
-    emails.add("sunbird_dummy_user_31313100@gmail.com");
+    emails.add("sunbird_dummy_user_414141@gmail.com");
+    emails.add("sunbird_dummy_user_41414100@gmail.com");
     map.put(JsonKey.RECIPIENT_EMAILS, emails);
     innerMap.put(JsonKey.EMAIL_REQUEST, map);
     reqObj.setRequest(innerMap);
@@ -2100,8 +2100,8 @@ public class UserManagementActorTest {
     userids.add(userIdnew);
     map.put(JsonKey.RECIPIENT_USERIDS, userids);
     List<String> emails = new ArrayList<>();
-    emails.add("sunbird_dummy_user_313131@gmail.com");
-    emails.add("sunbird_dummy_user_31313100@gmail.com");
+    emails.add("sunbird_dummy_user_414141@gmail.com");
+    emails.add("sunbird_dummy_user_41414100@gmail.com");
     map.put(JsonKey.RECIPIENT_EMAILS, emails);
     innerMap.put(JsonKey.EMAIL_REQUEST, map);
     reqObj.setRequest(innerMap);
@@ -2110,13 +2110,31 @@ public class UserManagementActorTest {
     assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
+  
+  @Test
+  public void testGetSunbirdWebUrlPerTenent(){
+    Map<String,Object> userMap = new HashMap<>();
+    userMap.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
+    String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
+    Assert.assertNotNull(webUrl);
+  }
+  
+  @Test
+  public void testGetSunbirdWebUrlPerTenentWithRootOrgIdAsNull(){
+    Map<String,Object> userMap = new HashMap<>();
+    userMap.put(JsonKey.ROOT_ORG_ID, "1234567890");
+    String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
+    Assert.assertNotNull(webUrl);
+  }
+  
+  
   @AfterClass
   public static void deleteUser() {
     try {
       if ("ON".equalsIgnoreCase(encryption)) {
         Response res = operation.getRecordsByProperty(userManagementDB.getKeySpace(),
             userManagementDB.getTableName(), JsonKey.USERNAME,
-            encryptionService.encryptData("sunbird_dummy_user_313131"));
+            encryptionService.encryptData("sunbird_dummy_user_414141"));
         Map<String, Object> usrMap = ((Map<String, Object>) res.getResult().get(JsonKey.RESPONSE));
         if (null != usrMap.get(JsonKey.ID)) {
           userId = (String) usrMap.get(JsonKey.ID);
@@ -2189,7 +2207,7 @@ public class UserManagementActorTest {
             (String) map.get(JsonKey.ID));
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     // To delete user data with webPage Data
     Map<String, Object> userMap = new HashMap<>();
@@ -2200,6 +2218,21 @@ public class UserManagementActorTest {
 
     ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.user.getTypeName(), userIdnew);
+
+    try{
+      Map<String, Object> userOrgMap = new HashMap<>();
+      userOrgMap.put(JsonKey.EXTERNAL_ID, "EXT_ID_DUMMY");
+      userOrgMap.put(JsonKey.PROVIDER, "BLR");
+
+      Response response = operation.getRecordsByProperties(userOrgDB.getKeySpace(), userOrgDB.getTableName(), userOrgMap);
+      List<Map<String, Object>> mapList = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
+      for (Map<String, Object> map : mapList) {
+        operation.deleteRecord(userOrgDB.getKeySpace(), userOrgDB.getTableName(),
+            (String) map.get(JsonKey.ID));
+      }
+    }catch (Exception ex){
+      ProjectLogger.log(ex.getMessage());
+    }
   }
 
 }

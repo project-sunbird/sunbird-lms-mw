@@ -506,12 +506,14 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
       Date todate = null;
       Date endDate = null;
       try {
-        endDate = format.parse((String) res.get(JsonKey.END_DATE));
+        if(!ProjectUtil.isStringNullOREmpty((String) res.get(JsonKey.END_DATE))){
+          endDate = format.parse((String) res.get(JsonKey.END_DATE));
+        }
         todate = format.parse((String) format.format(new Date()));
       } catch (ParseException e) {
         ProjectLogger.log("Exception occured while parsing date in CourseBatchManagementActor ", e);
       }
-      if (endDate.before(todate)) {
+      if (null != endDate && endDate.before(todate)) {
         throw new ProjectCommonException(ResponseCode.BatchCloseError.getErrorCode(),
             ResponseCode.BatchCloseError.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -525,13 +527,15 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
         try {
           requestedStartDate = format.parse((String) req.get(JsonKey.START_DATE));
           dbBatchStartDate = format.parse((String) res.get(JsonKey.START_DATE));
-          dbBatchEndDate = format.parse((String) res.get(JsonKey.END_DATE));
           todaydate = format.parse((String) format.format(new Date()));
-        } catch (ParseException e) {
+          if(!ProjectUtil.isStringNullOREmpty((String) res.get(JsonKey.END_DATE))) {
+            dbBatchEndDate = format.parse((String) res.get(JsonKey.END_DATE));
+          }
+        } catch (Exception e) {
           ProjectLogger.log("Exception occured while parsing date in CourseBatchManagementActor ",
               e);
         }
-        if (dbBatchEndDate.before(todaydate)) {
+        if (null != dbBatchEndDate && dbBatchEndDate.before(todaydate)) {
           throw new ProjectCommonException(ResponseCode.courseBatchEndDateError.getErrorCode(),
               ResponseCode.courseBatchEndDateError.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -558,10 +562,12 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
         Date dbBatchEndDate = null;
         try {
           dbBatchStartDate = format.parse((String) res.get(JsonKey.START_DATE));
-          dbBatchEndDate = format.parse((String) res.get(JsonKey.END_DATE));
           requestedStartDate = format.parse((String) req.get(JsonKey.START_DATE));
           todaydate = format.parse((String) format.format(new Date()));
-        } catch (ParseException e) {
+          if(!ProjectUtil.isStringNullOREmpty((String) res.get(JsonKey.END_DATE))) {
+            dbBatchEndDate = format.parse((String) res.get(JsonKey.END_DATE));
+          }
+        } catch (Exception e) {
           ProjectLogger.log("Exception occured while parsing date in CourseBatchManagementActor ",
               e);
         }
@@ -581,7 +587,7 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
         if (todaydate.compareTo(requestedStartDate) == 0) {
           req.put(JsonKey.STATUS, ProgressStatus.STARTED.getValue());
         }
-        if (requestedStartDate.after(dbBatchEndDate)) {
+        if (dbBatchEndDate != null && requestedStartDate.after(dbBatchEndDate)) {
           throw new ProjectCommonException(ResponseCode.invalidBatchStartDateError.getErrorCode(),
               ResponseCode.invalidBatchStartDateError.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -595,14 +601,16 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
         Date dbBatchEndDate = null;
         try {
           dbBatchStartDate = format.parse((String) res.get(JsonKey.START_DATE));
-          dbBatchEndDate = format.parse((String) res.get(JsonKey.END_DATE));
           requestedEndDate = format.parse((String) req.get(JsonKey.END_DATE));
           todaydate = format.parse((String) format.format(new Date()));
+          if(!ProjectUtil.isStringNullOREmpty((String) res.get(JsonKey.END_DATE))) {
+            dbBatchEndDate = format.parse((String) res.get(JsonKey.END_DATE));
+          }
         } catch (ParseException e) {
           ProjectLogger.log("Exception occured while parsing date in CourseBatchManagementActor ",
               e);
         }
-        if (dbBatchEndDate.before(todaydate)) {
+        if (dbBatchEndDate != null && dbBatchEndDate.before(todaydate)) {
           throw new ProjectCommonException(ResponseCode.courseBatchEndDateError.getErrorCode(),
               ResponseCode.courseBatchEndDateError.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());

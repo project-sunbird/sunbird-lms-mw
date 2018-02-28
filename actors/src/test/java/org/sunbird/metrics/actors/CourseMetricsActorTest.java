@@ -20,6 +20,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
+import org.sunbird.learner.Application;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -33,8 +34,10 @@ public class CourseMetricsActorTest {
   private static String batchId = "jkwf6t3r083fp4h";
   private static final String orgId = "vdckcyigc68569";
 
+
   @BeforeClass
   public static void setUp() {
+    Application.startLocalActorSystem();
     system = ActorSystem.create("system");
     Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
     insertBatchDataToES();
@@ -97,7 +100,7 @@ public class CourseMetricsActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+    Assert.assertTrue(null != res.get(JsonKey.PERIOD));
   }
 
   @Test
@@ -126,7 +129,7 @@ public class CourseMetricsActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+    Assert.assertTrue(null != res.get(JsonKey.PERIOD));
   }
 
   @Test
@@ -198,7 +201,7 @@ public class CourseMetricsActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+    Assert.assertTrue(null != res.get(JsonKey.REQUEST_ID));
   }
 
   @Test
@@ -215,8 +218,8 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+    Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.REQUEST_ID));
   }
 
   @Test

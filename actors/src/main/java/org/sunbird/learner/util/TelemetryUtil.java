@@ -13,10 +13,9 @@ import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 /**
  * Created by arvind on 17/1/18.
  */
-public class TelemetryUtil {
+public final class TelemetryUtil {
 
-  private TelemetryUtil() {
-  }
+  private TelemetryUtil() {}
 
   public static Map<String, Object> genarateTelemetryRequest(Map<String, Object> targetObject,
       List<Map<String, Object>> correlatedObject, String eventType, Map<String, Object> params) {

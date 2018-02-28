@@ -8,13 +8,16 @@ import java.util.concurrent.ScheduledExecutorService;
  * @author Manzarul.Haque
  *
  */
-public class ExecutorManager {
+public final class ExecutorManager {
   
 	private static final int MAX_EXECUTOR_THREAD = 10;
     /*
 	 * service ScheduledExecutorService object
 	 */
 	private static ScheduledExecutorService service = null;
+	
+	private ExecutorManager(){}
+	
 	static {
 	    service = Executors.newScheduledThreadPool(MAX_EXECUTOR_THREAD);
 	}

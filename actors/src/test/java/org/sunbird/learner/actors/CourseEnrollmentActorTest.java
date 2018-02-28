@@ -44,7 +44,6 @@ import org.sunbird.learner.util.Util;
 @PowerMockIgnore("javax.management.*")
 public class CourseEnrollmentActorTest {
 
-
   private static ActorSystem system;
   private static final Props props = Props.create(CourseEnrollmentActor.class);
   private static Util.DbInfo userCoursesdbInfo = null;
@@ -210,7 +209,7 @@ public class CourseEnrollmentActorTest {
     reqObj.setOperation(ActorOperations.ENROLL_COURSE.getValue());
     reqObj.put(JsonKey.COURSE_ID, "do_212282810555342848180");
     reqObj.put(JsonKey.USER_ID, "USR");
-    reqObj.put(JsonKey.BATCH_ID, batchId + 0123);
+    reqObj.put(JsonKey.BATCH_ID, batchId + "0123");
     HashMap<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.COURSE, reqObj.getRequest());
     innerMap.put(JsonKey.USER_ID, "USR");

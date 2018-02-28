@@ -3,6 +3,7 @@
  */
 package org.sunbird.common.quartz.scheduler;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -75,7 +76,7 @@ public class UploadLookUpScheduler implements Job {
           if (hourDiff < 5) {
             itr.remove();
           }
-        } catch (Exception ex) {
+        } catch (ParseException ex) {
           ProjectLogger.log(ex.getMessage(), ex);
         }
       }

@@ -24,6 +24,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
@@ -88,6 +89,19 @@ public class OrganisationManagementActorTest {
     Map<String, Object> parentOrg = new HashMap<>();
     parentOrg.put(JsonKey.ID, parentOrgId);
     operation.upsertRecord(orgDB.getKeySpace(), orgDB.getTableName(), parentOrg);
+
+    String rootOrgId = "ofure8ofp9yfpf9ego";
+
+    Map<String, Object> rootOrg = new HashMap<>();
+    rootOrg.put(JsonKey.ID, "ofure8ofp9yfpf9ego");
+    rootOrg.put(JsonKey.IS_ROOT_ORG, true);
+    rootOrg.put(JsonKey.CHANNEL, CHANNEL);
+    rootOrg.put(JsonKey.PROVIDER, PROVIDER+"01");
+    rootOrg.put(JsonKey.EXTERNAL_ID, EXTERNAL_ID+"01");
+
+    operation.upsertRecord(orgDB.getKeySpace(), orgDB.getTableName(), rootOrg);
+    ElasticSearchUtil.createData(EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), rootOrgId,
+        rootOrg);
 
     Map<String, Object> userMap = new HashMap<>();
     userMap.put(JsonKey.ID, USER_ID);
@@ -167,7 +181,7 @@ public class OrganisationManagementActorTest {
     try {
       Thread.sleep(20000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(), e);
     }
   }
 
@@ -504,7 +518,7 @@ public class OrganisationManagementActorTest {
     orgMap.put(JsonKey.ORGANISATION_NAME, "CBSE");
     orgMap.put(JsonKey.DESCRIPTION, "Central Board of Secondary Education");
     orgMap.put("orgCode", "CBSE");
-    orgMap.put("isRootOrg", true);
+    orgMap.put("isRootOrg", false);
     orgMap.put("channel", CHANNEL);
     innerMap.put(JsonKey.ORGANISATION, orgMap);
 
@@ -517,7 +531,7 @@ public class OrganisationManagementActorTest {
     try {
       Thread.sleep(10000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
   }
 
@@ -549,7 +563,7 @@ public class OrganisationManagementActorTest {
     try {
       Thread.sleep(4000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
 
     TestKit probe = new TestKit(system);
@@ -580,7 +594,7 @@ public class OrganisationManagementActorTest {
     try {
       Thread.sleep(4000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
 
     TestKit probe = new TestKit(system);
@@ -609,7 +623,7 @@ public class OrganisationManagementActorTest {
     try {
       Thread.sleep(4000);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -1038,7 +1052,7 @@ public class OrganisationManagementActorTest {
           .get(JsonKey.ADDRESS_ID));
       Assert.assertTrue(null != addressId);
     } catch (Exception ex) {
-      ex.printStackTrace();
+      ProjectLogger.log(ex.getMessage(),ex);
     }
   }
 
@@ -1137,9 +1151,9 @@ public class OrganisationManagementActorTest {
     reqObj.getRequest().put(JsonKey.USER_ORG, innerMap);
     reqObj.getRequest().put(JsonKey.REQUESTED_BY, "user1");
     subject.tell(reqObj, probe.getRef());
-    ProjectCommonException exc =
-        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != exc);
+    Response res =
+        probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res);
   }
 
 
@@ -1681,8 +1695,8 @@ public class OrganisationManagementActorTest {
           OrgIdWithSourceAndExternalId);
       System.out.println("3 " + OrgIdWithSourceAndExternalId);
 
-    } catch (Throwable th) {
-      th.printStackTrace();
+    } catch (Exception th) {
+      ProjectLogger.log(th.getMessage(),th);
     }
     if (!ProjectUtil.isStringNullOREmpty(usrId)) {
       ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
@@ -1743,7 +1757,7 @@ public class OrganisationManagementActorTest {
         }
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      ProjectLogger.log(e.getMessage(),e);
     }
     dbMap = new HashMap<>();
     dbMap.put(JsonKey.CHANNEL, CHANNEL);

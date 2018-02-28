@@ -6,7 +6,7 @@
   <packaging>pom</packaging>
   <name>sunbird_lms_mw_module</name>
   <modules>
-     <!--  <module>actors/libs</module> -->
+                  <module>actors/libs</module>
 		  <module>actors</module>
   </modules>
 </project>

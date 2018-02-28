@@ -18,6 +18,8 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.EsIndex;
+import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
 import org.sunbird.common.models.util.ProjectUtil.Status;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
@@ -168,7 +170,9 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
           ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
 
-    List<String> createdFor = (List<String>) courseBatchObject.get(JsonKey.COURSE_CREATED_FOR);
+    String batchCreator = (String) courseBatchObject.get(JsonKey.CREATED_BY);
+    String batchCreatorRootOrgId = getRootOrg(batchCreator);
+
     Map<String, Boolean> participants =
         (Map<String, Boolean>) courseBatchObject.get(JsonKey.PARTICIPANT);
     // check whether can update user or not
@@ -177,39 +181,28 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
       participants = new HashMap<>();
     }
 
+    Map<String, String> participantWithRootOrgIds = getRootOrgForMultipleUsers(userIds);
+
     for (String userId : userIds) {
       if (!(participants.containsKey(userId))) {
-        Response dbResponse = cassandraOperation.getRecordsByProperty(userOrgdbInfo.getKeySpace(),
-            userOrgdbInfo.getTableName(), JsonKey.USER_ID, userId);
-        List<Map<String, Object>> userOrgResult =
-            (List<Map<String, Object>>) dbResponse.get(JsonKey.RESPONSE);
-
-        if (userOrgResult.isEmpty()) {
+        if (!participantWithRootOrgIds.containsKey(userId) || (!batchCreatorRootOrgId
+            .equals(participantWithRootOrgIds.get(userId)))) {
           response.put(userId, ResponseCode.userNotAssociatedToOrg.getErrorMessage());
           continue;
         }
 
-        boolean flag = false;
-        for (int i = 0; i < userOrgResult.size() && !flag; i++) {
-          Map<String, Object> usrOrgDetail = userOrgResult.get(i);
-          if (createdFor.contains((String) usrOrgDetail.get(JsonKey.ORGANISATION_ID))) {
-            participants.put(userId,
-                addUserCourses(batchId, (String) courseBatchObject.get(JsonKey.COURSE_ID),
-                     userId,
-                    (Map<String, String>) (courseBatchObject.get(JsonKey.COURSE_ADDITIONAL_INFO))));
-            flag = true;
-          }
-        }
-        if (flag) {
-          response.getResult().put(userId, JsonKey.SUCCESS);
-          // create audit log for user here that user associated to the batch here , here user is the targer object ...
-          targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-          correlatedObject = new ArrayList<>();
-          TelemetryUtil.generateCorrelatedObject(batchId, JsonKey.BATCH ,null, correlatedObject );
-          TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
-           } else {
-          response.getResult().put(userId, ResponseCode.userNotAssociatedToOrg.getErrorMessage());
-        }
+        participants.put(userId,
+            addUserCourses(batchId, (String) courseBatchObject.get(JsonKey.COURSE_ID),
+                userId,
+                (Map<String, String>) (courseBatchObject.get(JsonKey.COURSE_ADDITIONAL_INFO))));
+
+        response.getResult().put(userId, JsonKey.SUCCESS);
+        // create audit log for user here that user associated to the batch here , here user is the targer object ...
+        targetObject = TelemetryUtil
+            .generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+        correlatedObject = new ArrayList<>();
+        TelemetryUtil.generateCorrelatedObject(batchId, JsonKey.BATCH, null, correlatedObject);
+        TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
 
       } else {
         response.getResult().put(userId, JsonKey.SUCCESS);
@@ -231,6 +224,63 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
       ProjectLogger.log(
           "Exception Occured during saving Course Batch to Es while updating Course Batch : ", ex);
     }
+  }
+
+  private Map<String, String> getRootOrgForMultipleUsers(List<String> userIds) {
+
+    Map<String, String> userWithRootOrgs = new HashMap<>();
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(JsonKey.ID, userIds);
+
+    List<String> fields = new ArrayList<>();
+    fields.add(JsonKey.ROOT_ORG_ID);
+    fields.add(JsonKey.ID);
+    fields.add(JsonKey.REGISTERED_ORG);
+
+    SearchDTO searchDTO = new SearchDTO();
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
+    searchDTO.setFields(fields);
+
+    Map<String, Object> result =
+        ElasticSearchUtil.complexSearch(searchDTO,
+            ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+
+    List<Map<String, Object>> esContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+
+    for(Map<String, Object> user : esContent){
+      String rootOrg = null;
+      Map<String , Object> registeredOrgInfo = (Map<String, Object>) user.get(JsonKey.REGISTERED_ORG);
+      if(registeredOrgInfo != null && !registeredOrgInfo.isEmpty()){
+        if(null != registeredOrgInfo.get(JsonKey.IS_ROOT_ORG) && (Boolean)registeredOrgInfo.get(JsonKey.IS_ROOT_ORG)){
+          rootOrg = (String) registeredOrgInfo.get(JsonKey.ID);
+        }else{
+          rootOrg = (String) user.get(JsonKey.ROOT_ORG_ID);
+        }
+      }else{
+        rootOrg = (String) user.get(JsonKey.ROOT_ORG_ID);
+      }
+
+      userWithRootOrgs.put((String)user.get(JsonKey.ID), rootOrg);
+    }
+
+    return userWithRootOrgs;
+
+  }
+
+  private String getRootOrg(String batchCreator) {
+    String rootOrg = null;
+    Map<String, Object> userInfo = ElasticSearchUtil.getDataByIdentifier(EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), batchCreator);
+    Map<String , Object> registeredOrgInfo = (Map<String, Object>) userInfo.get(JsonKey.REGISTERED_ORG);
+    if(registeredOrgInfo != null && !registeredOrgInfo.isEmpty()){
+      if(null != registeredOrgInfo.get(JsonKey.IS_ROOT_ORG) && (Boolean)registeredOrgInfo.get(JsonKey.IS_ROOT_ORG)){
+        rootOrg = (String) registeredOrgInfo.get(JsonKey.ID);
+      }else{
+        rootOrg = (String) userInfo.get(JsonKey.ROOT_ORG_ID);
+      }
+    }else{
+      rootOrg = (String) userInfo.get(JsonKey.ROOT_ORG_ID);
+    }
+    return rootOrg;
   }
 
   private Boolean addUserCourses(String batchId, String courseId, String userId,

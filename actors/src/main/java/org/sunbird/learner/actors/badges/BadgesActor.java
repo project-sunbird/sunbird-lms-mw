@@ -185,8 +185,7 @@ public class BadgesActor extends UntypedAbstractActor {
       isallHealthy = false;
     }
     // check EKStep Util.
-	responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE, false, null));
-   /* try {
+    try {
       String body = "{\"request\":{\"filters\":{\"identifier\":\"test\"}}}";
       Map<String, String> headers = new HashMap<>();
       headers.put(JsonKey.AUTHORIZATION,
@@ -212,7 +211,7 @@ public class BadgesActor extends UntypedAbstractActor {
     } catch (Exception e) {
       responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE, true, null));
       isallHealthy = false;
-    } */
+    } 
 
     finalResponseMap.put(JsonKey.CHECKS, responseList);
     finalResponseMap.put(JsonKey.NAME, "Complete health check api");

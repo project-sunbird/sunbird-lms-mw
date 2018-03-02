@@ -2,7 +2,6 @@ FROM openjdk:8-jdk-alpine
 MAINTAINER "Manojv" "manojv@ilimi.in"
 RUN apk update \
     && apk add unzip \
-    && apk add open-jdk8 \
     && apk add curl \
     && adduser -u 1001 -h /home/sunbird/ -D sunbird \
     && mkdir -p /home/sunbird/learner

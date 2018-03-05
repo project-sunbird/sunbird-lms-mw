@@ -1,9 +1,6 @@
 package org.sunbird.learner;
 
 
-import akka.actor.ActorRef;
-import akka.actor.ActorSelection;
-import junit.framework.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.sunbird.common.models.util.ActorOperations;
@@ -11,6 +8,10 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.learner.util.actorutility.ActorSystemFactory;
 import org.sunbird.learner.util.actorutility.impl.LocalActorSystem;
 import org.sunbird.learner.util.actorutility.impl.RemoteActorSystem;
+
+import akka.actor.ActorRef;
+import akka.actor.ActorSelection;
+import junit.framework.Assert;
 
 public class ActorSystemTest {
   

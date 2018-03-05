@@ -1,11 +1,11 @@
 package org.sunbird.learner.actors.search;
 
-import akka.actor.UntypedAbstractActor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -23,6 +23,8 @@ import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
+
+import akka.actor.UntypedAbstractActor;
 
 /**
  * This class will handle search operation for all different type of index and types

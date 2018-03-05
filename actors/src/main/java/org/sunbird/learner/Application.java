@@ -1,10 +1,5 @@
 package org.sunbird.learner;
 
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -14,6 +9,13 @@ import org.sunbird.learner.actors.BackgroundRequestRouterActor;
 import org.sunbird.learner.actors.RequestRouterActor;
 import org.sunbird.learner.util.SchedulerManager;
 import org.sunbird.learner.util.Util;
+
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
 
 /**
  * @author Amit Kumar

@@ -1,7 +1,5 @@
 package org.sunbird.learner.actors;
 
-import akka.actor.UntypedAbstractActor;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,6 +7,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.cassandra.CassandraOperation;
@@ -34,6 +33,10 @@ import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import akka.actor.UntypedAbstractActor;
 
 /**
  * This class will handle all the background job. Example when ever course is published then this

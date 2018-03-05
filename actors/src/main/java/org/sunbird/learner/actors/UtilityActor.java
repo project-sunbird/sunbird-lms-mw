@@ -1,6 +1,5 @@
 package org.sunbird.learner.actors;
 
-import akka.actor.UntypedAbstractActor;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -8,6 +7,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -20,6 +20,8 @@ import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
+
+import akka.actor.UntypedAbstractActor;
 
 /**
  * This will updated user learner state activity. example what was the last accessed content. how

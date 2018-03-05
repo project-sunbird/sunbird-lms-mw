@@ -10,7 +10,7 @@ import java.util.Map;
  *
  */
 public class ContentResponse {
-	private Map<String,Object> result;
+	private Map<String, Object> result;
 
 	public Map<String, Object> getResult() {
 		return result;
@@ -19,7 +19,5 @@ public class ContentResponse {
 	public void setResult(Map<String, Object> result) {
 		this.result = result;
 	}
-	
-	
 
 }

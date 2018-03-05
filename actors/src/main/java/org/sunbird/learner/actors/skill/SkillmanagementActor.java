@@ -33,341 +33,323 @@ import org.sunbird.learner.util.Util;
 import akka.actor.UntypedAbstractActor;
 
 /**
- * Class to provide functionality for Add and Endorse the user skills . Created by arvind on
- * 18/10/17.
+ * Class to provide functionality for Add and Endorse the user skills . Created
+ * by arvind on 18/10/17.
  */
 public class SkillmanagementActor extends UntypedAbstractActor {
 
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
-  private Util.DbInfo skillsListDbInfo = Util.dbInfoMap.get(JsonKey.SKILLS_LIST_DB);
-  private Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-  private static final String REF_SKILLS_DB_ID = "001";
+	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+	private Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
+	private Util.DbInfo skillsListDbInfo = Util.dbInfoMap.get(JsonKey.SKILLS_LIST_DB);
+	private Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+	private static final String REF_SKILLS_DB_ID = "001";
 
-  @Override
-  public void onReceive(Object message) throws Throwable {
+	@Override
+	public void onReceive(Object message) throws Throwable {
 
-    if (message instanceof Request) {
-      try {
-        ProjectLogger.log("SkillmanagementActor-onReceive called");
-        Request actorMessage = (Request) message;
-        Util.initializeContext(actorMessage, JsonKey.USER);
-        // set request id fto thread loacl...
-        ExecutionContext.setRequestId(actorMessage.getRequestId());
-        if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ADD_SKILL.getValue())) {
-          endorseSkill(actorMessage);
-        } else if (actorMessage.getOperation()
-            .equalsIgnoreCase(ActorOperations.GET_SKILL.getValue())) {
-          getSkill(actorMessage);
-        } else if (actorMessage.getOperation()
-            .equalsIgnoreCase(ActorOperations.GET_SKILLS_LIST.getValue())) {
-          getSkillsList();
-        } else {
-          ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
-          ProjectCommonException exception =
-              new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
-                  ResponseCode.invalidOperationName.getErrorMessage(),
-                  ResponseCode.CLIENT_ERROR.getResponseCode());
-          sender().tell(exception, self());
-        }
-      } catch (Exception ex) {
-        ProjectLogger.log(ex.getMessage(), ex,
-            TelemetryUtil.genarateTelemetryInfoForError(JsonKey.USER));
-        sender().tell(ex, self());
-      }
-    } else {
-      ProjectLogger.log("UNSUPPORTED MESSAGE");
-      ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-    }
-  }
+		if (message instanceof Request) {
+			try {
+				ProjectLogger.log("SkillmanagementActor-onReceive called");
+				Request actorMessage = (Request) message;
+				Util.initializeContext(actorMessage, JsonKey.USER);
+				// set request id fto thread loacl...
+				ExecutionContext.setRequestId(actorMessage.getRequestId());
+				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ADD_SKILL.getValue())) {
+					endorseSkill(actorMessage);
+				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_SKILL.getValue())) {
+					getSkill(actorMessage);
+				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_SKILLS_LIST.getValue())) {
+					getSkillsList();
+				} else {
+					ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
+					ProjectCommonException exception = new ProjectCommonException(
+							ResponseCode.invalidOperationName.getErrorCode(),
+							ResponseCode.invalidOperationName.getErrorMessage(),
+							ResponseCode.CLIENT_ERROR.getResponseCode());
+					sender().tell(exception, self());
+				}
+			} catch (Exception ex) {
+				ProjectLogger.log(ex.getMessage(), ex, TelemetryUtil.genarateTelemetryInfoForError(JsonKey.USER));
+				sender().tell(ex, self());
+			}
+		} else {
+			ProjectLogger.log("UNSUPPORTED MESSAGE");
+			ProjectCommonException exception = new ProjectCommonException(
+					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
+					ResponseCode.CLIENT_ERROR.getResponseCode());
+			sender().tell(exception, self());
+		}
+	}
 
-  /**
-   * Method will return all the list of skills , it is type of reference data ...
-   */
-  private void getSkillsList() {
+	/**
+	 * Method will return all the list of skills , it is type of reference data ...
+	 */
+	private void getSkillsList() {
 
-    ProjectLogger.log("SkillmanagementActor-getSkillsList called");
-    Map<String, Object> skills = new HashMap<>();
-    Response skilldbresponse = cassandraOperation.getRecordById(skillsListDbInfo.getKeySpace(),
-        skillsListDbInfo.getTableName(), REF_SKILLS_DB_ID);
-    List<Map<String, Object>> skillList =
-        (List<Map<String, Object>>) skilldbresponse.get(JsonKey.RESPONSE);
+		ProjectLogger.log("SkillmanagementActor-getSkillsList called");
+		Map<String, Object> skills = new HashMap<>();
+		Response skilldbresponse = cassandraOperation.getRecordById(skillsListDbInfo.getKeySpace(),
+				skillsListDbInfo.getTableName(), REF_SKILLS_DB_ID);
+		List<Map<String, Object>> skillList = (List<Map<String, Object>>) skilldbresponse.get(JsonKey.RESPONSE);
 
-    if (!skillList.isEmpty()) {
-      skills = skillList.get(0);
-    }
-    Response response = new Response();
-    response.getResult().put(JsonKey.SKILLS, skills.get(JsonKey.SKILLS));
-    sender().tell(response, self());
+		if (!skillList.isEmpty()) {
+			skills = skillList.get(0);
+		}
+		Response response = new Response();
+		response.getResult().put(JsonKey.SKILLS, skills.get(JsonKey.SKILLS));
+		sender().tell(response, self());
 
-  }
+	}
 
-  /**
-   * Method to get the list of skills of the user on basis of UserId ...
-   * 
-   * @param actorMessage
-   */
-  private void getSkill(Request actorMessage) {
+	/**
+	 * Method to get the list of skills of the user on basis of UserId ...
+	 * 
+	 * @param actorMessage
+	 */
+	private void getSkill(Request actorMessage) {
 
-    ProjectLogger.log("SkillmanagementActor-getSkill called");
-    String endorsedUserId = (String) actorMessage.getRequest().get(JsonKey.ENDORSED_USER_ID);
-    if (ProjectUtil.isStringNullOREmpty(endorsedUserId)) {
-      throw new ProjectCommonException(ResponseCode.endorsedUserIdRequired.getErrorCode(),
-          ResponseCode.endorsedUserIdRequired.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
-    Map<String, Object> filter = new HashMap<>();
-    filter.put(JsonKey.USER_ID, endorsedUserId);
-    List<String> fields = new ArrayList<>();
-    fields.add(JsonKey.SKILLS);
+		ProjectLogger.log("SkillmanagementActor-getSkill called");
+		String endorsedUserId = (String) actorMessage.getRequest().get(JsonKey.ENDORSED_USER_ID);
+		if (ProjectUtil.isStringNullOREmpty(endorsedUserId)) {
+			throw new ProjectCommonException(ResponseCode.endorsedUserIdRequired.getErrorCode(),
+					ResponseCode.endorsedUserIdRequired.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+		}
+		Map<String, Object> filter = new HashMap<>();
+		filter.put(JsonKey.USER_ID, endorsedUserId);
+		List<String> fields = new ArrayList<>();
+		fields.add(JsonKey.SKILLS);
 
-    Map<String, Object> result =
-        ElasticSearchUtil.complexSearch(createESRequest(filter, null, fields),
-            ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
-    if (result.isEmpty() || ((List<Map<String, Object>>) result.get(JsonKey.CONTENT)).isEmpty()) {
-      throw new ProjectCommonException(ResponseCode.invalidUserId.getErrorCode(),
-          ResponseCode.invalidUserId.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
-    List<Map<String, Object>> skillList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+		Map<String, Object> result = ElasticSearchUtil.complexSearch(createESRequest(filter, null, fields),
+				ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+		if (result.isEmpty() || ((List<Map<String, Object>>) result.get(JsonKey.CONTENT)).isEmpty()) {
+			throw new ProjectCommonException(ResponseCode.invalidUserId.getErrorCode(),
+					ResponseCode.invalidUserId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+		}
+		List<Map<String, Object>> skillList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
 
-    Map<String, Object> skillMap = new HashMap();
-    if (!skillList.isEmpty()) {
-      skillMap = skillList.get(0);
-    }
+		Map<String, Object> skillMap = new HashMap();
+		if (!skillList.isEmpty()) {
+			skillMap = skillList.get(0);
+		}
 
-    Response response = new Response();
-    response.getResult().put(JsonKey.SKILLS, skillMap.get(JsonKey.SKILLS));
-    sender().tell(response, self());
+		Response response = new Response();
+		response.getResult().put(JsonKey.SKILLS, skillMap.get(JsonKey.SKILLS));
+		sender().tell(response, self());
 
-  }
+	}
 
-  /**
-   * Method to add or endorse the user skill ...
-   * 
-   * @param actorMessage
-   */
-  private void endorseSkill(Request actorMessage) {
+	/**
+	 * Method to add or endorse the user skill ...
+	 * 
+	 * @param actorMessage
+	 */
+	private void endorseSkill(Request actorMessage) {
 
-    ProjectLogger.log("SkillmanagementActor-endorseSkill called");
-    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-    // object of telemetry event...
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+		ProjectLogger.log("SkillmanagementActor-endorseSkill called");
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+		// object of telemetry event...
+		Map<String, Object> targetObject = null;
+		List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
-    String endoresedUserId = (String) actorMessage.getRequest().get(JsonKey.ENDORSED_USER_ID);
+		String endoresedUserId = (String) actorMessage.getRequest().get(JsonKey.ENDORSED_USER_ID);
 
+		List<String> list = (List<String>) actorMessage.getRequest().get(JsonKey.SKILL_NAME);
+		CopyOnWriteArraySet<String> skillset = new CopyOnWriteArraySet<>(list);
+		String requestedByUserId = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
 
-    List<String> list = (List<String>) actorMessage.getRequest().get(JsonKey.SKILL_NAME);
-    CopyOnWriteArraySet<String> skillset = new CopyOnWriteArraySet<>(list);
-    String requestedByUserId = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
+		Response response1 = cassandraOperation.getRecordById(userDbInfo.getKeySpace(), userDbInfo.getTableName(),
+				endoresedUserId);
+		Response response2 = cassandraOperation.getRecordById(userDbInfo.getKeySpace(), userDbInfo.getTableName(),
+				requestedByUserId);
+		List<Map<String, Object>> endoresedList = (List<Map<String, Object>>) response1.get(JsonKey.RESPONSE);
+		List<Map<String, Object>> requestedUserList = (List<Map<String, Object>>) response2.get(JsonKey.RESPONSE);
 
-    Response response1 = cassandraOperation.getRecordById(userDbInfo.getKeySpace(),
-        userDbInfo.getTableName(), endoresedUserId);
-    Response response2 = cassandraOperation.getRecordById(userDbInfo.getKeySpace(),
-        userDbInfo.getTableName(), requestedByUserId);
-    List<Map<String, Object>> endoresedList =
-        (List<Map<String, Object>>) response1.get(JsonKey.RESPONSE);
-    List<Map<String, Object>> requestedUserList =
-        (List<Map<String, Object>>) response2.get(JsonKey.RESPONSE);
+		// check whether both userid exist or not if not throw exception
+		if (endoresedList.isEmpty() || requestedUserList.isEmpty()) {
+			// generate context and params here ...
+			throw new ProjectCommonException(ResponseCode.invalidUserId.getErrorCode(),
+					ResponseCode.invalidUserId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+		}
 
-    // check whether both userid exist or not if not throw exception
-    if (endoresedList.isEmpty() || requestedUserList.isEmpty()) {
-      // generate context and params here ...
-      throw new ProjectCommonException(ResponseCode.invalidUserId.getErrorCode(),
-          ResponseCode.invalidUserId.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
+		Map<String, Object> endoresedMap = endoresedList.get(0);
+		Map<String, Object> requestedUserMap = requestedUserList.get(0);
 
-    Map<String, Object> endoresedMap = endoresedList.get(0);
-    Map<String, Object> requestedUserMap = requestedUserList.get(0);
+		// check whether both belongs to same org or not(check root or id of both users)
+		// , if not then
+		// throw exception ---
+		if (!compareStrings((String) endoresedMap.get(JsonKey.ROOT_ORG_ID),
+				(String) requestedUserMap.get(JsonKey.ROOT_ORG_ID))) {
 
-    // check whether both belongs to same org or not(check root or id of both users) , if not then
-    // throw exception ---
-    if (!compareStrings((String) endoresedMap.get(JsonKey.ROOT_ORG_ID),
-        (String) requestedUserMap.get(JsonKey.ROOT_ORG_ID))) {
+			throw new ProjectCommonException(ResponseCode.canNotEndorse.getErrorCode(),
+					ResponseCode.canNotEndorse.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+		}
 
-      throw new ProjectCommonException(ResponseCode.canNotEndorse.getErrorCode(),
-          ResponseCode.canNotEndorse.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
+		for (String skillName : skillset) {
 
-    for (String skillName : skillset) {
+			if (!ProjectUtil.isStringNullOREmpty(skillName)) {
 
-      if (!ProjectUtil.isStringNullOREmpty(skillName)) {
+				// check whether user have already this skill or not -
+				String id = OneWayHashing
+						.encryptVal(endoresedUserId + JsonKey.PRIMARY_KEY_DELIMETER + skillName.toLowerCase());
+				Response response = cassandraOperation.getRecordById(userSkillDbInfo.getKeySpace(),
+						userSkillDbInfo.getTableName(), id);
+				List<Map<String, Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
 
-        // check whether user have already this skill or not -
-        String id = OneWayHashing
-            .encryptVal(endoresedUserId + JsonKey.PRIMARY_KEY_DELIMETER + skillName.toLowerCase());
-        Response response = cassandraOperation.getRecordById(userSkillDbInfo.getKeySpace(),
-            userSkillDbInfo.getTableName(), id);
-        List<Map<String, Object>> responseList =
-            (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+				// prepare correlted object ...
+				TelemetryUtil.generateCorrelatedObject(id, "skill", "user.skill", correlatedObject);
 
-        // prepare correlted object ...
-        TelemetryUtil.generateCorrelatedObject(id, "skill", "user.skill", correlatedObject);
+				if (responseList.isEmpty()) {
+					// means this is first time skill coming so add this one
+					Map<String, Object> skillMap = new HashMap<>();
+					skillMap.put(JsonKey.ID, id);
+					skillMap.put(JsonKey.USER_ID, endoresedUserId);
+					skillMap.put(JsonKey.SKILL_NAME, skillName);
+					skillMap.put(JsonKey.SKILL_NAME_TO_LOWERCASE, skillName.toLowerCase());
+					skillMap.put(JsonKey.ADDED_BY, requestedByUserId);
+					skillMap.put(JsonKey.ADDED_AT, format.format(new Date()));
+					Map<String, String> endoresers = new HashMap<>();
 
-        if (responseList.isEmpty()) {
-          // means this is first time skill coming so add this one
-          Map<String, Object> skillMap = new HashMap<>();
-          skillMap.put(JsonKey.ID, id);
-          skillMap.put(JsonKey.USER_ID, endoresedUserId);
-          skillMap.put(JsonKey.SKILL_NAME, skillName);
-          skillMap.put(JsonKey.SKILL_NAME_TO_LOWERCASE, skillName.toLowerCase());
-          skillMap.put(JsonKey.ADDED_BY, requestedByUserId);
-          skillMap.put(JsonKey.ADDED_AT, format.format(new Date()));
-          Map<String, String> endoresers = new HashMap<>();
+					List<Map<String, String>> endorsersList = new ArrayList<>();
+					endoresers.put(JsonKey.USER_ID, requestedByUserId);
+					endoresers.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
+					endorsersList.add(endoresers);
 
-          List<Map<String, String>> endorsersList = new ArrayList<>();
-          endoresers.put(JsonKey.USER_ID, requestedByUserId);
-          endoresers.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
-          endorsersList.add(endoresers);
+					skillMap.put(JsonKey.ENDORSERS_LIST, endorsersList);
+					skillMap.put(JsonKey.ENDORSEMENT_COUNT, 0);
+					cassandraOperation.insertRecord(userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(),
+							skillMap);
 
-          skillMap.put(JsonKey.ENDORSERS_LIST, endorsersList);
-          skillMap.put(JsonKey.ENDORSEMENT_COUNT, 0);
-          cassandraOperation.insertRecord(userSkillDbInfo.getKeySpace(),
-              userSkillDbInfo.getTableName(), skillMap);
+					updateEs(endoresedUserId);
+				} else {
+					// skill already exist for user simply update the then check if it is already
+					// added by
+					// same user then dont do anything
+					// otherwise update the existing one ...
 
-          updateEs(endoresedUserId);
-        } else {
-          // skill already exist for user simply update the then check if it is already added by
-          // same user then dont do anything
-          // otherwise update the existing one ...
+					Map<String, Object> responseMap = responseList.get(0);
+					// check whether requested user has already endoresed to that user or not
+					List<Map<String, String>> endoresersList = (List<Map<String, String>>) responseMap
+							.get(JsonKey.ENDORSERS_LIST);
+					boolean flag = false;
+					for (Map<String, String> map : endoresersList) {
+						if (((String) map.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedByUserId)) {
+							flag = true;
+							break;
+						}
+					}
+					if (flag) {
+						// donot do anything..
+						ProjectLogger.log(requestedByUserId + " has already endorsed the " + endoresedUserId);
+					} else {
+						Integer endoresementCount = (Integer) responseMap.get(JsonKey.ENDORSEMENT_COUNT) + 1;
+						Map<String, String> endorsersMap = new HashMap<>();
+						endorsersMap.put(JsonKey.USER_ID, requestedByUserId);
+						endorsersMap.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
+						endoresersList.add(endorsersMap);
 
-          Map<String, Object> responseMap = responseList.get(0);
-          // check whether requested user has already endoresed to that user or not
-          List<Map<String, String>> endoresersList =
-              (List<Map<String, String>>) responseMap.get(JsonKey.ENDORSERS_LIST);
-          boolean flag = false;
-          for (Map<String, String> map : endoresersList) {
-            if (((String) map.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedByUserId)) {
-              flag = true;
-              break;
-            }
-          }
-          if (flag) {
-            // donot do anything..
-            ProjectLogger.log(requestedByUserId + " has already endorsed the " + endoresedUserId);
-          } else {
-            Integer endoresementCount = (Integer) responseMap.get(JsonKey.ENDORSEMENT_COUNT) + 1;
-            Map<String, String> endorsersMap = new HashMap<>();
-            endorsersMap.put(JsonKey.USER_ID, requestedByUserId);
-            endorsersMap.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
-            endoresersList.add(endorsersMap);
+						responseMap.put(JsonKey.ENDORSERS_LIST, endoresersList);
+						responseMap.put(JsonKey.ENDORSEMENT_COUNT, endoresementCount);
+						cassandraOperation.updateRecord(userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(),
+								responseMap);
+						updateEs(endoresedUserId);
+					}
+				}
+			} else {
+				skillset.remove(skillName);
+			}
+		}
 
-            responseMap.put(JsonKey.ENDORSERS_LIST, endoresersList);
-            responseMap.put(JsonKey.ENDORSEMENT_COUNT, endoresementCount);
-            cassandraOperation.updateRecord(userSkillDbInfo.getKeySpace(),
-                userSkillDbInfo.getTableName(), responseMap);
-            updateEs(endoresedUserId);
-          }
-        }
-      } else {
-        skillset.remove(skillName);
-      }
-    }
+		Response response3 = new Response();
+		response3.getResult().put(JsonKey.RESULT, "SUCCESS");
+		sender().tell(response3, self());
 
-    Response response3 = new Response();
-    response3.getResult().put(JsonKey.RESULT, "SUCCESS");
-    sender().tell(response3, self());
+		targetObject = TelemetryUtil.generateTargetObject(endoresedUserId, JsonKey.USER, JsonKey.CREATE, null);
+		TelemetryUtil.generateCorrelatedObject(endoresedUserId, JsonKey.USER, null, correlatedObject);
+		TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
 
-    targetObject =
-        TelemetryUtil.generateTargetObject(endoresedUserId, JsonKey.USER, JsonKey.CREATE, null);
-    TelemetryUtil.generateCorrelatedObject(endoresedUserId, JsonKey.USER, null, correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
-        correlatedObject);
+		updateSkillsList(skillset);
+	}
 
-    updateSkillsList(skillset);
-  }
+	private void updateSkillsList(CopyOnWriteArraySet<String> skillset) {
 
-  private void updateSkillsList(CopyOnWriteArraySet<String> skillset) {
+		Map<String, Object> skills = new HashMap<>();
+		List<String> skillsList = null;
+		Response skilldbresponse = cassandraOperation.getRecordById(skillsListDbInfo.getKeySpace(),
+				skillsListDbInfo.getTableName(), REF_SKILLS_DB_ID);
+		List<Map<String, Object>> list = (List<Map<String, Object>>) skilldbresponse.get(JsonKey.RESPONSE);
 
-    Map<String, Object> skills = new HashMap<>();
-    List<String> skillsList = null;
-    Response skilldbresponse = cassandraOperation.getRecordById(skillsListDbInfo.getKeySpace(),
-        skillsListDbInfo.getTableName(), REF_SKILLS_DB_ID);
-    List<Map<String, Object>> list =
-        (List<Map<String, Object>>) skilldbresponse.get(JsonKey.RESPONSE);
+		if (!list.isEmpty()) {
+			skills = list.get(0);
+			skillsList = (List<String>) skills.get(JsonKey.SKILLS);
 
-    if (!list.isEmpty()) {
-      skills = list.get(0);
-      skillsList = (List<String>) skills.get(JsonKey.SKILLS);
+		} else {
+			// craete new Entry into the
+			skillsList = new ArrayList<>();
+		}
 
-    } else {
-      // craete new Entry into the
-      skillsList = new ArrayList<>();
-    }
+		for (String skillName : skillset) {
+			if (!skillsList.contains(skillName.toLowerCase())) {
+				skillsList.add(skillName.toLowerCase());
+			}
+		}
 
-    for (String skillName : skillset) {
-      if (!skillsList.contains(skillName.toLowerCase())) {
-        skillsList.add(skillName.toLowerCase());
-      }
-    }
+		skills.put(JsonKey.ID, REF_SKILLS_DB_ID);
+		skills.put(JsonKey.SKILLS, skillsList);
+		cassandraOperation.upsertRecord(skillsListDbInfo.getKeySpace(), skillsListDbInfo.getTableName(), skills);
 
-    skills.put(JsonKey.ID, REF_SKILLS_DB_ID);
-    skills.put(JsonKey.SKILLS, skillsList);
-    cassandraOperation.upsertRecord(skillsListDbInfo.getKeySpace(), skillsListDbInfo.getTableName(),
-        skills);
+	}
 
-  }
+	@SuppressWarnings("unchecked")
+	private void updateEs(String userId) {
 
-  @SuppressWarnings("unchecked")
-  private void updateEs(String userId) {
+		// get all records from cassandra as list and add that list to user in
+		// ElasticSearch ...
+		Response response = cassandraOperation.getRecordsByProperty(userSkillDbInfo.getKeySpace(),
+				userSkillDbInfo.getTableName(), JsonKey.USER_ID, userId);
+		List<Map<String, Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+		Map<String, Object> esMap = new HashMap<>();
+		esMap.put(JsonKey.SKILLS, responseList);
+		Map<String, Object> profile = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
+				EsType.user.getTypeName(), userId);
+		if (null != profile && !profile.isEmpty()) {
+			Map<String, String> visibility = (Map<String, String>) profile.get(JsonKey.PROFILE_VISIBILITY);
+			if ((null != visibility && !visibility.isEmpty()) && visibility.containsKey(JsonKey.SKILLS)) {
+				Map<String, Object> visibilityMap = ElasticSearchUtil.getDataByIdentifier(
+						ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.userprofilevisibility.getTypeName(), userId);
+				if (null != visibilityMap && !visibilityMap.isEmpty()) {
+					visibilityMap.putAll(esMap);
+					ElasticSearchUtil.createData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+							EsType.userprofilevisibility.getTypeName(), userId, visibilityMap);
+				}
+			} else {
+				ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(),
+						userId, esMap);
+			}
+		}
+	}
 
-    // get all records from cassandra as list and add that list to user in ElasticSearch ...
-    Response response = cassandraOperation.getRecordsByProperty(userSkillDbInfo.getKeySpace(),
-        userSkillDbInfo.getTableName(), JsonKey.USER_ID, userId);
-    List<Map<String, Object>> responseList =
-        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    Map<String, Object> esMap = new HashMap<>();
-    esMap.put(JsonKey.SKILLS, responseList);
-    Map<String, Object> profile = ElasticSearchUtil.getDataByIdentifier(
-        ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId);
-    if (null != profile && !profile.isEmpty()) {
-      Map<String, String> visibility =
-          (Map<String, String>) profile.get(JsonKey.PROFILE_VISIBILITY);
-      if ((null != visibility && !visibility.isEmpty()) && visibility.containsKey(JsonKey.SKILLS)) {
-        Map<String, Object> visibilityMap =
-            ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
-                EsType.userprofilevisibility.getTypeName(), userId);
-        if (null != visibilityMap && !visibilityMap.isEmpty()) {
-          visibilityMap.putAll(esMap);
-          ElasticSearchUtil.createData(ProjectUtil.EsIndex.sunbird.getIndexName(),
-              EsType.userprofilevisibility.getTypeName(), userId, visibilityMap);
-        }
-      } else {
-        ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(),
-            EsType.user.getTypeName(), userId, esMap);
-      }
-    }
-  }
+	// method will compare two strings and return true id both are same otherwise
+	// false ...
+	private boolean compareStrings(String first, String second) {
+		if (isNull(first) && isNull(second)) {
+			return true;
+		}
+		if ((isNull(first) && isNotNull(second)) || (isNull(second) && isNotNull(first))) {
+			return false;
+		}
+		return first.equalsIgnoreCase(second);
+	}
 
-  // method will compare two strings and return true id both are same otherwise false ...
-  private boolean compareStrings(String first, String second) {
-    if (isNull(first) && isNull(second)) {
-      return true;
-    }
-    if ((isNull(first) && isNotNull(second)) || (isNull(second) && isNotNull(first))) {
-      return false;
-    }
-    return first.equalsIgnoreCase(second);
-  }
+	protected SearchDTO createESRequest(Map<String, Object> filters, Map<String, String> aggs, List<String> fields) {
+		SearchDTO searchDTO = new SearchDTO();
 
-  protected SearchDTO createESRequest(Map<String, Object> filters, Map<String, String> aggs,
-      List<String> fields) {
-    SearchDTO searchDTO = new SearchDTO();
-
-    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
-    if (ProjectUtil.isNotNull(aggs)) {
-      searchDTO.getFacets().add(aggs);
-    }
-    if (ProjectUtil.isNotNull(fields)) {
-      searchDTO.setFields(fields);
-    }
-    return searchDTO;
-  }
+		searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
+		if (ProjectUtil.isNotNull(aggs)) {
+			searchDTO.getFacets().add(aggs);
+		}
+		if (ProjectUtil.isNotNull(fields)) {
+			searchDTO.setFields(fields);
+		}
+		return searchDTO;
+	}
 }

@@ -24,69 +24,69 @@ import akka.testkit.javadsl.TestKit;
 
 public class ApplicationConfigActorTest {
 
-  private static ActorSystem system;
-  private final static Props props = Props.create(ApplicationConfigActor.class);
+	private static ActorSystem system;
+	private final static Props props = Props.create(ApplicationConfigActor.class);
 
-  @BeforeClass
-  public static void setUp() {
-      Application.startLocalActorSystem();
-      system = ActorSystem.create("system");
-      Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-  }
-  
-  @Test
-  public void updateSystemSettings() {
-    boolean dbPhoneUniqueValue = false;
-    boolean dbEmailUniqueValue = false;
-    dbPhoneUniqueValue = Boolean.parseBoolean(DataCacheHandler.getConfigSettings().get(JsonKey.PHONE_UNIQUE));
-    dbPhoneUniqueValue = Boolean.parseBoolean(DataCacheHandler.getConfigSettings().get(JsonKey.EMAIL_UNIQUE));
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-   
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.UPDATE_SYSTEM_SETTINGS.getValue());
-    HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.PHONE_UNIQUE , dbPhoneUniqueValue);
-    innerMap.put(JsonKey.EMAIL_UNIQUE, dbEmailUniqueValue);
-    reqObj.getRequest().put(JsonKey.DATA, innerMap);
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("200 second"),Response.class);
-    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
-  }
+	@BeforeClass
+	public static void setUp() {
+		Application.startLocalActorSystem();
+		system = ActorSystem.create("system");
+		Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
+	}
 
-  @Test
-  public void testInvalidOperation(){
-      TestKit probe = new TestKit(system);
-      ActorRef subject = system.actorOf(props);
+	@Test
+	public void updateSystemSettings() {
+		boolean dbPhoneUniqueValue = false;
+		boolean dbEmailUniqueValue = false;
+		dbPhoneUniqueValue = Boolean.parseBoolean(DataCacheHandler.getConfigSettings().get(JsonKey.PHONE_UNIQUE));
+		dbPhoneUniqueValue = Boolean.parseBoolean(DataCacheHandler.getConfigSettings().get(JsonKey.EMAIL_UNIQUE));
+		TestKit probe = new TestKit(system);
+		ActorRef subject = system.actorOf(props);
 
-      Request reqObj = new Request();
-      reqObj.setOperation("INVALID_OPERATION");
+		Request reqObj = new Request();
+		reqObj.setOperation(ActorOperations.UPDATE_SYSTEM_SETTINGS.getValue());
+		HashMap<String, Object> innerMap = new HashMap<>();
+		innerMap.put(JsonKey.PHONE_UNIQUE, dbPhoneUniqueValue);
+		innerMap.put(JsonKey.EMAIL_UNIQUE, dbEmailUniqueValue);
+		reqObj.getRequest().put(JsonKey.DATA, innerMap);
+		subject.tell(reqObj, probe.getRef());
+		Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+		Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+	}
 
-      subject.tell(reqObj, probe.getRef());
-      ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
-      Assert.assertTrue(null != exc);
-  }
-  
-  @Test
-  public void testInvalidRequestData(){
-      TestKit probe = new TestKit(system);
-      ActorRef subject = system.actorOf(props);
+	@Test
+	public void testInvalidOperation() {
+		TestKit probe = new TestKit(system);
+		ActorRef subject = system.actorOf(props);
 
-      Response reqObj = new Response();
+		Request reqObj = new Request();
+		reqObj.setOperation("INVALID_OPERATION");
 
-      subject.tell(reqObj, probe.getRef());
-      ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
-      Assert.assertTrue(null != exc);
-  }
-  
-  @Test
-  public void testInvalidRequestData1(){
-      TestKit probe = new TestKit(system);
-      ActorRef subject = system.actorOf(props);
-      Request reqObj = new Request();
-      reqObj.setOperation(null);
-      subject.tell(reqObj, probe.getRef());
-      NullPointerException exc = probe.expectMsgClass(NullPointerException.class);
-      Assert.assertTrue(null != exc);
-  }
+		subject.tell(reqObj, probe.getRef());
+		ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+		Assert.assertTrue(null != exc);
+	}
+
+	@Test
+	public void testInvalidRequestData() {
+		TestKit probe = new TestKit(system);
+		ActorRef subject = system.actorOf(props);
+
+		Response reqObj = new Response();
+
+		subject.tell(reqObj, probe.getRef());
+		ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+		Assert.assertTrue(null != exc);
+	}
+
+	@Test
+	public void testInvalidRequestData1() {
+		TestKit probe = new TestKit(system);
+		ActorRef subject = system.actorOf(props);
+		Request reqObj = new Request();
+		reqObj.setOperation(null);
+		subject.tell(reqObj, probe.getRef());
+		NullPointerException exc = probe.expectMsgClass(NullPointerException.class);
+		Assert.assertTrue(null != exc);
+	}
 }

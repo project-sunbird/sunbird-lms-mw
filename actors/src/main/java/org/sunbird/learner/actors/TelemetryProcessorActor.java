@@ -10,15 +10,15 @@ import akka.actor.UntypedAbstractActor;
  */
 public class TelemetryProcessorActor extends UntypedAbstractActor {
 
-  private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
+	private LMAXWriter lmaxWriter = LMAXWriter.getInstance();
 
-  @Override
-  public void onReceive(Object message) throws Throwable {
+	@Override
+	public void onReceive(Object message) throws Throwable {
 
-    if (message instanceof Request) {
-      Request actorMessage = (Request) message;
-      lmaxWriter.submitMessage(actorMessage);
-    }
+		if (message instanceof Request) {
+			Request actorMessage = (Request) message;
+			lmaxWriter.submitMessage(actorMessage);
+		}
 
-  }
+	}
 }

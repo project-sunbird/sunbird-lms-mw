@@ -2,14 +2,11 @@ package org.sunbird.learner.actors;
 
 import static org.junit.Assert.assertTrue;
 
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
@@ -24,138 +21,135 @@ import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.testkit.javadsl.TestKit;
+
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class BackgroundServiceActorTest {
 
+	private static ActorSystem system;
+	private static final Props props = Props.create(BackGroundServiceActor.class);
+	private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+	private static Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
+	private static final String locnId = "hhjcjrdf4scdv56vf79fw4p89";
 
-  private static ActorSystem system;
-  private static final Props props = Props.create(BackGroundServiceActor.class);
-  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
-  private static final String locnId = "hhjcjrdf4scdv56vf79fw4p89";
+	@BeforeClass
+	public static void setUp() {
 
-  @BeforeClass
-  public static void setUp() {
+		Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
+		system = ActorSystem.create("system");
 
-    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-    system = ActorSystem.create("system");
+		Map<String, Object> locnMap = new HashMap<String, Object>();
+		locnMap.put(JsonKey.ID, locnId);
+		cassandraOperation.insertRecord(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), locnMap);
 
-    Map<String, Object> locnMap = new HashMap<String, Object>();
-    locnMap.put(JsonKey.ID, locnId);
-    cassandraOperation.insertRecord(geoLocationDbInfo.getKeySpace(),
-        geoLocationDbInfo.getTableName(), locnMap);
+	}
 
-  }
+	@Test
+	public void updateUserCountTest() {
 
-  @Test
-  public void updateUserCountTest() {
+		List<Object> locnIdList = new ArrayList<>();
+		locnIdList.add(locnId);
 
-    List<Object> locnIdList = new ArrayList<>();
-    locnIdList.add(locnId);
+		TestKit probe = new TestKit(system);
+		ActorRef subject = system.actorOf(props);
+		Request actorMessage = new Request();
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    Request actorMessage = new Request();
+		actorMessage.getRequest().put(JsonKey.LOCATION_IDS, locnIdList);
+		actorMessage.getRequest().put(JsonKey.OPERATION, "GeoLocationManagementActor");
+		actorMessage.setOperation(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue());
 
-    actorMessage.getRequest().put(JsonKey.LOCATION_IDS, locnIdList);
-    actorMessage.getRequest().put(JsonKey.OPERATION, "GeoLocationManagementActor");
-    actorMessage.setOperation(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue());
+		subject.tell(actorMessage, probe.getRef());
+		try {
+			Thread.sleep(20000);
+		} catch (InterruptedException e) {
+			ProjectLogger.log(e.getMessage(), e);
+		}
+		Response response = cassandraOperation.getRecordById(geoLocationDbInfo.getKeySpace(),
+				geoLocationDbInfo.getTableName(), locnId);
+		// probe.expectMsgClass(duration("300 second"),Response.class);
+		List<Map<String, Object>> reslist = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+		Map<String, Object> map = reslist.get(0);
+		int count = (int) map.get(JsonKey.USER_COUNT);
+		boolean bool = (count >= 0) ? true : false;
+		assertTrue(bool);
+	}
 
-    subject.tell(actorMessage, probe.getRef());
-    try {
-      Thread.sleep(20000);
-    } catch (InterruptedException e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-    Response response = cassandraOperation.getRecordById(geoLocationDbInfo.getKeySpace(),
-        geoLocationDbInfo.getTableName(), locnId);
-    // probe.expectMsgClass(duration("300 second"),Response.class);
-    List<Map<String, Object>> reslist = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    Map<String, Object> map = reslist.get(0);
-    int count = (int) map.get(JsonKey.USER_COUNT);
-    boolean bool = (count >= 0) ? true : false;
-    assertTrue(bool);
-  }
+	@Test
+	public void updateUserCountTest2() {
 
-  @Test
-  public void updateUserCountTest2() {
+		Map<String, Object> locnMap = new HashMap<String, Object>();
+		locnMap.put(JsonKey.ID, locnId);
+		locnMap.put(JsonKey.USER_COUNT, 0);
+		cassandraOperation.updateRecord(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), locnMap);
 
-    Map<String, Object> locnMap = new HashMap<String, Object>();
-    locnMap.put(JsonKey.ID, locnId);
-    locnMap.put(JsonKey.USER_COUNT, 0);
-    cassandraOperation.updateRecord(geoLocationDbInfo.getKeySpace(),
-        geoLocationDbInfo.getTableName(), locnMap);
+		List<Object> locnIdList = new ArrayList<>();
+		locnIdList.add(locnId);
 
+		TestKit probe = new TestKit(system);
+		ActorRef subject = system.actorOf(props);
+		Request actorMessage = new Request();
 
-    List<Object> locnIdList = new ArrayList<>();
-    locnIdList.add(locnId);
+		actorMessage.getRequest().put(JsonKey.LOCATION_IDS, locnIdList);
+		actorMessage.getRequest().put(JsonKey.OPERATION, "UpdateUserCountScheduler");
+		actorMessage.setOperation(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue());
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    Request actorMessage = new Request();
+		subject.tell(actorMessage, probe.getRef());
+		try {
+			Thread.sleep(20000);
+		} catch (InterruptedException e) {
+			ProjectLogger.log(e.getMessage(), e);
+		}
+		Response response = cassandraOperation.getRecordById(geoLocationDbInfo.getKeySpace(),
+				geoLocationDbInfo.getTableName(), locnId);
+		// probe.expectMsgClass(duration("300 second"),Response.class);
+		List<Map<String, Object>> reslist = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+		Map<String, Object> map = reslist.get(0);
+		int count = (int) map.get(JsonKey.USER_COUNT);
+		boolean bool = (count >= 0) ? true : false;
+		assertTrue(bool);
+	}
 
-    actorMessage.getRequest().put(JsonKey.LOCATION_IDS, locnIdList);
-    actorMessage.getRequest().put(JsonKey.OPERATION, "UpdateUserCountScheduler");
-    actorMessage.setOperation(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue());
+	@Test
+	public void updateUserCountTest3() {
 
-    subject.tell(actorMessage, probe.getRef());
-    try {
-      Thread.sleep(20000);
-    } catch (InterruptedException e) {
-      ProjectLogger.log(e.getMessage(),e);
-    }
-    Response response = cassandraOperation.getRecordById(geoLocationDbInfo.getKeySpace(),
-        geoLocationDbInfo.getTableName(), locnId);
-    // probe.expectMsgClass(duration("300 second"),Response.class);
-    List<Map<String, Object>> reslist = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    Map<String, Object> map = reslist.get(0);
-    int count = (int) map.get(JsonKey.USER_COUNT);
-    boolean bool = (count >= 0) ? true : false;
-    assertTrue(bool);
-  }
+		Map<String, Object> locnMap = new HashMap<String, Object>();
+		locnMap.put(JsonKey.ID, locnId);
+		locnMap.put(JsonKey.USER_COUNT, 0);
+		locnMap.put(JsonKey.USER_COUNT_TTL, "abc");
+		cassandraOperation.updateRecord(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), locnMap);
 
-  @Test
-  public void updateUserCountTest3() {
+		List<Object> locnIdList = new ArrayList<>();
+		locnIdList.add(locnId);
 
-    Map<String, Object> locnMap = new HashMap<String, Object>();
-    locnMap.put(JsonKey.ID, locnId);
-    locnMap.put(JsonKey.USER_COUNT, 0);
-    locnMap.put(JsonKey.USER_COUNT_TTL, "abc");
-    cassandraOperation.updateRecord(geoLocationDbInfo.getKeySpace(),
-        geoLocationDbInfo.getTableName(), locnMap);
+		TestKit probe = new TestKit(system);
+		ActorRef subject = system.actorOf(props);
+		Request actorMessage = new Request();
 
+		actorMessage.getRequest().put(JsonKey.LOCATION_IDS, locnIdList);
+		actorMessage.getRequest().put(JsonKey.OPERATION, "GeoLocationManagementActor");
+		actorMessage.setOperation(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue());
 
-    List<Object> locnIdList = new ArrayList<>();
-    locnIdList.add(locnId);
+		subject.tell(actorMessage, probe.getRef());
+		try {
+			Thread.sleep(20000);
+		} catch (InterruptedException e) {
+			ProjectLogger.log(e.getMessage(), e);
+		}
+		Response response = cassandraOperation.getRecordById(geoLocationDbInfo.getKeySpace(),
+				geoLocationDbInfo.getTableName(), locnId);
+		// probe.expectMsgClass(duration("300 second"),Response.class);
+		List<Map<String, Object>> reslist = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+		Map<String, Object> map = reslist.get(0);
+		int count = (int) map.get(JsonKey.USER_COUNT);
+		boolean bool = (count >= 0) ? true : false;
+		assertTrue(bool);
+	}
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    Request actorMessage = new Request();
-
-    actorMessage.getRequest().put(JsonKey.LOCATION_IDS, locnIdList);
-    actorMessage.getRequest().put(JsonKey.OPERATION, "GeoLocationManagementActor");
-    actorMessage.setOperation(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue());
-
-    subject.tell(actorMessage, probe.getRef());
-    try {
-      Thread.sleep(20000);
-    } catch (InterruptedException e) {
-      ProjectLogger.log(e.getMessage(),e);
-    }
-    Response response = cassandraOperation.getRecordById(geoLocationDbInfo.getKeySpace(),
-        geoLocationDbInfo.getTableName(), locnId);
-    // probe.expectMsgClass(duration("300 second"),Response.class);
-    List<Map<String, Object>> reslist = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    Map<String, Object> map = reslist.get(0);
-    int count = (int) map.get(JsonKey.USER_COUNT);
-    boolean bool = (count >= 0) ? true : false;
-    assertTrue(bool);
-  }
-
-
-  @AfterClass
-  public static void destroy() {
-    cassandraOperation.deleteRecord(geoLocationDbInfo.getKeySpace(),
-        geoLocationDbInfo.getTableName(), locnId);
-  }
+	@AfterClass
+	public static void destroy() {
+		cassandraOperation.deleteRecord(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), locnId);
+	}
 }

@@ -6,8 +6,8 @@ import org.sunbird.common.request.Request;
 
 public interface AuditLogService {
 
-  void process(Request actorMessage);
+	void process(Request actorMessage);
 
-  void save(Map<String, Object> requestedData);
+	void save(Map<String, Object> requestedData);
 
 }

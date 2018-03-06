@@ -27,6 +27,7 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.assessment.AssessmentItemActor;
+import org.sunbird.learner.actors.badges.BadgeAssertionActor;
 import org.sunbird.learner.actors.badges.BadgesActor;
 import org.sunbird.learner.actors.bulkupload.BulkUploadManagementActor;
 import org.sunbird.learner.actors.bulkupload.UserDataEncryptionDecryptionServiceActor;
@@ -95,7 +96,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ActorRef keyCloakSyncActor;
   private ActorRef applicationConfigActor;
   private ActorRef dbOperationActor;
-
+  private ActorRef badgeAssertionActor;
   private ExecutionContext ec;
 
 
@@ -132,7 +133,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private static final String KEYCLOAK_SYNC_ACTOR = "keyCloakSyncActor";
   private static final String APPLICATION_CONFIG_ACTOR = "applicationConfigActor";
   private static final String DBOPERATION_ACTOR = "dbOperationActor";
-
+  private static final String BADGE_ASSERTION_ACTOR = "badgeAssertionActor";
   /**
    * @return the system
    */
@@ -237,6 +238,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
     dbOperationActor = getContext().actorOf(
         FromConfig.getInstance().props(Props.create(DbOperationActor.class)),
         DBOPERATION_ACTOR);
+	badgeAssertionActor = getContext().actorOf(
+		FromConfig.getInstance().props(Props.create(BadgeAssertionActor.class)), 
+		BADGE_ASSERTION_ACTOR);
     ec = getContext().dispatcher();
     initializeRouterMap();
   }
@@ -376,6 +380,11 @@ public class RequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.READ_ALL_DATA.getValue(), dbOperationActor);
     routerMap.put(ActorOperations.SEARCH_DATA.getValue(), dbOperationActor);
     routerMap.put(ActorOperations.GET_METRICS.getValue(), dbOperationActor);
+    
+    routerMap.put(ActorOperations.CREATE_BADGE_ASSERTION.getValue(), badgeAssertionActor);
+    routerMap.put(ActorOperations.GET_BADGE_ASSERTION.getValue(), badgeAssertionActor);
+    routerMap.put(ActorOperations.GET_BADGE_ASSERTION_LIST.getValue(), badgeAssertionActor);
+    routerMap.put(ActorOperations.REVOKE_BADGE.getValue(), badgeAssertionActor);
   }
 
 

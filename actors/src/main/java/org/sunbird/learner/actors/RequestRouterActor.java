@@ -1,5 +1,6 @@
 package org.sunbird.learner.actors;
 
+import akka.actor.Actor;
 import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
 import akka.actor.ActorSystem;
@@ -28,6 +29,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.assessment.AssessmentItemActor;
 import org.sunbird.learner.actors.badges.BadgesActor;
+import org.sunbird.learner.actors.badging.BadgeIssuerActor;
 import org.sunbird.learner.actors.bulkupload.BulkUploadManagementActor;
 import org.sunbird.learner.actors.bulkupload.UserDataEncryptionDecryptionServiceActor;
 import org.sunbird.learner.actors.client.ClientManagementActor;
@@ -95,6 +97,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private ActorRef keyCloakSyncActor;
   private ActorRef applicationConfigActor;
   private ActorRef dbOperationActor;
+  private ActorRef badgeIssuerActor;
 
   private ExecutionContext ec;
 
@@ -132,6 +135,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
   private static final String KEYCLOAK_SYNC_ACTOR = "keyCloakSyncActor";
   private static final String APPLICATION_CONFIG_ACTOR = "applicationConfigActor";
   private static final String DBOPERATION_ACTOR = "dbOperationActor";
+  private static final String BADGE_ISSUER_ACTOR = "badgeIssuerActor";
 
   /**
    * @return the system
@@ -237,6 +241,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
     dbOperationActor = getContext().actorOf(
         FromConfig.getInstance().props(Props.create(DbOperationActor.class)),
         DBOPERATION_ACTOR);
+    badgeIssuerActor = getContext().actorOf(
+        FromConfig.getInstance().props(Props.create(BadgeIssuerActor.class)),
+        BADGE_ISSUER_ACTOR);
     ec = getContext().dispatcher();
     initializeRouterMap();
   }
@@ -376,6 +383,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
     routerMap.put(ActorOperations.READ_ALL_DATA.getValue(), dbOperationActor);
     routerMap.put(ActorOperations.SEARCH_DATA.getValue(), dbOperationActor);
     routerMap.put(ActorOperations.GET_METRICS.getValue(), dbOperationActor);
+    routerMap.put(ActorOperations.CREATE_BADGE_ISSUER.getValue(), badgeIssuerActor);
   }
 
 

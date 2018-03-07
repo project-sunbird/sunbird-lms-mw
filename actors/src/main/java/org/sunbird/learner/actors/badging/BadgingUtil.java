@@ -24,12 +24,20 @@ public class BadgingUtil {
         return String.format("%s/v1/issuer/issuers/%s/badges", getBadgrBaseUrl(), issuerSlug);
     }
 
+    public static String getBadgeClassUrl(String issuerSlug, String badgeSlug) {
+        return String.format("%s/v1/issuer/issuers/%s/badges/%s", getBadgrBaseUrl(), issuerSlug, badgeSlug);
+    }
+
     public static Map<String, String> getBadgrHeaders() {
         HashMap<String, String> headers = new HashMap<>();
+
         String authToken = System.getenv(BADGING_AUTHORIZATION_KEY);
         if (!ProjectUtil.isStringNullOREmpty(authToken)) {
             headers.put("Authorization", String.format(BADGING_AUTHORIZATION_FORMAT, authToken));
         }
+
+        headers.put("Accept", "application/json");
+
         return headers;
     }
 }

@@ -144,6 +144,6 @@
 				</configuration>
 			</plugin>
 		</plugins>
-		<finalName>actor-service-${version}</finalName>
+		<finalName>actor-service</finalName>
 	</build>
 </project>

@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.BadgingActorOperations;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -136,8 +137,8 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
 		routerMap.put(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue(), backGroundServiceActor);
 		routerMap.put(ActorOperations.REG_CHANNEL.getValue(), channelRegistrationActor);
 		routerMap.put(ActorOperations.TELEMETRY_PROCESSING.getValue(), telemetryProcessorActor);
-		routerMap.put(ActorOperations.ASSIGN_BADGE_MESSAGE.getValue(), badgeNotifier);
-		routerMap.put(ActorOperations.REVOKE_BADGE_MESSAGE.getValue(), badgeNotifier);
+		routerMap.put(BadgingActorOperations.ASSIGN_BADGE_MESSAGE.getValue(), badgeNotifier);
+		routerMap.put(BadgingActorOperations.REVOKE_BADGE_MESSAGE.getValue(), badgeNotifier);
 	}
 
 	@Override

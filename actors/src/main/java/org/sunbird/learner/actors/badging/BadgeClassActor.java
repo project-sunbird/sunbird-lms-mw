@@ -2,7 +2,6 @@ package org.sunbird.learner.actors.badging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.BadgingActorOperations;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.HttpUtil;
@@ -82,8 +81,8 @@ public class BadgeClassActor extends AbstractBaseActor {
         try {
             Map<String, Object> requestData = actorMessage.getRequest();
 
-            String issuerSlug = (String) requestData.get(JsonKey.ISSUER_SLUG);
-            String badgeClassSlug = (String) requestData.get(JsonKey.BADGE_CLASS_SLUG);
+            String issuerSlug = (String) requestData.get(BadgingJsonKey.ISSUER_SLUG);
+            String badgeClassSlug = (String) requestData.get(BadgingJsonKey.BADGE_CLASS_SLUG);
 
             Map<String, String> headers = BadgingUtil.getBadgrHeaders();
             String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerSlug, badgeClassSlug);
@@ -118,8 +117,8 @@ public class BadgeClassActor extends AbstractBaseActor {
         try {
             Map<String, Object> requestData = actorMessage.getRequest();
 
-            String issuerSlug = (String) requestData.get(JsonKey.ISSUER_SLUG);
-            String badgeClassSlug = (String) requestData.get(JsonKey.BADGE_CLASS_SLUG);
+            String issuerSlug = (String) requestData.get(BadgingJsonKey.ISSUER_SLUG);
+            String badgeClassSlug = (String) requestData.get(BadgingJsonKey.BADGE_CLASS_SLUG);
 
             Map<String, String> headers = BadgingUtil.getBadgrHeaders();
             String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerSlug, badgeClassSlug);

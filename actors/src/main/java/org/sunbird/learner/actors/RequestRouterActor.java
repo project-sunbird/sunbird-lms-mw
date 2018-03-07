@@ -9,6 +9,7 @@ import org.sunbird.common.config.ApplicationConfigActor;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.BadgingActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -373,16 +374,16 @@ public class RequestRouterActor extends UntypedAbstractActor {
 		routerMap.put(ActorOperations.SEARCH_DATA.getValue(), dbOperationActor);
 		routerMap.put(ActorOperations.GET_METRICS.getValue(), dbOperationActor);
 
-		routerMap.put(ActorOperations.CREATE_BADGE_ASSERTION.getValue(), badgeAssertionActor);
-		routerMap.put(ActorOperations.GET_BADGE_ASSERTION.getValue(), badgeAssertionActor);
-		routerMap.put(ActorOperations.GET_BADGE_ASSERTION_LIST.getValue(), badgeAssertionActor);
-		routerMap.put(ActorOperations.REVOKE_BADGE.getValue(), badgeAssertionActor);
-		routerMap.put(ActorOperations.CREATE_BADGE_ISSUER.getValue(), badgeIssuerActor);
+		routerMap.put(BadgingActorOperations.CREATE_BADGE_ASSERTION.getValue(), badgeAssertionActor);
+		routerMap.put(BadgingActorOperations.GET_BADGE_ASSERTION.getValue(), badgeAssertionActor);
+		routerMap.put(BadgingActorOperations.GET_BADGE_ASSERTION_LIST.getValue(), badgeAssertionActor);
+		routerMap.put(BadgingActorOperations.REVOKE_BADGE.getValue(), badgeAssertionActor);
+		routerMap.put(BadgingActorOperations.CREATE_BADGE_ISSUER.getValue(), badgeIssuerActor);
 
-		routerMap.put(ActorOperations.CREATE_BADGE_CLASS.getValue(), badgeClassActor);
-		routerMap.put(ActorOperations.GET_BADGE_CLASS.getValue(), badgeClassActor);
-		routerMap.put(ActorOperations.LIST_BADGE_CLASS.getValue(), badgeClassActor);
-		routerMap.put(ActorOperations.DELETE_BADGE_CLASS.getValue(), badgeClassActor);
+		routerMap.put(BadgingActorOperations.CREATE_BADGE_CLASS.getValue(), badgeClassActor);
+		routerMap.put(BadgingActorOperations.GET_BADGE_CLASS.getValue(), badgeClassActor);
+		routerMap.put(BadgingActorOperations.LIST_BADGE_CLASS.getValue(), badgeClassActor);
+		routerMap.put(BadgingActorOperations.DELETE_BADGE_CLASS.getValue(), badgeClassActor);
 	}
 
 	@Override

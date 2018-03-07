@@ -10,6 +10,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.BadgingActorOperations;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -29,8 +30,6 @@ import akka.actor.UntypedAbstractActor;
  */
 public class BadgeAssertionActor extends UntypedAbstractActor {
 
-
-
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo badgesDbInfo = Util.dbInfoMap.get(JsonKey.BADGES_DB);
   private Util.DbInfo userBadgesDbInfo = Util.dbInfoMap.get(JsonKey.USER_BADGES_DB);
@@ -45,13 +44,13 @@ public class BadgeAssertionActor extends UntypedAbstractActor {
         // set request id fto thread loacl...
         ExecutionContext.setRequestId(actorMessage.getRequestId());
         if (actorMessage.getOperation()
-            .equalsIgnoreCase(ActorOperations.CREATE_BADGE_ASSERTION.getValue())) {
+            .equalsIgnoreCase(BadgingActorOperations.CREATE_BADGE_ASSERTION.getValue())) {
          createAssertion(actorMessage);	
         } else if (actorMessage.getOperation()
-            .equalsIgnoreCase(ActorOperations.GET_BADGE_ASSERTION.getValue())) {
+            .equalsIgnoreCase(BadgingActorOperations.GET_BADGE_ASSERTION.getValue())) {
         } else if (actorMessage.getOperation()
-            .equalsIgnoreCase(ActorOperations.GET_BADGE_ASSERTION_LIST.getValue())) {
-        } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.REVOKE_BADGE.getValue())) {
+            .equalsIgnoreCase(BadgingActorOperations.GET_BADGE_ASSERTION_LIST.getValue())) {
+        } else if (actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.REVOKE_BADGE.getValue())) {
         }
         else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
@@ -94,9 +93,5 @@ public class BadgeAssertionActor extends UntypedAbstractActor {
 			 sender().tell(e, self());
 		}
 	}
-	
-	
-	
-	
 
 }

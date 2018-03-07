@@ -1,16 +1,16 @@
 package org.sunbird.learner.actors.badging;
 
 import akka.actor.ActorRef;
-import akka.actor.UntypedAbstractActor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.BadgingActorOperations;
+import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -18,13 +18,13 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.learner.actors.AbstractBaseActor;
 import org.sunbird.learner.util.Util;
 
 /**
  * Created by arvind on 5/3/18.
  */
-public class BadgeIssuerActor extends UntypedAbstractActor {
+public class BadgeIssuerActor extends AbstractBaseActor {
 
   private ObjectMapper mapper = new ObjectMapper();
 
@@ -37,28 +37,16 @@ public class BadgeIssuerActor extends UntypedAbstractActor {
         Util.initializeContext(actorMessage, JsonKey.USER);
         // set request id fto thread loacl...
         ExecutionContext.setRequestId(actorMessage.getRequestId());
-        if(actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_BADGE_ISSUER.getValue())){
+        if(actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.CREATE_BADGE_ISSUER.getValue())){
           createBadgeIssuer(actorMessage);
         } else {
-          ProjectLogger.log("UNSUPPORTED OPERATION");
-          ProjectCommonException exception =
-              new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
-                  ResponseCode.invalidOperationName.getErrorMessage(),
-                  ResponseCode.CLIENT_ERROR.getResponseCode());
-          sender().tell(exception, self());
+          onReceiveUnsupportedOperation(null);
         }
       } catch (Exception ex) {
-        ProjectLogger.log(ex.getMessage(), ex);
-        sender().tell(ex, self());
+        onReceiveException(null, ex);
       }
     } else {
-      // Throw exception as message body
-      ProjectLogger.log("UNSUPPORTED MESSAGE");
-      ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+      onReceiveUnsupportedMessage(null);
     }
 
   }
@@ -76,8 +64,8 @@ public class BadgeIssuerActor extends UntypedAbstractActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     byte[] image = null;
     Map<String , byte[]> fileData = new HashMap<>();
-    if(req.containsKey(JsonKey.IMAGE) && null != (Object)req.get(JsonKey.IMAGE)){
-       image = (byte[]) req.get(JsonKey.IMAGE) ;
+    if(req.containsKey(BadgingJsonKey.IMAGE) && null != (Object)req.get(BadgingJsonKey.IMAGE)){
+       image = (byte[]) req.get(BadgingJsonKey.IMAGE) ;
     }
 
     Map<String, String> requestData = new HashMap<>();
@@ -86,17 +74,17 @@ public class BadgeIssuerActor extends UntypedAbstractActor {
     requestData.put(JsonKey.URL , (String)req.get(JsonKey.URL));
     requestData.put(JsonKey.EMAIL , (String)req.get(JsonKey.EMAIL));
 
-    String url = "v1/issuer/issuers";
+    String url = "/v1/issuer/issuers";
 
-    String badgerBaseUrl = System.getenv(JsonKey.BADGER_BASE_URL);
+    String badgerBaseUrl = System.getenv(BadgingJsonKey.BADGER_BASE_URL);
     if (ProjectUtil.isStringNullOREmpty(badgerBaseUrl)) {
-      badgerBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.BADGER_BASE_URL);
+      badgerBaseUrl = PropertiesCache.getInstance().getProperty(BadgingJsonKey.BADGER_BASE_URL);
     }
-    String authKey = System.getenv(JsonKey.BADGING_AUTHORIZATION_KEY);
+    String authKey = System.getenv(BadgingJsonKey.BADGING_AUTHORIZATION_KEY);
     if (ProjectUtil.isStringNullOREmpty(authKey)) {
-      authKey = JsonKey.BADGING_TOKEN +PropertiesCache.getInstance().getProperty(JsonKey.BADGING_AUTHORIZATION_KEY);
+      authKey = BadgingJsonKey.BADGING_TOKEN +PropertiesCache.getInstance().getProperty(BadgingJsonKey.BADGING_AUTHORIZATION_KEY);
     } else {
-      authKey = JsonKey.BADGING_TOKEN + authKey;
+      authKey = BadgingJsonKey.BADGING_TOKEN + authKey;
     }
 
     Map<String , String> headers = new HashMap<>();
@@ -104,7 +92,7 @@ public class BadgeIssuerActor extends UntypedAbstractActor {
 
     String httpResponseString= null;
     if(null != image) {
-      fileData.put(JsonKey.IMAGE, image);
+      fileData.put(BadgingJsonKey.IMAGE, image);
     }
     httpResponseString = makeBadgerPostRequest(requestData , headers , badgerBaseUrl+url , fileData);
 
@@ -128,11 +116,7 @@ public class BadgeIssuerActor extends UntypedAbstractActor {
       String url, Map<String, byte[]> fileData) throws IOException {
 
     String httpResponseString;
-    //if(null != fileData && !fileData.isEmpty()){
-      httpResponseString=HttpUtil.postFormData(requestData , fileData , headers, url);
-    /*}else{
-      httpResponseString =HttpUtil.sendPostRequest(url , requestData , headers);
-    }*/
+    httpResponseString = HttpUtil.postFormData(requestData, fileData, headers, url);
     return httpResponseString;
   }
 

@@ -3,6 +3,7 @@ package org.sunbird.learner.actors.badging;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.BadgingActorOperations;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
@@ -27,13 +28,13 @@ public class BadgeClassActor extends AbstractBaseActor {
                 Util.initializeContext(actorMessage, JsonKey.USER);
                 ExecutionContext.setRequestId(actorMessage.getRequestId());
 
-                if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_BADGE_CLASS.getValue())) {
+                if (actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.CREATE_BADGE_CLASS.getValue())) {
                     createBadgeClass(actorMessage);
-                } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_BADGE_CLASS.getValue())) {
+                } else if (actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.GET_BADGE_CLASS.getValue())) {
                     getBadgeClass(actorMessage);
-                } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.LIST_BADGE_CLASS.getValue())) {
+                } else if (actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.LIST_BADGE_CLASS.getValue())) {
                     listBadgeClass();
-                } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.DELETE_BADGE_CLASS.getValue())) {
+                } else if (actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.DELETE_BADGE_CLASS.getValue())) {
                     deleteBadgeClass(actorMessage);
                 } else {
                     onReceiveUnsupportedOperation("BadgeClassActor");

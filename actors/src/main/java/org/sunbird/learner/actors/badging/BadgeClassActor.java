@@ -3,6 +3,7 @@ package org.sunbird.learner.actors.badging;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -51,7 +52,7 @@ public class BadgeClassActor extends AbstractBaseActor {
         try {
             Map<String, Object> requestData = actorMessage.getRequest();
 
-            String issuerSlug = (String) requestData.get(JsonKey.ISSUER_SLUG);
+            String issuerSlug = (String) requestData.get(BadgingJsonKey.ISSUER_SLUG);
 
             Map<String, String> formParams = (Map<String, String>) requestData.get(JsonKey.FORM_PARAMS);
             Map<String, byte[]> fileParams = (Map<String, byte[]>) requestData.get(JsonKey.FILE_PARAMS);

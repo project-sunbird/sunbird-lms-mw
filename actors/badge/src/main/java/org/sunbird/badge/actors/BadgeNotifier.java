@@ -1,4 +1,4 @@
-package org.sunbird.learner.actors.badges;
+package org.sunbird.badge.actors;
 
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -15,7 +15,7 @@ import akka.actor.UntypedAbstractActor;
  */
 
 public class BadgeNotifier extends UntypedAbstractActor {
-
+	
 	@Override
 	public void onReceive(Object message) throws Throwable {
 		if (message instanceof Request) {
@@ -31,11 +31,11 @@ public class BadgeNotifier extends UntypedAbstractActor {
 					System.out.println("This operation is not supported.");
 					break;
 				}
-				
+
 			} catch (Exception e) {
 				sender().tell(e, self());
 			}
-			
+
 		} else {
 			ProjectCommonException exception = new ProjectCommonException(
 					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),

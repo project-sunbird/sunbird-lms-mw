@@ -9,7 +9,6 @@ import org.sunbird.common.models.util.BadgingActorOperations;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.learner.actors.badges.BadgeNotifier;
 import org.sunbird.learner.actors.bulkupload.BulkUploadBackGroundJobActor;
 import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
 import org.sunbird.learner.audit.impl.ActorAuditLogServiceImpl;
@@ -43,8 +42,6 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
 	private ActorRef channelRegistrationActor;
 	private ActorRef telemetryProcessorActor;
 
-	private ActorRef badgeNotifier;
-
 	public static Map<String, ActorRef> routerMap = new HashMap<>();
 
 	private static final String BACKGROUND_JOB = "backgroundJobManager";
@@ -58,16 +55,12 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
 	private static final String CHANNEL_REG_ACTOR = "channelRegistrationActor";
 
 	private static final String TELEMETRY_PROCESSOR_ACTOR = "telemetryProcessorActor";
-	private static final String BADGE_NOTIFIER = "badgeNotifier";
 
 	/**
 	 * constructor to initialize router actor with child actor pool
 	 */
 	public BackgroundRequestRouterActor() {
 
-		badgeNotifier = getContext().actorOf(
-				FromConfig.getInstance().props(Props.create(BadgeNotifier.class)), BADGE_NOTIFIER);
-		System.out.println("Badge Notifier: " + badgeNotifier.path());
 		backgroundJobManager = getContext()
 				.actorOf(FromConfig.getInstance().props(Props.create(BackgroundJobManager.class)), BACKGROUND_JOB);
 
@@ -137,8 +130,6 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
 		routerMap.put(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue(), backGroundServiceActor);
 		routerMap.put(ActorOperations.REG_CHANNEL.getValue(), channelRegistrationActor);
 		routerMap.put(ActorOperations.TELEMETRY_PROCESSING.getValue(), telemetryProcessorActor);
-		routerMap.put(BadgingActorOperations.ASSIGN_BADGE_MESSAGE.getValue(), badgeNotifier);
-		routerMap.put(BadgingActorOperations.REVOKE_BADGE_MESSAGE.getValue(), badgeNotifier);
 	}
 
 	@Override

@@ -31,11 +31,11 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.Application;
 import org.sunbird.learner.actors.badges.BadgesActor;
 import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
+import org.sunbird.middleware.Application;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 
@@ -49,7 +49,7 @@ import akka.testkit.javadsl.TestKit;
  */
 // @Ignore
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class UserManagementActorTest2 {
+public class UserManagementActorTest {
 
 	private static ActorSystem system;
 	private static CassandraOperation operation = ServiceFactory.getInstance();

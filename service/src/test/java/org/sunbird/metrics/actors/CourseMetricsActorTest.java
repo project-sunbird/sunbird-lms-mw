@@ -17,8 +17,8 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
-import org.sunbird.learner.Application;
 import org.sunbird.learner.util.Util;
+import org.sunbird.middleware.Application;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;

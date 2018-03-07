@@ -8,6 +8,7 @@ import org.junit.Test;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.learner.util.actorutility.ActorSystemFactory;
 import org.sunbird.learner.util.actorutility.impl.RemoteActorSystem;
+import org.sunbird.middleware.Application;
 
 public class RemoteActorSystemTest {
 

@@ -17,8 +17,10 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.assessment.AssessmentItemActor;
+import org.sunbird.learner.actors.badges.BadgeAssertionActor;
 import org.sunbird.learner.actors.badges.BadgesActor;
 import org.sunbird.learner.actors.badging.BadgeClassActor;
+import org.sunbird.learner.actors.badging.BadgeIssuerActor;
 import org.sunbird.learner.actors.bulkupload.BulkUploadManagementActor;
 import org.sunbird.learner.actors.bulkupload.UserDataEncryptionDecryptionServiceActor;
 import org.sunbird.learner.actors.client.ClientManagementActor;
@@ -102,6 +104,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
 
 	// Badging Actors
 	private ActorRef badgeClassActor;
+	private ActorRef badgeAssertionActor;
+	private ActorRef badgeIssuerActor;
 
 	private ExecutionContext ec;
 
@@ -139,7 +143,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
 	private static final String DBOPERATION_ACTOR = "dbOperationActor";
 
 	// Badging Actor Constants
+	private static final String BADGE_ISSUER_ACTOR = "badgeIssuerActor";
 	private static final String BADGE_CLASS_ACTOR = "badgeClassActor";
+	private static final String BADGE_ASSERTION_ACTOR = "badgeAssertionActor";
 
 	/**
 	 * @return the system
@@ -228,7 +234,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
 				DBOPERATION_ACTOR);
 
 		// Badging Actors
+		badgeIssuerActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(BadgeIssuerActor.class)), BADGE_ISSUER_ACTOR);
 		badgeClassActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(BadgeClassActor.class)), BADGE_CLASS_ACTOR);
+		badgeAssertionActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(BadgeAssertionActor.class)), BADGE_ASSERTION_ACTOR);
 
 		ec = getContext().dispatcher();
 		initializeRouterMap();
@@ -330,8 +338,10 @@ public class RequestRouterActor extends UntypedAbstractActor {
 		routerMap.put(ActorOperations.UPDATE_NOTE.getValue(), notesActor);
 		routerMap.put(ActorOperations.DELETE_NOTE.getValue(), notesActor);
 		routerMap.put(ActorOperations.USER_CURRENT_LOGIN.getValue(), userManagementRouter);
-		routerMap.put(ActorOperations.ENCRYPT_USER_DATA.getValue(), userDataEncryptionDecryptionServiceActor);
-		routerMap.put(ActorOperations.DECRYPT_USER_DATA.getValue(), userDataEncryptionDecryptionServiceActor);
+		routerMap.put(ActorOperations.ENCRYPT_USER_DATA.getValue(),
+				userDataEncryptionDecryptionServiceActor);
+		routerMap.put(ActorOperations.DECRYPT_USER_DATA.getValue(),
+				userDataEncryptionDecryptionServiceActor);
 		routerMap.put(ActorOperations.GET_MEDIA_TYPES.getValue(), userManagementRouter);
 		routerMap.put(ActorOperations.SEARCH_AUDIT_LOG.getValue(), auditLogManagementActor);
 		routerMap.put(ActorOperations.PROCESS_AUDIT_LOG.getValue(), auditLogManagementActor);
@@ -362,6 +372,12 @@ public class RequestRouterActor extends UntypedAbstractActor {
 		routerMap.put(ActorOperations.READ_ALL_DATA.getValue(), dbOperationActor);
 		routerMap.put(ActorOperations.SEARCH_DATA.getValue(), dbOperationActor);
 		routerMap.put(ActorOperations.GET_METRICS.getValue(), dbOperationActor);
+
+		routerMap.put(ActorOperations.CREATE_BADGE_ASSERTION.getValue(), badgeAssertionActor);
+		routerMap.put(ActorOperations.GET_BADGE_ASSERTION.getValue(), badgeAssertionActor);
+		routerMap.put(ActorOperations.GET_BADGE_ASSERTION_LIST.getValue(), badgeAssertionActor);
+		routerMap.put(ActorOperations.REVOKE_BADGE.getValue(), badgeAssertionActor);
+		routerMap.put(ActorOperations.CREATE_BADGE_ISSUER.getValue(), badgeIssuerActor);
 
 		routerMap.put(ActorOperations.CREATE_BADGE_CLASS.getValue(), badgeClassActor);
 		routerMap.put(ActorOperations.GET_BADGE_CLASS.getValue(), badgeClassActor);

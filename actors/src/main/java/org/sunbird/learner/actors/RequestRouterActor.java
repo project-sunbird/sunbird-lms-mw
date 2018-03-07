@@ -18,6 +18,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.assessment.AssessmentItemActor;
 import org.sunbird.learner.actors.badges.BadgesActor;
+import org.sunbird.learner.actors.badging.BadgeClassActor;
 import org.sunbird.learner.actors.bulkupload.BulkUploadManagementActor;
 import org.sunbird.learner.actors.bulkupload.UserDataEncryptionDecryptionServiceActor;
 import org.sunbird.learner.actors.client.ClientManagementActor;
@@ -99,6 +100,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
 	private ActorRef applicationConfigActor;
 	private ActorRef dbOperationActor;
 
+	// Badging Actors
+	private ActorRef badgeClassActor;
+
 	private ExecutionContext ec;
 
 	public static final Map<String, ActorRef> routerMap = new HashMap<>();
@@ -133,6 +137,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
 	private static final String KEYCLOAK_SYNC_ACTOR = "keyCloakSyncActor";
 	private static final String APPLICATION_CONFIG_ACTOR = "applicationConfigActor";
 	private static final String DBOPERATION_ACTOR = "dbOperationActor";
+
+	// Badging Actor Constants
+	private static final String BADGE_CLASS_ACTOR = "badgeClassActor";
 
 	/**
 	 * @return the system
@@ -219,6 +226,10 @@ public class RequestRouterActor extends UntypedAbstractActor {
 				FromConfig.getInstance().props(Props.create(ApplicationConfigActor.class)), APPLICATION_CONFIG_ACTOR);
 		dbOperationActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(DbOperationActor.class)),
 				DBOPERATION_ACTOR);
+
+		// Badging Actors
+		badgeClassActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(BadgeClassActor.class)), BADGE_CLASS_ACTOR);
+
 		ec = getContext().dispatcher();
 		initializeRouterMap();
 	}
@@ -351,6 +362,11 @@ public class RequestRouterActor extends UntypedAbstractActor {
 		routerMap.put(ActorOperations.READ_ALL_DATA.getValue(), dbOperationActor);
 		routerMap.put(ActorOperations.SEARCH_DATA.getValue(), dbOperationActor);
 		routerMap.put(ActorOperations.GET_METRICS.getValue(), dbOperationActor);
+
+		routerMap.put(ActorOperations.CREATE_BADGE_CLASS.getValue(), badgeClassActor);
+		routerMap.put(ActorOperations.GET_BADGE_CLASS.getValue(), badgeClassActor);
+		routerMap.put(ActorOperations.LIST_BADGE_CLASS.getValue(), badgeClassActor);
+		routerMap.put(ActorOperations.DELETE_BADGE_CLASS.getValue(), badgeClassActor);
 	}
 
 	@Override

@@ -1,7 +1,6 @@
 package org.sunbird.learner.actors.badging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.cassandra.cql3.Json;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.HttpUtil;
@@ -59,14 +58,13 @@ public class BadgeClassActor extends AbstractBaseActor {
 
             Map<String, String> headers = BadgingUtil.getBadgrHeaders();
 
-            String responseString = HttpUtil.postFormData(formParams, fileParams, headers, BadgingUtil.getBadgeClassUrl(issuerSlug));
+            String badgrResponseStr = HttpUtil.postFormData(formParams, fileParams, headers, BadgingUtil.getBadgeClassUrl(issuerSlug));
 
             ObjectMapper mapper = new ObjectMapper();
-            Map<String , Object> responseMap  = mapper.readValue(responseString, HashMap.class);
+            Map<String , Object> badgrResponseMap  = mapper.readValue(badgrResponseStr, HashMap.class);
 
             Response response = new Response();
-            response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-            response.put("created_at", responseMap.get("created_at"));
+            response.putAll(badgrResponseMap);
             sender().tell(response, self());
         } catch (IOException e) {
             ProjectLogger.log("createBadgeClass: exception = ", e);

@@ -1,25 +1,22 @@
 package org.sunbird.learner.actors;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import org.sunbird.actor.background.ChannelRegistrationActor;
+import akka.actor.ActorRef;
+import akka.actor.Props;
+import akka.actor.UntypedAbstractActor;
+import akka.routing.FromConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.BulkUploadBackGroundJobActor;
-import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
 import org.sunbird.learner.audit.impl.ActorAuditLogServiceImpl;
 import org.sunbird.metrics.actors.CourseMetricsBackgroundActor;
 import org.sunbird.metrics.actors.MetricsBackGroundJobActor;
 import org.sunbird.metrics.actors.OrganisationMetricsBackgroundActor;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
-import akka.actor.UntypedAbstractActor;
-import akka.routing.FromConfig;
+import java.util.HashMap;
+import java.util.Map;
 
 public class BackgroundRequestRouterActor extends UntypedAbstractActor {
 
@@ -35,10 +32,6 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
 
 	private ActorRef courseMetricsBackgroundActor;
 
-	private ActorRef emailServiceActor;
-
-	private ActorRef backGroundServiceActor;
-
 	public static Map<String, ActorRef> routerMap = new HashMap<>();
 
 	private static final String BACKGROUND_JOB = "backgroundJobManager";
@@ -47,8 +40,6 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
 	private static final String AUDIT_LOG_MGMT_ACTOR = "auditLogManagementActor";
 	private static final String ORG_METRICS_BACKGROUND_ACTOR = "organisationMetricsBackgroundActor";
 	private static final String COURSE_METRICS_BACKGROUND_ACTOR = "courseMetricsBackgroundActor";
-	private static final String EMAIL_SERVICE_ACTOR = "emailServiceActor";
-	private static final String BACKGROUND_SERVICE_ACTOR = "backGroundServiceActor";
 
 	/**
 	 * constructor to initialize router actor with child actor pool
@@ -76,12 +67,6 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
 		courseMetricsBackgroundActor = getContext().actorOf(
 				FromConfig.getInstance().props(Props.create(CourseMetricsBackgroundActor.class)),
 				COURSE_METRICS_BACKGROUND_ACTOR);
-
-		emailServiceActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(EmailServiceActor.class)),
-				EMAIL_SERVICE_ACTOR);
-
-		backGroundServiceActor = getContext().actorOf(
-				FromConfig.getInstance().props(Props.create(BackGroundServiceActor.class)), BACKGROUND_SERVICE_ACTOR);
 
 		initializeRouterMap();
 	}
@@ -114,8 +99,6 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
 		routerMap.put(ActorOperations.ORG_CREATION_METRICS_DATA.getValue(), organisationMetricsBackgroundActor);
 		routerMap.put(ActorOperations.ORG_CONSUMPTION_METRICS_DATA.getValue(), organisationMetricsBackgroundActor);
 		routerMap.put(ActorOperations.COURSE_PROGRESS_METRICS_DATA.getValue(), courseMetricsBackgroundActor);
-		routerMap.put(ActorOperations.EMAIL_SERVICE.getValue(), emailServiceActor);
-		routerMap.put(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue(), backGroundServiceActor);
 	}
 
 	@Override

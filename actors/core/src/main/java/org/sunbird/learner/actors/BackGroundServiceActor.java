@@ -1,14 +1,11 @@
 package org.sunbird.learner.actors;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import org.sunbird.actor.background.BackgroundOperations;
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.BackgroundRequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
@@ -17,29 +14,23 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.UntypedAbstractActor;
+import java.util.*;
 
-public class BackGroundServiceActor extends UntypedAbstractActor {
+public class BackGroundServiceActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
+	public static void init() {
+		BackgroundRequestRouter.registerActor(BackGroundServiceActor.class,
+				Arrays.asList(BackgroundOperations.updateUserCountToLocationID.name()));
+	}
+
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("BackGroundServiceActor onReceive called");
-				Request actorMessage = (Request) message;
-				if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue())) {
-					updateUserCount(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION");
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-			}
+	public void onReceive(Request request) throws Throwable {
+		if (request.getOperation().equalsIgnoreCase(BackgroundOperations.updateUserCountToLocationID.name())) {
+			updateUserCount(request);
 		} else {
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

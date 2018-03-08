@@ -16,11 +16,11 @@ import akka.routing.FromConfig;
  *
  */
 
-public class BackgroundRequestRouter extends BaseRouter {
+public class RequestRouter extends BaseRouter {
 
 	protected static ActorContext context = null;
 
-	public BackgroundRequestRouter() {
+	public RequestRouter() {
 		context = getContext();
 	}
 

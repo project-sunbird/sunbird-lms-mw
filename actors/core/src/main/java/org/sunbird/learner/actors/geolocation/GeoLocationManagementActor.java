@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -111,7 +112,7 @@ public class GeoLocationManagementActor extends UntypedAbstractActor {
 		response.getResult().put(JsonKey.LOCATIONS, result);
 		sender().tell(response, self());
 		// Update user count in background
-		actorMessage.setOperation(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue());
+		actorMessage.setOperation(BackgroundOperations.updateUserCountToLocationID.name());
 		actorMessage.getRequest().put(JsonKey.OPERATION, "GeoLocationManagementActor");
 		ActorUtil.tell(actorMessage);
 	}

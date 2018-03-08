@@ -1,12 +1,13 @@
 package org.sunbird.badge.actors;
 
-import org.sunbird.common.exception.ProjectCommonException;
+import java.util.Arrays;
+
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.BackgroundRequestRouter;
+import org.sunbird.badge.BadgeOperations;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.service.provider.ContentService;
-
-import akka.actor.UntypedAbstractActor;
 
 /**
  * 
@@ -14,33 +15,24 @@ import akka.actor.UntypedAbstractActor;
  *
  */
 
-public class BadgeNotifier extends UntypedAbstractActor {
-	
+public class BadgeNotifier extends BaseActor {
+
+	public static void init() {
+		BackgroundRequestRouter.registerActor(BadgeNotifier.class,
+				Arrays.asList(BadgeOperations.assignBadgeMessage.name(), BadgeOperations.revokeBadgeMessage.name()));
+	}
+
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			Request request = (Request) message;
-			try {
-				String operation = request.getOperation();
-				switch (operation) {
-				case "assignBadgeMessage":
-					Response response = ContentService.assignBadge(request);
-					sender().tell(response, getSelf());
-					break;
-				case "revokeBadgeMessage":
-					System.out.println("This operation is not supported.");
-					break;
-				}
-
-			} catch (Exception e) {
-				sender().tell(e, self());
-			}
-
-		} else {
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
+	public void onReceive(Request request) throws Throwable {
+		String operation = request.getOperation();
+		switch (operation) {
+		case "assignBadgeMessage":
+			Response response = ContentService.assignBadge(request);
+			sender().tell(response, getSelf());
+			break;
+		case "revokeBadgeMessage":
+			System.out.println("This operation is not supported.");
+			break;
 		}
 	}
 

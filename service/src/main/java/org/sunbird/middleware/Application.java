@@ -1,5 +1,6 @@
 package org.sunbird.middleware;
 
+import org.sunbird.actor.core.CoreActorRegistry;
 import org.sunbird.actor.router.BackgroundRequestRouter;
 import org.sunbird.badge.BadgeActorRegistry;
 import org.sunbird.common.models.util.JsonKey;
@@ -166,6 +167,7 @@ public class Application {
 			system.actorOf(Props.create(BackgroundRequestRouter.class),
 					BackgroundRequestRouter.class.getSimpleName());
 
+			new CoreActorRegistry();
 			new BadgeActorRegistry();
 			
 			ProjectLogger.log("start BkgRemoteCreationSystem method called....");

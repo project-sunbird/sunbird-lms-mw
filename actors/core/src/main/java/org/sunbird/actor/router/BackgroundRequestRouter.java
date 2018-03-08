@@ -20,7 +20,7 @@ import akka.routing.FromConfig;
 public class BackgroundRequestRouter extends BaseActor {
 
 	private static akka.actor.ActorContext context = null;
-	public static Map<String, ActorRef> routingMap = new HashMap<>();
+	private static Map<String, ActorRef> routingMap = new HashMap<>();
 
 	public BackgroundRequestRouter() {
 		context = getContext();

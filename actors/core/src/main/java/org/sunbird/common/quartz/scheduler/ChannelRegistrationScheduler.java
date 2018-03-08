@@ -8,9 +8,9 @@ import java.util.Map;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
+import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -32,7 +32,7 @@ public class ChannelRegistrationScheduler implements Job {
 		Util.initializeContextForSchedulerJob(JsonKey.SYSTEM, ctx.getFireInstanceId(), JsonKey.SCHEDULER_JOB);
 		Map<String, Object> logInfo = genarateLogInfo(JsonKey.SYSTEM, ctx.getJobDetail().getDescription());
 		Request request = new Request();
-		request.setOperation(ActorOperations.REG_CHANNEL.getValue());
+		request.setOperation(BackgroundOperations.registerChannel.name());
 		CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 		Response response = cassandraOperation.getRecordById(JsonKey.SUNBIRD, JsonKey.SYSTEM_SETTINGS_DB,
 				JsonKey.CHANNEL_REG_STATUS_ID);

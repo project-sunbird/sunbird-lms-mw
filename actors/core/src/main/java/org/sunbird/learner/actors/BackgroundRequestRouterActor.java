@@ -3,10 +3,9 @@ package org.sunbird.learner.actors;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.sunbird.actor.background.TelemetryProcessorActor;
+import org.sunbird.actor.background.ChannelRegistrationActor;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.BadgingActorOperations;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -40,8 +39,6 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
 
 	private ActorRef backGroundServiceActor;
 
-	private ActorRef channelRegistrationActor;
-
 	public static Map<String, ActorRef> routerMap = new HashMap<>();
 
 	private static final String BACKGROUND_JOB = "backgroundJobManager";
@@ -52,7 +49,6 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
 	private static final String COURSE_METRICS_BACKGROUND_ACTOR = "courseMetricsBackgroundActor";
 	private static final String EMAIL_SERVICE_ACTOR = "emailServiceActor";
 	private static final String BACKGROUND_SERVICE_ACTOR = "backGroundServiceActor";
-	private static final String CHANNEL_REG_ACTOR = "channelRegistrationActor";
 
 	/**
 	 * constructor to initialize router actor with child actor pool
@@ -87,9 +83,6 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
 		backGroundServiceActor = getContext().actorOf(
 				FromConfig.getInstance().props(Props.create(BackGroundServiceActor.class)), BACKGROUND_SERVICE_ACTOR);
 
-		channelRegistrationActor = getContext().actorOf(
-				FromConfig.getInstance().props(Props.create(ChannelRegistrationActor.class)), CHANNEL_REG_ACTOR);
-
 		initializeRouterMap();
 	}
 
@@ -123,7 +116,6 @@ public class BackgroundRequestRouterActor extends UntypedAbstractActor {
 		routerMap.put(ActorOperations.COURSE_PROGRESS_METRICS_DATA.getValue(), courseMetricsBackgroundActor);
 		routerMap.put(ActorOperations.EMAIL_SERVICE.getValue(), emailServiceActor);
 		routerMap.put(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue(), backGroundServiceActor);
-		routerMap.put(ActorOperations.REG_CHANNEL.getValue(), channelRegistrationActor);
 	}
 
 	@Override

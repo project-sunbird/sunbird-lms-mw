@@ -2,7 +2,7 @@ package org.sunbird.learner.actors.badging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.BadgingActorOperations;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
@@ -13,8 +13,11 @@ import org.sunbird.learner.actors.AbstractBaseActor;
 import org.sunbird.learner.util.Util;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class BadgeClassActor extends AbstractBaseActor {
     @Override
@@ -27,13 +30,13 @@ public class BadgeClassActor extends AbstractBaseActor {
                 Util.initializeContext(actorMessage, JsonKey.USER);
                 ExecutionContext.setRequestId(actorMessage.getRequestId());
 
-                if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_BADGE_CLASS.getValue())) {
+                if (actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.CREATE_BADGE_CLASS.getValue())) {
                     createBadgeClass(actorMessage);
-                } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_BADGE_CLASS.getValue())) {
+                } else if (actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.GET_BADGE_CLASS.getValue())) {
                     getBadgeClass(actorMessage);
-                } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.LIST_BADGE_CLASS.getValue())) {
-                    listBadgeClass();
-                } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.DELETE_BADGE_CLASS.getValue())) {
+                } else if (actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.LIST_BADGE_CLASS.getValue())) {
+                    listBadgeClass(actorMessage);
+                } else if (actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.DELETE_BADGE_CLASS.getValue())) {
                     deleteBadgeClass(actorMessage);
                 } else {
                     onReceiveUnsupportedOperation("BadgeClassActor");
@@ -61,11 +64,12 @@ public class BadgeClassActor extends AbstractBaseActor {
 
             String badgrResponseStr = HttpUtil.postFormData(formParams, fileParams, headers, BadgingUtil.getBadgeClassUrl(issuerSlug));
 
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String , Object> badgrResponseMap  = mapper.readValue(badgrResponseStr, HashMap.class);
-
             Response response = new Response();
+            ObjectMapper mapper = new ObjectMapper();
+
+            Map<String , Object> badgrResponseMap  = mapper.readValue(badgrResponseStr, HashMap.class);
             response.putAll(badgrResponseMap);
+
             sender().tell(response, self());
         } catch (IOException e) {
             ProjectLogger.log("createBadgeClass: exception = ", e);
@@ -77,24 +81,91 @@ public class BadgeClassActor extends AbstractBaseActor {
     private void getBadgeClass(Request actorMessage) {
         ProjectLogger.log("getBadgeClass called");
 
-        Response response = new Response();
-        response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-        sender().tell(response, self());
+        try {
+            Map<String, Object> requestData = actorMessage.getRequest();
+
+            String issuerSlug = (String) requestData.get(BadgingJsonKey.ISSUER_SLUG);
+            String badgeClassSlug = (String) requestData.get(BadgingJsonKey.BADGE_CLASS_SLUG);
+
+            Map<String, String> headers = BadgingUtil.getBadgrHeaders();
+            String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerSlug, badgeClassSlug);
+
+            String badgrResponseStr = HttpUtil.sendGetRequest(badgrUrl, headers);
+
+            Response response = new Response();
+            ObjectMapper mapper = new ObjectMapper();
+
+            Map<String , Object> badgrResponseMap  = mapper.readValue(badgrResponseStr, HashMap.class);
+            response.putAll(badgrResponseMap);
+
+            sender().tell(response, self());
+        } catch (IOException e) {
+            ProjectLogger.log("getBadgeClass: exception = ", e);
+
+            sender().tell(e, self());
+        }
     }
 
-    private void listBadgeClass() {
+    private void listBadgeClass(Request actorMessage) {
         ProjectLogger.log("listBadgeClass called");
 
-        Response response = new Response();
-        response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-        sender().tell(response, self());
+        try {
+            Map<String, Object> requestData = actorMessage.getRequest();
+            List<String> issuerList = (List<String>) requestData.get(BadgingJsonKey.ISSUER_LIST);
+            Map<String, Object> context = (Map<String, Object>) requestData.get(BadgingJsonKey.CONTEXT);
+
+            List<Object> badges = new ArrayList<>();
+
+            for (String issuerSlug : issuerList) {
+                badges.addAll(listBadgeClassForIssuer(issuerSlug));
+            }
+
+            Response response = new Response();
+            response.put(BadgingJsonKey.BADGES, badges);
+
+            sender().tell(response, self());
+        } catch (IOException e) {
+            ProjectLogger.log("listBadgeClass: exception = ", e);
+
+            sender().tell(e, self());
+        }
+    }
+
+
+    private List<Object> listBadgeClassForIssuer(String issuerSlug) throws IOException {
+        Map<String, String> headers = BadgingUtil.getBadgrHeaders();
+        String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerSlug);
+
+        String badgrResponseStr = HttpUtil.sendGetRequest(badgrUrl, headers);
+
+        ObjectMapper mapper = new ObjectMapper();
+        List<Object> badges  = mapper.readValue(badgrResponseStr, ArrayList.class);
+
+        return badges;
     }
 
     private void deleteBadgeClass(Request actorMessage) {
         ProjectLogger.log("deleteBadgeClass called");
 
-        Response response = new Response();
-        response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-        sender().tell(response, self());
+        try {
+            Map<String, Object> requestData = actorMessage.getRequest();
+
+            String issuerSlug = (String) requestData.get(BadgingJsonKey.ISSUER_SLUG);
+            String badgeClassSlug = (String) requestData.get(BadgingJsonKey.BADGE_CLASS_SLUG);
+
+            Map<String, String> headers = BadgingUtil.getBadgrHeaders();
+            String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerSlug, badgeClassSlug);
+
+            String badgrResponseStr = HttpUtil.sendDeleteRequest(headers, badgrUrl);
+
+            Response response = new Response();
+            response.put(JsonKey.MESSAGE, badgrResponseStr.replaceAll("^\"|\"$", ""));
+
+            sender().tell(response, self());
+        } catch (IOException e) {
+            ProjectLogger.log("deleteBadgeClass: exception = ", e);
+
+            sender().tell(e, self());
+        }
     }
 }

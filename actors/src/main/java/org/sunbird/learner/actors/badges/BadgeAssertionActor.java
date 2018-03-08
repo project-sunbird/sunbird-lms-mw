@@ -9,7 +9,7 @@ import java.util.Map;
 
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.BadgingActorOperations;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -30,9 +30,8 @@ import akka.actor.UntypedAbstractActor;
  */
 public class BadgeAssertionActor extends UntypedAbstractActor {
 
-
-
   private ObjectMapper mapper = new ObjectMapper();
+
   @Override
   public void onReceive(Object message) throws Throwable {
     if (message instanceof Request) {
@@ -44,13 +43,13 @@ public class BadgeAssertionActor extends UntypedAbstractActor {
         // set request id fto thread loacl...
         ExecutionContext.setRequestId(actorMessage.getRequestId());
         if (actorMessage.getOperation()
-            .equalsIgnoreCase(ActorOperations.CREATE_BADGE_ASSERTION.getValue())) {
+            .equalsIgnoreCase(BadgingActorOperations.CREATE_BADGE_ASSERTION.getValue())) {
          createAssertion(actorMessage);	
         } else if (actorMessage.getOperation()
-            .equalsIgnoreCase(ActorOperations.GET_BADGE_ASSERTION.getValue())) {
+            .equalsIgnoreCase(BadgingActorOperations.GET_BADGE_ASSERTION.getValue())) {
         } else if (actorMessage.getOperation()
-            .equalsIgnoreCase(ActorOperations.GET_BADGE_ASSERTION_LIST.getValue())) {
-        } else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.REVOKE_BADGE.getValue())) {
+            .equalsIgnoreCase(BadgingActorOperations.GET_BADGE_ASSERTION_LIST.getValue())) {
+        } else if (actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.REVOKE_BADGE.getValue())) {
         }
         else {
           ProjectLogger.log("UNSUPPORTED OPERATION");
@@ -80,6 +79,7 @@ public class BadgeAssertionActor extends UntypedAbstractActor {
     * This method will call the badger server to create badge assertion.
     * @param actorMessage Request
     */
+    @SuppressWarnings("unchecked")
 	private void createAssertion(Request actorMessage) {
 		Map<String, Object> requestedData = actorMessage.getRequest();
 		String requestBody = BadgingUtil.createAssertionReqData(requestedData);

@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.BadgingActorOperations;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
@@ -36,7 +37,7 @@ public class BadgeIssuerActor extends AbstractBaseActor {
         Util.initializeContext(actorMessage, JsonKey.USER);
         // set request id fto thread loacl...
         ExecutionContext.setRequestId(actorMessage.getRequestId());
-        if(actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_BADGE_ISSUER.getValue())){
+        if(actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.CREATE_BADGE_ISSUER.getValue())){
           createBadgeIssuer(actorMessage);
         } else {
           onReceiveUnsupportedOperation(null);

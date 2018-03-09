@@ -1,6 +1,7 @@
 package org.sunbird.learner.actors.notificationservice;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -8,11 +9,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
+import org.sunbird.actor.background.BackgroundOperations;
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.BackgroundRequestRouter;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
@@ -27,9 +30,7 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.UntypedAbstractActor;
-
-public class EmailServiceActor extends UntypedAbstractActor {
+public class EmailServiceActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
@@ -37,35 +38,23 @@ public class EmailServiceActor extends UntypedAbstractActor {
 	private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
 			.getEncryptionServiceInstance(null);
 
+	public static void init() {
+		BackgroundRequestRouter.registerActor(EmailServiceActor.class,
+				Arrays.asList(BackgroundOperations.emailService.name()));
+		// TODO: use normal operations enum for below.
+		RequestRouter.registerActor(EmailServiceActor.class, Arrays.asList(BackgroundOperations.emailService.name()));
+	}
+
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		try {
-			if (message instanceof Request) {
-				ProjectLogger.log("EmailServiceActor  onReceive called");
-				Request actorMessage = (Request) message;
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.EMAIL_SERVICE.getValue())) {
-					sendMail(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION");
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, self());
-				}
-			} else {
-				ProjectLogger.log("UNSUPPORTED MESSAGE");
-				ProjectCommonException exception = new ProjectCommonException(
-						ResponseCode.invalidRequestData.getErrorCode(),
-						ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
-				sender().tell(exception, self());
-			}
-		} catch (Exception ex) {
-			ProjectLogger.log(ex.getMessage(), ex);
-			sender().tell(ex, self());
+	public void onReceive(Request request) throws Throwable {
+		if (request.getOperation().equalsIgnoreCase(BackgroundOperations.emailService.name())) {
+			sendMail(request);
+		} else {
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private void sendMail(Request actorMessage) {
 		Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
 		String name = "";

@@ -9,6 +9,7 @@ import java.util.Map;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
+import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -48,7 +49,7 @@ public class UpdateUserCountScheduler implements Job {
 		}
 		ProjectLogger.log("size of total locId to processed = " + locIdList.size());
 		Request request = new Request();
-		request.setOperation(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue());
+		request.setOperation(BackgroundOperations.updateUserCountToLocationID.name());
 		request.getRequest().put(JsonKey.LOCATION_IDS, locIdList);
 		request.getRequest().put(JsonKey.OPERATION, "UpdateUserCountScheduler");
 		ProjectLogger.log("calling BackgroundService actor from scheduler");

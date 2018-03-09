@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -1637,7 +1638,7 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 			emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
 
 			Request request = new Request();
-			request.setOperation(ActorOperations.EMAIL_SERVICE.getValue());
+			request.setOperation(BackgroundOperations.emailService.name());
 			request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);
 			ActorUtil.tell(request);
 		}

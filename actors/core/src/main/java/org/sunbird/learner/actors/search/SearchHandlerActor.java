@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -122,7 +123,7 @@ public class SearchHandlerActor extends UntypedAbstractActor {
 		//
 		Request req = new Request();
 		req.setRequest(telemetryRequestForSearch(telemetryContext, params));
-		req.setOperation(ActorOperations.TELEMETRY_PROCESSING.getValue());
+		req.setOperation(BackgroundOperations.telemetryProcessing.name());
 		ActorUtil.tell(req);
 		// lmaxWriter.submitMessage(req);
 

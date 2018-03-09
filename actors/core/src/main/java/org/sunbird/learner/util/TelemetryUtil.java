@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -93,7 +93,7 @@ public final class TelemetryUtil {
 		Request req = new Request();
 		req.setRequest(TelemetryUtil.genarateTelemetryRequest(targetObject, correlatedObject,
 				TelemetryEvents.AUDIT.getName(), params));
-		req.setOperation(ActorOperations.TELEMETRY_PROCESSING.getValue());
+		req.setOperation(BackgroundOperations.telemetryProcessing.name());
 		ActorUtil.tell(req);
 	}
 
@@ -109,7 +109,7 @@ public final class TelemetryUtil {
 			Request req = new Request();
 			req.setRequest(TelemetryUtil.genarateTelemetryRequest(targetObject, correlatedObject,
 					TelemetryEvents.AUDIT.getName(), params));
-			req.setOperation(ActorOperations.TELEMETRY_PROCESSING.getValue());
+			req.setOperation(BackgroundOperations.telemetryProcessing.name());
 			ActorUtil.tell(req);
 		} else if (eventType.equalsIgnoreCase(TelemetryEvents.LOG.getName())) {
 			Map<String, Object> logInfo = request;
@@ -117,7 +117,7 @@ public final class TelemetryUtil {
 			logInfo.put(JsonKey.END_TIME, endTime);
 			Request req = new Request();
 			req.setRequest(generateTelemetryRequest(eventType, logInfo, TelemetryUtil.getTelemetryContext()));
-			req.setOperation(ActorOperations.TELEMETRY_PROCESSING.getValue());
+			req.setOperation(BackgroundOperations.telemetryProcessing.name());
 			ActorUtil.tell(req);
 		}
 	}

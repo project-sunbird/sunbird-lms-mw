@@ -12,9 +12,9 @@ import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
+import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
@@ -59,7 +59,7 @@ public class BackgroundServiceActorTest {
 
 		actorMessage.getRequest().put(JsonKey.LOCATION_IDS, locnIdList);
 		actorMessage.getRequest().put(JsonKey.OPERATION, "GeoLocationManagementActor");
-		actorMessage.setOperation(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue());
+		actorMessage.setOperation(BackgroundOperations.updateUserCountToLocationID.name());
 
 		subject.tell(actorMessage, probe.getRef());
 		try {
@@ -94,7 +94,7 @@ public class BackgroundServiceActorTest {
 
 		actorMessage.getRequest().put(JsonKey.LOCATION_IDS, locnIdList);
 		actorMessage.getRequest().put(JsonKey.OPERATION, "UpdateUserCountScheduler");
-		actorMessage.setOperation(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue());
+		actorMessage.setOperation(BackgroundOperations.updateUserCountToLocationID.name());
 
 		subject.tell(actorMessage, probe.getRef());
 		try {
@@ -130,7 +130,7 @@ public class BackgroundServiceActorTest {
 
 		actorMessage.getRequest().put(JsonKey.LOCATION_IDS, locnIdList);
 		actorMessage.getRequest().put(JsonKey.OPERATION, "GeoLocationManagementActor");
-		actorMessage.setOperation(ActorOperations.UPDATE_USER_COUNT_TO_LOCATIONID.getValue());
+		actorMessage.setOperation(BackgroundOperations.updateUserCountToLocationID.name());
 
 		subject.tell(actorMessage, probe.getRef());
 		try {

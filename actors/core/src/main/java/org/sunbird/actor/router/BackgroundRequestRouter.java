@@ -4,7 +4,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.core.BaseRouter;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 
 import akka.actor.ActorRef;
@@ -17,28 +19,15 @@ import akka.routing.FromConfig;
  *
  */
 
-public class BackgroundRequestRouter extends BaseActor {
+public class BackgroundRequestRouter extends BaseRouter {
 
-	private static akka.actor.ActorContext context = null;
-	public static Map<String, ActorRef> routingMap = new HashMap<>();
+	protected static ActorContext context = null;
+	protected static Map<String, ActorRef> routingMap = new HashMap<>();
 
 	public BackgroundRequestRouter() {
 		context = getContext();
 	}
-
-	public static void registerActor(Class<?> clazz, List<String> operations) {
-		try {
-			ActorRef actor = context.actorOf(FromConfig.getInstance().props(Props.create(clazz)),
-					clazz.getSimpleName());
-			System.out.println("Actor path: " + actor.path());
-			for (String operation : operations) {
-				routingMap.put(operation, actor);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
+	
 	@Override
 	public void onReceive(Request request) throws Throwable {
 		org.sunbird.common.request.ExecutionContext.setRequestId(request.getRequestId());
@@ -48,6 +37,31 @@ public class BackgroundRequestRouter extends BaseActor {
 		} else {
 			onReceiveUnsupportedOperation(request.getOperation());
 		}
-
 	}
+
+	public static void registerActor(Class<?> clazz, List<String> operations) {
+		if (!contextAvailable(clazz.getSimpleName()))
+			return;
+		try {
+			ActorRef actor = context.actorOf(FromConfig.getInstance().props(Props.create(clazz)),
+					clazz.getSimpleName());
+			for (String operation : operations) {
+				routingMap.put(operation, actor);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static boolean contextAvailable(String name) {
+		if (null == context) {
+			System.out.println(RequestRouter.class.getSimpleName()
+					+ " context is not available to initialise actor for [" + name + "]");
+			ProjectLogger.log(RequestRouter.class.getSimpleName()
+					+ " context is not available to initialise actor for [" + name + "]", LoggerEnum.WARN.name());
+			return false;
+		}
+		return true;
+	}
+
 }

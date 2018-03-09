@@ -1,16 +1,18 @@
-package org.sunbird.learner.actors;
+package org.sunbird.actor.background;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.BackgroundRequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -23,33 +25,26 @@ import org.sunbird.learner.util.Util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * 
  * @author Amit Kumar
  *
  */
-public class ChannelRegistrationActor extends UntypedAbstractActor {
+public class ChannelRegistrationActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
+	public static void init() {
+		BackgroundRequestRouter.registerActor(ChannelRegistrationActor.class,
+				Arrays.asList(BackgroundOperations.registerChannel.name()));
+	}
+
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("ChannelRegistrationActor onReceive called");
-				Request actorMessage = (Request) message;
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.REG_CHANNEL.getValue())) {
-					registerChannel();
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION");
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-			}
+	public void onReceive(Request request) throws Throwable {
+		if (request.getOperation().equalsIgnoreCase(BackgroundOperations.registerChannel.name())) {
+			registerChannel();
 		} else {
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

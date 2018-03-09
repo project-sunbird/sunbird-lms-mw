@@ -17,7 +17,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.learner.util.BadgingUtil;
+import org.sunbird.learner.actors.badging.BadgingUtil;
 import org.sunbird.learner.util.Util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -83,9 +83,10 @@ public class BadgeAssertionActor extends UntypedAbstractActor {
 	private void createAssertion(Request actorMessage) {
 		Map<String, Object> requestedData = actorMessage.getRequest();
 		String requestBody = BadgingUtil.createAssertionReqData(requestedData);
-		String url = BadgingUtil.createAssertionUrl(requestedData, BadgingUtil.SUNBIRD_BADGER_CREATE_ASSERTION_URL, 2);
+		String url = BadgingUtil
+        .createAssertionUrl(requestedData, BadgingUtil.SUNBIRD_BADGER_CREATE_ASSERTION_URL, 2);
 		try {
-			String response = HttpUtil.sendPostRequest(url, requestBody, BadgingUtil.createBadgerHeader());
+			String response = HttpUtil.sendPostRequest(url, requestBody, BadgingUtil.getBadgrHeaders());
 			Response result = new Response();
 			Map<String, Object> res = mapper.readValue(response, HashMap.class);
 			result.getResult().putAll(res);

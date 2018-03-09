@@ -14,6 +14,11 @@ public class BadgingUtil {
 
     public static final String SUNBIRD_BADGR_SERVER_URL_DEFAULT = "http://localhost:8000";
     public static final String BADGING_AUTHORIZATION_FORMAT = "Token %s";
+    public static final String  SUNBIRD_BADGER_CREATE_ASSERTION_URL="/v1/issuer/issuers/{0}/badges/{1}/assertions";
+    public static final String  SUNBIRD_BADGER_GETASSERTION_URL="/v1/issuer/issuers/{0}/badges/{1}/assertion/{2}";
+    public static final String  SUNBIRD_BADGER_GETALLASSERTION_URL="/v1/issuer/issuers/{0}/badges/{1}/assertion";
+    public static final String  SUNBIRD_BADGER_REVOKE_URL="/v1/issuer/issuers/{0}/badges/{1}/assertion/{2}";
+
     private static PropertiesCache propertiesCache = PropertiesCache.getInstance();
 
 

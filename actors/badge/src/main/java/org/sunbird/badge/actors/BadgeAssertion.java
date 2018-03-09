@@ -1,15 +1,20 @@
 /**
  * 
  */
-package org.sunbird.learner.actors.badges;
+package org.sunbird.badge.actors;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.BackgroundRequestRouter;
+import org.sunbird.badge.BadgeOperations;
+import org.sunbird.badge.util.BadgingJsonKey;
+import org.sunbird.badge.util.BadgingUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.BadgingActorOperations;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -18,77 +23,67 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.learner.util.BadgingUtil;
 import org.sunbird.learner.util.Util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import akka.actor.UntypedAbstractActor;
 
 /**
  * @author Manzarul
  *
  */
-public class BadgeAssertionActor extends UntypedAbstractActor {
+public class BadgeAssertion extends BaseActor {
 
   private ObjectMapper mapper = new ObjectMapper();
-
-  @Override
-  public void onReceive(Object message) throws Throwable {
-    if (message instanceof Request) {
-      try {
-    	  
-        ProjectLogger.log("BadgeAssertionActor  onReceive called",LoggerEnum.INFO.name());
-        Request actorMessage = (Request) message;
-        Util.initializeContext(actorMessage, JsonKey.USER);
-        // set request id fto thread loacl...
-        ExecutionContext.setRequestId(actorMessage.getRequestId());
-        if (actorMessage.getOperation()
-            .equalsIgnoreCase(BadgingActorOperations.CREATE_BADGE_ASSERTION.getValue())) {
-         createAssertion(actorMessage);	
-        } else if (actorMessage.getOperation()
-            .equalsIgnoreCase(BadgingActorOperations.GET_BADGE_ASSERTION.getValue())) {
-        } else if (actorMessage.getOperation()
-            .equalsIgnoreCase(BadgingActorOperations.GET_BADGE_ASSERTION_LIST.getValue())) {
-        } else if (actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.REVOKE_BADGE.getValue())) {
-        }
-        else {
-          ProjectLogger.log("UNSUPPORTED OPERATION");
-          ProjectCommonException exception =
-              new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
-                  ResponseCode.invalidOperationName.getErrorMessage(),
-                  ResponseCode.CLIENT_ERROR.getResponseCode());
-          sender().tell(exception, self());
-        }
-      } catch (Exception ex) {
-        ProjectLogger.log(ex.getMessage(), ex);
-        sender().tell(ex, self());
-      }
-    } else {
-      // Throw exception as message body
-      ProjectLogger.log("UNSUPPORTED MESSAGE");
-      ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-    }
-
-  }
    
-  /**
-   * This method will call the badger server to create badge assertion.
-   * @param actorMessage Request
-   */
-   @SuppressWarnings("unchecked")
+	public static void init() {
+		BackgroundRequestRouter.registerActor(BadgeAssertion.class,
+				Arrays.asList(BadgeOperations.createBadgeAssertion.name(), BadgeOperations.getBadgeAssertion.name(),
+						BadgeOperations.getBadgeAssertionList.name(), BadgeOperations.revokeBadge.name()));
+	}
+	
+   @Override
+	public void onReceive(Request request) throws Throwable {
+		ProjectLogger.log("BadgeAssertionActor  onReceive called", LoggerEnum.INFO.name());
+		Util.initializeContext(request, JsonKey.USER);
+		// set request id fto thread loacl...
+		ExecutionContext.setRequestId(request.getRequestId());
+		String operation = request.getOperation();
+		switch (operation) {
+		case "createBadgeAssertion":
+			createAssertion(request);
+			break;
+		case "getBadgeAssertion":
+			getAssertionDetails(request);
+			break;
+		case "getBadgeAssertionList":
+			break;
+		case "revokeBadge":
+			break;
+		default:
+			ProjectLogger.log("UNSUPPORTED OPERATION");
+			ProjectCommonException exception = new ProjectCommonException(
+					ResponseCode.invalidOperationName.getErrorCode(),
+					ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+			sender().tell(exception, self());
+		}
+	}
+   
+   /**
+    * This method will call the badger server to create badge assertion.
+    * @param actorMessage Request
+    */
+    @SuppressWarnings("unchecked")
 	private void createAssertion(Request actorMessage) {
 		Map<String, Object> requestedData = actorMessage.getRequest();
 		String requestBody = BadgingUtil.createAssertionReqData(requestedData);
 		String url = BadgingUtil.createBadgerUrl(requestedData, BadgingUtil.SUNBIRD_BADGER_CREATE_ASSERTION_URL, 2);
 		try {
+			System.out.println("Testing..." + url);
 			String response = HttpUtil.sendPostRequest(url, requestBody, BadgingUtil.createBadgerHeader());
+			System.out.println("Response====" + response);
 			Response result = new Response();
 			Map<String, Object> res = mapper.readValue(response, HashMap.class);
+			res.put(BadgingJsonKey.CREATED_BY, actorMessage.getRequestId());
 			result.getResult().putAll(res);
 			sender().tell(result, self());
 		} catch (IOException e) {
@@ -99,13 +94,13 @@ public class BadgeAssertionActor extends UntypedAbstractActor {
 			ProjectLogger.log(e.getMessage(), e);
 		}
 	}
-   
-   /**
-    * This method will get single assertion details based on
-    * issuerSlug, badgeClassSlug and assertionSlug
-    * @param request Request
-    */
-   @SuppressWarnings("unchecked")
+    
+    /**
+     * This method will get single assertion details based on
+     * issuerSlug, badgeClassSlug and assertionSlug
+     * @param request Request
+     */
+    @SuppressWarnings("unchecked")
 	private void getAssertionDetails(Request request) {
 		String url = BadgingUtil.createBadgerUrl(request.getRequest(), BadgingUtil.SUNBIRD_BADGER_GETASSERTION_URL, 3);
 		try {
@@ -126,4 +121,5 @@ public class BadgeAssertionActor extends UntypedAbstractActor {
 			ProjectLogger.log(e.getMessage(), e);
 		}
 	}
+    
 }

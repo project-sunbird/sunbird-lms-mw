@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.sunbird.learner.util;
+package org.sunbird.badge.util;
 
 import java.text.MessageFormat;
 import java.util.HashMap;
@@ -35,7 +35,7 @@ public class BadgingUtil {
 	 */
 	public static String createAssertionReqData(Map<String, Object> map) {
 		JsonObject json = new JsonObject();
-		json.addProperty(BadgingJsonKey.RECIPIENT_IDENTIFIER, (String) map.get(BadgingJsonKey.RECIPIENT_EMAIL));
+		json.addProperty(BadgingJsonKey.RECIPIENT_IDENTIFIER, (String) map.get(BadgingJsonKey.RECIPIENT_IDENTIFIER));
 		if(!ProjectUtil.isStringNullOREmpty((String) map.get(BadgingJsonKey.EVIDENCE))) {
 		json.addProperty(BadgingJsonKey.EVIDENCE, (String) map.get(BadgingJsonKey.EVIDENCE));
 		}
@@ -63,13 +63,13 @@ public class BadgingUtil {
 		if (placeholderCount == 0) {
 			return uri;
 		} else if (placeholderCount == 1) {
-			return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_ID));
+			return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_SLUG));
 		} else if (placeholderCount == 2) {
-			return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_ID),
-					(String) map.get(BadgingJsonKey.BADGE_CLASS_ID));
+			return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_SLUG),
+					(String) map.get(BadgingJsonKey.BADGE_CLASS_SLUG));
 		} else {
-			return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_ID),
-					(String) map.get(BadgingJsonKey.BADGE_CLASS_ID));
+			return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_SLUG),
+					(String) map.get(BadgingJsonKey.BADGE_CLASS_SLUG));
 		}
 	}
 	

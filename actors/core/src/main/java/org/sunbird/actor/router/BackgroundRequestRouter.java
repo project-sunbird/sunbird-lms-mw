@@ -1,10 +1,13 @@
 package org.sunbird.actor.router;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.sunbird.actor.core.BaseRouter;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.request.Request;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
@@ -19,9 +22,21 @@ import akka.routing.FromConfig;
 public class BackgroundRequestRouter extends BaseRouter {
 
 	protected static ActorContext context = null;
+	protected static Map<String, ActorRef> routingMap = new HashMap<>();
 
 	public BackgroundRequestRouter() {
 		context = getContext();
+	}
+	
+	@Override
+	public void onReceive(Request request) throws Throwable {
+		org.sunbird.common.request.ExecutionContext.setRequestId(request.getRequestId());
+		ActorRef ref = routingMap.get(request.getOperation());
+		if (null != ref) {
+			ref.tell(request, ActorRef.noSender());
+		} else {
+			onReceiveUnsupportedOperation(request.getOperation());
+		}
 	}
 
 	public static void registerActor(Class<?> clazz, List<String> operations) {

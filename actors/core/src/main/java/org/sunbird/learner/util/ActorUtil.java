@@ -1,7 +1,6 @@
 package org.sunbird.learner.util;
 
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.actors.BackgroundRequestRouterActor;
@@ -26,21 +25,17 @@ public final class ActorUtil {
 		// set telemetry context so that it could bbe accessible to the ackground actor
 		// as well ...
 		request.getContext().put(JsonKey.TELEMETRY_CONTEXT, ExecutionContext.getCurrent().getRequestContext());
+		String operation = request.getOperation();
 
-		if (null != BackgroundRequestRouterActor.routerMap
-				&& null != BackgroundRequestRouterActor.routerMap.get(request.getOperation())) {
-			BackgroundRequestRouterActor.routerMap.get(request.getOperation()).tell(request, ActorRef.noSender());
-		} else if (null != RequestRouterActor.routerMap
-				&& null != RequestRouterActor.routerMap.get(request.getOperation())) {
+		if (null != BackgroundRequestRouterActor.routerMap.get(operation)) {
+			BackgroundRequestRouterActor.routerMap.get(operation).tell(request, ActorRef.noSender());
+		} else if (null != RequestRouterActor.routerMap.get(operation)) {
 			RequestRouterActor.routerMap.get(request.getOperation()).tell(request, ActorRef.noSender());
 		} else {
-			Object obj = ActorSystemFactory.getActorSystem().initializeActorSystem(request.getOperation());
+			Object obj = ActorSystemFactory.getActorSystem().initializeActorSystem(operation);
 			if (obj instanceof ActorRef) {
-				ProjectLogger.log("In ActorUtil(org.sunbird.learner.util) Actor ref is running " + ((ActorRef) obj));
 				((ActorRef) obj).tell(request, ActorRef.noSender());
 			} else {
-				ProjectLogger.log(
-						"In ActorUtil(org.sunbird.learner.util) Actor selection is running " + ((ActorSelection) obj));
 				((ActorSelection) obj).tell(request, ActorRef.noSender());
 			}
 		}

@@ -1,12 +1,14 @@
 package org.sunbird.learner.actors.badging;
 
 import akka.actor.ActorRef;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.BadgingActorOperations;
@@ -18,6 +20,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.AbstractBaseActor;
 import org.sunbird.learner.util.Util;
 
@@ -39,6 +42,10 @@ public class BadgeIssuerActor extends AbstractBaseActor {
         ExecutionContext.setRequestId(actorMessage.getRequestId());
         if(actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.CREATE_BADGE_ISSUER.getValue())){
           createBadgeIssuer(actorMessage);
+        }else if(actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.GET_BADGE_ISSUER.getValue())){
+          getBadgeIssuer(actorMessage);
+        } else if(actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.GET_ALL_ISSUER.getValue())){
+          getAllIssuer(actorMessage);
         } else {
           onReceiveUnsupportedOperation(null);
         }
@@ -75,32 +82,57 @@ public class BadgeIssuerActor extends AbstractBaseActor {
     requestData.put(JsonKey.EMAIL , (String)req.get(JsonKey.EMAIL));
 
     String url = "/v1/issuer/issuers";
-
-    String badgerBaseUrl = System.getenv(BadgingJsonKey.BADGER_BASE_URL);
-    if (ProjectUtil.isStringNullOREmpty(badgerBaseUrl)) {
-      badgerBaseUrl = PropertiesCache.getInstance().getProperty(BadgingJsonKey.BADGER_BASE_URL);
-    }
-    String authKey = System.getenv(BadgingJsonKey.BADGING_AUTHORIZATION_KEY);
-    if (ProjectUtil.isStringNullOREmpty(authKey)) {
-      authKey = BadgingJsonKey.BADGING_TOKEN +PropertiesCache.getInstance().getProperty(BadgingJsonKey.BADGING_AUTHORIZATION_KEY);
-    } else {
-      authKey = BadgingJsonKey.BADGING_TOKEN + authKey;
-    }
-
-    Map<String , String> headers = new HashMap<>();
-    headers.put(JsonKey.AUTHORIZATION, authKey);
+    Map<String , String> headers = BadgingUtil.getBadgrHeaders();
 
     String httpResponseString= null;
     if(null != image) {
       fileData.put(BadgingJsonKey.IMAGE, image);
     }
-    httpResponseString = makeBadgerPostRequest(requestData , headers , badgerBaseUrl+url , fileData);
-
+    httpResponseString = makeBadgerPostRequest(requestData , headers , BadgingUtil.getBadgrBaseUrl()+url , fileData);
     Response response = new Response();
     Map<String , Object> res  = mapper.readValue(httpResponseString, HashMap.class);
     response.getResult().putAll(res);
     sender().tell(response , ActorRef.noSender());
+  }
 
+  private void getBadgeIssuer(Request actorMessage) throws IOException {
+
+    Map<String, Object> req = actorMessage.getRequest();
+    String slug = (String) req.get(JsonKey.SLUG);
+    String url = "/v1/issuer/issuers"+"/"+slug;
+
+    Map<String, String> headers = BadgingUtil.getBadgrHeaders();
+
+    String result = HttpUtil.sendGetRequest(BadgingUtil.getBadgrBaseUrl()+url , headers);
+
+    if(ProjectUtil.isStringNullOREmpty(result)){
+      throw new ProjectCommonException(ResponseCode.invalidIssuerSlug.getErrorCode(),
+          ResponseCode.invalidIssuerSlug.getErrorMessage(),
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+    }
+    Response response = new Response();
+    Map<String , Object> res  = mapper.readValue(result, HashMap.class);
+    response.getResult().putAll(res);
+    sender().tell(response , ActorRef.noSender());
+  }
+
+  private void getAllIssuer(Request actorMessage) throws IOException {
+
+    String url = "/v1/issuer/issuers";
+    Map<String, String> headers = BadgingUtil.getBadgrHeaders();
+    String result = HttpUtil.sendGetRequest(BadgingUtil.getBadgrBaseUrl()+url , headers);
+    // todo: what should be the message in case of the
+    if(ProjectUtil.isStringNullOREmpty(result)){
+      throw new ProjectCommonException(ResponseCode.internalError.getErrorCode(),
+          ResponseCode.internalError.getErrorMessage(),
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+    }
+    Response response = new Response();
+    List<Map<String, Object>> data = mapper.readValue(result, new TypeReference<List<Map<String, Object>>>(){});
+    Map<String , Object> res = new HashMap<>();
+    res.put(BadgingJsonKey.ISSUERS , data);
+    response.getResult().putAll(res);
+    sender().tell(response , ActorRef.noSender());
   }
 
   /**

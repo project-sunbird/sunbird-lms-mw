@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.velocity.VelocityContext;
+import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.Constants;
 import org.sunbird.common.ElasticSearchUtil;
@@ -2820,7 +2821,7 @@ public class UserManagementActor extends UntypedAbstractActor {
 			emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
 
 			Request request = new Request();
-			request.setOperation(ActorOperations.EMAIL_SERVICE.getValue());
+			request.setOperation(BackgroundOperations.emailService.name());
 			request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);
 			ActorUtil.tell(request);
 		}

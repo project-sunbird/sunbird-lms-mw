@@ -27,7 +27,6 @@ import org.sunbird.learner.actors.bulkupload.UserDataEncryptionDecryptionService
 import org.sunbird.learner.actors.client.ClientManagementActor;
 import org.sunbird.learner.actors.fileuploadservice.FileUploadServiceActor;
 import org.sunbird.learner.actors.geolocation.GeoLocationManagementActor;
-import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
 import org.sunbird.learner.actors.recommend.RecommendorActor;
 import org.sunbird.learner.actors.search.CourseSearchActor;
 import org.sunbird.learner.actors.search.SearchHandlerActor;
@@ -86,7 +85,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
 	private ActorRef bulkUploadManagementActor;
 	private ActorRef courseBatchActor;
 	private ActorRef esSyncActor;
-	private ActorRef emailServiceActor;
 	private ActorRef fileUploadServiceActor;
 	private ActorRef notesActor;
 	private ActorRef auditLogManagementActor;
@@ -129,7 +127,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
 	private static final String COURSE_METRICS_ROUTER = "courseMetricsRouter";
 	private static final String ES_SYNC_ROUTER = "esSyncActor";
 	private static final String SCHEDULAR_ACTOR = "schedularActor";
-	private static final String EMAIL_SERVICE_ACTOR = "emailServiceActor";
 	private static final String FILE_UPLOAD_ACTOR = "fileUploadActor";
 	private static final String BADGES_ACTOR = "badgesActor";
 	private static final String NOTES_ACTOR = "notesActor";
@@ -206,8 +203,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
 				.actorOf(FromConfig.getInstance().props(Props.create(FileUploadServiceActor.class)), FILE_UPLOAD_ACTOR);
 		schedularActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(SchedularActor.class)),
 				SCHEDULAR_ACTOR);
-		emailServiceActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(EmailServiceActor.class)),
-				EMAIL_SERVICE_ACTOR);
 		badgesActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(BadgesActor.class)),
 				BADGES_ACTOR);
 		notesActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(NotesManagementActor.class)),
@@ -322,8 +317,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
 		routerMap.put(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue(), courseMetricsRouter);
 		routerMap.put(ActorOperations.COURSE_CREATION_METRICS_REPORT.getValue(), courseMetricsRouter);
 
-		routerMap.put(ActorOperations.EMAIL_SERVICE.getValue(), emailServiceActor);
-
 		routerMap.put(ActorOperations.SYNC.getValue(), esSyncActor);
 		routerMap.put(ActorOperations.FILE_STORAGE_SERVICE.getValue(), fileUploadServiceActor);
 		routerMap.put(ActorOperations.GET_ALL_BADGE.getValue(), badgesActor);
@@ -384,6 +377,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
 		routerMap.put(BadgingActorOperations.GET_BADGE_CLASS.getValue(), badgeClassActor);
 		routerMap.put(BadgingActorOperations.LIST_BADGE_CLASS.getValue(), badgeClassActor);
 		routerMap.put(BadgingActorOperations.DELETE_BADGE_CLASS.getValue(), badgeClassActor);
+		routerMap.put(BadgingActorOperations.GET_BADGE_ISSUER.getValue(), badgeIssuerActor);
+		routerMap.put(BadgingActorOperations.GET_ALL_ISSUER.getValue(), badgeIssuerActor);
 	}
 
 	@Override

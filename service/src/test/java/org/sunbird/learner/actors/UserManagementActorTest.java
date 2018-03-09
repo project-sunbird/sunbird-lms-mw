@@ -17,6 +17,7 @@ import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
+import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -2018,7 +2019,7 @@ public class UserManagementActorTest {
 		TestKit probe = new TestKit(system);
 		ActorRef subject = system.actorOf(emailServiceProps);
 		Request reqObj = new Request();
-		reqObj.setOperation(ActorOperations.EMAIL_SERVICE.getValue());
+		reqObj.setOperation(BackgroundOperations.emailService.name());
 		HashMap<String, Object> innerMap = new HashMap<>();
 		Map<String, Object> map = new HashMap<String, Object>();
 		List<String> userids = new ArrayList<>();
@@ -2042,7 +2043,7 @@ public class UserManagementActorTest {
 		TestKit probe = new TestKit(system);
 		ActorRef subject = system.actorOf(emailServiceProps);
 		Request reqObj = new Request();
-		reqObj.setOperation(ActorOperations.EMAIL_SERVICE.getValue());
+		reqObj.setOperation(BackgroundOperations.emailService.name());
 		HashMap<String, Object> innerMap = new HashMap<>();
 		Map<String, Object> map = new HashMap<String, Object>();
 		List<String> userids = new ArrayList<>();

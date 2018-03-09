@@ -18,7 +18,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.learner.util.BadgingUtil;
+import org.sunbird.learner.actors.badging.BadgingUtil;
 import org.sunbird.learner.util.Util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -86,7 +86,7 @@ public class BadgeAssertionActor extends UntypedAbstractActor {
 		String requestBody = BadgingUtil.createAssertionReqData(requestedData);
 		String url = BadgingUtil.createBadgerUrl(requestedData, BadgingUtil.SUNBIRD_BADGER_CREATE_ASSERTION_URL, 2);
 		try {
-			String response = HttpUtil.sendPostRequest(url, requestBody, BadgingUtil.createBadgerHeader());
+			String response = HttpUtil.sendPostRequest(url, requestBody, BadgingUtil.getBadgrHeaders());
 			Response result = new Response();
 			Map<String, Object> res = mapper.readValue(response, HashMap.class);
 			result.getResult().putAll(res);
@@ -109,7 +109,7 @@ public class BadgeAssertionActor extends UntypedAbstractActor {
 	private void getAssertionDetails(Request request) {
 		String url = BadgingUtil.createBadgerUrl(request.getRequest(), BadgingUtil.SUNBIRD_BADGER_GETASSERTION_URL, 3);
 		try {
-			String response = HttpUtil.sendGetRequest(url, BadgingUtil.createBadgerHeader());
+			String response = HttpUtil.sendGetRequest(url, BadgingUtil.getBadgrHeaders());
 			if (ProjectUtil.isStringNullOREmpty(response)) {
 				sender().tell(ProjectUtil.createResourceNotFoundException(), self());
 				return;

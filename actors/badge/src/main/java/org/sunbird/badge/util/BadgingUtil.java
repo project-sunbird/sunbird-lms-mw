@@ -66,10 +66,10 @@ public class BadgingUtil {
 			return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_SLUG));
 		} else if (placeholderCount == 2) {
 			return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_SLUG),
-					(String) map.get(BadgingJsonKey.BADGE_CLASS_SLUG));
+					(String) map.get(BadgingJsonKey.BADGE_SLUG));
 		} else {
 			return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_SLUG),
-					(String) map.get(BadgingJsonKey.BADGE_CLASS_SLUG));
+					(String) map.get(BadgingJsonKey.BADGE_SLUG));
 		}
 	}
 	

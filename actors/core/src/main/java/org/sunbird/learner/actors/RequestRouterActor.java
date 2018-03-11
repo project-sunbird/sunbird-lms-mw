@@ -377,6 +377,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
 		routerMap.put(BadgingActorOperations.GET_BADGE_CLASS.getValue(), badgeClassActor);
 		routerMap.put(BadgingActorOperations.LIST_BADGE_CLASS.getValue(), badgeClassActor);
 		routerMap.put(BadgingActorOperations.DELETE_BADGE_CLASS.getValue(), badgeClassActor);
+		routerMap.put(BadgingActorOperations.GET_BADGE_ISSUER.getValue(), badgeIssuerActor);
+		routerMap.put(BadgingActorOperations.GET_ALL_ISSUER.getValue(), badgeIssuerActor);
 	}
 
 	@Override

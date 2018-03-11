@@ -14,10 +14,11 @@ import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.learner.util.BadgingUtil;
+import org.sunbird.learner.actors.badging.BadgingUtil;
 import org.sunbird.learner.util.Util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -75,19 +76,47 @@ public class BadgeAssertionActor extends UntypedAbstractActor {
 
   }
    
-   /**
-    * This method will call the badger server to create badge assertion.
-    * @param actorMessage Request
-    */
-    @SuppressWarnings("unchecked")
+  /**
+   * This method will call the badger server to create badge assertion.
+   * @param actorMessage Request
+   */
+   @SuppressWarnings("unchecked")
 	private void createAssertion(Request actorMessage) {
 		Map<String, Object> requestedData = actorMessage.getRequest();
 		String requestBody = BadgingUtil.createAssertionReqData(requestedData);
-		String url = BadgingUtil.createAssertionUrl(requestedData, BadgingUtil.SUNBIRD_BADGER_CREATE_ASSERTION_URL, 2);
+		String url = BadgingUtil.createBadgerUrl(requestedData, BadgingUtil.SUNBIRD_BADGER_CREATE_ASSERTION_URL, 2);
 		try {
-			String response = HttpUtil.sendPostRequest(url, requestBody, BadgingUtil.createBadgerHeader());
+			String response = HttpUtil.sendPostRequest(url, requestBody, BadgingUtil.getBadgrHeaders());
 			Response result = new Response();
 			Map<String, Object> res = mapper.readValue(response, HashMap.class);
+			result.getResult().putAll(res);
+			sender().tell(result, self());
+		} catch (IOException e) {
+			e.printStackTrace();
+			ProjectCommonException ex = new ProjectCommonException(ResponseCode.badgingserverError.getErrorCode(),
+					ResponseCode.badgingserverError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+			sender().tell(ex, self());
+			ProjectLogger.log(e.getMessage(), e);
+		}
+	}
+   
+   /**
+    * This method will get single assertion details based on
+    * issuerSlug, badgeClassSlug and assertionSlug
+    * @param request Request
+    */
+   @SuppressWarnings("unchecked")
+	private void getAssertionDetails(Request request) {
+		String url = BadgingUtil.createBadgerUrl(request.getRequest(), BadgingUtil.SUNBIRD_BADGER_GETASSERTION_URL, 3);
+		try {
+			String response = HttpUtil.sendGetRequest(url, BadgingUtil.getBadgrHeaders());
+			if (ProjectUtil.isStringNullOREmpty(response)) {
+				sender().tell(ProjectUtil.createResourceNotFoundException(), self());
+				return;
+			}
+			Response result = new Response();
+			Map<String, Object> res = mapper.readValue(response, HashMap.class);
+			// TODO need to fetch created by and put into response
 			result.getResult().putAll(res);
 			sender().tell(result, self());
 		} catch (IOException e) {

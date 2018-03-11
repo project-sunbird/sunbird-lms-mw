@@ -3,6 +3,7 @@ package org.sunbird.metrics.actors;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -10,13 +11,13 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
+import org.sunbird.actor.router.BackgroundRequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
@@ -42,37 +43,20 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
 	private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
 			.getDecryptionServiceInstance(null);
 
+	public static void init() {
+		BackgroundRequestRouter.registerActor(OrganisationMetricsBackgroundActor.class,
+				Arrays.asList(ActorOperations.ORG_CREATION_METRICS_DATA.getValue(),
+						ActorOperations.ORG_CONSUMPTION_METRICS_DATA.getValue()));
+	}
+
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("OrganisationMetricsActor-onReceive called");
-				Request actorMessage = (Request) message;
-				if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.ORG_CREATION_METRICS_DATA.getValue())) {
-					orgCreationMetricsData(actorMessage);
-				} else if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.ORG_CONSUMPTION_METRICS_DATA.getValue())) {
-					orgConsumptionMetricsData(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, self());
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, self());
-			}
+	public void onReceive(Request request) throws Throwable {
+		if (request.getOperation().equalsIgnoreCase(ActorOperations.ORG_CREATION_METRICS_DATA.getValue())) {
+			orgCreationMetricsData(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.ORG_CONSUMPTION_METRICS_DATA.getValue())) {
+			orgConsumptionMetricsData(request);
 		} else {
-			// Throw exception as message body
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

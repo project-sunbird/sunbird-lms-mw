@@ -3,6 +3,7 @@ package org.sunbird.learner.audit.impl;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -11,6 +12,8 @@ import java.util.Map;
 
 import org.joda.time.DateTime;
 import org.joda.time.Months;
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.BackgroundRequestRouter;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -28,34 +31,24 @@ import org.sunbird.learner.audit.AuditLogService;
 import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.util.UserUtility;
 
-import akka.actor.UntypedAbstractActor;
-
-public class ActorAuditLogServiceImpl extends UntypedAbstractActor implements AuditLogService {
+public class ActorAuditLogServiceImpl extends BaseActor implements AuditLogService {
 
 	private PropertiesCache cache = PropertiesCache.getInstance();
 
+	public static void init() {
+		BackgroundRequestRouter.registerActor(ActorAuditLogServiceImpl.class, Arrays
+				.asList(ActorOperations.SEARCH_AUDIT_LOG.getValue(), ActorOperations.PROCESS_AUDIT_LOG.getValue()));
+	}
+
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("ActorAuditLogServiceImpl  onReceive called");
-				Request actorMessage = (Request) message;
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.PROCESS_AUDIT_LOG.getValue())) {
-					process(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.SEARCH_AUDIT_LOG.getValue())) {
-					searchAuditHistory(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION");
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, self());
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, self());
-			}
+	public void onReceive(Request request) throws Throwable {
+		ProjectLogger.log("ActorAuditLogServiceImpl  onReceive called");
+		if (request.getOperation().equalsIgnoreCase(ActorOperations.PROCESS_AUDIT_LOG.getValue())) {
+			process(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.SEARCH_AUDIT_LOG.getValue())) {
+			searchAuditHistory(request);
+		} else {
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

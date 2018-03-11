@@ -3,6 +3,7 @@ package org.sunbird.metrics.actors;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -10,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.velocity.VelocityContext;
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.BackgroundRequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -29,48 +32,35 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * Created by arvind on 28/8/17.
  */
-public class MetricsBackGroundJobActor extends UntypedAbstractActor {
+public class MetricsBackGroundJobActor extends BaseActor {
 
 	private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
+	public static void init() {
+		BackgroundRequestRouter.registerActor(MetricsBackGroundJobActor.class,
+				Arrays.asList(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue(),
+						ActorOperations.PROCESS_DATA.getValue(),
+						ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue()));
+	}
+
 	@Override
-	public void onReceive(Object message) throws Throwable {
-
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("BackgroundJobManager  onReceive called");
-
-				Request actorMessage = (Request) message;
-				Util.initializeContext(actorMessage, JsonKey.USER);
-				// set request id fto thread loacl...
-				ExecutionContext.setRequestId(actorMessage.getRequestId());
-				String requestedOperation = actorMessage.getOperation();
-				ProjectLogger.log("Operation name is ==" + requestedOperation);
-				if (requestedOperation.equalsIgnoreCase(ActorOperations.PROCESS_DATA.getValue())) {
-					processData(actorMessage);
-				} else if (requestedOperation.equalsIgnoreCase(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue())) {
-					fileGenerationAndUpload(actorMessage);
-				} else if (requestedOperation.equalsIgnoreCase(ActorOperations.SEND_MAIL.getValue())) {
-					sendMail(actorMessage);
-
-				} else {
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					ProjectLogger.log("UnSupported operation in Background Job Manager", exception);
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-			}
+	public void onReceive(Request request) throws Throwable {
+		Util.initializeContext(request, JsonKey.USER);
+		ExecutionContext.setRequestId(request.getRequestId());
+		String operation = request.getOperation();
+		ProjectLogger.log("Operation name is ==" + operation);
+		if (operation.equalsIgnoreCase(ActorOperations.PROCESS_DATA.getValue())) {
+			processData(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue())) {
+			fileGenerationAndUpload(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.SEND_MAIL.getValue())) {
+			sendMail(request);
 		} else {
-			ProjectLogger.log("UNSUPPORTED MESSAGE FOR BACKGROUND JOB MANAGER");
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

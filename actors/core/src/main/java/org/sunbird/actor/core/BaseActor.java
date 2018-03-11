@@ -32,18 +32,18 @@ public abstract class BaseActor extends UntypedAbstractActor {
 		}
 	}
 
-	protected void unSupportedMessage() {
+	public void unSupportedMessage() {
 		ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
 				ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
 		sender().tell(exception, self());
 	}
 
-	protected void onReceiveUnsupportedOperation(String callerName) {
+	public void onReceiveUnsupportedOperation(String callerName) {
 		ProjectLogger.log(callerName + ": unsupported message");
 		unSupportedMessage();
 	}
 
-	protected void onReceiveUnsupportedMessage(String callerName) {
+	public void onReceiveUnsupportedMessage(String callerName) {
 		ProjectLogger.log(callerName + ": unsupported operation");
 		ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
 				ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());

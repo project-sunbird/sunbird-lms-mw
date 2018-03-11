@@ -470,6 +470,9 @@ public class RequestRouterActor extends UntypedAbstractActor {
 		String bkghost = System.getenv(JsonKey.BKG_SUNBIRD_ACTOR_SERVICE_IP);
 		String bkgport = System.getenv(JsonKey.BKG_SUNBIRD_ACTOR_SERVICE_PORT);
 		Config con = null;
+		System.out.println("api_actor_provider: " + PropertiesCache.getInstance().getProperty("api_actor_provider"));
+		System.out.println("bkghost: " + bkghost);
+		System.out.println("bkgport: " + bkgport);
 		if ("local".equalsIgnoreCase(PropertiesCache.getInstance().getProperty("api_actor_provider"))) {
 			con = ConfigFactory.load().getConfig(ACTOR_CONFIG_NAME);
 			system = ActorSystem.create(REMOTE_ACTOR_SYSTEM_NAME, con);

@@ -14,6 +14,7 @@ import java.util.Set;
 
 import org.apache.velocity.VelocityContext;
 import org.sunbird.actor.background.BackgroundOperations;
+import org.sunbird.actor.core.BaseActor;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.Constants;
 import org.sunbird.common.ElasticSearchUtil;
@@ -49,15 +50,13 @@ import org.sunbird.notification.utils.SMSFactory;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * This actor will handle course enrollment operation .
  *
  * @author Manzarul
  * @author Amit Kumar
  */
-public class UserManagementActor extends UntypedAbstractActor {
+public class UserManagementActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private SSOManager ssoManager = SSOServiceFactory.getInstance();
@@ -77,70 +76,55 @@ public class UserManagementActor extends UntypedAbstractActor {
 	 * Receives the actor message and perform the course enrollment operation .
 	 */
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("UserManagementActor  onReceive called");
-				Request actorMessage = (Request) message;
-				Util.initializeContext(actorMessage, JsonKey.USER);
-				// set request id fto thread loacl...
-				ExecutionContext.setRequestId(actorMessage.getRequestId());
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_USER.getValue())) {
-					createUser(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_USER.getValue())) {
-					updateUser(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.LOGIN.getValue())) {
-					login(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.LOGOUT.getValue())) {
-					logout(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CHANGE_PASSWORD.getValue())) {
-					changePassword(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_PROFILE.getValue())) {
-					getUserProfile(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_ROLES.getValue())) {
-					getRoles();
-				} else if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.JOIN_USER_ORGANISATION.getValue())) {
-					joinUserOrganisation(actorMessage);
-				} else if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.APPROVE_USER_ORGANISATION.getValue())) {
-					approveUserOrg(actorMessage);
-				} else if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue())) {
-					getUserDetailsByLoginId(actorMessage);
-				} else if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.REJECT_USER_ORGANISATION.getValue())) {
-					rejectUserOrg(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.DOWNLOAD_USERS.getValue())) {
-					getUserDetails(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.BLOCK_USER.getValue())) {
-					blockUser(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ASSIGN_ROLES.getValue())) {
-					assignRoles(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.UNBLOCK_USER.getValue())) {
-					unBlockUser(actorMessage);
-				} else if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.USER_CURRENT_LOGIN.getValue())) {
-					updateUserLoginTime(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_MEDIA_TYPES.getValue())) {
-					getMediaTypes();
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.FORGOT_PASSWORD.getValue())) {
-					forgotPassword(actorMessage);
-				} else if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.PROFILE_VISIBILITY.getValue())) {
-					profileVisibility(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION");
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, self());
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, self());
-			}
+	public void onReceive(Request request) throws Throwable {
+		Util.initializeContext(request, JsonKey.USER);
+		// set request id fto thread loacl...
+		ExecutionContext.setRequestId(request.getRequestId());
+		String operation = request.getOperation();
+		if (operation.equalsIgnoreCase(ActorOperations.CREATE_USER.getValue())) {
+			createUser(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER.getValue())) {
+			updateUser(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.LOGIN.getValue())) {
+			login(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.LOGOUT.getValue())) {
+			logout(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.CHANGE_PASSWORD.getValue())) {
+			changePassword(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.GET_PROFILE.getValue())) {
+			getUserProfile(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.GET_ROLES.getValue())) {
+			getRoles();
+		} else if (operation.equalsIgnoreCase(ActorOperations.JOIN_USER_ORGANISATION.getValue())) {
+			joinUserOrganisation(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.APPROVE_USER_ORGANISATION.getValue())) {
+			approveUserOrg(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue())) {
+			getUserDetailsByLoginId(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.REJECT_USER_ORGANISATION.getValue())) {
+			rejectUserOrg(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.DOWNLOAD_USERS.getValue())) {
+			getUserDetails(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.BLOCK_USER.getValue())) {
+			blockUser(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.ASSIGN_ROLES.getValue())) {
+			assignRoles(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.UNBLOCK_USER.getValue())) {
+			unBlockUser(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.USER_CURRENT_LOGIN.getValue())) {
+			updateUserLoginTime(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.GET_MEDIA_TYPES.getValue())) {
+			getMediaTypes();
+		} else if (operation.equalsIgnoreCase(ActorOperations.FORGOT_PASSWORD.getValue())) {
+			forgotPassword(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.PROFILE_VISIBILITY.getValue())) {
+			profileVisibility(request);
+		} else {
+			ProjectLogger.log("UNSUPPORTED OPERATION");
+			ProjectCommonException exception = new ProjectCommonException(
+					ResponseCode.invalidOperationName.getErrorCode(),
+					ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+			sender().tell(exception, self());
 		}
 	}
 

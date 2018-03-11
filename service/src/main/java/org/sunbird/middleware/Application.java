@@ -2,6 +2,7 @@ package org.sunbird.middleware;
 
 import org.sunbird.actor.core.CoreActorRegistry;
 import org.sunbird.actor.router.BackgroundRequestRouter;
+import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.badge.BadgeActorRegistry;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -39,52 +40,9 @@ public class Application {
 	private static PropertiesCache cache = PropertiesCache.getInstance();
 
 	public static void main(String[] args) {
-		/*
-		 * System.getenv(JsonKey.ACTOR_SERVICE_INSTANCE) i.e "actor_service_name" values
-		 * are ("RemoteMiddlewareActorSystem" ,"BackGroundRemoteMiddlewareActorSystem").
-		 * 
-		 * based on value of "actor_service_name" env variable , this application will
-		 * start the actor system on a machine i.e if value is
-		 * "RemoteMiddlewareActorSystem" it will start Normal Actor System on that
-		 * machine and if value is "BackGroundRemoteMiddlewareActorSystem" , it will
-		 * start background actor system on that machine
-		 */
-		String actorSystemToStart = System.getenv(JsonKey.ACTOR_SERVICE_INSTANCE);
-		/*
-		 * Temporary changes for running learning service and actor service only on 2
-		 * machine instead of 3 machine
-		 * 
-		 * if have to run normal actor and background actor both remotely then change
-		 * the value of this variable accordingly on machine and read from environment
-		 * variable and make the value of this variable in config file i.e in
-		 * externalResource properties file to NULL or empty.
-		 * 
-		 * actorSystemToStart : reading this value from properties file to start any
-		 * actor system as remote only one actor system , can run remotely at a time
-		 * with this change (other actor system should run locally) if you want to run
-		 * background actor remotely then change the value of sunbird_actor_system_name
-		 * to BackGroundRemoteMiddlewareActorSystem OR if you want to run normal actor
-		 * remotely then change the value of sunbird_actor_system_name to
-		 * RemoteMiddlewareActorSystem
-		 */
-		if (!ProjectUtil
-				.isStringNullOREmpty(PropertiesCache.getInstance().getProperty(JsonKey.ACTOR_SERVICE_INSTANCE))) {
-			actorSystemToStart = PropertiesCache.getInstance().getProperty(JsonKey.ACTOR_SERVICE_INSTANCE);
-		}
-		if ("remote".equalsIgnoreCase(cache.getProperty("api_actor_provider"))
-				&& (REMOTE_ACTOR_SYSTEM_NAME.equalsIgnoreCase(actorSystemToStart))) {
-			ProjectLogger.log("Initializing Normal Actor System remotely");
-			startRemoteActorSystem();
-		}
-		if ("remote".equalsIgnoreCase(cache.getProperty("background_actor_provider"))
-				&& (BKG_REMOTE_ACTOR_SYSTEM_NAME.equalsIgnoreCase(actorSystemToStart))) {
-			ProjectLogger.log("Initializing Background Actor System remotely ");
-			startBackgroundRemoteActorSystem();
-		} else if ("local".equalsIgnoreCase(cache.getProperty("background_actor_provider"))) {
-			ProjectLogger.log("Initializing Background Actor System locally ");
-			startBackgroundLocalActorSystem();
-		}
-
+		SunbirdMWService.init();
+		new CoreActorRegistry();
+		new BadgeActorRegistry();
 	}
 
 	/**

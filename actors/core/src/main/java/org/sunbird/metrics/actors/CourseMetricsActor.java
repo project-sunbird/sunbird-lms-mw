@@ -21,7 +21,6 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
@@ -44,40 +43,22 @@ public class CourseMetricsActor extends BaseMetricsActor {
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
 			.getDecryptionServiceInstance(null);
+	
+	public static void init() {
+		//TODO:
+	}
 
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("CourseMetricsActor-onReceive called");
-				Request actorMessage = (Request) message;
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.COURSE_PROGRESS_METRICS.getValue())) {
-					courseProgressMetrics(actorMessage);
-				} else if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.COURSE_CREATION_METRICS.getValue())) {
-					courseConsumptionMetrics(actorMessage);
-				} else if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue())) {
-					courseProgressMetricsReport(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, self());
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log("Error occured", ex);
-				sender().tell(ex, self());
-			}
+	public void onReceive(Request request) throws Throwable {
+		if (request.getOperation().equalsIgnoreCase(ActorOperations.COURSE_PROGRESS_METRICS.getValue())) {
+			courseProgressMetrics(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.COURSE_CREATION_METRICS.getValue())) {
+			courseConsumptionMetrics(request);
+		} else if (request.getOperation()
+				.equalsIgnoreCase(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue())) {
+			courseProgressMetricsReport(request);
 		} else {
-			// Throw exception as message body
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

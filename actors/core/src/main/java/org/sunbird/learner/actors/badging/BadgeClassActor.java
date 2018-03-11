@@ -2,11 +2,7 @@ package org.sunbird.learner.actors.badging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.BadgingActorOperations;
-import org.sunbird.common.models.util.BadgingJsonKey;
-import org.sunbird.common.models.util.HttpUtil;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.actors.AbstractBaseActor;
@@ -73,7 +69,7 @@ public class BadgeClassActor extends AbstractBaseActor {
             String badgrResponseStr = HttpUtil.postFormData(formParams, fileParams, headers, BadgingUtil.getBadgeClassUrl(issuerSlug));
 
             Response response = new Response();
-            BadgingUtil.prepareBadgeClassResponse(response, badgrResponseStr);
+            BadgingUtil.prepareBadgeClassResponse(badgrResponseStr, response.getResult());
 
             sender().tell(response, self());
         } catch (IOException e) {
@@ -91,19 +87,16 @@ public class BadgeClassActor extends AbstractBaseActor {
         try {
             Map<String, Object> requestData = actorMessage.getRequest();
 
-            String issuerSlug = (String) requestData.get(BadgingJsonKey.ISSUER_SLUG);
-            String badgeClassSlug = (String) requestData.get(BadgingJsonKey.BADGE_SLUG);
+            String issuerId = (String) requestData.get(BadgingJsonKey.ISSUER_ID);
+            String badgeId = (String) requestData.get(BadgingJsonKey.BADGE_ID);
 
             Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-            String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerSlug, badgeClassSlug);
+            String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerId, badgeId);
 
             String badgrResponseStr = HttpUtil.sendGetRequest(badgrUrl, headers);
 
             Response response = new Response();
-            ObjectMapper mapper = new ObjectMapper();
-
-            Map<String , Object> badgrResponseMap  = mapper.readValue(badgrResponseStr, HashMap.class);
-            response.putAll(badgrResponseMap);
+            BadgingUtil.prepareBadgeClassResponse(badgrResponseStr, response.getResult());
 
             sender().tell(response, self());
         } catch (IOException e) {
@@ -146,9 +139,16 @@ public class BadgeClassActor extends AbstractBaseActor {
         String badgrResponseStr = HttpUtil.sendGetRequest(badgrUrl, headers);
 
         ObjectMapper mapper = new ObjectMapper();
+        List<Object> filteredBadges = new ArrayList<>();
         List<Object> badges  = mapper.readValue(badgrResponseStr, ArrayList.class);
 
-        return badges;
+        for (Object badge : badges) {
+            Map<String, Object> mappedBadge = new HashMap<>();
+            BadgingUtil.prepareBadgeClassResponse((Map<String, Object>) badge, mappedBadge);
+            filteredBadges.add(mappedBadge);
+        }
+
+        return filteredBadges;
     }
 
     private void deleteBadgeClass(Request actorMessage) {
@@ -157,11 +157,11 @@ public class BadgeClassActor extends AbstractBaseActor {
         try {
             Map<String, Object> requestData = actorMessage.getRequest();
 
-            String issuerSlug = (String) requestData.get(BadgingJsonKey.ISSUER_SLUG);
-            String badgeClassSlug = (String) requestData.get(BadgingJsonKey.BADGE_SLUG);
+            String issuerId = (String) requestData.get(BadgingJsonKey.ISSUER_ID);
+            String badgeId = (String) requestData.get(BadgingJsonKey.BADGE_ID);
 
             Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-            String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerSlug, badgeClassSlug);
+            String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerId, badgeId);
 
             String badgrResponseStr = HttpUtil.sendDeleteRequest(headers, badgrUrl);
 

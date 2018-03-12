@@ -3,13 +3,13 @@ package org.sunbird.learner.actors;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
 import org.sunbird.learner.util.Util;
-import org.sunbird.middleware.Application;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -23,7 +23,7 @@ public class EmailServiceActorTest {
 
 	@BeforeClass
 	public static void setUp() {
-		Application.startLocalActorSystem();
+		SunbirdMWService.init();
 		system = ActorSystem.create("system");
 		Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
 	}

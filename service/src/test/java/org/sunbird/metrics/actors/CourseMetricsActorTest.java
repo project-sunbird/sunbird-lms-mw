@@ -9,6 +9,7 @@ import java.util.Map;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -18,7 +19,6 @@ import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.util.Util;
-import org.sunbird.middleware.Application;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -38,7 +38,7 @@ public class CourseMetricsActorTest {
 
 	@BeforeClass
 	public static void setUp() {
-		Application.startLocalActorSystem();
+		SunbirdMWService.init();
 		system = ActorSystem.create("system");
 		Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
 		insertBatchDataToES();

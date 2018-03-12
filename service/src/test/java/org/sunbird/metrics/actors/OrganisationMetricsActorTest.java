@@ -10,6 +10,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -25,7 +26,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
-import org.sunbird.middleware.Application;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -46,7 +46,7 @@ public class OrganisationMetricsActorTest {
 
 	@BeforeClass
 	public static void setUp() {
-		Application.startLocalActorSystem();
+		SunbirdMWService.init();
 		system = ActorSystem.create("system");
 		Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
 		insertUserDataToES();

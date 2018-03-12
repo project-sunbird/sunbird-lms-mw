@@ -18,6 +18,7 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import org.sunbird.actor.background.BackgroundOperations;
+import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -85,7 +86,7 @@ public class UserManagementActorTest {
 
 	@BeforeClass
 	public static void setUp() {
-		Application.startLocalActorSystem();
+		SunbirdMWService.init();
 		encryption = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_ENCRYPTION);
 		system = ActorSystem.create("system");
 		Util.checkCassandraDbConnections(JsonKey.SUNBIRD);

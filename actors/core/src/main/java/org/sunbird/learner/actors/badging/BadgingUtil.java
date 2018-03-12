@@ -5,11 +5,14 @@ import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.StringUtils;
-import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.BadgingJsonKey;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.MapperUtil;
+import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.PropertiesCache;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
 
 public class BadgingUtil {
@@ -17,7 +20,7 @@ public class BadgingUtil {
     public static final String SUNBIRD_BADGR_SERVER_URL_DEFAULT = "http://localhost:8000";
     public static final String BADGING_AUTHORIZATION_FORMAT = "Token %s";
     public static final String  SUNBIRD_BADGER_CREATE_ASSERTION_URL="/v1/issuer/issuers/{0}/badges/{1}/assertions";
-    public static final String  SUNBIRD_BADGER_GETASSERTION_URL="/v1/issuer/issuers/{0}/badges/{1}/assertion/{2}";
+    public static final String  SUNBIRD_BADGER_GETASSERTION_URL="/v1/issuer/issuers/{0}/badges/{1}/assertions/{2}";
     public static final String  SUNBIRD_BADGER_GETALLASSERTION_URL="/v1/issuer/issuers/{0}/badges/{1}/assertion";
     public static final String  SUNBIRD_BADGER_REVOKE_URL="/v1/issuer/issuers/{0}/badges/{1}/assertion/{2}";
 
@@ -46,13 +49,14 @@ public class BadgingUtil {
         HashMap<String, String> headers = new HashMap<>();
 
         String authToken = System.getenv(BadgingJsonKey.BADGING_AUTHORIZATION_KEY);
-        if(StringUtils.isBlank(authToken)){
-            authToken = propertiesCache.getProperty(BadgingJsonKey.BADGING_AUTHORIZATION_KEY);
+        if(ProjectUtil.isStringNullOREmpty(authToken)){
+            authToken =  propertiesCache.getProperty(BadgingJsonKey.BADGING_AUTHORIZATION_KEY);
         }
         if (!StringUtils.isBlank(authToken)) {
             headers.put("Authorization", String.format(BADGING_AUTHORIZATION_FORMAT, authToken));
         }
         headers.put("Accept", "application/json");
+        headers.put("Content-Type", "application/json");
         return headers;
     }
 
@@ -88,13 +92,13 @@ public class BadgingUtil {
         if (placeholderCount == 0) {
             return uri;
         } else if (placeholderCount == 1) {
-            return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_SLUG));
+            return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_ID));
         } else if (placeholderCount == 2) {
-            return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_SLUG),
-                (String) map.get(BadgingJsonKey.BADGE_SLUG));
+            return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_ID),
+                (String) map.get(BadgingJsonKey.BADGE_CLASS_ID));
         } else {
-            return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_SLUG),
-                (String) map.get(BadgingJsonKey.BADGE_SLUG));
+            return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_ID),
+                (String) map.get(BadgingJsonKey.BADGE_CLASS_ID),(String) map.get(BadgingJsonKey.ASSERTION_ID));
         }
     }
 
@@ -122,7 +126,7 @@ public class BadgingUtil {
      */
     public static String createAssertionReqData(Map<String, Object> map) {
         JsonObject json = new JsonObject();
-        json.addProperty(BadgingJsonKey.RECIPIENT_IDENTIFIER, (String) map.get(BadgingJsonKey.RECIPIENT_IDENTIFIER));
+        json.addProperty(BadgingJsonKey.RECIPIENT_IDENTIFIER, (String) map.get(BadgingJsonKey.RECIPIENT_EMAIL));
         if(!ProjectUtil.isStringNullOREmpty((String) map.get(BadgingJsonKey.EVIDENCE))) {
             json.addProperty(BadgingJsonKey.EVIDENCE, (String) map.get(BadgingJsonKey.EVIDENCE));
         }

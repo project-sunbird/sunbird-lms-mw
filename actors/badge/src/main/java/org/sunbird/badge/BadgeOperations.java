@@ -8,5 +8,5 @@ package org.sunbird.badge;
 
 public enum BadgeOperations {
 
-	assignBadgeMessage, revokeBadgeMessage;
+    assignBadgeMessage, revokeBadgeMessage, addBadgeDataToUser;
 }

@@ -1,6 +1,9 @@
 package org.sunbird.actor.core;
 
+import org.sunbird.actor.router.BackgroundRequestRouter;
+import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -30,6 +33,15 @@ public abstract class BaseActor extends UntypedAbstractActor {
 		} else {
 			unSupportedMessage();
 		}
+	}
+	
+	public void tellToAnother(Request request) {
+		SunbirdMWService.tell(request, getSelf());
+	}
+	
+	public Response askAnother(Request request) {
+		// TODO: implementation pending.
+		return null;
 	}
 
 	public void unSupportedMessage() {

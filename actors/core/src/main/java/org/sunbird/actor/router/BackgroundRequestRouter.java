@@ -24,7 +24,7 @@ public class BackgroundRequestRouter extends BaseRouter {
 
 	private static String mode;
 	private static ActorContext context = null;
-	private static Map<String, ActorRef> routingMap = new HashMap<>();
+	public static Map<String, ActorRef> routingMap = new HashMap<>();
 
 	public BackgroundRequestRouter() {
 		context = getContext();
@@ -70,9 +70,9 @@ public class BackgroundRequestRouter extends BaseRouter {
 
 	private static boolean contextAvailable(String name) {
 		if (null == context) {
-			System.out.println(RequestRouter.class.getSimpleName()
+			System.out.println(BackgroundRequestRouter.class.getSimpleName()
 					+ " context is not available to initialise actor for [" + name + "]");
-			ProjectLogger.log(RequestRouter.class.getSimpleName()
+			ProjectLogger.log(BackgroundRequestRouter.class.getSimpleName()
 					+ " context is not available to initialise actor for [" + name + "]", LoggerEnum.WARN.name());
 			return false;
 		}

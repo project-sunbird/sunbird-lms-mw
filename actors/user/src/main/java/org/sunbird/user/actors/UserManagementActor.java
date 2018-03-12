@@ -1,10 +1,11 @@
-package org.sunbird.learner.actors;
+package org.sunbird.user.actors;
 
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -15,6 +16,7 @@ import java.util.Set;
 import org.apache.velocity.VelocityContext;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.Constants;
 import org.sunbird.common.ElasticSearchUtil;
@@ -71,6 +73,18 @@ public class UserManagementActor extends BaseActor {
 	private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
 	private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
 	private static final String SUNBIRD_APP_URL = "sunbird_app_url";
+
+	public static void init() {
+		RequestRouter.registerActor(UserManagementActor.class,
+				Arrays.asList(ActorOperations.CREATE_USER.getValue(), ActorOperations.UPDATE_USER.getValue(),
+						ActorOperations.LOGIN.getValue(), ActorOperations.LOGOUT.getValue(),
+						ActorOperations.CHANGE_PASSWORD.getValue(), ActorOperations.GET_PROFILE.getValue(),
+						ActorOperations.GET_ROLES.getValue(), ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue(),
+						ActorOperations.DOWNLOAD_USERS.getValue(), ActorOperations.FORGOT_PASSWORD.getValue(),
+						ActorOperations.PROFILE_VISIBILITY.getValue(), ActorOperations.UNBLOCK_USER.getValue(),
+						ActorOperations.ASSIGN_ROLES.getValue(), ActorOperations.BLOCK_USER.getValue(),
+						ActorOperations.USER_CURRENT_LOGIN.getValue(), ActorOperations.GET_MEDIA_TYPES.getValue()));
+	}
 
 	/**
 	 * Receives the actor message and perform the course enrollment operation .
@@ -1563,7 +1577,8 @@ public class UserManagementActor extends BaseActor {
 			userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
 			ProjectLogger.log("making a call to save user data to ES");
 			try {
-				ActorUtil.tell(userRequest);
+				tellToAnother(userRequest);
+				// ActorUtil.tell(userRequest);
 			} catch (Exception ex) {
 				ProjectLogger.log("Exception Occured during saving user to Es while creating user : ", ex);
 			}

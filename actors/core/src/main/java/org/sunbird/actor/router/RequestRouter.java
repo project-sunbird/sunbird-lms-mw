@@ -39,7 +39,7 @@ public class RequestRouter extends BaseRouter {
 	private static String mode;
 	private static final int WAIT_TIME_VALUE = 9;
 	private static ActorContext context;
-	private static Map<String, ActorRef> routingMap = new HashMap<>();
+	public static Map<String, ActorRef> routingMap = new HashMap<>();
 
 	public RequestRouter() {
 		context = getContext();

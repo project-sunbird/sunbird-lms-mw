@@ -31,6 +31,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.middleware.Application;
+import org.sunbird.user.actors.UserManagementActor;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;

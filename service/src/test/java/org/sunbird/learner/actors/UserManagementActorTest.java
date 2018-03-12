@@ -39,6 +39,7 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.middleware.Application;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
+import org.sunbird.user.actors.UserManagementActor;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;

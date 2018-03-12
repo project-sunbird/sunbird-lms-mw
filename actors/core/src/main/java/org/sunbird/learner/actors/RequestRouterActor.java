@@ -74,7 +74,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
 	private ActorRef courseEnrollmentActorRouter;
 	private ActorRef learnerStateActorRouter;
 	private ActorRef learnerStateUpdateActorRouter;
-	private ActorRef userManagementRouter;
 	private ActorRef courseManagementRouter;
 	private ActorRef pageManagementRouter;
 	private ActorRef organisationManagementRouter;
@@ -113,7 +112,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
 	private static final String COURSE_ENROLLMENT_ROUTER = "courseEnrollmentRouter";
 	private static final String LEARNER_ACTOR_ROUTER = "learnerActorRouter";
 	private static final String LEARNER_STATE_ROUTER = "learnerStateRouter";
-	private static final String USER_MANAGEMENT_ROUTER = "userManagementRouter";
 	private static final String COURSE_MANAGEMENT_ROUTER = "courseManagementRouter";
 	private static final String PAGE_MANAGEMENT_ROUTER = "pageManagementRouter";
 	private static final String ORGANISATION_MANAGEMENT_ROUTER = "organisationManagementRouter";
@@ -170,8 +168,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
 				.actorOf(FromConfig.getInstance().props(Props.create(LearnerStateActor.class)), LEARNER_ACTOR_ROUTER);
 		learnerStateUpdateActorRouter = getContext().actorOf(
 				FromConfig.getInstance().props(Props.create(LearnerStateUpdateActor.class)), LEARNER_STATE_ROUTER);
-		userManagementRouter = getContext().actorOf(
-				FromConfig.getInstance().props(Props.create(UserManagementActor.class)), USER_MANAGEMENT_ROUTER);
 		courseManagementRouter = getContext().actorOf(
 				FromConfig.getInstance().props(Props.create(CourseManagementActor.class)), COURSE_MANAGEMENT_ROUTER);
 		pageManagementRouter = getContext().actorOf(
@@ -230,9 +226,12 @@ public class RequestRouterActor extends UntypedAbstractActor {
 				DBOPERATION_ACTOR);
 
 		// Badging Actors
-		badgeIssuerActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(BadgeIssuerActor.class)), BADGE_ISSUER_ACTOR);
-		badgeClassActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(BadgeClassActor.class)), BADGE_CLASS_ACTOR);
-		badgeAssertionActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(BadgeAssertionActor.class)), BADGE_ASSERTION_ACTOR);
+		badgeIssuerActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(BadgeIssuerActor.class)),
+				BADGE_ISSUER_ACTOR);
+		badgeClassActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(BadgeClassActor.class)),
+				BADGE_CLASS_ACTOR);
+		badgeAssertionActor = getContext().actorOf(
+				FromConfig.getInstance().props(Props.create(BadgeAssertionActor.class)), BADGE_ASSERTION_ACTOR);
 
 		ec = getContext().dispatcher();
 		initializeRouterMap();
@@ -251,18 +250,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
 		routerMap.put(ActorOperations.UPDATE_COURSE.getValue(), courseManagementRouter);
 		routerMap.put(ActorOperations.PUBLISH_COURSE.getValue(), courseManagementRouter);
 		routerMap.put(ActorOperations.DELETE_COURSE.getValue(), courseManagementRouter);
-
-		routerMap.put(ActorOperations.CREATE_USER.getValue(), userManagementRouter);
-		routerMap.put(ActorOperations.UPDATE_USER.getValue(), userManagementRouter);
-		routerMap.put(ActorOperations.LOGIN.getValue(), userManagementRouter);
-		routerMap.put(ActorOperations.LOGOUT.getValue(), userManagementRouter);
-		routerMap.put(ActorOperations.CHANGE_PASSWORD.getValue(), userManagementRouter);
-		routerMap.put(ActorOperations.GET_PROFILE.getValue(), userManagementRouter);
-		routerMap.put(ActorOperations.GET_ROLES.getValue(), userManagementRouter);
-		routerMap.put(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue(), userManagementRouter);
-		routerMap.put(ActorOperations.DOWNLOAD_USERS.getValue(), userManagementRouter);
-		routerMap.put(ActorOperations.FORGOT_PASSWORD.getValue(), userManagementRouter);
-		routerMap.put(ActorOperations.PROFILE_VISIBILITY.getValue(), userManagementRouter);
 
 		routerMap.put(ActorOperations.CREATE_PAGE.getValue(), pageManagementRouter);
 		routerMap.put(ActorOperations.UPDATE_PAGE.getValue(), pageManagementRouter);
@@ -296,9 +283,7 @@ public class RequestRouterActor extends UntypedAbstractActor {
 		routerMap.put(ActorOperations.COMPOSITE_SEARCH.getValue(), searchHandlerActor);
 		routerMap.put(ActorOperations.REJECT_USER_ORGANISATION.getValue(), organisationManagementRouter);
 		routerMap.put(ActorOperations.DOWNLOAD_ORGS.getValue(), organisationManagementRouter);
-		routerMap.put(ActorOperations.BLOCK_USER.getValue(), userManagementRouter);
-		routerMap.put(ActorOperations.ASSIGN_ROLES.getValue(), userManagementRouter);
-		routerMap.put(ActorOperations.UNBLOCK_USER.getValue(), userManagementRouter);
+
 		routerMap.put(ActorOperations.BULK_UPLOAD.getValue(), bulkUploadManagementActor);
 		routerMap.put(ActorOperations.CREATE_BATCH.getValue(), courseBatchActor);
 		routerMap.put(ActorOperations.UPDATE_BATCH.getValue(), courseBatchActor);
@@ -331,12 +316,8 @@ public class RequestRouterActor extends UntypedAbstractActor {
 		routerMap.put(ActorOperations.SEARCH_NOTE.getValue(), notesActor);
 		routerMap.put(ActorOperations.UPDATE_NOTE.getValue(), notesActor);
 		routerMap.put(ActorOperations.DELETE_NOTE.getValue(), notesActor);
-		routerMap.put(ActorOperations.USER_CURRENT_LOGIN.getValue(), userManagementRouter);
-		routerMap.put(ActorOperations.ENCRYPT_USER_DATA.getValue(),
-				userDataEncryptionDecryptionServiceActor);
-		routerMap.put(ActorOperations.DECRYPT_USER_DATA.getValue(),
-				userDataEncryptionDecryptionServiceActor);
-		routerMap.put(ActorOperations.GET_MEDIA_TYPES.getValue(), userManagementRouter);
+		routerMap.put(ActorOperations.ENCRYPT_USER_DATA.getValue(), userDataEncryptionDecryptionServiceActor);
+		routerMap.put(ActorOperations.DECRYPT_USER_DATA.getValue(), userDataEncryptionDecryptionServiceActor);
 		routerMap.put(ActorOperations.SEARCH_AUDIT_LOG.getValue(), auditLogManagementActor);
 		routerMap.put(ActorOperations.PROCESS_AUDIT_LOG.getValue(), auditLogManagementActor);
 		routerMap.put(ActorOperations.SCHEDULE_BULK_UPLOAD.getValue(), schedularActor);

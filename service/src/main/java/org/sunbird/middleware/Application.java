@@ -13,6 +13,7 @@ import org.sunbird.learner.actors.BackgroundRequestRouterActor;
 import org.sunbird.learner.actors.RequestRouterActor;
 import org.sunbird.learner.util.SchedulerManager;
 import org.sunbird.learner.util.Util;
+import org.sunbird.user.UserActorRegistry;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -43,6 +44,8 @@ public class Application {
 		SunbirdMWService.init();
 		new CoreActorRegistry();
 		new BadgeActorRegistry();
+		new UserActorRegistry();
+		checkCassandraConnection();
 	}
 
 	/**

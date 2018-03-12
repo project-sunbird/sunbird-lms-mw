@@ -71,8 +71,8 @@ public class BadgeIssuerActor extends AbstractBaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     byte[] image = null;
     Map<String , byte[]> fileData = new HashMap<>();
-    if(req.containsKey(BadgingJsonKey.IMAGE) && null != (Object)req.get(BadgingJsonKey.IMAGE)){
-       image = (byte[]) req.get(BadgingJsonKey.IMAGE) ;
+    if(req.containsKey(JsonKey.IMAGE) && null != (Object)req.get(JsonKey.IMAGE)){
+       image = (byte[]) req.get(JsonKey.IMAGE) ;
     }
 
     Map<String, String> requestData = new HashMap<>();
@@ -86,7 +86,7 @@ public class BadgeIssuerActor extends AbstractBaseActor {
 
     String httpResponseString= null;
     if(null != image) {
-      fileData.put(BadgingJsonKey.IMAGE, image);
+      fileData.put(JsonKey.IMAGE, image);
     }
     httpResponseString = makeBadgerPostRequest(requestData , headers , BadgingUtil.getBadgrBaseUrl()+url , fileData);
     Response response = new Response();

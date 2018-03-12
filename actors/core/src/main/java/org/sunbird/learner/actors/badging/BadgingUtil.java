@@ -1,13 +1,18 @@
 package org.sunbird.learner.actors.badging;
 
+import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.lang.StringUtils;
 import org.sunbird.common.models.util.BadgingJsonKey;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.MapperUtil;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
 
 public class BadgingUtil {
@@ -47,12 +52,40 @@ public class BadgingUtil {
         if(ProjectUtil.isStringNullOREmpty(authToken)){
             authToken =  propertiesCache.getProperty(BadgingJsonKey.BADGING_AUTHORIZATION_KEY);
         }
-        if (!ProjectUtil.isStringNullOREmpty(authToken)) {
+        if (!StringUtils.isBlank(authToken)) {
             headers.put("Authorization", String.format(BADGING_AUTHORIZATION_FORMAT, authToken));
         }
         headers.put("Accept", "application/json");
         headers.put("Content-Type", "application/json");
         return headers;
+    }
+
+    public static String getLastSegment(String path) {
+        return path.substring(path.lastIndexOf('/') + 1);
+    }
+
+    public static void prepareBadgeClassResponse(Map<String, Object> inputMap, Map<String, Object> outputMap) throws IOException {
+        MapperUtil.put(inputMap, BadgingJsonKey.CREATED_AT, outputMap, JsonKey.CREATED_DATE);
+        MapperUtil.put(inputMap, BadgingJsonKey.SLUG, outputMap, BadgingJsonKey.BADGE_ID);
+        MapperUtil.put(inputMap, BadgingJsonKey.JSON_ID, outputMap, BadgingJsonKey.BADGE_ID_URL);
+        MapperUtil.put(inputMap, BadgingJsonKey.JSON_ISSUER, outputMap, BadgingJsonKey.ISSUER_ID_URL);
+
+        if (outputMap.containsKey(BadgingJsonKey.ISSUER_ID_URL)) {
+            outputMap.put(BadgingJsonKey.ISSUER_ID, getLastSegment((String) outputMap.get(BadgingJsonKey.ISSUER_ID_URL)));
+        }
+
+        MapperUtil.put(inputMap, JsonKey.NAME, outputMap, JsonKey.NAME);
+        MapperUtil.put(inputMap, BadgingJsonKey.JSON_DESCRIPTION, outputMap, JsonKey.DESCRIPTION);
+        MapperUtil.put(inputMap, JsonKey.IMAGE, outputMap, JsonKey.IMAGE);
+        MapperUtil.put(inputMap, BadgingJsonKey.JSON_CRITERIA, outputMap, JsonKey.CRITERIA);
+
+        MapperUtil.put(inputMap, BadgingJsonKey.RECIPIENT_COUNT, outputMap, JsonKey.RECIPIENT_COUNT);
+    }
+
+    public static void prepareBadgeClassResponse(String inputJson, Map<String, Object> outputMap) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        Map<String , Object> inputMap  = mapper.readValue(inputJson, HashMap.class);
+        prepareBadgeClassResponse(inputMap, outputMap);
     }
 
     private static String createUri(Map<String, Object> map, String uri, int placeholderCount) {

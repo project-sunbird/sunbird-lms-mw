@@ -11,15 +11,10 @@ import java.util.Map;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.BackgroundRequestRouter;
 import org.sunbird.badge.BadgeOperations;
-import org.sunbird.badge.util.BadgingJsonKey;
 import org.sunbird.badge.util.BadgingUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.HttpUtil;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -83,7 +78,7 @@ public class BadgeAssertion extends BaseActor {
 			System.out.println("Response====" + response);
 			Response result = new Response();
 			Map<String, Object> res = mapper.readValue(response, HashMap.class);
-			res.put(BadgingJsonKey.CREATED_BY, actorMessage.getRequestId());
+			//res.put(BadgingJsonKey.CREATED_BY, actorMessage.getRequestId());
 			result.getResult().putAll(res);
 			sender().tell(result, self());
 		} catch (IOException e) {

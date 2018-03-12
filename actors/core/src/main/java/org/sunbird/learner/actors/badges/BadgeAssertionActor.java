@@ -18,6 +18,8 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.learner.actors.badges.service.BadgingService;
+import org.sunbird.learner.actors.badges.service.impl.BadgingFactory;
 import org.sunbird.learner.actors.badging.BadgingUtil;
 import org.sunbird.learner.util.Util;
 
@@ -84,17 +86,13 @@ public class BadgeAssertionActor extends UntypedAbstractActor {
    */
    @SuppressWarnings("unchecked")
 	private void createAssertion(Request actorMessage) {
-		Map<String, Object> requestedData = actorMessage.getRequest();
-		String requestBody = BadgingUtil.createAssertionReqData(requestedData);
-		String url = BadgingUtil.createBadgerUrl(requestedData, BadgingUtil.SUNBIRD_BADGER_CREATE_ASSERTION_URL, 2);
+		BadgingService service  = BadgingFactory.getInstance();
 		try {
-			String response = HttpUtil.sendPostRequest(url, requestBody, BadgingUtil.getBadgrHeaders());
-			Response result = new Response();
-			Map<String, Object> res = mapper.readValue(response, HashMap.class);
+			Response result = service.badgeAssertion(actorMessage);
+			Map<String, Object> res = mapper.readValue((String)result.getResult().get(JsonKey.RESPONSE), HashMap.class);
 			result.getResult().putAll(res);
 			sender().tell(result, self());
 		} catch (IOException e) {
-			e.printStackTrace();
 			ProjectCommonException ex = new ProjectCommonException(ResponseCode.badgingserverError.getErrorCode(),
 					ResponseCode.badgingserverError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
 			sender().tell(ex, self());

@@ -1,5 +1,7 @@
 package org.sunbird.learner.actors.badges.service;
 
+import java.io.IOException;
+
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.request.Request;
 
@@ -17,9 +19,10 @@ public interface BadgingService {
 	 * 
 	 * @param request
 	 *            Request
+	 * @exception IOException
 	 * @return Response
 	 */
-	public Response createIssuer(Request request);
+	public Response createIssuer(Request request) throws IOException;
 
 	/**
 	 * This method will provide particular issuer details based on requested issuer
@@ -27,18 +30,20 @@ public interface BadgingService {
 	 * 
 	 * @param request
 	 *            Request
+	 * @exception IOException
 	 * @return Response
 	 */
-	public Response getIssuerDetails(Request request);
+	public Response getIssuerDetails(Request request) throws IOException;
 
 	/**
 	 * This method will provide list of issuers.
 	 * 
 	 * @param request
 	 *            Request
+	 * @exception IOException
 	 * @return Response
 	 */
-	public Response getIssuerList(Request request);
+	public Response getIssuerList(Request request) throws IOException;
 
 	/**
 	 * This method will delete issuer from server. the issuer can be deleted if they
@@ -46,27 +51,30 @@ public interface BadgingService {
 	 * 
 	 * @param request
 	 *            Request
+	 * @exception IOException
 	 * @return Response
 	 */
-	public Response removeIssuer(Request request);
+	public Response removeIssuer(Request request) throws IOException;
 
 	/**
 	 * This method will create a badge class for a particular issuer.
 	 * 
 	 * @param request
 	 *            Request
+	 * @exception IOException
 	 * @return Response
 	 */
-	public Response createBadgeClass(Request request);
+	public Response createBadgeClass(Request request) throws IOException;
 
 	/**
 	 * This method will provide badge class details based on issuerId and badgeId
 	 * 
 	 * @param request
 	 *            Request
+	 * @exception IOException
 	 * @return Response
 	 */
-	public Response getBadgeClassDetails(Request request);
+	public Response getBadgeClassDetails(Request request) throws IOException;
 
 	/**
 	 * This method will provide list of badge class either for one issuer or
@@ -74,9 +82,10 @@ public interface BadgingService {
 	 * 
 	 * @param request
 	 *            Request
+	 * @exception IOException
 	 * @return Response
 	 */
-	public Response getBadgeClassList(Request request);
+	public Response getBadgeClassList(Request request) throws IOException;
 
 	/**
 	 * This method will remove badge class from db. Badge class can be removed if it
@@ -84,43 +93,48 @@ public interface BadgingService {
 	 * 
 	 * @param request
 	 *            Request
+	 * @exception IOException
 	 * @return Response
 	 */
-	public Response removeBadgeClass(Request request);
+	public Response removeBadgeClass(Request request) throws IOException;
 
 	/**
 	 * This method will issue a badge assertion to either user or content.
 	 * 
 	 * @param request
 	 *            Request
+	 * @exception IOException
 	 * @return Response
 	 */
-	public Response badgeAssertion(Request request);
+	public Response badgeAssertion(Request request) throws IOException;
 
 	/**
 	 * This method will provide particular assertion details.
 	 * 
 	 * @param request
 	 *            Request
+	 * @exception IOException
 	 * @return Response
 	 */
-	public Response getAssertionDetails(Request request);
+	public Response getAssertionDetails(Request request) throws IOException;
 
 	/**
 	 * This method will provide list of assertions.
 	 * 
 	 * @param request
 	 *            Request
+	 * @exception IOException
 	 * @return Response
 	 */
-	public Response getAssertionList(Request request);
+	public Response getAssertionList(Request request) throws IOException;
 
 	/**
 	 * This method is used to remove the assertion from either user or content.
 	 * 
 	 * @param request
 	 *            Request
+	 * @exception IOException
 	 * @return Response
 	 */
-	public Response revokeAssertion(Request request);
+	public Response revokeAssertion(Request request) throws IOException;
 }

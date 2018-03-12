@@ -33,6 +33,7 @@ public class SunbirdMWService {
 	private static ActorSystem system;
 	private static String name = "SunbirdMWSystem";
 	private static Config config;
+	private static boolean client = false;
 	private static ActorRef requestRouter;
 	private static ActorRef bgRequestRouter;
 
@@ -40,6 +41,11 @@ public class SunbirdMWService {
 		config = ConfigFactory.systemEnvironment().withFallback(ConfigFactory.load());
 		getActorSystem();
 		initRouters();
+	}
+	
+	public static void initClient() {
+		client = true;
+		init();
 	}
 
 	public static void tell(Request request, ActorRef sender) {
@@ -64,9 +70,13 @@ public class SunbirdMWService {
 	}
 
 	private static ActorSelection getRemoteRouter(String name) {
+		String host = System.getenv(JsonKey.MW_SYSTEM_HOST);
+		String port = System.getenv(JsonKey.MW_SYSTEM_PORT);
+		System.out.println("Host: " + host + " and Port: " + port);
 		String path = MessageFormat.format(PropertiesCache.getInstance().getProperty("sunbird_mw_system_remote_path"),
-				System.getenv(JsonKey.MW_SYSTEM_HOST), System.getenv(JsonKey.MW_SYSTEM_PORT));
+				host, port);
 		path = path + "/" + name;
+		System.out.println("Path: " + path);
 		return system.actorSelection(path);
 	}
 
@@ -89,9 +99,9 @@ public class SunbirdMWService {
 				conf = config.getConfig(name);
 			}
 			System.out.println("ActorSystem starting with mode: " + getMode());
-			System.out.println("Config: " + conf);
 			system = ActorSystem.create(name, conf);
 		}
+		System.out.println("Actorsystem: "+ system);
 		return system;
 	}
 
@@ -101,11 +111,19 @@ public class SunbirdMWService {
 		details.add("akka.remote.enabled-transports = [\"akka.remote.netty.tcp\"]");
 
 		String host = System.getenv(JsonKey.MW_SYSTEM_HOST);
-		String port = System.getenv(JsonKey.MW_SYSTEM_PORT);
+		
 		if (StringUtils.isNotBlank(host))
 			details.add("akka.remote.netty.tcp.hostname=" + host);
-		if (StringUtils.isNotBlank(port))
-			details.add("akka.remote.netty.tcp.port=" + port);
+		if (client) {
+			String port = System.getenv(JsonKey.MW_SYSTEM_CLIENT_PORT);
+			if (StringUtils.isNotBlank(port))
+				details.add("akka.remote.netty.tcp.port=" + port);
+		} else {
+			String port = System.getenv(JsonKey.MW_SYSTEM_PORT);
+			if (StringUtils.isNotBlank(port))
+				details.add("akka.remote.netty.tcp.port=" + port);
+		}
+		
 		return ConfigFactory.parseString(StringUtils.join(details, ","));
 	}
 

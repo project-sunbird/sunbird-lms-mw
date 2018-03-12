@@ -56,7 +56,7 @@ public class BadgingUtil {
             headers.put("Authorization", String.format(BADGING_AUTHORIZATION_FORMAT, authToken));
         }
         headers.put("Accept", "application/json");
-        headers.put("Content-Type", "application/json");
+        //headers.put("Content-Type", "application/json");
         return headers;
     }
 
@@ -132,6 +132,23 @@ public class BadgingUtil {
         }
         json.addProperty(BadgingJsonKey.CREATE_NOTIFICATION, false);
         return json.toString();
+    }
+
+    public static void prepareBadgeIssuerResponse(String inputJson, Map<String, Object> outputMap) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        Map<String , Object> inputMap  = mapper.readValue(inputJson, HashMap.class);
+        prepareBadgeIssuerResponse(inputMap, outputMap);
+    }
+
+    public static void prepareBadgeIssuerResponse(Map<String, Object> inputMap, Map<String, Object> outputMap) throws IOException {
+        MapperUtil.put(inputMap, BadgingJsonKey.CREATED_AT, outputMap, JsonKey.CREATED_DATE);
+        MapperUtil.put(inputMap, BadgingJsonKey.SLUG, outputMap, BadgingJsonKey.ISSUER_ID);
+        MapperUtil.put(inputMap, BadgingJsonKey.JSON_ID, outputMap, BadgingJsonKey.ISSUER_ID_URL);
+        MapperUtil.put(inputMap,BadgingJsonKey.JSON_URL, outputMap, BadgingJsonKey.ISSUER_URL);
+        MapperUtil.put(inputMap, JsonKey.NAME, outputMap, JsonKey.NAME);
+        MapperUtil.put(inputMap, BadgingJsonKey.JSON_DESCRIPTION, outputMap, JsonKey.DESCRIPTION);
+        MapperUtil.put(inputMap, JsonKey.IMAGE, outputMap, JsonKey.IMAGE);
+        MapperUtil.put(inputMap, BadgingJsonKey.JSON_EMAIL, outputMap, JsonKey.EMAIL);
     }
 
 }

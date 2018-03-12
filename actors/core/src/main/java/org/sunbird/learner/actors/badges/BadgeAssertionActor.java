@@ -48,6 +48,8 @@ public class BadgeAssertionActor extends UntypedAbstractActor {
          createAssertion(actorMessage);	
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(BadgingActorOperations.GET_BADGE_ASSERTION.getValue())) {
+        	System.out.println("get assertion details called");
+        	getAssertionDetails(actorMessage);	
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(BadgingActorOperations.GET_BADGE_ASSERTION_LIST.getValue())) {
         } else if (actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.REVOKE_BADGE.getValue())) {
@@ -109,7 +111,10 @@ public class BadgeAssertionActor extends UntypedAbstractActor {
 	private void getAssertionDetails(Request request) {
 		String url = BadgingUtil.createBadgerUrl(request.getRequest(), BadgingUtil.SUNBIRD_BADGER_GETASSERTION_URL, 3);
 		try {
+			System.out.println("requested url " + url );
+			System.out.println("Header values "+BadgingUtil.getBadgrHeaders().get("Authorization"));
 			String response = HttpUtil.sendGetRequest(url, BadgingUtil.getBadgrHeaders());
+			System.out.println(" Response ==" + response);
 			if (ProjectUtil.isStringNullOREmpty(response)) {
 				sender().tell(ProjectUtil.createResourceNotFoundException(), self());
 				return;

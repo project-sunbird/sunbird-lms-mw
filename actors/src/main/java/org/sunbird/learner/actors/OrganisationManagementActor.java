@@ -1031,6 +1031,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
 
     List list = (List) result.get(JsonKey.RESPONSE);
     Map<String, Object> tempOrgap = null;
+    boolean isNewRecord = false;
     if (!list.isEmpty()) {
       tempOrgap = (Map<String, Object>) list.get(0);
       if (null != tempOrgap && !((boolean) tempOrgap.get(JsonKey.IS_DELETED))) {
@@ -1044,6 +1045,7 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
       }
     } else {
       usrOrgData.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv()));
+      isNewRecord = true;
     }
     if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
       String updatedByName = Util.getUserNamebyUserId(updatedBy);
@@ -1058,8 +1060,13 @@ public class OrganisationManagementActor extends UntypedAbstractActor {
     usrOrgData.put(JsonKey.IS_REJECTED, false);
     usrOrgData.put(JsonKey.IS_APPROVED, true);
     usrOrgData.put(JsonKey.IS_DELETED, false);
-    response = cassandraOperation.insertRecord(userOrgDbInfo.getKeySpace(),
-        userOrgDbInfo.getTableName(), usrOrgData);
+    if (isNewRecord) {
+        response = cassandraOperation.insertRecord(userOrgDbInfo.getKeySpace(),
+                userOrgDbInfo.getTableName(), usrOrgData);
+    } else {
+        response = cassandraOperation.updateRecord(userOrgDbInfo.getKeySpace(),
+                userOrgDbInfo.getTableName(), usrOrgData);
+    }
 
     Response orgResult = cassandraOperation.getRecordById(organisationDbInfo.getKeySpace(),
         organisationDbInfo.getTableName(), orgId);

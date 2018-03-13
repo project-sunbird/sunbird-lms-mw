@@ -4,79 +4,67 @@
 package org.sunbird.badge.actors;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.badge.BadgeOperations;
+import org.sunbird.badge.service.BadgingService;
+import org.sunbird.badge.service.impl.BadgingFactory;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.BadgingActorOperations;
+import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.badge.service.BadgingService;
-import org.sunbird.badge.service.impl.BadgingFactory;
-import org.sunbird.learner.util.Util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import akka.actor.UntypedAbstractActor;
 
 /**
  * @author Manzarul
  *
  */
-public class BadgeAssertionActor extends UntypedAbstractActor {
+public class BadgeAssertionActor extends BaseActor {
 
   private ObjectMapper mapper = new ObjectMapper();
   BadgingService service  = BadgingFactory.getInstance();
-  @Override
-  public void onReceive(Object message) throws Throwable {
-    if (message instanceof Request) {
-      try {
-    	  
-        ProjectLogger.log("BadgeAssertionActor  onReceive called",LoggerEnum.INFO.name());
-        Request actorMessage = (Request) message;
-        Util.initializeContext(actorMessage, JsonKey.USER);
-        // set request id fto thread loacl...
-        ExecutionContext.setRequestId(actorMessage.getRequestId());
-        if (actorMessage.getOperation()
-            .equalsIgnoreCase(BadgingActorOperations.CREATE_BADGE_ASSERTION.getValue())) {
-         createAssertion(actorMessage);	
-        } else if (actorMessage.getOperation()
-            .equalsIgnoreCase(BadgingActorOperations.GET_BADGE_ASSERTION.getValue())) {
-        	getAssertionDetails(actorMessage);	
-        } else if (actorMessage.getOperation()
-            .equalsIgnoreCase(BadgingActorOperations.GET_BADGE_ASSERTION_LIST.getValue())) {
-        	getAssertionList(actorMessage);
-        } else if (actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.REVOKE_BADGE.getValue())) {
-        }
-        else {
-          ProjectLogger.log("UNSUPPORTED OPERATION");
-          ProjectCommonException exception =
-              new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
-                  ResponseCode.invalidOperationName.getErrorMessage(),
-                  ResponseCode.CLIENT_ERROR.getResponseCode());
-          sender().tell(exception, self());
-        }
-      } catch (Exception ex) {
-        ProjectLogger.log(ex.getMessage(), ex);
-        sender().tell(ex, self());
-      }
-    } else {
-      // Throw exception as message body
-      ProjectLogger.log("UNSUPPORTED MESSAGE");
-      ProjectCommonException exception =
-          new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-    }
-
+  public static void init() {
+      RequestRouter.registerActor(BadgeAssertionActor.class, Arrays.asList(
+              BadgeOperations.createBadgeAssertion.name(),
+              BadgeOperations.getBadgeAssertion.name(),
+              BadgeOperations.getBadgeAssertionList.name(),
+              BadgeOperations.revokeBadge.name()));
   }
+  
+  @Override
+  public void onReceive(Request request) throws Throwable {
+	  ProjectLogger.log("BadgeAssertionActor  onReceive called",LoggerEnum.INFO.name());
+	  String operation = request.getOperation();
+
+      switch (operation) {
+          case "createBadgeAssertion":
+        	  createAssertion(request);	
+              break;
+          case "getBadgeAssertion":
+        	  getAssertionDetails(request);	
+              break;
+          case "getBadgeAssertionList":
+        	  getAssertionList(request);
+              break;
+          case "revokeBadge":
+        	  revokeAssertion(request);
+              break;
+          default:
+              onReceiveUnsupportedOperation("BadgeClassActor");
+      }
+   }
    
   /**
    * This method will call the badger server to create badge assertion.
@@ -132,14 +120,22 @@ public class BadgeAssertionActor extends UntypedAbstractActor {
 	private void getAssertionList(Request request) {
 		try {
 			Response result = service.getAssertionList(request);
-			if (ProjectUtil.isStringNullOREmpty((String)result.getResult().get(JsonKey.RESPONSE))) {
-				sender().tell(ProjectUtil.createResourceNotFoundException(), self());
-				return;
+			List<String> list = (List) result.getResult().get(JsonKey.RESPONSE);
+			if (list != null && list.size() > 0) {
+				List<Map<String, Object>> responseMap = new ArrayList<>();
+				for (String data : list) {
+					System.out.println("data=====" + data);
+					Map<String, Object> res = mapper.readValue(data, HashMap.class);
+					responseMap.add(res);
+				}
+				result = new Response();
+				result.getResult().put(BadgingJsonKey.ASSERTIONS, responseMap);
+				sender().tell(result, self());
+			} else {
+				result = new Response();
+				result.getResult().put(JsonKey.FAILURE, JsonKey.FAILURE);
+				sender().tell(result, self());
 			}
-			Map<String, Object> res = mapper.readValue((String)result.getResult().get(JsonKey.RESPONSE), HashMap.class);
-			result = new Response();
-			result.getResult().putAll(res);
-			sender().tell(result, self());
 		} catch (IOException e) {
 			ProjectCommonException ex = new ProjectCommonException(ResponseCode.badgingserverError.getErrorCode(),
 					ResponseCode.badgingserverError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());

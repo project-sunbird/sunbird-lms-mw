@@ -5,13 +5,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.sunbird.badge.service.BadgingService;
+import org.sunbird.badge.util.BadgingUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
-import org.sunbird.badge.service.BadgingService;
-import org.sunbird.badge.util.BadgingUtil;
 
 /**
  * 
@@ -93,9 +93,8 @@ public class BadgrServiceImpl implements BadgingService {
 		List<Map<String, Object>> requestData = (List) request.getRequest().get(BadgingJsonKey.ASSERTIONS);
 		List<String> responseList = new ArrayList<>();
 		for (Map<String, Object> map : requestData) {
-			String requestBody = BadgingUtil.createAssertionReqData(map);
-			String url = BadgingUtil.createBadgerUrl(map, BadgingUtil.SUNBIRD_BADGER_CREATE_ASSERTION_URL, 2);
-			String httpResponse = HttpUtil.sendPostRequest(url, requestBody, BadgingUtil.getBadgrHeaders());
+			String url = BadgingUtil.createBadgerUrl(map, BadgingUtil.SUNBIRD_BADGER_GETASSERTION_URL, 3);
+			String httpResponse = HttpUtil.sendGetRequest(url,  BadgingUtil.getBadgrHeaders());
 			responseList.add(httpResponse);
 		}
 		Response response = new Response();

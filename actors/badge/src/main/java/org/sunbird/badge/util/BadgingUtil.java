@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
+import org.sunbird.badge.model.BadgeClassExtension;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.MapperUtil;
@@ -14,7 +15,6 @@ import org.sunbird.common.models.util.PropertiesCache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
-import org.sunbird.badge.model.BadgeClassExtension;
 
 public class BadgingUtil {
 
@@ -57,6 +57,7 @@ public class BadgingUtil {
             headers.put("Authorization", String.format(BADGING_AUTHORIZATION_FORMAT, authToken));
         }
         headers.put("Accept", "application/json");
+        headers.put("Content-Type", "application/json");
         return headers;
     }
 

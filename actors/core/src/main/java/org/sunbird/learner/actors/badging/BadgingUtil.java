@@ -14,6 +14,7 @@ import org.sunbird.common.models.util.PropertiesCache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
+import org.sunbird.learner.actors.badging.model.BadgeClassExtension;
 
 public class BadgingUtil {
 
@@ -56,7 +57,6 @@ public class BadgingUtil {
             headers.put("Authorization", String.format(BADGING_AUTHORIZATION_FORMAT, authToken));
         }
         headers.put("Accept", "application/json");
-        //headers.put("Content-Type", "application/json");
         return headers;
     }
 
@@ -64,7 +64,7 @@ public class BadgingUtil {
         return path.substring(path.lastIndexOf('/') + 1);
     }
 
-    public static void prepareBadgeClassResponse(Map<String, Object> inputMap, Map<String, Object> outputMap) throws IOException {
+    public static void prepareBadgeClassResponse(Map<String, Object> inputMap, BadgeClassExtension badgeClassExtension, Map<String, Object> outputMap) throws IOException {
         MapperUtil.put(inputMap, BadgingJsonKey.CREATED_AT, outputMap, JsonKey.CREATED_DATE);
         MapperUtil.put(inputMap, BadgingJsonKey.SLUG, outputMap, BadgingJsonKey.BADGE_ID);
         MapperUtil.put(inputMap, BadgingJsonKey.JSON_ID, outputMap, BadgingJsonKey.BADGE_ID_URL);
@@ -80,12 +80,19 @@ public class BadgingUtil {
         MapperUtil.put(inputMap, BadgingJsonKey.JSON_CRITERIA, outputMap, JsonKey.CRITERIA);
 
         MapperUtil.put(inputMap, BadgingJsonKey.RECIPIENT_COUNT, outputMap, JsonKey.RECIPIENT_COUNT);
+
+        if (badgeClassExtension != null) {
+            outputMap.put(JsonKey.ROOT_ORG_ID, badgeClassExtension.getRootOrgId());
+            outputMap.put(JsonKey.TYPE, badgeClassExtension.getType());
+            outputMap.put(JsonKey.SUBTYPE, badgeClassExtension.getSubtype());
+            outputMap.put(JsonKey.ROLES, badgeClassExtension.getRoles());
+        }
     }
 
-    public static void prepareBadgeClassResponse(String inputJson, Map<String, Object> outputMap) throws IOException {
+    public static void prepareBadgeClassResponse(String inputJson, BadgeClassExtension badgeClassExtension, Map<String, Object> outputMap) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         Map<String , Object> inputMap  = mapper.readValue(inputJson, HashMap.class);
-        prepareBadgeClassResponse(inputMap, outputMap);
+        prepareBadgeClassResponse(inputMap, badgeClassExtension, outputMap);
     }
 
     private static String createUri(Map<String, Object> map, String uri, int placeholderCount) {

@@ -22,6 +22,7 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.sunbird.actor.core.BaseActor;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.HttpUtil;
@@ -36,7 +37,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import akka.actor.UntypedAbstractActor;
 
-public abstract class BaseMetricsActor extends UntypedAbstractActor {
+public abstract class BaseMetricsActor extends BaseActor {
 
 	private static ObjectMapper mapper = new ObjectMapper();
 

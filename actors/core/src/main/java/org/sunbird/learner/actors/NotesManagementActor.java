@@ -1,18 +1,20 @@
 package org.sunbird.learner.actors;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
@@ -25,57 +27,41 @@ import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * This class provides API's to create, update, get and delete user note
  */
-public class NotesManagementActor extends UntypedAbstractActor {
+public class NotesManagementActor extends BaseActor {
 
 	private Util.DbInfo userNotesDbInfo = Util.dbInfoMap.get(JsonKey.USER_NOTES_DB);
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+
+	public static void init() {
+		RequestRouter.registerActor(NotesManagementActor.class,
+				Arrays.asList(ActorOperations.CREATE_NOTE.getValue(), ActorOperations.GET_NOTE.getValue(),
+						ActorOperations.SEARCH_NOTE.getValue(), ActorOperations.UPDATE_NOTE.getValue(),
+						ActorOperations.DELETE_NOTE.getValue()));
+	}
 
 	/**
 	 * Receives the actor message and perform the operation for user note
 	 */
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("NotesManagementActor-onReceive called");
-				Request actorMessage = (Request) message;
-				Util.initializeContext(actorMessage, JsonKey.USER);
-				// set request id fto thread loacl...
-				ExecutionContext.setRequestId(actorMessage.getRequestId());
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_NOTE.getValue())) {
-					createNote(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_NOTE.getValue())) {
-					updateNote(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.SEARCH_NOTE.getValue())) {
-					searchNote(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_NOTE.getValue())) {
-					getNote(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.DELETE_NOTE.getValue())) {
-					deleteNote(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, self());
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, self());
-			}
+	public void onReceive(Request requsst) throws Throwable {
+		Util.initializeContext(requsst, JsonKey.USER);
+		// set request id fto thread loacl...
+		ExecutionContext.setRequestId(requsst.getRequestId());
+		if (requsst.getOperation().equalsIgnoreCase(ActorOperations.CREATE_NOTE.getValue())) {
+			createNote(requsst);
+		} else if (requsst.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_NOTE.getValue())) {
+			updateNote(requsst);
+		} else if (requsst.getOperation().equalsIgnoreCase(ActorOperations.SEARCH_NOTE.getValue())) {
+			searchNote(requsst);
+		} else if (requsst.getOperation().equalsIgnoreCase(ActorOperations.GET_NOTE.getValue())) {
+			getNote(requsst);
+		} else if (requsst.getOperation().equalsIgnoreCase(ActorOperations.DELETE_NOTE.getValue())) {
+			deleteNote(requsst);
 		} else {
-			// Throw exception as message body
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
+			onReceiveUnsupportedOperation(requsst.getOperation());
 		}
 	}
 

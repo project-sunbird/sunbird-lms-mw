@@ -12,6 +12,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -36,14 +38,12 @@ import org.sunbird.learner.util.Util.DbInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.CSVReader;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * This actor will handle bulk upload operation .
  *
  * @author Amit Kumar
  */
-public class BulkUploadManagementActor extends UntypedAbstractActor {
+public class BulkUploadManagementActor extends BaseActor {
 
 	private static final String CSV_FILE_EXTENSION = ".csv";
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -52,40 +52,22 @@ public class BulkUploadManagementActor extends UntypedAbstractActor {
 	private int orgDataSize = 0;
 	private int batchDataSize = 0;
 
-	@Override
-	public void onReceive(Object message) throws Throwable {
+	public static void init() {
+		RequestRouter.registerActor(BulkUploadManagementActor.class,
+				Arrays.asList(ActorOperations.BULK_UPLOAD.getValue(), ActorOperations.GET_BULK_OP_STATUS.getValue()));
+	}
 
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("BulkUploadManagementActor onReceive called");
-				Request actorMessage = (Request) message;
-				Util.initializeContext(actorMessage, JsonKey.USER);
-				// set request id fto thread loacl...
-				ExecutionContext.setRequestId(actorMessage.getRequestId());
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.BULK_UPLOAD.getValue())) {
-					upload(actorMessage);
-				} else if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.GET_BULK_OP_STATUS.getValue())) {
-					getUploadStatus(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION");
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, self());
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, self());
-			}
+	@Override
+	public void onReceive(Request request) throws Throwable {
+		Util.initializeContext(request, JsonKey.USER);
+		// set request id fto thread local...
+		ExecutionContext.setRequestId(request.getRequestId());
+		if (request.getOperation().equalsIgnoreCase(ActorOperations.BULK_UPLOAD.getValue())) {
+			upload(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_BULK_OP_STATUS.getValue())) {
+			getUploadStatus(request);
 		} else {
-			// Throw exception as message body
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

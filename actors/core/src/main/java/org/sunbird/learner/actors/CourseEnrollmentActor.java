@@ -2,11 +2,14 @@ package org.sunbird.learner.actors;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -24,20 +27,23 @@ import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * This actor will handle course enrollment operation .
  *
  * @author Manzarul
  * @author Arvind
  */
-public class CourseEnrollmentActor extends UntypedAbstractActor {
+public class CourseEnrollmentActor extends BaseActor {
 
 	private static String EKSTEP_COURSE_SEARCH_QUERY = "{\"request\": {\"filters\":{\"contentType\": [\"Course\"], \"objectType\": [\"Content\"], \"identifier\": \"COURSE_ID_PLACEHOLDER\", \"status\": \"Live\"},\"limit\": 1}}";
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
 	private static final String DEFAULT_BATCH_ID = "1";
+
+	public static void init() {
+		RequestRouter.registerActor(CourseEnrollmentActor.class,
+				Arrays.asList(ActorOperations.ENROLL_COURSE.getValue()));
+	}
 
 	/**
 	 * Receives the actor message and perform the course enrollment operation .
@@ -47,119 +53,95 @@ public class CourseEnrollmentActor extends UntypedAbstractActor {
 	 */
 	@SuppressWarnings("unchecked")
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("CourseEnrollmentActor  onReceive called");
-				Request actorMessage = (Request) message;
+	public void onReceive(Request request) throws Throwable {
 
-				Util.initializeContext(actorMessage, JsonKey.USER);
-				// set request id fto thread loacl...
-				ExecutionContext.setRequestId(actorMessage.getRequestId());
+		Util.initializeContext(request, JsonKey.USER);
+		// set request id fto thread loacl...
+		ExecutionContext.setRequestId(request.getRequestId());
 
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ENROLL_COURSE.getValue())) {
-					Util.DbInfo courseEnrollmentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
-					Util.DbInfo batchDbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
+		if (request.getOperation().equalsIgnoreCase(ActorOperations.ENROLL_COURSE.getValue())) {
+			Util.DbInfo courseEnrollmentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
+			Util.DbInfo batchDbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
 
-					// objects of telemetry event...
-					Map<String, Object> targetObject = new HashMap<>();
-					List<Map<String, Object>> correlatedObject = new ArrayList<>();
+			// objects of telemetry event...
+			Map<String, Object> targetObject = new HashMap<>();
+			List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
-					Map<String, Object> req = actorMessage.getRequest();
-					String addedBy = (String) req.get(JsonKey.REQUESTED_BY);
-					Map<String, Object> courseMap = (Map<String, Object>) req.get(JsonKey.COURSE);
+			Map<String, Object> req = request.getRequest();
+			String addedBy = (String) req.get(JsonKey.REQUESTED_BY);
+			Map<String, Object> courseMap = (Map<String, Object>) req.get(JsonKey.COURSE);
 
-					if (ProjectUtil.isNull(courseMap.get(JsonKey.BATCH_ID))) {
-						courseMap.put(JsonKey.BATCH_ID, DEFAULT_BATCH_ID);
-					} else {
-						Response response = cassandraOperation.getRecordById(batchDbInfo.getKeySpace(),
-								batchDbInfo.getTableName(), (String) courseMap.get(JsonKey.BATCH_ID));
-						List<Map<String, Object>> responseList = (List<Map<String, Object>>) response
-								.get(JsonKey.RESPONSE);
-						if (responseList.isEmpty()) {
-							throw new ProjectCommonException(ResponseCode.invalidCourseBatchId.getErrorCode(),
-									ResponseCode.invalidCourseBatchId.getErrorMessage(),
-									ResponseCode.CLIENT_ERROR.getResponseCode());
-						}
-					}
-					// check whether user already enroll for course
-					Response dbResult = cassandraOperation.getRecordById(courseEnrollmentdbInfo.getKeySpace(),
-							courseEnrollmentdbInfo.getTableName(), generateUserCoursesPrimaryKey(courseMap));
-					List<Map<String, Object>> dbList = (List<Map<String, Object>>) dbResult.get(JsonKey.RESPONSE);
-					if (!dbList.isEmpty()) {
-						ProjectLogger.log("User Already Enrolled Course ");
-						ProjectCommonException exception = new ProjectCommonException(
-								ResponseCode.userAlreadyEnrolledThisCourse.getErrorCode(),
-								ResponseCode.userAlreadyEnrolledThisCourse.getErrorMessage(),
-								ResponseCode.CLIENT_ERROR.getResponseCode());
-						sender().tell(exception, self());
-						return;
-					}
-
-					Map<String, String> headers = (Map<String, String>) actorMessage.getRequest().get(JsonKey.HEADER);
-					String courseId = (String) courseMap.get(JsonKey.COURSE_ID);
-					Map<String, Object> ekStepContent = getCourseObjectFromEkStep(courseId, headers);
-					if (null == ekStepContent || ekStepContent.size() == 0) {
-						ProjectLogger.log("Course Id not found in EkStep");
-						ProjectCommonException exception = new ProjectCommonException(
-								ResponseCode.invalidCourseId.getErrorCode(),
-								ResponseCode.invalidCourseId.getErrorMessage(),
-								ResponseCode.CLIENT_ERROR.getResponseCode());
-						sender().tell(exception, self());
-						return;
-					} else {
-						Timestamp ts = new Timestamp(new Date().getTime());
-						courseMap.put(JsonKey.COURSE_LOGO_URL, ekStepContent.get(JsonKey.APP_ICON));
-						courseMap.put(JsonKey.CONTENT_ID, courseId);
-						courseMap.put(JsonKey.COURSE_NAME, ekStepContent.get(JsonKey.NAME));
-						courseMap.put(JsonKey.DESCRIPTION, ekStepContent.get(JsonKey.DESCRIPTION));
-						courseMap.put(JsonKey.ADDED_BY, addedBy);
-						courseMap.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
-						courseMap.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
-						courseMap.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
-						courseMap.put(JsonKey.DATE_TIME, ts);
-						courseMap.put(JsonKey.ID, generateUserCoursesPrimaryKey(courseMap));
-						courseMap.put(JsonKey.COURSE_PROGRESS, 0);
-						courseMap.put(JsonKey.LEAF_NODE_COUNT, ekStepContent.get(JsonKey.LEAF_NODE_COUNT));
-						Response result = cassandraOperation.insertRecord(courseEnrollmentdbInfo.getKeySpace(),
-								courseEnrollmentdbInfo.getTableName(), courseMap);
-						sender().tell(result, self());
-
-						targetObject = TelemetryUtil.generateTargetObject((String) courseMap.get(JsonKey.USER_ID),
-								JsonKey.USER, JsonKey.UPDATE, null);
-						TelemetryUtil.generateCorrelatedObject((String) courseMap.get(JsonKey.COURSE_ID),
-								JsonKey.COURSE, "user.batch.course", correlatedObject);
-						TelemetryUtil.generateCorrelatedObject((String) courseMap.get(JsonKey.BATCH_ID), JsonKey.BATCH,
-								"user.batch", correlatedObject);
-
-						TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
-								correlatedObject);
-						// TODO: for some reason, ES indexing is failing with Timestamp value. need to
-						// check and
-						// correct it.
-						courseMap.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
-						insertUserCoursesToES(courseMap);
-						return;
-					}
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION");
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
+			if (ProjectUtil.isNull(courseMap.get(JsonKey.BATCH_ID))) {
+				courseMap.put(JsonKey.BATCH_ID, DEFAULT_BATCH_ID);
+			} else {
+				Response response = cassandraOperation.getRecordById(batchDbInfo.getKeySpace(),
+						batchDbInfo.getTableName(), (String) courseMap.get(JsonKey.BATCH_ID));
+				List<Map<String, Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+				if (responseList.isEmpty()) {
+					throw new ProjectCommonException(ResponseCode.invalidCourseBatchId.getErrorCode(),
+							ResponseCode.invalidCourseBatchId.getErrorMessage(),
 							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, self());
 				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, self());
+			}
+			// check whether user already enroll for course
+			Response dbResult = cassandraOperation.getRecordById(courseEnrollmentdbInfo.getKeySpace(),
+					courseEnrollmentdbInfo.getTableName(), generateUserCoursesPrimaryKey(courseMap));
+			List<Map<String, Object>> dbList = (List<Map<String, Object>>) dbResult.get(JsonKey.RESPONSE);
+			if (!dbList.isEmpty()) {
+				ProjectLogger.log("User Already Enrolled Course ");
+				ProjectCommonException exception = new ProjectCommonException(
+						ResponseCode.userAlreadyEnrolledThisCourse.getErrorCode(),
+						ResponseCode.userAlreadyEnrolledThisCourse.getErrorMessage(),
+						ResponseCode.CLIENT_ERROR.getResponseCode());
+				sender().tell(exception, self());
+				return;
+			}
+
+			Map<String, String> headers = (Map<String, String>) request.getRequest().get(JsonKey.HEADER);
+			String courseId = (String) courseMap.get(JsonKey.COURSE_ID);
+			Map<String, Object> ekStepContent = getCourseObjectFromEkStep(courseId, headers);
+			if (null == ekStepContent || ekStepContent.size() == 0) {
+				ProjectLogger.log("Course Id not found in EkStep");
+				ProjectCommonException exception = new ProjectCommonException(
+						ResponseCode.invalidCourseId.getErrorCode(), ResponseCode.invalidCourseId.getErrorMessage(),
+						ResponseCode.CLIENT_ERROR.getResponseCode());
+				sender().tell(exception, self());
+				return;
+			} else {
+				Timestamp ts = new Timestamp(new Date().getTime());
+				courseMap.put(JsonKey.COURSE_LOGO_URL, ekStepContent.get(JsonKey.APP_ICON));
+				courseMap.put(JsonKey.CONTENT_ID, courseId);
+				courseMap.put(JsonKey.COURSE_NAME, ekStepContent.get(JsonKey.NAME));
+				courseMap.put(JsonKey.DESCRIPTION, ekStepContent.get(JsonKey.DESCRIPTION));
+				courseMap.put(JsonKey.ADDED_BY, addedBy);
+				courseMap.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
+				courseMap.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
+				courseMap.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
+				courseMap.put(JsonKey.DATE_TIME, ts);
+				courseMap.put(JsonKey.ID, generateUserCoursesPrimaryKey(courseMap));
+				courseMap.put(JsonKey.COURSE_PROGRESS, 0);
+				courseMap.put(JsonKey.LEAF_NODE_COUNT, ekStepContent.get(JsonKey.LEAF_NODE_COUNT));
+				Response result = cassandraOperation.insertRecord(courseEnrollmentdbInfo.getKeySpace(),
+						courseEnrollmentdbInfo.getTableName(), courseMap);
+				sender().tell(result, self());
+
+				targetObject = TelemetryUtil.generateTargetObject((String) courseMap.get(JsonKey.USER_ID), JsonKey.USER,
+						JsonKey.UPDATE, null);
+				TelemetryUtil.generateCorrelatedObject((String) courseMap.get(JsonKey.COURSE_ID), JsonKey.COURSE,
+						"user.batch.course", correlatedObject);
+				TelemetryUtil.generateCorrelatedObject((String) courseMap.get(JsonKey.BATCH_ID), JsonKey.BATCH,
+						"user.batch", correlatedObject);
+
+				TelemetryUtil.telemetryProcessingCall(request.getRequest(), targetObject, correlatedObject);
+				// TODO: for some reason, ES indexing is failing with Timestamp value. need to
+				// check and
+				// correct it.
+				courseMap.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
+				insertUserCoursesToES(courseMap);
+				return;
 			}
 		} else {
-			// Throw exception as message body
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

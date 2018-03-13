@@ -1,6 +1,9 @@
 package org.sunbird.actor.core;
 
+import org.sunbird.actor.router.BackgroundRequestRouter;
+import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -31,19 +34,28 @@ public abstract class BaseActor extends UntypedAbstractActor {
 			unSupportedMessage();
 		}
 	}
+	
+	public void tellToAnother(Request request) {
+		SunbirdMWService.tell(request, getSelf());
+	}
+	
+	public Response askAnother(Request request) {
+		// TODO: implementation pending.
+		return null;
+	}
 
-	protected void unSupportedMessage() {
+	public void unSupportedMessage() {
 		ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
 				ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
 		sender().tell(exception, self());
 	}
 
-	protected void onReceiveUnsupportedOperation(String callerName) {
+	public void onReceiveUnsupportedOperation(String callerName) {
 		ProjectLogger.log(callerName + ": unsupported message");
 		unSupportedMessage();
 	}
 
-	protected void onReceiveUnsupportedMessage(String callerName) {
+	public void onReceiveUnsupportedMessage(String callerName) {
 		ProjectLogger.log(callerName + ": unsupported operation");
 		ProjectCommonException exception = new ProjectCommonException(ResponseCode.invalidOperationName.getErrorCode(),
 				ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());

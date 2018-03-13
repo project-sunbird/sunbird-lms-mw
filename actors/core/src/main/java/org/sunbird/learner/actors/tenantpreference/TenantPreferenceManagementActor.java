@@ -2,18 +2,20 @@ package org.sunbird.learner.actors.tenantpreference;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
@@ -22,12 +24,10 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * Class for T&C . Created by arvind on 27/10/17.
  */
-public class TenantPreferenceManagementActor extends UntypedAbstractActor {
+public class TenantPreferenceManagementActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private Util.DbInfo tenantPreferenceDbInfo = Util.dbInfoMap.get(JsonKey.TENANT_PREFERENCE_DB);
@@ -35,41 +35,26 @@ public class TenantPreferenceManagementActor extends UntypedAbstractActor {
 	private Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 	private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 
+	public static void init() {
+		RequestRouter.registerActor(TenantPreferenceManagementActor.class,
+				Arrays.asList(ActorOperations.CREATE_TENANT_PREFERENCE.getValue(),
+						ActorOperations.UPDATE_TENANT_PREFERENCE.getValue(),
+						ActorOperations.GET_TENANT_PREFERENCE.getValue(),
+						ActorOperations.UPDATE_TC_STATUS_OF_USER.getValue()));
+	}
+
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("TenantPreferenceManagementActor-onReceive called");
-				Request actorMessage = (Request) message;
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_TENANT_PREFERENCE.getValue())) {
-					createTenantPreference(actorMessage);
-				} else if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.UPDATE_TENANT_PREFERENCE.getValue())) {
-					updateTenantPreference(actorMessage);
-				} else if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.GET_TENANT_PREFERENCE.getValue())) {
-					getTenantPreference(actorMessage);
-				} else if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.UPDATE_TC_STATUS_OF_USER.getValue())) {
-					updateTcStatusOfUser(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, self());
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, self());
-			}
+	public void onReceive(Request request) throws Throwable {
+		if (request.getOperation().equalsIgnoreCase(ActorOperations.CREATE_TENANT_PREFERENCE.getValue())) {
+			createTenantPreference(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_TENANT_PREFERENCE.getValue())) {
+			updateTenantPreference(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_TENANT_PREFERENCE.getValue())) {
+			getTenantPreference(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_TC_STATUS_OF_USER.getValue())) {
+			updateTcStatusOfUser(request);
 		} else {
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

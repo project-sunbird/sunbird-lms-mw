@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseRouter;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -35,23 +36,34 @@ import scala.concurrent.duration.Duration;
 
 public class RequestRouter extends BaseRouter {
 
+	private static String mode;
 	private static final int WAIT_TIME_VALUE = 9;
-	private ExecutionContext ec;
 	private static ActorContext context;
-	private static Map<String, ActorRef> routingMap = new HashMap<>();
+	public static Map<String, ActorRef> routingMap = new HashMap<>();
 
 	public RequestRouter() {
 		context = getContext();
-		ec = getContext().dispatcher();
+		getMode();
+	}
 
+	public String getRouterMode() {
+		return getMode();
+	}
+	
+	public static String getMode() {
+		if (StringUtils.isBlank(mode)) {
+			String key = "api_actor_provider";
+			mode = getPropertyValue(key);
+		}
+		return mode;
 	}
 
 	@Override
-	public void onReceive(Request request) throws Throwable {
+	public void route(Request request) throws Throwable {
 		org.sunbird.common.request.ExecutionContext.setRequestId(request.getRequestId());
 		ActorRef ref = routingMap.get(request.getOperation());
 		if (null != ref) {
-			route(ref, request);
+			route(ref, request, getContext().dispatcher());
 		} else {
 			onReceiveUnsupportedOperation(request.getOperation());
 		}
@@ -90,7 +102,7 @@ public class RequestRouter extends BaseRouter {
 	 * @param message
 	 * @return boolean
 	 */
-	private boolean route(ActorRef router, Request message) {
+	private boolean route(ActorRef router, Request message, ExecutionContext ec) {
 		long startTime = System.currentTimeMillis();
 		ProjectLogger.log("Actor Service Call start  for  api ==" + message.getOperation() + " start time " + startTime,
 				LoggerEnum.PERF_LOG);

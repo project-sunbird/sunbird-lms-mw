@@ -2,18 +2,20 @@ package org.sunbird.learner.actors.geolocation;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.background.BackgroundOperations;
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.fcm.Notification;
@@ -25,59 +27,43 @@ import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * Class for providing Geo Location for Organisation Created by arvind on
  * 31/10/17.
  */
-public class GeoLocationManagementActor extends UntypedAbstractActor {
+public class GeoLocationManagementActor extends BaseActor {
 
 	private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 	private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 
+	public static void init() {
+		RequestRouter.registerActor(GeoLocationManagementActor.class,
+				Arrays.asList(ActorOperations.GET_GEO_LOCATION.getValue(),
+						ActorOperations.CREATE_GEO_LOCATION.getValue(), ActorOperations.UPDATE_GEO_LOCATION.getValue(),
+						ActorOperations.DELETE_GEO_LOCATION.getValue(), ActorOperations.SEND_NOTIFICATION.getValue(),
+						ActorOperations.GET_USER_COUNT.getValue()));
+	}
+
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("GeoLocationManagementActor-onReceive called");
-				Request actorMessage = (Request) message;
-				ExecutionContext.setRequestId(actorMessage.getRequestId());
-				Util.initializeContext(actorMessage, JsonKey.LOCATION);
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_GEO_LOCATION.getValue())) {
-					createGeoLocation(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_GEO_LOCATION.getValue())) {
-					getGeoLocation(actorMessage);
-				} else if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.UPDATE_GEO_LOCATION.getValue())) {
-					updateGeoLocation(actorMessage);
-				} else if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.DELETE_GEO_LOCATION.getValue())) {
-					deleteGeoLocation(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.SEND_NOTIFICATION.getValue())) {
-					sendNotification(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_USER_COUNT.getValue())) {
-					getUserCount(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, self());
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, self());
-			}
+	public void onReceive(Request request) throws Throwable {
+		ExecutionContext.setRequestId(request.getRequestId());
+		Util.initializeContext(request, JsonKey.LOCATION);
+		if (request.getOperation().equalsIgnoreCase(ActorOperations.CREATE_GEO_LOCATION.getValue())) {
+			createGeoLocation(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_GEO_LOCATION.getValue())) {
+			getGeoLocation(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_GEO_LOCATION.getValue())) {
+			updateGeoLocation(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.DELETE_GEO_LOCATION.getValue())) {
+			deleteGeoLocation(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.SEND_NOTIFICATION.getValue())) {
+			sendNotification(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_USER_COUNT.getValue())) {
+			getUserCount(request);
 		} else {
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

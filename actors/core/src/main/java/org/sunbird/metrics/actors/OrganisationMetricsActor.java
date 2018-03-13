@@ -3,6 +3,7 @@ package org.sunbird.metrics.actors;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -10,13 +11,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
@@ -41,42 +42,26 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 	private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
 			.getDecryptionServiceInstance(null);
 
+	public static void init() {
+		RequestRouter.registerActor(OrganisationMetricsActor.class,
+				Arrays.asList(ActorOperations.ORG_CREATION_METRICS.getValue(),
+						ActorOperations.ORG_CONSUMPTION_METRICS.getValue(),
+						ActorOperations.ORG_CREATION_METRICS_REPORT.getValue(),
+						ActorOperations.ORG_CONSUMPTION_METRICS_REPORT.getValue()));
+	}
+
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("OrganisationMetricsActor-onReceive called");
-				Request actorMessage = (Request) message;
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ORG_CREATION_METRICS.getValue())) {
-					orgCreationMetrics(actorMessage);
-				} else if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.ORG_CONSUMPTION_METRICS.getValue())) {
-					orgConsumptionMetrics(actorMessage);
-				} else if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.ORG_CREATION_METRICS_REPORT.getValue())) {
-					orgCreationMetricsReport(actorMessage);
-				} else if (actorMessage.getOperation()
-						.equalsIgnoreCase(ActorOperations.ORG_CONSUMPTION_METRICS_REPORT.getValue())) {
-					orgConsumptionMetricsReport(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, self());
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, self());
-			}
+	public void onReceive(Request request) throws Throwable {
+		if (request.getOperation().equalsIgnoreCase(ActorOperations.ORG_CREATION_METRICS.getValue())) {
+			orgCreationMetrics(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.ORG_CONSUMPTION_METRICS.getValue())) {
+			orgConsumptionMetrics(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.ORG_CREATION_METRICS_REPORT.getValue())) {
+			orgCreationMetricsReport(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.ORG_CONSUMPTION_METRICS_REPORT.getValue())) {
+			orgConsumptionMetricsReport(request);
 		} else {
-			// Throw exception as message body
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

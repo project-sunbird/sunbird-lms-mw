@@ -24,7 +24,7 @@ public class BadgeClassExtension {
     }
 
     public BadgeClassExtension(Map<String, Object> map) {
-        this.badgeId = (String) map.get(BadgingJsonKey.BADGE_ID);
+        this.badgeId = (String) map.get(JsonKey.ID);
         this.issuerId = (String) map.get(BadgingJsonKey.ISSUER_ID);
         this.rootOrgId = (String) map.get(JsonKey.ROOT_ORG_ID);
         this.type = (String) map.get(JsonKey.TYPE);

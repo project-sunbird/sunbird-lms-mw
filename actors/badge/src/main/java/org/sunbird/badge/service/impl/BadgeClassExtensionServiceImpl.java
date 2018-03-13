@@ -1,5 +1,6 @@
 package org.sunbird.badge.service.impl;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingJsonKey;
@@ -9,6 +10,7 @@ import org.sunbird.badge.model.BadgeClassExtension;
 import org.sunbird.badge.service.BadgeClassExtensionService;
 import org.sunbird.learner.util.Util;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +36,7 @@ public class BadgeClassExtensionServiceImpl implements BadgeClassExtensionServic
     }
 
     @Override
-    public List<BadgeClassExtension> get(String rootOrgId, String type, String subtype, List<String> roles) {
+    public List<BadgeClassExtension> get(List<String> issuerList, String rootOrgId, String type, String subtype, List<String> roles) {
         Map<String, Object> propertyMap = new HashMap<>();
 
         if (rootOrgId != null) {
@@ -45,14 +47,20 @@ public class BadgeClassExtensionServiceImpl implements BadgeClassExtensionServic
             propertyMap.put(JsonKey.TYPE, type);
         }
 
-        if (type != subtype) {
+        if (subtype != null) {
             propertyMap.put(JsonKey.SUBTYPE, subtype);
         }
 
         Response response = cassandraOperation.getRecordsByProperties(Util.KEY_SPACE_NAME, BADGE_CLASS_EXT_TABLE_NAME, propertyMap);
         List<Map<String, Object>> badgeList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
 
-        return badgeList.stream().map(badgeMap -> new BadgeClassExtension(badgeMap)).collect(Collectors.toList());
+        return badgeList.stream().map(
+                badgeMap -> new BadgeClassExtension(badgeMap)
+        ).filter(
+                badgeClassExt -> roles == null || CollectionUtils.isEmpty(badgeClassExt.getRoles()) || !Collections.disjoint(roles, badgeClassExt.getRoles())
+        ).filter(
+                badgeClassExt -> CollectionUtils.isEmpty(issuerList) || issuerList.contains(badgeClassExt.getIssuerId())
+        ).collect(Collectors.toList());
     }
 
     @Override
@@ -65,5 +73,10 @@ public class BadgeClassExtensionServiceImpl implements BadgeClassExtensionServic
         }
 
         return new BadgeClassExtension(badgeList.get(0));
+    }
+
+    @Override
+    public void delete(String badgeId) {
+        cassandraOperation.deleteRecord(Util.KEY_SPACE_NAME, BADGE_CLASS_EXT_TABLE_NAME, badgeId);
     }
 }

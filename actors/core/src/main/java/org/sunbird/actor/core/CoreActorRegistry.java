@@ -73,7 +73,6 @@ public class CoreActorRegistry {
 		EsSyncActor.init();
 		FileUploadServiceActor.init();
 		NotesManagementActor.init();
-		ActorAuditLogServiceImpl.init();
 		UserDataEncryptionDecryptionServiceActor.init();
 		SchedularActor.init();
 		OrganisationMetricsActor.init();

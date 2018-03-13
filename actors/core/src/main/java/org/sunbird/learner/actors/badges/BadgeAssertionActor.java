@@ -48,10 +48,10 @@ public class BadgeAssertionActor extends UntypedAbstractActor {
          createAssertion(actorMessage);	
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(BadgingActorOperations.GET_BADGE_ASSERTION.getValue())) {
-        	System.out.println("get assertion details called");
         	getAssertionDetails(actorMessage);	
         } else if (actorMessage.getOperation()
             .equalsIgnoreCase(BadgingActorOperations.GET_BADGE_ASSERTION_LIST.getValue())) {
+        	getAssertionList(actorMessage);
         } else if (actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.REVOKE_BADGE.getValue())) {
         }
         else {
@@ -137,6 +137,30 @@ public class BadgeAssertionActor extends UntypedAbstractActor {
 				return;
 			}
 			Map<String, Object> res = mapper.readValue((String)result.getResult().get(JsonKey.RESPONSE), HashMap.class);
+			result = new Response();
+			result.getResult().putAll(res);
+			sender().tell(result, self());
+		} catch (IOException e) {
+			ProjectCommonException ex = new ProjectCommonException(ResponseCode.badgingserverError.getErrorCode(),
+					ResponseCode.badgingserverError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+			sender().tell(ex, self());
+			ProjectLogger.log(e.getMessage(), e);
+		}
+	}
+   
+    /**
+     * This method will make a call for revoking the badges.
+     * @param request Request
+     */
+	private void revokeAssertion(Request request) {
+		try {
+			Response result = service.revokeAssertion(request);
+			if (ProjectUtil.isStringNullOREmpty((String) result.getResult().get(JsonKey.RESPONSE))) {
+				sender().tell(ProjectUtil.createResourceNotFoundException(), self());
+				return;
+			}
+			Map<String, Object> res = mapper.readValue((String) result.getResult().get(JsonKey.RESPONSE),
+					HashMap.class);
 			result = new Response();
 			result.getResult().putAll(res);
 			sender().tell(result, self());

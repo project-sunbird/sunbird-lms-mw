@@ -1,6 +1,7 @@
 package org.sunbird.learner.actors.badges.service.impl;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -89,14 +90,26 @@ public class BadgrServiceImpl implements BadgingService {
 
 	@Override
 	public Response getAssertionList(Request request) throws IOException {
-		 List<Map<String,Object>> requestData =(List) request.getRequest().get(BadgingJsonKey.ASSERTIONS);
-		return null;
+		List<Map<String, Object>> requestData = (List) request.getRequest().get(BadgingJsonKey.ASSERTIONS);
+		List<String> responseList = new ArrayList<>();
+		for (Map<String, Object> map : requestData) {
+			String requestBody = BadgingUtil.createAssertionReqData(map);
+			String url = BadgingUtil.createBadgerUrl(map, BadgingUtil.SUNBIRD_BADGER_CREATE_ASSERTION_URL, 2);
+			String httpResponse = HttpUtil.sendPostRequest(url, requestBody, BadgingUtil.getBadgrHeaders());
+			responseList.add(httpResponse);
+		}
+		Response response = new Response();
+		response.put(JsonKey.RESPONSE, responseList);
+		return response;
 	}
 
 	@Override
 	public Response revokeAssertion(Request request) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		String url = BadgingUtil.createBadgerUrl(request.getRequest(), BadgingUtil.SUNBIRD_BADGER_GETASSERTION_URL, 3);
+		String httpResponse = HttpUtil.sendGetRequest(url, BadgingUtil.getBadgrHeaders());
+		Response response = new Response();
+		response.put(JsonKey.RESPONSE, httpResponse);
+		return response;
 	}
 
 }

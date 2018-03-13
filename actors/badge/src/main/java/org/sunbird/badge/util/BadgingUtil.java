@@ -7,11 +7,15 @@ import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 import org.sunbird.badge.model.BadgeClassExtension;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.MapperUtil;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.responsecode.ResponseCode;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
@@ -159,4 +163,46 @@ public class BadgingUtil {
         MapperUtil.put(inputMap, BadgingJsonKey.JSON_EMAIL, outputMap, JsonKey.EMAIL);
     }
 
+    /**
+     * This method will create assertion revoke request data.
+     *
+     * @param map
+     *            Map<String,Object>
+     * @return String
+     */
+	public static String createAssertionRevokeData(Map<String, Object> map) {
+		JsonObject json = new JsonObject();
+		json.addProperty("revocation_reason", (String) map.get(BadgingJsonKey.REVOCATION_REASON));
+		return json.toString();
+	}
+	
+	/**
+	 * This method will create project common exception object for 
+	 * 400, 401, 403 , 404 and rest all will come under 500 server error.
+	 * need to call this method incase of error only. 
+	 * @param statusCode int
+	 * @return ProjectCommonException
+	 */
+	public static ProjectCommonException createExceptionForBadger(int statusCode) {
+		ProjectLogger.log("Badger is sending status code as " + statusCode, LoggerEnum.INFO.name());
+		switch (statusCode) {
+		case 400:
+			return new ProjectCommonException(ResponseCode.invalidData.getErrorCode(),
+					ResponseCode.invalidData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+		case 401:
+			return new ProjectCommonException(ResponseCode.unAuthorised.getErrorCode(),
+					ResponseCode.unAuthorised.getErrorMessage(), ResponseCode.UNAUTHORIZED.getResponseCode());
+		case 403:
+			return new ProjectCommonException(ResponseCode.unAuthorised.getErrorCode(),
+					ResponseCode.unAuthorised.getErrorMessage(), ResponseCode.UNAUTHORIZED.getResponseCode());
+		case 404:
+			return new ProjectCommonException(ResponseCode.resourceNotFound.getErrorCode(),
+					ResponseCode.resourceNotFound.getErrorMessage(), ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+		default:
+			return new ProjectCommonException(ResponseCode.internalError.getErrorCode(),
+					ResponseCode.internalError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+		}
+
+	}
+	
 }

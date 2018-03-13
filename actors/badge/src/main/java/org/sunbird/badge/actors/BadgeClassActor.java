@@ -1,50 +1,53 @@
-package org.sunbird.learner.actors.badging;
+package org.sunbird.badge.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.cassandra.cql3.Json;
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.BackgroundRequestRouter;
+import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.badge.BadgeOperations;
+import org.sunbird.badge.util.BadgingUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
-import org.sunbird.learner.actors.AbstractBaseActor;
-import org.sunbird.learner.actors.badging.model.BadgeClassExtension;
-import org.sunbird.learner.actors.badging.service.BadgeClassExtensionService;
-import org.sunbird.learner.actors.badging.service.impl.BadgeClassExtensionServiceImpl;
-import org.sunbird.learner.util.Util;
+import org.sunbird.badge.model.BadgeClassExtension;
+import org.sunbird.badge.service.BadgeClassExtensionService;
+import org.sunbird.badge.service.impl.BadgeClassExtensionServiceImpl;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class BadgeClassActor extends AbstractBaseActor {
+public class BadgeClassActor extends BaseActor {
     BadgeClassExtensionService badgeClassExtensionService = new BadgeClassExtensionServiceImpl();
 
+    public static void init() {
+        RequestRouter.registerActor(BadgeClassActor.class, Arrays.asList(
+                BadgeOperations.createBadgeClass.name(),
+                BadgeOperations.getBadgeClass.name(),
+                BadgeOperations.listBadgeClass.name(),
+                BadgeOperations.deleteBadgeClass.name()));
+    }
+
     @Override
-    public void onReceive(Object message) throws Throwable {
+    public void onReceive(Request request) {
         ProjectLogger.log("BadgeClassActor onReceive called");
+        String operation = request.getOperation();
 
-        if (message instanceof Request) {
-            try {
-                Request actorMessage = (Request) message;
-                Util.initializeContext(actorMessage, JsonKey.USER);
-                ExecutionContext.setRequestId(actorMessage.getRequestId());
-
-                if (actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.CREATE_BADGE_CLASS.getValue())) {
-                    createBadgeClass(actorMessage);
-                } else if (actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.GET_BADGE_CLASS.getValue())) {
-                    getBadgeClass(actorMessage);
-                } else if (actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.LIST_BADGE_CLASS.getValue())) {
-                    listBadgeClass(actorMessage);
-                } else if (actorMessage.getOperation().equalsIgnoreCase(BadgingActorOperations.DELETE_BADGE_CLASS.getValue())) {
-                    deleteBadgeClass(actorMessage);
-                } else {
-                    onReceiveUnsupportedOperation("BadgeClassActor");
-                }
-            } catch (Exception exception) {
-                onReceiveException("BadgeClassActor", exception);
-            }
-        } else {
-            onReceiveUnsupportedMessage("BadgeClassActor");
+        switch (operation) {
+            case "createBadgeClass":
+                createBadgeClass(request);
+                break;
+            case "getBadgeClass":
+                getBadgeClass(request);
+                break;
+            case "listBadgeClass":
+                listBadgeClass(request);
+                break;
+            case "deleteBadgeClass":
+                deleteBadgeClass(request);
+                break;
+            default:
+                onReceiveUnsupportedOperation("BadgeClassActor");
         }
     }
 

@@ -8,7 +8,6 @@ import java.util.concurrent.TimeUnit;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.BadgingActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -16,10 +15,6 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.learner.actors.badges.BadgeAssertionActor;
-import org.sunbird.learner.actors.badges.BadgesActor;
-import org.sunbird.learner.actors.badging.BadgeClassActor;
-import org.sunbird.learner.actors.badging.BadgeIssuerActor;
 import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.util.Util;
 
@@ -29,11 +24,9 @@ import com.typesafe.config.ConfigFactory;
 import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
 import akka.actor.ActorSystem;
-import akka.actor.Props;
 import akka.actor.UntypedAbstractActor;
 import akka.dispatch.OnComplete;
 import akka.pattern.Patterns;
-import akka.routing.FromConfig;
 import akka.util.Timeout;
 import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
@@ -52,14 +45,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
 	private static ActorSelection selection = null;
 	private static final String ACTOR_CONFIG_NAME = "RemoteMWConfig";
 	private static final String REMOTE_ACTOR_SYSTEM_NAME = "RemoteMiddlewareActorSystem";
-
-	
-
-	// Badging Actors
-	private ActorRef badgesActor;
-	private ActorRef badgeClassActor;
-	private ActorRef badgeAssertionActor;
-	private ActorRef badgeIssuerActor;
 
 	private ExecutionContext ec;
 
@@ -92,18 +77,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
 	 * constructor to initialize router actor with child actor pool
 	 */
 	public RequestRouterActor() {
-
-		badgesActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(BadgesActor.class)),
-				BADGES_ACTOR);
-
-		// Badging Actors
-		badgeIssuerActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(BadgeIssuerActor.class)),
-				BADGE_ISSUER_ACTOR);
-		badgeClassActor = getContext().actorOf(FromConfig.getInstance().props(Props.create(BadgeClassActor.class)),
-				BADGE_CLASS_ACTOR);
-		badgeAssertionActor = getContext().actorOf(
-				FromConfig.getInstance().props(Props.create(BadgeAssertionActor.class)), BADGE_ASSERTION_ACTOR);
-
 		ec = getContext().dispatcher();
 		initializeRouterMap();
 	}
@@ -112,33 +85,6 @@ public class RequestRouterActor extends UntypedAbstractActor {
 	 * Initialize the map with operation as key and corresponding router as value.
 	 */
 	private void initializeRouterMap() {
-		
-		
-		
-		
-		routerMap.put(ActorOperations.GET_ALL_BADGE.getValue(), badgesActor);
-		routerMap.put(ActorOperations.ADD_USER_BADGE.getValue(), badgesActor);
-		routerMap.put(ActorOperations.HEALTH_CHECK.getValue(), badgesActor);
-		routerMap.put(ActorOperations.ACTOR.getValue(), badgesActor);
-		routerMap.put(ActorOperations.ES.getValue(), badgesActor);
-		routerMap.put(ActorOperations.CASSANDRA.getValue(), badgesActor);
-		
-		
-
-		
-
-		routerMap.put(BadgingActorOperations.CREATE_BADGE_ASSERTION.getValue(), badgeAssertionActor);
-		routerMap.put(BadgingActorOperations.GET_BADGE_ASSERTION.getValue(), badgeAssertionActor);
-		routerMap.put(BadgingActorOperations.GET_BADGE_ASSERTION_LIST.getValue(), badgeAssertionActor);
-		routerMap.put(BadgingActorOperations.REVOKE_BADGE.getValue(), badgeAssertionActor);
-		routerMap.put(BadgingActorOperations.CREATE_BADGE_ISSUER.getValue(), badgeIssuerActor);
-
-		routerMap.put(BadgingActorOperations.CREATE_BADGE_CLASS.getValue(), badgeClassActor);
-		routerMap.put(BadgingActorOperations.GET_BADGE_CLASS.getValue(), badgeClassActor);
-		routerMap.put(BadgingActorOperations.LIST_BADGE_CLASS.getValue(), badgeClassActor);
-		routerMap.put(BadgingActorOperations.DELETE_BADGE_CLASS.getValue(), badgeClassActor);
-		routerMap.put(BadgingActorOperations.GET_BADGE_ISSUER.getValue(), badgeIssuerActor);
-		routerMap.put(BadgingActorOperations.GET_ALL_ISSUER.getValue(), badgeIssuerActor);
 	}
 
 	@Override

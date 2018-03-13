@@ -1,6 +1,6 @@
-package org.sunbird.learner.actors.badging.service;
+package org.sunbird.badge.service;
 
-import org.sunbird.learner.actors.badging.model.BadgeClassExtension;
+import org.sunbird.badge.model.BadgeClassExtension;
 
 import java.util.List;
 

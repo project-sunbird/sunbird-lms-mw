@@ -1,4 +1,4 @@
-package org.sunbird.learner.actors.badging.model;
+package org.sunbird.badge.model;
 
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;

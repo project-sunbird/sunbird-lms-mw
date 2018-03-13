@@ -1,4 +1,4 @@
-package org.sunbird.learner.actors.badges.service;
+package org.sunbird.badge.service;
 
 import java.io.IOException;
 

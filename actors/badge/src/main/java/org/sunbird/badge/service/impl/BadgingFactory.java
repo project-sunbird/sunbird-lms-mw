@@ -1,9 +1,9 @@
 /**
  * 
  */
-package org.sunbird.learner.actors.badges.service.impl;
+package org.sunbird.badge.service.impl;
 
-import org.sunbird.learner.actors.badges.service.BadgingService;
+import org.sunbird.badge.service.BadgingService;
 
 /**
  * 

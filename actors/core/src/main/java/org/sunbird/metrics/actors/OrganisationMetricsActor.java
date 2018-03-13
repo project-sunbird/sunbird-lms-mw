@@ -3,6 +3,7 @@ package org.sunbird.metrics.actors;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -10,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -41,7 +43,11 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 			.getDecryptionServiceInstance(null);
 
 	public static void init() {
-		// TODO:
+		RequestRouter.registerActor(OrganisationMetricsActor.class,
+				Arrays.asList(ActorOperations.ORG_CREATION_METRICS.getValue(),
+						ActorOperations.ORG_CONSUMPTION_METRICS.getValue(),
+						ActorOperations.ORG_CREATION_METRICS_REPORT.getValue(),
+						ActorOperations.ORG_CONSUMPTION_METRICS_REPORT.getValue()));
 	}
 
 	@Override

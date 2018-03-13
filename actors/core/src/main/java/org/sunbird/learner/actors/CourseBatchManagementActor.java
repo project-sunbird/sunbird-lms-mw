@@ -4,11 +4,14 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -32,19 +35,24 @@ import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * This actor will handle course batch related operations.
  * 
  * @author Manzarul
  * @author Amit Kumar
  */
-public class CourseBatchManagementActor extends UntypedAbstractActor {
+public class CourseBatchManagementActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private Util.DbInfo dbInfo = null;
 	private Util.DbInfo userOrgdbInfo = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
+
+	public static void init() {
+		RequestRouter.registerActor(CourseBatchManagementActor.class,
+				Arrays.asList(ActorOperations.CREATE_BATCH.getValue(), ActorOperations.UPDATE_BATCH.getValue(),
+						ActorOperations.ADD_USER_TO_BATCH.getValue(), ActorOperations.REMOVE_USER_FROM_BATCH.getValue(),
+						ActorOperations.GET_BATCH.getValue(), ActorOperations.GET_COURSE_BATCH_DETAIL.getValue()));
+	}
 
 	/**
 	 * Receives the actor message and perform the course enrollment operation .
@@ -53,49 +61,28 @@ public class CourseBatchManagementActor extends UntypedAbstractActor {
 	 *            Object is an instance of Request
 	 */
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("Batch Management -onReceive called");
-				dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
-				Request actorMessage = (Request) message;
+	public void onReceive(Request request) throws Throwable {
+		dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
 
-				Util.initializeContext(actorMessage, JsonKey.BATCH);
-				// set request id fto thread loacl...
-				ExecutionContext.setRequestId(actorMessage.getRequestId());
+		Util.initializeContext(request, JsonKey.BATCH);
+		// set request id fto thread loacl...
+		ExecutionContext.setRequestId(request.getRequestId());
 
-				String requestedOperation = actorMessage.getOperation();
-				if (requestedOperation.equalsIgnoreCase(ActorOperations.CREATE_BATCH.getValue())) {
-					createCourseBatch(actorMessage);
-				}
-				if (requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_BATCH.getValue())) {
-					updateCourseBatch(actorMessage);
-				}
-				if (requestedOperation.equalsIgnoreCase(ActorOperations.GET_BATCH.getValue())) {
-					getCourseBatch(actorMessage);
-				} else if (requestedOperation.equalsIgnoreCase(ActorOperations.ADD_USER_TO_BATCH.getValue())) {
-					addUserCourseBatch(actorMessage);
-				} else if (requestedOperation.equalsIgnoreCase(ActorOperations.GET_COURSE_BATCH_DETAIL.getValue())) {
-					getCourseBatchDetail(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION");
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, self());
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, self());
-			}
+		String requestedOperation = request.getOperation();
+		if (requestedOperation.equalsIgnoreCase(ActorOperations.CREATE_BATCH.getValue())) {
+			createCourseBatch(request);
+		}
+		if (requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_BATCH.getValue())) {
+			updateCourseBatch(request);
+		}
+		if (requestedOperation.equalsIgnoreCase(ActorOperations.GET_BATCH.getValue())) {
+			getCourseBatch(request);
+		} else if (requestedOperation.equalsIgnoreCase(ActorOperations.ADD_USER_TO_BATCH.getValue())) {
+			addUserCourseBatch(request);
+		} else if (requestedOperation.equalsIgnoreCase(ActorOperations.GET_COURSE_BATCH_DETAIL.getValue())) {
+			getCourseBatchDetail(request);
 		} else {
-			// Throw exception as message body
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

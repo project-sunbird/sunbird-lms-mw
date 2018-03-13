@@ -7,9 +7,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -17,64 +18,40 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * 
  * @author Amit Kumar
  *
  */
-public class KeyCloakSyncActor extends UntypedAbstractActor {
+public class KeyCloakSyncActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private boolean isSSOEnabled = Boolean
 			.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
 	private SSOManager ssoManager = SSOServiceFactory.getInstance();
 
-	@Override
-	public void onReceive(Object message) throws Throwable {
-		ProjectLogger.log("KeyCloakSyncActor  onReceive called");
-		if (message instanceof Request) {
-			try {
-				Request actorMessage = (Request) message;
-				String requestedOperation = actorMessage.getOperation();
-				ProjectLogger.log("Operation name is ==" + requestedOperation);
-				if (requestedOperation.equalsIgnoreCase(ActorOperations.SYNC_KEYCLOAK.getValue())) {
-					// return SUCCESS to controller and run the sync process in background
-					Response response = new Response();
-					response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-					sender().tell(response, self());
-					syncData(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION");
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					ProjectLogger.log("Unsupported operation in Keycloak sync Background Job Manager", exception);
-					sender().tell(exception, self());
-					return;
-				}
+	public static void init() {
+		RequestRouter.registerActor(KeyCloakSyncActor.class, Arrays.asList(ActorOperations.SYNC_KEYCLOAK.getValue()));
+	}
 
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, self());
-				return;
-			}
+	@Override
+	public void onReceive(Request actorMessage) throws Throwable {
+		String requestedOperation = actorMessage.getOperation();
+		ProjectLogger.log("Operation name is ==" + requestedOperation);
+		if (requestedOperation.equalsIgnoreCase(ActorOperations.SYNC_KEYCLOAK.getValue())) {
+			// return SUCCESS to controller and run the sync process in background
+			Response response = new Response();
+			response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+			sender().tell(response, self());
+			syncData(actorMessage);
 		} else {
-			ProjectLogger.log("UNSUPPORTED MESSAGE FOR KeyCloakSyncActor");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
-			return;
+			onReceiveUnsupportedOperation(actorMessage.getOperation());
 		}
 	}
 

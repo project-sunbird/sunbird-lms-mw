@@ -14,6 +14,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Months;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.BackgroundRequestRouter;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -37,6 +38,8 @@ public class ActorAuditLogServiceImpl extends BaseActor implements AuditLogServi
 
 	public static void init() {
 		BackgroundRequestRouter.registerActor(ActorAuditLogServiceImpl.class, Arrays
+				.asList(ActorOperations.SEARCH_AUDIT_LOG.getValue(), ActorOperations.PROCESS_AUDIT_LOG.getValue()));
+		RequestRouter.registerActor(ActorAuditLogServiceImpl.class, Arrays
 				.asList(ActorOperations.SEARCH_AUDIT_LOG.getValue(), ActorOperations.PROCESS_AUDIT_LOG.getValue()));
 	}
 

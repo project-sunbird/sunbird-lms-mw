@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -31,15 +33,13 @@ import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * This class is used to sync the ElasticSearch and DB.
  * 
  * @author Amit Kumar
  *
  */
-public class EsSyncActor extends UntypedAbstractActor {
+public class EsSyncActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
@@ -50,43 +50,23 @@ public class EsSyncActor extends UntypedAbstractActor {
 	private DecryptionService decService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
 			.getDecryptionServiceInstance(null);
 
-	@Override
-	public void onReceive(Object message) throws Throwable {
-		ProjectLogger.log("EsSyncBackgroundJobManager  onReceive called");
-		if (message instanceof Request) {
-			try {
-				Request actorMessage = (Request) message;
-				String requestedOperation = actorMessage.getOperation();
-				ProjectLogger.log("Operation name is ==" + requestedOperation);
-				if (requestedOperation.equalsIgnoreCase(ActorOperations.SYNC.getValue())) {
-					// return SUCCESS to controller and run the sync process in background
-					Response response = new Response();
-					response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-					sender().tell(response, self());
-					syncData(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION");
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					ProjectLogger.log("Unsupported operation in Es sync Background Job Manager", exception);
-					sender().tell(exception, self());
-					return;
-				}
+	public static void init() {
+		RequestRouter.registerActor(EsSyncActor.class, Arrays.asList(ActorOperations.SYNC.getValue()));
 
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, self());
-				return;
-			}
+	}
+
+	@Override
+	public void onReceive(Request request) throws Throwable {
+		String requestedOperation = request.getOperation();
+		ProjectLogger.log("Operation name is ==" + requestedOperation);
+		if (requestedOperation.equalsIgnoreCase(ActorOperations.SYNC.getValue())) {
+			// return SUCCESS to controller and run the sync process in background
+			Response response = new Response();
+			response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+			sender().tell(response, self());
+			syncData(request);
 		} else {
-			ProjectLogger.log("UNSUPPORTED MESSAGE FOR BACKGROUND JOB MANAGER");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
-			return;
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

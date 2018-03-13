@@ -1,11 +1,14 @@
 package org.sunbird.learner.actors;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.Constants;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -21,18 +24,22 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * This actor will handle course management operation on organization level.
  *
  * @author Manzarul
  */
-public class CourseManagementActor extends UntypedAbstractActor {
+public class CourseManagementActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private Util.DbInfo dbInfo = null;
 	private String coursePublishedBody = "{\"request\":{\"content\":{\"lastPublishedBy\": \"userId\"}}}";
+
+	public static void init() {
+		RequestRouter.registerActor(CourseManagementActor.class,
+				Arrays.asList(ActorOperations.CREATE_COURSE.getValue(), ActorOperations.UPDATE_COURSE.getValue(),
+						ActorOperations.PUBLISH_COURSE.getValue(), ActorOperations.DELETE_COURSE.getValue()));
+	}
 
 	/**
 	 * Receives the actor message and perform the course enrollment operation .
@@ -41,40 +48,19 @@ public class CourseManagementActor extends UntypedAbstractActor {
 	 *            Object is an instance of Request
 	 */
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("CourseManagementActor-onReceive called");
-				dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
-				Request actorMessage = (Request) message;
-				String requestedOperation = actorMessage.getOperation();
-				if (requestedOperation.equalsIgnoreCase(ActorOperations.CREATE_COURSE.getValue())) {
-					createCourse(actorMessage);
-				} else if (requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_COURSE.getValue())) {
-					updateCourse(actorMessage);
-				} else if (requestedOperation.equalsIgnoreCase(ActorOperations.PUBLISH_COURSE.getValue())) {
-					publishCourse(actorMessage);
-				} else if (requestedOperation.equalsIgnoreCase(ActorOperations.DELETE_COURSE.getValue())) {
-					deleteCourse(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION");
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, self());
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, self());
-			}
+	public void onReceive(Request request) throws Throwable {
+		dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
+		String operation = request.getOperation();
+		if (operation.equalsIgnoreCase(ActorOperations.CREATE_COURSE.getValue())) {
+			createCourse(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_COURSE.getValue())) {
+			updateCourse(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.PUBLISH_COURSE.getValue())) {
+			publishCourse(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.DELETE_COURSE.getValue())) {
+			deleteCourse(request);
 		} else {
-			// Throw exception as message body
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

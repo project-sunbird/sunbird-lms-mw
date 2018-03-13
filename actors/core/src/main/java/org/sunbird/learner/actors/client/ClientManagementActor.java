@@ -1,17 +1,19 @@
 package org.sunbird.learner.actors.client;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.ExecutionContext;
@@ -21,48 +23,31 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.UntypedAbstractActor;
-
-public class ClientManagementActor extends UntypedAbstractActor {
+public class ClientManagementActor extends BaseActor {
 
 	private Util.DbInfo clientDbInfo = Util.dbInfoMap.get(JsonKey.CLIENT_INFO_DB);
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
-	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("ClientManagementActor-onReceive called");
-				Request actorMessage = (Request) message;
-				Util.initializeContext(actorMessage, "MASTER_KEY");
-				// set request id fto thread loacl...
-				ExecutionContext.setRequestId(actorMessage.getRequestId());
+	public static void init() {
+		RequestRouter.registerActor(ClientManagementActor.class,
+				Arrays.asList(ActorOperations.REGISTER_CLIENT.getValue(), ActorOperations.UPDATE_CLIENT_KEY.getValue(),
+						ActorOperations.GET_CLIENT_KEY.getValue()));
+	}
 
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.REGISTER_CLIENT.getValue())) {
-					registerClient(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_CLIENT_KEY.getValue())) {
-					updateClientKey(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_CLIENT_KEY.getValue())) {
-					getClientKey(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, self());
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, self());
-			}
+	@Override
+	public void onReceive(Request request) throws Throwable {
+		Util.initializeContext(request, "MASTER_KEY");
+		// set request id fto thread loacl...
+		ExecutionContext.setRequestId(request.getRequestId());
+
+		if (request.getOperation().equalsIgnoreCase(ActorOperations.REGISTER_CLIENT.getValue())) {
+			registerClient(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_CLIENT_KEY.getValue())) {
+			updateClientKey(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_CLIENT_KEY.getValue())) {
+			getClientKey(request);
 		} else {
-			// Throw exception as message body
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

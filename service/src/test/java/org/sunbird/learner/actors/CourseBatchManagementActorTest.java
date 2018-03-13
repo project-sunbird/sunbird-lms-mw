@@ -24,6 +24,7 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -70,7 +71,7 @@ public class CourseBatchManagementActorTest {
 
 	@BeforeClass
 	public static void setUp() {
-		Application.startLocalActorSystem();
+		SunbirdMWService.init();
 		hashTagId = String.valueOf(System.currentTimeMillis());
 		hashTagId2 = String.valueOf(System.currentTimeMillis()) + 45;
 		system = ActorSystem.create("system");

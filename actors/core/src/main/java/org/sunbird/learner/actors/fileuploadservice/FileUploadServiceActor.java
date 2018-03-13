@@ -3,8 +3,11 @@ package org.sunbird.learner.actors.fileuploadservice;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Map;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -16,41 +19,22 @@ import org.sunbird.common.models.util.azure.CloudServiceFactory;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * Class to upload the file on cloud storage. Created by arvind on 28/8/17.
  */
-public class FileUploadServiceActor extends UntypedAbstractActor {
+public class FileUploadServiceActor extends BaseActor {
+
+	public static void init() {
+		RequestRouter.registerActor(FileUploadServiceActor.class,
+				Arrays.asList(ActorOperations.FILE_STORAGE_SERVICE.getValue()));
+	}
 
 	@Override
-	public void onReceive(Object message) throws Throwable {
-
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("FileUploadServiceActor onReceive called");
-				Request actorMessage = (Request) message;
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.FILE_STORAGE_SERVICE.getValue())) {
-					processFileUpload(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION");
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, self());
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, self());
-			}
+	public void onReceive(Request request) throws Throwable {
+		if (request.getOperation().equalsIgnoreCase(ActorOperations.FILE_STORAGE_SERVICE.getValue())) {
+			processFileUpload(request);
 		} else {
-			// Throw exception as message body
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

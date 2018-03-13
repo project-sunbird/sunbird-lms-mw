@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.sunbird.actor.background.BackgroundOperations;
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.BackgroundRequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -51,14 +53,12 @@ import org.sunbird.services.sso.SSOServiceFactory;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * This actor will handle bulk upload operation .
  *
  * @author Amit Kumar
  */
-public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
+public class BulkUploadBackGroundJobActor extends BaseActor {
 
 	private String processId = "";
 	private Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
@@ -71,25 +71,19 @@ public class BulkUploadBackGroundJobActor extends UntypedAbstractActor {
 	private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
 	private static final String SUNBIRD_APP_URL = "sunbird_app_url";
 
+	public static void init() {
+		BackgroundRequestRouter.registerActor(BulkUploadBackGroundJobActor.class,
+				Arrays.asList(ActorOperations.PROCESS_BULK_UPLOAD.getValue()));
+	}
+
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("BulkUploadBackGroundJobActor onReceive called");
-				Request actorMessage = (Request) message;
-				Util.initializeContext(actorMessage, JsonKey.USER);
-				// set request id fto thread loacl...
-				ExecutionContext.setRequestId(actorMessage.getRequestId());
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.PROCESS_BULK_UPLOAD.getValue())) {
-					process(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION");
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-			}
+	public void onReceive(Request request) throws Throwable {
+		Util.initializeContext(request, JsonKey.USER);
+		ExecutionContext.setRequestId(request.getRequestId());
+		if (request.getOperation().equalsIgnoreCase(ActorOperations.PROCESS_BULK_UPLOAD.getValue())) {
+			process(request);
 		} else {
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

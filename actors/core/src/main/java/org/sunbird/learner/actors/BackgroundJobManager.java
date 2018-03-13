@@ -10,6 +10,8 @@ import java.util.Map;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.BackgroundRequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -36,8 +38,6 @@ import org.sunbird.learner.util.Util.DbInfo;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * This class will handle all the background job. Example when ever course is
  * published then this job will collect course related data from EKStep and
@@ -46,7 +46,7 @@ import akka.actor.UntypedAbstractActor;
  * @author Manzarul
  * @author Amit Kumar
  */
-public class BackgroundJobManager extends UntypedAbstractActor {
+public class BackgroundJobManager extends BaseActor {
 
 	private static Map<String, String> headerMap = new HashMap<>();
 	private static Util.DbInfo dbInfo = null;
@@ -59,60 +59,63 @@ public class BackgroundJobManager extends UntypedAbstractActor {
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
 
+	public static void init() {
+		BackgroundRequestRouter.registerActor(BackgroundJobManager.class, Arrays.asList(
+				ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue(), ActorOperations.UPDATE_USER_ROLES_ES.getValue(),
+				ActorOperations.ADD_USER_BADGE_BKG.getValue(),
+				ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue(),
+				ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue(),
+				ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue(), ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue(),
+				ActorOperations.UPDATE_USER_ORG_ES.getValue(), ActorOperations.REMOVE_USER_ORG_ES.getValue(),
+				ActorOperations.INSERT_USER_NOTES_ES.getValue(), ActorOperations.UPDATE_USER_NOTES_ES.getValue(),
+				ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue(),
+				ActorOperations.UPDATE_COURSE_BATCH_ES.getValue(), ActorOperations.INSERT_COURSE_BATCH_ES.getValue()));
+	}
+
 	@Override
-	public void onReceive(Object message) throws Throwable {
-
-		if (message instanceof Request) {
-			ProjectLogger.log("BackgroundJobManager  onReceive called");
-			if (dbInfo == null) {
-				dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_MANAGEMENT_DB);
-			}
-
-			Request actorMessage = (Request) message;
-			String requestedOperation = actorMessage.getOperation();
-			ProjectLogger.log("Operation name is ==" + requestedOperation);
-			if (requestedOperation.equalsIgnoreCase(ActorOperations.PUBLISH_COURSE.getValue())) {
-				manageBackgroundJob(actorMessage);
-			} else if (requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue())) {
-				updateUserInfoToEs(actorMessage);
-			} else if (requestedOperation
-					.equalsIgnoreCase(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue())) {
-				insertUserCourseInfoToEs(actorMessage);
-			} else if (requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_USER_COUNT.getValue())) {
-				updateUserCount(actorMessage);
-			} else if (requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue())) {
-				updateOrgInfoToEs(actorMessage);
-			} else if (requestedOperation.equalsIgnoreCase(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue())) {
-				insertOrgInfoToEs(actorMessage);
-			} else if (requestedOperation.equalsIgnoreCase(ActorOperations.INSERT_COURSE_BATCH_ES.getValue())) {
-				insertCourseBatchInfoToEs(actorMessage);
-			} else if (requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue())) {
-				updateCourseBatchInfoToEs(actorMessage);
-			} else if (requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_USER_ORG_ES.getValue())) {
-				updateUserOrgInfoToEs(actorMessage);
-			} else if (requestedOperation.equalsIgnoreCase(ActorOperations.REMOVE_USER_ORG_ES.getValue())) {
-				removeUserOrgInfoToEs(actorMessage);
-			} else if (requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_USER_ROLES_ES.getValue())) {
-				updateUserRoleToEs(actorMessage);
-			} else if (requestedOperation
-					.equalsIgnoreCase(ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue())) {
-				updateUserCourseInfoToEs(actorMessage);
-			} else if (requestedOperation.equalsIgnoreCase(ActorOperations.ADD_USER_BADGE_BKG.getValue())) {
-				addBadgeToUserprofile(actorMessage);
-			} else if (requestedOperation.equalsIgnoreCase(ActorOperations.INSERT_USER_NOTES_ES.getValue())) {
-				insertUserNotesToEs(actorMessage);
-			} else if (requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_USER_NOTES_ES.getValue())) {
-				updateUserNotesToEs(actorMessage);
-			} else {
-				ProjectLogger.log("UNSUPPORTED OPERATION");
-				ProjectCommonException exception = new ProjectCommonException(
-						ResponseCode.invalidOperationName.getErrorCode(),
-						ResponseCode.invalidOperationName.getErrorMessage(),
-						ResponseCode.CLIENT_ERROR.getResponseCode());
-				ProjectLogger.log("UnSupported operation in Background Job Manager", exception);
-			}
+	public void onReceive(Request request) throws Throwable {
+		ProjectLogger.log("BackgroundJobManager  onReceive called");
+		if (dbInfo == null) {
+			dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_MANAGEMENT_DB);
+		}
+		String operation = request.getOperation();
+		ProjectLogger.log("Operation name is ==" + operation);
+		if (operation.equalsIgnoreCase(ActorOperations.PUBLISH_COURSE.getValue())) {
+			manageBackgroundJob(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue())) {
+			updateUserInfoToEs(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue())) {
+			insertUserCourseInfoToEs(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_COUNT.getValue())) {
+			updateUserCount(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue())) {
+			updateOrgInfoToEs(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue())) {
+			insertOrgInfoToEs(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.INSERT_COURSE_BATCH_ES.getValue())) {
+			insertCourseBatchInfoToEs(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue())) {
+			updateCourseBatchInfoToEs(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_ORG_ES.getValue())) {
+			updateUserOrgInfoToEs(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.REMOVE_USER_ORG_ES.getValue())) {
+			removeUserOrgInfoToEs(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_ROLES_ES.getValue())) {
+			updateUserRoleToEs(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue())) {
+			updateUserCourseInfoToEs(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.ADD_USER_BADGE_BKG.getValue())) {
+			addBadgeToUserprofile(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.INSERT_USER_NOTES_ES.getValue())) {
+			insertUserNotesToEs(request);
+		} else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_NOTES_ES.getValue())) {
+			updateUserNotesToEs(request);
 		} else {
-			ProjectLogger.log("UNSUPPORTED MESSAGE FOR BACKGROUND JOB MANAGER");
+			ProjectLogger.log("UNSUPPORTED OPERATION");
+			ProjectCommonException exception = new ProjectCommonException(
+					ResponseCode.invalidOperationName.getErrorCode(),
+					ResponseCode.invalidOperationName.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+			ProjectLogger.log("UnSupported operation in Background Job Manager", exception);
 		}
 	}
 

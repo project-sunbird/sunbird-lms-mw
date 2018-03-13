@@ -5,19 +5,21 @@ import static org.sunbird.learner.util.Util.isNull;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
@@ -30,13 +32,11 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * Class to provide functionality for Add and Endorse the user skills . Created
  * by arvind on 18/10/17.
  */
-public class SkillmanagementActor extends UntypedAbstractActor {
+public class SkillmanagementActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
@@ -44,40 +44,25 @@ public class SkillmanagementActor extends UntypedAbstractActor {
 	private Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
 	private static final String REF_SKILLS_DB_ID = "001";
 
-	@Override
-	public void onReceive(Object message) throws Throwable {
+	public static void init() {
+		RequestRouter.registerActor(SkillmanagementActor.class, Arrays.asList(ActorOperations.ADD_SKILL.getValue(),
+				ActorOperations.GET_SKILL.getValue(), ActorOperations.GET_SKILLS_LIST.getValue()));
+	}
 
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("SkillmanagementActor-onReceive called");
-				Request actorMessage = (Request) message;
-				Util.initializeContext(actorMessage, JsonKey.USER);
-				// set request id fto thread loacl...
-				ExecutionContext.setRequestId(actorMessage.getRequestId());
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ADD_SKILL.getValue())) {
-					endorseSkill(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_SKILL.getValue())) {
-					getSkill(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_SKILLS_LIST.getValue())) {
-					getSkillsList();
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION", LoggerEnum.INFO.name());
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, self());
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex, TelemetryUtil.genarateTelemetryInfoForError(JsonKey.USER));
-				sender().tell(ex, self());
-			}
+	@Override
+	public void onReceive(Request request) throws Throwable {
+
+		Util.initializeContext(request, JsonKey.USER);
+		// set request id fto thread loacl...
+		ExecutionContext.setRequestId(request.getRequestId());
+		if (request.getOperation().equalsIgnoreCase(ActorOperations.ADD_SKILL.getValue())) {
+			endorseSkill(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_SKILL.getValue())) {
+			getSkill(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_SKILLS_LIST.getValue())) {
+			getSkillsList();
 		} else {
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

@@ -2,6 +2,7 @@ package org.sunbird.learner.actors;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -9,6 +10,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -27,14 +30,12 @@ import org.sunbird.learner.util.Util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * This actor will handle page management operation .
  *
  * @author Amit Kumar
  */
-public class PageManagementActor extends UntypedAbstractActor {
+public class PageManagementActor extends BaseActor {
 
 	private Util.DbInfo pageDbInfo = Util.dbInfoMap.get(JsonKey.PAGE_MGMT_DB);
 	private Util.DbInfo sectionDbInfo = Util.dbInfoMap.get(JsonKey.SECTION_MGMT_DB);
@@ -42,52 +43,40 @@ public class PageManagementActor extends UntypedAbstractActor {
 	private Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
+	public static void init() {
+		RequestRouter.registerActor(PageManagementActor.class,
+				Arrays.asList(ActorOperations.CREATE_PAGE.getValue(), ActorOperations.UPDATE_PAGE.getValue(),
+						ActorOperations.GET_PAGE_DATA.getValue(), ActorOperations.GET_PAGE_SETTINGS.getValue(),
+						ActorOperations.GET_PAGE_SETTING.getValue(), ActorOperations.CREATE_SECTION.getValue(),
+						ActorOperations.UPDATE_SECTION.getValue(), ActorOperations.GET_SECTION.getValue(),
+						ActorOperations.GET_ALL_SECTION.getValue()));
+	}
+
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("PageManagementActor onReceive called");
-				Request actorMessage = (Request) message;
-				Util.initializeContext(actorMessage, JsonKey.PAGE);
-				// set request id fto thread loacl...
-				ExecutionContext.setRequestId(actorMessage.getRequestId());
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_PAGE.getValue())) {
-					createPage(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_PAGE.getValue())) {
-					updatePage(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_PAGE_SETTING.getValue())) {
-					getPageSetting(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_PAGE_SETTINGS.getValue())) {
-					getPageSettings();
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_PAGE_DATA.getValue())) {
-					getPageData(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_SECTION.getValue())) {
-					createPageSection(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_SECTION.getValue())) {
-					updatePageSection(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_SECTION.getValue())) {
-					getSection(actorMessage);
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_ALL_SECTION.getValue())) {
-					getAllSections();
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION");
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, self());
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, self());
-			}
+	public void onReceive(Request request) throws Throwable {
+		Util.initializeContext(request, JsonKey.PAGE);
+		// set request id fto thread loacl...
+		ExecutionContext.setRequestId(request.getRequestId());
+		if (request.getOperation().equalsIgnoreCase(ActorOperations.CREATE_PAGE.getValue())) {
+			createPage(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_PAGE.getValue())) {
+			updatePage(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_PAGE_SETTING.getValue())) {
+			getPageSetting(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_PAGE_SETTINGS.getValue())) {
+			getPageSettings();
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_PAGE_DATA.getValue())) {
+			getPageData(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.CREATE_SECTION.getValue())) {
+			createPageSection(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_SECTION.getValue())) {
+			updatePageSection(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_SECTION.getValue())) {
+			getSection(request);
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_ALL_SECTION.getValue())) {
+			getAllSections();
 		} else {
-			// Throw exception as message body
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 
 	}

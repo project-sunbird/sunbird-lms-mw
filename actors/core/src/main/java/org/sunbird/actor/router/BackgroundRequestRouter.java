@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseRouter;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -21,15 +22,29 @@ import akka.routing.FromConfig;
 
 public class BackgroundRequestRouter extends BaseRouter {
 
-	protected static ActorContext context = null;
-	protected static Map<String, ActorRef> routingMap = new HashMap<>();
+	private static String mode;
+	private static ActorContext context = null;
+	public static Map<String, ActorRef> routingMap = new HashMap<>();
 
 	public BackgroundRequestRouter() {
 		context = getContext();
+		getMode();
 	}
-	
+
+	public String getRouterMode() {
+		return getMode();
+	}
+
+	public static String getMode() {
+		if (StringUtils.isBlank(mode)) {
+			String key = "background_actor_provider";
+			mode = getPropertyValue(key);
+		}
+		return mode;
+	}
+
 	@Override
-	public void onReceive(Request request) throws Throwable {
+	public void route(Request request) throws Throwable {
 		org.sunbird.common.request.ExecutionContext.setRequestId(request.getRequestId());
 		ActorRef ref = routingMap.get(request.getOperation());
 		if (null != ref) {
@@ -55,9 +70,9 @@ public class BackgroundRequestRouter extends BaseRouter {
 
 	private static boolean contextAvailable(String name) {
 		if (null == context) {
-			System.out.println(RequestRouter.class.getSimpleName()
+			System.out.println(BackgroundRequestRouter.class.getSimpleName()
 					+ " context is not available to initialise actor for [" + name + "]");
-			ProjectLogger.log(RequestRouter.class.getSimpleName()
+			ProjectLogger.log(BackgroundRequestRouter.class.getSimpleName()
 					+ " context is not available to initialise actor for [" + name + "]", LoggerEnum.WARN.name());
 			return false;
 		}

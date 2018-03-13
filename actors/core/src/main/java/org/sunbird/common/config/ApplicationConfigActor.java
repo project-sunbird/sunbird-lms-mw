@@ -2,11 +2,14 @@ package org.sunbird.common.config;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -21,48 +24,26 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.UntypedAbstractActor;
-
-public class ApplicationConfigActor extends UntypedAbstractActor {
+public class ApplicationConfigActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
-	@Override
-	public void onReceive(Object message) throws Throwable {
-		ProjectLogger.log("ApplicationConfigActor  onReceive called");
-		if (message instanceof Request) {
-			try {
-				Request actorMessage = (Request) message;
-				String requestedOperation = actorMessage.getOperation();
-				ProjectLogger.log("Operation name is ==" + requestedOperation);
-				if (requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_SYSTEM_SETTINGS.getValue())) {
-					updateSystemSettings(actorMessage);
-					Response response = new Response();
-					response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-					sender().tell(response, self());
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION");
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					ProjectLogger.log("Unsupported operation in ApplicationConfigActor", exception);
-					sender().tell(exception, self());
-					return;
-				}
+	public static void init() {
+		RequestRouter.registerActor(ApplicationConfigActor.class,
+				Arrays.asList(ActorOperations.UPDATE_SYSTEM_SETTINGS.getValue()));
+	}
 
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, self());
-				return;
-			}
+	@Override
+	public void onReceive(Request request) throws Throwable {
+		String requestedOperation = request.getOperation();
+		ProjectLogger.log("Operation name is ==" + requestedOperation);
+		if (requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_SYSTEM_SETTINGS.getValue())) {
+			updateSystemSettings(request);
+			Response response = new Response();
+			response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+			sender().tell(response, self());
 		} else {
-			ProjectLogger.log("UNSUPPORTED MESSAGE FOR ApplicationConfigActor");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
-			return;
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

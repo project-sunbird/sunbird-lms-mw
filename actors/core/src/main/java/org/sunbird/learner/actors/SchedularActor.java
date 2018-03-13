@@ -1,9 +1,12 @@
 package org.sunbird.learner.actors;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -15,31 +18,24 @@ import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * 
  * @author Amit Kumar
  *
  */
-public class SchedularActor extends UntypedAbstractActor {
+public class SchedularActor extends BaseActor {
+
+	public static void init() {
+		RequestRouter.registerActor(SchedularActor.class,
+				Arrays.asList(ActorOperations.SCHEDULE_BULK_UPLOAD.getValue()));
+	}
 
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("SchedularActor onReceive called");
-				Request actorMessage = (Request) message;
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.SCHEDULE_BULK_UPLOAD.getValue())) {
-					schedule(actorMessage);
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION");
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-			}
+	public void onReceive(Request actorMessage) throws Throwable {
+		if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.SCHEDULE_BULK_UPLOAD.getValue())) {
+			schedule(actorMessage);
 		} else {
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
+			ProjectLogger.log("UNSUPPORTED OPERATION");
 		}
 	}
 

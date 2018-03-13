@@ -71,8 +71,8 @@ public class BadgeIssuerActor extends AbstractBaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     byte[] image = null;
     Map<String , byte[]> fileData = new HashMap<>();
-    if(req.containsKey(BadgingJsonKey.IMAGE) && null != (Object)req.get(BadgingJsonKey.IMAGE)){
-       image = (byte[]) req.get(BadgingJsonKey.IMAGE) ;
+    if(req.containsKey(JsonKey.IMAGE) && null != (Object)req.get(JsonKey.IMAGE)){
+       image = (byte[]) req.get(JsonKey.IMAGE) ;
     }
 
     Map<String, String> requestData = new HashMap<>();
@@ -86,12 +86,11 @@ public class BadgeIssuerActor extends AbstractBaseActor {
 
     String httpResponseString= null;
     if(null != image) {
-      fileData.put(BadgingJsonKey.IMAGE, image);
+      fileData.put(JsonKey.IMAGE, image);
     }
     httpResponseString = makeBadgerPostRequest(requestData , headers , BadgingUtil.getBadgrBaseUrl()+url , fileData);
     Response response = new Response();
-    Map<String , Object> res  = mapper.readValue(httpResponseString, HashMap.class);
-    response.getResult().putAll(res);
+    BadgingUtil.prepareBadgeIssuerResponse(httpResponseString, response.getResult());
     sender().tell(response , ActorRef.noSender());
   }
 
@@ -111,8 +110,8 @@ public class BadgeIssuerActor extends AbstractBaseActor {
           ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
     Response response = new Response();
-    Map<String , Object> res  = mapper.readValue(result, HashMap.class);
-    response.getResult().putAll(res);
+    BadgingUtil.prepareBadgeIssuerResponse(result, response.getResult());
+    sender().tell(response , ActorRef.noSender());
     sender().tell(response , ActorRef.noSender());
   }
 
@@ -127,10 +126,16 @@ public class BadgeIssuerActor extends AbstractBaseActor {
           ResponseCode.internalError.getErrorMessage(),
           ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
+    List<Map<String, Object>> issuers = new ArrayList<>();
     Response response = new Response();
     List<Map<String, Object>> data = mapper.readValue(result, new TypeReference<List<Map<String, Object>>>(){});
+    for (Object badge : data) {
+      Map<String, Object> mappedBadge = new HashMap<>();
+      BadgingUtil.prepareBadgeIssuerResponse((Map<String, Object>) badge, mappedBadge);
+      issuers.add(mappedBadge);
+    }
     Map<String , Object> res = new HashMap<>();
-    res.put(BadgingJsonKey.ISSUERS , data);
+    res.put(BadgingJsonKey.ISSUERS , issuers);
     response.getResult().putAll(res);
     sender().tell(response , ActorRef.noSender());
   }

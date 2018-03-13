@@ -1,28 +1,25 @@
 package org.sunbird.learner.actors;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-
-import akka.actor.ActorRef;
-import akka.actor.UntypedAbstractActor;
 
 /**
  * This actor will handle leaner's state operation like get course , get content
@@ -31,9 +28,14 @@ import akka.actor.UntypedAbstractActor;
  * @author Manzarul
  * @author Arvind
  */
-public class LearnerStateActor extends UntypedAbstractActor {
+public class LearnerStateActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+
+	public static void init() {
+		RequestRouter.registerActor(LearnerStateActor.class,
+				Arrays.asList(ActorOperations.GET_COURSE.getValue(), ActorOperations.GET_CONTENT.getValue()));
+	}
 
 	/**
 	 * Receives the actor message and perform the operation like get course , get
@@ -43,59 +45,38 @@ public class LearnerStateActor extends UntypedAbstractActor {
 	 *            Object
 	 */
 	@Override
-	public void onReceive(Object message) throws Exception {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("LearnerStateActor onReceive called");
-				Request actorMessage = (Request) message;
-				Response response = new Response();
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_COURSE.getValue())) {
-					String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
+	public void onReceive(Request request) throws Exception {
+		Response response = new Response();
+		if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_COURSE.getValue())) {
+			String userId = (String) request.getRequest().get(JsonKey.USER_ID);
 
-					Map<String, Object> filter = new HashMap<>();
-					filter.put(JsonKey.USER_ID, userId);
+			Map<String, Object> filter = new HashMap<>();
+			filter.put(JsonKey.USER_ID, userId);
 
-					SearchDTO searchDto = new SearchDTO();
-					searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
+			SearchDTO searchDto = new SearchDTO();
+			searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
 
-					// SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
-					Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto,
-							ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.usercourses.getTypeName());
+			// SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
+			Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto,
+					ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.usercourses.getTypeName());
 
-					response.put(JsonKey.RESPONSE, result.get(JsonKey.CONTENT));
-					sender().tell(response, self());
+			response.put(JsonKey.RESPONSE, result.get(JsonKey.CONTENT));
+			sender().tell(response, self());
 
-				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_CONTENT.getValue())) {
-					String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
-					Response res = new Response();
-					if (actorMessage.getRequest().get(JsonKey.COURSE) != null) {
-						res = getContentByCourse(userId, actorMessage.getRequest());
-					} else if (actorMessage.getRequest().get(JsonKey.CONTENT_IDS) != null) {
-						res = getContentByContents(userId, actorMessage.getRequest());
-					} else if (actorMessage.getRequest().get(JsonKey.COURSE_IDS) != null) {
-						res = getContentByCourses(userId, actorMessage.getRequest());
-					}
-					removeUnwantedProperties(res);
-					sender().tell(res, self());
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION");
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, ActorRef.noSender());
-				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, ActorRef.noSender());
+		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_CONTENT.getValue())) {
+			String userId = (String) request.getRequest().get(JsonKey.USER_ID);
+			Response res = new Response();
+			if (request.getRequest().get(JsonKey.COURSE) != null) {
+				res = getContentByCourse(userId, request.getRequest());
+			} else if (request.getRequest().get(JsonKey.CONTENT_IDS) != null) {
+				res = getContentByContents(userId, request.getRequest());
+			} else if (request.getRequest().get(JsonKey.COURSE_IDS) != null) {
+				res = getContentByCourses(userId, request.getRequest());
 			}
-
+			removeUnwantedProperties(res);
+			sender().tell(res, self());
 		} else {
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, ActorRef.noSender());
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 
 	}

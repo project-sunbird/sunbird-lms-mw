@@ -19,6 +19,7 @@ import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
+import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
@@ -71,7 +72,7 @@ public class BulkUploadManagementActorTest {
 	@BeforeClass
 	public static void setUp() {
 		CassandraOperation operation = ServiceFactory.getInstance();
-		Application.startLocalActorSystem();
+		SunbirdMWService.init();
 		system = ActorSystem.create("system");
 		Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
 		// userManagementDB = Util.dbInfoMap.get(JsonKey.USER_DB);

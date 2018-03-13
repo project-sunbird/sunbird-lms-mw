@@ -1,10 +1,13 @@
 package org.sunbird.learner.datapersistence;
 
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -25,9 +28,7 @@ import org.sunbird.learner.util.Util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import akka.actor.UntypedAbstractActor;
-
-public class DbOperationActor extends UntypedAbstractActor {
+public class DbOperationActor extends BaseActor {
 
 	private static final String REQUIRED_FIELDS = "requiredFields";
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -52,42 +53,36 @@ public class DbOperationActor extends UntypedAbstractActor {
 		}
 	}
 
+	public static void init() {
+		RequestRouter.registerActor(DbOperationActor.class,
+				Arrays.asList(ActorOperations.CREATE_DATA.getValue(), ActorOperations.UPDATE_DATA.getValue(),
+						ActorOperations.DELETE_DATA.getValue(), ActorOperations.READ_DATA.getValue(),
+						ActorOperations.READ_ALL_DATA.getValue(), ActorOperations.SEARCH_DATA.getValue(),
+						ActorOperations.GET_METRICS.getValue()));
+	}
+
 	@Override
-	public void onReceive(Object message) throws Throwable {
+	public void onReceive(Request actorMessage) throws Throwable {
 		if (null == tableList) {
 			createtableList();
 		}
-		if (message instanceof Request) {
-			ProjectLogger.log("DbOperationActor  onReceive called");
-			Request actorMessage = (Request) message;
-			if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_DATA.getValue())) {
-				create(actorMessage);
-			} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_DATA.getValue())) {
-				update(actorMessage);
-			} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.DELETE_DATA.getValue())) {
-				delete(actorMessage);
-			} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.READ_DATA.getValue())) {
-				read(actorMessage);
-			} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.READ_ALL_DATA.getValue())) {
-				readAllData(actorMessage);
-			} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.SEARCH_DATA.getValue())) {
-				search(actorMessage);
-			} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_METRICS.getValue())) {
-				getMetrics(actorMessage);
-			} else {
-				ProjectLogger.log("UNSUPPORTED OPERATION");
-				ProjectCommonException exception = new ProjectCommonException(
-						ResponseCode.invalidOperationName.getErrorCode(),
-						ResponseCode.invalidOperationName.getErrorMessage(),
-						ResponseCode.CLIENT_ERROR.getResponseCode());
-				sender().tell(exception, self());
-			}
+
+		if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.CREATE_DATA.getValue())) {
+			create(actorMessage);
+		} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_DATA.getValue())) {
+			update(actorMessage);
+		} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.DELETE_DATA.getValue())) {
+			delete(actorMessage);
+		} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.READ_DATA.getValue())) {
+			read(actorMessage);
+		} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.READ_ALL_DATA.getValue())) {
+			readAllData(actorMessage);
+		} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.SEARCH_DATA.getValue())) {
+			search(actorMessage);
+		} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_METRICS.getValue())) {
+			getMetrics(actorMessage);
 		} else {
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, self());
+			onReceiveUnsupportedOperation(actorMessage.getOperation());
 		}
 	}
 

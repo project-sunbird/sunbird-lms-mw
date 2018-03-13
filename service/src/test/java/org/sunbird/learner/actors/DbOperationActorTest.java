@@ -12,6 +12,7 @@ import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
+import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -19,7 +20,6 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.datapersistence.DbOperationActor;
 import org.sunbird.learner.util.Util;
-import org.sunbird.middleware.Application;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -33,7 +33,7 @@ public class DbOperationActorTest {
 
 	@BeforeClass
 	public static void setUp() {
-		Application.startLocalActorSystem();
+		SunbirdMWService.init();
 		system = ActorSystem.create("system");
 		Util.checkCassandraDbConnections(JsonKey.SUNBIRD_PLUGIN);
 	}

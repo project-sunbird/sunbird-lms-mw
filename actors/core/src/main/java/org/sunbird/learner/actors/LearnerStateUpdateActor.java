@@ -7,12 +7,15 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -30,7 +33,6 @@ import org.sunbird.learner.util.Util;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
-import akka.actor.UntypedAbstractActor;
 
 /**
  * This actor to handle learner's state update operation .
@@ -38,12 +40,17 @@ import akka.actor.UntypedAbstractActor;
  * @author Manzarul
  * @author Arvind
  */
-public class LearnerStateUpdateActor extends UntypedAbstractActor {
+public class LearnerStateUpdateActor extends BaseActor {
 
 	private static final String CONTENT_STATE_INFO = "contentStateInfo";
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private ActorRef utilityActorRef = context().actorOf(Props.create(UtilityActor.class), "utilityActor");
+
+	public static void init() {
+		RequestRouter.registerActor(LearnerStateUpdateActor.class,
+				Arrays.asList(ActorOperations.ADD_CONTENT.getValue()));
+	}
 
 	/**
 	 * Receives the actor message and perform the add content operation .
@@ -53,120 +60,98 @@ public class LearnerStateUpdateActor extends UntypedAbstractActor {
 	 */
 	@SuppressWarnings("unchecked")
 	@Override
-	public void onReceive(Object message) throws Throwable {
-		if (message instanceof Request) {
-			try {
-				ProjectLogger.log("LearnerStateUpdateActor onReceive called");
-				Request actorMessage = (Request) message;
-				Util.initializeContext(actorMessage, JsonKey.USER);
-				// set request id fto thread loacl...
-				ExecutionContext.setRequestId(actorMessage.getRequestId());
+	public void onReceive(Request request) throws Throwable {
+		Util.initializeContext(request, JsonKey.USER);
+		// set request id fto thread loacl...
+		ExecutionContext.setRequestId(request.getRequestId());
 
-				Response response = new Response();
-				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ADD_CONTENT.getValue())) {
-					Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
-					Util.DbInfo batchdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
-					// objects of telemetry event...
-					Map<String, Object> targetObject = null;
-					List<Map<String, Object>> correlatedObject = null;
+		Response response = new Response();
+		if (request.getOperation().equalsIgnoreCase(ActorOperations.ADD_CONTENT.getValue())) {
+			Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
+			Util.DbInfo batchdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
+			// objects of telemetry event...
+			Map<String, Object> targetObject = null;
+			List<Map<String, Object>> correlatedObject = null;
 
-					String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
-					List<Map<String, Object>> requestedcontentList = (List<Map<String, Object>>) actorMessage
-							.getRequest().get(JsonKey.CONTENTS);
-					CopyOnWriteArrayList<Map<String, Object>> contentList = new CopyOnWriteArrayList<>(
-							requestedcontentList);
-					actorMessage.getRequest().put(JsonKey.CONTENTS, contentList);
-					// map to hold the status of requested state of contents
-					Map<String, Integer> contentStatusHolder = new HashMap<>();
+			String userId = (String) request.getRequest().get(JsonKey.USER_ID);
+			List<Map<String, Object>> requestedcontentList = (List<Map<String, Object>>) request.getRequest()
+					.get(JsonKey.CONTENTS);
+			CopyOnWriteArrayList<Map<String, Object>> contentList = new CopyOnWriteArrayList<>(requestedcontentList);
+			request.getRequest().put(JsonKey.CONTENTS, contentList);
+			// map to hold the status of requested state of contents
+			Map<String, Integer> contentStatusHolder = new HashMap<>();
 
-					if (!(contentList.isEmpty())) {
-						for (Map<String, Object> map : contentList) {
-							// replace the course id (equivalent to Ekstep content id) with One way hashing
-							// of
-							// userId#courseId , bcoz in cassndra we are saving course id as userId#courseId
+			if (!(contentList.isEmpty())) {
+				for (Map<String, Object> map : contentList) {
+					// replace the course id (equivalent to Ekstep content id) with One way hashing
+					// of
+					// userId#courseId , bcoz in cassndra we are saving course id as userId#courseId
 
-							String batchId = (String) map.get(JsonKey.BATCH_ID);
-							boolean flag = true;
+					String batchId = (String) map.get(JsonKey.BATCH_ID);
+					boolean flag = true;
 
-							// code to validate the whether request for valid batch range(start and end
-							// date)
-							if (!(ProjectUtil.isStringNullOREmpty(batchId))) {
-								Response batchResponse = cassandraOperation.getRecordById(batchdbInfo.getKeySpace(),
-										batchdbInfo.getTableName(), batchId);
-								List<Map<String, Object>> batches = (List<Map<String, Object>>) batchResponse
-										.getResult().get(JsonKey.RESPONSE);
-								if (batches.isEmpty()) {
-									flag = false;
-								} else {
-									Map<String, Object> batchInfo = batches.get(0);
-									flag = validateBatchRange(batchInfo);
-								}
-
-								if (!flag) {
-									response.getResult().put((String) map.get(JsonKey.CONTENT_ID),
-											"BATCH NOT STARTED OR BATCH CLOSED");
-									contentList.remove(map);
-									continue;
-								}
-
-							}
-							map.putIfAbsent(JsonKey.COURSE_ID, JsonKey.NOT_AVAILABLE);
-							preOperation(map, userId, contentStatusHolder);
-							map.put(JsonKey.USER_ID, userId);
-							map.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
-
-							try {
-								cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), map);
-								response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.SUCCESS);
-								// create telemetry for user for each content ...
-								targetObject = TelemetryUtil.generateTargetObject((String) map.get(JsonKey.BATCH_ID),
-										JsonKey.BATCH, JsonKey.CREATE, null);
-								// since this event will generate multiple times so nedd to recreate correlated
-								// objects every time ...
-								correlatedObject = new ArrayList<>();
-								TelemetryUtil.generateCorrelatedObject((String) map.get(JsonKey.CONTENT_ID),
-										JsonKey.CONTENT, null, correlatedObject);
-								TelemetryUtil.generateCorrelatedObject((String) map.get(JsonKey.COURSE_ID),
-										JsonKey.COURSE, null, correlatedObject);
-								TelemetryUtil.generateCorrelatedObject((String) map.get(JsonKey.BATCH_ID),
-										JsonKey.BATCH, null, correlatedObject);
-								TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
-										correlatedObject);
-
-								Map<String, String> rollUp = new HashMap<>();
-								rollUp.put("l1", (String) map.get(JsonKey.COURSE_ID));
-								rollUp.put("l2", (String) map.get(JsonKey.CONTENT_ID));
-								TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
-
-							} catch (Exception ex) {
-								response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.FAILED);
-								contentList.remove(map);
-							}
+					// code to validate the whether request for valid batch range(start and end
+					// date)
+					if (!(ProjectUtil.isStringNullOREmpty(batchId))) {
+						Response batchResponse = cassandraOperation.getRecordById(batchdbInfo.getKeySpace(),
+								batchdbInfo.getTableName(), batchId);
+						List<Map<String, Object>> batches = (List<Map<String, Object>>) batchResponse.getResult()
+								.get(JsonKey.RESPONSE);
+						if (batches.isEmpty()) {
+							flag = false;
+						} else {
+							Map<String, Object> batchInfo = batches.get(0);
+							flag = validateBatchRange(batchInfo);
 						}
+
+						if (!flag) {
+							response.getResult().put((String) map.get(JsonKey.CONTENT_ID),
+									"BATCH NOT STARTED OR BATCH CLOSED");
+							contentList.remove(map);
+							continue;
+						}
+
 					}
-					sender().tell(response, self());
-					// call to update the corresponding course
-					actorMessage.getRequest().put(CONTENT_STATE_INFO, contentStatusHolder);
-					// ActorUtil.tell(actorMessage);
-					utilityActorRef.tell(actorMessage, ActorRef.noSender());
-				} else {
-					ProjectLogger.log("UNSUPPORTED OPERATION");
-					ProjectCommonException exception = new ProjectCommonException(
-							ResponseCode.invalidOperationName.getErrorCode(),
-							ResponseCode.invalidOperationName.getErrorMessage(),
-							ResponseCode.CLIENT_ERROR.getResponseCode());
-					sender().tell(exception, ActorRef.noSender());
+					map.putIfAbsent(JsonKey.COURSE_ID, JsonKey.NOT_AVAILABLE);
+					preOperation(map, userId, contentStatusHolder);
+					map.put(JsonKey.USER_ID, userId);
+					map.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
+
+					try {
+						cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), map);
+						response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.SUCCESS);
+						// create telemetry for user for each content ...
+						targetObject = TelemetryUtil.generateTargetObject((String) map.get(JsonKey.BATCH_ID),
+								JsonKey.BATCH, JsonKey.CREATE, null);
+						// since this event will generate multiple times so nedd to recreate correlated
+						// objects every time ...
+						correlatedObject = new ArrayList<>();
+						TelemetryUtil.generateCorrelatedObject((String) map.get(JsonKey.CONTENT_ID), JsonKey.CONTENT,
+								null, correlatedObject);
+						TelemetryUtil.generateCorrelatedObject((String) map.get(JsonKey.COURSE_ID), JsonKey.COURSE,
+								null, correlatedObject);
+						TelemetryUtil.generateCorrelatedObject((String) map.get(JsonKey.BATCH_ID), JsonKey.BATCH, null,
+								correlatedObject);
+						TelemetryUtil.telemetryProcessingCall(request.getRequest(), targetObject, correlatedObject);
+
+						Map<String, String> rollUp = new HashMap<>();
+						rollUp.put("l1", (String) map.get(JsonKey.COURSE_ID));
+						rollUp.put("l2", (String) map.get(JsonKey.CONTENT_ID));
+						TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
+
+					} catch (Exception ex) {
+						response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.FAILED);
+						contentList.remove(map);
+					}
 				}
-			} catch (Exception ex) {
-				ProjectLogger.log(ex.getMessage(), ex);
-				sender().tell(ex, ActorRef.noSender());
 			}
+			sender().tell(response, self());
+			// call to update the corresponding course
+			request.getRequest().put(CONTENT_STATE_INFO, contentStatusHolder);
+			// ActorUtil.tell(actorMessage);
+			utilityActorRef.tell(request, ActorRef.noSender());
 		} else {
-			ProjectLogger.log("UNSUPPORTED MESSAGE");
-			ProjectCommonException exception = new ProjectCommonException(
-					ResponseCode.invalidRequestData.getErrorCode(), ResponseCode.invalidRequestData.getErrorMessage(),
-					ResponseCode.CLIENT_ERROR.getResponseCode());
-			sender().tell(exception, ActorRef.noSender());
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

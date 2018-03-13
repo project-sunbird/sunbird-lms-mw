@@ -1,6 +1,6 @@
 package org.sunbird.badge;
 
-import org.sunbird.badge.actors.BadgeAssertion;
+import org.sunbird.badge.actors.BadgeClassActor;
 import org.sunbird.badge.actors.BadgeNotifier;
 
 /**
@@ -13,7 +13,7 @@ public class BadgeActorRegistry {
 
 	public BadgeActorRegistry() {
 		BadgeNotifier.init();
-		BadgeAssertion.init();
+		BadgeClassActor.init();
 	}
 
 }

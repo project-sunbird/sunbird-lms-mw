@@ -8,8 +8,10 @@ package org.sunbird.badge;
 
 public enum BadgeOperations {
 
-	assignBadgeMessage, revokeBadgeMessage, createBadgeClass, getBadgeClass, listBadgeClass, 
-	deleteBadgeClass, createBadgeIssuer, createBadgeAssertion, getBadgeAssertion, getBadgeAssertionList,
-	revokeBadge,addBadgeDataToUser;
+    assignBadgeMessage, revokeBadgeMessage,
+
+    createBadgeClass, getBadgeClass, listBadgeClass, deleteBadgeClass,
+
+    createBadgeIssuer, createBadgeAssertion, getBadgeAssertion, getBadgeAssertionList, revokeBadge, addBadgeDataToUser
 }
 

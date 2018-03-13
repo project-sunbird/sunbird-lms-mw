@@ -49,7 +49,7 @@ public final class Util {
 	public static final Map<String, DbInfo> dbInfoMap = new HashMap<>();
 	public static final int RECOMENDED_LIST_SIZE = 10;
 	private static PropertiesCache propertiesCache = PropertiesCache.getInstance();
-	private static final String KEY_SPACE_NAME = "sunbird";
+	public static final String KEY_SPACE_NAME = "sunbird";
 	private static Properties prop = new Properties();
 	private static Map<String, String> headers = new HashMap<>();
 	private static Map<Integer, List<Integer>> orgStatusTransition = new HashMap<>();

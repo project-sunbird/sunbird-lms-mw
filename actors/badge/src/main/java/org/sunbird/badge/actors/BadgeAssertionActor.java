@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.sunbird.learner.actors.badges;
+package org.sunbird.badge.actors;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -17,8 +17,8 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.learner.actors.badges.service.BadgingService;
-import org.sunbird.learner.actors.badges.service.impl.BadgingFactory;
+import org.sunbird.badge.service.BadgingService;
+import org.sunbird.badge.service.impl.BadgingFactory;
 import org.sunbird.learner.util.Util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

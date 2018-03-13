@@ -1,4 +1,4 @@
-package org.sunbird.learner.actors.badges.service.impl;
+package org.sunbird.badge.service.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -10,8 +10,8 @@ import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
-import org.sunbird.learner.actors.badges.service.BadgingService;
-import org.sunbird.learner.actors.badging.BadgingUtil;
+import org.sunbird.badge.service.BadgingService;
+import org.sunbird.badge.util.BadgingUtil;
 
 /**
  * 

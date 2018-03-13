@@ -1,9 +1,11 @@
 package org.sunbird.learner.actors.badges.service.impl;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
@@ -78,13 +80,16 @@ public class BadgrServiceImpl implements BadgingService {
 
 	@Override
 	public Response getAssertionDetails(Request request) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		String url = BadgingUtil.createBadgerUrl(request.getRequest(), BadgingUtil.SUNBIRD_BADGER_GETASSERTION_URL, 3);
+		String httpResponse = HttpUtil.sendGetRequest(url, BadgingUtil.getBadgrHeaders());
+		Response response = new Response();
+		response.put(JsonKey.RESPONSE, httpResponse);
+		return response;
 	}
 
 	@Override
 	public Response getAssertionList(Request request) throws IOException {
-		// TODO Auto-generated method stub
+		 List<Map<String,Object>> requestData =(List) request.getRequest().get(BadgingJsonKey.ASSERTIONS);
 		return null;
 	}
 

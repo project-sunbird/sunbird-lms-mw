@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import org.sunbird.badge.util.BadgingUtil;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.HttpUtilResponse;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingActorOperations;
 import org.sunbird.common.models.util.BadgingJsonKey;
@@ -159,9 +160,8 @@ public class BadgeIssuerActor extends AbstractBaseActor {
             Map<String, String> headers, String url, Map<String, byte[]> fileData)
             throws IOException {
 
-        Map<String, Object> httpResponse = HttpUtil.postFormData(requestData, fileData, headers, url);
-        String httpResponseString = (String) httpResponse.get(JsonKey.BODY);
-        return httpResponseString;
+        HttpUtilResponse httpResponse = HttpUtil.postFormData(requestData, fileData, headers, url);
+        return httpResponse.getBody();
     }
 
 }

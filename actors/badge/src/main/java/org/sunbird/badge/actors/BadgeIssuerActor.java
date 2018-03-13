@@ -159,9 +159,8 @@ public class BadgeIssuerActor extends AbstractBaseActor {
             Map<String, String> headers, String url, Map<String, byte[]> fileData)
             throws IOException {
 
-        String httpResponseString;
-        httpResponseString = (String) HttpUtil.postFormData(requestData, fileData, headers, url)
-                .get(JsonKey.BODY);
+        Map<String, Object> httpResponse = HttpUtil.postFormData(requestData, fileData, headers, url);
+        String httpResponseString = (String) httpResponse.get(JsonKey.BODY);
         return httpResponseString;
     }
 

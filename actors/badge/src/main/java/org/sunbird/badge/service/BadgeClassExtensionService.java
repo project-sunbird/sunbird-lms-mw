@@ -6,6 +6,10 @@ import java.util.List;
 
 public interface BadgeClassExtensionService {
     void save(BadgeClassExtension badgeClassExtension);
-    List<BadgeClassExtension> get(String rootOrgId, String type, String subtype, List<String> roles);
+
+    List<BadgeClassExtension> get(List<String> issuerList, String rootOrgId, String type, String subtype, List<String> roles);
+
     BadgeClassExtension get(String badgeId);
+
+    void delete(String badgeId);
 }

@@ -1,6 +1,5 @@
 package org.sunbird.actor.core;
 
-import org.sunbird.actor.router.BackgroundRequestRouter;
 import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;

@@ -80,9 +80,18 @@ public class BadgeAssertionActor extends BaseActor {
 			if (statusCode >= 200 && statusCode < 300) {
 				Map<String, Object> res = mapper.readValue(httpUtilResponse.getBody(),
 						HashMap.class);
+				//calling to create response as per sunbird 
+				 res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String,Object>());
 				result = new Response();
 				result.getResult().putAll(res);
 				sender().tell(result, self());
+				Map<String,Object> map = BadgingUtil.createBadgeNotifierMap(res);
+				Request  request = new Request();
+				map.put(JsonKey.OBJECT_TYPE, actorMessage.getRequest().get(JsonKey.OBJECT_TYPE));
+				map.put(JsonKey.ID, actorMessage.getRequest().get(BadgingJsonKey.RECIPIENT_ID));
+				request.getRequest().putAll(map);
+				request.setOperation(BadgeOperations.assignBadgeMessage.name());
+				tellToAnother(request);
 			} else {
 				sender().tell(BadgingUtil.createExceptionForBadger(statusCode), self());
 			}
@@ -107,6 +116,8 @@ public class BadgeAssertionActor extends BaseActor {
 			int statusCode = httpUtilResponse.getStatusCode();
 			if (statusCode >= 200 && statusCode < 300) {
 				Map<String, Object> res = mapper.readValue(httpUtilResponse.getBody(), HashMap.class);
+				//calling to create response as per sunbird 
+				res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String,Object>());
 				result = new Response();
 				result.getResult().putAll(res);
 				sender().tell(result, self());	
@@ -136,6 +147,8 @@ public class BadgeAssertionActor extends BaseActor {
 				for (HttpUtilResponse data : list) {
 					if (data.getStatusCode() >= 200 && data.getStatusCode() < 300) {
 						Map<String, Object> res = mapper.readValue(data.getBody(), HashMap.class);
+						//calling to create response as per sunbird 
+						res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String,Object>());
 						responseMap.add(res);
 					}
 				}
@@ -168,6 +181,13 @@ public class BadgeAssertionActor extends BaseActor {
 				result = new Response();
 				result.getResult().put(JsonKey.STATUS, JsonKey.SUCCESS);
 				sender().tell(result, self());
+				 Map<String,Object> map = BadgingUtil.createRevokeBadgeNotifierMap(request.getRequest());
+				 Request notificationReq = new Request();
+				 map.put(JsonKey.OBJECT_TYPE, request.getRequest().get(JsonKey.OBJECT_TYPE));
+				 map.put(JsonKey.ID, request.getRequest().get(BadgingJsonKey.RECIPIENT_ID));
+				 notificationReq.getRequest().putAll(map);
+				 notificationReq.setOperation(BadgeOperations.revokeBadgeMessage.name());
+				 tellToAnother(notificationReq);
 			} else {
 				sender().tell(BadgingUtil.createExceptionForBadger(statusCode), self());
 			}

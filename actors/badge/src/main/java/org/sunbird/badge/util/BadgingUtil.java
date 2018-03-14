@@ -7,7 +7,10 @@ import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 import org.sunbird.badge.model.BadgeClassExtension;
+import org.sunbird.badge.service.BadgingService;
+import org.sunbird.badge.service.impl.BadgingFactory;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -15,6 +18,7 @@ import org.sunbird.common.models.util.MapperUtil;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,7 +34,7 @@ public class BadgingUtil {
     public static final String SUNBIRD_BADGER_REVOKE_URL="/v1/issuer/issuers/{0}/badges/{1}/assertion/{2}";
 
     private static PropertiesCache propertiesCache = PropertiesCache.getInstance();
-
+    private static BadgingService service = BadgingFactory.getInstance();
 
     public static String getBadgrBaseUrl() {
         String badgeraseUrl= SUNBIRD_BADGR_SERVER_URL_DEFAULT;
@@ -204,4 +208,84 @@ public class BadgingUtil {
 
 	}
 	
+	/**
+	 * This method will get the response from badging server and 
+	 * create proper map (meta data) to store either with user or content.
+	 * @param reqMap  Map<String,Object>
+	 * @return Map<String,Object>
+	 */
+	public static Map<String, Object> createBadgeNotifierMap(Map<String, Object> reqMap) {
+		Map<String, Object> outerMap = new HashMap<>();
+		Map<String, Object> innerMap = new HashMap<>();
+		innerMap.put(BadgingJsonKey.ASSERTION_ID, reqMap.get(BadgingJsonKey.ASSERTION_ID));
+		innerMap.put(BadgingJsonKey.BADGE_CLASS_ID, reqMap.get(BadgingJsonKey.BADGE_CLASS_ID));
+		innerMap.put(BadgingJsonKey.ISSUER_ID, reqMap.get(BadgingJsonKey.ISSUER_ID));
+		innerMap.put(BadgingJsonKey.BADGE_CLASS_IMAGE, reqMap.get(BadgingJsonKey.BADGE_ID_URL));
+		innerMap.put(JsonKey.STATUS, BadgeStatus.active.name());
+		innerMap.put(BadgingJsonKey.CREATED_TS, System.currentTimeMillis());
+		// now make a badgr call to collect badgeClassName
+		Request request = new Request();
+		request.getRequest().put(BadgingJsonKey.ISSUER_ID, reqMap.get(BadgingJsonKey.ISSUER_ID));
+		request.getRequest().put(BadgingJsonKey.BADGE_CLASS_ID, reqMap.get(BadgingJsonKey.BADGE_CLASS_ID));
+		try {
+			Response response = service.getBadgeClassDetails(request);
+			request.getRequest().put(BadgingJsonKey.BADGE_CLASS_NANE, response.getResult().get(JsonKey.NAME));
+		} catch (IOException | ProjectCommonException e) {
+			ProjectLogger.log(e.getMessage(), e);
+		}
+		outerMap.put(BadgingJsonKey.BADGE_ASSERTION, innerMap);
+		return outerMap;
+	}
+	
+	/**
+	 * This method will take response data from badger server as input map and then prepare a
+	 * new map as outPut map by changing the key and some values.
+	 * @param inputMap Map<String,Object>
+	 * @param outPutMap Map<String,Object>
+	 * @return Map<String,Object>
+	 */
+	public static Map<String, Object> prepareAssertionResponse(Map<String, Object> inputMap,
+			Map<String, Object> outPutMap) {
+		MapperUtil.put(inputMap, BadgingJsonKey.CREATED_AT, outPutMap, JsonKey.CREATED_DATE);
+		MapperUtil.put(inputMap, BadgingJsonKey.JSON_ISSUED_ON, outPutMap, BadgingJsonKey.ASSERTION_DATE);
+		MapperUtil.put(inputMap, BadgingJsonKey.SLUG, outPutMap, BadgingJsonKey.ASSERTION_ID);
+		MapperUtil.put(inputMap, BadgingJsonKey.JSON_ID, outPutMap, BadgingJsonKey.ASSERTION_ID_URL);
+		MapperUtil.put(inputMap, BadgingJsonKey.JSON_IMAGE, outPutMap, BadgingJsonKey.ASSERTION_IMAGE_URL);
+		MapperUtil.put(inputMap, BadgingJsonKey.BADGE_CLASS, outPutMap, BadgingJsonKey.BADGE_ID_URL);
+		if (outPutMap.containsKey(BadgingJsonKey.BADGE_ID_URL)) {
+			outPutMap.put(BadgingJsonKey.BADGE_ID, getLastSegment((String) outPutMap.get(BadgingJsonKey.BADGE_ID_URL)));
+		}
+		MapperUtil.put(inputMap, BadgingJsonKey.ISSUER, outPutMap, BadgingJsonKey.ISSUER_ID_URL);
+		if (outPutMap.containsKey(BadgingJsonKey.ISSUER_ID_URL)) {
+			outPutMap.put(BadgingJsonKey.ISSUER_ID,
+					getLastSegment((String) outPutMap.get(BadgingJsonKey.ISSUER_ID_URL)));
+		}
+		MapperUtil.put(inputMap, BadgingJsonKey.JSON_RECIPIENT, outPutMap, BadgingJsonKey.RECIPIENT);
+		MapperUtil.put(inputMap, BadgingJsonKey.RECIPIENT_IDENTIFIER, outPutMap, BadgingJsonKey.RECIPIENT_EMAIL);
+		MapperUtil.put(inputMap, BadgingJsonKey.JSON_VERIFY, outPutMap, BadgingJsonKey.VERIFY);
+		MapperUtil.put(inputMap, BadgingJsonKey.REVOKED, outPutMap, BadgingJsonKey.REVOKED);
+		MapperUtil.put(inputMap, BadgingJsonKey.REVOCATION_REASON_BADGE, outPutMap, BadgingJsonKey.REVOCATION_REASON);
+		return outPutMap;
+	}
+    
+	
+	/**
+	 * This method will get the response from badging server and 
+	 * create proper map (meta data) to remove badge assertion either from user or content.
+	 * @param reqMap  Map<String,Object>
+	 * @return Map<String,Object>
+	 */
+	public static Map<String, Object> createRevokeBadgeNotifierMap(Map<String, Object> reqMap) {
+		Map<String, Object> outerMap = new HashMap<>();
+		Map<String, Object> innerMap = new HashMap<>();
+		innerMap.put(BadgingJsonKey.ASSERTION_ID, reqMap.get(BadgingJsonKey.ASSERTION_ID));
+		innerMap.put(BadgingJsonKey.BADGE_CLASS_ID, reqMap.get(BadgingJsonKey.BADGE_CLASS_ID));
+		innerMap.put(BadgingJsonKey.ISSUER_ID, reqMap.get(BadgingJsonKey.ISSUER_ID));
+		outerMap.put(BadgingJsonKey.BADGE_ASSERTION, innerMap);
+		return outerMap;
+	}
+	
+	public enum BadgeStatus {
+		active,revoked;
+	}
 }

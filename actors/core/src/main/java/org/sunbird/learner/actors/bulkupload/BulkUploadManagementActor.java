@@ -31,7 +31,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
@@ -408,7 +407,7 @@ public class BulkUploadManagementActor extends BaseActor {
 			Request request = new Request();
 			request.put(JsonKey.PROCESS_ID, processId);
 			request.setOperation(ActorOperations.PROCESS_BULK_UPLOAD.getValue());
-			ActorUtil.tell(request);
+			tellToAnother(request);
 		}
 	}
 

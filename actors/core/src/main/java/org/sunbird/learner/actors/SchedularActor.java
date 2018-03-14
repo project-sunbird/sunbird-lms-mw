@@ -14,7 +14,6 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 
@@ -73,7 +72,7 @@ public class SchedularActor extends BaseActor {
 				ProjectLogger.log("calling bulkUploadBackGroundJobActor for processId from schedular actor "
 						+ map.get(JsonKey.ID));
 				req.setOperation(ActorOperations.PROCESS_BULK_UPLOAD.getValue());
-				ActorUtil.tell(req);
+				tellToAnother(req);
 			}
 		}
 	}

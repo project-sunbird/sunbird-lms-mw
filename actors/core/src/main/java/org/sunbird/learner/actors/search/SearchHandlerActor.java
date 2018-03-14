@@ -19,7 +19,6 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.dto.SearchDTO;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
@@ -109,7 +108,7 @@ public class SearchHandlerActor extends BaseActor {
 		Request req = new Request();
 		req.setRequest(telemetryRequestForSearch(telemetryContext, params));
 		req.setOperation(BackgroundOperations.telemetryProcessing.name());
-		ActorUtil.tell(req);
+		tellToAnother(req);
 		// lmaxWriter.submitMessage(req);
 
 	}

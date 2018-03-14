@@ -23,7 +23,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
@@ -118,7 +117,7 @@ public class NotesManagementActor extends BaseActor {
 			request.setOperation(ActorOperations.INSERT_USER_NOTES_ES.getValue());
 			request.getRequest().put(JsonKey.NOTE, req);
 			ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
-			ActorUtil.tell(request);
+			tellToAnother(request);
 		} catch (Exception e) {
 			ProjectLogger.log("Error occured", e);
 			sender().tell(e, self());
@@ -186,7 +185,7 @@ public class NotesManagementActor extends BaseActor {
 			Request request = new Request();
 			request.getRequest().put(JsonKey.NOTE, req);
 			request.setOperation(ActorOperations.UPDATE_USER_NOTES_ES.getValue());
-			ActorUtil.tell(request);
+			tellToAnother(request);
 
 		} catch (Exception e) {
 			ProjectLogger.log("Error occured", e);
@@ -335,7 +334,7 @@ public class NotesManagementActor extends BaseActor {
 			Request request = new Request();
 			request.getRequest().put(JsonKey.NOTE, req);
 			request.setOperation(ActorOperations.UPDATE_USER_NOTES_ES.getValue());
-			ActorUtil.tell(request);
+			tellToAnother(request);
 		} catch (Exception e) {
 			ProjectLogger.log("Error occured", e);
 			sender().tell(e, self());

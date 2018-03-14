@@ -27,7 +27,6 @@ import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.metrics.actors.OrganisationMetricsUtil.ContentStatus;
 
@@ -109,7 +108,7 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
 			innerMap.put(JsonKey.FILE_NAME, fileName);
 			innerMap.put(JsonKey.DATA, csvRecords);
 			backGroundRequest.setRequest(innerMap);
-			ActorUtil.tell(backGroundRequest);
+			tellToAnother(backGroundRequest);
 		} catch (Exception e) {
 			ProjectLogger.log("Some error occurs", e);
 			throw new ProjectCommonException(ResponseCode.internalError.getErrorCode(),
@@ -166,7 +165,7 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
 			innerMap.put(JsonKey.FILE_NAME, fileName);
 			innerMap.put(JsonKey.DATA, csvRecords);
 			backGroundRequest.setRequest(innerMap);
-			ActorUtil.tell(backGroundRequest);
+			tellToAnother(backGroundRequest);
 		} catch (Exception e) {
 			ProjectLogger.log("Some error occurs", e);
 			throw new ProjectCommonException(ResponseCode.internalError.getErrorCode(),

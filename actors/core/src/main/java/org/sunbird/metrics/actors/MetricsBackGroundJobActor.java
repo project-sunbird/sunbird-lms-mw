@@ -29,7 +29,6 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -74,15 +73,15 @@ public class MetricsBackGroundJobActor extends BaseActor {
 		if (JsonKey.OrgCreation.equalsIgnoreCase(operation)) {
 			metricsRequest.setOperation(ActorOperations.ORG_CREATION_METRICS_DATA.getValue());
 			metricsRequest.setRequest(request);
-			ActorUtil.tell(metricsRequest);
+			tellToAnother(metricsRequest);
 		} else if (JsonKey.OrgConsumption.equalsIgnoreCase(operation)) {
 			metricsRequest.setOperation(ActorOperations.ORG_CONSUMPTION_METRICS_DATA.getValue());
 			metricsRequest.setRequest(request);
-			ActorUtil.tell(metricsRequest);
+			tellToAnother(metricsRequest);
 		} else if (JsonKey.CourseProgress.equalsIgnoreCase(operation)) {
 			metricsRequest.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_DATA.getValue());
 			metricsRequest.setRequest(request);
-			ActorUtil.tell(metricsRequest);
+			tellToAnother(metricsRequest);
 		}
 	}
 

@@ -40,10 +40,12 @@ public class ContentService {
 		List<Map<String, Object>> badge = (List<Map<String, Object>>) request.getRequest().get("badge");
 
 		if (StringUtils.isBlank(id)) {
-			throw new ProjectCommonException("INVALID_ASSIGN_BADGE_REQUEST", "Please provide content id.", ResponseCode.CLIENT_ERROR.getResponseCode());
+			throw new ProjectCommonException("INVALID_ASSIGN_BADGE_REQUEST", "Please provide content id.",
+					ResponseCode.CLIENT_ERROR.getResponseCode());
 		}
 		if (null == badge || badge.isEmpty()) {
-			throw new ProjectCommonException("INVALID_ASSIGN_BADGE_REQUEST", "Please provide badge details.", ResponseCode.CLIENT_ERROR.getResponseCode());
+			throw new ProjectCommonException("INVALID_ASSIGN_BADGE_REQUEST", "Please provide badge details.",
+					ResponseCode.CLIENT_ERROR.getResponseCode());
 		}
 
 		String url = ekstepInfraUrl + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_UPDATE_URL) + id;
@@ -51,6 +53,13 @@ public class ContentService {
 		String reqBody = "{\"request\": {\"content\": {\"" + BADGE_LIST_KEY + "\": " + badgeStr + "}}}";
 		String httpResponse = HttpUtil.sendPatchRequest(url, reqBody, headers);
 		System.out.println("Response: " + httpResponse);
+		Response response = new Response();
+		response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+		return response;
+	}
+
+	public static Response revokeBadge(Request request) throws Exception {
+		// TODO Auto-generated method stub
 		Response response = new Response();
 		response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
 		return response;

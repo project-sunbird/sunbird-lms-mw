@@ -27,7 +27,6 @@ import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -82,7 +81,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 		innerMap.put(JsonKey.REQUEST, JsonKey.OrgConsumption);
 
 		backGroundRequest.setRequest(innerMap);
-		ActorUtil.tell(backGroundRequest);
+		tellToAnother(backGroundRequest);
 	}
 
 	private String createReportTrackingEntry(Request actorMessage) {
@@ -142,7 +141,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 		innerMap.put(JsonKey.REQUEST_ID, requestId);
 		innerMap.put(JsonKey.REQUEST, JsonKey.OrgCreation);
 		backGroundRequest.setRequest(innerMap);
-		ActorUtil.tell(backGroundRequest);
+		tellToAnother(backGroundRequest);
 	}
 
 	protected Map<String, Object> getViewData(String orgId, Object orgName) {

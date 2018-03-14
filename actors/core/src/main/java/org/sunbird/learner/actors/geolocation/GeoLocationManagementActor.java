@@ -23,7 +23,6 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
@@ -100,7 +99,7 @@ public class GeoLocationManagementActor extends BaseActor {
 		// Update user count in background
 		actorMessage.setOperation(BackgroundOperations.updateUserCountToLocationID.name());
 		actorMessage.getRequest().put(JsonKey.OPERATION, "GeoLocationManagementActor");
-		ActorUtil.tell(actorMessage);
+		tellToAnother(actorMessage);
 	}
 
 	private void sendNotification(Request actorMessage) {

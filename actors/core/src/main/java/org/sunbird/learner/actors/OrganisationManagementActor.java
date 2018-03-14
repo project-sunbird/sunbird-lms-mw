@@ -33,7 +33,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
@@ -417,7 +416,7 @@ public class OrganisationManagementActor extends BaseActor {
 			orgReq.getRequest().put(JsonKey.ORGANISATION, req);
 			orgReq.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
 			ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
-			ActorUtil.tell(orgReq);
+			tellToAnother(orgReq);
 		} catch (ProjectCommonException e) {
 			ProjectLogger.log("Some error occurs" + e.getMessage());
 			sender().tell(e, self());
@@ -548,7 +547,7 @@ public class OrganisationManagementActor extends BaseActor {
 			Request request = new Request();
 			request.getRequest().put(JsonKey.ORGANISATION, updateOrgDBO);
 			request.setOperation(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-			ActorUtil.tell(request);
+			tellToAnother(request);
 			return;
 		} catch (ProjectCommonException e) {
 			sender().tell(e, self());
@@ -624,7 +623,7 @@ public class OrganisationManagementActor extends BaseActor {
 			Request request = new Request();
 			request.getRequest().put(JsonKey.ORGANISATION, updateOrgDBO);
 			request.setOperation(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-			ActorUtil.tell(request);
+			tellToAnother(request);
 
 			return;
 		} catch (ProjectCommonException e) {
@@ -881,7 +880,7 @@ public class OrganisationManagementActor extends BaseActor {
 			Request request = new Request();
 			request.getRequest().put(JsonKey.ORGANISATION, updateOrgDBO);
 			request.setOperation(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-			ActorUtil.tell(request);
+			tellToAnother(request);
 		} catch (ProjectCommonException e) {
 			sender().tell(e, self());
 			return;
@@ -1044,7 +1043,7 @@ public class OrganisationManagementActor extends BaseActor {
 			request.getRequest().put(JsonKey.USER, usrOrgData);
 			ProjectLogger.log("making a call to save user data to ES");
 			try {
-				ActorUtil.tell(request);
+				tellToAnother(request);
 			} catch (Exception ex) {
 				ProjectLogger.log("Exception Occured during saving user to Es while addMemberOrganisation : ", ex);
 			}
@@ -1149,7 +1148,7 @@ public class OrganisationManagementActor extends BaseActor {
 				request.getRequest().put(JsonKey.USER, dataMap);
 				ProjectLogger.log("making a call to save user data to ES");
 				try {
-					ActorUtil.tell(request);
+					tellToAnother(request);
 				} catch (Exception ex) {
 					ProjectLogger.log(
 							"Exception Occured during saving user to Es while removing memeber from Organisation : ",

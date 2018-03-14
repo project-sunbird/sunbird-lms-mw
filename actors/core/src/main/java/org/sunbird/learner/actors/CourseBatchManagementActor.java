@@ -31,7 +31,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
@@ -202,7 +201,7 @@ public class CourseBatchManagementActor extends BaseActor {
 		request.getRequest().put(JsonKey.BATCH, courseBatchObject);
 		ProjectLogger.log("making a call to save Course Batch data to ES");
 		try {
-			ActorUtil.tell(request);
+			tellToAnother(request);
 		} catch (Exception ex) {
 			ProjectLogger.log("Exception Occured during saving Course Batch to Es while updating Course Batch : ", ex);
 		}
@@ -429,7 +428,7 @@ public class CourseBatchManagementActor extends BaseActor {
 			request.getRequest().put(JsonKey.BATCH, req);
 			ProjectLogger.log("making a call to save Course Batch data to ES");
 			try {
-				ActorUtil.tell(request);
+				tellToAnother(request);
 			} catch (Exception ex) {
 				ProjectLogger.log("Exception Occured during saving Course Batch to Es while creating Course Batch : ",
 						ex);
@@ -713,7 +712,7 @@ public class CourseBatchManagementActor extends BaseActor {
 				request.getRequest().put(JsonKey.BATCH, req);
 				ProjectLogger.log("making a call to save Course Batch data to ES");
 				try {
-					ActorUtil.tell(request);
+					tellToAnother(request);
 				} catch (Exception ex) {
 					ProjectLogger.log(
 							"Exception Occured during saving Course Batch to Es while updating Course Batch : ", ex);
@@ -751,7 +750,7 @@ public class CourseBatchManagementActor extends BaseActor {
 		request.setOperation(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue());
 		request.getRequest().put(JsonKey.USER_COURSES, courseMap);
 		try {
-			ActorUtil.tell(request);
+			tellToAnother(request);
 		} catch (Exception ex) {
 			ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
 		}

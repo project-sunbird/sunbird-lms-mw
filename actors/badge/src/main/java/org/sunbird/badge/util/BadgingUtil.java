@@ -288,4 +288,25 @@ public class BadgingUtil {
 	public enum BadgeStatus {
 		active,revoked;
 	}
+	
+	/**
+	 * Badger is having some issues , to get badge assertion data , badger required
+	 * issuerId, badgeId, assertionId but internally it's checking only assertionId other's
+	 * values can be any thing and it will provide the response. so to avoid this we have the check
+	 * request issuerId, badgeId  need to  be same as response data.
+	 * @param issuerId String
+	 * @param badgeId String
+	 * @param resp  Map<String,Object> 
+	 * @return boolean
+	 */
+	public static boolean matchAssertionData(String issuerId, String badgeId, Map<String, Object> resp) {
+		if (ProjectUtil.isStringNullOREmpty(issuerId) || ProjectUtil.isStringNullOREmpty(badgeId)) {
+			return false;
+		}
+		if (issuerId.equals((String) resp.get(BadgingJsonKey.ISSUER_ID))
+				&& badgeId.equals((String) resp.get(BadgingJsonKey.BADGE_CLASS_ID))) {
+			return true;
+		}
+		return false;
+	}
 }

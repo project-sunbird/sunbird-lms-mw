@@ -106,11 +106,10 @@ public class BadgingUtil {
         } else if (placeholderCount == 1) {
             return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_ID));
         } else if (placeholderCount == 2) {
-            return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_ID),
-                (String) map.get(BadgingJsonKey.BADGE_CLASS_ID));
+            return MessageFormat.format(uri, map.get(BadgingJsonKey.ISSUER_ID), map.get(BadgingJsonKey.BADGE_ID));
         } else {
-            return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_ID),
-                (String) map.get(BadgingJsonKey.BADGE_CLASS_ID),(String) map.get(BadgingJsonKey.ASSERTION_ID));
+            return MessageFormat.format(uri, map.get(BadgingJsonKey.ISSUER_ID),
+                map.get(BadgingJsonKey.BADGE_ID), map.get(BadgingJsonKey.ASSERTION_ID));
         }
     }
 

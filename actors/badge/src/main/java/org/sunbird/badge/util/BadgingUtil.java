@@ -230,7 +230,7 @@ public class BadgingUtil {
 		try {
 			Response response = service.getBadgeClassDetails(request);
 			request.getRequest().put(BadgingJsonKey.BADGE_CLASS_NANE, response.getResult().get(JsonKey.NAME));
-		} catch (IOException | ProjectCommonException e) {
+		} catch (ProjectCommonException e) {
 			ProjectLogger.log(e.getMessage(), e);
 		}
 		outerMap.put(BadgingJsonKey.BADGE_ASSERTION, innerMap);

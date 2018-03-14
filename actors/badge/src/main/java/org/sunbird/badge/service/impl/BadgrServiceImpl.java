@@ -107,7 +107,6 @@ public class BadgrServiceImpl implements BadgingService {
 	public Response revokeAssertion(Request request) throws IOException {
 		String url = BadgingUtil.createBadgerUrl(request.getRequest(), BadgingUtil.SUNBIRD_BADGER_GETASSERTION_URL, 3);
 		String requestBody = BadgingUtil.createAssertionRevokeData(request.getRequest());
-		System.out.println("request data and url ==" + requestBody + " " + url);
 		HttpUtilResponse httpResponse = HttpUtil.sendDeleteRequest(requestBody,  BadgingUtil.getBadgrHeaders(), url);
 		Response response = new Response();
 		response.put(JsonKey.RESPONSE, httpResponse);

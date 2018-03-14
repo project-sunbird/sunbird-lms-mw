@@ -3,7 +3,11 @@ package org.sunbird.actor.core;
 import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.response.ResponseParams;
+import org.sunbird.common.models.response.ResponseParams.StatusType;
+import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 
@@ -33,14 +37,10 @@ public abstract class BaseActor extends UntypedAbstractActor {
 			unSupportedMessage();
 		}
 	}
-	
+
 	public void tellToAnother(Request request) {
+		request.getContext().put(JsonKey.TELEMETRY_CONTEXT, ExecutionContext.getCurrent().getRequestContext());
 		SunbirdMWService.tell(request, getSelf());
-	}
-	
-	public Response askAnother(Request request) {
-		// TODO: implementation pending.
-		return null;
 	}
 
 	public void unSupportedMessage() {
@@ -64,5 +64,23 @@ public abstract class BaseActor extends UntypedAbstractActor {
 	protected void onReceiveException(String callerName, Exception e) {
 		ProjectLogger.log(callerName + ": exception in message processing = " + e.getMessage(), e);
 		sender().tell(e, self());
+	}
+
+	protected Response getErrorResponse(Exception e) {
+		Response response = new Response();
+		ResponseParams resStatus = new ResponseParams();
+		String message = e.getMessage();
+		resStatus.setErrmsg(message);
+		resStatus.setStatus(StatusType.FAILED.name());
+		if (e instanceof ProjectCommonException) {
+			ProjectCommonException me = (ProjectCommonException) e;
+			resStatus.setErr(me.getCode());
+			response.setResponseCode(ResponseCode.SERVER_ERROR);
+		} else {
+			resStatus.setErr(e.getMessage());
+			response.setResponseCode(ResponseCode.SERVER_ERROR);
+		}
+		response.setParams(resStatus);
+		return response;
 	}
 }

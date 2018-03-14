@@ -12,6 +12,7 @@ import org.sunbird.badge.model.BadgeClassExtension;
 import org.sunbird.badge.service.BadgeClassExtensionService;
 import org.sunbird.badge.service.BadgingService;
 import org.sunbird.badge.util.BadgingUtil;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.HttpUtilResponse;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingJsonKey;

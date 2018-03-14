@@ -27,13 +27,13 @@ public class UserBadgeAssertion extends BaseActor {
 
     public static void init() {
         BackgroundRequestRouter.registerActor(UserBadgeAssertion.class,
-                Arrays.asList(BadgeOperations.addBadgeDataToUser.name()));
+                Arrays.asList(BadgeOperations.assignBadgeToUser.name()));
     }
 
     @Override
     public void onReceive(Request request) throws Throwable {
         String operation = request.getOperation();
-        if (BadgeOperations.addBadgeDataToUser.name().equalsIgnoreCase(operation)) {
+        if (BadgeOperations.assignBadgeToUser.name().equalsIgnoreCase(operation)) {
             updateBadgeData(request);
         }
     }

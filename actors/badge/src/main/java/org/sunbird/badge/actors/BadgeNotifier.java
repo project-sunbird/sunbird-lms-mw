@@ -51,15 +51,16 @@ public class BadgeNotifier extends BaseActor {
 		} else {
 			onReceiveUnsupportedMessage(request.getOperation());
 		}
-
 	}
 
 	private Response assignBadge(String type, Request request) throws Exception {
 		Response response;
 		switch (type.toUpperCase()) {
 		case "USER":
+			request.setOperation(BadgeOperations.assignBadgeToUser.name());
+			tellToAnother(request);
 			response = new Response();
-
+			response.setResponseCode(ResponseCode.success);
 			break;
 		case "CONTENT":
 			response = ContentService.assignBadge(request);
@@ -75,8 +76,10 @@ public class BadgeNotifier extends BaseActor {
 		Response response;
 		switch (type.toUpperCase()) {
 		case "USER":
-			// TODO: user badge.
+			request.setOperation(BadgeOperations.revokeBadgeFromUser.name());
+			tellToAnother(request);
 			response = new Response();
+			response.setResponseCode(ResponseCode.success);
 			break;
 		case "CONTENT":
 			response = ContentService.revokeBadge(request);

@@ -28,10 +28,10 @@ public class BadgingUtil {
 
     public static final String SUNBIRD_BADGR_SERVER_URL_DEFAULT = "http://localhost:8000";
     public static final String BADGING_AUTHORIZATION_FORMAT = "Token %s";
-    public static final String  SUNBIRD_BADGER_CREATE_ASSERTION_URL="/v1/issuer/issuers/{0}/badges/{1}/assertions";
-    public static final String  SUNBIRD_BADGER_GETASSERTION_URL="/v1/issuer/issuers/{0}/badges/{1}/assertions/{2}";
-    public static final String  SUNBIRD_BADGER_GETALLASSERTION_URL="/v1/issuer/issuers/{0}/badges/{1}/assertion";
-    public static final String  SUNBIRD_BADGER_REVOKE_URL="/v1/issuer/issuers/{0}/badges/{1}/assertion/{2}";
+    public static final String SUNBIRD_BADGER_CREATE_ASSERTION_URL="/v1/issuer/issuers/{0}/badges/{1}/assertions";
+    public static final String SUNBIRD_BADGER_GETASSERTION_URL="/v1/issuer/issuers/{0}/badges/{1}/assertions/{2}";
+    public static final String SUNBIRD_BADGER_GETALLASSERTION_URL="/v1/issuer/issuers/{0}/badges/{1}/assertion";
+    public static final String SUNBIRD_BADGER_REVOKE_URL="/v1/issuer/issuers/{0}/badges/{1}/assertion/{2}";
 
     private static PropertiesCache propertiesCache = PropertiesCache.getInstance();
     private static BadgingService service = BadgingFactory.getInstance();
@@ -110,11 +110,10 @@ public class BadgingUtil {
         } else if (placeholderCount == 1) {
             return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_ID));
         } else if (placeholderCount == 2) {
-            return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_ID),
-                (String) map.get(BadgingJsonKey.BADGE_CLASS_ID));
+            return MessageFormat.format(uri, map.get(BadgingJsonKey.ISSUER_ID), map.get(BadgingJsonKey.BADGE_ID));
         } else {
-            return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_ID),
-                (String) map.get(BadgingJsonKey.BADGE_CLASS_ID),(String) map.get(BadgingJsonKey.ASSERTION_ID));
+            return MessageFormat.format(uri, map.get(BadgingJsonKey.ISSUER_ID),
+                map.get(BadgingJsonKey.BADGE_ID), map.get(BadgingJsonKey.ASSERTION_ID));
         }
     }
 

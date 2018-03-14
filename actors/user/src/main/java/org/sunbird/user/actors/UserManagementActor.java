@@ -40,7 +40,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.TelemetryUtil;
@@ -1020,7 +1019,7 @@ public class UserManagementActor extends BaseActor {
 			userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
 			userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
 			try {
-				ActorUtil.tell(userRequest);
+				tellToAnother(userRequest);
 			} catch (Exception ex) {
 				ProjectLogger.log("Exception Occured during saving user to Es while updating user : ", ex);
 			}
@@ -2472,7 +2471,7 @@ public class UserManagementActor extends BaseActor {
 		Request request = new Request();
 		request.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
 		request.getRequest().put(JsonKey.ID, userId);
-		ActorUtil.tell(request);
+		tellToAnother(request);
 	}
 
 	/**
@@ -2670,7 +2669,7 @@ public class UserManagementActor extends BaseActor {
 		request.getRequest().put(JsonKey.ORGANISATION_ID, orgId);
 		ProjectLogger.log("making a call to save user data to ES");
 		try {
-			ActorUtil.tell(request);
+			tellToAnother(request);
 		} catch (Exception ex) {
 			ProjectLogger.log("Exception Occured during saving user to Es while joinUserOrganisation : ", ex);
 		}
@@ -2734,7 +2733,7 @@ public class UserManagementActor extends BaseActor {
 		Request request = new Request();
 		request.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
 		request.getRequest().put(JsonKey.ID, userId);
-		ActorUtil.tell(request);
+		tellToAnother(request);
 	}
 
 	/**
@@ -2822,7 +2821,7 @@ public class UserManagementActor extends BaseActor {
 			Request request = new Request();
 			request.setOperation(BackgroundOperations.emailService.name());
 			request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);
-			ActorUtil.tell(request);
+			tellToAnother(request);
 		}
 
 	}

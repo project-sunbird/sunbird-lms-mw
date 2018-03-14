@@ -37,7 +37,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.SocialMediaType;
@@ -235,7 +234,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 		request.getRequest().put(JsonKey.BATCH, courseBatchObject);
 		ProjectLogger.log("making a call to save Course Batch data to ES");
 		try {
-			ActorUtil.tell(request);
+			tellToAnother(request);
 		} catch (Exception ex) {
 			ProjectLogger.log("Exception Occured during saving Course Batch to Es while updating Course Batch : ", ex);
 		}
@@ -301,7 +300,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 		request.setOperation(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue());
 		request.getRequest().put(JsonKey.USER_COURSES, courseMap);
 		try {
-			ActorUtil.tell(request);
+			tellToAnother(request);
 		} catch (Exception ex) {
 			ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
 		}
@@ -513,7 +512,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 					Request request = new Request();
 					request.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
 					request.getRequest().put(JsonKey.ORGANISATION, concurrentHashMap);
-					ActorUtil.tell(request);
+					tellToAnother(request);
 					successList.add(concurrentHashMap);
 					// process Audit Log
 					processAuditLog(concurrentHashMap, ActorOperations.UPDATE_ORG.getValue(), "", JsonKey.ORGANISATION);
@@ -604,7 +603,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 					Request request = new Request();
 					request.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
 					request.getRequest().put(JsonKey.ORGANISATION, concurrentHashMap);
-					ActorUtil.tell(request);
+					tellToAnother(request);
 					successList.add(concurrentHashMap);
 					// process Audit Log
 					processAuditLog(concurrentHashMap, ActorOperations.UPDATE_ORG.getValue(), "", JsonKey.ORGANISATION);
@@ -759,7 +758,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 			Request request = new Request();
 			request.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
 			request.getRequest().put(JsonKey.ORGANISATION, concurrentHashMap);
-			ActorUtil.tell(request);
+			tellToAnother(request);
 			successList.add(concurrentHashMap);
 			// process Audit Log
 			processAuditLog(concurrentHashMap, ActorOperations.CREATE_ORG.getValue(), "", JsonKey.ORGANISATION);
@@ -1017,7 +1016,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 					Request request = new Request();
 					request.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
 					request.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
-					ActorUtil.tell(request);
+					tellToAnother(request);
 					// generate telemetry for update user
 					// object of telemetry event...
 					Map<String, Object> targetObject = null;
@@ -1591,7 +1590,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 		Request request = new Request();
 		request.setOperation(ActorOperations.PROCESS_AUDIT_LOG.getValue());
 		request.setRequest(map);
-		ActorUtil.tell(request);
+		tellToAnother(request);
 	}
 
 	private void sendOnboardingMail(Map<String, Object> emailTemplateMap) {
@@ -1634,7 +1633,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 			Request request = new Request();
 			request.setOperation(BackgroundOperations.emailService.name());
 			request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);
-			ActorUtil.tell(request);
+			tellToAnother(request);
 		}
 	}
 

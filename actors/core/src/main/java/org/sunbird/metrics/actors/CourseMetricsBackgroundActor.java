@@ -28,7 +28,6 @@ import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -193,7 +192,7 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
 		backGroundRequest.setOperation(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue());
 		backGroundRequest.getRequest().put(JsonKey.DATA, finalList);
 		backGroundRequest.getRequest().put(JsonKey.REQUEST_ID, requestId);
-		ActorUtil.tell(backGroundRequest);
+		tellToAnother(backGroundRequest);
 	}
 
 }

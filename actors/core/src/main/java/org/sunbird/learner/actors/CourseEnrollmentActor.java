@@ -22,7 +22,6 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
@@ -150,7 +149,7 @@ public class CourseEnrollmentActor extends BaseActor {
 		request.setOperation(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue());
 		request.getRequest().put(JsonKey.USER_COURSES, courseMap);
 		try {
-			ActorUtil.tell(request);
+			tellToAnother(request);
 		} catch (Exception ex) {
 			ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
 		}
@@ -212,7 +211,7 @@ public class CourseEnrollmentActor extends BaseActor {
 		 * userCountresponse.getResult().put(JsonKey.OPERATION, innerOperation);
 		 */
 		try {
-			ActorUtil.tell(request);
+			tellToAnother(request);
 		} catch (Exception ex) {
 			ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
 		}

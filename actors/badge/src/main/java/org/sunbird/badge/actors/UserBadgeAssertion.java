@@ -10,64 +10,108 @@ import org.sunbird.badge.BadgeOperations;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.Util;
+import org.sunbird.learner.util.Util.DbInfo;
 
 public class UserBadgeAssertion extends BaseActor {
 
     private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    private DbInfo dbInfo = Util.dbInfoMap.get(BadgingJsonKey.USER_BADGE_ASSERTION_DB);
 
     public static void init() {
-        BackgroundRequestRouter.registerActor(BadgeNotifier.class,
-                Arrays.asList(BadgeOperations.addBadgeDataToUser.name()));
+        BackgroundRequestRouter.registerActor(UserBadgeAssertion.class,
+                Arrays.asList(BadgeOperations.assignBadgeToUser.name(),
+                        BadgeOperations.revokeBadgeFromUser.name()));
     }
 
     @Override
     public void onReceive(Request request) throws Throwable {
         String operation = request.getOperation();
-        if (BadgeOperations.addBadgeDataToUser.name().equalsIgnoreCase(operation)) {
-            addBadgeDataToUser(request);
-        }
-    }
-
-    private void addBadgeDataToUser(Request request) {
-        try {
-            Map<String, Object> map = request.getRequest();
-            map.put("id", map.get("assertionId"));
-            Response response = cassandraOperation.upsertRecord("keyspaceName", "tableName", map);
-            if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-                updateUserBadgeData(map);
-            }
-        } catch (Exception ex) {
-            ProjectLogger.log("Exception occurred while adding badge data to user.", ex);
+        if (BadgeOperations.assignBadgeToUser.name().equalsIgnoreCase(operation)) {
+            addBadgeData(request);
+        } else if (BadgeOperations.revokeBadgeFromUser.name().equalsIgnoreCase(operation)) {
+            revokeBadgeData(request);
         }
     }
 
     @SuppressWarnings("unchecked")
-    private void updateUserBadgeData(Map<String, Object> map) {
+    private void revokeBadgeData(Request request) {
+        // request came to revoke the badge from user
+        // Delete the badge details
+        Map<String, Object> map = request.getRequest();
+        String userId = (String) map.get(JsonKey.ID);
+        Map<String, Object> badge = (Map<String, Object>) map.get(BadgingJsonKey.BADGE_ASSERTION);
+        String id = getUserBadgeAssertionId(badge);
+        cassandraOperation.deleteRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), id);
+        badge.put(JsonKey.ID, id);
+        badge.put(JsonKey.USER_ID, userId);
+        updateUserBadgeDataToES(badge);
+        Response reponse = new Response();
+        reponse.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+        sender().tell(reponse, self());
+    }
+
+    @SuppressWarnings("unchecked")
+    private void addBadgeData(Request request) {
+        // request came to assign the badge from user
+        // Delete the badge details
+        Map<String, Object> map = request.getRequest();
+        String userId = (String) map.get(JsonKey.ID);
+        Map<String, Object> badge = (Map<String, Object>) map.get(BadgingJsonKey.BADGE_ASSERTION);
+        String id = getUserBadgeAssertionId(badge);
+
+        // request came to assign the badge to user
+        badge.put(JsonKey.ID, id);
+        badge.put(JsonKey.USER_ID, userId);
+        cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), badge);
+        updateUserBadgeDataToES(badge);
+        Response reponse = new Response();
+        reponse.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+        sender().tell(reponse, self());
+    }
+
+    /**
+     * @param badge
+     * @return String
+     */
+    private String getUserBadgeAssertionId(Map<String, Object> badge) {
+        return ((String) badge.get(BadgingJsonKey.ASSERTION_ID) + JsonKey.PRIMARY_KEY_DELIMETER
+                + (String) badge.get(BadgingJsonKey.ISSUER_ID) + JsonKey.PRIMARY_KEY_DELIMETER
+                + (String) badge.get(BadgingJsonKey.BADGE_CLASS_ID));
+    }
+
+    @SuppressWarnings("unchecked")
+    private void updateUserBadgeDataToES(Map<String, Object> map) {
         Map<String, Object> result =
                 ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
                         ProjectUtil.EsType.user.getTypeName(), (String) map.get(JsonKey.USER_ID));
-        if (result.containsKey("badgeAssertions") && null != result.get("badgeAssertions")) {
+        if (result.containsKey(BadgingJsonKey.BADGE_ASSERTIONS)
+                && null != result.get(BadgingJsonKey.BADGE_ASSERTIONS)) {
             List<Map<String, Object>> badgeAssertionsList =
-                    (List<Map<String, Object>>) result.get("badgeAssertions");
-            if (((boolean) map.get("isRevoked"))) {
-                for (Map<String, Object> tempMap : badgeAssertionsList) {
-                    if (((String) tempMap.get("id")).equalsIgnoreCase((String) map.get("id"))) {
-                        badgeAssertionsList.remove(tempMap);
-                    }
+                    (List<Map<String, Object>>) result.get(BadgingJsonKey.BADGE_ASSERTIONS);
+
+            boolean bool = true;
+            for (Map<String, Object> tempMap : badgeAssertionsList) {
+                if (((String) tempMap.get(JsonKey.ID))
+                        .equalsIgnoreCase((String) map.get(JsonKey.ID))) {
+                    badgeAssertionsList.remove(tempMap);
+                    bool = false;
                 }
-            } else {
+            }
+            if (bool) {
                 badgeAssertionsList.add(map);
             }
         } else {
             List<Map<String, Object>> mapList = new ArrayList<>();
             mapList.add(map);
-            result.put("badgeAssertions", mapList);
+            result.put(BadgingJsonKey.BADGE_ASSERTIONS, mapList);
         }
         updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
                 ProjectUtil.EsType.user.getTypeName(), (String) result.get(JsonKey.IDENTIFIER),
@@ -81,7 +125,7 @@ public class UserBadgeAssertion extends BaseActor {
         if (response) {
             return true;
         }
-        ProjectLogger.log("unbale to save the data inside ES with identifier " + identifier,
+        ProjectLogger.log("unbale to save the data inside ES for user badge " + identifier,
                 LoggerEnum.INFO.name());
         return false;
 

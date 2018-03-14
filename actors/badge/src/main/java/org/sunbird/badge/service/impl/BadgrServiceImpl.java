@@ -12,6 +12,7 @@ import org.sunbird.badge.model.BadgeClassExtension;
 import org.sunbird.badge.service.BadgeClassExtensionService;
 import org.sunbird.badge.service.BadgingService;
 import org.sunbird.badge.util.BadgingUtil;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.HttpUtilResponse;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingJsonKey;
@@ -52,66 +53,78 @@ public class BadgrServiceImpl implements BadgingService {
 	}
 
 	@Override
-	public Response createBadgeClass(Request request) throws IOException {
-		Map<String, Object> requestData = request.getRequest();
+	public Response createBadgeClass(Request request) throws ProjectCommonException {
+		Response response = new Response();
 
-		Map<String, String> formParams = (Map<String, String>) requestData.get(JsonKey.FORM_PARAMS);
-		Map<String, byte[]> fileParams = (Map<String, byte[]>) requestData.get(JsonKey.FILE_PARAMS);
+		try {
+			Map<String, Object> requestData = request.getRequest();
 
-		String issuerId = formParams.remove(BadgingJsonKey.ISSUER_ID);
-		String rootOrgId = formParams.remove(JsonKey.ROOT_ORG_ID);
-		String type = formParams.remove(JsonKey.TYPE);
-		String roles = formParams.remove(JsonKey.ROLES);
-		List<String> rolesList = new ArrayList<>();
-		if (roles != null) {
+			Map<String, String> formParams = (Map<String, String>) requestData.get(JsonKey.FORM_PARAMS);
+			Map<String, byte[]> fileParams = (Map<String, byte[]>) requestData.get(JsonKey.FILE_PARAMS);
+
+			String issuerId = formParams.remove(BadgingJsonKey.ISSUER_ID);
+			String rootOrgId = formParams.remove(JsonKey.ROOT_ORG_ID);
+			String type = formParams.remove(JsonKey.TYPE);
+			String roles = formParams.remove(JsonKey.ROLES);
+			List<String> rolesList = new ArrayList<>();
+			if (roles != null) {
+				ObjectMapper mapper = new ObjectMapper();
+				rolesList = mapper.readValue(roles, ArrayList.class);
+			}
+
+			String subtype = "";
+			if (formParams.containsKey(JsonKey.SUBTYPE)) {
+				subtype = formParams.remove(JsonKey.SUBTYPE);
+			}
+
+			Map<String, String> headers = BadgingUtil.getBadgrHeaders();
+
+			HttpUtilResponse httpUtilResponse = HttpUtil.postFormData(formParams, fileParams, headers, BadgingUtil.getBadgeClassUrl(issuerId));
+			String badgrResponseStr = httpUtilResponse.getBody();
 			ObjectMapper mapper = new ObjectMapper();
-			rolesList = mapper.readValue(roles, ArrayList.class);
+			Map<String, Object> badgrResponseMap = (Map<String, Object>) mapper.readValue(badgrResponseStr, HashMap.class);
+			String badgeId = (String) badgrResponseMap.get(BadgingJsonKey.SLUG);
+
+			BadgeClassExtension badgeClassExt = new BadgeClassExtension(badgeId, issuerId, rootOrgId, type, subtype, rolesList);
+			badgeClassExtensionService.save(badgeClassExt);
+
+			BadgingUtil.prepareBadgeClassResponse(badgrResponseStr, badgeClassExt, response.getResult());
+		} catch (IOException e) {
+
 		}
-
-		String subtype = "";
-		if (formParams.containsKey(JsonKey.SUBTYPE)) {
-			subtype = formParams.remove(JsonKey.SUBTYPE);
-		}
-
-		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-
-		HttpUtilResponse httpUtilResponse = HttpUtil.postFormData(formParams, fileParams, headers, BadgingUtil.getBadgeClassUrl(issuerId));
-		String badgrResponseStr = httpUtilResponse.getBody();
-		ObjectMapper mapper = new ObjectMapper();
-		Map<String, Object> badgrResponseMap = (Map<String, Object>) mapper.readValue(badgrResponseStr, HashMap.class);
-		String badgeId = (String) badgrResponseMap.get(BadgingJsonKey.SLUG);
-
-		BadgeClassExtension badgeClassExt = new BadgeClassExtension(badgeId, issuerId, rootOrgId, type, subtype, rolesList);
-		badgeClassExtensionService.save(badgeClassExt);
-
-		Response response = new Response();
-		BadgingUtil.prepareBadgeClassResponse(badgrResponseStr, badgeClassExt, response.getResult());
-
-		return null;
-	}
-
-	@Override
-	public Response getBadgeClassDetails(Request request) throws IOException {
-		Map<String, Object> requestData = request.getRequest();
-
-		String issuerId = (String) requestData.get(BadgingJsonKey.ISSUER_ID);
-		String badgeId = (String) requestData.get(BadgingJsonKey.BADGE_ID);
-
-		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-		String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerId, badgeId);
-
-		String badgrResponseStr = HttpUtil.sendGetRequest(badgrUrl, headers);
-
-		BadgeClassExtension badgeClassExtension = badgeClassExtensionService.get(badgeId);
-
-		Response response = new Response();
-		BadgingUtil.prepareBadgeClassResponse(badgrResponseStr, badgeClassExtension, response.getResult());
 
 		return response;
 	}
 
 	@Override
-	public Response getBadgeClassList(Request request) throws IOException {
+	public Response getBadgeClassDetails(Request request) throws ProjectCommonException {
+		Response response = new Response();
+
+		try {
+			Map<String, Object> requestData = request.getRequest();
+
+			String issuerId = (String) requestData.get(BadgingJsonKey.ISSUER_ID);
+			String badgeId = (String) requestData.get(BadgingJsonKey.BADGE_ID);
+
+			Map<String, String> headers = BadgingUtil.getBadgrHeaders();
+			String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerId, badgeId);
+
+			String badgrResponseStr = HttpUtil.sendGetRequest(badgrUrl, headers);
+
+			BadgeClassExtension badgeClassExtension = badgeClassExtensionService.get(badgeId);
+
+			BadgingUtil.prepareBadgeClassResponse(badgrResponseStr, badgeClassExtension, response.getResult());
+		} catch (IOException e) {
+
+		}
+
+		return response;
+	}
+
+	@Override
+	public Response getBadgeClassList(Request request) throws ProjectCommonException {
+		Response response = new Response();
+
 		Map<String, Object> requestData = request.getRequest();
 		List<String> issuerList = (List<String>) requestData.get(BadgingJsonKey.ISSUER_LIST);
 		Map<String, Object> context = (Map<String, Object>) requestData.get(BadgingJsonKey.CONTEXT);
@@ -131,52 +144,62 @@ public class BadgrServiceImpl implements BadgingService {
 			badges.addAll(listBadgeClassForIssuer(issuerSlug, badgeClassExtList));
 		}
 
-		Response response = new Response();
 		response.put(BadgingJsonKey.BADGES, badges);
 
-		return null;
+		return response;
 	}
 
-	private List<Object> listBadgeClassForIssuer(String issuerSlug, List<BadgeClassExtension> badgeClassExtensionList) throws IOException {
-		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-		String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerSlug);
-
-		String badgrResponseStr = HttpUtil.sendGetRequest(badgrUrl, headers);
-
-		ObjectMapper mapper = new ObjectMapper();
+	private List<Object> listBadgeClassForIssuer(String issuerSlug, List<BadgeClassExtension> badgeClassExtensionList) throws ProjectCommonException {
 		List<Object> filteredBadges = new ArrayList<>();
-		List<Map<String, Object>> badges = mapper.readValue(badgrResponseStr, ArrayList.class);
 
-		for (Map<String, Object> badge : badges) {
-			BadgeClassExtension matchedBadgeClassExt = badgeClassExtensionList.stream()
-					.filter(x -> x.getBadgeId().equals(badge.get(BadgingJsonKey.SLUG))).findFirst()
-					.orElse(null);
+		try {
+			Map<String, String> headers = BadgingUtil.getBadgrHeaders();
+			String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerSlug);
 
-			if (matchedBadgeClassExt != null) {
-				Map<String, Object> mappedBadge = new HashMap<>();
-				BadgingUtil.prepareBadgeClassResponse(badge, matchedBadgeClassExt, mappedBadge);
-				filteredBadges.add(mappedBadge);
+			String badgrResponseStr = HttpUtil.sendGetRequest(badgrUrl, headers);
+
+			ObjectMapper mapper = new ObjectMapper();
+			List<Map<String, Object>> badges = mapper.readValue(badgrResponseStr, ArrayList.class);
+
+			for (Map<String, Object> badge : badges) {
+				BadgeClassExtension matchedBadgeClassExt = badgeClassExtensionList.stream()
+						.filter(x -> x.getBadgeId().equals(badge.get(BadgingJsonKey.SLUG))).findFirst()
+						.orElse(null);
+
+				if (matchedBadgeClassExt != null) {
+					Map<String, Object> mappedBadge = new HashMap<>();
+					BadgingUtil.prepareBadgeClassResponse(badge, matchedBadgeClassExt, mappedBadge);
+					filteredBadges.add(mappedBadge);
+				}
 			}
+		} catch (IOException e) {
+
 		}
 
 		return filteredBadges;
 	}
 
 	@Override
-	public Response removeBadgeClass(Request requestMsg) throws IOException {
-		Map<String, Object> requestData = requestMsg.getRequest();
-
-		String issuerId = (String) requestData.get(BadgingJsonKey.ISSUER_ID);
-		String badgeId = (String) requestData.get(BadgingJsonKey.BADGE_ID);
-
-		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-		String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerId, badgeId);
-
-		HttpUtilResponse httpUtilResponse = HttpUtil.sendDeleteRequest(headers, badgrUrl);
-		String badgrResponseStr = httpUtilResponse.getBody();
-		badgeClassExtensionService.delete(badgeId);
+	public Response removeBadgeClass(Request requestMsg) throws ProjectCommonException {
 		Response response = new Response();
-		response.put(JsonKey.MESSAGE, badgrResponseStr.replaceAll("^\"|\"$", ""));
+
+		try {
+			Map<String, Object> requestData = requestMsg.getRequest();
+
+			String issuerId = (String) requestData.get(BadgingJsonKey.ISSUER_ID);
+			String badgeId = (String) requestData.get(BadgingJsonKey.BADGE_ID);
+
+			Map<String, String> headers = BadgingUtil.getBadgrHeaders();
+			String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerId, badgeId);
+
+			HttpUtilResponse httpUtilResponse = HttpUtil.sendDeleteRequest(headers, badgrUrl);
+			String badgrResponseStr = httpUtilResponse.getBody();
+			badgeClassExtensionService.delete(badgeId);
+			response.put(JsonKey.MESSAGE, badgrResponseStr.replaceAll("^\"|\"$", ""));
+		} catch (IOException e) {
+
+		}
+
 		return response;
 	}
 

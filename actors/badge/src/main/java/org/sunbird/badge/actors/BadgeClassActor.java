@@ -17,6 +17,7 @@ import org.sunbird.badge.service.BadgingService;
 import org.sunbird.badge.service.impl.BadgeClassExtensionServiceImpl;
 import org.sunbird.badge.service.impl.BadgingFactory;
 import org.sunbird.badge.util.BadgingUtil;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.HttpUtilResponse;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingJsonKey;
@@ -26,7 +27,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 
 public class BadgeClassActor extends BaseActor {
-    BadgingService badgingService = BadgingFactory.getInstance();
+    private BadgingService badgingService;
 
     public static void init() {
         RequestRouter.registerActor(BadgeClassActor.class, Arrays.asList(
@@ -34,6 +35,14 @@ public class BadgeClassActor extends BaseActor {
                 BadgeOperations.getBadgeClass.name(),
                 BadgeOperations.listBadgeClass.name(),
                 BadgeOperations.deleteBadgeClass.name()));
+    }
+
+    public BadgeClassActor() {
+        this.badgingService = BadgingFactory.getInstance();
+    }
+
+    public BadgeClassActor(BadgingService badgingService) {
+        this.badgingService = badgingService;
     }
 
     @Override
@@ -66,7 +75,7 @@ public class BadgeClassActor extends BaseActor {
             Response response = badgingService.createBadgeClass(actorMessage);
 
             sender().tell(response, self());
-        } catch (IOException e) {
+        } catch (ProjectCommonException e) {
             ProjectLogger.log("createBadgeClass: exception = ", e);
 
             sender().tell(e, self());
@@ -80,7 +89,7 @@ public class BadgeClassActor extends BaseActor {
             Response response = badgingService.getBadgeClassDetails(actorMessage);
 
             sender().tell(response, self());
-        } catch (IOException e) {
+        } catch (ProjectCommonException e) {
             ProjectLogger.log("getBadgeClass: exception = ", e);
 
             sender().tell(e, self());
@@ -94,7 +103,7 @@ public class BadgeClassActor extends BaseActor {
             Response response = badgingService.getBadgeClassList(actorMessage);
 
             sender().tell(response, self());
-        } catch (IOException e) {
+        } catch (ProjectCommonException e) {
             ProjectLogger.log("listBadgeClass: exception = ", e);
 
             sender().tell(e, self());
@@ -108,7 +117,7 @@ public class BadgeClassActor extends BaseActor {
             Response response = badgingService.removeBadgeClass(actorMessage);
 
             sender().tell(response, self());
-        } catch (IOException e) {
+        } catch (ProjectCommonException e) {
             ProjectLogger.log("deleteBadgeClass: exception = ", e);
 
             sender().tell(e, self());

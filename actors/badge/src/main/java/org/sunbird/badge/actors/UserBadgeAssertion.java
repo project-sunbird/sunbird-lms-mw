@@ -9,6 +9,7 @@ import org.sunbird.actor.router.BackgroundRequestRouter;
 import org.sunbird.badge.BadgeOperations;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -52,6 +53,9 @@ public class UserBadgeAssertion extends BaseActor {
         badge.put(JsonKey.ID, id);
         badge.put(JsonKey.USER_ID, userId);
         updateUserBadgeDataToES(badge);
+        Response reponse = new Response();
+        reponse.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+        sender().tell(reponse, self());
     }
 
     @SuppressWarnings("unchecked")
@@ -68,6 +72,9 @@ public class UserBadgeAssertion extends BaseActor {
         badge.put(JsonKey.USER_ID, userId);
         cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), badge);
         updateUserBadgeDataToES(badge);
+        Response reponse = new Response();
+        reponse.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+        sender().tell(reponse, self());
     }
 
     /**

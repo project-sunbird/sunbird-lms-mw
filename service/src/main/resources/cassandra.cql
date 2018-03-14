@@ -560,9 +560,3 @@ ALTER TABLE sunbird.geo_location ADD userCountTTL text;
 // adding new column in client-info to save the channel
 ALTER TABLE sunbird.client_info ADD channel text;
 CREATE INDEX inx_ci_clientchannel ON sunbird.client_info(channel);
-
-// Mar 12th 2018
-CREATE TABLE IF NOT EXISTS sunbird.badge_class_extension(id text, issuerId text, rootOrgId text, type text, subtype text, roles list<text>, PRIMARY KEY (id));
-
- // primary key is assertionId##issuerId##badgeId
- CREATE TABLE IF NOT EXISTS sunbird.user_badge_assertion(id text, createdTS text, issuerId text ,badgeId text ,badgeClassName text , badgeClassImage text , assertionId text ,userId text ,PRIMARY KEY (id));

@@ -40,36 +40,30 @@ public class UserBadgeAssertion extends BaseActor {
 
     @SuppressWarnings("unchecked")
     private void updateBadgeData(Request request) {
-        try {
-            Map<String, Object> map = request.getRequest();
-            String userId = (String) map.get(JsonKey.ID);
-            Map<String, Object> badge =
-                    (Map<String, Object>) map.get(BadgingJsonKey.BADGE_ASSERTION);
-            String id = ((String) badge.get(BadgingJsonKey.ASSERTION_ID)
-                    + JsonKey.PRIMARY_KEY_DELIMETER + (String) badge.get(BadgingJsonKey.ISSUER_ID)
-                    + JsonKey.PRIMARY_KEY_DELIMETER
-                    + (String) badge.get(BadgingJsonKey.BADGE_CLASS_ID));
-            Response response = cassandraOperation.getRecordById(dbInfo.getKeySpace(),
-                    dbInfo.getTableName(), id);
-            List<Map<String, Object>> resList =
-                    (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+        Map<String, Object> map = request.getRequest();
+        String userId = (String) map.get(JsonKey.ID);
+        Map<String, Object> badge = (Map<String, Object>) map.get(BadgingJsonKey.BADGE_ASSERTION);
+        String id = ((String) badge.get(BadgingJsonKey.ASSERTION_ID) + JsonKey.PRIMARY_KEY_DELIMETER
+                + (String) badge.get(BadgingJsonKey.ISSUER_ID) + JsonKey.PRIMARY_KEY_DELIMETER
+                + (String) badge.get(BadgingJsonKey.BADGE_CLASS_ID));
+        Response response =
+                cassandraOperation.getRecordById(dbInfo.getKeySpace(), dbInfo.getTableName(), id);
+        List<Map<String, Object>> resList =
+                (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
 
-            if (null != resList && !resList.isEmpty()) {
-                // request came to revoke the badge from user
-                // Delete the badge details
-                cassandraOperation.deleteRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), id);
-                badge.put(JsonKey.ID, id);
-                badge.put(JsonKey.USER_ID, userId);
-                updateUserBadgeDataToES(badge);
-            } else {
-                // request came to assign the badge to user
-                badge.put(JsonKey.ID, id);
-                badge.put(JsonKey.USER_ID, userId);
-                cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), badge);
-                updateUserBadgeDataToES(badge);
-            }
-        } catch (Exception ex) {
-            ProjectLogger.log("Exception occurred while adding badge data to user.", ex);
+        if (null != resList && !resList.isEmpty()) {
+            // request came to revoke the badge from user
+            // Delete the badge details
+            cassandraOperation.deleteRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), id);
+            badge.put(JsonKey.ID, id);
+            badge.put(JsonKey.USER_ID, userId);
+            updateUserBadgeDataToES(badge);
+        } else {
+            // request came to assign the badge to user
+            badge.put(JsonKey.ID, id);
+            badge.put(JsonKey.USER_ID, userId);
+            cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), badge);
+            updateUserBadgeDataToES(badge);
         }
     }
 

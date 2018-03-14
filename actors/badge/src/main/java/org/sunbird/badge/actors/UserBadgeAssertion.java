@@ -26,7 +26,7 @@ public class UserBadgeAssertion extends BaseActor {
     private DbInfo dbInfo = Util.dbInfoMap.get(BadgingJsonKey.USER_BADGE_ASSERTION_DB);
 
     public static void init() {
-        BackgroundRequestRouter.registerActor(BadgeNotifier.class,
+        BackgroundRequestRouter.registerActor(UserBadgeAssertion.class,
                 Arrays.asList(BadgeOperations.addBadgeDataToUser.name()));
     }
 
@@ -42,11 +42,13 @@ public class UserBadgeAssertion extends BaseActor {
     private void updateBadgeData(Request request) {
         try {
             Map<String, Object> map = request.getRequest();
-            String userId = (String) map.get(JsonKey.USER_ID);
-            Map<String, Object> badge = (Map<String, Object>) map.get("badge");
-            String id = ((String) badge.get("assertionId") + JsonKey.PRIMARY_KEY_DELIMETER
-                    + (String) badge.get("issuerId") + JsonKey.PRIMARY_KEY_DELIMETER
-                    + (String) badge.get("badgeClassId"));
+            String userId = (String) map.get(JsonKey.ID);
+            Map<String, Object> badge =
+                    (Map<String, Object>) map.get(BadgingJsonKey.BADGE_ASSERTION);
+            String id = ((String) badge.get(BadgingJsonKey.ASSERTION_ID)
+                    + JsonKey.PRIMARY_KEY_DELIMETER + (String) badge.get(BadgingJsonKey.ISSUER_ID)
+                    + JsonKey.PRIMARY_KEY_DELIMETER
+                    + (String) badge.get(BadgingJsonKey.BADGE_CLASS_ID));
             Response response = cassandraOperation.getRecordById(dbInfo.getKeySpace(),
                     dbInfo.getTableName(), id);
             List<Map<String, Object>> resList =

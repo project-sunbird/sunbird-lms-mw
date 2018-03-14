@@ -9,7 +9,6 @@ import org.sunbird.actor.router.BackgroundRequestRouter;
 import org.sunbird.badge.BadgeOperations;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
-import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -27,44 +26,58 @@ public class UserBadgeAssertion extends BaseActor {
 
     public static void init() {
         BackgroundRequestRouter.registerActor(UserBadgeAssertion.class,
-                Arrays.asList(BadgeOperations.assignBadgeToUser.name()));
+                Arrays.asList(BadgeOperations.assignBadgeToUser.name(),
+                        BadgeOperations.revokeBadgeFromUser.name()));
     }
 
     @Override
     public void onReceive(Request request) throws Throwable {
         String operation = request.getOperation();
         if (BadgeOperations.assignBadgeToUser.name().equalsIgnoreCase(operation)) {
-            updateBadgeData(request);
+            addBadgeData(request);
+        } else if (BadgeOperations.revokeBadgeFromUser.name().equalsIgnoreCase(operation)) {
+            revokeBadgeData(request);
         }
     }
 
     @SuppressWarnings("unchecked")
-    private void updateBadgeData(Request request) {
+    private void revokeBadgeData(Request request) {
+        // request came to revoke the badge from user
+        // Delete the badge details
         Map<String, Object> map = request.getRequest();
         String userId = (String) map.get(JsonKey.ID);
         Map<String, Object> badge = (Map<String, Object>) map.get(BadgingJsonKey.BADGE_ASSERTION);
-        String id = ((String) badge.get(BadgingJsonKey.ASSERTION_ID) + JsonKey.PRIMARY_KEY_DELIMETER
+        String id = getUserBadgeAssertionId(badge);
+        cassandraOperation.deleteRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), id);
+        badge.put(JsonKey.ID, id);
+        badge.put(JsonKey.USER_ID, userId);
+        updateUserBadgeDataToES(badge);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void addBadgeData(Request request) {
+        // request came to assign the badge from user
+        // Delete the badge details
+        Map<String, Object> map = request.getRequest();
+        String userId = (String) map.get(JsonKey.ID);
+        Map<String, Object> badge = (Map<String, Object>) map.get(BadgingJsonKey.BADGE_ASSERTION);
+        String id = getUserBadgeAssertionId(badge);
+
+        // request came to assign the badge to user
+        badge.put(JsonKey.ID, id);
+        badge.put(JsonKey.USER_ID, userId);
+        cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), badge);
+        updateUserBadgeDataToES(badge);
+    }
+
+    /**
+     * @param badge
+     * @return String
+     */
+    private String getUserBadgeAssertionId(Map<String, Object> badge) {
+        return ((String) badge.get(BadgingJsonKey.ASSERTION_ID) + JsonKey.PRIMARY_KEY_DELIMETER
                 + (String) badge.get(BadgingJsonKey.ISSUER_ID) + JsonKey.PRIMARY_KEY_DELIMETER
                 + (String) badge.get(BadgingJsonKey.BADGE_CLASS_ID));
-        Response response =
-                cassandraOperation.getRecordById(dbInfo.getKeySpace(), dbInfo.getTableName(), id);
-        List<Map<String, Object>> resList =
-                (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-
-        if (null != resList && !resList.isEmpty()) {
-            // request came to revoke the badge from user
-            // Delete the badge details
-            cassandraOperation.deleteRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), id);
-            badge.put(JsonKey.ID, id);
-            badge.put(JsonKey.USER_ID, userId);
-            updateUserBadgeDataToES(badge);
-        } else {
-            // request came to assign the badge to user
-            badge.put(JsonKey.ID, id);
-            badge.put(JsonKey.USER_ID, userId);
-            cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), badge);
-            updateUserBadgeDataToES(badge);
-        }
     }
 
     @SuppressWarnings("unchecked")

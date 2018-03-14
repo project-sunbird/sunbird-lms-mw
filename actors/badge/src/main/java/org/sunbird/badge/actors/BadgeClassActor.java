@@ -27,10 +27,11 @@ public class BadgeClassActor extends BaseActor {
     BadgeClassExtensionService badgeClassExtensionService = new BadgeClassExtensionServiceImpl();
 
     public static void init() {
-        RequestRouter.registerActor(BadgeClassActor.class,
-                Arrays.asList(BadgeOperations.createBadgeClass.name(),
-                        BadgeOperations.getBadgeClass.name(), BadgeOperations.listBadgeClass.name(),
-                        BadgeOperations.deleteBadgeClass.name()));
+        RequestRouter.registerActor(BadgeClassActor.class, Arrays.asList(
+                BadgeOperations.createBadgeClass.name(),
+                BadgeOperations.getBadgeClass.name(),
+                BadgeOperations.listBadgeClass.name(),
+                BadgeOperations.deleteBadgeClass.name()));
     }
 
     @Override
@@ -62,10 +63,8 @@ public class BadgeClassActor extends BaseActor {
         try {
             Map<String, Object> requestData = actorMessage.getRequest();
 
-            Map<String, String> formParams =
-                    (Map<String, String>) requestData.get(JsonKey.FORM_PARAMS);
-            Map<String, byte[]> fileParams =
-                    (Map<String, byte[]>) requestData.get(JsonKey.FILE_PARAMS);
+            Map<String, String> formParams = (Map<String, String>) requestData.get(JsonKey.FORM_PARAMS);
+            Map<String, byte[]> fileParams = (Map<String, byte[]>) requestData.get(JsonKey.FILE_PARAMS);
 
             String issuerId = formParams.remove(BadgingJsonKey.ISSUER_ID);
             String rootOrgId = formParams.remove(JsonKey.ROOT_ORG_ID);
@@ -84,21 +83,17 @@ public class BadgeClassActor extends BaseActor {
 
             Map<String, String> headers = BadgingUtil.getBadgrHeaders();
 
-            HttpUtilResponse httpUtilResponse = HttpUtil.postFormData(formParams, fileParams,
-                    headers, BadgingUtil.getBadgeClassUrl(issuerId));
+            HttpUtilResponse httpUtilResponse = HttpUtil.postFormData(formParams, fileParams, headers, BadgingUtil.getBadgeClassUrl(issuerId));
             String badgrResponseStr = httpUtilResponse.getBody();
             ObjectMapper mapper = new ObjectMapper();
-            Map<String, Object> badgrResponseMap =
-                    mapper.readValue(badgrResponseStr, HashMap.class);
+            Map<String, Object> badgrResponseMap = (Map<String, Object>) mapper.readValue(badgrResponseStr, HashMap.class);
             String badgeId = (String) badgrResponseMap.get(BadgingJsonKey.SLUG);
 
-            BadgeClassExtension badgeClassExt =
-                    new BadgeClassExtension(badgeId, issuerId, rootOrgId, type, subtype, rolesList);
+            BadgeClassExtension badgeClassExt = new BadgeClassExtension(badgeId, issuerId, rootOrgId, type, subtype, rolesList);
             badgeClassExtensionService.save(badgeClassExt);
 
             Response response = new Response();
-            BadgingUtil.prepareBadgeClassResponse(badgrResponseStr, badgeClassExt,
-                    response.getResult());
+            BadgingUtil.prepareBadgeClassResponse(badgrResponseStr, badgeClassExt, response.getResult());
 
             sender().tell(response, self());
         } catch (IOException e) {
@@ -127,8 +122,7 @@ public class BadgeClassActor extends BaseActor {
             BadgeClassExtension badgeClassExtension = badgeClassExtensionService.get(badgeId);
 
             Response response = new Response();
-            BadgingUtil.prepareBadgeClassResponse(badgrResponseStr, badgeClassExtension,
-                    response.getResult());
+            BadgingUtil.prepareBadgeClassResponse(badgrResponseStr, badgeClassExtension, response.getResult());
 
             sender().tell(response, self());
         } catch (IOException e) {
@@ -144,8 +138,7 @@ public class BadgeClassActor extends BaseActor {
         try {
             Map<String, Object> requestData = actorMessage.getRequest();
             List<String> issuerList = (List<String>) requestData.get(BadgingJsonKey.ISSUER_LIST);
-            Map<String, Object> context =
-                    (Map<String, Object>) requestData.get(BadgingJsonKey.CONTEXT);
+            Map<String, Object> context = (Map<String, Object>) requestData.get(BadgingJsonKey.CONTEXT);
             String rootOrgId = (String) context.get(JsonKey.ROOT_ORG_ID);
             String type = (String) context.get(JsonKey.TYPE);
             String subtype = (String) context.get(JsonKey.SUBTYPE);
@@ -159,7 +152,7 @@ public class BadgeClassActor extends BaseActor {
             List<Object> badges = new ArrayList<>();
 
             for (String issuerSlug : filteredIssuerList) {
-                badges.addAll(listBadgeClassForIssuer(issuerSlug, badgeClassExtList, allowedRoles));
+                badges.addAll(listBadgeClassForIssuer(issuerSlug, badgeClassExtList));
             }
 
             Response response = new Response();
@@ -174,9 +167,7 @@ public class BadgeClassActor extends BaseActor {
     }
 
 
-    private List<Object> listBadgeClassForIssuer(String issuerSlug,
-            List<BadgeClassExtension> badgeClassExtensionList, List<String> allowedRoles)
-            throws IOException {
+    private List<Object> listBadgeClassForIssuer(String issuerSlug, List<BadgeClassExtension> badgeClassExtensionList) throws IOException {
         Map<String, String> headers = BadgingUtil.getBadgrHeaders();
         String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerSlug);
 

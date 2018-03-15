@@ -34,7 +34,7 @@ public abstract class BaseActor extends UntypedAbstractActor {
 				onReceiveException(callerName, e);
 			}
 		} else if (message instanceof Response) {
-			sender().tell(message, getSelf());
+			sender().tell(message, self());
 		} else {
 			unSupportedMessage();
 		}
@@ -42,7 +42,7 @@ public abstract class BaseActor extends UntypedAbstractActor {
 
 	public void tellToAnother(Request request) {
 		request.getContext().put(JsonKey.TELEMETRY_CONTEXT, ExecutionContext.getCurrent().getRequestContext());
-		SunbirdMWService.tell(request, getSelf());
+		SunbirdMWService.tell(request, self());
 	}
 
 	public void unSupportedMessage() {

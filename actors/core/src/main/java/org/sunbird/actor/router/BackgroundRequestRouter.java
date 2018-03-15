@@ -48,7 +48,7 @@ public class BackgroundRequestRouter extends BaseRouter {
 		org.sunbird.common.request.ExecutionContext.setRequestId(request.getRequestId());
 		ActorRef ref = routingMap.get(request.getOperation());
 		if (null != ref) {
-			ref.tell(request, ActorRef.noSender());
+			ref.tell(request, self());
 		} else {
 			onReceiveUnsupportedOperation(request.getOperation());
 		}

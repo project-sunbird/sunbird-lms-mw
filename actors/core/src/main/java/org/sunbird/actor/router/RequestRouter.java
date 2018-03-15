@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseRouter;
+import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -118,19 +119,19 @@ public class RequestRouter extends BaseRouter {
 					// We got a failure, handle it here
 					ProjectLogger.log(failure.getMessage(), failure);
 					if (failure instanceof ProjectCommonException) {
-						parent.tell(failure, ActorRef.noSender());
+						parent.tell(failure, self());
 					} else {
 						ProjectCommonException exception = new ProjectCommonException(
 								ResponseCode.internalError.getErrorCode(), ResponseCode.internalError.getErrorMessage(),
 								ResponseCode.CLIENT_ERROR.getResponseCode());
-						parent.tell(exception, ActorRef.noSender());
+						parent.tell(exception, self());
 					}
 				} else {
 					// We got a result, handle it
 					ProjectLogger.log("Actor Service Call Ended on Success for  api ==" + message.getOperation()
 							+ " end time " + System.currentTimeMillis() + "  Time taken "
 							+ (System.currentTimeMillis() - startTime), LoggerEnum.PERF_LOG);
-					parent.tell(result, ActorRef.noSender());
+					parent.tell(result, self());
 					// Audit log method call
 					if (result instanceof Response && Util.auditLogUrlMap.containsKey(message.getOperation())) {
 						AuditOperation auditOperation = (AuditOperation) Util.auditLogUrlMap
@@ -142,8 +143,7 @@ public class RequestRouter extends BaseRouter {
 						Request request = new Request();
 						request.setOperation(ActorOperations.PROCESS_AUDIT_LOG.getValue());
 						request.setRequest(map);
-						// TODO: we need to enable audit logging.
-						// auditLogManagementActor.tell(request, self());
+						SunbirdMWService.tell(request, self());
 					}
 				}
 			}

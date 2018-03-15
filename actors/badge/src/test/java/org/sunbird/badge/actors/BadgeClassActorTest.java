@@ -36,8 +36,8 @@ public class BadgeClassActorTest {
 
     private Request actorMessage;
 
-    BadgrServiceImpl mockBadgingService;
-    ProjectCommonException resourceNotFoundException;
+    private BadgrServiceImpl mockBadgingService;
+    private ProjectCommonException resourceNotFoundException;
 
     @Before
     public void setup() {

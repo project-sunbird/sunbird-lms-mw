@@ -50,7 +50,7 @@ public class BadgrServiceImpl implements BadgingService {
 		if (null != image) {
 			fileData.put(JsonKey.IMAGE, image);
 		}
-		HttpUtilResponse httpResponse = HttpUtil.postFormData(requestData, fileData, headers, url);
+		HttpUtilResponse httpResponse = HttpUtil.postFormData(requestData, fileData, headers, BadgingUtil.getBadgrBaseUrl() + url);
 		Response response = new Response();
 		response.put(JsonKey.RESPONSE, httpResponse);
 		return response;
@@ -288,7 +288,7 @@ public class BadgrServiceImpl implements BadgingService {
 		String slug = (String) req.get(JsonKey.SLUG);
 		String url = "/v1/issuer/issuers" + "/" + slug;
 		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-		HttpUtilResponse httpResponse =HttpUtil.sendDeleteRequest(headers , url);
+		HttpUtilResponse httpResponse =HttpUtil.sendDeleteRequest(headers , BadgingUtil.getBadgrBaseUrl() + url);
 		Response response = new Response();
 		response.put(JsonKey.RESPONSE, httpResponse);
 		return response;

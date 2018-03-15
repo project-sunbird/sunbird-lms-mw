@@ -548,6 +548,8 @@ public final class Util {
                     .get(JsonKey.GROUP_QUERY));
         }
         if (searchQueryMap.containsKey(JsonKey.SOFT_CONSTRAINTS)) {
+            // Play is converting int value to bigInt so need to cnvert back those data to iny
+            // SearchDto soft constraints expect Map<String, Integer>
             Map<String, Integer> constraintsMap = new HashMap<>();
             Set<Entry<String, BigInteger>> entrySet =
                     ((Map<String, BigInteger>) searchQueryMap.get(JsonKey.SOFT_CONSTRAINTS))

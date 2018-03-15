@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
+import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.BackgroundRequestRouter;
 import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
@@ -27,10 +28,9 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.AbstractBaseActor;
 import org.sunbird.learner.util.Util;
 
-public class EmailServiceActor extends AbstractBaseActor {
+public class EmailServiceActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
@@ -46,16 +46,11 @@ public class EmailServiceActor extends AbstractBaseActor {
 	}
 
 	@Override
-	public void onReceive(Object obj) throws Throwable {
-		if (obj instanceof Request) {
-			Request request = (Request) obj;
-			if (request.getOperation().equalsIgnoreCase(BackgroundOperations.emailService.name())) {
-				sendMail(request);
-			} else {
-				onReceiveUnsupportedOperation(request.getOperation());
-			}
+	public void onReceive(Request request) throws Throwable {
+		if (request.getOperation().equalsIgnoreCase(BackgroundOperations.emailService.name())) {
+			sendMail(request);
 		} else {
-			onReceiveUnsupportedMessage("emailService");
+			onReceiveUnsupportedOperation(request.getOperation());
 		}
 	}
 

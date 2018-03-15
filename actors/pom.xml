@@ -12,11 +12,11 @@
 	<name>Middleware Actors</name>
 	<modules>
 		<module>core</module>
-		<module>badge</module>
 		<module>user</module>
 		<module>organization</module>
 		<module>course</module>
     <module>content</module>
+		<module>badge</module>
     <module>dashboard</module>
   </modules>
 </project>

@@ -2,6 +2,7 @@ package org.sunbird.badge.actors;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import org.sunbird.actor.core.BaseActor;
@@ -98,13 +99,16 @@ public class UserBadgeAssertion extends BaseActor {
                     (List<Map<String, Object>>) result.get(BadgingJsonKey.BADGE_ASSERTIONS);
 
             boolean bool = true;
-            for (Map<String, Object> tempMap : badgeAssertionsList) {
+            Iterator<Map<String, Object>> itr = badgeAssertionsList.iterator();
+            while (itr.hasNext()) {
+                Map<String, Object> tempMap = itr.next();
                 if (((String) tempMap.get(JsonKey.ID))
                         .equalsIgnoreCase((String) map.get(JsonKey.ID))) {
-                    badgeAssertionsList.remove(tempMap);
+                    itr.remove();
                     bool = false;
                 }
             }
+
             if (bool) {
                 badgeAssertionsList.add(map);
             }
@@ -121,13 +125,13 @@ public class UserBadgeAssertion extends BaseActor {
 
     private boolean updateDataToElastic(String indexName, String typeName, String identifier,
             Map<String, Object> data) {
+
         boolean response = ElasticSearchUtil.updateData(indexName, typeName, identifier, data);
-        if (response) {
-            return true;
+        if (!response) {
+            ProjectLogger.log("unbale to save the data inside ES for user badge " + identifier,
+                    LoggerEnum.INFO.name());
         }
-        ProjectLogger.log("unbale to save the data inside ES for user badge " + identifier,
-                LoggerEnum.INFO.name());
-        return false;
+        return response;
 
     }
 }

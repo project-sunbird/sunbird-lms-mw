@@ -29,7 +29,6 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.learner.actors.AbstractBaseActor;
 import org.sunbird.learner.util.Util;
 
 /**

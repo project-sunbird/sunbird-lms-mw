@@ -2,6 +2,7 @@ package org.sunbird.badge.util;
 
 import java.io.IOException;
 import java.text.MessageFormat;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,7 +55,7 @@ public class BadgingUtil {
         return String.format("%s/v1/issuer/issuers/%s/badges/%s", getBadgrBaseUrl(), issuerSlug, badgeSlug);
     }
 
-    public static Map<String, String> getBadgrHeaders() {
+    public static Map<String, String> getBadgrHeaders(boolean isContentTypeHeaderRequired) {
         HashMap<String, String> headers = new HashMap<>();
 
         String authToken = System.getenv(BadgingJsonKey.BADGING_AUTHORIZATION_KEY);
@@ -65,8 +66,15 @@ public class BadgingUtil {
             headers.put("Authorization", String.format(BADGING_AUTHORIZATION_FORMAT, authToken));
         }
         headers.put("Accept", "application/json");
-        headers.put("Content-Type", "application/json");
+
+        if (isContentTypeHeaderRequired) {
+            headers.put("Content-Type", "application/json");
+        }
         return headers;
+    }
+
+    public static Map<String, String> getBadgrHeaders() {
+        return getBadgrHeaders(true);
     }
 
     public static String getLastSegment(String path) {
@@ -207,6 +215,12 @@ public class BadgingUtil {
 		}
 
 	}
+
+	public static void throwExceptionOnErrorStatus(int statusCode) throws ProjectCommonException {
+		if (statusCode < 200 || statusCode > 300) {
+			throw createExceptionForBadger(statusCode);
+		}
+	}
 	
 	/**
 	 * This method will get the response from badging server and 
@@ -222,7 +236,7 @@ public class BadgingUtil {
 		innerMap.put(BadgingJsonKey.ISSUER_ID, reqMap.get(BadgingJsonKey.ISSUER_ID));
 		innerMap.put(BadgingJsonKey.BADGE_CLASS_IMAGE, reqMap.get(BadgingJsonKey.BADGE_ID_URL));
 		innerMap.put(JsonKey.STATUS, BadgeStatus.active.name());
-		innerMap.put(BadgingJsonKey.CREATED_TS, System.currentTimeMillis());
+		innerMap.put(BadgingJsonKey.CREATED_TS, new java.sql.Timestamp(Calendar.getInstance().getTime().getTime()));
 		// now make a badgr call to collect badgeClassName
 		Request request = new Request();
 		request.getRequest().put(BadgingJsonKey.ISSUER_ID, reqMap.get(BadgingJsonKey.ISSUER_ID));

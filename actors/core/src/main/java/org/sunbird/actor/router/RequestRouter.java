@@ -49,11 +49,10 @@ public class RequestRouter extends BaseRouter {
 	public String getRouterMode() {
 		return getMode();
 	}
-	
+
 	public static String getMode() {
 		if (StringUtils.isBlank(mode)) {
-			String key = "api_actor_provider";
-			mode = getPropertyValue(key);
+			mode = getPropertyValue(JsonKey.API_ACTOR_PROVIDER);
 		}
 		return mode;
 	}

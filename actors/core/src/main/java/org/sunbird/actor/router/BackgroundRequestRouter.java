@@ -6,6 +6,7 @@ import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseRouter;
+import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
@@ -37,8 +38,7 @@ public class BackgroundRequestRouter extends BaseRouter {
 
 	public static String getMode() {
 		if (StringUtils.isBlank(mode)) {
-			String key = "background_actor_provider";
-			mode = getPropertyValue(key);
+			mode = getPropertyValue(JsonKey.BACKGROUND_ACTOR_PROVIDER);
 		}
 		return mode;
 	}
@@ -72,8 +72,10 @@ public class BackgroundRequestRouter extends BaseRouter {
 		if (null == context) {
 			System.out.println(BackgroundRequestRouter.class.getSimpleName()
 					+ " context is not available to initialise actor for [" + name + "]");
-			ProjectLogger.log(BackgroundRequestRouter.class.getSimpleName()
-					+ " context is not available to initialise actor for [" + name + "]", LoggerEnum.WARN.name());
+			ProjectLogger.log(
+					BackgroundRequestRouter.class.getSimpleName()
+							+ " context is not available to initialise actor for [" + name + "]",
+					LoggerEnum.WARN.name());
 			return false;
 		}
 		return true;

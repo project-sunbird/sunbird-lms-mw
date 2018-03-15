@@ -8,9 +8,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.Set;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -543,6 +546,20 @@ public final class Util {
         if (searchQueryMap.containsKey(JsonKey.GROUP_QUERY)) {
             search.getGroupQuery().addAll((Collection<? extends Map<String, Object>>) searchQueryMap
                     .get(JsonKey.GROUP_QUERY));
+        }
+        if (searchQueryMap.containsKey(JsonKey.SOFT_CONSTRAINTS)) {
+            // Play is converting int value to bigInt so need to cnvert back those data to iny
+            // SearchDto soft constraints expect Map<String, Integer>
+            Map<String, Integer> constraintsMap = new HashMap<>();
+            Set<Entry<String, BigInteger>> entrySet =
+                    ((Map<String, BigInteger>) searchQueryMap.get(JsonKey.SOFT_CONSTRAINTS))
+                            .entrySet();
+            Iterator<Entry<String, BigInteger>> itr = entrySet.iterator();
+            while (itr.hasNext()) {
+                Entry<String, BigInteger> entry = itr.next();
+                constraintsMap.put(entry.getKey(), entry.getValue().intValue());
+            }
+            search.setSoftConstraints(constraintsMap);
         }
         return search;
     }

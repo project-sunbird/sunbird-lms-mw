@@ -26,8 +26,6 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * This will updated user learner state activity. example what was the last
  * accessed content. how much percentage is completed, what is the state of

@@ -35,7 +35,6 @@ import org.sunbird.dto.SearchDTO;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import akka.actor.UntypedAbstractActor;
 
 public abstract class BaseMetricsActor extends BaseActor {
 

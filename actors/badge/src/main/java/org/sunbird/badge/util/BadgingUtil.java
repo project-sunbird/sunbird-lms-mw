@@ -2,6 +2,7 @@ package org.sunbird.badge.util;
 
 import java.io.IOException;
 import java.text.MessageFormat;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -222,7 +223,7 @@ public class BadgingUtil {
 		innerMap.put(BadgingJsonKey.ISSUER_ID, reqMap.get(BadgingJsonKey.ISSUER_ID));
 		innerMap.put(BadgingJsonKey.BADGE_CLASS_IMAGE, reqMap.get(BadgingJsonKey.BADGE_ID_URL));
 		innerMap.put(JsonKey.STATUS, BadgeStatus.active.name());
-		innerMap.put(BadgingJsonKey.CREATED_TS, System.currentTimeMillis());
+		innerMap.put(BadgingJsonKey.CREATED_TS, new java.sql.Timestamp(Calendar.getInstance().getTime().getTime()));
 		// now make a badgr call to collect badgeClassName
 		Request request = new Request();
 		request.getRequest().put(BadgingJsonKey.ISSUER_ID, reqMap.get(BadgingJsonKey.ISSUER_ID));

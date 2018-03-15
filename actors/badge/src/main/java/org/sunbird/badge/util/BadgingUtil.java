@@ -55,7 +55,7 @@ public class BadgingUtil {
         return String.format("%s/v1/issuer/issuers/%s/badges/%s", getBadgrBaseUrl(), issuerSlug, badgeSlug);
     }
 
-    public static Map<String, String> getBadgrHeaders() {
+    public static Map<String, String> getBadgrHeaders(boolean isContentTypeHeaderRequired) {
         HashMap<String, String> headers = new HashMap<>();
 
         String authToken = System.getenv(BadgingJsonKey.BADGING_AUTHORIZATION_KEY);
@@ -66,8 +66,15 @@ public class BadgingUtil {
             headers.put("Authorization", String.format(BADGING_AUTHORIZATION_FORMAT, authToken));
         }
         headers.put("Accept", "application/json");
-        headers.put("Content-Type", "application/json");
+
+        if (isContentTypeHeaderRequired) {
+            headers.put("Content-Type", "application/json");
+        }
         return headers;
+    }
+
+    public static Map<String, String> getBadgrHeaders() {
+        return getBadgrHeaders(true);
     }
 
     public static String getLastSegment(String path) {
@@ -207,6 +214,12 @@ public class BadgingUtil {
 					ResponseCode.internalError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
 		}
 
+	}
+
+	public static void throwExceptionOnErrorStatus(int statusCode) throws ProjectCommonException {
+		if (statusCode < 200 || statusCode > 300) {
+			throw createExceptionForBadger(statusCode);
+		}
 	}
 	
 	/**

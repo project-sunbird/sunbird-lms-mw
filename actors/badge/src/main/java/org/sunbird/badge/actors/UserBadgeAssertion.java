@@ -127,8 +127,10 @@ public class UserBadgeAssertion extends BaseActor {
             Map<String, Object> data) {
 
         boolean response = ElasticSearchUtil.updateData(indexName, typeName, identifier, data);
-        ProjectLogger.log("unbale to save the data inside ES for user badge " + identifier,
-                LoggerEnum.INFO.name());
+        if (!response) {
+            ProjectLogger.log("unbale to save the data inside ES for user badge " + identifier,
+                    LoggerEnum.INFO.name());
+        }
         return response;
 
     }

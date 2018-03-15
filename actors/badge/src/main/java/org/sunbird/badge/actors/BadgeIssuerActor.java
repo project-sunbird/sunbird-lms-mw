@@ -38,7 +38,7 @@ import org.sunbird.learner.util.Util;
 public class BadgeIssuerActor extends BaseActor {
 
     private ObjectMapper mapper = new ObjectMapper();
-    BadgingService service  = BadgingFactory.getInstance();
+    private BadgingService badgingService;
 
     public static void init() {
         RequestRouter.registerActor(BadgeIssuerActor.class, Arrays.asList(
@@ -47,6 +47,15 @@ public class BadgeIssuerActor extends BaseActor {
             BadgeOperations.getAllIssuer.name(),
             BadgeOperations.deleteIssuer.name()));
     }
+
+    public BadgeIssuerActor() {
+        this.badgingService = BadgingFactory.getInstance();
+    }
+
+    public BadgeIssuerActor(BadgingService badgingService) {
+        this.badgingService = badgingService;
+    }
+
 
     @Override
     public void onReceive(Request request) throws Throwable {
@@ -80,13 +89,13 @@ public class BadgeIssuerActor extends BaseActor {
      **/
     private void createBadgeIssuer(Request actorMessage) throws IOException {
 
-        Response result = service.createIssuer(actorMessage);
+        Response result = badgingService.createIssuer(actorMessage);
         HttpUtilResponse httpUtilResponse = (HttpUtilResponse) result.getResult().get(JsonKey.RESPONSE);
         int statusCode = httpUtilResponse.getStatusCode();
         if (statusCode >= 200 && statusCode < 300) {
             Response response = new Response();
             BadgingUtil.prepareBadgeIssuerResponse(httpUtilResponse.getBody(), response.getResult());
-            sender().tell(response, ActorRef.noSender());
+            sender().tell(response, self());
         } else {
             sender().tell(BadgingUtil.createExceptionForBadger(statusCode), self());
         }
@@ -95,7 +104,7 @@ public class BadgeIssuerActor extends BaseActor {
     private void getBadgeIssuer(Request actorMessage) throws IOException {
 
 
-        Response result = service.getIssuerDetails(actorMessage);
+        Response result = badgingService.getIssuerDetails(actorMessage);
         HttpUtilResponse httpUtilResponse = (HttpUtilResponse) result.getResult().get(JsonKey.RESPONSE);
         int statusCode = httpUtilResponse.getStatusCode();
 
@@ -110,7 +119,7 @@ public class BadgeIssuerActor extends BaseActor {
 
     private void getAllIssuer(Request actorMessage) throws IOException {
 
-        Response result = service.getIssuerList(actorMessage);
+        Response result = badgingService.getIssuerList(actorMessage);
         HttpUtilResponse httpUtilResponse = (HttpUtilResponse) result.getResult().get(JsonKey.RESPONSE);
         int statusCode = httpUtilResponse.getStatusCode();
 
@@ -135,7 +144,7 @@ public class BadgeIssuerActor extends BaseActor {
 
     private void deleteIssuer(Request request) throws IOException {
 
-        Response result = service.deleteIssuer(request);
+        Response result = badgingService.deleteIssuer(request);
         HttpUtilResponse httpUtilResponse = (HttpUtilResponse) result.getResult().get(JsonKey.RESPONSE);
         int statusCode = httpUtilResponse.getStatusCode();
 

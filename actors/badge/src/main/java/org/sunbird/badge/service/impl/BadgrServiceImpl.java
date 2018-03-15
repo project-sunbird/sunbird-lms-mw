@@ -28,6 +28,14 @@ import org.sunbird.common.request.Request;
 public class BadgrServiceImpl implements BadgingService {
 	BadgeClassExtensionService badgeClassExtensionService = new BadgeClassExtensionServiceImpl();
 
+	public BadgrServiceImpl() {
+		this.badgeClassExtensionService = new BadgeClassExtensionServiceImpl();
+	}
+
+	public BadgrServiceImpl(BadgeClassExtensionService badgeClassExtensionService) {
+		this.badgeClassExtensionService = badgeClassExtensionService;
+	}
+
 	@Override
 	public Response createIssuer(Request request) throws IOException {
 		// TODO Auto-generated method stub

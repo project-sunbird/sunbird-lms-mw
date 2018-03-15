@@ -2,6 +2,7 @@ package org.sunbird.badge.service.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -24,19 +25,54 @@ public class BadgrServiceImpl implements BadgingService {
 	@Override
 	public Response createIssuer(Request request) throws IOException {
 		// TODO Auto-generated method stub
-		return null;
+		Map<String, Object> req = request.getRequest();
+		byte[] image = null;
+		Map<String, byte[]> fileData = new HashMap<>();
+		if (req.containsKey(JsonKey.IMAGE) && null != req.get(JsonKey.IMAGE)) {
+			image = (byte[]) req.get(JsonKey.IMAGE);
+		}
+		Map<String, String> requestData = new HashMap<>();
+		requestData.put(JsonKey.NAME, (String) req.get(JsonKey.NAME));
+		requestData.put(JsonKey.DESCRIPTION, (String) req.get(JsonKey.DESCRIPTION));
+		requestData.put(JsonKey.URL, (String) req.get(JsonKey.URL));
+		requestData.put(JsonKey.EMAIL, (String) req.get(JsonKey.EMAIL));
+
+		String url = "/v1/issuer/issuers";
+		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
+		// since the content type here is not application/json so removing this key.
+		headers.remove("Content-Type");
+		if (null != image) {
+			fileData.put(JsonKey.IMAGE, image);
+		}
+		HttpUtilResponse httpResponse = HttpUtil.postFormData(requestData, fileData, headers, url);
+		Response response = new Response();
+		response.put(JsonKey.RESPONSE, httpResponse);
+		return response;
 	}
 
 	@Override
 	public Response getIssuerDetails(Request request) throws IOException {
 		// TODO Auto-generated method stub
-		return null;
+		Map<String, Object> req = request.getRequest();
+		String slug = (String) req.get(JsonKey.SLUG);
+		String url = "/v1/issuer/issuers" + "/" + slug;
+		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
+
+		HttpUtilResponse httpResponse =HttpUtil.doGetRequest(BadgingUtil.getBadgrBaseUrl() + url, headers);
+		Response response = new Response();
+		response.put(JsonKey.RESPONSE, httpResponse);
+		return response;
 	}
 
 	@Override
 	public Response getIssuerList(Request request) throws IOException {
 		// TODO Auto-generated method stub
-		return null;
+		String url = "/v1/issuer/issuers";
+		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
+		HttpUtilResponse httpResponse =HttpUtil.doGetRequest(BadgingUtil.getBadgrBaseUrl() + url, headers);
+		Response response = new Response();
+		response.put(JsonKey.RESPONSE, httpResponse);
+		return response;
 	}
 
 	@Override
@@ -112,6 +148,19 @@ public class BadgrServiceImpl implements BadgingService {
 		Response response = new Response();
 		response.put(JsonKey.RESPONSE, httpResponse);
 		return response;
+	}
+
+	@Override
+	public Response deleteIssuer(Request request) throws IOException{
+		Map<String, Object> req = request.getRequest();
+		String slug = (String) req.get(JsonKey.SLUG);
+		String url = "/v1/issuer/issuers" + "/" + slug;
+		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
+		HttpUtilResponse httpResponse =HttpUtil.sendDeleteRequest(headers , url);
+		Response response = new Response();
+		response.put(JsonKey.RESPONSE, httpResponse);
+		return response;
+
 	}
 
 }

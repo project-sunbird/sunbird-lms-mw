@@ -139,4 +139,15 @@ public interface BadgingService {
 	 * @return Response
 	 */
 	public Response revokeAssertion(Request request) throws IOException;
+
+	/**
+	 * This method will provide particular issuer details based on requested issuer
+	 * id.
+	 *
+	 * @param request
+	 *            Request
+	 * @exception IOException
+	 * @return Response
+	 */
+	public Response deleteIssuer(Request request) throws IOException;
 }

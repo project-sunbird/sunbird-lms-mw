@@ -2,6 +2,7 @@ package org.sunbird.badge;
 
 import org.sunbird.badge.actors.BadgeAssertionActor;
 import org.sunbird.badge.actors.BadgeClassActor;
+import org.sunbird.badge.actors.BadgeIssuerActor;
 import org.sunbird.badge.actors.BadgeNotifier;
 import org.sunbird.badge.actors.UserBadgeAssertion;
 
@@ -18,6 +19,7 @@ public class BadgeActorRegistry {
         BadgeClassActor.init();
         BadgeAssertionActor.init();
         UserBadgeAssertion.init();
+        BadgeIssuerActor.init();
     }
 
 }

@@ -95,7 +95,7 @@ public class BadgeNotifier extends BaseActor {
 		Response response = new Response();
 		response.setResponseCode(ResponseCode.CLIENT_ERROR);
 		ResponseParams params = new ResponseParams();
-		params.setErrmsg("ObjectType is invalid.");
+		params.setErrmsg("ObjectType is invalid to assign/revoke badge.");
 		params.setErr(error);
 		response.setParams(params);
 		return response;

@@ -17,15 +17,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class ContentService {
 
-	private static final String contentServiceBaseUrl = System.getenv(JsonKey.SUNBIRD_CONTENT_SERVICE_BASE_URL);
+	private static final String contentServiceBaseUrl = System.getenv(JsonKey.SUNBIRD_API_BASE_URL);
 	private static ObjectMapper mapper = new ObjectMapper();
 	private static Map<String, String> headers = new HashMap<String, String>();
 	private static final String BADGE_ASSERTION = "badgeAssertion";
 
 	static {
-		String authorization = System.getenv(JsonKey.SUNBIRD_CONTENT_SERVICE_AUTHORIZATION);
+		String authorization = System.getenv(JsonKey.SUNBIRD_AUTHORIZATION);
 		if (ProjectUtil.isStringNullOREmpty(authorization)) {
-			authorization = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_CONTENT_SERVICE_AUTHORIZATION);
+			authorization = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_AUTHORIZATION);
 		} else {
 			authorization = JsonKey.BEARER + authorization;
 		}
@@ -58,8 +58,8 @@ public class ContentService {
 		String badgeStr = mapper.writeValueAsString(badge);
 		String reqBody = "{\"request\": {\"content\": {\"" + BADGE_ASSERTION + "\": " + badgeStr + "}}}";
 
-		String httpResponse = HttpUtil.sendPatchRequest(props.get("basePath") + id, reqBody, headers);
-		System.out.println("Response: " + httpResponse);
+		HttpUtil.sendPatchRequest(props.get("basePath") + id, reqBody, headers);
+		// TODO: Get the response and return msg based on it's value.
 		Response response = new Response();
 		response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
 		return response;
@@ -70,12 +70,12 @@ public class ContentService {
 		switch (operation.toUpperCase()) {
 		case "ASSIGNBADGE":
 			props.put("basePath",
-					contentServiceBaseUrl + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_UPDATE_URL));
+					contentServiceBaseUrl + PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_CONTENT_BADGE_ASSIGN_URL));
 			props.put("errCode", "INVALID_ASSIGN_BADGE_REQUEST");
 			break;
 		case "REVOKEBADGE":
 			props.put("basePath",
-					contentServiceBaseUrl + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_UPDATE_URL));
+					contentServiceBaseUrl + PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_CONTENT_BADGE_REVOKE_URL));
 			props.put("errCode", "INVALID_REVOKE_BADGE_REQUEST");
 			break;
 		default:

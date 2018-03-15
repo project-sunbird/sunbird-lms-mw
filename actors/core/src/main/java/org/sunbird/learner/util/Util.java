@@ -544,6 +544,10 @@ public final class Util {
             search.getGroupQuery().addAll((Collection<? extends Map<String, Object>>) searchQueryMap
                     .get(JsonKey.GROUP_QUERY));
         }
+        if (searchQueryMap.containsKey(JsonKey.SOFT_CONSTRAINTS)) {
+            search.setSoftConstraints(
+                    (Map<String, Integer>) searchQueryMap.get(JsonKey.SOFT_CONSTRAINTS));;
+        }
         return search;
     }
 

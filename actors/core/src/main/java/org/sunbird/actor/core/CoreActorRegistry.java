@@ -8,6 +8,7 @@ import org.sunbird.learner.actors.BackgroundJobManager;
 import org.sunbird.learner.actors.CourseBatchManagementActor;
 import org.sunbird.learner.actors.CourseEnrollmentActor;
 import org.sunbird.learner.actors.CourseManagementActor;
+import org.sunbird.learner.actors.LeanerStateUpdateBackGroundActor;
 import org.sunbird.learner.actors.LearnerStateActor;
 import org.sunbird.learner.actors.LearnerStateUpdateActor;
 import org.sunbird.learner.actors.NotesManagementActor;
@@ -84,6 +85,7 @@ public class CoreActorRegistry {
 		KeyCloakSyncActor.init();
 		ApplicationConfigActor.init();
 		DbOperationActor.init();
+		LeanerStateUpdateBackGroundActor.init();
 
 	}
 }

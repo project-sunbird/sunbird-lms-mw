@@ -45,7 +45,6 @@ public class LearnerStateUpdateActor extends BaseActor {
 	private static final String CONTENT_STATE_INFO = "contentStateInfo";
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-	private ActorRef utilityActorRef = context().actorOf(Props.create(UtilityActor.class), "utilityActor");
 
 	public static void init() {
 		RequestRouter.registerActor(LearnerStateUpdateActor.class,
@@ -55,7 +54,7 @@ public class LearnerStateUpdateActor extends BaseActor {
 	/**
 	 * Receives the actor message and perform the add content operation .
 	 *
-	 * @param message
+	 * @param request
 	 *            Request
 	 */
 	@SuppressWarnings("unchecked")
@@ -147,9 +146,10 @@ public class LearnerStateUpdateActor extends BaseActor {
 			}
 			sender().tell(response, self());
 			// call to update the corresponding course
+			ProjectLogger.log("Calling background job to update learner state");
 			request.getRequest().put(CONTENT_STATE_INFO, contentStatusHolder);
-			// ActorUtil.tell(actorMessage);
-			utilityActorRef.tell(request, ActorRef.noSender());
+			request.setOperation(ActorOperations.UPDATE_LEARNER_STATE.getValue());
+			tellToAnother(request);
 		} else {
 			onReceiveUnsupportedOperation(request.getOperation());
 		}

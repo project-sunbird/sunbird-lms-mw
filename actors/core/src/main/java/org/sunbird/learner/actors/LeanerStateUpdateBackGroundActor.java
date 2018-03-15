@@ -3,15 +3,20 @@ package org.sunbird.learner.actors;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.BackgroundRequestRouter;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
@@ -30,14 +35,30 @@ import akka.actor.UntypedAbstractActor;
  * 
  * @author arvind
  */
-public class UtilityActor extends UntypedAbstractActor {
+public class LeanerStateUpdateBackGroundActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private static final String CONTENT_STATE_INFO = "contentStateInfo";
 
-	@SuppressWarnings("unchecked")
+	public static void init() {
+		BackgroundRequestRouter.registerActor(LeanerStateUpdateBackGroundActor.class, Arrays.asList(
+				ActorOperations.UPDATE_LEARNER_STATE.getValue()));
+	}
+
 	@Override
-	public void onReceive(Object message) throws Throwable {
+	public void onReceive(Request request) throws Throwable {
+		ProjectLogger.log("LeanerStateUpdateBackGroundActor  onReceive called", LoggerEnum.INFO.name());
+		String operation = request.getOperation();
+		switch (operation) {
+			case "updateLearnerState":
+				updateLearnerState(request);
+				break;
+			default:
+				onReceiveUnsupportedOperation("updateLearnerState");
+		}
+	}
+
+	private void updateLearnerState(Object message) throws Throwable {
 		if (message instanceof Request) {
 			Request req = (Request) message;
 			// get the list of content objects

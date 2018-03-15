@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.badge.BadgeOperations;
@@ -109,7 +110,7 @@ public class BadgeIssuerActor extends BaseActor {
 
     private void getAllIssuer(Request actorMessage) throws IOException {
 
-        Response result = service.getIssuerDetails(actorMessage);
+        Response result = service.getIssuerList(actorMessage);
         HttpUtilResponse httpUtilResponse = (HttpUtilResponse) result.getResult().get(JsonKey.RESPONSE);
         int statusCode = httpUtilResponse.getStatusCode();
 
@@ -140,7 +141,8 @@ public class BadgeIssuerActor extends BaseActor {
 
         if (statusCode >= 200 && statusCode < 300) {
             Response response = new Response();
-            response.put(JsonKey.MESSAGE , httpUtilResponse.getBody());
+            // since the response from badger service contains " at beging and end so remove that from response string
+            response.put(JsonKey.MESSAGE , StringUtils.strip( httpUtilResponse.getBody(), "\""));
             sender().tell(response, self());
         } else {
             sender().tell(BadgingUtil.createExceptionForBadger(statusCode), self());

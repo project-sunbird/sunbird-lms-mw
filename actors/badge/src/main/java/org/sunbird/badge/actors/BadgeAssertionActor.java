@@ -23,6 +23,7 @@ import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 
@@ -80,9 +81,18 @@ public class BadgeAssertionActor extends BaseActor {
 			if (statusCode >= 200 && statusCode < 300) {
 				Map<String, Object> res = mapper.readValue(httpUtilResponse.getBody(),
 						HashMap.class);
+				//calling to create response as per sunbird 
+				 res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String,Object>());
 				result = new Response();
 				result.getResult().putAll(res);
 				sender().tell(result, self());
+				Map<String,Object> map = BadgingUtil.createBadgeNotifierMap(res);
+				Request  request = new Request();
+				map.put(JsonKey.OBJECT_TYPE, actorMessage.getRequest().get(JsonKey.OBJECT_TYPE));
+				map.put(JsonKey.ID, actorMessage.getRequest().get(BadgingJsonKey.RECIPIENT_ID));
+				request.getRequest().putAll(map);
+				request.setOperation(BadgeOperations.assignBadgeMessage.name());
+				tellToAnother(request);
 			} else {
 				sender().tell(BadgingUtil.createExceptionForBadger(statusCode), self());
 			}
@@ -107,11 +117,23 @@ public class BadgeAssertionActor extends BaseActor {
 			int statusCode = httpUtilResponse.getStatusCode();
 			if (statusCode >= 200 && statusCode < 300) {
 				Map<String, Object> res = mapper.readValue(httpUtilResponse.getBody(), HashMap.class);
-				result = new Response();
-				result.getResult().putAll(res);
-				sender().tell(result, self());	
-			}else {
-			  sender().tell(BadgingUtil.createExceptionForBadger(statusCode), self());
+				// calling to create response as per sunbird
+				res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String, Object>());
+				boolean response = BadgingUtil.matchAssertionData(
+						(String) request.getRequest().get(BadgingJsonKey.ISSUER_ID),
+						(String) request.getRequest().get(BadgingJsonKey.BADGE_CLASS_ID), res);
+				if (response) {
+					result = new Response();
+					result.getResult().putAll(res);
+					sender().tell(result, self());
+				} else {
+					ProjectCommonException ex = new ProjectCommonException(ResponseCode.resourceNotFound.getErrorCode(),
+							ResponseCode.resourceNotFound.getErrorMessage(),
+							ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+					sender().tell(ex, self());
+				}
+			} else {
+				sender().tell(BadgingUtil.createExceptionForBadger(statusCode), self());
 			}
 		} catch (IOException e) {
 			ProjectCommonException ex = new ProjectCommonException(ResponseCode.badgingserverError.getErrorCode(),
@@ -134,8 +156,11 @@ public class BadgeAssertionActor extends BaseActor {
 			if (list != null && list.size() > 0) {
 				List<Map<String, Object>> responseMap = new ArrayList<>();
 				for (HttpUtilResponse data : list) {
-					if (data.getStatusCode() >= 200 && data.getStatusCode() < 300) {
+					if (data.getStatusCode() >= 200 && data.getStatusCode() < 300
+							&& !ProjectUtil.isStringNullOREmpty(data.getBody())) {
 						Map<String, Object> res = mapper.readValue(data.getBody(), HashMap.class);
+						// calling to create response as per sunbird
+						res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String, Object>());
 						responseMap.add(res);
 					}
 				}
@@ -143,9 +168,10 @@ public class BadgeAssertionActor extends BaseActor {
 				result.getResult().put(BadgingJsonKey.ASSERTIONS, responseMap);
 				sender().tell(result, self());
 			} else {
-				result = new Response();
-				result.getResult().put(JsonKey.FAILURE, JsonKey.FAILURE);
-				sender().tell(result, self());
+				ProjectCommonException ex = new ProjectCommonException(ResponseCode.resourceNotFound.getErrorCode(),
+						ResponseCode.resourceNotFound.getErrorMessage(),
+						ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+				sender().tell(ex, self());
 			}
 		} catch (IOException e) {
 			ProjectCommonException ex = new ProjectCommonException(ResponseCode.badgingserverError.getErrorCode(),
@@ -168,6 +194,19 @@ public class BadgeAssertionActor extends BaseActor {
 				result = new Response();
 				result.getResult().put(JsonKey.STATUS, JsonKey.SUCCESS);
 				sender().tell(result, self());
+				Map<String, Object> map = BadgingUtil.createRevokeBadgeNotifierMap(request.getRequest());
+				Request notificationReq = new Request();
+				map.put(JsonKey.OBJECT_TYPE, request.getRequest().get(JsonKey.OBJECT_TYPE));
+				map.put(JsonKey.ID, request.getRequest().get(BadgingJsonKey.RECIPIENT_ID));
+				notificationReq.getRequest().putAll(map);
+				notificationReq.setOperation(BadgeOperations.revokeBadgeMessage.name());
+				tellToAnother(notificationReq);
+			} else if (statusCode == 400) {
+				ProjectCommonException ex = new ProjectCommonException(
+						ResponseCode.badgeAssertionAlreadyRevoked.getErrorCode(),
+						ResponseCode.badgeAssertionAlreadyRevoked.getErrorMessage(),
+						ResponseCode.CLIENT_ERROR.getResponseCode());
+				sender().tell(ex, self());
 			} else {
 				sender().tell(BadgingUtil.createExceptionForBadger(statusCode), self());
 			}

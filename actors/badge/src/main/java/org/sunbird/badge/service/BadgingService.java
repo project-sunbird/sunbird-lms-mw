@@ -2,6 +2,8 @@ package org.sunbird.badge.service;
 
 import java.io.IOException;
 
+import org.apache.tools.ant.Project;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.request.Request;
 
@@ -64,7 +66,7 @@ public interface BadgingService {
 	 * @exception IOException
 	 * @return Response
 	 */
-	public Response createBadgeClass(Request request) throws IOException;
+	public Response createBadgeClass(Request request) throws ProjectCommonException;
 
 	/**
 	 * This method will provide badge class details based on issuerId and badgeId
@@ -74,7 +76,7 @@ public interface BadgingService {
 	 * @exception IOException
 	 * @return Response
 	 */
-	public Response getBadgeClassDetails(Request request) throws IOException;
+	public Response getBadgeClassDetails(Request request) throws ProjectCommonException;
 
 	/**
 	 * This method will provide list of badge class either for one issuer or
@@ -85,7 +87,7 @@ public interface BadgingService {
 	 * @exception IOException
 	 * @return Response
 	 */
-	public Response getBadgeClassList(Request request) throws IOException;
+	public Response getBadgeClassList(Request request) throws ProjectCommonException;
 
 	/**
 	 * This method will remove badge class from db. Badge class can be removed if it
@@ -96,7 +98,7 @@ public interface BadgingService {
 	 * @exception IOException
 	 * @return Response
 	 */
-	public Response removeBadgeClass(Request request) throws IOException;
+	public Response removeBadgeClass(Request request) throws ProjectCommonException;
 
 	/**
 	 * This method will issue a badge assertion to either user or content.

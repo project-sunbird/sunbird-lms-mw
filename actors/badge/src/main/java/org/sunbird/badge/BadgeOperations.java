@@ -12,7 +12,7 @@ public enum BadgeOperations {
 
     createBadgeClass, getBadgeClass, listBadgeClass, deleteBadgeClass,
 
-    createBadgeIssuer, createBadgeAssertion, getBadgeAssertion, getBadgeAssertionList, revokeBadge, addBadgeDataToUser,
+    createBadgeIssuer, createBadgeAssertion, getBadgeAssertion, getBadgeAssertionList, revokeBadge, assignBadgeToUser, revokeBadgeFromUser,
 
     getBadgeIssuer, getAllIssuer , deleteIssuer
 

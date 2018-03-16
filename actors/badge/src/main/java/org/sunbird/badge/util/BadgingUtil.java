@@ -137,7 +137,7 @@ public class BadgingUtil {
     public static String createBadgerUrl(Map<String, Object> map, String uri, int placeholderCount) {
         String url = getBadgrBaseUrl()
             + createUri(map, uri, placeholderCount);
-        return url + "?format=json";
+        return url;
     }
 
     /**

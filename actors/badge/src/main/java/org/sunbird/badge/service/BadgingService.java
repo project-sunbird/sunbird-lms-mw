@@ -2,7 +2,6 @@ package org.sunbird.badge.service;
 
 import java.io.IOException;
 
-import org.apache.tools.ant.Project;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.request.Request;

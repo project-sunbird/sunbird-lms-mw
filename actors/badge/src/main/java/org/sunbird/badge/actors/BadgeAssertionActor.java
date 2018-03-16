@@ -68,7 +68,9 @@ public class BadgeAssertionActor extends BaseActor {
 	 */
 	private void createAssertion(Request actorMessage) throws IOException {
 		Response result = service.badgeAssertion(actorMessage);
+		ProjectLogger.log("resultMap==" + result.getResult());
 		sender().tell(result, self());
+		ProjectLogger.log("resultMapSent==" + result.getResult());
 		Map<String, Object> map = BadgingUtil.createBadgeNotifierMap(result.getResult());
 		Request request = new Request();
 		map.put(JsonKey.OBJECT_TYPE, actorMessage.getRequest().get(JsonKey.OBJECT_TYPE));

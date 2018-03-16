@@ -17,6 +17,8 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 
@@ -282,7 +284,9 @@ public class BadgrServiceImpl implements BadgingService {
 		Map<String, Object> requestedData = request.getRequest();
 		String requestBody = BadgingUtil.createAssertionReqData(requestedData);
 		String url = BadgingUtil.createBadgerUrl(requestedData, BadgingUtil.SUNBIRD_BADGER_CREATE_ASSERTION_URL, 2);
+		ProjectLogger.log("AssertionData==" +requestBody +"  " + url +"  " + BadgingUtil.getBadgrHeaders() , LoggerEnum.INFO.name());
 		HttpUtilResponse httpResponse = HttpUtil.doPostRequest(url, requestBody, BadgingUtil.getBadgrHeaders());
+		ProjectLogger.log("AssertionDataResponse==" +httpResponse.getStatusCode(), LoggerEnum.INFO.name());
 		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(),null);
 		Map<String, Object> res = mapper.readValue(httpResponse.getBody(), HashMap.class);
 		// calling to create response as per sunbird

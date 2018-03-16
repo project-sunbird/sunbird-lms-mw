@@ -121,6 +121,14 @@ public class BadgrServiceImpl implements BadgingService {
 				subtype = formParams.remove(JsonKey.SUBTYPE);
 			}
 
+			if (type != null) {
+				type = type.toLowerCase();
+			}
+
+			if (subtype != null) {
+				subtype = subtype.toLowerCase();
+			}
+
 			Map<String, String> headers = BadgingUtil.getBadgrHeaders(false);
 
 			HttpUtilResponse httpUtilResponse = HttpUtil.postFormData(formParams, fileParams, headers, BadgingUtil.getBadgeClassUrl(issuerId));
@@ -183,6 +191,14 @@ public class BadgrServiceImpl implements BadgingService {
 		String subtype = (String) context.get(JsonKey.SUBTYPE);
 		List<String> allowedRoles = (List<String>) context.get(JsonKey.ROLES);
 
+		if (type != null) {
+			type = type.toLowerCase();
+		}
+
+		if (subtype != null) {
+			subtype = subtype.toLowerCase();
+		}
+		
 		List<BadgeClassExtension> badgeClassExtList = badgeClassExtensionService.get(issuerList,
 				rootOrgId, type, subtype, allowedRoles);
 		List<String> filteredIssuerList = badgeClassExtList.stream()

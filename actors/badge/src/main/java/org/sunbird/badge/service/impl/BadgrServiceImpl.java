@@ -18,6 +18,7 @@ import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -282,7 +283,7 @@ public class BadgrServiceImpl implements BadgingService {
 		String requestBody = BadgingUtil.createAssertionReqData(requestedData);
 		String url = BadgingUtil.createBadgerUrl(requestedData, BadgingUtil.SUNBIRD_BADGER_CREATE_ASSERTION_URL, 2);
 		HttpUtilResponse httpResponse = HttpUtil.doPostRequest(url, requestBody, BadgingUtil.getBadgrHeaders());
-		BadgingUtil.throwExceptionOnErrorStatus(httpResponse.getStatusCode());
+		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(),null);
 		Map<String, Object> res = mapper.readValue(httpResponse.getBody(), HashMap.class);
 		// calling to create response as per sunbird
 		res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String, Object>());
@@ -296,7 +297,7 @@ public class BadgrServiceImpl implements BadgingService {
 	public Response getAssertionDetails(Request request) throws IOException {
 		String url = BadgingUtil.createBadgerUrl(request.getRequest(), BadgingUtil.SUNBIRD_BADGER_GETASSERTION_URL, 3);
 		HttpUtilResponse httpResponse = HttpUtil.doGetRequest(url, BadgingUtil.getBadgrHeaders());
-		BadgingUtil.throwExceptionOnErrorStatus(httpResponse.getStatusCode());
+		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(),null);
 		Map<String, Object> res = mapper.readValue(httpResponse.getBody(), HashMap.class);
 		// calling to create response as per sunbird
 		res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String, Object>());
@@ -313,7 +314,7 @@ public class BadgrServiceImpl implements BadgingService {
 		for (Map<String, Object> map : requestData) {
 			String url = BadgingUtil.createBadgerUrl(map, BadgingUtil.SUNBIRD_BADGER_GETASSERTION_URL, 3);
 			HttpUtilResponse httpResponse = HttpUtil.doGetRequest(url,  BadgingUtil.getBadgrHeaders());
-			BadgingUtil.throwExceptionOnErrorStatus(httpResponse.getStatusCode());
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(),null);
 			Map<String, Object> res = mapper.readValue(httpResponse.getBody(), HashMap.class);
 			// calling to create response as per sunbird
 			res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String, Object>());
@@ -329,7 +330,7 @@ public class BadgrServiceImpl implements BadgingService {
 		String url = BadgingUtil.createBadgerUrl(request.getRequest(), BadgingUtil.SUNBIRD_BADGER_GETASSERTION_URL, 3);
 		String requestBody = BadgingUtil.createAssertionRevokeData(request.getRequest());
 		HttpUtilResponse httpResponse = HttpUtil.sendDeleteRequest(requestBody,  BadgingUtil.getBadgrHeaders(), url);
-		BadgingUtil.throwExceptionOnErrorStatus(httpResponse.getStatusCode());
+		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(),null);
 		Response response = new Response();
 		response.getResult().put(JsonKey.STATUS, JsonKey.SUCCESS);
 		return response;

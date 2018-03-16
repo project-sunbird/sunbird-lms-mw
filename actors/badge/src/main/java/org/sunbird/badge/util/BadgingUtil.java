@@ -216,12 +216,27 @@ public class BadgingUtil {
 
 	}
 
-	public static void throwExceptionOnErrorStatus(int statusCode) throws ProjectCommonException {
+	public static void throwBadgeClassExceptionOnErrorStatus(int statusCode, String errorMsg) throws ProjectCommonException {
 		if (statusCode < 200 || statusCode > 300) {
-			throw createExceptionForBadger(statusCode);
+			ResponseCode customError;
+			String specificErrorMsg;
+			switch (statusCode) {
+				case 400:
+					customError = ResponseCode.invalidData;
+					specificErrorMsg = errorMsg != null ? errorMsg : ResponseCode.invalidData.getErrorMessage();
+					break;
+				case 404:
+					customError = ResponseCode.customResourceNotFound;
+					specificErrorMsg = errorMsg != null ? errorMsg : ResponseCode.resourceNotFound.getErrorMessage();
+					break;
+				default:
+					customError = ResponseCode.customServerError;
+					specificErrorMsg = errorMsg != null ? errorMsg : ResponseCode.internalError.getErrorMessage();
+			}
+			throw new ProjectCommonException(customError.getErrorCode(), customError.getErrorMessage(), statusCode, specificErrorMsg);
 		}
 	}
-	
+
 	/**
 	 * This method will get the response from badging server and 
 	 * create proper map (meta data) to store either with user or content.

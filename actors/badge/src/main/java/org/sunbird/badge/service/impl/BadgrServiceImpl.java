@@ -124,10 +124,10 @@ public class BadgrServiceImpl implements BadgingService {
 			Map<String, String> headers = BadgingUtil.getBadgrHeaders(false);
 
 			HttpUtilResponse httpUtilResponse = HttpUtil.postFormData(formParams, fileParams, headers, BadgingUtil.getBadgeClassUrl(issuerId));
-
-			BadgingUtil.throwExceptionOnErrorStatus(httpUtilResponse.getStatusCode());
-
 			String badgrResponseStr = httpUtilResponse.getBody();
+
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpUtilResponse.getStatusCode(), badgrResponseStr);
+
 			ObjectMapper mapper = new ObjectMapper();
 			Map<String, Object> badgrResponseMap = (Map<String, Object>) mapper.readValue(badgrResponseStr, HashMap.class);
 			String badgeId = (String) badgrResponseMap.get(BadgingJsonKey.SLUG);
@@ -137,7 +137,7 @@ public class BadgrServiceImpl implements BadgingService {
 
 			BadgingUtil.prepareBadgeClassResponse(badgrResponseStr, badgeClassExt, response.getResult());
 		} catch (IOException e) {
-
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.SERVER_ERROR.getResponseCode(), e.getMessage());
 		}
 
 		return response;
@@ -157,16 +157,15 @@ public class BadgrServiceImpl implements BadgingService {
 			String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerId, badgeId);
 
 			HttpUtilResponse httpUtilResponse = HttpUtil.doGetRequest(badgrUrl, headers);
-
-			BadgingUtil.throwExceptionOnErrorStatus(httpUtilResponse.getStatusCode());
-
 			String badgrResponseStr = httpUtilResponse.getBody();
+
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpUtilResponse.getStatusCode(), badgrResponseStr);
 
 			BadgeClassExtension badgeClassExtension = badgeClassExtensionService.get(badgeId);
 
 			BadgingUtil.prepareBadgeClassResponse(badgrResponseStr, badgeClassExtension, response.getResult());
 		} catch (IOException e) {
-
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.SERVER_ERROR.getResponseCode(), e.getMessage());
 		}
 
 		return response;
@@ -208,10 +207,9 @@ public class BadgrServiceImpl implements BadgingService {
 			String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerSlug);
 
 			HttpUtilResponse httpUtilResponse = HttpUtil.doGetRequest(badgrUrl, headers);
-
-			BadgingUtil.throwExceptionOnErrorStatus(httpUtilResponse.getStatusCode());
-
 			String badgrResponseStr = httpUtilResponse.getBody();
+
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpUtilResponse.getStatusCode(), badgrResponseStr);
 
 			ObjectMapper mapper = new ObjectMapper();
 			List<Map<String, Object>> badges = mapper.readValue(badgrResponseStr, ArrayList.class);
@@ -228,7 +226,7 @@ public class BadgrServiceImpl implements BadgingService {
 				}
 			}
 		} catch (IOException e) {
-
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.SERVER_ERROR.getResponseCode(), e.getMessage());
 		}
 
 		return filteredBadges;
@@ -248,15 +246,14 @@ public class BadgrServiceImpl implements BadgingService {
 			String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerId, badgeId);
 
 			HttpUtilResponse httpUtilResponse = HttpUtil.sendDeleteRequest(headers, badgrUrl);
-
-			BadgingUtil.throwExceptionOnErrorStatus(httpUtilResponse.getStatusCode());
-
 			String badgrResponseStr = httpUtilResponse.getBody();
+
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpUtilResponse.getStatusCode(), badgrResponseStr);
 
 			badgeClassExtensionService.delete(badgeId);
 			response.put(JsonKey.MESSAGE, badgrResponseStr.replaceAll("^\"|\"$", ""));
 		} catch (IOException e) {
-
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.SERVER_ERROR.getResponseCode(), e.getMessage());
 		}
 
 		return response;

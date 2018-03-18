@@ -94,6 +94,11 @@ public class RequestRouter extends BaseRouter {
 		return true;
 	}
 
+	@Override
+	protected void cacheActor(String key, ActorRef actor) {
+
+	}
+
 	/**
 	 * method will route the message to corresponding router pass into the argument
 	 * .

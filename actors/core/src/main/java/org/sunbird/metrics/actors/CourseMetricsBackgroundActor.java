@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.sunbird.actor.router.BackgroundRequestRouter;
+import org.sunbird.actor.router.RouterConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -33,16 +33,13 @@ import org.sunbird.learner.util.Util;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+@RouterConfig(request = {}, bgRequest = { "courseProgressMetricsData" })
 public class CourseMetricsBackgroundActor extends BaseMetricsActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
 	private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
 			.getDecryptionServiceInstance(null);
-	
-	public static void init()  {
-		BackgroundRequestRouter.registerActor(CourseMetricsBackgroundActor.class, Arrays.asList(ActorOperations.COURSE_PROGRESS_METRICS_DATA.getValue()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {
@@ -51,7 +48,6 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
 		} else {
 			onReceiveUnsupportedOperation(request.getOperation());
 		}
-
 	}
 
 	@SuppressWarnings("unchecked")

@@ -13,8 +13,8 @@ import java.util.Map;
 import org.joda.time.DateTime;
 import org.joda.time.Months;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.BackgroundRequestRouter;
 import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.RouterConfig;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -32,13 +32,12 @@ import org.sunbird.learner.audit.AuditLogService;
 import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.util.UserUtility;
 
+@RouterConfig(request = { "searchAuditLog", "processAuditLog" }, bgRequest = { "searchAuditLog", "processAuditLog" })
 public class ActorAuditLogServiceImpl extends BaseActor implements AuditLogService {
 
 	private PropertiesCache cache = PropertiesCache.getInstance();
 
 	public static void init() {
-		BackgroundRequestRouter.registerActor(ActorAuditLogServiceImpl.class, Arrays
-				.asList(ActorOperations.SEARCH_AUDIT_LOG.getValue(), ActorOperations.PROCESS_AUDIT_LOG.getValue()));
 		RequestRouter.registerActor(ActorAuditLogServiceImpl.class, Arrays
 				.asList(ActorOperations.SEARCH_AUDIT_LOG.getValue(), ActorOperations.PROCESS_AUDIT_LOG.getValue()));
 	}

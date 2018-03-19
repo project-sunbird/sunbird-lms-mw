@@ -71,7 +71,7 @@ public class BaseMWService {
 		} else {
 			return null;
 		}
-			
+
 	}
 
 	protected static ActorSystem getActorSystem(String host, String port) {
@@ -104,11 +104,13 @@ public class BaseMWService {
 	protected static void initRouters() {
 		ProjectLogger.log("RequestRouter mode: " + RequestRouter.getMode(), LoggerEnum.INFO.name());
 		if (!RouterMode.OFF.name().equalsIgnoreCase(RequestRouter.getMode())) {
-			requestRouter = system.actorOf(Props.create(RequestRouter.class), RequestRouter.class.getSimpleName());
+			requestRouter = system.actorOf(FromConfig.getInstance().props(Props.create(RequestRouter.class)),
+					RequestRouter.class.getSimpleName());
 		}
 		ProjectLogger.log("BackgroundRequestRouter mode: " + BackgroundRequestRouter.getMode(), LoggerEnum.INFO.name());
 		if (!RouterMode.OFF.name().equalsIgnoreCase(BackgroundRequestRouter.getMode())) {
-			bgRequestRouter = system.actorOf(FromConfig.getInstance().props(Props.create(BackgroundRequestRouter.class)),
+			bgRequestRouter = system.actorOf(
+					FromConfig.getInstance().props(Props.create(BackgroundRequestRouter.class)),
 					BackgroundRequestRouter.class.getSimpleName());
 		}
 	}

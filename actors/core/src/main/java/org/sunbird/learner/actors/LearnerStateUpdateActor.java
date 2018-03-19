@@ -7,7 +7,6 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -15,7 +14,7 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.RouterConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -31,25 +30,19 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
-
 /**
  * This actor to handle learner's state update operation .
  *
  * @author Manzarul
  * @author Arvind
  */
+
+@RouterConfig(request = {"addContent"}, bgRequest = {})
 public class LearnerStateUpdateActor extends BaseActor {
 
 	private static final String CONTENT_STATE_INFO = "contentStateInfo";
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-
-	public static void init() {
-		RequestRouter.registerActor(LearnerStateUpdateActor.class,
-				Arrays.asList(ActorOperations.ADD_CONTENT.getValue()));
-	}
 
 	/**
 	 * Receives the actor message and perform the add content operation .

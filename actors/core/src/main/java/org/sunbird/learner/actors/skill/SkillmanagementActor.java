@@ -5,7 +5,6 @@ import static org.sunbird.learner.util.Util.isNull;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -13,7 +12,7 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.RouterConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -36,6 +35,8 @@ import org.sunbird.learner.util.Util;
  * Class to provide functionality for Add and Endorse the user skills . Created
  * by arvind on 18/10/17.
  */
+
+@RouterConfig(request = { "addSkill", "getSkill", "getSkillsList" }, bgRequest = {})
 public class SkillmanagementActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -43,11 +44,6 @@ public class SkillmanagementActor extends BaseActor {
 	private Util.DbInfo skillsListDbInfo = Util.dbInfoMap.get(JsonKey.SKILLS_LIST_DB);
 	private Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
 	private static final String REF_SKILLS_DB_ID = "001";
-
-	public static void init() {
-		RequestRouter.registerActor(SkillmanagementActor.class, Arrays.asList(ActorOperations.ADD_SKILL.getValue(),
-				ActorOperations.GET_SKILL.getValue(), ActorOperations.GET_SKILLS_LIST.getValue()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

@@ -1,7 +1,6 @@
 package org.sunbird.learner.actors;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -9,7 +8,7 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.RouterConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
@@ -28,14 +27,11 @@ import org.sunbird.learner.util.Util;
  * @author Manzarul
  * @author Arvind
  */
+
+@RouterConfig(request = { "getCourse", "getContent" }, bgRequest = {})
 public class LearnerStateActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-
-	public static void init() {
-		RequestRouter.registerActor(LearnerStateActor.class,
-				Arrays.asList(ActorOperations.GET_COURSE.getValue(), ActorOperations.GET_CONTENT.getValue()));
-	}
 
 	/**
 	 * Receives the actor message and perform the operation like get course , get

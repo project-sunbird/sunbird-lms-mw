@@ -9,6 +9,7 @@ import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.RouterConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -24,15 +25,12 @@ import org.sunbird.learner.util.Util;
  * @author Amit Kumar
  *
  */
+
+@RouterConfig(request = {"getAssessment", "saveAssessment"}, bgRequest = {})
 public class AssessmentItemActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private Util.DbInfo assmntItemDbInfo = Util.dbInfoMap.get(JsonKey.ASSESSMENT_ITEM_DB);
-
-	public static void init() {
-		RequestRouter.registerActor(AssessmentItemActor.class,
-				Arrays.asList(ActorOperations.GET_ASSESSMENT.getValue(), ActorOperations.SAVE_ASSESSMENT.getValue()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

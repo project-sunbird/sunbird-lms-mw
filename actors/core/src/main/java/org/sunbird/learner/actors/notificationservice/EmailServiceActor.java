@@ -1,7 +1,6 @@
 package org.sunbird.learner.actors.notificationservice;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -11,7 +10,6 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.actor.router.RouterConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
@@ -39,9 +37,6 @@ public class EmailServiceActor extends BaseActor {
 	private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
 			.getEncryptionServiceInstance(null);
 
-	public static void init() {
-		RequestRouter.registerActor(EmailServiceActor.class, Arrays.asList(BackgroundOperations.emailService.name()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

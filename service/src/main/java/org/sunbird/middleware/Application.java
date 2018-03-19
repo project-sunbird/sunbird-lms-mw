@@ -16,7 +16,6 @@ public class Application {
 	
 	public static void main(String[] args) {
 		SunbirdMWService.init();
-		new ActorRegistry();
 		checkCassandraConnection();
 	}
 

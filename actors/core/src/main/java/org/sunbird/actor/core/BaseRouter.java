@@ -26,12 +26,11 @@ public abstract class BaseRouter extends BaseActor {
 	public abstract String getRouterMode();
 
 	public abstract void route(Request request) throws Throwable;
-	
+
 	protected abstract void cacheActor(String key, ActorRef actor);
 
 	@Override
 	public void onReceive(Request request) throws Throwable {
-		System.out.println("Received by: " + self().path());
 		String senderPath = sender().path().toString();
 		if (RouterMode.LOCAL.name().equalsIgnoreCase(getRouterMode())
 				&& !StringUtils.startsWith(senderPath, "akka://")) {
@@ -55,18 +54,19 @@ public abstract class BaseRouter extends BaseActor {
 			if (null != routerDetails) {
 				switch (name) {
 				case "BackgroundRequestRouter":
-					String[] operations = routerDetails.bgRequest();
-					createActor(context, actor, operations);
+					String[] bgOperations = routerDetails.bgRequest();
+					createActor(context, actor, bgOperations);
 					break;
 				case "RequestRouter":
-					System.out.println("RequestRouter init is in progress.");
+					String[] operations = routerDetails.request();
+					createActor(context, actor, operations);
 					break;
 				default:
 					System.out.println("Router with name '" + name + "' not supported.");
 					break;
 				}
 			} else {
-				// System.out.println(actor.getSimpleName() + " don't have config.");
+//				System.out.println(actor.getSimpleName() + " don't have config.");
 			}
 		}
 

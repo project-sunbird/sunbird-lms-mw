@@ -1,14 +1,13 @@
 package org.sunbird.learner.actors;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.RouterConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.Constants;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -29,17 +28,13 @@ import org.sunbird.learner.util.Util;
  *
  * @author Manzarul
  */
+
+@RouterConfig(request = { "createCourse", "updateCourse", "publishCourse", "deleteCourse" }, bgRequest = {})
 public class CourseManagementActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private Util.DbInfo dbInfo = null;
 	private String coursePublishedBody = "{\"request\":{\"content\":{\"lastPublishedBy\": \"userId\"}}}";
-
-	public static void init() {
-		RequestRouter.registerActor(CourseManagementActor.class,
-				Arrays.asList(ActorOperations.CREATE_COURSE.getValue(), ActorOperations.UPDATE_COURSE.getValue(),
-						ActorOperations.PUBLISH_COURSE.getValue(), ActorOperations.DELETE_COURSE.getValue()));
-	}
 
 	/**
 	 * Receives the actor message and perform the course enrollment operation .

@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.RouterConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -42,6 +42,8 @@ import com.opencsv.CSVReader;
  *
  * @author Amit Kumar
  */
+
+@RouterConfig(request = { "bulkUpload", "getBulkOpStatus" }, bgRequest = {})
 public class BulkUploadManagementActor extends BaseActor {
 
 	private static final String CSV_FILE_EXTENSION = ".csv";
@@ -50,11 +52,6 @@ public class BulkUploadManagementActor extends BaseActor {
 	private int userDataSize = 0;
 	private int orgDataSize = 0;
 	private int batchDataSize = 0;
-
-	public static void init() {
-		RequestRouter.registerActor(BulkUploadManagementActor.class,
-				Arrays.asList(ActorOperations.BULK_UPLOAD.getValue(), ActorOperations.GET_BULK_OP_STATUS.getValue()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

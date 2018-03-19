@@ -8,8 +8,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.RouterConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -38,6 +39,8 @@ import org.sunbird.learner.util.Util.DbInfo;
  * @author Amit Kumar
  *
  */
+
+@RouterConfig(request = {"sync"}, bgRequest = {})
 public class EsSyncActor extends BaseActor {
 
     private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -52,11 +55,6 @@ public class EsSyncActor extends BaseActor {
             org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
                     .getDecryptionServiceInstance(null);
 
-    public static void init() {
-        RequestRouter.registerActor(EsSyncActor.class,
-                Arrays.asList(ActorOperations.SYNC.getValue()));
-
-    }
 
     @Override
     public void onReceive(Request request) throws Throwable {

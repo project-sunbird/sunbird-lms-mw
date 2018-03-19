@@ -1,7 +1,6 @@
 package org.sunbird.actor.router;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
@@ -20,27 +19,18 @@ import akka.actor.ActorRef;
 public class BackgroundRequestRouter extends BaseRouter {
 
 	private static String mode;
-	public static Map<String, ActorRef> routingMap = new HashMap<>();
-
-	@Override
-	public void preStart() throws Exception {
-		super.preStart();
-		initActors(getContext(), BackgroundRequestRouter.class.getSimpleName());
-	}
+	private static String name;
+	private static Map<String, ActorRef> routingMap = new HashMap<>();
 
 	public BackgroundRequestRouter() {
 		getMode();
 	}
 
-	public String getRouterMode() {
-		return getMode();
-	}
-
-	public static String getMode() {
-		if (StringUtils.isBlank(mode)) {
-			mode = getPropertyValue(JsonKey.BACKGROUND_ACTOR_PROVIDER);
-		}
-		return mode;
+	@Override
+	public void preStart() throws Exception {
+		super.preStart();
+		name = self().path().name();
+		initActors(getContext(), BackgroundRequestRouter.class.getSimpleName());
 	}
 
 	@Override
@@ -58,6 +48,21 @@ public class BackgroundRequestRouter extends BaseRouter {
 		} else {
 			onReceiveUnsupportedOperation(request.getOperation());
 		}
+	}
+
+	public String getRouterMode() {
+		return getMode();
+	}
+
+	public static String getMode() {
+		if (StringUtils.isBlank(mode)) {
+			mode = getPropertyValue(JsonKey.BACKGROUND_ACTOR_PROVIDER);
+		}
+		return mode;
+	}
+
+	public static ActorRef getActor(String operation) {
+		return routingMap.get(getKey(name, operation));
 	}
 
 }

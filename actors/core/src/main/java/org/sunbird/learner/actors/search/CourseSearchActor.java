@@ -1,11 +1,10 @@
 package org.sunbird.learner.actors.search;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.RouterConfig;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -24,12 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * 
  * @author Amit Kumar
  */
+@RouterConfig(request = { "searchCourse", "getCourseById" }, bgRequest = {})
 public class CourseSearchActor extends BaseActor {
-
-	public static void init() {
-		RequestRouter.registerActor(CourseSearchActor.class,
-				Arrays.asList(ActorOperations.SEARCH_COURSE.getValue(), ActorOperations.GET_COURSE_BY_ID.getValue()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

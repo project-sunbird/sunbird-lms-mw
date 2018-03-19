@@ -4,14 +4,13 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.RouterConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -40,18 +39,14 @@ import org.sunbird.learner.util.Util;
  * @author Manzarul
  * @author Amit Kumar
  */
+
+@RouterConfig(request = { "createBatch", "updateBatch", "addUserBatch", "removeUserFromBatch", "getBatch",
+		"getCourseBatchDetail" }, bgRequest = {})
 public class CourseBatchManagementActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private Util.DbInfo dbInfo = null;
 	private Util.DbInfo userOrgdbInfo = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
-
-	public static void init() {
-		RequestRouter.registerActor(CourseBatchManagementActor.class,
-				Arrays.asList(ActorOperations.CREATE_BATCH.getValue(), ActorOperations.UPDATE_BATCH.getValue(),
-						ActorOperations.ADD_USER_TO_BATCH.getValue(), ActorOperations.REMOVE_USER_FROM_BATCH.getValue(),
-						ActorOperations.GET_BATCH.getValue(), ActorOperations.GET_COURSE_BATCH_DETAIL.getValue()));
-	}
 
 	/**
 	 * Receives the actor message and perform the course enrollment operation .

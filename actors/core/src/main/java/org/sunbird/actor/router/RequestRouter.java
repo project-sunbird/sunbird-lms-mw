@@ -1,7 +1,6 @@
 package org.sunbird.actor.router;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -20,10 +19,8 @@ import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.util.Util;
 
 import akka.actor.ActorRef;
-import akka.actor.Props;
 import akka.dispatch.OnComplete;
 import akka.pattern.Patterns;
-import akka.routing.FromConfig;
 import akka.util.Timeout;
 import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
@@ -38,13 +35,40 @@ import scala.concurrent.duration.Duration;
 public class RequestRouter extends BaseRouter {
 
 	private static String mode;
+	private static String name;
 	private static final int WAIT_TIME_VALUE = 9;
-	private static ActorContext context;
 	public static Map<String, ActorRef> routingMap = new HashMap<>();
 
 	public RequestRouter() {
-		context = getContext();
 		getMode();
+	}
+
+	@Override
+	public void preStart() throws Exception {
+		super.preStart();
+		name = self().path().name();
+		initActors(getContext(), RequestRouter.class.getSimpleName());
+	}
+
+	@Override
+	protected void cacheActor(String key, ActorRef actor) {
+		routingMap.put(key, actor);
+	}
+
+	@Override
+	public void route(Request request) throws Throwable {
+		org.sunbird.common.request.ExecutionContext.setRequestId(request.getRequestId());
+		String operation = request.getOperation();
+		ActorRef ref = routingMap.get(getKey(self().path().name(), operation));
+		if (null != ref) {
+			route(ref, request, getContext().dispatcher());
+		} else {
+			onReceiveUnsupportedOperation(request.getOperation());
+		}
+	}
+	
+	public static ActorRef getActor(String operation) {
+		return routingMap.get(getKey(name, operation));
 	}
 
 	public String getRouterMode() {
@@ -56,47 +80,6 @@ public class RequestRouter extends BaseRouter {
 			mode = getPropertyValue(JsonKey.API_ACTOR_PROVIDER);
 		}
 		return mode;
-	}
-
-	@Override
-	public void route(Request request) throws Throwable {
-		org.sunbird.common.request.ExecutionContext.setRequestId(request.getRequestId());
-		ActorRef ref = routingMap.get(request.getOperation());
-		if (null != ref) {
-			route(ref, request, getContext().dispatcher());
-		} else {
-			onReceiveUnsupportedOperation(request.getOperation());
-		}
-	}
-
-	public static void registerActor(Class<?> clazz, List<String> operations) {
-		if (!contextAvailable(clazz.getSimpleName()))
-			return;
-		try {
-			ActorRef actor = context.actorOf(FromConfig.getInstance().props(Props.create(clazz)),
-					clazz.getSimpleName());
-			for (String operation : operations) {
-				routingMap.put(operation, actor);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	private static boolean contextAvailable(String name) {
-		if (null == context) {
-			System.out.println(RequestRouter.class.getSimpleName()
-					+ " context is not available to initialise actor for [" + name + "]");
-			ProjectLogger.log(RequestRouter.class.getSimpleName()
-					+ " context is not available to initialise actor for [" + name + "]", LoggerEnum.WARN.name());
-			return false;
-		}
-		return true;
-	}
-
-	@Override
-	protected void cacheActor(String key, ActorRef actor) {
-
 	}
 
 	/**

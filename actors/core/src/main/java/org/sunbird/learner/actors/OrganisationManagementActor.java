@@ -6,7 +6,6 @@ import static org.sunbird.learner.util.Util.isNull;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +13,7 @@ import java.util.TreeMap;
 
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.RouterConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -45,22 +44,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * @author Amit Kumar
  * @author Arvind
  */
+
+@RouterConfig(request = { "createOrg", "approveOrg", "updateOrg", "updateOrgStatus", "getOrgDetails",
+		"addMemberOrganisation", "removeMemberOrganisation", "getOrgTypeList", "createOrgType", "updateOrgType",
+		"approveUserOrganisation", "joinUserOrganisation", "rejectUserOrganisation", "downlaodOrg" }, bgRequest = {})
 public class OrganisationManagementActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
 			.getEncryptionServiceInstance(null);
-
-	public static void init() {
-		RequestRouter.registerActor(OrganisationManagementActor.class, Arrays.asList(
-				ActorOperations.CREATE_ORG.getValue(), ActorOperations.APPROVE_ORG.getValue(),
-				ActorOperations.UPDATE_ORG.getValue(), ActorOperations.UPDATE_ORG_STATUS.getValue(),
-				ActorOperations.GET_ORG_DETAILS.getValue(), ActorOperations.ADD_MEMBER_ORGANISATION.getValue(),
-				ActorOperations.REMOVE_MEMBER_ORGANISATION.getValue(), ActorOperations.GET_ORG_TYPE_LIST.getValue(),
-				ActorOperations.CREATE_ORG_TYPE.getValue(), ActorOperations.UPDATE_ORG_TYPE.getValue(),
-				ActorOperations.APPROVE_USER_ORGANISATION.getValue(), ActorOperations.JOIN_USER_ORGANISATION.getValue(),
-				ActorOperations.REJECT_USER_ORGANISATION.getValue(), ActorOperations.DOWNLOAD_ORGS.getValue()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.RouterConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
@@ -29,16 +29,14 @@ import org.sunbird.services.sso.SSOServiceFactory;
  * @author Amit Kumar
  *
  */
+
+@RouterConfig(request = { "syncKeycloak" }, bgRequest = {})
 public class KeyCloakSyncActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private boolean isSSOEnabled = Boolean
 			.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
 	private SSOManager ssoManager = SSOServiceFactory.getInstance();
-
-	public static void init() {
-		RequestRouter.registerActor(KeyCloakSyncActor.class, Arrays.asList(ActorOperations.SYNC_KEYCLOAK.getValue()));
-	}
 
 	@Override
 	public void onReceive(Request actorMessage) throws Throwable {

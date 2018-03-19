@@ -3,7 +3,6 @@ package org.sunbird.metrics.actors;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -11,7 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.RouterConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -32,6 +31,8 @@ import org.sunbird.learner.util.Util;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+@RouterConfig(request = { "orgCreationMetrics", "orgConsumptionMetrics", "orgCreationMetricsReport",
+		"orgConsumptionMetricsReport" }, bgRequest = {})
 public class OrganisationMetricsActor extends BaseMetricsActor {
 
 	private static ObjectMapper mapper = new ObjectMapper();
@@ -40,14 +41,6 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 	private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
 	private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
 			.getDecryptionServiceInstance(null);
-
-	public static void init() {
-		RequestRouter.registerActor(OrganisationMetricsActor.class,
-				Arrays.asList(ActorOperations.ORG_CREATION_METRICS.getValue(),
-						ActorOperations.ORG_CONSUMPTION_METRICS.getValue(),
-						ActorOperations.ORG_CREATION_METRICS_REPORT.getValue(),
-						ActorOperations.ORG_CONSUMPTION_METRICS_REPORT.getValue()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

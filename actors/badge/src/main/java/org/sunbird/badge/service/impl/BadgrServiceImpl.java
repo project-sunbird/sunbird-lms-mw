@@ -1,5 +1,6 @@
 package org.sunbird.badge.service.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -7,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.lang.StringUtils;
 import org.sunbird.badge.model.BadgeClassExtension;
 import org.sunbird.badge.service.BadgeClassExtensionService;
 import org.sunbird.badge.service.BadgingService;
@@ -18,8 +19,12 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * 
@@ -28,6 +33,7 @@ import org.sunbird.common.responsecode.ResponseCode;
  */
 public class BadgrServiceImpl implements BadgingService {
 	BadgeClassExtensionService badgeClassExtensionService = new BadgeClassExtensionServiceImpl();
+	private ObjectMapper mapper = new ObjectMapper();
 
 	public BadgrServiceImpl() {
 		this.badgeClassExtensionService = new BadgeClassExtensionServiceImpl();
@@ -59,9 +65,13 @@ public class BadgrServiceImpl implements BadgingService {
 		if (null != image) {
 			fileData.put(JsonKey.IMAGE, image);
 		}
-		HttpUtilResponse httpResponse = HttpUtil.postFormData(requestData, fileData, headers, BadgingUtil.getBadgrBaseUrl() + url);
+		HttpUtilResponse httpResponse = HttpUtil
+				.postFormData(requestData, fileData, headers, BadgingUtil.getBadgrBaseUrl() + url);
+
+		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode() ,null );
 		Response response = new Response();
-		response.put(JsonKey.RESPONSE, httpResponse);
+		BadgingUtil.prepareBadgeIssuerResponse(httpResponse.getBody(), response.getResult());
+
 		return response;
 	}
 
@@ -74,9 +84,11 @@ public class BadgrServiceImpl implements BadgingService {
 		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
 
 		HttpUtilResponse httpResponse =HttpUtil.doGetRequest(BadgingUtil.getBadgrBaseUrl() + url, headers);
+		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode() ,null );
 		Response response = new Response();
-		response.put(JsonKey.RESPONSE, httpResponse);
+		BadgingUtil.prepareBadgeIssuerResponse(httpResponse.getBody(), response.getResult());
 		return response;
+
 	}
 
 	@Override
@@ -85,8 +97,21 @@ public class BadgrServiceImpl implements BadgingService {
 		String url = "/v1/issuer/issuers";
 		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
 		HttpUtilResponse httpResponse =HttpUtil.doGetRequest(BadgingUtil.getBadgrBaseUrl() + url, headers);
+		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode() ,null );
 		Response response = new Response();
-		response.put(JsonKey.RESPONSE, httpResponse);
+
+		ObjectMapper mapper = new ObjectMapper();
+		List<Map<String, Object>> issuers = new ArrayList<>();
+		List<Map<String, Object>> data =
+				mapper.readValue(httpResponse.getBody(), new TypeReference<List<Map<String, Object>>>() {});
+		for (Object badge : data) {
+			Map<String, Object> mappedBadge = new HashMap<>();
+			BadgingUtil.prepareBadgeIssuerResponse((Map<String, Object>) badge, mappedBadge);
+			issuers.add(mappedBadge);
+		}
+		Map<String, Object> res = new HashMap<>();
+		res.put(BadgingJsonKey.ISSUERS, issuers);
+		response.getResult().putAll(res);
 		return response;
 	}
 
@@ -121,13 +146,21 @@ public class BadgrServiceImpl implements BadgingService {
 				subtype = formParams.remove(JsonKey.SUBTYPE);
 			}
 
+			if (type != null) {
+				type = type.toLowerCase();
+			}
+
+			if (subtype != null) {
+				subtype = subtype.toLowerCase();
+			}
+
 			Map<String, String> headers = BadgingUtil.getBadgrHeaders(false);
 
 			HttpUtilResponse httpUtilResponse = HttpUtil.postFormData(formParams, fileParams, headers, BadgingUtil.getBadgeClassUrl(issuerId));
-
-			BadgingUtil.throwExceptionOnErrorStatus(httpUtilResponse.getStatusCode());
-
 			String badgrResponseStr = httpUtilResponse.getBody();
+
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpUtilResponse.getStatusCode(), badgrResponseStr);
+
 			ObjectMapper mapper = new ObjectMapper();
 			Map<String, Object> badgrResponseMap = (Map<String, Object>) mapper.readValue(badgrResponseStr, HashMap.class);
 			String badgeId = (String) badgrResponseMap.get(BadgingJsonKey.SLUG);
@@ -137,7 +170,7 @@ public class BadgrServiceImpl implements BadgingService {
 
 			BadgingUtil.prepareBadgeClassResponse(badgrResponseStr, badgeClassExt, response.getResult());
 		} catch (IOException e) {
-
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.SERVER_ERROR.getResponseCode(), e.getMessage());
 		}
 
 		return response;
@@ -157,16 +190,15 @@ public class BadgrServiceImpl implements BadgingService {
 			String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerId, badgeId);
 
 			HttpUtilResponse httpUtilResponse = HttpUtil.doGetRequest(badgrUrl, headers);
-
-			BadgingUtil.throwExceptionOnErrorStatus(httpUtilResponse.getStatusCode());
-
 			String badgrResponseStr = httpUtilResponse.getBody();
+
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpUtilResponse.getStatusCode(), badgrResponseStr);
 
 			BadgeClassExtension badgeClassExtension = badgeClassExtensionService.get(badgeId);
 
 			BadgingUtil.prepareBadgeClassResponse(badgrResponseStr, badgeClassExtension, response.getResult());
 		} catch (IOException e) {
-
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.SERVER_ERROR.getResponseCode(), e.getMessage());
 		}
 
 		return response;
@@ -183,6 +215,14 @@ public class BadgrServiceImpl implements BadgingService {
 		String type = (String) context.get(JsonKey.TYPE);
 		String subtype = (String) context.get(JsonKey.SUBTYPE);
 		List<String> allowedRoles = (List<String>) context.get(JsonKey.ROLES);
+
+		if (type != null) {
+			type = type.toLowerCase();
+		}
+
+		if (subtype != null) {
+			subtype = subtype.toLowerCase();
+		}
 
 		List<BadgeClassExtension> badgeClassExtList = badgeClassExtensionService.get(issuerList,
 				rootOrgId, type, subtype, allowedRoles);
@@ -208,10 +248,9 @@ public class BadgrServiceImpl implements BadgingService {
 			String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerSlug);
 
 			HttpUtilResponse httpUtilResponse = HttpUtil.doGetRequest(badgrUrl, headers);
-
-			BadgingUtil.throwExceptionOnErrorStatus(httpUtilResponse.getStatusCode());
-
 			String badgrResponseStr = httpUtilResponse.getBody();
+
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpUtilResponse.getStatusCode(), badgrResponseStr);
 
 			ObjectMapper mapper = new ObjectMapper();
 			List<Map<String, Object>> badges = mapper.readValue(badgrResponseStr, ArrayList.class);
@@ -228,7 +267,7 @@ public class BadgrServiceImpl implements BadgingService {
 				}
 			}
 		} catch (IOException e) {
-
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.SERVER_ERROR.getResponseCode(), e.getMessage());
 		}
 
 		return filteredBadges;
@@ -248,51 +287,67 @@ public class BadgrServiceImpl implements BadgingService {
 			String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerId, badgeId);
 
 			HttpUtilResponse httpUtilResponse = HttpUtil.sendDeleteRequest(headers, badgrUrl);
-
-			BadgingUtil.throwExceptionOnErrorStatus(httpUtilResponse.getStatusCode());
-
 			String badgrResponseStr = httpUtilResponse.getBody();
+
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpUtilResponse.getStatusCode(), badgrResponseStr);
 
 			badgeClassExtensionService.delete(badgeId);
 			response.put(JsonKey.MESSAGE, badgrResponseStr.replaceAll("^\"|\"$", ""));
 		} catch (IOException e) {
-
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.SERVER_ERROR.getResponseCode(), e.getMessage());
 		}
 
 		return response;
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public Response badgeAssertion(Request request) throws IOException {
 		Map<String, Object> requestedData = request.getRequest();
 		String requestBody = BadgingUtil.createAssertionReqData(requestedData);
 		String url = BadgingUtil.createBadgerUrl(requestedData, BadgingUtil.SUNBIRD_BADGER_CREATE_ASSERTION_URL, 2);
+		ProjectLogger.log("AssertionData==" +requestBody +"  " + url +"  " + BadgingUtil.getBadgrHeaders() , LoggerEnum.INFO.name());
 		HttpUtilResponse httpResponse = HttpUtil.doPostRequest(url, requestBody, BadgingUtil.getBadgrHeaders());
+		ProjectLogger.log("AssertionDataResponse==" +httpResponse.getStatusCode(), LoggerEnum.INFO.name());
+		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(),null);
+		Map<String, Object> res = mapper.readValue(httpResponse.getBody(), HashMap.class);
+		// calling to create response as per sunbird
+		res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String, Object>());
 		Response response = new Response();
-		response.put(JsonKey.RESPONSE, httpResponse);
+		response.getResult().putAll(res);
 		return response;
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public Response getAssertionDetails(Request request) throws IOException {
 		String url = BadgingUtil.createBadgerUrl(request.getRequest(), BadgingUtil.SUNBIRD_BADGER_GETASSERTION_URL, 3);
 		HttpUtilResponse httpResponse = HttpUtil.doGetRequest(url, BadgingUtil.getBadgrHeaders());
+		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(),null);
+		Map<String, Object> res = mapper.readValue(httpResponse.getBody(), HashMap.class);
+		// calling to create response as per sunbird
+		res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String, Object>());
 		Response response = new Response();
-		response.put(JsonKey.RESPONSE, httpResponse);
+		response.getResult().putAll(res);
 		return response;
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public Response getAssertionList(Request request) throws IOException {
 		List<Map<String, Object>> requestData = (List) request.getRequest().get(BadgingJsonKey.ASSERTIONS);
-		List<HttpUtilResponse> responseList = new ArrayList<>();
+		List<Map<String, Object>> responseList = new ArrayList<>();
 		for (Map<String, Object> map : requestData) {
 			String url = BadgingUtil.createBadgerUrl(map, BadgingUtil.SUNBIRD_BADGER_GETASSERTION_URL, 3);
 			HttpUtilResponse httpResponse = HttpUtil.doGetRequest(url,  BadgingUtil.getBadgrHeaders());
-			responseList.add(httpResponse);
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(),null);
+			Map<String, Object> res = mapper.readValue(httpResponse.getBody(), HashMap.class);
+			// calling to create response as per sunbird
+			res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String, Object>());
+			responseList.add(res);
 		}
 		Response response = new Response();
-		response.put(JsonKey.RESPONSE, responseList);
+		response.getResult().put(BadgingJsonKey.ASSERTIONS, responseList);
 		return response;
 	}
 
@@ -301,8 +356,9 @@ public class BadgrServiceImpl implements BadgingService {
 		String url = BadgingUtil.createBadgerUrl(request.getRequest(), BadgingUtil.SUNBIRD_BADGER_GETASSERTION_URL, 3);
 		String requestBody = BadgingUtil.createAssertionRevokeData(request.getRequest());
 		HttpUtilResponse httpResponse = HttpUtil.sendDeleteRequest(requestBody,  BadgingUtil.getBadgrHeaders(), url);
+		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(),null);
 		Response response = new Response();
-		response.put(JsonKey.RESPONSE, httpResponse);
+		response.getResult().put(JsonKey.STATUS, JsonKey.SUCCESS);
 		return response;
 	}
 
@@ -313,8 +369,10 @@ public class BadgrServiceImpl implements BadgingService {
 		String url = "/v1/issuer/issuers" + "/" + slug;
 		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
 		HttpUtilResponse httpResponse =HttpUtil.sendDeleteRequest(headers , BadgingUtil.getBadgrBaseUrl() + url);
+		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode() ,null );
 		Response response = new Response();
-		response.put(JsonKey.RESPONSE, httpResponse);
+		// since the response from badger service contains " at beging and end so remove that from response string
+		response.put(JsonKey.MESSAGE , StringUtils.strip( httpResponse.getBody(), "\""));
 		return response;
 
 	}

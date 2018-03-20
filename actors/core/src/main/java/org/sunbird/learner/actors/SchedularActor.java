@@ -1,12 +1,11 @@
 package org.sunbird.learner.actors;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -22,12 +21,9 @@ import org.sunbird.learner.util.Util;
  * @author Amit Kumar
  *
  */
-public class SchedularActor extends BaseActor {
 
-	public static void init() {
-		RequestRouter.registerActor(SchedularActor.class,
-				Arrays.asList(ActorOperations.SCHEDULE_BULK_UPLOAD.getValue()));
-	}
+@ActorConfig(tasks = {"scheduleBulkUpload"}, asyncTasks = {})
+public class SchedularActor extends BaseActor {
 
 	@Override
 	public void onReceive(Request actorMessage) throws Throwable {

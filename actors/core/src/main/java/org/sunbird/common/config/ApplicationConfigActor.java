@@ -2,14 +2,13 @@ package org.sunbird.common.config;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -24,14 +23,11 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
+@ActorConfig(tasks = {"updateSystemSettings"}, asyncTasks = {})
 public class ApplicationConfigActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
-	public static void init() {
-		RequestRouter.registerActor(ApplicationConfigActor.class,
-				Arrays.asList(ActorOperations.UPDATE_SYSTEM_SETTINGS.getValue()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

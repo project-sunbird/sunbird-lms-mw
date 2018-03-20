@@ -4,11 +4,10 @@
 package org.sunbird.badge.actors;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.badge.BadgeOperations;
 import org.sunbird.badge.service.BadgingService;
 import org.sunbird.badge.service.impl.BadgingFactory;
@@ -20,20 +19,16 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 
-
 /**
  * @author Manzarul
  *
  */
+
+@ActorConfig(tasks = { "createBadgeAssertion", "getBadgeAssertion", "getBadgeAssertionList",
+		"revokeBadge" }, asyncTasks = {})
 public class BadgeAssertionActor extends BaseActor {
 
 	BadgingService service = BadgingFactory.getInstance();
-
-	public static void init() {
-		RequestRouter.registerActor(BadgeAssertionActor.class,
-				Arrays.asList(BadgeOperations.createBadgeAssertion.name(), BadgeOperations.getBadgeAssertion.name(),
-						BadgeOperations.getBadgeAssertionList.name(), BadgeOperations.revokeBadge.name()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

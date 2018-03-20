@@ -1,19 +1,14 @@
 package org.sunbird.actor.router;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseRouter;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 
 import akka.actor.ActorRef;
-import akka.actor.Props;
-import akka.routing.FromConfig;
 
 /**
  * 
@@ -24,12 +19,35 @@ import akka.routing.FromConfig;
 public class BackgroundRequestRouter extends BaseRouter {
 
 	private static String mode;
-	private static ActorContext context = null;
-	public static Map<String, ActorRef> routingMap = new HashMap<>();
+	private static String name;
+	private static Map<String, ActorRef> routingMap = new HashMap<>();
 
 	public BackgroundRequestRouter() {
-		context = getContext();
 		getMode();
+	}
+
+	@Override
+	public void preStart() throws Exception {
+		super.preStart();
+		name = self().path().name();
+		initActors(getContext(), BackgroundRequestRouter.class.getSimpleName());
+	}
+
+	@Override
+	protected void cacheActor(String key, ActorRef actor) {
+		routingMap.put(key, actor);
+	}
+
+	@Override
+	public void route(Request request) throws Throwable {
+		org.sunbird.common.request.ExecutionContext.setRequestId(request.getRequestId());
+		String operation = request.getOperation();
+		ActorRef ref = routingMap.get(getKey(self().path().name(), operation));
+		if (null != ref) {
+			ref.tell(request, self());
+		} else {
+			onReceiveUnsupportedOperation(request.getOperation());
+		}
 	}
 
 	public String getRouterMode() {
@@ -43,42 +61,8 @@ public class BackgroundRequestRouter extends BaseRouter {
 		return mode;
 	}
 
-	@Override
-	public void route(Request request) throws Throwable {
-		org.sunbird.common.request.ExecutionContext.setRequestId(request.getRequestId());
-		ActorRef ref = routingMap.get(request.getOperation());
-		if (null != ref) {
-			ref.tell(request, self());
-		} else {
-			onReceiveUnsupportedOperation(request.getOperation());
-		}
-	}
-
-	public static void registerActor(Class<?> clazz, List<String> operations) {
-		if (!contextAvailable(clazz.getSimpleName()))
-			return;
-		try {
-			ActorRef actor = context.actorOf(FromConfig.getInstance().props(Props.create(clazz)),
-					clazz.getSimpleName());
-			for (String operation : operations) {
-				routingMap.put(operation, actor);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	private static boolean contextAvailable(String name) {
-		if (null == context) {
-			System.out.println(BackgroundRequestRouter.class.getSimpleName()
-					+ " context is not available to initialise actor for [" + name + "]");
-			ProjectLogger.log(
-					BackgroundRequestRouter.class.getSimpleName()
-							+ " context is not available to initialise actor for [" + name + "]",
-					LoggerEnum.WARN.name());
-			return false;
-		}
-		return true;
+	public static ActorRef getActor(String operation) {
+		return routingMap.get(getKey(name, operation));
 	}
 
 }

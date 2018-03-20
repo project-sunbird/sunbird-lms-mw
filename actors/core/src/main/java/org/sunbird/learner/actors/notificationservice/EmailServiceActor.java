@@ -1,7 +1,6 @@
 package org.sunbird.learner.actors.notificationservice;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -11,8 +10,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.BackgroundRequestRouter;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
@@ -30,6 +28,7 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
+@ActorConfig(tasks = { "emailService" }, asyncTasks = { "emailService" })
 public class EmailServiceActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -38,12 +37,6 @@ public class EmailServiceActor extends BaseActor {
 	private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
 			.getEncryptionServiceInstance(null);
 
-	public static void init() {
-		BackgroundRequestRouter.registerActor(EmailServiceActor.class,
-				Arrays.asList(BackgroundOperations.emailService.name()));
-		// TODO: use normal operations enum for below.
-		RequestRouter.registerActor(EmailServiceActor.class, Arrays.asList(BackgroundOperations.emailService.name()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

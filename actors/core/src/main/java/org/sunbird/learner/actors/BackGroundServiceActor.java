@@ -1,8 +1,13 @@
 package org.sunbird.learner.actors;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.BackgroundRequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
@@ -14,16 +19,10 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
-import java.util.*;
-
+@ActorConfig(tasks = {}, asyncTasks = { "updateUserCountToLocationID" })
 public class BackGroundServiceActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-
-	public static void init() {
-		BackgroundRequestRouter.registerActor(BackGroundServiceActor.class,
-				Arrays.asList(BackgroundOperations.updateUserCountToLocationID.name()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

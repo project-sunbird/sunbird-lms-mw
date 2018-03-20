@@ -1,11 +1,10 @@
 package org.sunbird.learner.actors.bulkupload;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -17,16 +16,12 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 
+@ActorConfig(tasks = { "encryptUserData", "decryptUserData" }, asyncTasks = {})
 public class UserDataEncryptionDecryptionServiceActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
 	private Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-
-	public static void init() {
-		RequestRouter.registerActor(UserDataEncryptionDecryptionServiceActor.class, Arrays
-				.asList(ActorOperations.ENCRYPT_USER_DATA.getValue(), ActorOperations.DECRYPT_USER_DATA.getValue()));
-	}
 
 	@Override
 	public void onReceive(Request actorMessage) throws Throwable {

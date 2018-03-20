@@ -1,7 +1,6 @@
 package org.sunbird.actor.background;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,7 +8,7 @@ import java.util.Map;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.BackgroundRequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
@@ -30,14 +29,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * @author Amit Kumar
  *
  */
+
+@ActorConfig(tasks = {}, asyncTasks = { "registerChannel" })
 public class ChannelRegistrationActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-
-	public static void init() {
-		BackgroundRequestRouter.registerActor(ChannelRegistrationActor.class,
-				Arrays.asList(BackgroundOperations.registerChannel.name()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

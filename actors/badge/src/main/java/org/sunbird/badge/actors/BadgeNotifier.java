@@ -1,10 +1,8 @@
 package org.sunbird.badge.actors;
 
-import java.util.Arrays;
-
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.BackgroundRequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.badge.BadgeOperations;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.response.ResponseParams;
@@ -19,15 +17,11 @@ import org.sunbird.content.service.ContentService;
  *
  */
 
+@ActorConfig(tasks = {}, asyncTasks = { "assignBadgeMessage", "revokeBadgeMessage", "badgeTest" })
 public class BadgeNotifier extends BaseActor {
 
 	private static final String INVALID_BADGE_ASSIGN_REQUEST = "INVALID_BADGE_ASSIGN_REQUEST";
 	private static final String INVALID_BADGE_REVOKE_REQUEST = "INVALID_BADGE_REVOKE_REQUEST";
-
-	public static void init() {
-		BackgroundRequestRouter.registerActor(BadgeNotifier.class,
-				Arrays.asList(BadgeOperations.assignBadgeMessage.name(), BadgeOperations.revokeBadgeMessage.name()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {
@@ -38,11 +32,16 @@ public class BadgeNotifier extends BaseActor {
 			switch (operation) {
 			case "assignBadgeMessage":
 				response = assignBadge(type, request);
-				sender().tell(response, getSelf());
+				sender().tell(response, self());
 				break;
 			case "revokeBadgeMessage":
 				response = revokeBadge(type, request);
-				sender().tell(response, getSelf());
+				sender().tell(response, self());
+				break;
+			case "badgeTest":
+				System.out.println("Got a message to BadgeNotifier with path: " + self().path());
+				response = new Response();
+				sender().tell(response, self());
 				break;
 			default:
 				onReceiveUnsupportedOperation(request.getOperation());

@@ -1,14 +1,13 @@
 package org.sunbird.learner.actors.client;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -23,16 +22,11 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
+@ActorConfig(tasks = { "registerClient", "updateClientKey", "getClientKey" }, asyncTasks = {})
 public class ClientManagementActor extends BaseActor {
 
 	private Util.DbInfo clientDbInfo = Util.dbInfoMap.get(JsonKey.CLIENT_INFO_DB);
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-
-	public static void init() {
-		RequestRouter.registerActor(ClientManagementActor.class,
-				Arrays.asList(ActorOperations.REGISTER_CLIENT.getValue(), ActorOperations.UPDATE_CLIENT_KEY.getValue(),
-						ActorOperations.GET_CLIENT_KEY.getValue()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

@@ -4,13 +4,12 @@
 package org.sunbird.learner.actors.health;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -33,21 +32,13 @@ import org.sunbird.learner.util.Util;
  * @author Manzarul
  *
  */
+@ActorConfig(tasks = { "getAllBadge", "addUserBadge", "healthCheck", "actor", "es", "cassandra" }, asyncTasks = {})
 public class HealthActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private Util.DbInfo badgesDbInfo = Util.dbInfoMap.get(JsonKey.BADGES_DB);
 	private Util.DbInfo userBadgesDbInfo = Util.dbInfoMap.get(JsonKey.USER_BADGES_DB);
 
-	public static void init() {
-		RequestRouter.registerActor(HealthActor.class,
-				Arrays.asList(ActorOperations.GET_ALL_BADGE.getValue(),
-						ActorOperations.ADD_USER_BADGE.getValue(), ActorOperations.HEALTH_CHECK.getValue(),
-						ActorOperations.ACTOR.getValue(), ActorOperations.ES.getValue(),
-						ActorOperations.CASSANDRA.getValue()));
-	}
-	
-	
 	@Override
 	public void onReceive(Request message) throws Throwable {
 		if (message instanceof Request) {
@@ -57,7 +48,7 @@ public class HealthActor extends BaseActor {
 				Util.initializeContext(actorMessage, JsonKey.USER);
 				// set request id fto thread loacl...
 				ExecutionContext.setRequestId(actorMessage.getRequestId());
-				//TODO need to remove the badges api's 
+				// TODO need to remove the badges api's
 				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_ALL_BADGE.getValue())) {
 					getBadges();
 				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ADD_USER_BADGE.getValue())) {
@@ -216,7 +207,6 @@ public class HealthActor extends BaseActor {
 			responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE, true, null));
 			isallHealthy = false;
 		}
-		 
 
 		finalResponseMap.put(JsonKey.CHECKS, responseList);
 		finalResponseMap.put(JsonKey.NAME, "Complete health check api");

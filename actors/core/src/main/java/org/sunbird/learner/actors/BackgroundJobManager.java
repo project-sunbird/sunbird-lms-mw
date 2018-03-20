@@ -11,7 +11,7 @@ import java.util.Map;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.BackgroundRequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -46,6 +46,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * @author Manzarul
  * @author Amit Kumar
  */
+
+@ActorConfig(tasks = {}, asyncTasks = { "updateUserInfoToElastic", "updateUserRoles", "addUserBadgebackground",
+		"updateUserCoursesInfoToElastic", "updateUserCoursesInfoToElastic", "insertOrgInfoToElastic",
+		"updateOrgInfoToElastic", "updateUserOrgES", "removeUserOrgES", "insertUserNotesToElastic",
+		"updateUserNotesToElastic", "insertUserCoursesInfoToElastic", "updateCourseBatchToEs",
+		"insertCourseBatchToEs" })
 public class BackgroundJobManager extends BaseActor {
 
 	private static Map<String, String> headerMap = new HashMap<>();
@@ -58,19 +64,6 @@ public class BackgroundJobManager extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
-
-	public static void init() {
-		BackgroundRequestRouter.registerActor(BackgroundJobManager.class, Arrays.asList(
-				ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue(), ActorOperations.UPDATE_USER_ROLES_ES.getValue(),
-				ActorOperations.ADD_USER_BADGE_BKG.getValue(),
-				ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue(),
-				ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue(),
-				ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue(), ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue(),
-				ActorOperations.UPDATE_USER_ORG_ES.getValue(), ActorOperations.REMOVE_USER_ORG_ES.getValue(),
-				ActorOperations.INSERT_USER_NOTES_ES.getValue(), ActorOperations.UPDATE_USER_NOTES_ES.getValue(),
-				ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue(),
-				ActorOperations.UPDATE_COURSE_BATCH_ES.getValue(), ActorOperations.INSERT_COURSE_BATCH_ES.getValue()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

@@ -5,7 +5,6 @@ import static org.sunbird.common.models.util.ProjectUtil.isNull;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -16,7 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -36,6 +35,8 @@ import org.sunbird.learner.util.Util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+@ActorConfig(tasks = { "courseProgressMetrics", "courseConsumptionMetrics", "courseProgressMetricsReport",
+		"courseConsumptionMetricsReport" }, asyncTasks = {})
 public class CourseMetricsActor extends BaseMetricsActor {
 
 	private static final Object COURSE_PROGRESS_REPORT = " Course Prgoress Report";
@@ -44,14 +45,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
 			.getDecryptionServiceInstance(null);
-
-	public static void init() {
-		RequestRouter.registerActor(CourseMetricsActor.class,
-				Arrays.asList(ActorOperations.COURSE_PROGRESS_METRICS.getValue(),
-						ActorOperations.COURSE_CREATION_METRICS.getValue(),
-						ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue(),
-						ActorOperations.COURSE_CREATION_METRICS_REPORT.getValue()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

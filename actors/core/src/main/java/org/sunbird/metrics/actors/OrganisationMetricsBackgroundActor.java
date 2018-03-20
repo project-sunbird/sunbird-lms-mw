@@ -3,7 +3,6 @@ package org.sunbird.metrics.actors;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -11,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
-import org.sunbird.actor.router.BackgroundRequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -33,6 +32,7 @@ import org.sunbird.metrics.actors.OrganisationMetricsUtil.ContentStatus;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+@ActorConfig(tasks = {}, asyncTasks = { "orgCreationMetricsData", "orgConsumptionMetricsData" })
 public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
 
 	private static ObjectMapper mapper = new ObjectMapper();
@@ -41,12 +41,6 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
 	private static Map<String, String> conceptsList = new HashMap<>();
 	private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
 			.getDecryptionServiceInstance(null);
-
-	public static void init() {
-		BackgroundRequestRouter.registerActor(OrganisationMetricsBackgroundActor.class,
-				Arrays.asList(ActorOperations.ORG_CREATION_METRICS_DATA.getValue(),
-						ActorOperations.ORG_CONSUMPTION_METRICS_DATA.getValue()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

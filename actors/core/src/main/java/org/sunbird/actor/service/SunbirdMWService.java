@@ -25,9 +25,9 @@ public class SunbirdMWService extends BaseMWService {
 
 	public static void tell(Request request, ActorRef sender) {
 		String operation = request.getOperation();
-		ActorRef actor = BackgroundRequestRouter.routingMap.get(operation);
+		ActorRef actor = BackgroundRequestRouter.getActor(operation);
 		if (null == actor)
-			actor = RequestRouter.routingMap.get(operation);
+			actor = RequestRouter.getActor(operation);
 		if (null == actor) {
 			ActorSelection select = getRemoteRouter(BackgroundRequestRouter.class.getSimpleName());
 			select.tell(request, sender);

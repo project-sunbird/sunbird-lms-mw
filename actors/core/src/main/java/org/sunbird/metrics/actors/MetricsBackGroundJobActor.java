@@ -3,7 +3,6 @@ package org.sunbird.metrics.actors;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -12,7 +11,7 @@ import java.util.Map;
 
 import org.apache.velocity.VelocityContext;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.BackgroundRequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -34,17 +33,12 @@ import org.sunbird.learner.util.Util;
 /**
  * Created by arvind on 28/8/17.
  */
+
+@ActorConfig(tasks = {}, asyncTasks = { "fileGenerationAndUpload", "processData", "fileGenerationAndUpload" })
 public class MetricsBackGroundJobActor extends BaseActor {
 
 	private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-
-	public static void init() {
-		BackgroundRequestRouter.registerActor(MetricsBackGroundJobActor.class,
-				Arrays.asList(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue(),
-						ActorOperations.PROCESS_DATA.getValue(),
-						ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

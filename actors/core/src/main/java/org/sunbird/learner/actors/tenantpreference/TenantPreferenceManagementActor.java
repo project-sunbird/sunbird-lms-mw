@@ -2,14 +2,13 @@ package org.sunbird.learner.actors.tenantpreference;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -27,6 +26,9 @@ import org.sunbird.learner.util.Util;
 /**
  * Class for T&C . Created by arvind on 27/10/17.
  */
+
+@ActorConfig(tasks = { "createTanentPreference", "updateTenantPreference", "getTenantPreference",
+		"updateTCStatusOfUser" }, asyncTasks = {})
 public class TenantPreferenceManagementActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -34,14 +36,6 @@ public class TenantPreferenceManagementActor extends BaseActor {
 	private Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
 	private Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 	private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-
-	public static void init() {
-		RequestRouter.registerActor(TenantPreferenceManagementActor.class,
-				Arrays.asList(ActorOperations.CREATE_TENANT_PREFERENCE.getValue(),
-						ActorOperations.UPDATE_TENANT_PREFERENCE.getValue(),
-						ActorOperations.GET_TENANT_PREFERENCE.getValue(),
-						ActorOperations.UPDATE_TC_STATUS_OF_USER.getValue()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

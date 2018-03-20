@@ -3,7 +3,6 @@ package org.sunbird.learner.audit.impl;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -13,8 +12,7 @@ import java.util.Map;
 import org.joda.time.DateTime;
 import org.joda.time.Months;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.BackgroundRequestRouter;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -32,16 +30,10 @@ import org.sunbird.learner.audit.AuditLogService;
 import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.util.UserUtility;
 
+@ActorConfig(tasks = { "searchAuditLog", "processAuditLog" }, asyncTasks = { "searchAuditLog", "processAuditLog" })
 public class ActorAuditLogServiceImpl extends BaseActor implements AuditLogService {
 
 	private PropertiesCache cache = PropertiesCache.getInstance();
-
-	public static void init() {
-		BackgroundRequestRouter.registerActor(ActorAuditLogServiceImpl.class, Arrays
-				.asList(ActorOperations.SEARCH_AUDIT_LOG.getValue(), ActorOperations.PROCESS_AUDIT_LOG.getValue()));
-		RequestRouter.registerActor(ActorAuditLogServiceImpl.class, Arrays
-				.asList(ActorOperations.SEARCH_AUDIT_LOG.getValue(), ActorOperations.PROCESS_AUDIT_LOG.getValue()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

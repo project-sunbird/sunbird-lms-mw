@@ -1,13 +1,12 @@
 package org.sunbird.learner.datapersistence;
 
 import java.math.BigInteger;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -28,6 +27,8 @@ import org.sunbird.learner.util.Util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+@ActorConfig(tasks = { "createData", "updateData", "deleteData", "readData", "readAllData", "searchData",
+		"getMetrics" }, asyncTasks = {})
 public class DbOperationActor extends BaseActor {
 
 	private static final String REQUIRED_FIELDS = "requiredFields";
@@ -51,14 +52,6 @@ public class DbOperationActor extends BaseActor {
 		} catch (Exception e) {
 			ProjectLogger.log("Error occured" + e.getMessage(), e);
 		}
-	}
-
-	public static void init() {
-		RequestRouter.registerActor(DbOperationActor.class,
-				Arrays.asList(ActorOperations.CREATE_DATA.getValue(), ActorOperations.UPDATE_DATA.getValue(),
-						ActorOperations.DELETE_DATA.getValue(), ActorOperations.READ_DATA.getValue(),
-						ActorOperations.READ_ALL_DATA.getValue(), ActorOperations.SEARCH_DATA.getValue(),
-						ActorOperations.GET_METRICS.getValue()));
 	}
 
 	@Override

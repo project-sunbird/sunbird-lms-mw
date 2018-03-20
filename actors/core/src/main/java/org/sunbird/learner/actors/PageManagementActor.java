@@ -2,7 +2,6 @@ package org.sunbird.learner.actors;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -11,7 +10,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -35,6 +34,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *
  * @author Amit Kumar
  */
+
+@ActorConfig(tasks = { "createPage", "updatePage", "getPageData", "getPageSettings", "getPageSetting",
+		"createSection", "updateSection", "getSection", "getAllSection" }, asyncTasks = {})
 public class PageManagementActor extends BaseActor {
 
 	private Util.DbInfo pageDbInfo = Util.dbInfoMap.get(JsonKey.PAGE_MGMT_DB);
@@ -42,15 +44,6 @@ public class PageManagementActor extends BaseActor {
 	private Util.DbInfo pageSectionDbInfo = Util.dbInfoMap.get(JsonKey.PAGE_SECTION_DB);
 	private Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-
-	public static void init() {
-		RequestRouter.registerActor(PageManagementActor.class,
-				Arrays.asList(ActorOperations.CREATE_PAGE.getValue(), ActorOperations.UPDATE_PAGE.getValue(),
-						ActorOperations.GET_PAGE_DATA.getValue(), ActorOperations.GET_PAGE_SETTINGS.getValue(),
-						ActorOperations.GET_PAGE_SETTING.getValue(), ActorOperations.CREATE_SECTION.getValue(),
-						ActorOperations.UPDATE_SECTION.getValue(), ActorOperations.GET_SECTION.getValue(),
-						ActorOperations.GET_ALL_SECTION.getValue()));
-	}
 
 	@Override
 	public void onReceive(Request request) throws Throwable {

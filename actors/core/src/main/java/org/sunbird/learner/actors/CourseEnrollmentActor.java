@@ -2,14 +2,13 @@ package org.sunbird.learner.actors;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -32,17 +31,14 @@ import org.sunbird.learner.util.Util;
  * @author Manzarul
  * @author Arvind
  */
+
+@ActorConfig(tasks = { "enrollCourse" }, asyncTasks = {})
 public class CourseEnrollmentActor extends BaseActor {
 
 	private static String EKSTEP_COURSE_SEARCH_QUERY = "{\"request\": {\"filters\":{\"contentType\": [\"Course\"], \"objectType\": [\"Content\"], \"identifier\": \"COURSE_ID_PLACEHOLDER\", \"status\": \"Live\"},\"limit\": 1}}";
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
 	private static final String DEFAULT_BATCH_ID = "1";
-
-	public static void init() {
-		RequestRouter.registerActor(CourseEnrollmentActor.class,
-				Arrays.asList(ActorOperations.ENROLL_COURSE.getValue()));
-	}
 
 	/**
 	 * Receives the actor message and perform the course enrollment operation .

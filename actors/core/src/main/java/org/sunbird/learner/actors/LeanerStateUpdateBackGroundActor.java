@@ -200,7 +200,7 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
 		request.setOperation(ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue());
 		request.getRequest().put(JsonKey.USER_COURSES, courseMap);
 		try {
-			ActorUtil.tell(request);
+			tellToAnother(request);
 		} catch (Exception ex) {
 			ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
 		}

@@ -3,6 +3,8 @@ package org.sunbird.learner.actors.bulkupload;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -12,11 +14,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.BackgroundRequestRouter;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.actor.router.BackgroundRequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -50,26 +51,22 @@ import org.sunbird.notification.utils.SMSFactory;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 /**
  * This actor will handle bulk upload operation .
  *
  * @author Amit Kumar
  */
-
 @ActorConfig(tasks = {}, asyncTasks = { "processBulkUpload" })
 public class BulkUploadBackGroundJobActor extends BaseActor {
 
 	private String processId = "";
-	private Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
-	private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
+	private final Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
+	private final EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
 			.getEncryptionServiceInstance(null);
-	private PropertiesCache propertiesCache = PropertiesCache.getInstance();
-	private List<String> locnIdList = new ArrayList<>();
-	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-	private SSOManager ssoManager = SSOServiceFactory.getInstance();
+	private final PropertiesCache propertiesCache = PropertiesCache.getInstance();
+	private final List<String> locnIdList = new ArrayList<>();
+	private final CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+	private final SSOManager ssoManager = SSOServiceFactory.getInstance();
 	private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
 	private static final String SUNBIRD_APP_URL = "sunbird_app_url";
 
@@ -197,7 +194,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 				boolean flag = false;
 				for (int i = 0; i < userOrgResult.size() && !flag; i++) {
 					Map<String, Object> usrOrgDetail = userOrgResult.get(i);
-					if (createdFor.contains((String) usrOrgDetail.get(JsonKey.ORGANISATION_ID))) {
+					if (createdFor.contains(usrOrgDetail.get(JsonKey.ORGANISATION_ID))) {
 						participants.put(userId,
 								addUserCourses(batchId, (String) courseBatchObject.get(JsonKey.COURSE_ID), userId,
 										(Map<String, String>) (courseBatchObject.get(JsonKey.COURSE_ADDITIONAL_INFO))));
@@ -436,8 +433,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 			}
 		}
 
-		if (isNotNull((String) concurrentHashMap.get(JsonKey.PROVIDER))
-				|| isNotNull((String) concurrentHashMap.get(JsonKey.EXTERNAL_ID))) {
+		if (isNotNull(concurrentHashMap.get(JsonKey.PROVIDER))
+				|| isNotNull(concurrentHashMap.get(JsonKey.EXTERNAL_ID))) {
 			if (isNull(concurrentHashMap.get(JsonKey.PROVIDER)) || isNull(concurrentHashMap.get(JsonKey.EXTERNAL_ID))) {
 				ProjectLogger.log("Provider and external ids both should exist.");
 				concurrentHashMap.put(JsonKey.ERROR_MSG, "Provider and external ids both should exist.");
@@ -534,7 +531,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
 			// check for unique root org for channel -----
 			Map<String, Object> filters = new HashMap<>();
-			filters.put(JsonKey.CHANNEL, (String) concurrentHashMap.get(JsonKey.CHANNEL));
+			filters.put(JsonKey.CHANNEL, concurrentHashMap.get(JsonKey.CHANNEL));
 			filters.put(JsonKey.IS_ROOT_ORG, true);
 
 			Map<String, Object> esResult = elasticSearchComplexSearch(filters, EsIndex.sunbird.getIndexName(),
@@ -615,9 +612,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 				}
 
 			}
-			concurrentHashMap.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
-			channelToRootOrgCache.put((String) concurrentHashMap.get(JsonKey.CHANNEL),
-					(String) concurrentHashMap.get(JsonKey.ORGANISATION_NAME));
 
 		} else {
 
@@ -628,7 +622,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 					concurrentHashMap.put(JsonKey.ROOT_ORG_ID, channelToRootOrgCache.get(channel));
 				} else {
 					Map<String, Object> filters = new HashMap<>();
-					filters.put(JsonKey.CHANNEL, (String) concurrentHashMap.get(JsonKey.CHANNEL));
+					filters.put(JsonKey.CHANNEL, concurrentHashMap.get(JsonKey.CHANNEL));
 					filters.put(JsonKey.IS_ROOT_ORG, true);
 
 					Map<String, Object> esResult = elasticSearchComplexSearch(filters, EsIndex.sunbird.getIndexName(),
@@ -738,6 +732,10 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 					return;
 				}
 			}
+
+			if (null != isRootOrgFlag && isRootOrgFlag) {
+				concurrentHashMap.put(JsonKey.ROOT_ORG_ID, uniqueId);
+			}
 		}
 
 		concurrentHashMap.put(JsonKey.CONTACT_DETAILS, contactDetails);
@@ -801,8 +799,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 	private String validateOrgType(String orgType) {
 		String orgTypeId = null;
 		try {
-			if (!ProjectUtil
-					.isStringNullOREmpty((String) DataCacheHandler.getOrgTypeMap().get(orgType.toLowerCase()))) {
+			if (!ProjectUtil.isStringNullOREmpty(DataCacheHandler.getOrgTypeMap().get(orgType.toLowerCase()))) {
 				orgTypeId = DataCacheHandler.getOrgTypeMap().get(orgType.toLowerCase());
 			} else {
 				Util.DbInfo orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
@@ -850,7 +847,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 				userMap.put(JsonKey.PASSWORD, randomPassword);
 				welcomeMailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, randomPassword);
 			} else {
-				welcomeMailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, (String) userMap.get(JsonKey.PASSWORD));
+				welcomeMailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, userMap.get(JsonKey.PASSWORD));
 			}
 			String errMsg = validateUser(userMap);
 			if (errMsg.equalsIgnoreCase(JsonKey.SUCCESS)) {
@@ -916,6 +913,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 					tempMap.put(JsonKey.EMAIL_VERIFIED, false);
 					Response response = null;
 					if (null == tempMap.get(JsonKey.OPERATION)) {
+						// will allowing only PUBLIC role at user level.
+						tempMap.remove(JsonKey.ROLES);
 						// insert user record
 						// Add only PUBLIC role to user
 						List<String> list = new ArrayList<>();
@@ -932,6 +931,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 									ResponseCode.SERVER_ERROR.getResponseCode());
 						}
 						tempMap.put(JsonKey.CREATED_BY, updatedBy);
+						tempMap.put(JsonKey.IS_DELETED, false);
 						try {
 							response = cassandraOperation.insertRecord(usrDbInfo.getKeySpace(),
 									usrDbInfo.getTableName(), tempMap);
@@ -971,6 +971,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 						tempMap.remove(JsonKey.OPERATION);
 						tempMap.remove(JsonKey.REGISTERED_ORG_ID);
 						tempMap.remove(JsonKey.ROOT_ORG_ID);
+						// will not allowing to update roles at user level
+						tempMap.remove(JsonKey.ROLES);
 						tempMap.put(JsonKey.UPDATED_BY, updatedBy);
 						tempMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
 						try {
@@ -995,6 +997,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 							failureUserReq.add(userMap);
 							continue;
 						}
+						// update user_org data
+						updateUserOrgData(userMap, updatedBy);
 						// Process Audit Log
 						processAuditLog(userMap, ActorOperations.UPDATE_USER.getValue(), updatedBy, JsonKey.USER);
 					}
@@ -1009,6 +1013,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
 					// insert details to user Ext Identity table
 					insertRecordToUserExtTable(userMap);
+
 					// update elastic search
 					ProjectLogger.log("making a call to save user data to ES in BulkUploadBackGroundJobActor");
 					Request request = new Request();
@@ -1055,6 +1060,29 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 		} catch (Exception e) {
 			ProjectLogger
 					.log("Exception Occurred while updating bulk_upload_process in BulkUploadBackGroundJobActor : ", e);
+		}
+	}
+
+	private void updateUserOrgData(Map<String, Object> userMap, String updatedBy) {
+		Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
+		Map<String, Object> map = new HashMap<>();
+		Map<String, Object> reqMap = new HashMap<>();
+		map.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+		map.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.REGISTERED_ORG_ID));
+		Response response = cassandraOperation.getRecordsByProperties(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(),
+				map);
+		List<Map<String, Object>> resList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+		if (!resList.isEmpty()) {
+			Map<String, Object> res = resList.get(0);
+			reqMap.put(JsonKey.ID, res.get(JsonKey.ID));
+			reqMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
+			reqMap.put(JsonKey.UPDATED_BY, updatedBy);
+			reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+			try {
+				cassandraOperation.updateRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), res);
+			} catch (Exception e) {
+				ProjectLogger.log(e.getMessage(), e);
+			}
 		}
 	}
 
@@ -1261,6 +1289,11 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 			if (!(((List<Map<String, Object>>) resultFrUserName.get(JsonKey.RESPONSE)).isEmpty())) {
 				// user exist
 				Map<String, Object> map = ((List<Map<String, Object>>) resultFrUserName.get(JsonKey.RESPONSE)).get(0);
+				if (null != map.get(JsonKey.IS_DELETED) && (boolean) map.get(JsonKey.IS_DELETED)) {
+					throw new ProjectCommonException(ResponseCode.inactiveUser.getErrorCode(),
+							ResponseCode.inactiveUser.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+				}
+
 				userMap.put(JsonKey.ID, map.get(JsonKey.ID));
 				userMap.put(JsonKey.USER_ID, map.get(JsonKey.ID));
 				userMap.put(JsonKey.OPERATION, JsonKey.UPDATE);
@@ -1284,6 +1317,12 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 						email = (String) userMap.get(JsonKey.EMAIL);
 						userMap.remove(JsonKey.EMAIL);
 					}
+					// check user is active for this organization or not
+					if (isUserDeletedFromOrg(userMap)) {
+						throw new ProjectCommonException(ResponseCode.userInactiveForThisOrg.getErrorCode(),
+								ResponseCode.userInactiveForThisOrg.getErrorMessage(),
+								ResponseCode.CLIENT_ERROR.getResponseCode());
+					}
 					updateKeyCloakUserBase(userMap);
 					userMap.put(JsonKey.EMAIL, email);
 				} else {
@@ -1291,7 +1330,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 							ResponseCode.userRegOrgError.getErrorMessage(),
 							ResponseCode.CLIENT_ERROR.getResponseCode());
 				}
-
 			} else {
 				// user doesn't exist
 				try {
@@ -1316,7 +1354,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 				}
 				userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
 				userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
-				userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
+				userMap.put(JsonKey.IS_DELETED, false);
 				if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.COUNTRY_CODE))) {
 					userMap.put(JsonKey.COUNTRY_CODE, propertiesCache.getProperty("sunbird_default_country_code"));
 				}
@@ -1344,6 +1382,26 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 			userMap.put(JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
 		}
 		return userMap;
+	}
+
+	private boolean isUserDeletedFromOrg(Map<String, Object> userMap) {
+		Util.DbInfo usrOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+		Map<String, Object> map = new HashMap<>();
+		map.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+		map.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.REGISTERED_ORG_ID));
+		Response response = cassandraOperation.getRecordsByProperties(usrOrgDbInfo.getKeySpace(),
+				usrOrgDbInfo.getTableName(), map);
+		List<Map<String, Object>> resList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+		if (!resList.isEmpty()) {
+			Map<String, Object> res = resList.get(0);
+			if (null != res.get(JsonKey.IS_DELETED)) {
+				return (boolean) (res.get(JsonKey.IS_DELETED));
+			} else {
+				return false;
+			}
+		}
+		return false;
+
 	}
 
 	private void checkEmailUniqueness(Map<String, Object> userMap, String opType) {
@@ -1505,7 +1563,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
 	/**
 	 * This method will make some requested key value as lower case.
-	 * 
+	 *
 	 * @param map
 	 *            Request
 	 */
@@ -1664,7 +1722,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
 			ProjectLogger.log("shortened url :: " + webUrl);
 			String sms = ProjectUtil.getSMSBody(name, webUrl, envName);
-			if (ProjectUtil.isStringNullOREmpty((String) sms)) {
+			if (ProjectUtil.isStringNullOREmpty(sms)) {
 				sms = PropertiesCache.getInstance().getProperty("sunbird_default_welcome_sms");
 			}
 			ProjectLogger.log("SMS text : " + sms);

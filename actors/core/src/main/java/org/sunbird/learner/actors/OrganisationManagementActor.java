@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -50,8 +49,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 		"approveUserOrganisation", "joinUserOrganisation", "rejectUserOrganisation", "downlaodOrg" }, asyncTasks = {})
 public class OrganisationManagementActor extends BaseActor {
 
-	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-	private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
+	private final CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+	private final EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
 			.getEncryptionServiceInstance(null);
 
 	@Override
@@ -318,9 +317,15 @@ public class OrganisationManagementActor extends BaseActor {
 				upsertAddress(addressReq);
 				req.put(JsonKey.ADDRESS_ID, addressId);
 			}
-			if (ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ROOT_ORG_ID))) {
+
+			Boolean isRootOrg = (Boolean) req.get(JsonKey.IS_ROOT_ORG);
+			// set root org on basis of whether the org itself is root org or not ...
+			if (null != isRootOrg && isRootOrg) {
+				req.put(JsonKey.ROOT_ORG_ID, uniqueId);
+			} else if (ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ROOT_ORG_ID))) {
 				req.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
 			}
+
 			// adding one extra filed for tag.
 			if (!ProjectUtil.isStringNullOREmpty(((String) req.get(JsonKey.HASHTAGID)))) {
 				req.put(JsonKey.HASHTAGID,
@@ -328,7 +333,7 @@ public class OrganisationManagementActor extends BaseActor {
 			} else {
 				req.put(JsonKey.HASHTAGID, uniqueId);
 			}
-			Boolean isRootOrg = (Boolean) req.get(JsonKey.IS_ROOT_ORG);
+
 			// if channel is available then make slug for channel.
 			// remove the slug key if coming from user input
 			req.remove(JsonKey.SLUG);
@@ -931,20 +936,7 @@ public class OrganisationManagementActor extends BaseActor {
 				}
 			}
 		}
-		if (isNotNull(usrOrgData.get(JsonKey.ROLE))) {
-			String role = usrOrgData.get(JsonKey.ROLE).toString();
-			// partners are going to send these role values
-			if (StringUtils.equalsIgnoreCase(role, "content-creator")) {
-				role = ProjectUtil.UserRole.CONTENT_CREATOR.getValue();
-			} else if (StringUtils.equalsIgnoreCase(role, "member")) {
-				role = ProjectUtil.UserRole.ORG_MEMBER.getValue();
-			} else if (StringUtils.equalsIgnoreCase(role, "admin")) {
-				role = ProjectUtil.UserRole.ORG_ADMIN.getValue();
-			} else if (StringUtils.equalsIgnoreCase(role, "content-reviewer")) {
-				role = ProjectUtil.UserRole.CONTENT_REVIEWER.getValue();
-			}
-			roles.add(role);
-		}
+
 		usrOrgData.remove(JsonKey.ROLE);
 		if (isNull(roles) && roles.isEmpty()) {
 			// create exception here invalid request data and tell the exception , then
@@ -1010,8 +1002,8 @@ public class OrganisationManagementActor extends BaseActor {
 		if (!orgList.isEmpty()) {
 			Integer count = 0;
 			Map<String, Object> orgMap = (Map<String, Object>) orgList.get(0);
-			if (isNotNull(orgMap.get(JsonKey.NO_OF_MEMBERS.toLowerCase()))) {
-				count = Integer.valueOf((String) orgMap.get(JsonKey.NO_OF_MEMBERS.toLowerCase()));
+			if (isNotNull(orgMap.get(JsonKey.NO_OF_MEMBERS))) {
+				count = (Integer) orgMap.get(JsonKey.NO_OF_MEMBERS);
 			}
 			newOrgMap.put(JsonKey.ID, orgId);
 			newOrgMap.put(JsonKey.NO_OF_MEMBERS, count + 1);
@@ -1101,6 +1093,14 @@ public class OrganisationManagementActor extends BaseActor {
 			return;
 		} else {
 			Map<String, Object> dataMap = (Map<String, Object>) list.get(0);
+			if (null != dataMap.get(JsonKey.IS_DELETED) && (boolean) dataMap.get(JsonKey.IS_DELETED)) {
+				ProjectCommonException exception = new ProjectCommonException(
+						ResponseCode.userInactiveForThisOrg.getErrorCode(),
+						ResponseCode.userInactiveForThisOrg.getErrorMessage(),
+						ResponseCode.CLIENT_ERROR.getResponseCode());
+				sender().tell(exception, self());
+				return;
+			}
 			if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
 				dataMap.put(JsonKey.UPDATED_BY, updatedBy);
 			}
@@ -1116,8 +1116,8 @@ public class OrganisationManagementActor extends BaseActor {
 			List orgList = (List) orgresult.get(JsonKey.RESPONSE);
 			if (!orgList.isEmpty()) {
 				Map<String, Object> orgMap = (Map<String, Object>) orgList.get(0);
-				if (isNotNull(orgMap.get(JsonKey.NO_OF_MEMBERS.toLowerCase()))) {
-					Integer count = Integer.valueOf((String) orgMap.get(JsonKey.NO_OF_MEMBERS.toLowerCase()));
+				if (isNotNull(orgMap.get(JsonKey.NO_OF_MEMBERS))) {
+					Integer count = (Integer) orgMap.get(JsonKey.NO_OF_MEMBERS);
 					newOrgMap.put(JsonKey.ID, orgId);
 					newOrgMap.put(JsonKey.NO_OF_MEMBERS, count == 0 ? 0 : (count - 1));
 					cassandraOperation.updateRecord(organisationDbInfo.getKeySpace(), organisationDbInfo.getTableName(),
@@ -1635,7 +1635,7 @@ public class OrganisationManagementActor extends BaseActor {
 
 	/**
 	 * Validates whether the organisation or source with externalId exists in DB
-	 * 
+	 *
 	 * @param req
 	 *            Request from the user
 	 * @return boolean
@@ -1689,7 +1689,7 @@ public class OrganisationManagementActor extends BaseActor {
 
 	/**
 	 * Validates whether the organisation or source with externalId exists in DB
-	 * 
+	 *
 	 * @param req
 	 * @return boolean
 	 */
@@ -1745,7 +1745,7 @@ public class OrganisationManagementActor extends BaseActor {
 	/**
 	 * Validates where the userId or provider with userName is in database and is
 	 * valid
-	 * 
+	 *
 	 * @param req
 	 * @return boolean
 	 */
@@ -1812,7 +1812,7 @@ public class OrganisationManagementActor extends BaseActor {
 
 	/**
 	 * validates if channel is already present in the organisation
-	 * 
+	 *
 	 * @param channel
 	 * @return boolean
 	 */
@@ -1890,7 +1890,7 @@ public class OrganisationManagementActor extends BaseActor {
 
 	/**
 	 * validates if channel is already present in the organisation while Updating
-	 * 
+	 *
 	 * @param channel
 	 * @return boolean
 	 */
@@ -1915,7 +1915,7 @@ public class OrganisationManagementActor extends BaseActor {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param externalId
 	 * @param provider
 	 */
@@ -1931,7 +1931,7 @@ public class OrganisationManagementActor extends BaseActor {
 
 	/**
 	 * This method will do the channel uniqueness validation
-	 * 
+	 *
 	 * @param req
 	 */
 	private void validateChannel(Map<String, Object> req) {

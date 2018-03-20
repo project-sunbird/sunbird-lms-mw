@@ -33,7 +33,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.badges.BadgesActor;
+import org.sunbird.learner.actors.health.HealthActor;
 import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
@@ -60,7 +60,7 @@ public class UserManagementActorTest {
 	private final static Props props = Props.create(UserManagementActor.class);
 	private final static Props orgProps = Props.create(OrganisationManagementActor.class);
 	private final static Props emailServiceProps = Props.create(EmailServiceActor.class);
-	private final static Props badgeProps = Props.create(BadgesActor.class);
+	private final static Props badgeProps = Props.create(HealthActor.class);
 	private static EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
 			.getEncryptionServiceInstance(null);
 	private static Util.DbInfo userManagementDB = null;

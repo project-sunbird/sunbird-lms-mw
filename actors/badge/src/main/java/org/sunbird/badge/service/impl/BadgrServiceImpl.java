@@ -7,10 +7,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang.StringUtils;
 import org.sunbird.badge.model.BadgeClassExtension;
 import org.sunbird.badge.service.BadgeClassExtensionService;
 import org.sunbird.badge.service.BadgingService;
 import org.sunbird.badge.util.BadgingUtil;
+import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.HttpUtilResponse;
 import org.sunbird.common.models.response.Response;
@@ -19,9 +21,15 @@ import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.CourseBatchSchedulerUtil;
+import org.sunbird.learner.util.Util;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -31,18 +39,29 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 public class BadgrServiceImpl implements BadgingService {
 	BadgeClassExtensionService badgeClassExtensionService = new BadgeClassExtensionServiceImpl();
-	private ObjectMapper mapper = new ObjectMapper(); 
-	
+	private ObjectMapper mapper = new ObjectMapper();
+	private static CassandraOperation cassandraOperation = ServiceFactory.getInstance(); 
 	public BadgrServiceImpl() {
 		this.badgeClassExtensionService = new BadgeClassExtensionServiceImpl();
 	}
-
+	public static Map<String, String> headerMap = new HashMap<>();
+	static {
+		String header = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
+		if (ProjectUtil.isStringNullOREmpty(header)) {
+			header = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION);
+		} else {
+			header = JsonKey.BEARER + header;
+		}
+		headerMap.put(JsonKey.AUTHORIZATION, header);
+		headerMap.put("Content-Type", "application/json");
+	}
 	public BadgrServiceImpl(BadgeClassExtensionService badgeClassExtensionService) {
 		this.badgeClassExtensionService = badgeClassExtensionService;
 	}
 
 	@Override
 	public Response createIssuer(Request request) throws IOException {
+		// TODO Auto-generated method stub
 		Map<String, Object> req = request.getRequest();
 		byte[] image = null;
 		Map<String, byte[]> fileData = new HashMap<>();
@@ -62,9 +81,13 @@ public class BadgrServiceImpl implements BadgingService {
 		if (null != image) {
 			fileData.put(JsonKey.IMAGE, image);
 		}
-		HttpUtilResponse httpResponse = HttpUtil.postFormData(requestData, fileData, headers, BadgingUtil.getBadgrBaseUrl() + url);
+		HttpUtilResponse httpResponse = HttpUtil
+				.postFormData(requestData, fileData, headers, BadgingUtil.getBadgrBaseUrl() + url);
+
+		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode() ,null );
 		Response response = new Response();
-		response.put(JsonKey.RESPONSE, httpResponse);
+		BadgingUtil.prepareBadgeIssuerResponse(httpResponse.getBody(), response.getResult());
+
 		return response;
 	}
 
@@ -77,9 +100,11 @@ public class BadgrServiceImpl implements BadgingService {
 		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
 
 		HttpUtilResponse httpResponse =HttpUtil.doGetRequest(BadgingUtil.getBadgrBaseUrl() + url, headers);
+		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode() ,null );
 		Response response = new Response();
-		response.put(JsonKey.RESPONSE, httpResponse);
+		BadgingUtil.prepareBadgeIssuerResponse(httpResponse.getBody(), response.getResult());
 		return response;
+
 	}
 
 	@Override
@@ -88,8 +113,21 @@ public class BadgrServiceImpl implements BadgingService {
 		String url = "/v1/issuer/issuers";
 		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
 		HttpUtilResponse httpResponse =HttpUtil.doGetRequest(BadgingUtil.getBadgrBaseUrl() + url, headers);
+		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode() ,null );
 		Response response = new Response();
-		response.put(JsonKey.RESPONSE, httpResponse);
+
+		ObjectMapper mapper = new ObjectMapper();
+		List<Map<String, Object>> issuers = new ArrayList<>();
+		List<Map<String, Object>> data =
+				mapper.readValue(httpResponse.getBody(), new TypeReference<List<Map<String, Object>>>() {});
+		for (Object badge : data) {
+			Map<String, Object> mappedBadge = new HashMap<>();
+			BadgingUtil.prepareBadgeIssuerResponse((Map<String, Object>) badge, mappedBadge);
+			issuers.add(mappedBadge);
+		}
+		Map<String, Object> res = new HashMap<>();
+		res.put(BadgingJsonKey.ISSUERS, issuers);
+		response.getResult().putAll(res);
 		return response;
 	}
 
@@ -201,7 +239,7 @@ public class BadgrServiceImpl implements BadgingService {
 		if (subtype != null) {
 			subtype = subtype.toLowerCase();
 		}
-		
+
 		List<BadgeClassExtension> badgeClassExtList = badgeClassExtensionService.get(issuerList,
 				rootOrgId, type, subtype, allowedRoles);
 		List<String> filteredIssuerList = badgeClassExtList.stream()
@@ -281,13 +319,18 @@ public class BadgrServiceImpl implements BadgingService {
 	@Override
 	@SuppressWarnings("unchecked")
 	public Response badgeAssertion(Request request) throws IOException {
+		// Based on incoming recipientType and recipientId collect the email.
 		Map<String, Object> requestedData = request.getRequest();
+		String email = getEmail((String) requestedData.get(BadgingJsonKey.RECIPIENT_ID),
+				(String) requestedData.get(BadgingJsonKey.RECIPIENT_TYPE));
+		requestedData.put(BadgingJsonKey.RECIPIENT_EMAIL, email);
 		String requestBody = BadgingUtil.createAssertionReqData(requestedData);
 		String url = BadgingUtil.createBadgerUrl(requestedData, BadgingUtil.SUNBIRD_BADGER_CREATE_ASSERTION_URL, 2);
-		ProjectLogger.log("AssertionData==" +requestBody +"  " + url +"  " + BadgingUtil.getBadgrHeaders() , LoggerEnum.INFO.name());
+		ProjectLogger.log("AssertionData==" + requestBody + "  " + url + "  " + BadgingUtil.getBadgrHeaders(),
+				LoggerEnum.INFO.name());
 		HttpUtilResponse httpResponse = HttpUtil.doPostRequest(url, requestBody, BadgingUtil.getBadgrHeaders());
-		ProjectLogger.log("AssertionDataResponse==" +httpResponse.getStatusCode(), LoggerEnum.INFO.name());
-		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(),null);
+		ProjectLogger.log("AssertionDataResponse==" + httpResponse.getStatusCode(), LoggerEnum.INFO.name());
+		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(), null);
 		Map<String, Object> res = mapper.readValue(httpResponse.getBody(), HashMap.class);
 		// calling to create response as per sunbird
 		res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String, Object>());
@@ -347,10 +390,71 @@ public class BadgrServiceImpl implements BadgingService {
 		String url = "/v1/issuer/issuers" + "/" + slug;
 		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
 		HttpUtilResponse httpResponse =HttpUtil.sendDeleteRequest(headers , BadgingUtil.getBadgrBaseUrl() + url);
+		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode() ,null );
 		Response response = new Response();
-		response.put(JsonKey.RESPONSE, httpResponse);
+		// since the response from badger service contains " at beging and end so remove that from response string
+		response.put(JsonKey.MESSAGE , StringUtils.strip( httpResponse.getBody(), "\""));
 		return response;
+	}
+	
+	/**
+	 * This method wu
+	 * @param recipientId
+	 * @param recipientType
+	 * @return
+	 */
+	public static String getEmail(String recipientId, String recipientType) {
+		if (BadgingJsonKey.BADGE_TYPE_USER.equalsIgnoreCase(recipientType)) {
+			return getUserEmailFromDB(recipientId);
+		} else {
+			return verifyContent(recipientType);
+		}
+	}
+	
+	/**
+	 * This method will provide user email id.
+	 * @param userId String
+	 * @return String
+	 */
+	private static String getUserEmailFromDB(String userId) {
+		Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+		Response response = cassandraOperation.getRecordById(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userId);
+		List<Map<String, Object>> user = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+		if ((user == null) || user.isEmpty()) {
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(),
+					"User not found.");
+		}
+		String email = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
+				.getDecryptionServiceInstance(null).decryptData((String) user.get(0).get(JsonKey.EMAIL));
+
+		// verify the email format.
+		if (ProjectUtil.isEmailvalid(email)) {
+			return email;
+		} else {
+			// TODO need to create dummy email
+			return userId + "@gmail.com";
+		}
+	}
+	
+	/**
+	 * 
+	 * @param contentId String
+	 * @return String
+	 */
+	private static String verifyContent(String contentId) {
+		String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
+		String url = ekStepBaseUrl + PropertiesCache.getInstance().getProperty("sunbird_content_read") + "/"
+				+ contentId;
+		try {
+			HttpUtil.doGetRequest(url, CourseBatchSchedulerUtil.headerMap);
+		} catch (IOException e) {
+			ProjectLogger.log(e.getMessage(), e);
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(),
+					"Content not found.");
+		}
+		return contentId + "@gmail.com";
 
 	}
 
+	
 }

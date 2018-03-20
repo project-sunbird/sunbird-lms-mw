@@ -475,7 +475,11 @@ public class BadgrServiceImpl implements BadgingService {
 			JSONObject data = object.getJSONObject(JsonKey.RESULT);
 			JSONObject contentData = data.getJSONObject(JsonKey.CONTENT);
 			String userId = contentData.getString(JsonKey.CREATED_BY);
+			try {
 			return getUserEmailFromDB(userId);
+			} catch (Exception e) {
+			  //no need to throw the exception if content id is valid.
+			}
 		} catch (IOException | JSONException e) {
 			ProjectLogger.log(e.getMessage(), e);
 			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(),

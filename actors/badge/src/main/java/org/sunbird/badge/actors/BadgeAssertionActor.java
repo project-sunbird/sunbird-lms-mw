@@ -117,7 +117,7 @@ public class BadgeAssertionActor extends BaseActor {
 		sender().tell(result, self());
 		Map<String, Object> map = BadgingUtil.createRevokeBadgeNotifierMap(request.getRequest());
 		Request notificationReq = new Request();
-		map.put(JsonKey.OBJECT_TYPE, request.getRequest().get(JsonKey.OBJECT_TYPE));
+		map.put(JsonKey.OBJECT_TYPE, request.getRequest().get(BadgingJsonKey.RECIPIENT_ID));
 		map.put(JsonKey.ID, request.getRequest().get(BadgingJsonKey.RECIPIENT_ID));
 		notificationReq.getRequest().putAll(map);
 		notificationReq.setOperation(BadgeOperations.revokeBadgeMessage.name());

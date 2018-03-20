@@ -1,21 +1,26 @@
 /**
  * 
  */
-package org.sunbird.learner.actors.badges;
+package org.sunbird.learner.actors.health;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -24,20 +29,27 @@ import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.UntypedAbstractActor;
-
 /**
  * @author Manzarul
  *
  */
-public class BadgesActor extends UntypedAbstractActor {
+public class HealthActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private Util.DbInfo badgesDbInfo = Util.dbInfoMap.get(JsonKey.BADGES_DB);
 	private Util.DbInfo userBadgesDbInfo = Util.dbInfoMap.get(JsonKey.USER_BADGES_DB);
 
+	public static void init() {
+		RequestRouter.registerActor(HealthActor.class,
+				Arrays.asList(ActorOperations.GET_ALL_BADGE.getValue(),
+						ActorOperations.ADD_USER_BADGE.getValue(), ActorOperations.HEALTH_CHECK.getValue(),
+						ActorOperations.ACTOR.getValue(), ActorOperations.ES.getValue(),
+						ActorOperations.CASSANDRA.getValue()));
+	}
+	
+	
 	@Override
-	public void onReceive(Object message) throws Throwable {
+	public void onReceive(Request message) throws Throwable {
 		if (message instanceof Request) {
 			try {
 				ProjectLogger.log("AssessmentItemActor onReceive called");
@@ -45,6 +57,7 @@ public class BadgesActor extends UntypedAbstractActor {
 				Util.initializeContext(actorMessage, JsonKey.USER);
 				// set request id fto thread loacl...
 				ExecutionContext.setRequestId(actorMessage.getRequestId());
+				//TODO need to remove the badges api's 
 				if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.GET_ALL_BADGE.getValue())) {
 					getBadges();
 				} else if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.ADD_USER_BADGE.getValue())) {
@@ -178,28 +191,32 @@ public class BadgesActor extends UntypedAbstractActor {
 			isallHealthy = false;
 		}
 		// check EKStep Util.
-		/*
-		 * try { String body = "{\"request\":{\"filters\":{\"identifier\":\"test\"}}}";
-		 * Map<String, String> headers = new HashMap<>();
-		 * headers.put(JsonKey.AUTHORIZATION, JsonKey.BEARER +
-		 * System.getenv(JsonKey.EKSTEP_AUTHORIZATION)); if
-		 * (ProjectUtil.isStringNullOREmpty((String)
-		 * headers.get(JsonKey.AUTHORIZATION))) { headers.put(JsonKey.AUTHORIZATION,
-		 * PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
-		 * headers.put("Content_Type", "application/json; charset=utf-8"); } String
-		 * ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL); if
-		 * (ProjectUtil.isStringNullOREmpty(ekStepBaseUrl)) { ekStepBaseUrl =
-		 * PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL); } String
-		 * response = HttpUtil.sendPostRequest( ekStepBaseUrl +
-		 * PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_URL),
-		 * body, headers); if (response.contains("OK")) {
-		 * responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE,
-		 * false, null)); } else {
-		 * responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE,
-		 * true, null)); } } catch (Exception e) {
-		 * responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE,
-		 * true, null)); isallHealthy = false; }
-		 */
+		try {
+			String body = "{\"request\":{\"filters\":{\"identifier\":\"test\"}}}";
+			Map<String, String> headers = new HashMap<>();
+			headers.put(JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
+			if (ProjectUtil.isStringNullOREmpty((String) headers.get(JsonKey.AUTHORIZATION))) {
+				headers.put(JsonKey.AUTHORIZATION,
+						PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
+				headers.put("Content_Type", "application/json; charset=utf-8");
+			}
+			String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
+			if (ProjectUtil.isStringNullOREmpty(ekStepBaseUrl)) {
+				ekStepBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
+			}
+			String response = HttpUtil.sendPostRequest(
+					ekStepBaseUrl + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_URL), body,
+					headers);
+			if (response.contains("OK")) {
+				responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE, false, null));
+			} else {
+				responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE, true, null));
+			}
+		} catch (Exception e) {
+			responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE, true, null));
+			isallHealthy = false;
+		}
+		 
 
 		finalResponseMap.put(JsonKey.CHECKS, responseList);
 		finalResponseMap.put(JsonKey.NAME, "Complete health check api");

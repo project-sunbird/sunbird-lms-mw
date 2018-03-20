@@ -122,7 +122,10 @@ public class EsSyncActor extends BaseActor {
         Iterator<Entry<String, Object>> itr = responseMap.entrySet().iterator();
         while (itr.hasNext()) {
             if (objectType.equals(JsonKey.USER)) {
-                result.add(getUserDetails(itr.next()));
+                Map<String, Object> userMap = (Map<String, Object>) itr.next().getValue();
+                if (!((boolean) userMap.get(JsonKey.IS_DELETED))) {
+                    result.add(getUserDetails(itr.next()));
+                }
             } else if (objectType.equals(JsonKey.ORGANISATION)) {
                 result.add(getOrgDetails(itr.next()));
             } else if (objectType.equals(JsonKey.BATCH) || objectType.equals(JsonKey.USER_COURSE)) {

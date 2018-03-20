@@ -29,7 +29,7 @@ public class BadgeNotifier extends BaseActor {
 	public void onReceive(Request request) throws Throwable {
 		String operation = request.getOperation();
 		String type = (String) request.getRequest().get(JsonKey.OBJECT_TYPE);
-		ProjectLogger.log("Processing badge notification.", request.getRequest().put("operation", operation), LoggerEnum.INFO.name());
+		ProjectLogger.log("Processing badge notification for "+ operation, request.getRequest(), LoggerEnum.INFO.name());
 		Response response;
 		if (StringUtils.isNotBlank(operation) && StringUtils.isNotBlank(type)) {
 			switch (operation) {

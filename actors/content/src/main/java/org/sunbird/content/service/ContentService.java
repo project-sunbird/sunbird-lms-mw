@@ -8,6 +8,8 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
@@ -58,7 +60,8 @@ public class ContentService {
 		String badgeStr = mapper.writeValueAsString(badge);
 		String reqBody = "{\"request\": {\"content\": {\"" + BADGE_ASSERTION + "\": " + badgeStr + "}}}";
 
-		HttpUtil.sendPatchRequest(props.get("basePath") + id, reqBody, headers);
+		String result = HttpUtil.sendPatchRequest(props.get("basePath") + id, reqBody, headers);
+		ProjectLogger.log("Status badge of assigning to content: "+ result, request.getRequest(), LoggerEnum.INFO.name());
 		// TODO: Get the response and return msg based on it's value.
 		Response response = new Response();
 		response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);

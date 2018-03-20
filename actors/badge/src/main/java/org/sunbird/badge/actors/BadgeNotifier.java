@@ -7,6 +7,8 @@ import org.sunbird.badge.BadgeOperations;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.response.ResponseParams;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.service.ContentService;
@@ -17,7 +19,7 @@ import org.sunbird.content.service.ContentService;
  *
  */
 
-@ActorConfig(tasks = {}, asyncTasks = { "assignBadgeMessage", "revokeBadgeMessage", "badgeTest" })
+@ActorConfig(tasks = {}, asyncTasks = { "assignBadgeMessage", "revokeBadgeMessage" })
 public class BadgeNotifier extends BaseActor {
 
 	private static final String INVALID_BADGE_ASSIGN_REQUEST = "INVALID_BADGE_ASSIGN_REQUEST";
@@ -27,6 +29,7 @@ public class BadgeNotifier extends BaseActor {
 	public void onReceive(Request request) throws Throwable {
 		String operation = request.getOperation();
 		String type = (String) request.getRequest().get(JsonKey.OBJECT_TYPE);
+		ProjectLogger.log("Processing badge notification.", request.getRequest().put("operation", operation), LoggerEnum.INFO.name());
 		Response response;
 		if (StringUtils.isNotBlank(operation) && StringUtils.isNotBlank(type)) {
 			switch (operation) {
@@ -36,11 +39,6 @@ public class BadgeNotifier extends BaseActor {
 				break;
 			case "revokeBadgeMessage":
 				response = revokeBadge(type, request);
-				sender().tell(response, self());
-				break;
-			case "badgeTest":
-				System.out.println("Got a message to BadgeNotifier with path: " + self().path());
-				response = new Response();
 				sender().tell(response, self());
 				break;
 			default:

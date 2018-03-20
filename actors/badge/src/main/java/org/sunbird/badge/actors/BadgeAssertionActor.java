@@ -6,6 +6,7 @@ package org.sunbird.badge.actors;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.badge.BadgeOperations;
@@ -32,7 +33,7 @@ public class BadgeAssertionActor extends BaseActor {
 
 	@Override
 	public void onReceive(Request request) throws Throwable {
-		ProjectLogger.log("BadgeAssertionActor  onReceive called", LoggerEnum.INFO.name());
+		ProjectLogger.log("BadgeAssertionActor onReceive called", LoggerEnum.INFO.name());
 		String operation = request.getOperation();
 
 		switch (operation) {
@@ -60,14 +61,22 @@ public class BadgeAssertionActor extends BaseActor {
 	 *            Request
 	 */
 	private void createAssertion(Request actorMessage) throws IOException {
+		ProjectLogger.log("Got request to create badge assertion", actorMessage.getRequest(), LoggerEnum.INFO.name());
 		Response result = service.badgeAssertion(actorMessage);
 		ProjectLogger.log("resultMap==" + result.getResult());
 		sender().tell(result, self());
 		ProjectLogger.log("resultMapSent==" + result.getResult());
 		Map<String, Object> map = BadgingUtil.createBadgeNotifierMap(result.getResult());
 		Request request = new Request();
-		map.put(JsonKey.OBJECT_TYPE, actorMessage.getRequest().get(BadgingJsonKey.RECIPIENT_TYPE));
-		map.put(JsonKey.ID, actorMessage.getRequest().get(BadgingJsonKey.RECIPIENT_ID));
+		String id = (String) actorMessage.getRequest().get(BadgingJsonKey.RECIPIENT_ID);
+		String objectType = (String) actorMessage.getRequest().get(BadgingJsonKey.RECIPIENT_TYPE);
+		ProjectLogger.log("Notifying badge assertion for " + objectType + " with id: " + id, actorMessage.getRequest(), LoggerEnum.INFO.name());
+		// TODO: remove this after testing.
+		if (StringUtils.isBlank(objectType)) {
+			objectType = "content";
+		}
+		map.put(JsonKey.OBJECT_TYPE, objectType);
+		map.put(JsonKey.ID, id);
 		request.getRequest().putAll(map);
 		request.setOperation(BadgeOperations.assignBadgeMessage.name());
 		tellToAnother(request);

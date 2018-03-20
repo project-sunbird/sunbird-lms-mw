@@ -1,9 +1,7 @@
 package org.sunbird.badge.actors;
 
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.testkit.javadsl.TestKit;
+import static akka.testkit.JavaTestKit.duration;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -18,9 +16,12 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingActorOperations;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import scala.concurrent.duration.FiniteDuration;
 
-import static akka.testkit.JavaTestKit.duration;
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.testkit.javadsl.TestKit;
+import scala.concurrent.duration.FiniteDuration;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(BadgeClassActor.class)

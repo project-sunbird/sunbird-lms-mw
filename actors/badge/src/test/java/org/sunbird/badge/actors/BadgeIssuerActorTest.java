@@ -2,16 +2,12 @@ package org.sunbird.badge.actors;
 
 import static akka.testkit.JavaTestKit.duration;
 
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.testkit.javadsl.TestKit;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -21,12 +17,18 @@ import org.sunbird.badge.service.impl.BadgrServiceImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.HttpUtilResponse;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.BadgingActorOperations;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.testkit.javadsl.TestKit;
 import scala.concurrent.duration.FiniteDuration;
 
 /**

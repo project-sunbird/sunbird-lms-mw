@@ -1,8 +1,8 @@
 package org.sunbird.badge.service;
 
-import org.sunbird.badge.model.BadgeClassExtension;
-
 import java.util.List;
+
+import org.sunbird.badge.model.BadgeClassExtension;
 
 public interface BadgeClassExtensionService {
     void save(BadgeClassExtension badgeClassExtension);

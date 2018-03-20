@@ -66,7 +66,7 @@ public class BadgeAssertionActor extends BaseActor {
 		ProjectLogger.log("resultMapSent==" + result.getResult());
 		Map<String, Object> map = BadgingUtil.createBadgeNotifierMap(result.getResult());
 		Request request = new Request();
-		map.put(JsonKey.OBJECT_TYPE, actorMessage.getRequest().get(JsonKey.OBJECT_TYPE));
+		map.put(JsonKey.OBJECT_TYPE, actorMessage.getRequest().get(BadgingJsonKey.RECIPIENT_TYPE));
 		map.put(JsonKey.ID, actorMessage.getRequest().get(BadgingJsonKey.RECIPIENT_ID));
 		request.getRequest().putAll(map);
 		request.setOperation(BadgeOperations.assignBadgeMessage.name());

@@ -970,7 +970,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                     }
                     // convert userName,provide,loginId,externalId.. value to lowercase
                     updateMapSomeValueTOLowerCase(userMap);
-                    userMap = insertRecordToKeyCloak(userMap);
+                    userMap = insertRecordToKeyCloak(userMap, updatedBy);
                     Map<String, Object> tempMap = new HashMap<>();
                     tempMap.putAll(userMap);
                     tempMap.remove(JsonKey.EMAIL_VERIFIED);
@@ -1353,8 +1353,22 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         }
     }
 
+    private void updateRecordToUserOrgTable(Map<String, Object> map, String updatedBy) {
+        Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
+        map.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
+        map.put(JsonKey.IS_DELETED, false);
+        map.put(JsonKey.UPDATED_BY, updatedBy);
+        map.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+        try {
+            cassandraOperation.updateRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), map);
+        } catch (Exception e) {
+            ProjectLogger.log(e.getMessage(), e);
+        }
+    }
+
     @SuppressWarnings("unchecked")
-    private Map<String, Object> insertRecordToKeyCloak(Map<String, Object> userMap) {
+    private Map<String, Object> insertRecordToKeyCloak(Map<String, Object> userMap,
+            String updatedBy) {
         Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
         if (userMap.containsKey(JsonKey.PROVIDER)
                 && !ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PROVIDER))) {
@@ -1415,12 +1429,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                         userMap.remove(JsonKey.EMAIL);
                     }
                     // check user is active for this organization or not
-                    if (isUserDeletedFromOrg(userMap)) {
-                        throw new ProjectCommonException(
-                                ResponseCode.userInactiveForThisOrg.getErrorCode(),
-                                ResponseCode.userInactiveForThisOrg.getErrorMessage(),
-                                ResponseCode.CLIENT_ERROR.getResponseCode());
-                    }
+                    isUserDeletedFromOrg(userMap, updatedBy);
                     updateKeyCloakUserBase(userMap);
                     userMap.put(JsonKey.EMAIL, email);
                 } else {
@@ -1486,7 +1495,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         return userMap;
     }
 
-    private boolean isUserDeletedFromOrg(Map<String, Object> userMap) {
+    private boolean isUserDeletedFromOrg(Map<String, Object> userMap, String updatedBy) {
         Util.DbInfo usrOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
         Map<String, Object> map = new HashMap<>();
         map.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
@@ -1498,7 +1507,19 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         if (!resList.isEmpty()) {
             Map<String, Object> res = resList.get(0);
             if (null != res.get(JsonKey.IS_DELETED)) {
-                return (boolean) (res.get(JsonKey.IS_DELETED));
+                boolean bool = (boolean) (res.get(JsonKey.IS_DELETED));
+                // if deleted then add this user to org and proceed
+                try {
+                    if (bool) {
+                        updateRecordToUserOrgTable(res, updatedBy);
+                    }
+                } catch (Exception ex) {
+                    throw new ProjectCommonException(
+                            ResponseCode.userUpdateToOrgFailed.getErrorCode(),
+                            ResponseCode.userUpdateToOrgFailed.getErrorMessage(),
+                            ResponseCode.CLIENT_ERROR.getResponseCode());
+                }
+                return bool;
             } else {
                 return false;
             }

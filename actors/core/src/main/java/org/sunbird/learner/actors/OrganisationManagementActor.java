@@ -349,43 +349,49 @@ public class OrganisationManagementActor extends BaseActor {
                 addressReq.put(JsonKey.ID, addressId);
                 addressReq.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
 
-                if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
-                    addressReq.put(JsonKey.CREATED_BY, updatedBy);
-                }
-                upsertAddress(addressReq);
-                req.put(JsonKey.ADDRESS_ID, addressId);
-            }
-            if (ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ROOT_ORG_ID))) {
-                req.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
-            }
-            // adding one extra filed for tag.
-            if (!ProjectUtil.isStringNullOREmpty(((String) req.get(JsonKey.HASHTAGID)))) {
-                req.put(JsonKey.HASHTAGID, validateHashTagId(((String) req.get(JsonKey.HASHTAGID)),
-                        JsonKey.CREATE, ""));
-            } else {
-                req.put(JsonKey.HASHTAGID, uniqueId);
-            }
-            Boolean isRootOrg = (Boolean) req.get(JsonKey.IS_ROOT_ORG);
-            // if channel is available then make slug for channel.
-            // remove the slug key if coming from user input
-            req.remove(JsonKey.SLUG);
-            if (req.containsKey(JsonKey.CHANNEL)) {
-                String slug = Slug.makeSlug((String) req.getOrDefault(JsonKey.CHANNEL, ""), true);
-                if (null != isRootOrg && isRootOrg) {
-                    boolean bool = isSlugUnique(slug);
-                    if (bool) {
-                        req.put(JsonKey.SLUG, slug);
-                    } else {
-                        ProjectCommonException exception = new ProjectCommonException(
-                                ResponseCode.slugIsNotUnique.getErrorCode(),
-                                ResponseCode.slugIsNotUnique.getErrorMessage(),
-                                ResponseCode.CLIENT_ERROR.getResponseCode());
-                        sender().tell(exception, self());
-                        return;
-                    }
-                } else {
-                    req.put(JsonKey.SLUG, slug);
-                }
+				if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
+					addressReq.put(JsonKey.CREATED_BY, updatedBy);
+				}
+				upsertAddress(addressReq);
+				req.put(JsonKey.ADDRESS_ID, addressId);
+			}
+
+			Boolean isRootOrg = (Boolean) req.get(JsonKey.IS_ROOT_ORG);
+			// set root org on basis of whether the org itself is root org or not ...
+			if (null != isRootOrg && isRootOrg) {
+				req.put(JsonKey.ROOT_ORG_ID, uniqueId);
+			} else if (ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ROOT_ORG_ID))) {
+				req.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
+			}
+
+			// adding one extra filed for tag.
+			if (!ProjectUtil.isStringNullOREmpty(((String) req.get(JsonKey.HASHTAGID)))) {
+				req.put(JsonKey.HASHTAGID,
+						validateHashTagId(((String) req.get(JsonKey.HASHTAGID)), JsonKey.CREATE, ""));
+			} else {
+				req.put(JsonKey.HASHTAGID, uniqueId);
+			}
+
+			// if channel is available then make slug for channel.
+			// remove the slug key if coming from user input
+			req.remove(JsonKey.SLUG);
+			if (req.containsKey(JsonKey.CHANNEL)) {
+				String slug = Slug.makeSlug((String) req.getOrDefault(JsonKey.CHANNEL, ""), true);
+				if (null != isRootOrg && isRootOrg) {
+					boolean bool = isSlugUnique(slug);
+					if (bool) {
+						req.put(JsonKey.SLUG, slug);
+					} else {
+						ProjectCommonException exception = new ProjectCommonException(
+								ResponseCode.slugIsNotUnique.getErrorCode(),
+								ResponseCode.slugIsNotUnique.getErrorMessage(),
+								ResponseCode.CLIENT_ERROR.getResponseCode());
+						sender().tell(exception, self());
+						return;
+					}
+				} else {
+					req.put(JsonKey.SLUG, slug);
+				}
 
             }
             // check contactDetail filed is coming or not. it will always come as list of
@@ -1744,7 +1750,7 @@ public class OrganisationManagementActor extends BaseActor {
 
     /**
      * Validates whether the organisation or source with externalId exists in DB
-     * 
+     *
      * @param req Request from the user
      * @return boolean
      */
@@ -1801,7 +1807,7 @@ public class OrganisationManagementActor extends BaseActor {
 
     /**
      * Validates whether the organisation or source with externalId exists in DB
-     * 
+     *
      * @param req
      * @return boolean
      */
@@ -1859,7 +1865,7 @@ public class OrganisationManagementActor extends BaseActor {
 
     /**
      * Validates where the userId or provider with userName is in database and is valid
-     * 
+     *
      * @param req
      * @return boolean
      */
@@ -1930,7 +1936,7 @@ public class OrganisationManagementActor extends BaseActor {
 
     /**
      * validates if channel is already present in the organisation
-     * 
+     *
      * @param channel
      * @return boolean
      */
@@ -2014,7 +2020,7 @@ public class OrganisationManagementActor extends BaseActor {
 
     /**
      * validates if channel is already present in the organisation while Updating
-     * 
+     *
      * @param channel
      * @return boolean
      */
@@ -2040,7 +2046,7 @@ public class OrganisationManagementActor extends BaseActor {
     }
 
     /**
-     * 
+     *
      * @param externalId
      * @param provider
      */
@@ -2058,7 +2064,7 @@ public class OrganisationManagementActor extends BaseActor {
 
     /**
      * This method will do the channel uniqueness validation
-     * 
+     *
      * @param req
      */
     private void validateChannel(Map<String, Object> req) {

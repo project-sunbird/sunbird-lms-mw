@@ -659,10 +659,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                     return;
                 }
 
-            }
-            concurrentHashMap.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
-            channelToRootOrgCache.put((String) concurrentHashMap.get(JsonKey.CHANNEL),
-                    (String) concurrentHashMap.get(JsonKey.ORGANISATION_NAME));
+			}
 
         } else {
 
@@ -781,16 +778,20 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 }
             }
 
-            if (null != isRootOrgFlag && isRootOrgFlag) {
-                boolean bool = Util.registerChannel(concurrentHashMap);
-                if (!bool) {
-                    ProjectLogger.log("channel registration failed.");
-                    concurrentHashMap.put(JsonKey.ERROR_MSG, "channel registration failed.");
-                    failureList.add(concurrentHashMap);
-                    return;
-                }
-            }
-        }
+			if (null != isRootOrgFlag && isRootOrgFlag) {
+				boolean bool = Util.registerChannel(concurrentHashMap);
+				if (!bool) {
+					ProjectLogger.log("channel registration failed.");
+					concurrentHashMap.put(JsonKey.ERROR_MSG, "channel registration failed.");
+					failureList.add(concurrentHashMap);
+					return;
+				}
+			}
+
+			if (null != isRootOrgFlag && isRootOrgFlag) {
+				concurrentHashMap.put(JsonKey.ROOT_ORG_ID, uniqueId);
+			}
+		}
 
         concurrentHashMap.put(JsonKey.CONTACT_DETAILS, contactDetails);
 
@@ -1698,7 +1699,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
     /**
      * This method will make some requested key value as lower case.
-     * 
+     *
      * @param map Request
      */
     public static void updateMapSomeValueTOLowerCase(Map<String, Object> map) {

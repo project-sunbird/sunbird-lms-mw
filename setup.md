@@ -71,7 +71,8 @@ Below are the list of environment variables to setup.
 | sunird_web_url                        | web page url                                                                                                |
 | sunbird_app_url                       | Play store url to download the app                                                                          |
 | sunbird_msg_91_auth                   | msg 91 auth  
-  sunbird_msg_sender                     | message sender name                                                   |
+| sunbird_msg_sender                    | message sender name  
+| sunbird_installation_email            | email of admin per installation
    
 
 - Do the below env setup, if you are planing to run background actor in remote mode.

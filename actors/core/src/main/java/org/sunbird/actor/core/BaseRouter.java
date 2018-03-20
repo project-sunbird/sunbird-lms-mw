@@ -4,7 +4,7 @@ import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.reflections.Reflections;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
@@ -50,15 +50,15 @@ public abstract class BaseRouter extends BaseActor {
 	protected void initActors(ActorContext context, String name) {
 		Set<Class<? extends BaseActor>> actors = getActors();
 		for (Class<? extends BaseActor> actor : actors) {
-			RouterConfig routerDetails = actor.getAnnotation(RouterConfig.class);
+			ActorConfig routerDetails = actor.getAnnotation(ActorConfig.class);
 			if (null != routerDetails) {
 				switch (name) {
 				case "BackgroundRequestRouter":
-					String[] bgOperations = routerDetails.bgRequest();
+					String[] bgOperations = routerDetails.asyncTasks();
 					createActor(context, actor, bgOperations);
 					break;
 				case "RequestRouter":
-					String[] operations = routerDetails.request();
+					String[] operations = routerDetails.tasks();
 					createActor(context, actor, operations);
 					break;
 				default:

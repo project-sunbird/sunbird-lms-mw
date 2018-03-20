@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.badge.BadgeOperations;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
@@ -21,7 +21,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
-@RouterConfig(request = {}, bgRequest = { "assignBadgeToUser", "revokeBadgeFromUser" })
+@ActorConfig(tasks = {}, asyncTasks = { "assignBadgeToUser", "revokeBadgeFromUser" })
 public class UserBadgeAssertion extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();

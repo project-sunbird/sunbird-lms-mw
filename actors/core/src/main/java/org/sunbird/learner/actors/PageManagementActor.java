@@ -10,7 +10,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -35,8 +35,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * @author Amit Kumar
  */
 
-@RouterConfig(request = { "createPage", "updatePage", "getPageData", "getPageSettings", "getPageSetting",
-		"createSection", "updateSection", "getSection", "getAllSection" }, bgRequest = {})
+@ActorConfig(tasks = { "createPage", "updatePage", "getPageData", "getPageSettings", "getPageSetting",
+		"createSection", "updateSection", "getSection", "getAllSection" }, asyncTasks = {})
 public class PageManagementActor extends BaseActor {
 
 	private Util.DbInfo pageDbInfo = Util.dbInfoMap.get(JsonKey.PAGE_MGMT_DB);

@@ -10,7 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -31,8 +31,8 @@ import org.sunbird.learner.util.Util;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-@RouterConfig(request = { "orgCreationMetrics", "orgConsumptionMetrics", "orgCreationMetricsReport",
-		"orgConsumptionMetricsReport" }, bgRequest = {})
+@ActorConfig(tasks = { "orgCreationMetrics", "orgConsumptionMetrics", "orgCreationMetricsReport",
+		"orgConsumptionMetricsReport" }, asyncTasks = {})
 public class OrganisationMetricsActor extends BaseMetricsActor {
 
 	private static ObjectMapper mapper = new ObjectMapper();

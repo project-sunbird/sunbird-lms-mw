@@ -7,7 +7,7 @@ import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -22,7 +22,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
-@RouterConfig(request = { "registerClient", "updateClientKey", "getClientKey" }, bgRequest = {})
+@ActorConfig(tasks = { "registerClient", "updateClientKey", "getClientKey" }, asyncTasks = {})
 public class ClientManagementActor extends BaseActor {
 
 	private Util.DbInfo clientDbInfo = Util.dbInfoMap.get(JsonKey.CLIENT_INFO_DB);

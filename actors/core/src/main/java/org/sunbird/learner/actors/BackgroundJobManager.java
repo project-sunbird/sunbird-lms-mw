@@ -11,7 +11,7 @@ import java.util.Map;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -47,7 +47,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * @author Amit Kumar
  */
 
-@RouterConfig(request = {}, bgRequest = { "updateUserInfoToElastic", "updateUserRoles", "addUserBadgebackground",
+@ActorConfig(tasks = {}, asyncTasks = { "updateUserInfoToElastic", "updateUserRoles", "addUserBadgebackground",
 		"updateUserCoursesInfoToElastic", "updateUserCoursesInfoToElastic", "insertOrgInfoToElastic",
 		"updateOrgInfoToElastic", "updateUserOrgES", "removeUserOrgES", "insertUserNotesToElastic",
 		"updateUserNotesToElastic", "insertUserCoursesInfoToElastic", "updateCourseBatchToEs",

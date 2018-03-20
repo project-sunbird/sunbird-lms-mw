@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -22,7 +22,7 @@ import org.sunbird.learner.util.Util;
  *
  */
 
-@RouterConfig(request = {"scheduleBulkUpload"}, bgRequest = {})
+@ActorConfig(tasks = {"scheduleBulkUpload"}, asyncTasks = {})
 public class SchedularActor extends BaseActor {
 
 	@Override

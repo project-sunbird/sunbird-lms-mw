@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -23,7 +23,7 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
-@RouterConfig(request = {"updateSystemSettings"}, bgRequest = {})
+@ActorConfig(tasks = {"updateSystemSettings"}, asyncTasks = {})
 public class ApplicationConfigActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();

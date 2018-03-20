@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -28,7 +28,7 @@ import org.sunbird.learner.util.Util;
 /**
  * This class provides API's to create, update, get and delete user note
  */
-@RouterConfig(request = { "createNote", "getNote", "searchNote", "updateNote", "deleteNote" }, bgRequest = {})
+@ActorConfig(tasks = { "createNote", "getNote", "searchNote", "updateNote", "deleteNote" }, asyncTasks = {})
 public class NotesManagementActor extends BaseActor {
 
 	private Util.DbInfo userNotesDbInfo = Util.dbInfoMap.get(JsonKey.USER_NOTES_DB);

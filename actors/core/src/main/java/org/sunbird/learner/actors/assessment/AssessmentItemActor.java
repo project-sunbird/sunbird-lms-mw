@@ -9,7 +9,7 @@ import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.RequestRouter;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -26,7 +26,7 @@ import org.sunbird.learner.util.Util;
  *
  */
 
-@RouterConfig(request = {"getAssessment", "saveAssessment"}, bgRequest = {})
+@ActorConfig(tasks = {"getAssessment", "saveAssessment"}, asyncTasks = {})
 public class AssessmentItemActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();

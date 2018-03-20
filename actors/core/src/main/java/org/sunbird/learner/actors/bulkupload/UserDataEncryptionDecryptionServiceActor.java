@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -16,7 +16,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 
-@RouterConfig(request = { "encryptUserData", "decryptUserData" }, bgRequest = {})
+@ActorConfig(tasks = { "encryptUserData", "decryptUserData" }, asyncTasks = {})
 public class UserDataEncryptionDecryptionServiceActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();

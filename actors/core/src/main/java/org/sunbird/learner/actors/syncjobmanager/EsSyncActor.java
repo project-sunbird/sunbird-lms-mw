@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -40,7 +40,7 @@ import org.sunbird.learner.util.Util.DbInfo;
  *
  */
 
-@RouterConfig(request = {"sync"}, bgRequest = {})
+@ActorConfig(tasks = {"sync"}, asyncTasks = {})
 public class EsSyncActor extends BaseActor {
 
     private CassandraOperation cassandraOperation = ServiceFactory.getInstance();

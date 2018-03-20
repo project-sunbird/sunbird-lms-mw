@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -40,8 +40,8 @@ import org.sunbird.learner.util.Util;
  * @author Amit Kumar
  */
 
-@RouterConfig(request = { "createBatch", "updateBatch", "addUserBatch", "removeUserFromBatch", "getBatch",
-		"getCourseBatchDetail" }, bgRequest = {})
+@ActorConfig(tasks = { "createBatch", "updateBatch", "addUserBatch", "removeUserFromBatch", "getBatch",
+		"getCourseBatchDetail" }, asyncTasks = {})
 public class CourseBatchManagementActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();

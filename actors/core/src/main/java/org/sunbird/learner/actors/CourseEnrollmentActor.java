@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -32,7 +32,7 @@ import org.sunbird.learner.util.Util;
  * @author Arvind
  */
 
-@RouterConfig(request = { "enrollCourse" }, bgRequest = {})
+@ActorConfig(tasks = { "enrollCourse" }, asyncTasks = {})
 public class CourseEnrollmentActor extends BaseActor {
 
 	private static String EKSTEP_COURSE_SEARCH_QUERY = "{\"request\": {\"filters\":{\"contentType\": [\"Course\"], \"objectType\": [\"Content\"], \"identifier\": \"COURSE_ID_PLACEHOLDER\", \"status\": \"Live\"},\"limit\": 1}}";

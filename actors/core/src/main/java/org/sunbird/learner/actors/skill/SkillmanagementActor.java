@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -36,7 +36,7 @@ import org.sunbird.learner.util.Util;
  * by arvind on 18/10/17.
  */
 
-@RouterConfig(request = { "addSkill", "getSkill", "getSkillsList" }, bgRequest = {})
+@ActorConfig(tasks = { "addSkill", "getSkill", "getSkillsList" }, asyncTasks = {})
 public class SkillmanagementActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();

@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -33,7 +33,7 @@ import org.sunbird.learner.util.Util;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-@RouterConfig(request = {}, bgRequest = { "courseProgressMetricsData" })
+@ActorConfig(tasks = {}, asyncTasks = { "courseProgressMetricsData" })
 public class CourseMetricsBackgroundActor extends BaseMetricsActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();

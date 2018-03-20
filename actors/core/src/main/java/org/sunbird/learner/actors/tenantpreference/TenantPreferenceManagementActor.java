@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -27,8 +27,8 @@ import org.sunbird.learner.util.Util;
  * Class for T&C . Created by arvind on 27/10/17.
  */
 
-@RouterConfig(request = { "createTanentPreference", "updateTenantPreference", "getTenantPreference",
-		"updateTCStatusOfUser" }, bgRequest = {})
+@ActorConfig(tasks = { "createTanentPreference", "updateTenantPreference", "getTenantPreference",
+		"updateTCStatusOfUser" }, asyncTasks = {})
 public class TenantPreferenceManagementActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();

@@ -13,7 +13,7 @@ import java.util.TreeMap;
 
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -45,9 +45,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * @author Arvind
  */
 
-@RouterConfig(request = { "createOrg", "approveOrg", "updateOrg", "updateOrgStatus", "getOrgDetails",
+@ActorConfig(tasks = { "createOrg", "approveOrg", "updateOrg", "updateOrgStatus", "getOrgDetails",
 		"addMemberOrganisation", "removeMemberOrganisation", "getOrgTypeList", "createOrgType", "updateOrgType",
-		"approveUserOrganisation", "joinUserOrganisation", "rejectUserOrganisation", "downlaodOrg" }, bgRequest = {})
+		"approveUserOrganisation", "joinUserOrganisation", "rejectUserOrganisation", "downlaodOrg" }, asyncTasks = {})
 public class OrganisationManagementActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();

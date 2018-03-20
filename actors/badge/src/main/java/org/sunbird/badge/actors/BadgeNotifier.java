@@ -1,11 +1,8 @@
 package org.sunbird.badge.actors;
 
-import java.util.Arrays;
-
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.BackgroundRequestRouter;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.badge.BadgeOperations;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.response.ResponseParams;
@@ -20,7 +17,7 @@ import org.sunbird.content.service.ContentService;
  *
  */
 
-@RouterConfig(request = {}, bgRequest = { "assignBadgeMessage", "revokeBadgeMessage", "badgeTest" })
+@ActorConfig(tasks = {}, asyncTasks = { "assignBadgeMessage", "revokeBadgeMessage", "badgeTest" })
 public class BadgeNotifier extends BaseActor {
 
 	private static final String INVALID_BADGE_ASSIGN_REQUEST = "INVALID_BADGE_ASSIGN_REQUEST";

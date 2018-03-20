@@ -16,7 +16,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.BackgroundRequestRouter;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -59,7 +59,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * @author Amit Kumar
  */
 
-@RouterConfig(request = {}, bgRequest = { "processBulkUpload" })
+@ActorConfig(tasks = {}, asyncTasks = { "processBulkUpload" })
 public class BulkUploadBackGroundJobActor extends BaseActor {
 
 	private String processId = "";

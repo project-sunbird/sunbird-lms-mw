@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
@@ -30,7 +30,7 @@ import org.sunbird.services.sso.SSOServiceFactory;
  *
  */
 
-@RouterConfig(request = { "syncKeycloak" }, bgRequest = {})
+@ActorConfig(tasks = { "syncKeycloak" }, asyncTasks = {})
 public class KeyCloakSyncActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();

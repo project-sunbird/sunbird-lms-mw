@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.badge.BadgeOperations;
 import org.sunbird.badge.service.BadgingService;
 import org.sunbird.badge.service.impl.BadgingFactory;
@@ -26,8 +26,8 @@ import org.sunbird.common.responsecode.ResponseCode;
  *
  */
 
-@RouterConfig(request = { "createBadgeAssertion", "getBadgeAssertion", "getBadgeAssertionList",
-		"revokeBadge" }, bgRequest = {})
+@ActorConfig(tasks = { "createBadgeAssertion", "getBadgeAssertion", "getBadgeAssertionList",
+		"revokeBadge" }, asyncTasks = {})
 public class BadgeAssertionActor extends BaseActor {
 
 	BadgingService service = BadgingFactory.getInstance();

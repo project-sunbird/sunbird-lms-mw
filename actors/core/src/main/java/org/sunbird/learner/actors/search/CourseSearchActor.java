@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * 
  * @author Amit Kumar
  */
-@RouterConfig(request = { "searchCourse", "getCourseById" }, bgRequest = {})
+@ActorConfig(tasks = { "searchCourse", "getCourseById" }, asyncTasks = {})
 public class CourseSearchActor extends BaseActor {
 
 	@Override

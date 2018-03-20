@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -37,7 +37,7 @@ import org.sunbird.learner.util.Util;
  * @author Arvind
  */
 
-@RouterConfig(request = {"addContent"}, bgRequest = {})
+@ActorConfig(tasks = {"addContent"}, asyncTasks = {})
 public class LearnerStateUpdateActor extends BaseActor {
 
 	private static final String CONTENT_STATE_INFO = "contentStateInfo";

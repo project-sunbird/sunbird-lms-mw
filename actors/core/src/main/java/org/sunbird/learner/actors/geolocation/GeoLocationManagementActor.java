@@ -9,7 +9,7 @@ import java.util.Map;
 
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -30,8 +30,8 @@ import org.sunbird.learner.util.Util;
  * 31/10/17.
  */
 
-@RouterConfig(request = { "getGeoLocation", "createGeoLocation", "updateGeoLocation", "deleteGeoLocation",
-		"sendNotification", "getUserCount" }, bgRequest = {})
+@ActorConfig(tasks = { "getGeoLocation", "createGeoLocation", "updateGeoLocation", "deleteGeoLocation",
+		"sendNotification", "getUserCount" }, asyncTasks = {})
 public class GeoLocationManagementActor extends BaseActor {
 
 	private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);

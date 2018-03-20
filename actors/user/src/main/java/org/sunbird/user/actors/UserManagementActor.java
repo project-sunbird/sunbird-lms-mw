@@ -15,7 +15,7 @@ import java.util.Set;
 import org.apache.velocity.VelocityContext;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.Constants;
 import org.sunbird.common.ElasticSearchUtil;
@@ -57,9 +57,9 @@ import org.sunbird.services.sso.SSOServiceFactory;
  * @author Amit Kumar
  */
 
-@RouterConfig(request = { "createUser", "updateUser", "login", "logout", "changePassword", "getUserProfile", "getRoles",
+@ActorConfig(tasks = { "createUser", "updateUser", "login", "logout", "changePassword", "getUserProfile", "getRoles",
 		"getUserDetailsByLoginId", "downloadUsersData", "forgotpassword", "profileVisibility", "unblockUser",
-		"blockUser", "assignRoles", "userCurrentLogin", "getMediaTypes" }, bgRequest = {})
+		"blockUser", "assignRoles", "userCurrentLogin", "getMediaTypes" }, asyncTasks = {})
 public class UserManagementActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();

@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -30,7 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * @author arvind
  */
 
-@RouterConfig(request = { "getRecommendedCourses" }, bgRequest = {})
+@ActorConfig(tasks = { "getRecommendedCourses" }, asyncTasks = {})
 public class RecommendorActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();

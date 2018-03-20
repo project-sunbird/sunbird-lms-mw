@@ -8,7 +8,7 @@ import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.badge.service.BadgingService;
 import org.sunbird.badge.service.impl.BadgingFactory;
 import org.sunbird.badge.util.BadgingUtil;
@@ -29,7 +29,7 @@ import akka.actor.ActorRef;
  * Created by arvind on 5/3/18.
  */
 
-@RouterConfig(request = { "createBadgeIssuer", "getBadgeIssuer", "getAllIssuer", "deleteIssuer" }, bgRequest = {})
+@ActorConfig(tasks = { "createBadgeIssuer", "getBadgeIssuer", "getAllIssuer", "deleteIssuer" }, asyncTasks = {})
 public class BadgeIssuerActor extends BaseActor {
 
 	private ObjectMapper mapper = new ObjectMapper();

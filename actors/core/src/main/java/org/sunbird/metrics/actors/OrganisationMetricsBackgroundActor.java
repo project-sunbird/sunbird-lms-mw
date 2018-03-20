@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -32,7 +32,7 @@ import org.sunbird.metrics.actors.OrganisationMetricsUtil.ContentStatus;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-@RouterConfig(request = {}, bgRequest = { "orgCreationMetricsData", "orgConsumptionMetricsData" })
+@ActorConfig(tasks = {}, asyncTasks = { "orgCreationMetricsData", "orgConsumptionMetricsData" })
 public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
 
 	private static ObjectMapper mapper = new ObjectMapper();

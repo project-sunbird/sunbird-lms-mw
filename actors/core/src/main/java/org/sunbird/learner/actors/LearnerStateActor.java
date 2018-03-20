@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
@@ -28,7 +28,7 @@ import org.sunbird.learner.util.Util;
  * @author Arvind
  */
 
-@RouterConfig(request = { "getCourse", "getContent" }, bgRequest = {})
+@ActorConfig(tasks = { "getCourse", "getContent" }, asyncTasks = {})
 public class LearnerStateActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();

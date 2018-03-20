@@ -8,7 +8,7 @@ import java.util.Map;
 
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -31,7 +31,7 @@ import org.sunbird.learner.util.Util;
  *
  */
 
-@RouterConfig(request = { "compositeSearch" }, bgRequest = {})
+@ActorConfig(tasks = { "compositeSearch" }, asyncTasks = {})
 public class SearchHandlerActor extends BaseActor {
 
 	private String topn = PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_TOP_N);

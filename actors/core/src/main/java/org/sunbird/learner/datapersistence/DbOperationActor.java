@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -27,8 +27,8 @@ import org.sunbird.learner.util.Util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-@RouterConfig(request = { "createData", "updateData", "deleteData", "readData", "readAllData", "searchData",
-		"getMetrics" }, bgRequest = {})
+@ActorConfig(tasks = { "createData", "updateData", "deleteData", "readData", "readAllData", "searchData",
+		"getMetrics" }, asyncTasks = {})
 public class DbOperationActor extends BaseActor {
 
 	private static final String REQUIRED_FIELDS = "requiredFields";

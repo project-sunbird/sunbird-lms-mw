@@ -11,7 +11,7 @@ import java.util.Map;
 
 import org.apache.velocity.VelocityContext;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -34,7 +34,7 @@ import org.sunbird.learner.util.Util;
  * Created by arvind on 28/8/17.
  */
 
-@RouterConfig(request = {}, bgRequest = { "fileGenerationAndUpload", "processData", "fileGenerationAndUpload" })
+@ActorConfig(tasks = {}, asyncTasks = { "fileGenerationAndUpload", "processData", "fileGenerationAndUpload" })
 public class MetricsBackGroundJobActor extends BaseActor {
 
 	private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);

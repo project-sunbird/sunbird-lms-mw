@@ -15,7 +15,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-public @interface RouterConfig {
-	String[] request();
-	String[] bgRequest();
+public @interface ActorConfig {
+	String[] tasks();
+	String[] asyncTasks();
 }

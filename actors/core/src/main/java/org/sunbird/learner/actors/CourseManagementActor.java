@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.router.RouterConfig;
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.Constants;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -29,7 +29,7 @@ import org.sunbird.learner.util.Util;
  * @author Manzarul
  */
 
-@RouterConfig(request = { "createCourse", "updateCourse", "publishCourse", "deleteCourse" }, bgRequest = {})
+@ActorConfig(tasks = { "createCourse", "updateCourse", "publishCourse", "deleteCourse" }, asyncTasks = {})
 public class CourseManagementActor extends BaseActor {
 
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();

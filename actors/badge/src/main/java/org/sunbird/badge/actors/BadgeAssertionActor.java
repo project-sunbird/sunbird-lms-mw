@@ -12,14 +12,12 @@ import org.sunbird.badge.BadgeOperations;
 import org.sunbird.badge.service.BadgingService;
 import org.sunbird.badge.service.impl.BadgingFactory;
 import org.sunbird.badge.util.BadgingUtil;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
 
 /**
  * @author Manzarul
@@ -84,15 +82,7 @@ public class BadgeAssertionActor extends BaseActor {
 	 */
 	private void getAssertionDetails(Request request) throws IOException {
 		Response result = service.getAssertionDetails(request);
-		boolean response = BadgingUtil.matchAssertionData((String) request.getRequest().get(BadgingJsonKey.ISSUER_ID),
-				(String) request.getRequest().get(BadgingJsonKey.BADGE_CLASS_ID), result.getResult());
-		if (response) {
-			sender().tell(result, self());
-		} else {
-			ProjectCommonException ex = new ProjectCommonException(ResponseCode.resourceNotFound.getErrorCode(),
-					ResponseCode.resourceNotFound.getErrorMessage(), ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
-			sender().tell(ex, self());
-		}
+		sender().tell(result, self());
 	}
 
 	/**

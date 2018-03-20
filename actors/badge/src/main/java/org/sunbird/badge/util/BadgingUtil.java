@@ -33,7 +33,8 @@ public class BadgingUtil {
     public static final String SUNBIRD_BADGER_GETASSERTION_URL="/v1/issuer/issuers/{0}/badges/{1}/assertions/{2}";
     public static final String SUNBIRD_BADGER_GETALLASSERTION_URL="/v1/issuer/issuers/{0}/badges/{1}/assertion";
     public static final String SUNBIRD_BADGER_REVOKE_URL="/v1/issuer/issuers/{0}/badges/{1}/assertion/{2}";
-
+    private static final String DEFAULT_ISSUER_ID = "issuer-def";
+    private static final String DEFAULT_BADGE_ID = "badge-def";
     private static PropertiesCache propertiesCache = PropertiesCache.getInstance();
     private static BadgingService service = BadgingFactory.getInstance();
 
@@ -112,18 +113,20 @@ public class BadgingUtil {
         prepareBadgeClassResponse(inputMap, badgeClassExtension, outputMap);
     }
 
-    private static String createUri(Map<String, Object> map, String uri, int placeholderCount) {
-        if (placeholderCount == 0) {
-            return uri;
-        } else if (placeholderCount == 1) {
-            return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_ID));
-        } else if (placeholderCount == 2) {
-            return MessageFormat.format(uri, map.get(BadgingJsonKey.ISSUER_ID), map.get(BadgingJsonKey.BADGE_ID));
-        } else {
-            return MessageFormat.format(uri, map.get(BadgingJsonKey.ISSUER_ID),
-                map.get(BadgingJsonKey.BADGE_ID), map.get(BadgingJsonKey.ASSERTION_ID));
-        }
-    }
+	private static String createUri(Map<String, Object> map, String uri, int placeholderCount) {
+		if (placeholderCount == 0) {
+			return uri;
+		} else if (placeholderCount == 1) {
+			return MessageFormat.format(uri, (String) map.get(BadgingJsonKey.ISSUER_ID));
+		} else if (placeholderCount == 2) {
+			return MessageFormat.format(uri, map.get(BadgingJsonKey.ISSUER_ID), map.get(BadgingJsonKey.BADGE_ID));
+		} else {
+			return MessageFormat.format(uri,
+					map.get(BadgingJsonKey.ISSUER_ID) != null ? map.get(BadgingJsonKey.ISSUER_ID) : DEFAULT_ISSUER_ID,
+					map.get(BadgingJsonKey.BADGE_ID) != null ? map.get(BadgingJsonKey.BADGE_ID) : DEFAULT_BADGE_ID,
+					map.get(BadgingJsonKey.ASSERTION_ID));
+		}
+	}
 
     /**
      * This method will create url for badger server call.

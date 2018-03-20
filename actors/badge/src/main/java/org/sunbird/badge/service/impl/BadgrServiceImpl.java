@@ -385,6 +385,10 @@ public class BadgrServiceImpl implements BadgingService {
 
 	@Override
 	public Response revokeAssertion(Request request) throws IOException {
+		//do the recipient id validation
+		Map<String, Object> requestedData = request.getRequest();
+		getEmail((String) requestedData.get(BadgingJsonKey.RECIPIENT_ID),
+				(String) requestedData.get(BadgingJsonKey.RECIPIENT_TYPE));
 		String url = BadgingUtil.createBadgerUrl(request.getRequest(), BadgingUtil.SUNBIRD_BADGER_GETASSERTION_URL, 3);
 		String requestBody = BadgingUtil.createAssertionRevokeData(request.getRequest());
 		HttpUtilResponse httpResponse = HttpUtil.sendDeleteRequest(requestBody,  BadgingUtil.getBadgrHeaders(), url);

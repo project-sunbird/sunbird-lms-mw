@@ -58,14 +58,14 @@ import org.sunbird.services.sso.SSOServiceFactory;
 public class BulkUploadBackGroundJobActor extends BaseActor {
 
     private String processId = "";
-    private Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
-    private EncryptionService encryptionService =
+    private final Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
+    private final EncryptionService encryptionService =
             org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
                     .getEncryptionServiceInstance(null);
-    private PropertiesCache propertiesCache = PropertiesCache.getInstance();
-    private List<String> locnIdList = new ArrayList<>();
-    private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-    private SSOManager ssoManager = SSOServiceFactory.getInstance();
+    private final PropertiesCache propertiesCache = PropertiesCache.getInstance();
+    private final List<String> locnIdList = new ArrayList<>();
+    private final CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    private final SSOManager ssoManager = SSOServiceFactory.getInstance();
     private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
     private static final String SUNBIRD_APP_URL = "sunbird_app_url";
 
@@ -1415,8 +1415,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                         userMap.remove(JsonKey.EMAIL);
                     }
                     // check user is active for this organization or not
-                    boolean bool = isUserDeletedFromOrg(userMap);
-                    if (bool) {
+                    if (isUserDeletedFromOrg(userMap)) {
                         throw new ProjectCommonException(
                                 ResponseCode.userInactiveForThisOrg.getErrorCode(),
                                 ResponseCode.userInactiveForThisOrg.getErrorMessage(),

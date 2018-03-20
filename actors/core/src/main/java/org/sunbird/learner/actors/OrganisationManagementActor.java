@@ -44,8 +44,8 @@ import org.sunbird.learner.util.Util;
  */
 public class OrganisationManagementActor extends BaseActor {
 
-    private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-    private EncryptionService encryptionService =
+    private final CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    private final EncryptionService encryptionService =
             org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
                     .getEncryptionServiceInstance(null);
 
@@ -1077,7 +1077,7 @@ public class OrganisationManagementActor extends BaseActor {
             Integer count = 0;
             Map<String, Object> orgMap = (Map<String, Object>) orgList.get(0);
             if (isNotNull(orgMap.get(JsonKey.NO_OF_MEMBERS))) {
-                count = Integer.valueOf((String) orgMap.get(JsonKey.NO_OF_MEMBERS));
+                count = (Integer) orgMap.get(JsonKey.NO_OF_MEMBERS);
             }
             newOrgMap.put(JsonKey.ID, orgId);
             newOrgMap.put(JsonKey.NO_OF_MEMBERS, count + 1);
@@ -1197,7 +1197,7 @@ public class OrganisationManagementActor extends BaseActor {
             if (!orgList.isEmpty()) {
                 Map<String, Object> orgMap = (Map<String, Object>) orgList.get(0);
                 if (isNotNull(orgMap.get(JsonKey.NO_OF_MEMBERS))) {
-                    Integer count = Integer.valueOf((String) orgMap.get(JsonKey.NO_OF_MEMBERS));
+                    Integer count = (Integer) orgMap.get(JsonKey.NO_OF_MEMBERS);
                     newOrgMap.put(JsonKey.ID, orgId);
                     newOrgMap.put(JsonKey.NO_OF_MEMBERS, count == 0 ? 0 : (count - 1));
                     cassandraOperation.updateRecord(organisationDbInfo.getKeySpace(),

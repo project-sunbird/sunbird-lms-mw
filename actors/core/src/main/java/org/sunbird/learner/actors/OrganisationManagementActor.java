@@ -326,9 +326,15 @@ public class OrganisationManagementActor extends BaseActor {
 				upsertAddress(addressReq);
 				req.put(JsonKey.ADDRESS_ID, addressId);
 			}
-			if (ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ROOT_ORG_ID))) {
+
+			Boolean isRootOrg = (Boolean) req.get(JsonKey.IS_ROOT_ORG);
+			// set root org on basis of whether the org itself is root org or not ...
+			if (null != isRootOrg && isRootOrg) {
+				req.put(JsonKey.ROOT_ORG_ID, uniqueId);
+			} else if (ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ROOT_ORG_ID))) {
 				req.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
 			}
+
 			// adding one extra filed for tag.
 			if (!ProjectUtil.isStringNullOREmpty(((String) req.get(JsonKey.HASHTAGID)))) {
 				req.put(JsonKey.HASHTAGID,
@@ -336,7 +342,7 @@ public class OrganisationManagementActor extends BaseActor {
 			} else {
 				req.put(JsonKey.HASHTAGID, uniqueId);
 			}
-			Boolean isRootOrg = (Boolean) req.get(JsonKey.IS_ROOT_ORG);
+
 			// if channel is available then make slug for channel.
 			// remove the slug key if coming from user input
 			req.remove(JsonKey.SLUG);

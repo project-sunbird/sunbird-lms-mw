@@ -617,9 +617,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 				}
 
 			}
-			concurrentHashMap.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
-			channelToRootOrgCache.put((String) concurrentHashMap.get(JsonKey.CHANNEL),
-					(String) concurrentHashMap.get(JsonKey.ORGANISATION_NAME));
 
 		} else {
 
@@ -739,6 +736,10 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 					failureList.add(concurrentHashMap);
 					return;
 				}
+			}
+
+			if (null != isRootOrgFlag && isRootOrgFlag) {
+				concurrentHashMap.put(JsonKey.ROOT_ORG_ID, uniqueId);
 			}
 		}
 

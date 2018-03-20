@@ -3,6 +3,8 @@ package org.sunbird.learner.actors.bulkupload;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -12,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -49,16 +50,13 @@ import org.sunbird.notification.utils.SMSFactory;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 /**
  * This actor will handle bulk upload operation .
  *
  * @author Amit Kumar
  */
 
-@ActorConfig(tasks = {}, asyncTasks = { "processBulkUpload" })
+@ActorConfig(tasks = {}, asyncTasks = {"processBulkUpload"})
 public class BulkUploadBackGroundJobActor extends BaseActor {
 
     private String processId = "";
@@ -658,7 +656,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                     return;
                 }
 
-			}
+            }
 
         } else {
 
@@ -777,20 +775,20 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 }
             }
 
-			if (null != isRootOrgFlag && isRootOrgFlag) {
-				boolean bool = Util.registerChannel(concurrentHashMap);
-				if (!bool) {
-					ProjectLogger.log("channel registration failed.");
-					concurrentHashMap.put(JsonKey.ERROR_MSG, "channel registration failed.");
-					failureList.add(concurrentHashMap);
-					return;
-				}
-			}
+            if (null != isRootOrgFlag && isRootOrgFlag) {
+                boolean bool = Util.registerChannel(concurrentHashMap);
+                if (!bool) {
+                    ProjectLogger.log("channel registration failed.");
+                    concurrentHashMap.put(JsonKey.ERROR_MSG, "channel registration failed.");
+                    failureList.add(concurrentHashMap);
+                    return;
+                }
+            }
 
-			if (null != isRootOrgFlag && isRootOrgFlag) {
-				concurrentHashMap.put(JsonKey.ROOT_ORG_ID, uniqueId);
-			}
-		}
+            if (null != isRootOrgFlag && isRootOrgFlag) {
+                concurrentHashMap.put(JsonKey.ROOT_ORG_ID, uniqueId);
+            }
+        }
 
         concurrentHashMap.put(JsonKey.CONTACT_DETAILS, contactDetails);
 
@@ -1355,12 +1353,14 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
     private void updateRecordToUserOrgTable(Map<String, Object> map, String updatedBy) {
         Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
-        map.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
-        map.put(JsonKey.IS_DELETED, false);
-        map.put(JsonKey.UPDATED_BY, updatedBy);
-        map.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+        Map<String, Object> reqMap = new HashMap<>();
+        reqMap.put(JsonKey.ID, map.get(JsonKey.ID));
+        reqMap.put(JsonKey.IS_DELETED, false);
+        reqMap.put(JsonKey.UPDATED_BY, updatedBy);
+        reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
         try {
-            cassandraOperation.updateRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), map);
+            cassandraOperation.updateRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(),
+                    reqMap);
         } catch (Exception e) {
             ProjectLogger.log(e.getMessage(), e);
         }

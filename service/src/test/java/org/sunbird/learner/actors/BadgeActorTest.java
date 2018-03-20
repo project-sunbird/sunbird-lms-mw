@@ -10,7 +10,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
-import org.sunbird.learner.actors.badges.BadgesActor;
+import org.sunbird.learner.actors.health.HealthActor;
 import org.sunbird.learner.util.Util;
 
 import akka.actor.ActorRef;
@@ -21,7 +21,7 @@ import akka.testkit.javadsl.TestKit;
 public class BadgeActorTest {
 
 	private static ActorSystem system;
-	private static final Props props = Props.create(BadgesActor.class);
+	private static final Props props = Props.create(HealthActor.class);
 
 	@BeforeClass
 	public static void setUp() {

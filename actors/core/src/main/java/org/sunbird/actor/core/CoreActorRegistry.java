@@ -22,6 +22,7 @@ import org.sunbird.learner.actors.bulkupload.UserDataEncryptionDecryptionService
 import org.sunbird.learner.actors.client.ClientManagementActor;
 import org.sunbird.learner.actors.fileuploadservice.FileUploadServiceActor;
 import org.sunbird.learner.actors.geolocation.GeoLocationManagementActor;
+import org.sunbird.learner.actors.health.HealthActor;
 import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
 import org.sunbird.learner.actors.recommend.RecommendorActor;
 import org.sunbird.learner.actors.search.CourseSearchActor;
@@ -86,6 +87,6 @@ public class CoreActorRegistry {
 		ApplicationConfigActor.init();
 		DbOperationActor.init();
 		LeanerStateUpdateBackGroundActor.init();
-
+		HealthActor.init();
 	}
 }

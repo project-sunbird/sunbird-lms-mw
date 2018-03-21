@@ -28,9 +28,6 @@ import scala.concurrent.duration.FiniteDuration;
 public class BadgeClassActorTest {
     private static final FiniteDuration ACTOR_MAX_WAIT_DURATION = duration("100 second");
 
-    private ActorSystem system;
-    private Props props;
-
     private TestKit probe;
     private ActorRef subject;
 
@@ -41,12 +38,12 @@ public class BadgeClassActorTest {
 
     @Before
     public void setUp() {
-        system = ActorSystem.create("system");
+        ActorSystem system = ActorSystem.create("system");
         probe = new TestKit(system);
 
         mockBadgingService = PowerMockito.mock(BadgrServiceImpl.class);
 
-        props = Props.create(BadgeClassActor.class, mockBadgingService);
+        Props props = Props.create(BadgeClassActor.class, mockBadgingService);
         subject = system.actorOf(props);
 
         actorMessage = new Request();

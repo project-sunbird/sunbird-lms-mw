@@ -30,11 +30,11 @@ import org.sunbird.common.responsecode.ResponseCode;
 @PrepareForTest({BadgrServiceImpl.class, HttpUtil.class})
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
 public class BadgrServiceImplBadgeClassTest {
-    BadgingService badgrServiceImpl;
+    private BadgingService badgrServiceImpl;
 
     private Request request;
 
-    BadgeClassExtensionService mockBadgeClassExtensionService;
+    private BadgeClassExtensionService mockBadgeClassExtensionService;
 
     private static final String BADGE_CLASS_COMMON_RESPONSE_SUCCESS = "{\"created_at\":\"2018-03-05T09:35:33.722993Z\",\"id\":1,\"issuer\":\"http://localhost:8000/public/issuers/oracle-university\",\"json\":{\"name\":\"Java SE 8 Programmer\",\"image\":\"http://localhost:8000/public/badges/java-se-8-programmer/image\",\"criteria\":\"https://education.oracle.com/pls/web_prod-plq-dad/db_pages.getpage?page_id=5001&get_params=p_exam_id:1Z0-808\",\"@context\":\"https://w3id.org/openbadges/v1\",\"issuer\":\"http://localhost:8000/public/issuers/oracle-university\",\"type\":\"BadgeClass\",\"id\":\"http://localhost:8000/public/badges/java-se-8-programmer\",\"description\":\"A basic Java SE 8 certification.\"},\"name\":\"Java SE 8 Programmer\",\"image\":\"http://localhost:8000/media/uploads/badges/issuer_badgeclass_76c4cb77-40c7-4694-bee2-de15bd45f6cb.png\",\"slug\":\"java-se-8-programmer\",\"recipient_count\":1,\"created_by\":\"http://localhost:8000/user/1\"}";
     private static final String BADGE_CLASS_SEARCH_RESPONSE_SUCCESS = "[" + BADGE_CLASS_COMMON_RESPONSE_SUCCESS + "]";

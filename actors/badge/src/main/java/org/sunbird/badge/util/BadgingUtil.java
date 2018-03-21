@@ -263,6 +263,7 @@ public class BadgingUtil {
                     customError = ResponseCode.customServerError;
                     specificErrorMsg = errorMsg != null ? errorMsg
                             : ResponseCode.internalError.getErrorMessage();
+                    break;
             }
             throw new ProjectCommonException(customError.getErrorCode(),
                     customError.getErrorMessage(), statusCode, specificErrorMsg);

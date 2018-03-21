@@ -106,10 +106,10 @@ public class BadgeClassActorTest {
     }
 
     @Test
-    public void testListBadgeClassSuccess() {
-        PowerMockito.when(mockBadgingService.getBadgeClassList(actorMessage)).thenReturn(new Response());
+    public void testSearchBadgeClassSuccess() {
+        PowerMockito.when(mockBadgingService.searchBadgeClass(actorMessage)).thenReturn(new Response());
 
-        actorMessage.setOperation(BadgingActorOperations.LIST_BADGE_CLASS.getValue());
+        actorMessage.setOperation(BadgingActorOperations.SEARCH_BADGE_CLASS.getValue());
 
         subject.tell(actorMessage, probe.getRef());
 
@@ -118,10 +118,10 @@ public class BadgeClassActorTest {
     }
 
     @Test
-    public void testListBadgeClassFailure() {
-        PowerMockito.when(mockBadgingService.getBadgeClassList(actorMessage)).thenThrow(resourceNotFoundException);
+    public void testSearchBadgeClassFailure() {
+        PowerMockito.when(mockBadgingService.searchBadgeClass(actorMessage)).thenThrow(resourceNotFoundException);
 
-        actorMessage.setOperation(BadgingActorOperations.LIST_BADGE_CLASS.getValue());
+        actorMessage.setOperation(BadgingActorOperations.SEARCH_BADGE_CLASS.getValue());
 
         subject.tell(actorMessage, probe.getRef());
 

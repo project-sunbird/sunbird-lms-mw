@@ -1,5 +1,7 @@
 package org.sunbird.badge.service.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -7,8 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.stream.Collectors;
-
-import org.apache.cassandra.cql3.Json;
 import org.apache.commons.lang.StringUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -32,9 +32,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.Util;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * 
@@ -388,9 +385,6 @@ public class BadgrServiceImpl implements BadgingService {
 				responseList.add(res);
 			}
 		}
-		if (responseList.size() == 0) {
-			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), null);
-		}
 		Response response = new Response();
 		response.getResult().put(BadgingJsonKey.ASSERTIONS, responseList);
 		return response;
@@ -500,6 +494,4 @@ public class BadgrServiceImpl implements BadgingService {
 		}
 		return contentId + ASSERTION_DUMMY_DOMAIN;
 	}
-
-	
 }

@@ -450,4 +450,25 @@ public abstract class BaseMetricsActor extends BaseActor {
 		return searchDTO;
 	}
 
+  protected void calculateCourseProgressPercentage(List<Map<String, Object>> esContent) {
+
+		for(Map<String, Object> map : esContent ){
+			Integer progress = (Integer) map.get(JsonKey.PROGRESS);
+			Integer leafNodeCont = (Integer) map.get(JsonKey.LEAF_NODE_COUNT);
+
+			Integer progressPercentage = new Integer(0);
+
+			if(null != progress && progress > 0){
+				if(null == leafNodeCont || leafNodeCont ==0){
+					progressPercentage = new Integer(100);
+				}else{
+					progressPercentage = (progress*100)/leafNodeCont;
+				}
+			}
+			map.put(JsonKey.PROGRESS , progressPercentage);
+			map.remove(JsonKey.LEAF_NODE_COUNT);
+		}
+
+	}
+
 }

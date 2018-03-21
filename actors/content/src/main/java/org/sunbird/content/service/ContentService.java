@@ -60,7 +60,7 @@ public class ContentService {
 		String badgeStr = mapper.writeValueAsString(badge);
 		String reqBody = "{\"request\": {\"content\": {\"" + BADGE_ASSERTION + "\": " + badgeStr + "}}}";
 
-		String result = HttpUtil.sendPatchRequest(props.get("basePath") + id, reqBody, headers);
+		String result = HttpUtil.sendPostRequest(props.get("basePath") + id, reqBody, headers);
 		ProjectLogger.log("Status badge of assigning to content: "+ result, request.getRequest(), LoggerEnum.INFO.name());
 		// TODO: Get the response and return msg based on it's value.
 		Response response = new Response();

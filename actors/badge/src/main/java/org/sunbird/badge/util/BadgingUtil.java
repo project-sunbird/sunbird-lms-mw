@@ -39,13 +39,13 @@ public class BadgingUtil {
     private static BadgingService service = BadgingFactory.getInstance();
 
     public static String getBadgrBaseUrl() {
-        String badgeraseUrl= SUNBIRD_BADGR_SERVER_URL_DEFAULT;
+        String badgerBaseUrl= SUNBIRD_BADGR_SERVER_URL_DEFAULT;
         if(!ProjectUtil.isStringNullOREmpty(System.getenv(BadgingJsonKey.BADGER_BASE_URL))){
-            badgeraseUrl = System.getenv(BadgingJsonKey.BADGER_BASE_URL);
-        }else if(!ProjectUtil.isStringNullOREmpty(propertiesCache.getProperty(BadgingJsonKey.BADGER_BASE_URL))){
-            badgeraseUrl = propertiesCache.getProperty(BadgingJsonKey.BADGER_BASE_URL);
+					badgerBaseUrl = System.getenv(BadgingJsonKey.BADGER_BASE_URL);
+        }else if(!ProjectUtil.isStringNullOREmpty(propertiesCache.readProperty(BadgingJsonKey.BADGER_BASE_URL))){
+					badgerBaseUrl = propertiesCache.readProperty(BadgingJsonKey.BADGER_BASE_URL);
         }
-        return badgeraseUrl;
+        return badgerBaseUrl;
     }
 
     public static String getBadgeClassUrl(String issuerSlug) {
@@ -61,7 +61,7 @@ public class BadgingUtil {
 
         String authToken = System.getenv(BadgingJsonKey.BADGING_AUTHORIZATION_KEY);
         if(ProjectUtil.isStringNullOREmpty(authToken)){
-            authToken =  propertiesCache.getProperty(BadgingJsonKey.BADGING_AUTHORIZATION_KEY);
+            authToken =  propertiesCache.readProperty(BadgingJsonKey.BADGING_AUTHORIZATION_KEY);
         }
         if (!StringUtils.isBlank(authToken)) {
             headers.put("Authorization", String.format(BADGING_AUTHORIZATION_FORMAT, authToken));

@@ -29,9 +29,10 @@ public class BadgeNotifier extends BaseActor {
 	public void onReceive(Request request) throws Throwable {
 		String operation = request.getOperation();
 		String type = (String) request.getRequest().get(JsonKey.OBJECT_TYPE);
-		ProjectLogger.log("Processing badge notification for "+ operation, request.getRequest(), LoggerEnum.INFO.name());
+		ProjectLogger.log("Processing badge notification for " + operation, request.getRequest(),
+				LoggerEnum.INFO.name());
 		Response response;
-		if (StringUtils.isNotBlank(operation) && StringUtils.isNotBlank(type)) {
+		if (StringUtils.isNotBlank(operation)) {
 			switch (operation) {
 			case "assignBadgeMessage":
 				response = assignBadge(type, request);
@@ -52,47 +53,56 @@ public class BadgeNotifier extends BaseActor {
 
 	private Response assignBadge(String type, Request request) throws Exception {
 		Response response;
-		switch (type.toUpperCase()) {
-		case "USER":
-			request.setOperation(BadgeOperations.assignBadgeToUser.name());
-			tellToAnother(request);
-			response = new Response();
-			response.setResponseCode(ResponseCode.success);
-			break;
-		case "CONTENT":
-			response = ContentService.assignBadge(request);
-			break;
-		default:
-			response = invalidObjectType(INVALID_BADGE_ASSIGN_REQUEST);
-			break;
+		if (StringUtils.isBlank(type)) {
+			response = invalidObjectType(INVALID_BADGE_REVOKE_REQUEST, type);
+		} else {
+			switch (type.toUpperCase()) {
+			case "USER":
+				request.setOperation(BadgeOperations.assignBadgeToUser.name());
+				tellToAnother(request);
+				response = new Response();
+				response.setResponseCode(ResponseCode.success);
+				break;
+			case "CONTENT":
+				response = ContentService.assignBadge(request);
+				break;
+			default:
+				response = invalidObjectType(INVALID_BADGE_ASSIGN_REQUEST, type);
+				break;
+			}
 		}
 		return response;
 	}
 
 	private Response revokeBadge(String type, Request request) throws Exception {
 		Response response;
-		switch (type.toUpperCase()) {
-		case "USER":
-			request.setOperation(BadgeOperations.revokeBadgeFromUser.name());
-			tellToAnother(request);
-			response = new Response();
-			response.setResponseCode(ResponseCode.success);
-			break;
-		case "CONTENT":
-			response = ContentService.revokeBadge(request);
-			break;
-		default:
-			response = invalidObjectType(INVALID_BADGE_REVOKE_REQUEST);
-			break;
+		if (StringUtils.isBlank(type)) {
+			response = invalidObjectType(INVALID_BADGE_REVOKE_REQUEST, type);
+		} else {
+			switch (type.toUpperCase()) {
+			case "USER":
+				request.setOperation(BadgeOperations.revokeBadgeFromUser.name());
+				tellToAnother(request);
+				response = new Response();
+				response.setResponseCode(ResponseCode.success);
+				break;
+			case "CONTENT":
+				response = ContentService.revokeBadge(request);
+				break;
+			default:
+				response = invalidObjectType(INVALID_BADGE_REVOKE_REQUEST, type);
+				break;
+			}
 		}
+
 		return response;
 	}
 
-	private Response invalidObjectType(String error) {
+	private Response invalidObjectType(String error, String objectType) {
 		Response response = new Response();
 		response.setResponseCode(ResponseCode.CLIENT_ERROR);
 		ResponseParams params = new ResponseParams();
-		params.setErrmsg("ObjectType is invalid to assign/revoke badge.");
+		params.setErrmsg("ObjectType is invalid to assign/revoke badge: " + objectType);
 		params.setErr(error);
 		response.setParams(params);
 		return response;

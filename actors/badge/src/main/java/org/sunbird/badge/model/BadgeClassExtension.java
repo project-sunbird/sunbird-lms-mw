@@ -7,12 +7,12 @@ import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 
 public class BadgeClassExtension {
-    String badgeId;
-    String issuerId;
-    String rootOrgId;
-    String type;
-    String subtype;
-    List<String> roles;
+    private String badgeId;
+    private String issuerId;
+    private String rootOrgId;
+    private String type;
+    private String subtype;
+    private List<String> roles;
 
     public BadgeClassExtension(String badgeId, String issuerId, String rootOrgId, String type, String subtype, List<String> roles) {
         this.badgeId = badgeId;

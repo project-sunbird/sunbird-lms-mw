@@ -94,6 +94,7 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
 		coursefields.add(JsonKey.USER_ID);
 		coursefields.add(JsonKey.PROGRESS);
 		coursefields.add(JsonKey.BATCH_ID);
+		coursefields.add(JsonKey.LEAF_NODE_COUNT);
 
 		Map<String, Object> result = ElasticSearchUtil.complexSearch(createESRequest(filter, null, coursefields),
 				ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.usercourses.getTypeName());
@@ -101,6 +102,8 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
 
 		if (!(userCoursesContent.isEmpty())) {
 			List<String> userIds = new ArrayList<>();
+
+			calculateCourseProgressPercentage(userCoursesContent);
 
 			for (Map<String, Object> entry : userCoursesContent) {
 				String userId = (String) entry.get(JsonKey.USER_ID);

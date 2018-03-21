@@ -19,3 +19,4 @@ dist
 .classpath
 .project
 *.iml
+actors/badge/logs

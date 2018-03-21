@@ -66,6 +66,8 @@ public class UserBadgeAssertion extends BaseActor {
 		// request came to assign the badge to user
 		badge.put(JsonKey.ID, id);
 		badge.put(JsonKey.USER_ID, userId);
+		//removing status from map
+		badge.remove(JsonKey.STATUS);
 		cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), badge);
 		updateUserBadgeDataToES(badge);
 		Response reponse = new Response();
@@ -78,9 +80,7 @@ public class UserBadgeAssertion extends BaseActor {
 	 * @return String
 	 */
 	private String getUserBadgeAssertionId(Map<String, Object> badge) {
-		return ((String) badge.get(BadgingJsonKey.ASSERTION_ID) + JsonKey.PRIMARY_KEY_DELIMETER
-				+ (String) badge.get(BadgingJsonKey.ISSUER_ID) + JsonKey.PRIMARY_KEY_DELIMETER
-				+ (String) badge.get(BadgingJsonKey.BADGE_CLASS_ID));
+		return ((String) badge.get(BadgingJsonKey.ASSERTION_ID));
 	}
 
 	@SuppressWarnings("unchecked")

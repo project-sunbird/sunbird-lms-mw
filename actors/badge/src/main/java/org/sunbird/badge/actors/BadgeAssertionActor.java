@@ -6,7 +6,6 @@ package org.sunbird.badge.actors;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.badge.BadgeOperations;
@@ -71,10 +70,6 @@ public class BadgeAssertionActor extends BaseActor {
 		String id = (String) actorMessage.getRequest().get(BadgingJsonKey.RECIPIENT_ID);
 		String objectType = (String) actorMessage.getRequest().get(BadgingJsonKey.RECIPIENT_TYPE);
 		ProjectLogger.log("Notifying badge assertion for " + objectType + " with id: " + id, actorMessage.getRequest(), LoggerEnum.INFO.name());
-		// TODO: remove this after testing.
-		if (StringUtils.isBlank(objectType)) {
-			objectType = "content";
-		}
 		map.put(JsonKey.OBJECT_TYPE, objectType);
 		map.put(JsonKey.ID, id);
 		request.getRequest().putAll(map);
@@ -117,7 +112,7 @@ public class BadgeAssertionActor extends BaseActor {
 		sender().tell(result, self());
 		Map<String, Object> map = BadgingUtil.createRevokeBadgeNotifierMap(request.getRequest());
 		Request notificationReq = new Request();
-		map.put(JsonKey.OBJECT_TYPE, request.getRequest().get(BadgingJsonKey.RECIPIENT_ID));
+		map.put(JsonKey.OBJECT_TYPE, request.getRequest().get(BadgingJsonKey.RECIPIENT_TYPE));
 		map.put(JsonKey.ID, request.getRequest().get(BadgingJsonKey.RECIPIENT_ID));
 		notificationReq.getRequest().putAll(map);
 		notificationReq.setOperation(BadgeOperations.revokeBadgeMessage.name());

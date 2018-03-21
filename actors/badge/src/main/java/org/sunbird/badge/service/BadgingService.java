@@ -86,7 +86,7 @@ public interface BadgingService {
 	 * @exception IOException
 	 * @return Response
 	 */
-	public Response getBadgeClassList(Request request) throws ProjectCommonException;
+	public Response searchBadgeClass(Request request) throws ProjectCommonException;
 
 	/**
 	 * This method will remove badge class from db. Badge class can be removed if it

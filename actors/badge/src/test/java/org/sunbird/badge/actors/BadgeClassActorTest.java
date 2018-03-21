@@ -2,6 +2,10 @@ package org.sunbird.badge.actors;
 
 import static akka.testkit.JavaTestKit.duration;
 
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.testkit.javadsl.TestKit;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -16,11 +20,6 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingActorOperations;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.testkit.javadsl.TestKit;
 import scala.concurrent.duration.FiniteDuration;
 
 @RunWith(PowerMockRunner.class)
@@ -41,7 +40,7 @@ public class BadgeClassActorTest {
     private ProjectCommonException resourceNotFoundException;
 
     @Before
-    public void setup() {
+    public void setUp() {
         system = ActorSystem.create("system");
         probe = new TestKit(system);
 
@@ -53,13 +52,15 @@ public class BadgeClassActorTest {
         actorMessage = new Request();
 
         ResponseCode error = ResponseCode.resourceNotFound;
-        resourceNotFoundException = new ProjectCommonException(error.getErrorCode(), error.getErrorMessage(), error.getResponseCode());
+        resourceNotFoundException = new ProjectCommonException(error.getErrorCode(),
+                error.getErrorMessage(), error.getResponseCode());
 
     }
 
     @Test
     public void testCreateBadgeClassSuccess() {
-        PowerMockito.when(mockBadgingService.createBadgeClass(actorMessage)).thenReturn(new Response());
+        PowerMockito.when(mockBadgingService.createBadgeClass(actorMessage))
+                .thenReturn(new Response());
 
         actorMessage.setOperation(BadgingActorOperations.CREATE_BADGE_CLASS.getValue());
 
@@ -71,19 +72,22 @@ public class BadgeClassActorTest {
 
     @Test
     public void testCreateBadgeClassFailure() {
-        PowerMockito.when(mockBadgingService.createBadgeClass(actorMessage)).thenThrow(resourceNotFoundException);
+        PowerMockito.when(mockBadgingService.createBadgeClass(actorMessage))
+                .thenThrow(resourceNotFoundException);
 
         actorMessage.setOperation(BadgingActorOperations.CREATE_BADGE_CLASS.getValue());
 
         subject.tell(actorMessage, probe.getRef());
 
-        ProjectCommonException exception = probe.expectMsgClass(ACTOR_MAX_WAIT_DURATION, ProjectCommonException.class);
+        ProjectCommonException exception =
+                probe.expectMsgClass(ACTOR_MAX_WAIT_DURATION, ProjectCommonException.class);
         Assert.assertTrue(null != exception);
     }
 
     @Test
     public void testGetBadgeClassSuccess() {
-        PowerMockito.when(mockBadgingService.getBadgeClassDetails(actorMessage)).thenReturn(new Response());
+        PowerMockito.when(mockBadgingService.getBadgeClassDetails(actorMessage))
+                .thenReturn(new Response());
 
         actorMessage.setOperation(BadgingActorOperations.GET_BADGE_CLASS.getValue());
 
@@ -95,21 +99,23 @@ public class BadgeClassActorTest {
 
     @Test
     public void testGetBadgeClassFailure() {
-        PowerMockito.when(mockBadgingService.getBadgeClassDetails(actorMessage)).thenThrow(resourceNotFoundException);
+        PowerMockito.when(mockBadgingService.getBadgeClassDetails(actorMessage))
+                .thenThrow(resourceNotFoundException);
 
         actorMessage.setOperation(BadgingActorOperations.GET_BADGE_CLASS.getValue());
 
         subject.tell(actorMessage, probe.getRef());
 
-        ProjectCommonException exception = probe.expectMsgClass(ACTOR_MAX_WAIT_DURATION, ProjectCommonException.class);
+        ProjectCommonException exception =
+                probe.expectMsgClass(ACTOR_MAX_WAIT_DURATION, ProjectCommonException.class);
         Assert.assertTrue(null != exception);
     }
 
     @Test
-    public void testListBadgeClassSuccess() {
-        PowerMockito.when(mockBadgingService.getBadgeClassList(actorMessage)).thenReturn(new Response());
+    public void testSearchBadgeClassSuccess() {
+        PowerMockito.when(mockBadgingService.searchBadgeClass(actorMessage)).thenReturn(new Response());
 
-        actorMessage.setOperation(BadgingActorOperations.LIST_BADGE_CLASS.getValue());
+        actorMessage.setOperation(BadgingActorOperations.SEARCH_BADGE_CLASS.getValue());
 
         subject.tell(actorMessage, probe.getRef());
 
@@ -118,20 +124,22 @@ public class BadgeClassActorTest {
     }
 
     @Test
-    public void testListBadgeClassFailure() {
-        PowerMockito.when(mockBadgingService.getBadgeClassList(actorMessage)).thenThrow(resourceNotFoundException);
+    public void testSearchBadgeClassFailure() {
+        PowerMockito.when(mockBadgingService.searchBadgeClass(actorMessage)).thenThrow(resourceNotFoundException);
 
-        actorMessage.setOperation(BadgingActorOperations.LIST_BADGE_CLASS.getValue());
+        actorMessage.setOperation(BadgingActorOperations.SEARCH_BADGE_CLASS.getValue());
 
         subject.tell(actorMessage, probe.getRef());
 
-        ProjectCommonException exception = probe.expectMsgClass(ACTOR_MAX_WAIT_DURATION, ProjectCommonException.class);
+        ProjectCommonException exception =
+                probe.expectMsgClass(ACTOR_MAX_WAIT_DURATION, ProjectCommonException.class);
         Assert.assertTrue(null != exception);
     }
 
     @Test
     public void testDeleteBadgeClassSuccess() {
-        PowerMockito.when(mockBadgingService.removeBadgeClass(actorMessage)).thenReturn(new Response());
+        PowerMockito.when(mockBadgingService.removeBadgeClass(actorMessage))
+                .thenReturn(new Response());
 
         actorMessage.setOperation(BadgingActorOperations.DELETE_BADGE_CLASS.getValue());
 
@@ -143,13 +151,15 @@ public class BadgeClassActorTest {
 
     @Test
     public void testDeleteBadgeClassFailure() {
-        PowerMockito.when(mockBadgingService.removeBadgeClass(actorMessage)).thenThrow(resourceNotFoundException);
+        PowerMockito.when(mockBadgingService.removeBadgeClass(actorMessage))
+                .thenThrow(resourceNotFoundException);
 
         actorMessage.setOperation(BadgingActorOperations.DELETE_BADGE_CLASS.getValue());
 
         subject.tell(actorMessage, probe.getRef());
 
-        ProjectCommonException exception = probe.expectMsgClass(ACTOR_MAX_WAIT_DURATION, ProjectCommonException.class);
+        ProjectCommonException exception =
+                probe.expectMsgClass(ACTOR_MAX_WAIT_DURATION, ProjectCommonException.class);
         Assert.assertTrue(null != exception);
     }
 }

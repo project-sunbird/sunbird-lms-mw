@@ -1,5 +1,7 @@
 package org.sunbird.badge.service.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -7,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang.StringUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -32,9 +33,6 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.Util;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 /**
  * 
  * @author Manzarul
@@ -45,10 +43,8 @@ public class BadgrServiceImpl implements BadgingService {
 	private ObjectMapper mapper = new ObjectMapper();
 	private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private static final String ASSERTION_DUMMY_DOMAIN = "@gmail.com";
-	public BadgrServiceImpl() {
-		this.badgeClassExtensionService = new BadgeClassExtensionServiceImpl();
-	}
 	public static Map<String, String> headerMap = new HashMap<>();
+
 	static {
 		String header = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
 		if (ProjectUtil.isStringNullOREmpty(header)) {
@@ -59,6 +55,11 @@ public class BadgrServiceImpl implements BadgingService {
 		headerMap.put(JsonKey.AUTHORIZATION, header);
 		headerMap.put("Content-Type", "application/json");
 	}
+
+	public BadgrServiceImpl() {
+		this.badgeClassExtensionService = new BadgeClassExtensionServiceImpl();
+	}
+
 	public BadgrServiceImpl(BadgeClassExtensionService badgeClassExtensionService) {
 		this.badgeClassExtensionService = badgeClassExtensionService;
 	}
@@ -148,23 +149,20 @@ public class BadgrServiceImpl implements BadgingService {
 		try {
 			Map<String, Object> requestData = request.getRequest();
 
-			Map<String, String> formParams = (Map<String, String>) requestData.get(JsonKey.FORM_PARAMS);
-			Map<String, byte[]> fileParams = (Map<String, byte[]>) requestData.get(JsonKey.FILE_PARAMS);
+			Map<String, String> formParams = new HashMap<>();
+			formParams.put(BadgingJsonKey.ISSUER_SLUG, (String) requestData.get(BadgingJsonKey.ISSUER_ID));
+			formParams.put(JsonKey.NAME, (String) requestData.get(JsonKey.NAME));
+			formParams.put(JsonKey.DESCRIPTION, (String) requestData.get(JsonKey.DESCRIPTION));
+			formParams.put(JsonKey.CRITERIA, (String) requestData.get(JsonKey.CRITERIA));
 
-			String issuerId = formParams.remove(BadgingJsonKey.ISSUER_ID);
-			String rootOrgId = formParams.remove(JsonKey.ROOT_ORG_ID);
-			String type = formParams.remove(JsonKey.TYPE);
-			String roles = formParams.remove(JsonKey.ROLES);
-			List<String> rolesList = new ArrayList<>();
-			if (roles != null) {
-				ObjectMapper mapper = new ObjectMapper();
-				rolesList = mapper.readValue(roles, ArrayList.class);
-			}
+			Map<String, byte[]> fileParams = new HashMap<>();
+			fileParams.put(JsonKey.IMAGE, (byte[]) requestData.get(JsonKey.IMAGE));
 
-			String subtype = "";
-			if (formParams.containsKey(JsonKey.SUBTYPE)) {
-				subtype = formParams.remove(JsonKey.SUBTYPE);
-			}
+			String issuerId = (String) requestData.get(BadgingJsonKey.ISSUER_ID);
+			String rootOrgId = (String) requestData.get(JsonKey.ROOT_ORG_ID);
+			String type = (String) requestData.get(JsonKey.TYPE);
+			String subtype = (String) requestData.get(JsonKey.SUBTYPE);
+			String roles = (String) requestData.get(JsonKey.ROLES);
 
 			if (type != null) {
 				type = type.toLowerCase();
@@ -172,6 +170,20 @@ public class BadgrServiceImpl implements BadgingService {
 
 			if (subtype != null) {
 				subtype = subtype.toLowerCase();
+			}
+
+			List<String> rolesList;
+			if (roles != null) {
+				String trimmedRoles = roles.trim();
+				if (trimmedRoles.startsWith("[") && trimmedRoles.endsWith("]")) {
+					ObjectMapper mapper = new ObjectMapper();
+					rolesList = mapper.readValue(trimmedRoles, ArrayList.class);
+				} else {
+					rolesList = new ArrayList<>();
+					rolesList.add(trimmedRoles);
+				}
+			} else {
+				rolesList = new ArrayList<>();
 			}
 
 			Map<String, String> headers = BadgingUtil.getBadgrHeaders(false);
@@ -203,11 +215,10 @@ public class BadgrServiceImpl implements BadgingService {
 		try {
 			Map<String, Object> requestData = request.getRequest();
 
-			String issuerId = (String) requestData.get(BadgingJsonKey.ISSUER_ID);
 			String badgeId = (String) requestData.get(BadgingJsonKey.BADGE_ID);
 
 			Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-			String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerId, badgeId);
+			String badgrUrl = BadgingUtil.getBadgeClassUrl(BadgingJsonKey.ISSUER_ID, badgeId);
 
 			HttpUtilResponse httpUtilResponse = HttpUtil.doGetRequest(badgrUrl, headers);
 			String badgrResponseStr = httpUtilResponse.getBody();
@@ -225,16 +236,16 @@ public class BadgrServiceImpl implements BadgingService {
 	}
 
 	@Override
-	public Response getBadgeClassList(Request request) throws ProjectCommonException {
+	public Response searchBadgeClass(Request request) throws ProjectCommonException {
 		Response response = new Response();
 
-		Map<String, Object> requestData = request.getRequest();
-		List<String> issuerList = (List<String>) requestData.get(BadgingJsonKey.ISSUER_LIST);
-		Map<String, Object> context = (Map<String, Object>) requestData.get(BadgingJsonKey.CONTEXT);
-		String rootOrgId = (String) context.get(JsonKey.ROOT_ORG_ID);
-		String type = (String) context.get(JsonKey.TYPE);
-		String subtype = (String) context.get(JsonKey.SUBTYPE);
-		List<String> allowedRoles = (List<String>) context.get(JsonKey.ROLES);
+		Map<String, Object> filtersMap = (Map<String, Object>) request.getRequest().get(JsonKey.FILTERS);
+
+		List<String> issuerList = (List<String>) filtersMap.get(BadgingJsonKey.ISSUER_LIST);
+		String rootOrgId = (String) filtersMap.get(JsonKey.ROOT_ORG_ID);
+		String type = (String) filtersMap.get(JsonKey.TYPE);
+		String subtype = (String) filtersMap.get(JsonKey.SUBTYPE);
+		List<String> allowedRoles = (List<String>) filtersMap.get(JsonKey.ROLES);
 
 		if (type != null) {
 			type = type.toLowerCase();
@@ -300,11 +311,10 @@ public class BadgrServiceImpl implements BadgingService {
 		try {
 			Map<String, Object> requestData = requestMsg.getRequest();
 
-			String issuerId = (String) requestData.get(BadgingJsonKey.ISSUER_ID);
 			String badgeId = (String) requestData.get(BadgingJsonKey.BADGE_ID);
 
 			Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-			String badgrUrl = BadgingUtil.getBadgeClassUrl(issuerId, badgeId);
+			String badgrUrl = BadgingUtil.getBadgeClassUrl(BadgingJsonKey.ISSUER_ID, badgeId);
 
 			HttpUtilResponse httpUtilResponse = HttpUtil.sendDeleteRequest(headers, badgrUrl);
 			String badgrResponseStr = httpUtilResponse.getBody();
@@ -374,9 +384,6 @@ public class BadgrServiceImpl implements BadgingService {
 				res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String, Object>());
 				responseList.add(res);
 			}
-		}
-		if (responseList.size() == 0) {
-			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), null);
 		}
 		Response response = new Response();
 		response.getResult().put(BadgingJsonKey.ASSERTIONS, responseList);
@@ -487,6 +494,4 @@ public class BadgrServiceImpl implements BadgingService {
 		}
 		return contentId + ASSERTION_DUMMY_DOMAIN;
 	}
-
-	
 }

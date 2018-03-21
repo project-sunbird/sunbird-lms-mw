@@ -9,7 +9,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 
-@ActorConfig(tasks = { "createBadgeClass", "getBadgeClass", "listBadgeClass", "deleteBadgeClass" }, asyncTasks = {})
+@ActorConfig(tasks = { "createBadgeClass", "getBadgeClass", "searchBadgeClass", "deleteBadgeClass" }, asyncTasks = {})
 public class BadgeClassActor extends BaseActor {
 	private BadgingService badgingService;
 
@@ -33,8 +33,8 @@ public class BadgeClassActor extends BaseActor {
 		case "getBadgeClass":
 			getBadgeClass(request);
 			break;
-		case "listBadgeClass":
-			listBadgeClass(request);
+		case "searchBadgeClass":
+			searchBadgeClass(request);
 			break;
 		case "deleteBadgeClass":
 			deleteBadgeClass(request);
@@ -72,15 +72,15 @@ public class BadgeClassActor extends BaseActor {
 		}
 	}
 
-	private void listBadgeClass(Request actorMessage) {
-		ProjectLogger.log("listBadgeClass called");
+	private void searchBadgeClass(Request actorMessage) {
+		ProjectLogger.log("searchBadgeClass called");
 
 		try {
-			Response response = badgingService.getBadgeClassList(actorMessage);
+			Response response = badgingService.searchBadgeClass(actorMessage);
 
 			sender().tell(response, self());
 		} catch (ProjectCommonException e) {
-			ProjectLogger.log("listBadgeClass: exception = ", e);
+			ProjectLogger.log("searchBadgeClass: exception = ", e);
 
 			sender().tell(e, self());
 		}

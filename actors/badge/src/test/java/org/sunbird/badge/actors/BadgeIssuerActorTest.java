@@ -47,7 +47,7 @@ public class BadgeIssuerActorTest {
     ProjectCommonException resourceNotFoundException;
 
     @Before
-    public void setup() {
+    public void setUp() {
         system = ActorSystem.create("system");
         probe = new TestKit(system);
         mockBadgingService = PowerMockito.mock(BadgrServiceImpl.class);

@@ -64,7 +64,7 @@ public class TenantPreferenceManagementActor extends BaseActor {
 		
 		String orgId = (String) actorMessage.getRequest().get(JsonKey.ROOT_ORG_ID);
 		ProjectLogger.log("TenantPreferenceManagementActor-getTenantPreference called for org: " + orgId);
-		validateRequest(actorMessage);
+		validateRequest(actorMessage, false);
 		List<String> keys = (List<String>) actorMessage.getRequest().get(JsonKey.KEYS);
 
 		Map<String, Map<String, Object>> orgPrefMap = getPreferenceMap(getPreferencesFromDB(orgId));
@@ -99,7 +99,7 @@ public class TenantPreferenceManagementActor extends BaseActor {
 
 		String orgId = (String) actorMessage.getRequest().get(JsonKey.ROOT_ORG_ID);
 		ProjectLogger.log("TenantPreferenceManagementActor-updateTenantPreference called for org: " + orgId);
-		validateRequest(actorMessage);
+		validateRequest(actorMessage, true);
 		
 		Response finalResponse = new Response();
 		List<Map<String, Object>> responseList = new ArrayList<>();
@@ -152,7 +152,7 @@ public class TenantPreferenceManagementActor extends BaseActor {
 
 		String orgId = (String) actorMessage.getRequest().get(JsonKey.ROOT_ORG_ID);
 		ProjectLogger.log("TenantPreferenceManagementActor-createTenantPreference called for org: " + orgId);
-		validateRequest(actorMessage);
+		validateRequest(actorMessage, true);
 		List<Map<String, Object>> preferencesList = getPreferencesFromDB(orgId);
 		Response finalResponse = new Response();
 		List<Map<String, Object>> responseList = new ArrayList<>();
@@ -215,7 +215,7 @@ public class TenantPreferenceManagementActor extends BaseActor {
 	}
 	
 	@SuppressWarnings("unchecked")
-	private void validateRequest(Request actorMessage) {
+	private void validateRequest(Request actorMessage, boolean update) {
 		
 		String orgId = (String) actorMessage.getRequest().get(JsonKey.ROOT_ORG_ID);
 		if (StringUtils.isBlank(orgId)) {
@@ -236,12 +236,14 @@ public class TenantPreferenceManagementActor extends BaseActor {
 						ResponseCode.invalidOrgId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
 		}*/
 
-		List<Map<String, Object>> req = (List<Map<String, Object>>) actorMessage.getRequest()
-				.get(JsonKey.TENANT_PREFERENCE);
-		// no need to do anything throw exception invalid request data as list is empty
-		if (null == req || req.isEmpty())
-			throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
-					ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+		if (update) {
+			List<Map<String, Object>> req = (List<Map<String, Object>>) actorMessage.getRequest()
+					.get(JsonKey.TENANT_PREFERENCE);
+			// no need to do anything throw exception invalid request data as list is empty
+			if (null == req || req.isEmpty())
+				throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
+						ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+		}
 	}
 	
 	private Map<String, Map<String, Object>> getPreferenceMap(List<Map<String, Object>> preferencesList) {

@@ -1,11 +1,13 @@
 package org.sunbird.learner.util;
 
+import akka.actor.ActorRef;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.sunbird.actor.background.BackgroundOperations;
+import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -17,6 +19,17 @@ import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 public final class TelemetryUtil {
 
 	private TelemetryUtil() {
+	}
+
+	public static Map<String, Object> generateTargetObject(String id, String type, String currentState,
+			String prevState) {
+
+		Map<String, Object> target = new HashMap<>();
+		target.put(JsonKey.ID, id);
+		target.put(JsonKey.TYPE, type);
+		target.put(JsonKey.CURRENT_STATE, currentState);
+		target.put(JsonKey.PREV_STATE, prevState);
+		return target;
 	}
 
 	public static Map<String, Object> genarateTelemetryRequest(Map<String, Object> targetObject,
@@ -34,17 +47,6 @@ public final class TelemetryUtil {
 		Map<String, Object> context = getTelemetryContext();
 		map.put(JsonKey.CONTEXT, context);
 		return map;
-	}
-
-	public static Map<String, Object> generateTargetObject(String id, String type, String currentState,
-			String prevState) {
-
-		Map<String, Object> target = new HashMap<>();
-		target.put(JsonKey.ID, id);
-		target.put(JsonKey.TYPE, type);
-		target.put(JsonKey.CURRENT_STATE, currentState);
-		target.put(JsonKey.PREV_STATE, prevState);
-		return target;
 	}
 
 	public static void generateCorrelatedObject(String id, String type, String corelation,
@@ -88,13 +90,13 @@ public final class TelemetryUtil {
 	public static void telemetryProcessingCall(Map<String, Object> request, Map<String, Object> targetObject,
 			List<Map<String, Object>> correlatedObject) {
 		Map<String, Object> params = new HashMap<>();
-		// set additional props for edata related things ...
+		// set additional props for edata related things that will be used for getting the requested fields name while telemetry processing
 		params.put(JsonKey.PROPS, request);
 		Request req = new Request();
 		req.setRequest(TelemetryUtil.genarateTelemetryRequest(targetObject, correlatedObject,
 				TelemetryEvents.AUDIT.getName(), params));
 		req.setOperation(BackgroundOperations.telemetryProcessing.name());
-		ActorUtil.tell(req);
+		callBackGroundActor(req);
 	}
 
 	public static void telemetryProcessingCall(Map<String, Object> request, Map<String, Object> targetObject,
@@ -110,7 +112,7 @@ public final class TelemetryUtil {
 			req.setRequest(TelemetryUtil.genarateTelemetryRequest(targetObject, correlatedObject,
 					TelemetryEvents.AUDIT.getName(), params));
 			req.setOperation(BackgroundOperations.telemetryProcessing.name());
-			ActorUtil.tell(req);
+			callBackGroundActor(req);
 		} else if (eventType.equalsIgnoreCase(TelemetryEvents.LOG.getName())) {
 			Map<String, Object> logInfo = request;
 			long endTime = System.currentTimeMillis();
@@ -118,7 +120,7 @@ public final class TelemetryUtil {
 			Request req = new Request();
 			req.setRequest(generateTelemetryRequest(eventType, logInfo, TelemetryUtil.getTelemetryContext()));
 			req.setOperation(BackgroundOperations.telemetryProcessing.name());
-			ActorUtil.tell(req);
+			callBackGroundActor(req);
 		}
 	}
 
@@ -130,6 +132,11 @@ public final class TelemetryUtil {
 		map.put(JsonKey.CONTEXT, context);
 		map.put(JsonKey.PARAMS, params);
 		return map;
+	}
+
+	private static void callBackGroundActor(Request request){
+		request.getContext().put(JsonKey.TELEMETRY_CONTEXT, ExecutionContext.getCurrent().getRequestContext());
+		SunbirdMWService.tell(request, ActorRef.noSender());
 	}
 
 }

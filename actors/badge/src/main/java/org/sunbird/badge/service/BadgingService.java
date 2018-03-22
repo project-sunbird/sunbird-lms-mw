@@ -47,17 +47,6 @@ public interface BadgingService {
 	public Response getIssuerList(Request request) throws IOException;
 
 	/**
-	 * This method will delete issuer from server. the issuer can be deleted if they
-	 * haven't issued any badge.
-	 * 
-	 * @param request
-	 *            Request
-	 * @exception IOException
-	 * @return Response
-	 */
-	public Response removeIssuer(Request request) throws IOException;
-
-	/**
 	 * This method will create a badge class for a particular issuer.
 	 * 
 	 * @param request

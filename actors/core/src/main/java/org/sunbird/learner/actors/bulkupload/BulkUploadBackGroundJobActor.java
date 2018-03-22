@@ -1162,7 +1162,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
             try {
                 cassandraOperation.updateRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(),
-                        res);
+                        reqMap);
             } catch (Exception e) {
                 ProjectLogger.log(e.getMessage(), e);
             }

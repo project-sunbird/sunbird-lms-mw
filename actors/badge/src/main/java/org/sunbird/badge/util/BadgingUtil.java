@@ -385,4 +385,12 @@ public class BadgingUtil {
         }
         return false;
     }
+
+    public static String getBadgeIssuerUrl() {
+        return String.format("%s/v1/issuer/issuers", getBadgrBaseUrl());
+    }
+
+    public static String getBadgeIssuerUrl(String slug) {
+        return String.format("%s/v1/issuer/issuers/%s", getBadgrBaseUrl(), slug);
+    }
 }

@@ -31,6 +31,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
+import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -48,7 +49,7 @@ public class BadgrServiceImpl implements BadgingService {
 	static {
 		String header = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
 		if (ProjectUtil.isStringNullOREmpty(header)) {
-			header = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION);
+			header = PropertiesCache.getInstance().readProperty(JsonKey.EKSTEP_AUTHORIZATION);
 		} else {
 			header = JsonKey.BEARER + header;
 		}
@@ -66,7 +67,10 @@ public class BadgrServiceImpl implements BadgingService {
 
 	@Override
 	public Response createIssuer(Request request) throws IOException {
-		// TODO Auto-generated method stub
+
+		Map<String, Object> targetObject = null;
+		List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
 		Map<String, Object> req = request.getRequest();
 		byte[] image = null;
 		Map<String, byte[]> fileData = new HashMap<>();
@@ -79,19 +83,22 @@ public class BadgrServiceImpl implements BadgingService {
 		requestData.put(JsonKey.URL, (String) req.get(JsonKey.URL));
 		requestData.put(JsonKey.EMAIL, (String) req.get(JsonKey.EMAIL));
 
-		String url = "/v1/issuer/issuers";
 		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-		// since the content type here is not application/json so removing this key.
+		// since the content type here is not application/json, it is of type form data so removing this key.
 		headers.remove("Content-Type");
 		if (null != image) {
 			fileData.put(JsonKey.IMAGE, image);
 		}
 		HttpUtilResponse httpResponse = HttpUtil
-				.postFormData(requestData, fileData, headers, BadgingUtil.getBadgrBaseUrl() + url);
+				.postFormData(requestData, fileData, headers, BadgingUtil.getBadgeIssuerUrl());
 
 		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode() ,null );
 		Response response = new Response();
 		BadgingUtil.prepareBadgeIssuerResponse(httpResponse.getBody(), response.getResult());
+
+		targetObject = TelemetryUtil
+				.generateTargetObject((String) response.getResult().get(BadgingJsonKey.ISSUER_ID), BadgingJsonKey.BADGE_ISSUER, JsonKey.CREATE, null);
+		TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
 
 		return response;
 	}
@@ -104,7 +111,7 @@ public class BadgrServiceImpl implements BadgingService {
 		String url = "/v1/issuer/issuers" + "/" + slug;
 		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
 
-		HttpUtilResponse httpResponse =HttpUtil.doGetRequest(BadgingUtil.getBadgrBaseUrl() + url, headers);
+		HttpUtilResponse httpResponse =HttpUtil.doGetRequest(BadgingUtil.getBadgeIssuerUrl(slug), headers);
 		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode() ,null );
 		Response response = new Response();
 		BadgingUtil.prepareBadgeIssuerResponse(httpResponse.getBody(), response.getResult());
@@ -115,9 +122,8 @@ public class BadgrServiceImpl implements BadgingService {
 	@Override
 	public Response getIssuerList(Request request) throws IOException {
 		// TODO Auto-generated method stub
-		String url = "/v1/issuer/issuers";
 		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-		HttpUtilResponse httpResponse =HttpUtil.doGetRequest(BadgingUtil.getBadgrBaseUrl() + url, headers);
+		HttpUtilResponse httpResponse =HttpUtil.doGetRequest(BadgingUtil.getBadgeIssuerUrl(), headers);
 		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode() ,null );
 		Response response = new Response();
 
@@ -137,14 +143,11 @@ public class BadgrServiceImpl implements BadgingService {
 	}
 
 	@Override
-	public Response removeIssuer(Request request) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public Response createBadgeClass(Request request) throws ProjectCommonException {
 		Response response = new Response();
+
+		Map<String, Object> targetObject = null;
+		List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
 		try {
 			Map<String, Object> requestData = request.getRequest();
@@ -201,6 +204,12 @@ public class BadgrServiceImpl implements BadgingService {
 			badgeClassExtensionService.save(badgeClassExt);
 
 			BadgingUtil.prepareBadgeClassResponse(badgrResponseStr, badgeClassExt, response.getResult());
+			targetObject = TelemetryUtil
+					.generateTargetObject((String) response.getResult().get(BadgingJsonKey.BADGE_ID), BadgingJsonKey.BADGE_CLASS, JsonKey.CREATE, null);
+			TelemetryUtil.generateCorrelatedObject(issuerId, BadgingJsonKey.BADGE_ISSUER, null, correlatedObject);
+			TelemetryUtil.generateCorrelatedObject(rootOrgId, JsonKey.ORGANISATION, null, correlatedObject);
+			TelemetryUtil.telemetryProcessingCall(requestData, targetObject, correlatedObject);
+
 		} catch (IOException e) {
 			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.SERVER_ERROR.getResponseCode(), e.getMessage());
 		}
@@ -307,6 +316,8 @@ public class BadgrServiceImpl implements BadgingService {
 	@Override
 	public Response removeBadgeClass(Request requestMsg) throws ProjectCommonException {
 		Response response = new Response();
+		Map<String, Object> targetObject = null;
+		List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
 		try {
 			Map<String, Object> requestData = requestMsg.getRequest();
@@ -323,6 +334,10 @@ public class BadgrServiceImpl implements BadgingService {
 
 			badgeClassExtensionService.delete(badgeId);
 			response.put(JsonKey.MESSAGE, badgrResponseStr.replaceAll("^\"|\"$", ""));
+			targetObject = TelemetryUtil
+					.generateTargetObject(badgeId, BadgingJsonKey.BADGE_CLASS, JsonKey.DELETE, null);
+			TelemetryUtil.telemetryProcessingCall(requestData, targetObject, correlatedObject);
+
 		} catch (IOException e) {
 			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.SERVER_ERROR.getResponseCode(), e.getMessage());
 		}
@@ -335,6 +350,9 @@ public class BadgrServiceImpl implements BadgingService {
 	public Response badgeAssertion(Request request) throws IOException {
 		// Based on incoming recipientType and recipientId collect the email.
 		Map<String, Object> requestedData = request.getRequest();
+		Map<String, Object> targetObject = null;
+		List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
 		String email = getEmail((String) requestedData.get(BadgingJsonKey.RECIPIENT_ID),
 				(String) requestedData.get(BadgingJsonKey.RECIPIENT_TYPE));
 		requestedData.put(BadgingJsonKey.RECIPIENT_EMAIL, email);
@@ -350,6 +368,12 @@ public class BadgrServiceImpl implements BadgingService {
 		res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String, Object>());
 		Response response = new Response();
 		response.getResult().putAll(res);
+		targetObject = TelemetryUtil
+				.generateTargetObject((String) response.getResult().get(BadgingJsonKey.BADGE_ID), BadgingJsonKey.BADGE_CLASS, JsonKey.CREATE, null);
+		TelemetryUtil.generateCorrelatedObject((String) requestedData.get(BadgingJsonKey.RECIPIENT_ID), (String) requestedData.get(BadgingJsonKey.RECIPIENT_TYPE), null, correlatedObject);
+		TelemetryUtil.generateCorrelatedObject((String) requestedData.get(BadgingJsonKey.ISSUER_ID), BadgingJsonKey.BADGE_ISSUER, null, correlatedObject);
+		TelemetryUtil.generateCorrelatedObject((String) requestedData.get(BadgingJsonKey.BADGE_ID), BadgingJsonKey.BADGE_CLASS, null, correlatedObject);
+		TelemetryUtil.telemetryProcessingCall(requestedData, targetObject, correlatedObject);
 		return response;
 	}
 
@@ -394,6 +418,9 @@ public class BadgrServiceImpl implements BadgingService {
 	public Response revokeAssertion(Request request) throws IOException {
 		//do the recipient id validation
 		Map<String, Object> requestedData = request.getRequest();
+		Map<String, Object> targetObject = null;
+		List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
 		getEmail((String) requestedData.get(BadgingJsonKey.RECIPIENT_ID),
 				(String) requestedData.get(BadgingJsonKey.RECIPIENT_TYPE));
 		String url = BadgingUtil.createBadgerUrl(request.getRequest(), BadgingUtil.SUNBIRD_BADGER_GETASSERTION_URL, 3);
@@ -402,20 +429,30 @@ public class BadgrServiceImpl implements BadgingService {
 		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(),null);
 		Response response = new Response();
 		response.getResult().put(JsonKey.STATUS, JsonKey.SUCCESS);
+		targetObject = TelemetryUtil
+				.generateTargetObject((String) requestedData.get(BadgingJsonKey.ASSERTION_ID), BadgingJsonKey.BADGE_ISSUER, JsonKey.DELETE, null);
+		TelemetryUtil.generateCorrelatedObject((String) requestedData.get(BadgingJsonKey.RECIPIENT_ID), (String) requestedData.get(BadgingJsonKey.RECIPIENT_TYPE), null, correlatedObject);
+		TelemetryUtil.telemetryProcessingCall(requestedData, targetObject, correlatedObject);
 		return response;
 	}
 
 	@Override
 	public Response deleteIssuer(Request request) throws IOException{
+		Map<String, Object> targetObject = null;
+		List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
 		Map<String, Object> req = request.getRequest();
 		String slug = (String) req.get(JsonKey.SLUG);
-		String url = "/v1/issuer/issuers" + "/" + slug;
 		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-		HttpUtilResponse httpResponse =HttpUtil.sendDeleteRequest(headers , BadgingUtil.getBadgrBaseUrl() + url);
+		HttpUtilResponse httpResponse =HttpUtil.sendDeleteRequest(headers , BadgingUtil.getBadgeIssuerUrl(slug));
 		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode() ,null );
 		Response response = new Response();
 		// since the response from badger service contains " at beging and end so remove that from response string
 		response.put(JsonKey.MESSAGE , StringUtils.strip( httpResponse.getBody(), "\""));
+
+		targetObject = TelemetryUtil
+				.generateTargetObject(slug, BadgingJsonKey.BADGE_ISSUER, JsonKey.DELETE, null);
+		TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
 		return response;
 	}
 	

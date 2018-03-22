@@ -253,7 +253,7 @@ public class BadgrServiceImplBadgeClassTest {
         PowerMockito.when(HttpUtil.doGetRequest(Mockito.any(), Mockito.any()))
                 .thenReturn(new HttpUtilResponse(BADGE_CLASS_SEARCH_RESPONSE_SUCCESS, 200));
         PowerMockito
-                .when(mockBadgeClassExtensionService.get(Mockito.anyList(), Mockito.any(),
+                .when(mockBadgeClassExtensionService.search(Mockito.anyList(), Mockito.any(),
                         Mockito.any(), Mockito.any(), Mockito.anyList()))
                 .thenReturn(new ArrayList<>(
                         Arrays.asList(new BadgeClassExtension(VALUE_BADGE_ID, VALUE_ISSUER_ID,
@@ -283,7 +283,7 @@ public class BadgrServiceImplBadgeClassTest {
         PowerMockito.when(HttpUtil.doGetRequest(Mockito.any(), Mockito.any()))
                 .thenReturn(new HttpUtilResponse(BADGE_CLASS_SEARCH_RESPONSE_SUCCESS, 200));
         PowerMockito
-                .when(mockBadgeClassExtensionService.get(Mockito.anyList(), Mockito.any(),
+                .when(mockBadgeClassExtensionService.search(Mockito.anyList(), Mockito.any(),
                         Mockito.any(), Mockito.any(), Mockito.anyList()))
                 .thenReturn(new ArrayList<>());
 
@@ -309,7 +309,7 @@ public class BadgrServiceImplBadgeClassTest {
         PowerMockito.when(HttpUtil.doGetRequest(Mockito.any(), Mockito.any()))
                 .thenThrow(new IOException());
         PowerMockito
-                .when(mockBadgeClassExtensionService.get(Mockito.anyList(), Mockito.any(),
+                .when(mockBadgeClassExtensionService.search(Mockito.anyList(), Mockito.any(),
                         Mockito.any(), Mockito.any(), Mockito.anyList()))
                 .thenReturn(new ArrayList<>(
                         Arrays.asList(new BadgeClassExtension(VALUE_BADGE_ID, VALUE_ISSUER_ID,

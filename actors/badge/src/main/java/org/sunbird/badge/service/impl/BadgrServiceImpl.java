@@ -39,7 +39,7 @@ import org.sunbird.learner.util.Util;
  *
  */
 public class BadgrServiceImpl implements BadgingService {
-	BadgeClassExtensionService badgeClassExtensionService = new BadgeClassExtensionServiceImpl();
+	private BadgeClassExtensionService badgeClassExtensionService;
 	private ObjectMapper mapper = new ObjectMapper();
 	private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 	private static final String ASSERTION_DUMMY_DOMAIN = "@gmail.com";
@@ -255,7 +255,7 @@ public class BadgrServiceImpl implements BadgingService {
 			subtype = subtype.toLowerCase();
 		}
 
-		List<BadgeClassExtension> badgeClassExtList = badgeClassExtensionService.get(issuerList,
+		List<BadgeClassExtension> badgeClassExtList = badgeClassExtensionService.search(issuerList,
 				rootOrgId, type, subtype, allowedRoles);
 		List<String> filteredIssuerList = badgeClassExtList.stream()
 				.map(badge -> badge.getIssuerId()).distinct().collect(Collectors.toList());

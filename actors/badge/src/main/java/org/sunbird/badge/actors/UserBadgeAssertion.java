@@ -15,8 +15,10 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
@@ -28,6 +30,8 @@ public class UserBadgeAssertion extends BaseActor {
 
     @Override
     public void onReceive(Request request) throws Throwable {
+        Util.initializeContext(request, JsonKey.USER);
+        ExecutionContext.setRequestId(request.getRequestId());
         String operation = request.getOperation();
         if (BadgeOperations.assignBadgeToUser.name().equalsIgnoreCase(operation)) {
             addBadgeData(request);
@@ -40,6 +44,9 @@ public class UserBadgeAssertion extends BaseActor {
     private void revokeBadgeData(Request request) {
         // request came to revoke the badge from user
         // Delete the badge details
+        Map<String, Object> targetObject = null;
+        List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
         Map<String, Object> map = request.getRequest();
         String userId = (String) map.get(JsonKey.ID);
         Map<String, Object> badge = (Map<String, Object>) map.get(BadgingJsonKey.BADGE_ASSERTION);
@@ -51,12 +58,21 @@ public class UserBadgeAssertion extends BaseActor {
         Response reponse = new Response();
         reponse.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
         sender().tell(reponse, self());
+        targetObject = TelemetryUtil
+            .generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+        TelemetryUtil.generateCorrelatedObject((String)badge.get(BadgingJsonKey.ASSERTION_ID), BadgingJsonKey.BADGE_ASSERTION, null, correlatedObject);
+        TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
+        TelemetryUtil.telemetryProcessingCall(map, targetObject, correlatedObject);
+
     }
 
     @SuppressWarnings("unchecked")
     private void addBadgeData(Request request) {
         // request came to assign the badge from user
         // Delete the badge details
+        Map<String, Object> targetObject = null;
+        List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
         Map<String, Object> map = request.getRequest();
         String userId = (String) map.get(JsonKey.ID);
         Map<String, Object> badge = (Map<String, Object>) map.get(BadgingJsonKey.BADGE_ASSERTION);
@@ -71,6 +87,12 @@ public class UserBadgeAssertion extends BaseActor {
         Response reponse = new Response();
         reponse.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
         sender().tell(reponse, self());
+        targetObject = TelemetryUtil
+            .generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+        TelemetryUtil.generateCorrelatedObject((String)badge.get(BadgingJsonKey.ASSERTION_ID), BadgingJsonKey.BADGE_ASSERTION, null, correlatedObject);
+        TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
+        TelemetryUtil.telemetryProcessingCall(map, targetObject, correlatedObject);
+
     }
 
     @SuppressWarnings("unchecked")

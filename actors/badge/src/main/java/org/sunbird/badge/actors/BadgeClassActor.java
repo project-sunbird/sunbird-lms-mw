@@ -6,8 +6,11 @@ import org.sunbird.badge.service.BadgingService;
 import org.sunbird.badge.service.impl.BadgingFactory;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
+import org.sunbird.learner.util.Util;
 
 @ActorConfig(tasks = { "createBadgeClass", "getBadgeClass", "searchBadgeClass", "deleteBadgeClass" }, asyncTasks = {})
 public class BadgeClassActor extends BaseActor {
@@ -25,6 +28,9 @@ public class BadgeClassActor extends BaseActor {
 	public void onReceive(Request request) {
 		ProjectLogger.log("BadgeClassActor onReceive called");
 		String operation = request.getOperation();
+
+		Util.initializeContext(request, JsonKey.USER);
+		ExecutionContext.setRequestId(request.getRequestId());
 
 		switch (operation) {
 		case "createBadgeClass":

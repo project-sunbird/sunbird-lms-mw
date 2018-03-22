@@ -6,9 +6,12 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.badge.service.BadgingService;
 import org.sunbird.badge.service.impl.BadgingFactory;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
+import org.sunbird.learner.util.Util;
 
 /**
  * Created by arvind on 5/3/18.
@@ -32,7 +35,9 @@ public class BadgeIssuerActor extends BaseActor {
     public void onReceive(Request request) throws Throwable {
         ProjectLogger.log("BadgeIssuerActor  onReceive called", LoggerEnum.INFO.name());
         String operation = request.getOperation();
-        System.out.println("OPERATION IS " + operation);
+
+        Util.initializeContext(request, JsonKey.USER);
+        ExecutionContext.setRequestId(request.getRequestId());
 
         switch (operation) {
             case "createBadgeIssuer":

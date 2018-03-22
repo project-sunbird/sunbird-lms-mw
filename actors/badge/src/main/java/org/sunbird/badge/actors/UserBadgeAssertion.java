@@ -44,12 +44,9 @@ public class UserBadgeAssertion extends BaseActor {
     private void revokeBadgeData(Request request) {
         // request came to revoke the badge from user
         // Delete the badge details
-        Map<String, Object> targetObject = null;
-        List<Map<String, Object>> correlatedObject = new ArrayList<>();
-
-        Map<String, Object> map = request.getRequest();
-        String userId = (String) map.get(JsonKey.ID);
-        Map<String, Object> badge = (Map<String, Object>) map.get(BadgingJsonKey.BADGE_ASSERTION);
+        String userId = (String) request.getRequest().get(JsonKey.ID);
+        Map<String, Object> badge =
+                (Map<String, Object>) request.getRequest().get(BadgingJsonKey.BADGE_ASSERTION);
         cassandraOperation.deleteRecord(dbInfo.getKeySpace(), dbInfo.getTableName(),
                 (String) badge.get(BadgingJsonKey.ASSERTION_ID));
         badge.put(JsonKey.ID, badge.get(BadgingJsonKey.ASSERTION_ID));
@@ -58,24 +55,28 @@ public class UserBadgeAssertion extends BaseActor {
         Response reponse = new Response();
         reponse.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
         sender().tell(reponse, self());
-        targetObject = TelemetryUtil
-            .generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-        TelemetryUtil.generateCorrelatedObject((String)badge.get(BadgingJsonKey.ASSERTION_ID), BadgingJsonKey.BADGE_ASSERTION, null, correlatedObject);
+        sendTelemetry(request.getRequest(), userId, badge);
+
+    }
+
+    private void sendTelemetry(Map<String, Object> map, String userId, Map<String, Object> badge) {
+        List<Map<String, Object>> correlatedObject = new ArrayList<>();
+        Map<String, Object> targetObject;
+        targetObject =
+                TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+        TelemetryUtil.generateCorrelatedObject((String) badge.get(BadgingJsonKey.ASSERTION_ID),
+                BadgingJsonKey.BADGE_ASSERTION, null, correlatedObject);
         TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
         TelemetryUtil.telemetryProcessingCall(map, targetObject, correlatedObject);
-
     }
 
     @SuppressWarnings("unchecked")
     private void addBadgeData(Request request) {
         // request came to assign the badge from user
         // Delete the badge details
-        Map<String, Object> targetObject = null;
-        List<Map<String, Object>> correlatedObject = new ArrayList<>();
-
-        Map<String, Object> map = request.getRequest();
-        String userId = (String) map.get(JsonKey.ID);
-        Map<String, Object> badge = (Map<String, Object>) map.get(BadgingJsonKey.BADGE_ASSERTION);
+        String userId = (String) request.getRequest().get(JsonKey.ID);
+        Map<String, Object> badge =
+                (Map<String, Object>) request.getRequest().get(BadgingJsonKey.BADGE_ASSERTION);
 
         // request came to assign the badge to user
         badge.put(JsonKey.ID, badge.get(BadgingJsonKey.ASSERTION_ID));
@@ -87,11 +88,7 @@ public class UserBadgeAssertion extends BaseActor {
         Response reponse = new Response();
         reponse.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
         sender().tell(reponse, self());
-        targetObject = TelemetryUtil
-            .generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-        TelemetryUtil.generateCorrelatedObject((String)badge.get(BadgingJsonKey.ASSERTION_ID), BadgingJsonKey.BADGE_ASSERTION, null, correlatedObject);
-        TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
-        TelemetryUtil.telemetryProcessingCall(map, targetObject, correlatedObject);
+        sendTelemetry(request.getRequest(), userId, badge);
 
     }
 

@@ -10,15 +10,25 @@ import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.badge.model.BadgeClassExtension;
 import org.sunbird.badge.service.BadgeClassExtensionService;
 import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
 public class BadgeClassExtensionServiceImpl implements BadgeClassExtensionService {
-    private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    private CassandraOperation cassandraOperation;
     public static final String BADGE_CLASS_EXT_TABLE_NAME = "badge_class_extension";
+
+    public BadgeClassExtensionServiceImpl() {
+        this.cassandraOperation = ServiceFactory.getInstance();
+    }
+
+    public BadgeClassExtensionServiceImpl(CassandraOperation cassandraOperation) {
+        this.cassandraOperation = cassandraOperation;
+    }
 
     @Override
     public void save(BadgeClassExtension badgeClassExtension) {
@@ -36,7 +46,7 @@ public class BadgeClassExtensionServiceImpl implements BadgeClassExtensionServic
     }
 
     @Override
-    public List<BadgeClassExtension> get(List<String> issuerList, String rootOrgId, String type, String subtype, List<String> roles) {
+    public List<BadgeClassExtension> search(List<String> issuerList, String rootOrgId, String type, String subtype, List<String> roles) {
         Map<String, Object> propertyMap = new HashMap<>();
 
         if (rootOrgId != null) {
@@ -64,12 +74,12 @@ public class BadgeClassExtensionServiceImpl implements BadgeClassExtensionServic
     }
 
     @Override
-    public BadgeClassExtension get(String badgeId) {
+    public BadgeClassExtension get(String badgeId) throws ProjectCommonException {
         Response response = cassandraOperation.getRecordById(Util.KEY_SPACE_NAME, BADGE_CLASS_EXT_TABLE_NAME, badgeId);
         List<Map<String, Object>> badgeList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
 
         if ((badgeList == null) || badgeList.isEmpty()) {
-            return null;
+            throw new ProjectCommonException(ResponseCode.resourceNotFound.getErrorCode(), ResponseCode.resourceNotFound.getErrorMessage(), ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
         }
 
         return new BadgeClassExtension(badgeList.get(0));

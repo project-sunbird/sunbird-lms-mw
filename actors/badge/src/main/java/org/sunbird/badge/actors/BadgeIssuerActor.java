@@ -1,6 +1,5 @@
 package org.sunbird.badge.actors;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -19,7 +18,6 @@ import org.sunbird.common.request.Request;
         asyncTasks = {})
 public class BadgeIssuerActor extends BaseActor {
 
-    private ObjectMapper mapper = new ObjectMapper();
     private BadgingService badgingService;
 
     public BadgeIssuerActor() {

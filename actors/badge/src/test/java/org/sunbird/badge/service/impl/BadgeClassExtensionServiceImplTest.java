@@ -65,9 +65,6 @@ public class BadgeClassExtensionServiceImplTest {
     }
 
     @Test
-    public void testSearchSuccess() {}
-
-    @Test
     public void testGetSuccess() {
         Response response = new Response();
         response.put(JsonKey.RESPONSE,

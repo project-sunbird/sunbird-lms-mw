@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -119,6 +120,7 @@ public class BadgrServiceImplBadgeClassTest {
 
         Response response = badgrServiceImpl.createBadgeClass(request);
         validateSuccessResponse(response.getResponseCode(), response.getResult());
+        Assert.assertTrue(null != response);
     }
 
     @Test
@@ -198,6 +200,7 @@ public class BadgrServiceImplBadgeClassTest {
 
         Response response = badgrServiceImpl.getBadgeClassDetails(request);
         validateSuccessResponse(response.getResponseCode(), response.getResult());
+        Assert.assertTrue(null != response);
     }
 
     @Test

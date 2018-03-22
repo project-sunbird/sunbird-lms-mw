@@ -61,10 +61,10 @@ public class TenantPreferenceManagementActor extends BaseActor {
 	 */
 	@SuppressWarnings("unchecked")
 	private void getTenantPreference(Request actorMessage) {
-
-		String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
-		validateRequest(actorMessage);
+		
+		String orgId = (String) actorMessage.getRequest().get(JsonKey.ROOT_ORG_ID);
 		ProjectLogger.log("TenantPreferenceManagementActor-getTenantPreference called for org: " + orgId);
+		validateRequest(actorMessage);
 		List<String> keys = (List<String>) actorMessage.getRequest().get(JsonKey.KEYS);
 
 		Map<String, Map<String, Object>> orgPrefMap = getPreferenceMap(getPreferencesFromDB(orgId));
@@ -196,7 +196,7 @@ public class TenantPreferenceManagementActor extends BaseActor {
 	
 	private Map<String, Object> getResponseMap(String orgId, String key, String error) {
 		Map<String, Object> responseMap = new HashMap<>();
-		responseMap.put(JsonKey.ORG_ID, orgId);
+		responseMap.put(JsonKey.ROOT_ORG_ID, orgId);
 		responseMap.put(JsonKey.KEY, key);
 		if (StringUtils.isNotBlank(error)) {
 			responseMap.put(JsonKey.STATUS, JsonKey.FAILED);
@@ -216,9 +216,7 @@ public class TenantPreferenceManagementActor extends BaseActor {
 	
 	@SuppressWarnings("unchecked")
 	private void validateRequest(Request actorMessage) {
-		List<Map<String, Object>> req = (List<Map<String, Object>>) actorMessage.getRequest()
-				.get(JsonKey.TENANT_PREFERENCE);
-
+		
 		String orgId = (String) actorMessage.getRequest().get(JsonKey.ROOT_ORG_ID);
 		if (StringUtils.isBlank(orgId)) {
 			// throw invalid ord id ,org id should not be null or empty .
@@ -238,6 +236,8 @@ public class TenantPreferenceManagementActor extends BaseActor {
 						ResponseCode.invalidOrgId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
 		}*/
 
+		List<Map<String, Object>> req = (List<Map<String, Object>>) actorMessage.getRequest()
+				.get(JsonKey.TENANT_PREFERENCE);
 		// no need to do anything throw exception invalid request data as list is empty
 		if (null == req || req.isEmpty())
 			throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),

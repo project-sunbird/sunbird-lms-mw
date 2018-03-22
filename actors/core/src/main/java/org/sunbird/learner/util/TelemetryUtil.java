@@ -136,7 +136,7 @@ public final class TelemetryUtil {
 
 	private static void callBackGroundActor(Request request){
 		request.getContext().put(JsonKey.TELEMETRY_CONTEXT, ExecutionContext.getCurrent().getRequestContext());
-		SunbirdMWService.tell(request, ActorRef.noSender());
+		SunbirdMWService.tellToBGRouter(request, ActorRef.noSender());
 	}
 
 }

@@ -23,11 +23,20 @@ public class SunbirdMWService extends BaseMWService {
 		initRouters();
 	}
 
-	public static void tell(Request request, ActorRef sender) {
+	public static void tellToRequestRouter(Request request, ActorRef sender) {
+		String operation = request.getOperation();
+		ActorRef actor = RequestRouter.getActor(operation);
+		if (null == actor) {
+			ActorSelection select = getRemoteRouter(RequestRouter.class.getSimpleName());
+			select.tell(request, sender);
+		} else {
+			actor.tell(request, sender);
+		}
+	}
+
+	public static void tellToBGRouter(Request request, ActorRef sender) {
 		String operation = request.getOperation();
 		ActorRef actor = BackgroundRequestRouter.getActor(operation);
-		if (null == actor)
-			actor = RequestRouter.getActor(operation);
 		if (null == actor) {
 			ActorSelection select = getRemoteRouter(BackgroundRequestRouter.class.getSimpleName());
 			select.tell(request, sender);

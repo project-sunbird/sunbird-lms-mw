@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.sunbird.cassandra.CassandraOperation;
@@ -21,7 +20,6 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
@@ -32,7 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 /**
  * Created by arvind on 30/8/17.
  */
-public class MetricsReportJob implements Job {
+public class MetricsReportJob extends BaseJob {
 
 	private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -81,7 +79,7 @@ public class MetricsReportJob implements Job {
 						innerMap.put(JsonKey.DATA, data);
 
 						backGroundRequest.setRequest(innerMap);
-						ActorUtil.tell(backGroundRequest);
+						tellToBGRouter(backGroundRequest);
 					}
 				} catch (ParseException | IOException e) {
 					ProjectLogger.log(e.getMessage(), e);
@@ -110,8 +108,7 @@ public class MetricsReportJob implements Job {
 						innerMap.put(JsonKey.REQUEST_ID, map.get(JsonKey.ID));
 
 						backGroundRequest.setRequest(innerMap);
-						ActorUtil.tell(backGroundRequest);
-
+						tellToBGRouter(backGroundRequest);
 					}
 
 				} catch (ParseException e) {

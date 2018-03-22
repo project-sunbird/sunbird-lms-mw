@@ -107,8 +107,6 @@ public class SearchHandlerActor extends BaseActor {
 		req.setRequest(telemetryRequestForSearch(telemetryContext, params));
 		req.setOperation(BackgroundOperations.telemetryProcessing.name());
 		tellToAnother(req);
-		// lmaxWriter.submitMessage(req);
-
 	}
 
 	private List<Map<String, Object>> generateTopnResult(Map<String, Object> result) {

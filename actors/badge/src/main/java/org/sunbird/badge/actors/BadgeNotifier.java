@@ -1,5 +1,8 @@
 package org.sunbird.badge.actors;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -22,79 +25,57 @@ import org.sunbird.content.service.ContentService;
 @ActorConfig(tasks = {}, asyncTasks = { "assignBadgeMessage", "revokeBadgeMessage" })
 public class BadgeNotifier extends BaseActor {
 
-	private static final String INVALID_BADGE_ASSIGN_REQUEST = "INVALID_BADGE_ASSIGN_REQUEST";
-	private static final String INVALID_BADGE_REVOKE_REQUEST = "INVALID_BADGE_REVOKE_REQUEST";
+	private static final String INVALID_BADGE_NOTIFICATION_REQUEST = "INVALID_BADGE_NOTIFICATION_REQUEST";
+	private static final List<String> asyncTasks = Arrays.asList("assignBadgeMessage", "revokeBadgeMessage");
 
 	@Override
 	public void onReceive(Request request) throws Throwable {
 		String operation = request.getOperation();
-		String type = (String) request.getRequest().get(JsonKey.OBJECT_TYPE);
+		String objectType = (String) request.getRequest().get(JsonKey.OBJECT_TYPE);
 		ProjectLogger.log("Processing badge notification for " + operation, request.getRequest(),
 				LoggerEnum.INFO.name());
 		Response response;
-		if (StringUtils.isNotBlank(operation)) {
-			switch (operation) {
-			case "assignBadgeMessage":
-				response = assignBadge(type, request);
-				sender().tell(response, self());
-				break;
-			case "revokeBadgeMessage":
-				response = revokeBadge(type, request);
-				sender().tell(response, self());
-				break;
-			default:
-				onReceiveUnsupportedOperation(request.getOperation());
-				break;
-			}
+		if (StringUtils.isNotBlank(operation) && asyncTasks.contains(operation)) {
+			response = processBadge(operation, objectType, request);
+			sender().tell(response, self());
 		} else {
 			onReceiveUnsupportedMessage(request.getOperation());
 		}
 	}
 
-	private Response assignBadge(String type, Request request) throws Exception {
+	private Response processBadge(String operation, String objectType, Request request) throws Exception {
 		Response response;
-		if (StringUtils.isBlank(type)) {
-			response = invalidObjectType(INVALID_BADGE_REVOKE_REQUEST, type);
+		if (StringUtils.isBlank(objectType)) {
+			response = invalidObjectType(INVALID_BADGE_NOTIFICATION_REQUEST, objectType);
 		} else {
-			switch (type.toUpperCase()) {
-			case "USER":
+			String caseVal = objectType.toUpperCase() + ":" + operation.toUpperCase();
+			switch (caseVal) {
+			case "USER:ASSIGNBADGEMESSAGE":
 				request.setOperation(BadgeOperations.assignBadgeToUser.name());
-				tellToAnother(request);
-				response = new Response();
-				response.setResponseCode(ResponseCode.success);
+				response = notifyUser(request);
 				break;
-			case "CONTENT":
+			case "USER:REVOKEBADGEMESSAGE":
+				request.setOperation(BadgeOperations.revokeBadgeFromUser.name());
+				response = notifyUser(request);
+				break;
+			case "CONTENT:ASSIGNBADGEMESSAGE":
 				response = ContentService.assignBadge(request);
 				break;
+			case "CONTENT:REVOKEBADGEMESSAGE":
+				response = ContentService.revokeBadge(request);
+				break;
 			default:
-				response = invalidObjectType(INVALID_BADGE_ASSIGN_REQUEST, type);
+				response = invalidObjectType(INVALID_BADGE_NOTIFICATION_REQUEST, objectType);
 				break;
 			}
 		}
 		return response;
 	}
 
-	private Response revokeBadge(String type, Request request) throws Exception {
-		Response response;
-		if (StringUtils.isBlank(type)) {
-			response = invalidObjectType(INVALID_BADGE_REVOKE_REQUEST, type);
-		} else {
-			switch (type.toUpperCase()) {
-			case "USER":
-				request.setOperation(BadgeOperations.revokeBadgeFromUser.name());
-				tellToAnother(request);
-				response = new Response();
-				response.setResponseCode(ResponseCode.success);
-				break;
-			case "CONTENT":
-				response = ContentService.revokeBadge(request);
-				break;
-			default:
-				response = invalidObjectType(INVALID_BADGE_REVOKE_REQUEST, type);
-				break;
-			}
-		}
-
+	private Response notifyUser(Request request) {
+		tellToAnother(request);
+		Response response = new Response();
+		response.setResponseCode(ResponseCode.success);
 		return response;
 	}
 
@@ -107,5 +88,4 @@ public class BadgeNotifier extends BaseActor {
 		response.setParams(params);
 		return response;
 	}
-
 }

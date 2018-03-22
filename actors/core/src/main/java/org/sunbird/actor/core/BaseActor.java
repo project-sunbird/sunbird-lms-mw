@@ -42,7 +42,7 @@ public abstract class BaseActor extends UntypedAbstractActor {
 
 	public void tellToAnother(Request request) {
 		request.getContext().put(JsonKey.TELEMETRY_CONTEXT, ExecutionContext.getCurrent().getRequestContext());
-		SunbirdMWService.tell(request, self());
+		SunbirdMWService.tellToBGRouter(request, self());
 	}
 
 	public void unSupportedMessage() {

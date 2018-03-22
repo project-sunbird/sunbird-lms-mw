@@ -24,7 +24,6 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
@@ -282,7 +281,7 @@ public class HealthActor extends BaseActor {
 			Request request = new Request();
 			request.setOperation(ActorOperations.ADD_USER_BADGE_BKG.getValue());
 			request.getRequest().put(JsonKey.RECEIVER_ID, receiverId);
-			ActorUtil.tell(request);
+			tellToAnother(request);
 		} catch (Exception ex) {
 			ProjectLogger.log("Exception Occured during saving user badges to ES : ", ex);
 		}

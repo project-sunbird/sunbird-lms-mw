@@ -12,7 +12,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.sunbird.cassandra.CassandraOperation;
@@ -24,7 +23,6 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
@@ -37,7 +35,7 @@ import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
  * @author Manzarul
  *
  */
-public class UploadLookUpScheduler implements Job {
+public class UploadLookUpScheduler extends BaseJob {
 	private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSSZ");
 
 	public void execute(JobExecutionContext ctx) throws JobExecutionException {
@@ -96,7 +94,7 @@ public class UploadLookUpScheduler implements Job {
 		Request request = new Request();
 		request.put(JsonKey.DATA, result);
 		request.setOperation(ActorOperations.SCHEDULE_BULK_UPLOAD.getValue());
-		ActorUtil.tell(request);
+		tellToBGRouter(request);
 	}
 
 	private Map<String, Object> genarateLogInfo(String logType, String message) {

@@ -131,7 +131,7 @@ public class RequestRouter extends BaseRouter {
 						Request request = new Request();
 						request.setOperation(ActorOperations.PROCESS_AUDIT_LOG.getValue());
 						request.setRequest(map);
-						SunbirdMWService.tell(request, self());
+						SunbirdMWService.tellToBGRouter(request, self());
 					}
 				}
 			}

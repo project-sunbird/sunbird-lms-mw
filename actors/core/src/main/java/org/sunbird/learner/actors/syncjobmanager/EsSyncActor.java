@@ -8,7 +8,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -179,74 +178,42 @@ public class EsSyncActor extends BaseActor {
         ProjectLogger.log("fetching user address data started");
         String encryption = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_ENCRYPTION);
         String uid = userId;
+        uid = encryptUserData(encryption, uid);
+        userMap.put(JsonKey.ADDRESS,
+                getDetails(Util.dbInfoMap.get(JsonKey.ADDRESS_DB), uid, JsonKey.USER_ID));
+        ProjectLogger.log("fetching user education data started");
+        fetchEducationDetails(userId, userMap);
+        ProjectLogger.log("fetching user job profile data started");
+        fetchJobDetails(userId, userMap);
+        ProjectLogger.log("fetching user org data started");
+        fetchUserOrgDetails(userId, userMap);
+        ProjectLogger.log("fetching user Badge data  started");
+        fetchUserBadgeDetails(userId, userMap);
+
+        // save masked email and phone number
+        addMaskEmailAndPhone(userMap);
+        // add the skills column into ES
+        fetchUserSkills(userId, userMap);
+        // compute profile completeness and error field.
+        checkProfileCompleteness(userId, userMap);
+        ProjectLogger.log("fetching user data completed");
+        return userMap;
+    }
+
+    private String encryptUserData(String encryption, String uid) {
+        String userId = "";
         if ("ON".equalsIgnoreCase(encryption)) {
             try {
-                uid = service.encryptData(uid);
+                userId = service.encryptData(uid);
             } catch (Exception e) {
                 ProjectLogger.log("Exception Occurred while encrypting userId in user search api ",
                         e);
             }
         }
-        userMap.put(JsonKey.ADDRESS,
-                getDetails(Util.dbInfoMap.get(JsonKey.ADDRESS_DB), uid, JsonKey.USER_ID));
-        ProjectLogger.log("fetching user education data started");
-        List<Map<String, Object>> eduMap =
-                getDetails(Util.dbInfoMap.get(JsonKey.EDUCATION_DB), userId, JsonKey.USER_ID);
-        for (Map<String, Object> map : eduMap) {
-            if (map.containsKey(JsonKey.ADDRESS_ID)
-                    && !ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.ADDRESS_ID))) {
-                map.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),
-                        (String) map.get(JsonKey.ADDRESS_ID)));
-            }
-        }
-        userMap.put(JsonKey.EDUCATION, eduMap);
-        ProjectLogger.log("fetching user job profile data started");
-        List<Map<String, Object>> jobMap =
-                getDetails(Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB), userId, JsonKey.USER_ID);
-        for (Map<String, Object> map : jobMap) {
-            if (map.containsKey(JsonKey.ADDRESS_ID)
-                    && !ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.ADDRESS_ID))) {
-                map.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),
-                        (String) map.get(JsonKey.ADDRESS_ID)));
-            }
-        }
-        userMap.put(JsonKey.JOB_PROFILE, jobMap);
-        ProjectLogger.log("fetching user org data started");
-        List<Map<String, Object>> orgMapList =
-                getDetails(Util.dbInfoMap.get(JsonKey.USER_ORG_DB), userId, JsonKey.USER_ID);
-        List<Map<String, Object>> mapList = new ArrayList<>();
-        for (Map<String, Object> temp : orgMapList) {
-            if (null != temp.get(JsonKey.IS_DELETED) && !(boolean) temp.get(JsonKey.IS_DELETED)) {
-                mapList.add(temp);
-            }
-        }
-        userMap.put(JsonKey.ORGANISATIONS, mapList);
+        return userId;
+    }
 
-        ProjectLogger.log("fetching user Badge data  started");
-        List<Map<String, Object>> badgesMap =
-                getDetails(Util.dbInfoMap.get(BadgingJsonKey.USER_BADGE_ASSERTION_DB), userId,
-                        JsonKey.USER_ID);
-        userMap.put(BadgingJsonKey.BADGE_ASSERTIONS, badgesMap);
-
-        // save masked email and phone number
-        String phone = (String) userMap.get(JsonKey.PHONE);
-        String email = (String) userMap.get(JsonKey.EMAIL);
-        if (!ProjectUtil.isStringNullOREmpty(phone)) {
-            userMap.put(JsonKey.ENC_PHONE, phone);
-            userMap.put(JsonKey.PHONE, maskingService.maskPhone(decService.decryptData(phone)));
-        }
-        if (!ProjectUtil.isStringNullOREmpty(email)) {
-            userMap.put(JsonKey.ENC_EMAIL, email);
-            userMap.put(JsonKey.EMAIL, maskingService.maskEmail(decService.decryptData(email)));
-        }
-        // add the skills column into ES
-        Response skillresponse =
-                cassandraOperation.getRecordsByProperty(userSkillDbInfo.getKeySpace(),
-                        userSkillDbInfo.getTableName(), JsonKey.USER_ID, userId);
-        List<Map<String, Object>> responseList =
-                (List<Map<String, Object>>) skillresponse.get(JsonKey.RESPONSE);
-        userMap.put(JsonKey.SKILLS, responseList);
-        // compute profile completeness and error field.
+    private void checkProfileCompleteness(String userId, Map<String, Object> userMap) {
         ProfileCompletenessService profileService = ProfileCompletenessFactory.getInstance();
         Map<String, Object> profileResponse = profileService.computeProfile(userMap);
         userMap.putAll(profileResponse);
@@ -264,8 +231,73 @@ public class EsSyncActor extends BaseActor {
         } else {
             userMap.put(JsonKey.PROFILE_VISIBILITY, new HashMap<String, String>());
         }
-        ProjectLogger.log("fetching user data completed");
-        return userMap;
+    }
+
+    private void fetchUserSkills(String userId, Map<String, Object> userMap) {
+        Response skillresponse =
+                cassandraOperation.getRecordsByProperty(userSkillDbInfo.getKeySpace(),
+                        userSkillDbInfo.getTableName(), JsonKey.USER_ID, userId);
+        List<Map<String, Object>> responseList =
+                (List<Map<String, Object>>) skillresponse.get(JsonKey.RESPONSE);
+        userMap.put(JsonKey.SKILLS, responseList);
+    }
+
+    private void addMaskEmailAndPhone(Map<String, Object> userMap) {
+        String phone = (String) userMap.get(JsonKey.PHONE);
+        String email = (String) userMap.get(JsonKey.EMAIL);
+        if (!ProjectUtil.isStringNullOREmpty(phone)) {
+            userMap.put(JsonKey.ENC_PHONE, phone);
+            userMap.put(JsonKey.PHONE, maskingService.maskPhone(decService.decryptData(phone)));
+        }
+        if (!ProjectUtil.isStringNullOREmpty(email)) {
+            userMap.put(JsonKey.ENC_EMAIL, email);
+            userMap.put(JsonKey.EMAIL, maskingService.maskEmail(decService.decryptData(email)));
+        }
+    }
+
+    private void fetchUserBadgeDetails(String userId, Map<String, Object> userMap) {
+        List<Map<String, Object>> badgesMap =
+                getDetails(Util.dbInfoMap.get(BadgingJsonKey.USER_BADGE_ASSERTION_DB), userId,
+                        JsonKey.USER_ID);
+        userMap.put(BadgingJsonKey.BADGE_ASSERTIONS, badgesMap);
+    }
+
+    private void fetchUserOrgDetails(String userId, Map<String, Object> userMap) {
+        List<Map<String, Object>> orgMapList =
+                getDetails(Util.dbInfoMap.get(JsonKey.USER_ORG_DB), userId, JsonKey.USER_ID);
+        List<Map<String, Object>> mapList = new ArrayList<>();
+        for (Map<String, Object> temp : orgMapList) {
+            if (null != temp.get(JsonKey.IS_DELETED) && !(boolean) temp.get(JsonKey.IS_DELETED)) {
+                mapList.add(temp);
+            }
+        }
+        userMap.put(JsonKey.ORGANISATIONS, mapList);
+    }
+
+    private void fetchJobDetails(String userId, Map<String, Object> userMap) {
+        List<Map<String, Object>> jobMap =
+                getDetails(Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB), userId, JsonKey.USER_ID);
+        for (Map<String, Object> map : jobMap) {
+            if (map.containsKey(JsonKey.ADDRESS_ID)
+                    && !ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.ADDRESS_ID))) {
+                map.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),
+                        (String) map.get(JsonKey.ADDRESS_ID)));
+            }
+        }
+        userMap.put(JsonKey.JOB_PROFILE, jobMap);
+    }
+
+    private void fetchEducationDetails(String userId, Map<String, Object> userMap) {
+        List<Map<String, Object>> eduMap =
+                getDetails(Util.dbInfoMap.get(JsonKey.EDUCATION_DB), userId, JsonKey.USER_ID);
+        for (Map<String, Object> map : eduMap) {
+            if (map.containsKey(JsonKey.ADDRESS_ID)
+                    && !ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.ADDRESS_ID))) {
+                map.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),
+                        (String) map.get(JsonKey.ADDRESS_ID)));
+            }
+        }
+        userMap.put(JsonKey.EDUCATION, eduMap);
     }
 
     private Map<String, Object> getDetailsById(DbInfo dbInfo, String userId) {

@@ -12,7 +12,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.badge.service.impl.BadgrServiceImpl;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -23,7 +22,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import scala.concurrent.duration.FiniteDuration;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest(BadgeClassActor.class)
+// @PrepareForTest(BadgeClassActor.class)
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
 public class BadgeClassActorTest {
     private static final FiniteDuration ACTOR_MAX_WAIT_DURATION = duration("100 second");
@@ -110,7 +109,8 @@ public class BadgeClassActorTest {
 
     @Test
     public void testSearchBadgeClassSuccess() {
-        PowerMockito.when(mockBadgingService.searchBadgeClass(actorMessage)).thenReturn(new Response());
+        PowerMockito.when(mockBadgingService.searchBadgeClass(actorMessage))
+                .thenReturn(new Response());
 
         actorMessage.setOperation(BadgingActorOperations.SEARCH_BADGE_CLASS.getValue());
 
@@ -122,7 +122,8 @@ public class BadgeClassActorTest {
 
     @Test
     public void testSearchBadgeClassFailure() {
-        PowerMockito.when(mockBadgingService.searchBadgeClass(actorMessage)).thenThrow(resourceNotFoundException);
+        PowerMockito.when(mockBadgingService.searchBadgeClass(actorMessage))
+                .thenThrow(resourceNotFoundException);
 
         actorMessage.setOperation(BadgingActorOperations.SEARCH_BADGE_CLASS.getValue());
 

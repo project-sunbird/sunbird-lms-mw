@@ -26,7 +26,7 @@ import org.sunbird.common.request.Request;
  * Created by arvind on 15/3/18.
  */
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({BadgrServiceImpl.class, HttpUtil.class})
+@PrepareForTest({HttpUtil.class})
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
 public class BadgrServiceImplBadgeIssuerTest {
 

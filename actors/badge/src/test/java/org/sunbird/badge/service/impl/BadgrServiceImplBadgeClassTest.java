@@ -3,9 +3,11 @@ package org.sunbird.badge.service.impl;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-import java.util.*;
-
-import org.apache.cassandra.cql3.Json;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -27,7 +29,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({BadgrServiceImpl.class, HttpUtil.class})
+@PrepareForTest({HttpUtil.class})
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
 public class BadgrServiceImplBadgeClassTest {
     private BadgingService badgrServiceImpl;
@@ -36,25 +38,35 @@ public class BadgrServiceImplBadgeClassTest {
 
     private BadgeClassExtensionService mockBadgeClassExtensionService;
 
-    private static final String BADGE_CLASS_COMMON_RESPONSE_SUCCESS = "{\"created_at\":\"2018-03-05T09:35:33.722993Z\",\"id\":1,\"issuer\":\"http://localhost:8000/public/issuers/oracle-university\",\"json\":{\"name\":\"Java SE 8 Programmer\",\"image\":\"http://localhost:8000/public/badges/java-se-8-programmer/image\",\"criteria\":\"https://education.oracle.com/pls/web_prod-plq-dad/db_pages.getpage?page_id=5001&get_params=p_exam_id:1Z0-808\",\"@context\":\"https://w3id.org/openbadges/v1\",\"issuer\":\"http://localhost:8000/public/issuers/oracle-university\",\"type\":\"BadgeClass\",\"id\":\"http://localhost:8000/public/badges/java-se-8-programmer\",\"description\":\"A basic Java SE 8 certification.\"},\"name\":\"Java SE 8 Programmer\",\"image\":\"http://localhost:8000/media/uploads/badges/issuer_badgeclass_76c4cb77-40c7-4694-bee2-de15bd45f6cb.png\",\"slug\":\"java-se-8-programmer\",\"recipient_count\":1,\"created_by\":\"http://localhost:8000/user/1\"}";
-    private static final String BADGE_CLASS_SEARCH_RESPONSE_SUCCESS = "[" + BADGE_CLASS_COMMON_RESPONSE_SUCCESS + "]";
-    private static final String BADGE_CLASSS_DELETE_RESPONSE_SUCCESS = "Badge java-se-8-programmer has been deleted.";
-    private static final String BADGE_CLASS_CREATE_RESPONSE_FAILURE_ISSUER_NOT_FOUND = "\"Issuer invalid not found or inadequate permissions.\"";
-    private static final String BADGE_CLASS_GET_RESPONSE_FAILURE_BADGE_NOT_FOUND = "\"BadgeClass invalid could not be found, or inadequate permissions.\"";
+    private static final String BADGE_CLASS_COMMON_RESPONSE_SUCCESS =
+            "{\"created_at\":\"2018-03-05T09:35:33.722993Z\",\"id\":1,\"issuer\":\"http://localhost:8000/public/issuers/oracle-university\",\"json\":{\"name\":\"Java SE 8 Programmer\",\"image\":\"http://localhost:8000/public/badges/java-se-8-programmer/image\",\"criteria\":\"https://education.oracle.com/pls/web_prod-plq-dad/db_pages.getpage?page_id=5001&get_params=p_exam_id:1Z0-808\",\"@context\":\"https://w3id.org/openbadges/v1\",\"issuer\":\"http://localhost:8000/public/issuers/oracle-university\",\"type\":\"BadgeClass\",\"id\":\"http://localhost:8000/public/badges/java-se-8-programmer\",\"description\":\"A basic Java SE 8 certification.\"},\"name\":\"Java SE 8 Programmer\",\"image\":\"http://localhost:8000/media/uploads/badges/issuer_badgeclass_76c4cb77-40c7-4694-bee2-de15bd45f6cb.png\",\"slug\":\"java-se-8-programmer\",\"recipient_count\":1,\"created_by\":\"http://localhost:8000/user/1\"}";
+    private static final String BADGE_CLASS_SEARCH_RESPONSE_SUCCESS =
+            "[" + BADGE_CLASS_COMMON_RESPONSE_SUCCESS + "]";
+    private static final String BADGE_CLASSS_DELETE_RESPONSE_SUCCESS =
+            "Badge java-se-8-programmer has been deleted.";
+    private static final String BADGE_CLASS_CREATE_RESPONSE_FAILURE_ISSUER_NOT_FOUND =
+            "\"Issuer invalid not found or inadequate permissions.\"";
+    private static final String BADGE_CLASS_GET_RESPONSE_FAILURE_BADGE_NOT_FOUND =
+            "\"BadgeClass invalid could not be found, or inadequate permissions.\"";
 
     private static final String VALUE_BADGE_ID = "java-se-8-programmer";
-    private static final String VALUE_BADGE_ID_URL = "http://localhost:8000/public/badges/java-se-8-programmer";
+    private static final String VALUE_BADGE_ID_URL =
+            "http://localhost:8000/public/badges/java-se-8-programmer";
     private static final String VALUE_ISSUER_ID = "oracle-university";
-    private static final String VALUE_ISSUER_ID_URL = "http://localhost:8000/public/issuers/oracle-university";
+    private static final String VALUE_ISSUER_ID_URL =
+            "http://localhost:8000/public/issuers/oracle-university";
     private static final String VALUE_NAME = "Java SE 8 Programmer";
     private static final String VALUE_DESCRIPTION = "A basic Java SE 8 certification.";
-    private static final String VALUE_BADGE_CRITERIA = "https://education.oracle.com/pls/web_prod-plq-dad/db_pages.getpage?page_id=5001&get_params=p_exam_id:1Z0-808";
-    private static final String VALUE_IMAGE = "http://localhost:8000/media/uploads/badges/issuer_badgeclass_76c4cb77-40c7-4694-bee2-de15bd45f6cb.png";
+    private static final String VALUE_BADGE_CRITERIA =
+            "https://education.oracle.com/pls/web_prod-plq-dad/db_pages.getpage?page_id=5001&get_params=p_exam_id:1Z0-808";
+    private static final String VALUE_IMAGE =
+            "http://localhost:8000/media/uploads/badges/issuer_badgeclass_76c4cb77-40c7-4694-bee2-de15bd45f6cb.png";
     private static final String VALUE_ROOT_ORG_ID = "AP";
     private static final String VALUE_TYPE = "user";
     private static final String VALUE_SUBTYPE = "award";
     private static final String VALUE_ROLES_JSON = "[ \"roleId1\" ]";
-    private static final ArrayList<String> VALUE_ROLES_LIST = new ArrayList<>(Arrays.asList("roleId1"));
+    private static final ArrayList<String> VALUE_ROLES_LIST =
+            new ArrayList<>(Arrays.asList("roleId1"));
     private static final String VALUE_CREATED_DATE = "2018-03-05T09:35:33.722993Z";
 
     private static final String INVALID_VALUE = "invalid";
@@ -68,7 +80,8 @@ public class BadgrServiceImplBadgeClassTest {
         request = new Request();
     }
 
-    private void validateSuccessResponse(ResponseCode responseCode, Map<String, Object> responseMap) {
+    private void validateSuccessResponse(ResponseCode responseCode,
+            Map<String, Object> responseMap) {
         assertEquals(ResponseCode.OK, responseCode);
 
         assertEquals(VALUE_BADGE_ID, responseMap.get(BadgingJsonKey.BADGE_ID));
@@ -88,7 +101,9 @@ public class BadgrServiceImplBadgeClassTest {
 
     @Test
     public void testCreateBadgeClassSuccess() throws IOException {
-        PowerMockito.when(HttpUtil.postFormData(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+        PowerMockito
+                .when(HttpUtil.postFormData(Mockito.any(), Mockito.any(), Mockito.any(),
+                        Mockito.any()))
                 .thenReturn(new HttpUtilResponse(BADGE_CLASS_COMMON_RESPONSE_SUCCESS, 200));
         PowerMockito.doNothing().when(mockBadgeClassExtensionService).save(Mockito.any());
 
@@ -108,8 +123,12 @@ public class BadgrServiceImplBadgeClassTest {
 
     @Test
     public void testCreateBadgeClassFailureInvalidIssuer() throws IOException {
-        PowerMockito.when(HttpUtil.postFormData(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
-                .thenReturn(new HttpUtilResponse(BADGE_CLASS_CREATE_RESPONSE_FAILURE_ISSUER_NOT_FOUND, ResponseCode.RESOURCE_NOT_FOUND.getResponseCode()));
+        PowerMockito
+                .when(HttpUtil.postFormData(Mockito.any(), Mockito.any(), Mockito.any(),
+                        Mockito.any()))
+                .thenReturn(
+                        new HttpUtilResponse(BADGE_CLASS_CREATE_RESPONSE_FAILURE_ISSUER_NOT_FOUND,
+                                ResponseCode.RESOURCE_NOT_FOUND.getResponseCode()));
         PowerMockito.doNothing().when(mockBadgeClassExtensionService).save(Mockito.any());
 
         request.put(BadgingJsonKey.ISSUER_ID, INVALID_VALUE);
@@ -129,7 +148,8 @@ public class BadgrServiceImplBadgeClassTest {
             badgrServiceImpl.createBadgeClass(request);
         } catch (ProjectCommonException exception) {
             thrown = true;
-            assertEquals(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), exception.getResponseCode());
+            assertEquals(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(),
+                    exception.getResponseCode());
         }
 
         assertEquals(true, thrown);
@@ -137,7 +157,8 @@ public class BadgrServiceImplBadgeClassTest {
 
     @Test
     public void testCreateBadgeClassFailureException() throws IOException {
-        PowerMockito.when(HttpUtil.postFormData(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+        PowerMockito.when(
+                HttpUtil.postFormData(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
                 .thenThrow(new IOException());
         PowerMockito.doNothing().when(mockBadgeClassExtensionService).save(Mockito.any());
 
@@ -168,9 +189,9 @@ public class BadgrServiceImplBadgeClassTest {
     public void testGetBadgeClassSuccess() throws IOException {
         PowerMockito.when(HttpUtil.doGetRequest(Mockito.any(), Mockito.any()))
                 .thenReturn(new HttpUtilResponse(BADGE_CLASS_COMMON_RESPONSE_SUCCESS, 200));
-        PowerMockito.when(mockBadgeClassExtensionService.get(VALUE_BADGE_ID)).thenReturn(
-                new BadgeClassExtension(VALUE_BADGE_ID, VALUE_ISSUER_ID, VALUE_ROOT_ORG_ID, VALUE_TYPE, VALUE_SUBTYPE, VALUE_ROLES_LIST)
-        );
+        PowerMockito.when(mockBadgeClassExtensionService.get(VALUE_BADGE_ID))
+                .thenReturn(new BadgeClassExtension(VALUE_BADGE_ID, VALUE_ISSUER_ID,
+                        VALUE_ROOT_ORG_ID, VALUE_TYPE, VALUE_SUBTYPE, VALUE_ROLES_LIST));
 
         request.put(BadgingJsonKey.ISSUER_ID, VALUE_ISSUER_ID);
         request.put(BadgingJsonKey.BADGE_ID, VALUE_BADGE_ID);
@@ -182,10 +203,11 @@ public class BadgrServiceImplBadgeClassTest {
     @Test
     public void testGetBadgeClassFailureInvalidBadgeId() throws IOException {
         PowerMockito.when(HttpUtil.doGetRequest(Mockito.any(), Mockito.any()))
-                .thenReturn(new HttpUtilResponse(BADGE_CLASS_GET_RESPONSE_FAILURE_BADGE_NOT_FOUND, ResponseCode.RESOURCE_NOT_FOUND.getResponseCode()));
-        PowerMockito.when(mockBadgeClassExtensionService.get(VALUE_BADGE_ID)).thenReturn(
-                new BadgeClassExtension(VALUE_BADGE_ID, VALUE_ISSUER_ID, VALUE_ROOT_ORG_ID, VALUE_TYPE, VALUE_SUBTYPE, VALUE_ROLES_LIST)
-        );
+                .thenReturn(new HttpUtilResponse(BADGE_CLASS_GET_RESPONSE_FAILURE_BADGE_NOT_FOUND,
+                        ResponseCode.RESOURCE_NOT_FOUND.getResponseCode()));
+        PowerMockito.when(mockBadgeClassExtensionService.get(VALUE_BADGE_ID))
+                .thenReturn(new BadgeClassExtension(VALUE_BADGE_ID, VALUE_ISSUER_ID,
+                        VALUE_ROOT_ORG_ID, VALUE_TYPE, VALUE_SUBTYPE, VALUE_ROLES_LIST));
 
         request.put(BadgingJsonKey.ISSUER_ID, VALUE_ISSUER_ID);
         request.put(BadgingJsonKey.BADGE_ID, INVALID_VALUE);
@@ -196,7 +218,8 @@ public class BadgrServiceImplBadgeClassTest {
             badgrServiceImpl.getBadgeClassDetails(request);
         } catch (ProjectCommonException exception) {
             thrown = true;
-            assertEquals(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), exception.getResponseCode());
+            assertEquals(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(),
+                    exception.getResponseCode());
         }
 
         assertEquals(true, thrown);
@@ -206,9 +229,9 @@ public class BadgrServiceImplBadgeClassTest {
     public void testGetBadgeClassFailureException() throws IOException {
         PowerMockito.when(HttpUtil.doGetRequest(Mockito.any(), Mockito.any()))
                 .thenThrow(new IOException());
-        PowerMockito.when(mockBadgeClassExtensionService.get(VALUE_BADGE_ID)).thenReturn(
-                new BadgeClassExtension(VALUE_BADGE_ID, VALUE_ISSUER_ID, VALUE_ROOT_ORG_ID, VALUE_TYPE, VALUE_SUBTYPE, VALUE_ROLES_LIST)
-        );
+        PowerMockito.when(mockBadgeClassExtensionService.get(VALUE_BADGE_ID))
+                .thenReturn(new BadgeClassExtension(VALUE_BADGE_ID, VALUE_ISSUER_ID,
+                        VALUE_ROOT_ORG_ID, VALUE_TYPE, VALUE_SUBTYPE, VALUE_ROLES_LIST));
 
         request.put(BadgingJsonKey.ISSUER_ID, VALUE_ISSUER_ID);
         request.put(BadgingJsonKey.BADGE_ID, VALUE_BADGE_ID);
@@ -229,9 +252,12 @@ public class BadgrServiceImplBadgeClassTest {
     public void testSearchBadgeClassSuccessNonEmpty() throws IOException {
         PowerMockito.when(HttpUtil.doGetRequest(Mockito.any(), Mockito.any()))
                 .thenReturn(new HttpUtilResponse(BADGE_CLASS_SEARCH_RESPONSE_SUCCESS, 200));
-        PowerMockito.when(mockBadgeClassExtensionService.get(Mockito.anyList(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.anyList())).thenReturn(
-                new ArrayList<>(Arrays.asList(new BadgeClassExtension(VALUE_BADGE_ID, VALUE_ISSUER_ID, VALUE_ROOT_ORG_ID, VALUE_TYPE, VALUE_SUBTYPE, VALUE_ROLES_LIST)))
-        );
+        PowerMockito
+                .when(mockBadgeClassExtensionService.get(Mockito.anyList(), Mockito.any(),
+                        Mockito.any(), Mockito.any(), Mockito.anyList()))
+                .thenReturn(new ArrayList<>(
+                        Arrays.asList(new BadgeClassExtension(VALUE_BADGE_ID, VALUE_ISSUER_ID,
+                                VALUE_ROOT_ORG_ID, VALUE_TYPE, VALUE_SUBTYPE, VALUE_ROLES_LIST))));
 
         Map<String, Object> filtersMap = new HashMap<>();
 
@@ -245,7 +271,8 @@ public class BadgrServiceImplBadgeClassTest {
 
         Response response = badgrServiceImpl.searchBadgeClass(request);
 
-        List<Map<String, Object>> badges = (List<Map<String, Object>>) response.getResult().get(BadgingJsonKey.BADGES);
+        List<Map<String, Object>> badges =
+                (List<Map<String, Object>>) response.getResult().get(BadgingJsonKey.BADGES);
         assertEquals(1, badges.size());
 
         validateSuccessResponse(response.getResponseCode(), badges.get(0));
@@ -255,9 +282,10 @@ public class BadgrServiceImplBadgeClassTest {
     public void testSearchBadgeClassSuccessEmpty() throws IOException {
         PowerMockito.when(HttpUtil.doGetRequest(Mockito.any(), Mockito.any()))
                 .thenReturn(new HttpUtilResponse(BADGE_CLASS_SEARCH_RESPONSE_SUCCESS, 200));
-        PowerMockito.when(mockBadgeClassExtensionService.get(Mockito.anyList(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.anyList())).thenReturn(
-                new ArrayList<>()
-        );
+        PowerMockito
+                .when(mockBadgeClassExtensionService.get(Mockito.anyList(), Mockito.any(),
+                        Mockito.any(), Mockito.any(), Mockito.anyList()))
+                .thenReturn(new ArrayList<>());
 
         Map<String, Object> filtersMap = new HashMap<>();
 
@@ -271,7 +299,8 @@ public class BadgrServiceImplBadgeClassTest {
 
         Response response = badgrServiceImpl.searchBadgeClass(request);
 
-        List<Map<String, Object>> badges = (List<Map<String, Object>>) response.getResult().get(BadgingJsonKey.BADGES);
+        List<Map<String, Object>> badges =
+                (List<Map<String, Object>>) response.getResult().get(BadgingJsonKey.BADGES);
         assertEquals(0, badges.size());
     }
 
@@ -279,9 +308,12 @@ public class BadgrServiceImplBadgeClassTest {
     public void testListBadgeClassFailureException() throws IOException {
         PowerMockito.when(HttpUtil.doGetRequest(Mockito.any(), Mockito.any()))
                 .thenThrow(new IOException());
-        PowerMockito.when(mockBadgeClassExtensionService.get(Mockito.anyList(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.anyList())).thenReturn(
-                new ArrayList<>(Arrays.asList(new BadgeClassExtension(VALUE_BADGE_ID, VALUE_ISSUER_ID, VALUE_ROOT_ORG_ID, VALUE_TYPE, VALUE_SUBTYPE, VALUE_ROLES_LIST)))
-        );
+        PowerMockito
+                .when(mockBadgeClassExtensionService.get(Mockito.anyList(), Mockito.any(),
+                        Mockito.any(), Mockito.any(), Mockito.anyList()))
+                .thenReturn(new ArrayList<>(
+                        Arrays.asList(new BadgeClassExtension(VALUE_BADGE_ID, VALUE_ISSUER_ID,
+                                VALUE_ROOT_ORG_ID, VALUE_TYPE, VALUE_SUBTYPE, VALUE_ROLES_LIST))));
 
         Map<String, Object> filtersMap = new HashMap<>();
 
@@ -318,13 +350,14 @@ public class BadgrServiceImplBadgeClassTest {
         Response response = badgrServiceImpl.removeBadgeClass(request);
 
         assertEquals(ResponseCode.OK, response.getResponseCode());
-        assertEquals(BADGE_CLASSS_DELETE_RESPONSE_SUCCESS, response.getResult().get(JsonKey.MESSAGE));
+        assertEquals(BADGE_CLASSS_DELETE_RESPONSE_SUCCESS,
+                response.getResult().get(JsonKey.MESSAGE));
     }
 
     @Test
     public void testRemoveBadgeClassFailureInvalidBadgeId() throws IOException {
-        PowerMockito.when(HttpUtil.sendDeleteRequest(Mockito.any(), Mockito.any()))
-                .thenReturn(new HttpUtilResponse("", ResponseCode.RESOURCE_NOT_FOUND.getResponseCode()));
+        PowerMockito.when(HttpUtil.sendDeleteRequest(Mockito.any(), Mockito.any())).thenReturn(
+                new HttpUtilResponse("", ResponseCode.RESOURCE_NOT_FOUND.getResponseCode()));
         PowerMockito.doNothing().when(mockBadgeClassExtensionService).delete(Mockito.any());
 
         request.put(BadgingJsonKey.ISSUER_ID, VALUE_ISSUER_ID);
@@ -336,7 +369,8 @@ public class BadgrServiceImplBadgeClassTest {
             badgrServiceImpl.removeBadgeClass(request);
         } catch (ProjectCommonException exception) {
             thrown = true;
-            assertEquals(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), exception.getResponseCode());
+            assertEquals(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(),
+                    exception.getResponseCode());
         }
 
         assertEquals(true, thrown);

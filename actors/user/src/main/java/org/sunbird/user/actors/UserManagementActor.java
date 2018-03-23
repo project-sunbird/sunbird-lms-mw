@@ -11,7 +11,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.velocity.VelocityContext;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
@@ -56,9 +55,10 @@ import org.sunbird.services.sso.SSOServiceFactory;
  * @author Manzarul
  * @author Amit Kumar
  */
-@ActorConfig(tasks = { "createUser", "updateUser", "login", "logout", "changePassword", "getUserProfile", "getRoles",
-		"getUserDetailsByLoginId", "downloadUsersData", "forgotpassword", "profileVisibility", "unblockUser",
-		"blockUser", "assignRoles", "userCurrentLogin", "getMediaTypes" }, asyncTasks = {})
+@ActorConfig(tasks = {"createUser", "updateUser", "login", "logout", "changePassword",
+        "getUserProfile", "getRoles", "getUserDetailsByLoginId", "downloadUsersData",
+        "forgotpassword", "profileVisibility", "unblockUser", "blockUser", "assignRoles",
+        "userCurrentLogin", "getMediaTypes"}, asyncTasks = {})
 public class UserManagementActor extends BaseActor {
 
     private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -974,6 +974,11 @@ public class UserManagementActor extends BaseActor {
         Map<String, Object> req = actorMessage.getRequest();
         Map<String, Object> requestMap = null;
         Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
+        if (null != userMap.get(JsonKey.USER_ID)) {
+            userMap.put(JsonKey.ID, userMap.get(JsonKey.USER_ID));
+        } else {
+            userMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+        }
         if (isUserDeleted(userMap)) {
             ProjectCommonException exception =
                     new ProjectCommonException(ResponseCode.inactiveUser.getErrorCode(),
@@ -991,11 +996,7 @@ public class UserManagementActor extends BaseActor {
                     (List<Map<String, String>>) userMap.get(JsonKey.WEB_PAGES));
         }
 
-        if (null != userMap.get(JsonKey.USER_ID)) {
-            userMap.put(JsonKey.ID, userMap.get(JsonKey.USER_ID));
-        } else {
-            userMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-        }
+
         checkPhoneUniqueness(userMap, JsonKey.UPDATE);
         checkEmailUniqueness(userMap, JsonKey.UPDATE);
 

@@ -283,7 +283,8 @@ public class BadgingUtil {
         innerMap.put(BadgingJsonKey.ASSERTION_ID, reqMap.get(BadgingJsonKey.ASSERTION_ID));
         innerMap.put(BadgingJsonKey.BADGE_CLASS_ID, reqMap.get(BadgingJsonKey.BADGE_CLASS_ID));
         innerMap.put(BadgingJsonKey.ISSUER_ID, reqMap.get(BadgingJsonKey.ISSUER_ID));
-        innerMap.put(BadgingJsonKey.BADGE_CLASS_IMAGE, reqMap.get(BadgingJsonKey.BADGE_ID_URL));
+        innerMap.put(BadgingJsonKey.BADGE_CLASS_IMAGE,
+                reqMap.get(BadgingJsonKey.ASSERTION_IMAGE_URL));
         innerMap.put(JsonKey.STATUS, BadgeStatus.active.name());
         innerMap.put(BadgingJsonKey.CREATED_TS,
                 new java.sql.Timestamp(Calendar.getInstance().getTime().getTime()));

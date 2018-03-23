@@ -83,14 +83,11 @@ public class BadgrServiceImpl implements BadgingService {
 		requestData.put(JsonKey.URL, (String) req.get(JsonKey.URL));
 		requestData.put(JsonKey.EMAIL, (String) req.get(JsonKey.EMAIL));
 
-		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-		// since the content type here is not application/json, it is of type form data so removing this key.
-		headers.remove("Content-Type");
 		if (null != image) {
 			fileData.put(JsonKey.IMAGE, image);
 		}
 		HttpUtilResponse httpResponse = HttpUtil
-				.postFormData(requestData, fileData, headers, BadgingUtil.getBadgeIssuerUrl());
+				.postFormData(requestData, fileData, BadgingUtil.getBadgrHeaders(false), BadgingUtil.getBadgeIssuerUrl());
 
 		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode() ,null );
 		Response response = new Response();
@@ -105,13 +102,9 @@ public class BadgrServiceImpl implements BadgingService {
 
 	@Override
 	public Response getIssuerDetails(Request request) throws IOException {
-		// TODO Auto-generated method stub
 		Map<String, Object> req = request.getRequest();
 		String slug = (String) req.get(JsonKey.SLUG);
-		String url = "/v1/issuer/issuers" + "/" + slug;
-		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-
-		HttpUtilResponse httpResponse =HttpUtil.doGetRequest(BadgingUtil.getBadgeIssuerUrl(slug), headers);
+		HttpUtilResponse httpResponse =HttpUtil.doGetRequest(BadgingUtil.getBadgeIssuerUrl(slug), BadgingUtil.getBadgrHeaders());
 		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode() ,null );
 		Response response = new Response();
 		BadgingUtil.prepareBadgeIssuerResponse(httpResponse.getBody(), response.getResult());
@@ -121,9 +114,7 @@ public class BadgrServiceImpl implements BadgingService {
 
 	@Override
 	public Response getIssuerList(Request request) throws IOException {
-		// TODO Auto-generated method stub
-		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-		HttpUtilResponse httpResponse =HttpUtil.doGetRequest(BadgingUtil.getBadgeIssuerUrl(), headers);
+		HttpUtilResponse httpResponse =HttpUtil.doGetRequest(BadgingUtil.getBadgeIssuerUrl(), BadgingUtil.getBadgrHeaders());
 		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode() ,null );
 		Response response = new Response();
 
@@ -443,8 +434,7 @@ public class BadgrServiceImpl implements BadgingService {
 
 		Map<String, Object> req = request.getRequest();
 		String slug = (String) req.get(JsonKey.SLUG);
-		Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-		HttpUtilResponse httpResponse =HttpUtil.sendDeleteRequest(headers , BadgingUtil.getBadgeIssuerUrl(slug));
+		HttpUtilResponse httpResponse =HttpUtil.sendDeleteRequest(BadgingUtil.getBadgrHeaders() , BadgingUtil.getBadgeIssuerUrl(slug));
 		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode() ,null );
 		Response response = new Response();
 		// since the response from badger service contains " at beging and end so remove that from response string

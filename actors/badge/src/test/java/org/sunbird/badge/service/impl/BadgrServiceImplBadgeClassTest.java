@@ -28,9 +28,10 @@ import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.learner.util.TelemetryUtil;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({HttpUtil.class})
+@PrepareForTest({HttpUtil.class, TelemetryUtil.class})
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
 public class BadgrServiceImplBadgeClassTest {
     private BadgingService badgrServiceImpl;
@@ -73,8 +74,12 @@ public class BadgrServiceImplBadgeClassTest {
     private static final String INVALID_VALUE = "invalid";
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
         PowerMockito.mockStatic(HttpUtil.class);
+
+        PowerMockito.mockStatic(TelemetryUtil.class);
+        PowerMockito.doNothing().when(TelemetryUtil.class, "telemetryProcessingCall", Mockito.anyMap(), Mockito.anyMap(), Mockito.anyList());
+
         mockBadgeClassExtensionService = PowerMockito.mock(BadgeClassExtensionServiceImpl.class);
 
         badgrServiceImpl = new BadgrServiceImpl(mockBadgeClassExtensionService);
@@ -256,7 +261,7 @@ public class BadgrServiceImplBadgeClassTest {
         PowerMockito.when(HttpUtil.doGetRequest(Mockito.any(), Mockito.any()))
                 .thenReturn(new HttpUtilResponse(BADGE_CLASS_SEARCH_RESPONSE_SUCCESS, 200));
         PowerMockito
-                .when(mockBadgeClassExtensionService.search(Mockito.anyList(), Mockito.any(),
+                .when(mockBadgeClassExtensionService.search(Mockito.anyList(), Mockito.anyList(), Mockito.any(),
                         Mockito.any(), Mockito.any(), Mockito.anyList()))
                 .thenReturn(new ArrayList<>(
                         Arrays.asList(new BadgeClassExtension(VALUE_BADGE_ID, VALUE_ISSUER_ID,
@@ -286,7 +291,7 @@ public class BadgrServiceImplBadgeClassTest {
         PowerMockito.when(HttpUtil.doGetRequest(Mockito.any(), Mockito.any()))
                 .thenReturn(new HttpUtilResponse(BADGE_CLASS_SEARCH_RESPONSE_SUCCESS, 200));
         PowerMockito
-                .when(mockBadgeClassExtensionService.search(Mockito.anyList(), Mockito.any(),
+                .when(mockBadgeClassExtensionService.search(Mockito.anyList(), Mockito.anyList(), Mockito.any(),
                         Mockito.any(), Mockito.any(), Mockito.anyList()))
                 .thenReturn(new ArrayList<>());
 
@@ -312,7 +317,7 @@ public class BadgrServiceImplBadgeClassTest {
         PowerMockito.when(HttpUtil.doGetRequest(Mockito.any(), Mockito.any()))
                 .thenThrow(new IOException());
         PowerMockito
-                .when(mockBadgeClassExtensionService.search(Mockito.anyList(), Mockito.any(),
+                .when(mockBadgeClassExtensionService.search(Mockito.anyList(), Mockito.anyList(), Mockito.any(),
                         Mockito.any(), Mockito.any(), Mockito.anyList()))
                 .thenReturn(new ArrayList<>(
                         Arrays.asList(new BadgeClassExtension(VALUE_BADGE_ID, VALUE_ISSUER_ID,

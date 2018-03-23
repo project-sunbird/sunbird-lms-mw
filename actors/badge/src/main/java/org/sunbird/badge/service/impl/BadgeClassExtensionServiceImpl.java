@@ -46,7 +46,7 @@ public class BadgeClassExtensionServiceImpl implements BadgeClassExtensionServic
     }
 
     @Override
-    public List<BadgeClassExtension> search(List<String> issuerList, String rootOrgId, String type, String subtype, List<String> roles) {
+    public List<BadgeClassExtension> search(List<String> issuerList, List<String> badgeList, String rootOrgId, String type, String subtype, List<String> roles) {
         Map<String, Object> propertyMap = new HashMap<>();
 
         if (rootOrgId != null) {
@@ -62,14 +62,16 @@ public class BadgeClassExtensionServiceImpl implements BadgeClassExtensionServic
         }
 
         Response response = cassandraOperation.getRecordsByProperties(Util.KEY_SPACE_NAME, BADGE_CLASS_EXT_TABLE_NAME, propertyMap);
-        List<Map<String, Object>> badgeList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+        List<Map<String, Object>> badgeClassExtList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
 
-        return badgeList.stream().map(
-                badgeMap -> new BadgeClassExtension(badgeMap)
+        return badgeClassExtList.stream().map(
+                badgeClassExtMap -> new BadgeClassExtension(badgeClassExtMap)
         ).filter(
                 badgeClassExt -> roles == null || CollectionUtils.isEmpty(badgeClassExt.getRoles()) || !Collections.disjoint(roles, badgeClassExt.getRoles())
         ).filter(
                 badgeClassExt -> CollectionUtils.isEmpty(issuerList) || issuerList.contains(badgeClassExt.getIssuerId())
+        ).filter(
+                badgeClassExt -> CollectionUtils.isEmpty(badgeList) || badgeList.contains(badgeClassExt.getBadgeId())
         ).collect(Collectors.toList());
     }
 

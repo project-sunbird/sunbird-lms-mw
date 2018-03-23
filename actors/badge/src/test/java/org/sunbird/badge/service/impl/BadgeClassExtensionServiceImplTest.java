@@ -93,7 +93,7 @@ public class BadgeClassExtensionServiceImplTest {
         PowerMockito.when(mockDBService.getRecordsByProperties(Mockito.any(), Mockito.any(), Mockito.anyMap())).thenReturn(response);
 
         List<BadgeClassExtension> badgeClassExtList =
-                badgeClassExtensionServiceImpl.search(new ArrayList<>(), VALUE_ROOT_ORG_ID, VALUE_TYPE, VALUE_SUBTYPE, VALUE_ROLES_LIST);
+                badgeClassExtensionServiceImpl.search(new ArrayList<>(), new ArrayList<>(), VALUE_ROOT_ORG_ID, VALUE_TYPE, VALUE_SUBTYPE, VALUE_ROLES_LIST);
 
         Assert.assertTrue(null != badgeClassExtList);
         Assert.assertEquals(1, badgeClassExtList.size());
@@ -112,7 +112,7 @@ public class BadgeClassExtensionServiceImplTest {
         PowerMockito.when(mockDBService.getRecordsByProperties(Mockito.any(), Mockito.any(), Mockito.anyMap())).thenReturn(response);
 
         List<BadgeClassExtension> badgeClassExtList =
-                badgeClassExtensionServiceImpl.search(new ArrayList<>(), VALUE_ROOT_ORG_ID, VALUE_TYPE, VALUE_SUBTYPE, VALUE_ROLES_LIST);
+                badgeClassExtensionServiceImpl.search(new ArrayList<>(), new ArrayList<>(), VALUE_ROOT_ORG_ID, VALUE_TYPE, VALUE_SUBTYPE, VALUE_ROLES_LIST);
 
         Assert.assertTrue(null != badgeClassExtList);
         Assert.assertEquals(0, badgeClassExtList.size());

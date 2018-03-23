@@ -254,6 +254,7 @@ public class BadgrServiceImpl implements BadgingService {
                 (Map<String, Object>) request.getRequest().get(JsonKey.FILTERS);
 
         List<String> issuerList = (List<String>) filtersMap.get(BadgingJsonKey.ISSUER_LIST);
+        List<String> badgeList = (List<String>) filtersMap.get(BadgingJsonKey.BADGE_LIST);
         String rootOrgId = (String) filtersMap.get(JsonKey.ROOT_ORG_ID);
         String type = (String) filtersMap.get(JsonKey.TYPE);
         String subtype = (String) filtersMap.get(JsonKey.SUBTYPE);
@@ -268,7 +269,7 @@ public class BadgrServiceImpl implements BadgingService {
         }
 
         List<BadgeClassExtension> badgeClassExtList = badgeClassExtensionService.search(issuerList,
-                rootOrgId, type, subtype, allowedRoles);
+                badgeList, rootOrgId, type, subtype, allowedRoles);
         List<String> filteredIssuerList = badgeClassExtList.stream()
                 .map(badge -> badge.getIssuerId()).distinct().collect(Collectors.toList());
 

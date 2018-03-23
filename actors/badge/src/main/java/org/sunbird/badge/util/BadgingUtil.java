@@ -318,8 +318,7 @@ public class BadgingUtil {
         MapperUtil.put(inputMap, BadgingJsonKey.SLUG, outPutMap, BadgingJsonKey.ASSERTION_ID);
         MapperUtil.put(inputMap, BadgingJsonKey.JSON_ID, outPutMap,
                 BadgingJsonKey.ASSERTION_ID_URL);
-        MapperUtil.put(inputMap, BadgingJsonKey.JSON_IMAGE, outPutMap,
-                BadgingJsonKey.ASSERTION_IMAGE_URL);
+        MapperUtil.put(inputMap, JsonKey.IMAGE, outPutMap, BadgingJsonKey.ASSERTION_IMAGE_URL);
         MapperUtil.put(inputMap, BadgingJsonKey.BADGE_CLASS, outPutMap,
                 BadgingJsonKey.BADGE_ID_URL);
         if (outPutMap.containsKey(BadgingJsonKey.BADGE_ID_URL)) {

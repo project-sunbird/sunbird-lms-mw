@@ -1,7 +1,5 @@
 package org.sunbird.badge.service.impl;
 
-import static org.junit.Assert.assertEquals;
-
 import java.util.*;
 
 import org.junit.Assert;
@@ -60,7 +58,7 @@ public class BadgeClassExtensionServiceImplTest {
             thrown = true;
         }
 
-        assertEquals(false, thrown);
+        Assert.assertEquals(false, thrown);
     }
 
     @Test
@@ -134,11 +132,11 @@ public class BadgeClassExtensionServiceImplTest {
             badgeClassExtensionServiceImpl.get(VALUE_BADGE_ID);
         } catch (ProjectCommonException exception) {
             thrown = true;
-            assertEquals(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(),
+            Assert.assertEquals(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(),
                     exception.getResponseCode());
         }
 
-        assertEquals(true, thrown);
+        Assert.assertEquals(true, thrown);
     }
 
     @Test
@@ -156,11 +154,11 @@ public class BadgeClassExtensionServiceImplTest {
             badgeClassExtensionServiceImpl.get(VALUE_BADGE_ID);
         } catch (ProjectCommonException exception) {
             thrown = true;
-            assertEquals(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(),
+            Assert.assertEquals(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(),
                     exception.getResponseCode());
         }
 
-        assertEquals(true, thrown);
+        Assert.assertEquals(true, thrown);
     }
 
     @Test
@@ -176,6 +174,6 @@ public class BadgeClassExtensionServiceImplTest {
             thrown = true;
         }
 
-        assertEquals(false, thrown);
+        Assert.assertEquals(false, thrown);
     }
 }

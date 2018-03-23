@@ -944,7 +944,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                         // insert user record
                         // Add only PUBLIC role to user
                         List<String> list = new ArrayList<>();
-                        list.add(JsonKey.PUBLIC);
+                        list.add(ProjectUtil.UserRole.PUBLIC.getValue());
                         tempMap.put(JsonKey.ROLES, list);
                         try {
                             UserUtility.encryptUserData(tempMap);

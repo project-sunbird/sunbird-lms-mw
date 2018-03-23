@@ -40,7 +40,6 @@ public class UserBadgeAssertionTest {
     private static final FiniteDuration ACTOR_MAX_WAIT_DURATION = duration("100 second");
 
     private ActorSystem system;
-    private Props props;
     private TestKit probe;
     private ActorRef subject;
     private Request actorMessage;
@@ -78,7 +77,7 @@ public class UserBadgeAssertionTest {
                 .when(ElasticSearchUtil.updateData(ProjectUtil.EsIndex.sunbird.getIndexName(),
                         ProjectUtil.EsType.user.getTypeName(), "userId-123", tempMap))
                 .thenReturn(true);
-        props = Props.create(UserBadgeAssertion.class);
+        Props props = Props.create(UserBadgeAssertion.class);
         subject = system.actorOf(props);
 
 

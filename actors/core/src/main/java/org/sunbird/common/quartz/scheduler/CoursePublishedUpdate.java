@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.sunbird.cassandra.CassandraOperation;
@@ -23,7 +22,6 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.TelemetryUtil;
@@ -40,7 +38,7 @@ import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
  * @author Manzarul
  *
  */
-public class CoursePublishedUpdate implements Job {
+public class CoursePublishedUpdate extends BaseJob {
 
 	private static Util.DbInfo coursePublishDBInfo = Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
 	private Util.DbInfo courseBatchDBInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
@@ -256,11 +254,7 @@ public class CoursePublishedUpdate implements Job {
 		Request request = new Request();
 		request.setOperation(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue());
 		request.getRequest().put(JsonKey.USER_COURSES, courseMap);
-		try {
-			ActorUtil.tell(request);
-		} catch (Exception ex) {
-			ProjectLogger.log("Exception Occured during saving user course to Es : ", ex);
-		}
+		tellToBGRouter(request);
 	}
 
 	public static void main(String[] args) {

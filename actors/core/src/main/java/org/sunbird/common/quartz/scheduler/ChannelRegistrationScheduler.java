@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.sunbird.actor.background.BackgroundOperations;
@@ -17,12 +16,11 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 
-public class ChannelRegistrationScheduler implements Job {
+public class ChannelRegistrationScheduler extends BaseJob {
 
 	@Override
 	public void execute(JobExecutionContext ctx) throws JobExecutionException {
@@ -44,12 +42,12 @@ public class ChannelRegistrationScheduler implements Job {
 			if (ProjectUtil.isStringNullOREmpty((String) resultMap.get(JsonKey.VALUE))
 					&& !Boolean.parseBoolean((String) resultMap.get(JsonKey.VALUE))) {
 				ProjectLogger.log("calling ChannelRegistrationActor from ChannelRegistrationScheduler execute method.");
-				ActorUtil.tell(request);
+				tellToBGRouter(request);
 			}
 		} else {
 			ProjectLogger.log("calling ChannelRegistrationActor from ChannelRegistrationScheduler execute method, "
 					+ "entry for CHANNEL_REG_STATUS_ID (003) is null.");
-			ActorUtil.tell(request);
+			tellToBGRouter(request);
 		}
 		TelemetryUtil.telemetryProcessingCall(logInfo, null, null, TelemetryEvents.LOG.getName());
 	}

@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.sunbird.actor.background.BackgroundOperations;
@@ -17,7 +16,6 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ActorUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
@@ -27,7 +25,7 @@ import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
  * @author Amit Kumar
  *
  */
-public class UpdateUserCountScheduler implements Job {
+public class UpdateUserCountScheduler extends BaseJob {
 
 	@Override
 	public void execute(JobExecutionContext ctx) throws JobExecutionException {
@@ -52,7 +50,7 @@ public class UpdateUserCountScheduler implements Job {
 		request.getRequest().put(JsonKey.LOCATION_IDS, locIdList);
 		request.getRequest().put(JsonKey.OPERATION, "UpdateUserCountScheduler");
 		ProjectLogger.log("calling BackgroundService actor from scheduler");
-		ActorUtil.tell(request);
+		tellToBGRouter(request);
 		TelemetryUtil.telemetryProcessingCall(logInfo, null, null, TelemetryEvents.LOG.getName());
 	}
 

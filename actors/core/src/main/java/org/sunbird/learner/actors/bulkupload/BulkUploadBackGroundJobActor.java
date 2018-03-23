@@ -893,7 +893,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
     }
 
-    @SuppressWarnings("unchecked")
     private void processUserInfo(List<Map<String, Object>> dataMapList, String processId,
             String updatedBy) {
         // update status from NEW to INProgress
@@ -916,56 +915,19 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             String errMsg = validateUser(userMap);
             if (errMsg.equalsIgnoreCase(JsonKey.SUCCESS)) {
                 try {
-                    // this role is part of organization
-                    if (null != userMap.get(JsonKey.ROLES)) {
-                        String[] userRole = ((String) userMap.get(JsonKey.ROLES)).split(",");
-                        List<String> list = new ArrayList<>(Arrays.asList(userRole));
-                        // validating roles
-                        if (null != list && !list.isEmpty()) {
-                            String msg = Util.validateRoles(list);
-                            if (!msg.equalsIgnoreCase(JsonKey.SUCCESS)) {
-                                userMap.put(JsonKey.ERROR_MSG, msg);
-                                failureUserReq.add(userMap);
-                                continue;
-                            }
-                        }
-                        userMap.put(JsonKey.ROLES, list);
-                    }
 
                     if (null != userMap.get(JsonKey.GRADE)) {
-                        String[] userGrade = ((String) userMap.get(JsonKey.GRADE)).split(",");
-                        List<String> list = new ArrayList<>(Arrays.asList(userGrade));
-                        userMap.put(JsonKey.GRADE, list);
+                        convertCommaSepStringToList(userMap, JsonKey.GRADE);
                     }
 
                     if (null != userMap.get(JsonKey.SUBJECT)) {
-                        String[] subjects = ((String) userMap.get(JsonKey.SUBJECT)).split(",");
-                        List<String> list = new ArrayList<>(Arrays.asList(subjects));
-                        userMap.put(JsonKey.SUBJECT, list);
+                        convertCommaSepStringToList(userMap, JsonKey.SUBJECT);
                     }
 
                     if (null != userMap.get(JsonKey.LANGUAGE)) {
-                        String[] languages = ((String) userMap.get(JsonKey.LANGUAGE)).split(",");
-                        List<String> list = new ArrayList<>(Arrays.asList(languages));
-                        userMap.put(JsonKey.LANGUAGE, list);
+                        convertCommaSepStringToList(userMap, JsonKey.LANGUAGE);
                     }
 
-                    if (null != userMap.get(JsonKey.WEB_PAGES)) {
-                        String webPageString = (String) userMap.get(JsonKey.WEB_PAGES);
-                        webPageString = webPageString.replaceAll("'", "\"");
-                        List<Map<String, String>> webPages = new ArrayList<>();
-                        try {
-                            ObjectMapper mapper = new ObjectMapper();
-                            webPages = mapper.readValue(webPageString, List.class);
-                        } catch (Exception ex) {
-                            ProjectLogger.log("Unable to parse Web Page Details ", ex);
-                            userMap.put(JsonKey.ERROR_MSG, "Unable to parse Web Page Details ");
-                            failureUserReq.add(userMap);
-                            continue;
-                        }
-                        SocialMediaType.validateSocialMedia(webPages);
-                        userMap.put(JsonKey.WEB_PAGES, webPages);
-                    }
                     // convert userName,provide,loginId,externalId.. value to lowercase
                     updateMapSomeValueTOLowerCase(userMap);
                     userMap = insertRecordToKeyCloak(userMap, updatedBy);
@@ -1144,6 +1106,12 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         }
     }
 
+    private void convertCommaSepStringToList(Map<String, Object> userMap, String property) {
+        String[] userGrade = ((String) userMap.get(property)).split(",");
+        List<String> list = new ArrayList<>(Arrays.asList(userGrade));
+        userMap.put(property, list);
+    }
+
     private void updateUserOrgData(Map<String, Object> userMap, String updatedBy) {
         Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
         Map<String, Object> map = new HashMap<>();
@@ -1162,7 +1130,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
             try {
                 cassandraOperation.updateRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(),
-                        res);
+                        reqMap);
             } catch (Exception e) {
                 ProjectLogger.log(e.getMessage(), e);
             }
@@ -1682,6 +1650,35 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             } else {
                 return ResponseCode.phoneVerifiedError.getErrorMessage();
             }
+        }
+
+        // this role is part of organization
+        if (null != map.get(JsonKey.ROLES)) {
+            String[] userRole = ((String) map.get(JsonKey.ROLES)).split(",");
+            List<String> list = new ArrayList<>(Arrays.asList(userRole));
+            // validating roles
+            if (!list.isEmpty()) {
+                String msg = Util.validateRoles(list);
+                if (!JsonKey.SUCCESS.equalsIgnoreCase(msg)) {
+                    return msg;
+                } else {
+                    map.put(JsonKey.ROLES, list);
+                }
+            }
+        }
+
+        if (null != map.get(JsonKey.WEB_PAGES)) {
+            String webPageString = (String) map.get(JsonKey.WEB_PAGES);
+            webPageString = webPageString.replaceAll("'", "\"");
+            List<Map<String, String>> webPages = new ArrayList<>();
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                webPages = mapper.readValue(webPageString, List.class);
+            } catch (Exception ex) {
+                return "Unable to parse Web Page Details ";
+            }
+            SocialMediaType.validateSocialMedia(webPages);
+            map.put(JsonKey.WEB_PAGES, webPages);
         }
 
         return JsonKey.SUCCESS;

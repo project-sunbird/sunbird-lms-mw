@@ -2,10 +2,8 @@ package org.sunbird.badge.service.impl;
 
 import static org.junit.Assert.assertEquals;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -21,6 +19,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.responsecode.ResponseCode;
 
@@ -65,9 +64,6 @@ public class BadgeClassExtensionServiceImplTest {
     }
 
     @Test
-    public void testSearchSuccess() {}
-
-    @Test
     public void testGetSuccess() {
         Response response = new Response();
         response.put(JsonKey.RESPONSE,
@@ -80,6 +76,48 @@ public class BadgeClassExtensionServiceImplTest {
                 badgeClassExtensionServiceImpl.get(VALUE_BADGE_ID);
 
         Assert.assertTrue(null != badgeClassExtension);
+    }
+
+    @Test
+    public void testSearchSuccessNonEmpty() {
+        HashMap<String, Object> badgeMap = new HashMap<>();
+        badgeMap.put(JsonKey.ID, VALUE_BADGE_ID);
+        badgeMap.put(BadgingJsonKey.ISSUER_ID, VALUE_ISSUER_ID);
+        badgeMap.put(JsonKey.ROOT_ORG_ID, VALUE_ROOT_ORG_ID);
+        badgeMap.put(JsonKey.TYPE, VALUE_TYPE);
+        badgeMap.put(JsonKey.SUBTYPE, VALUE_SUBTYPE);
+        badgeMap.put(JsonKey.ROLES, VALUE_ROLES_LIST);
+
+        Response response = new Response();
+        response.put(JsonKey.RESPONSE,
+                new ArrayList<Map<String, Object>>(Arrays.asList(badgeMap)));
+
+        PowerMockito.when(mockDBService.getRecordsByProperties(Mockito.any(), Mockito.any(), Mockito.anyMap())).thenReturn(response);
+
+        List<BadgeClassExtension> badgeClassExtList =
+                badgeClassExtensionServiceImpl.search(new ArrayList<>(), VALUE_ROOT_ORG_ID, VALUE_TYPE, VALUE_SUBTYPE, VALUE_ROLES_LIST);
+
+        Assert.assertTrue(null != badgeClassExtList);
+        Assert.assertEquals(1, badgeClassExtList.size());
+        Assert.assertEquals(VALUE_BADGE_ID, badgeClassExtList.get(0).getBadgeId());
+        Assert.assertEquals(VALUE_ROOT_ORG_ID, badgeClassExtList.get(0).getRootOrgId());
+        Assert.assertEquals(VALUE_TYPE, badgeClassExtList.get(0).getType());
+        Assert.assertEquals(VALUE_SUBTYPE, badgeClassExtList.get(0).getSubtype());
+        Assert.assertEquals(VALUE_ROLES_LIST, badgeClassExtList.get(0).getRoles());
+    }
+
+    @Test
+    public void testSearchSuccessEmpty() {
+        Response response = new Response();
+        response.put(JsonKey.RESPONSE, new ArrayList<Map<String, Object>>());
+
+        PowerMockito.when(mockDBService.getRecordsByProperties(Mockito.any(), Mockito.any(), Mockito.anyMap())).thenReturn(response);
+
+        List<BadgeClassExtension> badgeClassExtList =
+                badgeClassExtensionServiceImpl.search(new ArrayList<>(), VALUE_ROOT_ORG_ID, VALUE_TYPE, VALUE_SUBTYPE, VALUE_ROLES_LIST);
+
+        Assert.assertTrue(null != badgeClassExtList);
+        Assert.assertEquals(0, badgeClassExtList.size());
     }
 
     @Test

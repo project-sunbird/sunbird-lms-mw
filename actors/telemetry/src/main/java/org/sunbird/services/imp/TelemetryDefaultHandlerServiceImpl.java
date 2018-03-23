@@ -21,7 +21,7 @@ public class TelemetryDefaultHandlerServiceImpl implements TelemetryDataHandlerS
 
   @Override
   public void processData(Request request, Map<String, String> headers) {
-    
+
     LMAXWriter lmaxWriter = LMAXWriter.getInstance();
     TelemetryEvent event = new TelemetryEvent();
     EventData data = new TelemetryEvent().new EventData();

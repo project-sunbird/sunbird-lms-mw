@@ -1,5 +1,8 @@
 package org.sunbird.util.lmaxdisruptor;
 
+import java.math.BigInteger;
+import java.util.List;
+import java.util.Map;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -9,6 +12,8 @@ import org.sunbird.common.models.util.PropertiesCache;
 
 import com.google.gson.Gson;
 import com.lmax.disruptor.EventHandler;
+import org.sunbird.common.request.Request;
+import org.sunbird.common.request.TelemetryV3Request;
 
 
 /**
@@ -23,7 +28,7 @@ public class EkstepEventConsumer implements EventHandler<TelemetryEvent> {
 			try {
 				Gson gson = new Gson();
 				String response = HttpUtil.sendPostRequest(getTelemetryUrl(),
-						gson.toJson(writeEvent.getData().getRequest()), writeEvent.getData().getHeaders());
+						gson.toJson(getEkstepTelemetryRequest(writeEvent.getData().getRequest())), writeEvent.getData().getHeaders());
 				ProjectLogger.log(response + " processed.", LoggerEnum.INFO.name());
 			} catch (Exception e) {
 				ProjectLogger.log(e.getMessage(), e);
@@ -45,6 +50,19 @@ public class EkstepEventConsumer implements EventHandler<TelemetryEvent> {
 				+ PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_TELEMETRY_API_URL);
 		ProjectLogger.log("telemetry url==" + telemetryBaseUrl);
 		return telemetryBaseUrl;
+	}
+
+	private TelemetryV3Request getEkstepTelemetryRequest(Request request){
+
+		TelemetryV3Request telemetryV3Request = new TelemetryV3Request();
+		if(request.getRequest().get(JsonKey.ETS) != null && request.getRequest().get(JsonKey.ETS) instanceof BigInteger){
+			telemetryV3Request.setEts(((BigInteger)request.getRequest().get(JsonKey.ETS)).longValue());
+		}
+		if(request.getRequest().get(JsonKey.EVENTS) != null && request.getRequest().get(JsonKey.EVENTS) instanceof List && !(((List) request.getRequest().get(JsonKey.EVENTS)).isEmpty())){
+			telemetryV3Request.setEvents(
+					(List<Map<String, Object>>) request.getRequest().get(JsonKey.EVENTS));
+		}
+		return telemetryV3Request;
 	}
 
 }

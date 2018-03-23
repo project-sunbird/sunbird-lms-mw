@@ -60,8 +60,12 @@ public class ContentService {
 		String badgeStr = mapper.writeValueAsString(badge);
 		String reqBody = "{\"request\": {\"content\": {\"" + BADGE_ASSERTION + "\": " + badgeStr + "}}}";
 
-		String result = HttpUtil.sendPostRequest(props.get("basePath") + id, reqBody, headers);
-		ProjectLogger.log("Status badge of assigning to content: "+ result, request.getRequest(), LoggerEnum.INFO.name());
+		String url = props.get("basePath") + id;
+		ProjectLogger.log("Making call to update badge for content: " + url, request.getRequest(),
+				LoggerEnum.INFO.name());
+		String result = HttpUtil.sendPostRequest(url, reqBody, headers);
+		ProjectLogger.log("Status for badge processing of content: " + result, request.getRequest(),
+				LoggerEnum.INFO.name());
 		// TODO: Get the response and return msg based on it's value.
 		Response response = new Response();
 		response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
@@ -72,13 +76,13 @@ public class ContentService {
 		Map<String, String> props = new HashMap<String, String>();
 		switch (operation.toUpperCase()) {
 		case "ASSIGNBADGE":
-			props.put("basePath",
-					contentServiceBaseUrl + PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_CONTENT_BADGE_ASSIGN_URL));
+			props.put("basePath", contentServiceBaseUrl
+					+ PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_CONTENT_BADGE_ASSIGN_URL));
 			props.put("errCode", "INVALID_ASSIGN_BADGE_REQUEST");
 			break;
 		case "REVOKEBADGE":
-			props.put("basePath",
-					contentServiceBaseUrl + PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_CONTENT_BADGE_REVOKE_URL));
+			props.put("basePath", contentServiceBaseUrl
+					+ PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_CONTENT_BADGE_REVOKE_URL));
 			props.put("errCode", "INVALID_REVOKE_BADGE_REQUEST");
 			break;
 		default:

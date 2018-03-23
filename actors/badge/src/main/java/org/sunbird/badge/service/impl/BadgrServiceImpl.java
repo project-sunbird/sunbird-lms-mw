@@ -83,15 +83,11 @@ public class BadgrServiceImpl implements BadgingService {
         requestData.put(JsonKey.URL, (String) req.get(JsonKey.URL));
         requestData.put(JsonKey.EMAIL, (String) req.get(JsonKey.EMAIL));
 
-        Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-        // since the content type here is not application/json, it is of type form data so removing
-        // this key.
-        headers.remove("Content-Type");
-        if (null != image) {
-            fileData.put(JsonKey.IMAGE, image);
-        }
-        HttpUtilResponse httpResponse = HttpUtil.postFormData(requestData, fileData, headers,
-                BadgingUtil.getBadgeIssuerUrl());
+		if (null != image) {
+			fileData.put(JsonKey.IMAGE, image);
+		}
+		HttpUtilResponse httpResponse = HttpUtil
+				.postFormData(requestData, fileData, BadgingUtil.getBadgrHeaders(false), BadgingUtil.getBadgeIssuerUrl());
 
         BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(), null);
         Response response = new Response();
@@ -105,31 +101,23 @@ public class BadgrServiceImpl implements BadgingService {
         return response;
     }
 
-    @Override
-    public Response getIssuerDetails(Request request) throws IOException {
-        // TODO Auto-generated method stub
-        Map<String, Object> req = request.getRequest();
-        String slug = (String) req.get(JsonKey.SLUG);
-        String url = "/v1/issuer/issuers" + "/" + slug;
-        Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-
-        HttpUtilResponse httpResponse =
-                HttpUtil.doGetRequest(BadgingUtil.getBadgeIssuerUrl(slug), headers);
-        BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(), null);
-        Response response = new Response();
-        BadgingUtil.prepareBadgeIssuerResponse(httpResponse.getBody(), response.getResult());
-        return response;
+	@Override
+	public Response getIssuerDetails(Request request) throws IOException {
+		Map<String, Object> req = request.getRequest();
+		String slug = (String) req.get(JsonKey.SLUG);
+		HttpUtilResponse httpResponse =HttpUtil.doGetRequest(BadgingUtil.getBadgeIssuerUrl(slug), BadgingUtil.getBadgrHeaders());
+		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode() ,null );
+		Response response = new Response();
+		BadgingUtil.prepareBadgeIssuerResponse(httpResponse.getBody(), response.getResult());
+		return response;
 
     }
 
-    @Override
-    public Response getIssuerList(Request request) throws IOException {
-        // TODO Auto-generated method stub
-        Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-        HttpUtilResponse httpResponse =
-                HttpUtil.doGetRequest(BadgingUtil.getBadgeIssuerUrl(), headers);
-        BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(), null);
-        Response response = new Response();
+	@Override
+	public Response getIssuerList(Request request) throws IOException {
+		HttpUtilResponse httpResponse =HttpUtil.doGetRequest(BadgingUtil.getBadgeIssuerUrl(), BadgingUtil.getBadgrHeaders());
+		BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode() ,null );
+		Response response = new Response();
 
         List<Map<String, Object>> issuers = new ArrayList<>();
         List<Map<String, Object>> data = mapper.readValue(httpResponse.getBody(),
@@ -470,34 +458,32 @@ public class BadgrServiceImpl implements BadgingService {
                 (String) requestedData.get(BadgingJsonKey.RECIPIENT_ID),
                 (String) requestedData.get(BadgingJsonKey.RECIPIENT_TYPE), null, correlatedObject);
         TelemetryUtil.telemetryProcessingCall(requestedData, targetObject, correlatedObject);
-        return response;
+			  return response;
     }
 
     @Override
     public Response deleteIssuer(Request request) throws IOException {
-        Map<String, Object> targetObject = null;
-        List<Map<String, Object>> correlatedObject = new ArrayList<>();
+			Map<String, Object> targetObject = null;
+			List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
-        Map<String, Object> req = request.getRequest();
-        String slug = (String) req.get(JsonKey.SLUG);
-        Map<String, String> headers = BadgingUtil.getBadgrHeaders();
-        HttpUtilResponse httpResponse =
-                HttpUtil.sendDeleteRequest(headers, BadgingUtil.getBadgeIssuerUrl(slug));
-        BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(), null);
-        Response response = new Response();
-        // since the response from badger service contains " at beging and end so remove that from
-        // response string
-        response.put(JsonKey.MESSAGE, StringUtils.strip(httpResponse.getBody(), "\""));
+			Map<String, Object> req = request.getRequest();
+			String slug = (String) req.get(JsonKey.SLUG);
+			HttpUtilResponse httpResponse = HttpUtil
+					.sendDeleteRequest(BadgingUtil.getBadgrHeaders(), BadgingUtil.getBadgeIssuerUrl(slug));
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(), null);
+			Response response = new Response();
+			// since the response from badger service contains " at beging and end so remove that from response string
+			response.put(JsonKey.MESSAGE, StringUtils.strip(httpResponse.getBody(), "\""));
 
-        targetObject = TelemetryUtil.generateTargetObject(slug, BadgingJsonKey.BADGE_ISSUER,
-                JsonKey.DELETE, null);
-        TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
-        return response;
-    }
+			targetObject = TelemetryUtil.generateTargetObject(slug, BadgingJsonKey.BADGE_ISSUER,
+					JsonKey.DELETE, null);
+			TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
+			return response;
+		}
 
     /**
      * This method wu
-     * 
+     *
      * @param recipientId
      * @param recipientType
      * @return
@@ -512,7 +498,7 @@ public class BadgrServiceImpl implements BadgingService {
 
     /**
      * This method will provide user email id.
-     * 
+     *
      * @param userId String
      * @return String
      */
@@ -544,7 +530,7 @@ public class BadgrServiceImpl implements BadgingService {
      * This method will take contentId and make EKstep api call to do the content validation, if
      * content found inside Ekstep then it will take createdBy attribute and make sunbird api call
      * to get the user email. if content not found then user will get 404 error.
-     * 
+     *
      * @param contentId String
      * @return String
      */

@@ -64,7 +64,7 @@ public abstract class BaseActor extends UntypedAbstractActor {
 	}
 
 	protected void onReceiveException(String callerName, Exception e) {
-		ProjectLogger.log(callerName + ": exception in message processing = " + e.getMessage(), e);
+		ProjectLogger.log("Exception in message processing for: " + callerName + " :: message: " + e.getMessage(), e);
 		sender().tell(e, self());
 	}
 

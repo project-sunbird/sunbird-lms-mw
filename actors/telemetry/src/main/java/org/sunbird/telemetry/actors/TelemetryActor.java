@@ -59,6 +59,7 @@ public class TelemetryActor extends BaseActor {
 		String authKey = System.getenv("ekstep_authorization");
 		ProjectLogger.log("Telemetry auth value is comming as =" + authKey);
 		map.put("Content-Type", "application/json");
+		authKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJkNjNiMjgwZTQ1NDE0NDU4ODk4NzcwYzZhOGZiZjQ1MCJ9.Ji-22XcRrOiVy4dFAmE68wPxLkNmX4wKbTj_IB7fG6Y";
 		map.put("authorization", JsonKey.BEARER + authKey);
 		return map;
 	}

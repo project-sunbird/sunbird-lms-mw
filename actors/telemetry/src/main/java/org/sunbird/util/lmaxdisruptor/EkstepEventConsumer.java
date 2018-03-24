@@ -55,13 +55,12 @@ public class EkstepEventConsumer implements EventHandler<TelemetryEvent> {
         writeEvent.getData().getHeaders().put("Content-Encoding", "gzip");
         writeEvent.getData().getHeaders().remove("content-type");
         writeEvent.getData().getHeaders().remove("Content-Type");
-        writeEvent.getData().getHeaders().put("authorization",
-                "bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIxZjMwNWQ1NDg1YjQzNDFiZGEyZmViNmI5ZTU0NjBmYSJ9.0D7D0mPX6o-F9sDmydurspSzH_RpzS1yzXxlTcVIVTo");
+
         try {
-            HttpUtilResponse response =
-                    HttpUtil.postInputStream(bs, writeEvent.getData().getHeaders(),
-                            "https://dev.ekstep.in/api/data/v3/telemetry");
-            ProjectLogger.log(response + " processed.", LoggerEnum.INFO.name());
+            HttpUtilResponse response = HttpUtil.postInputStream(bs,
+                    writeEvent.getData().getHeaders(), getTelemetryUrl());
+            ProjectLogger.log(response.getStatusCode() + " " + response.getBody(),
+                    LoggerEnum.INFO.name());
         } catch (Exception e) {
             ProjectLogger.log(e.getMessage(), e);
             ProjectLogger.log("Failure Data==" + writeEvent.getData().getRequest());

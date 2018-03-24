@@ -30,7 +30,7 @@ public class EkstepEventConsumer implements EventHandler<TelemetryEvent> {
 				Gson gson = new Gson();
 				String response = HttpUtil.sendPostRequest(getTelemetryUrl(),
 						gson.toJson(getEkstepTelemetryRequest(writeEvent.getData().getRequest())), writeEvent.getData().getHeaders());
-				ProjectLogger.log(response + " processed.", LoggerEnum.INFO.name());
+				ProjectLogger.log("Sending events to Ekstep - response.", response, LoggerEnum.INFO.name());
 			} catch (Exception e) {
 				ProjectLogger.log(e.getMessage(), e);
 				ProjectLogger.log("Failure Data==" + writeEvent.getData().getRequest());
@@ -60,8 +60,9 @@ public class EkstepEventConsumer implements EventHandler<TelemetryEvent> {
 			telemetryV3Request.setEts(((BigInteger)request.getRequest().get(JsonKey.ETS)).longValue());
 		}
 		if(request.getRequest().get(JsonKey.EVENTS) != null && request.getRequest().get(JsonKey.EVENTS) instanceof List && !(((List) request.getRequest().get(JsonKey.EVENTS)).isEmpty())){
-			telemetryV3Request.setEvents(
-					(List<Map<String, Object>>) request.getRequest().get(JsonKey.EVENTS));
+			List<Map<String, Object>> events = (List<Map<String, Object>>) request.getRequest().get(JsonKey.EVENTS);
+			telemetryV3Request.setEvents(events);
+			ProjectLogger.log("Sending events to Ekstep - count: " + events.size(), LoggerEnum.INFO.name());
 		}
 		return telemetryV3Request;
 	}

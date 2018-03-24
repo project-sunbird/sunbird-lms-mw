@@ -2,8 +2,6 @@ package org.sunbird.util.lmaxdisruptor;
 
 import com.google.gson.Gson;
 import com.lmax.disruptor.EventHandler;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
@@ -34,9 +32,8 @@ public class EkstepEventConsumer implements EventHandler<TelemetryEvent> {
             Map<String, Object> reqMap = req.getRequest();
             String contentEncoding = (String) reqMap.get("Content-Encoding");
             if ("gzip".equalsIgnoreCase(contentEncoding)) {
-                InputStream stream = readFile(reqMap);
-                if (null != stream) {
-                    sendTelemetryToEkstep(stream, writeEvent);
+                if (null != reqMap.get(JsonKey.FILE)) {
+                    sendTelemetryToEkstep((byte[]) reqMap.get(JsonKey.FILE), writeEvent);
                 }
             } else {
                 try {
@@ -54,7 +51,7 @@ public class EkstepEventConsumer implements EventHandler<TelemetryEvent> {
         }
     }
 
-    private void sendTelemetryToEkstep(InputStream stream, TelemetryEvent writeEvent) {
+    private void sendTelemetryToEkstep(byte[] bs, TelemetryEvent writeEvent) {
         writeEvent.getData().getHeaders().put("Content-Encoding", "gzip");
         writeEvent.getData().getHeaders().remove("content-type");
         writeEvent.getData().getHeaders().remove("Content-Type");
@@ -62,19 +59,13 @@ public class EkstepEventConsumer implements EventHandler<TelemetryEvent> {
                 "bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIxZjMwNWQ1NDg1YjQzNDFiZGEyZmViNmI5ZTU0NjBmYSJ9.0D7D0mPX6o-F9sDmydurspSzH_RpzS1yzXxlTcVIVTo");
         try {
             HttpUtilResponse response =
-                    HttpUtil.postInputStream(stream, writeEvent.getData().getHeaders(),
+                    HttpUtil.postInputStream(bs, writeEvent.getData().getHeaders(),
                             "https://dev.ekstep.in/api/data/v3/telemetry");
             ProjectLogger.log(response + " processed.", LoggerEnum.INFO.name());
         } catch (Exception e) {
             ProjectLogger.log(e.getMessage(), e);
             ProjectLogger.log("Failure Data==" + writeEvent.getData().getRequest());
         }
-    }
-
-    private InputStream readFile(Map<String, Object> reqMap) {
-        byte[] byteArr = (byte[]) reqMap.get(JsonKey.FILE);
-        InputStream myInputStream = new ByteArrayInputStream(byteArr);
-        return myInputStream;
     }
 
     /**

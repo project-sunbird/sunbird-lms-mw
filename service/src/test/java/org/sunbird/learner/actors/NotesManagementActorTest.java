@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -20,7 +21,6 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
@@ -99,7 +99,7 @@ public class NotesManagementActorTest {
 		subject.tell(actorMessage, probe.getRef());
 		Response res = probe.expectMsgClass(duration("10 second"), Response.class);
 		noteId = (String) res.getResult().get(JsonKey.ID);
-		Assert.assertTrue(!ProjectUtil.isStringNullOREmpty(noteId));
+		Assert.assertTrue(!StringUtils.isBlank(noteId));
 	}
 
 	/**
@@ -212,7 +212,7 @@ public class NotesManagementActorTest {
 		subject.tell(actorMessage, probe.getRef());
 		Response res = probe.expectMsgClass(duration("10 second"), Response.class);
 		noteId = (String) res.getResult().get(JsonKey.ID);
-		Assert.assertTrue(!ProjectUtil.isStringNullOREmpty(noteId));
+		Assert.assertTrue(!StringUtils.isBlank(noteId));
 	}
 
 	/**

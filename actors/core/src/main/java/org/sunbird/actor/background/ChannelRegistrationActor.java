@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.sunbird.actor.core.BaseActor;
@@ -61,7 +62,7 @@ public class ChannelRegistrationActor extends BaseActor {
 		Boolean bool = true;
 		for (Map<String, Object> map : sunbirdChannelList) {
 			ProjectLogger.log("processing start for hashTagId " + map.get(JsonKey.HASHTAGID));
-			if (!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.HASHTAGID))
+			if (!StringUtils.isBlank((String) map.get(JsonKey.HASHTAGID))
 					&& (!ekstepChannelList.contains(map.get(JsonKey.HASHTAGID))) && (!Util.registerChannel(map))) {
 				bool = false;
 			}
@@ -105,7 +106,7 @@ public class ChannelRegistrationActor extends BaseActor {
 		List<String> channelList = new ArrayList<>();
 		Map<String, String> headerMap = new HashMap<>();
 		String header = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
-		if (ProjectUtil.isStringNullOREmpty(header)) {
+		if (StringUtils.isBlank(header)) {
 			header = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION);
 		} else {
 			header = JsonKey.BEARER + header;
@@ -121,7 +122,7 @@ public class ChannelRegistrationActor extends BaseActor {
 		try {
 			ProjectLogger.log("start call for getting List of channel from Ekstep");
 			String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-			if (ProjectUtil.isStringNullOREmpty(ekStepBaseUrl)) {
+			if (StringUtils.isBlank(ekStepBaseUrl)) {
 				ekStepBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
 			}
 			Map<String, Object> map = new HashMap<>();

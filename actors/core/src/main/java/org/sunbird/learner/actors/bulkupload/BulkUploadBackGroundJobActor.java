@@ -3,8 +3,6 @@ package org.sunbird.learner.actors.bulkupload;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -14,6 +12,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -49,6 +49,9 @@ import org.sunbird.notification.sms.provider.ISmsProvider;
 import org.sunbird.notification.utils.SMSFactory;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * This actor will handle bulk upload operation .
@@ -287,7 +290,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         userCourses.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.COURSE_LOGO_URL));
         userCourses.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.COURSE_NAME));
         userCourses.put(JsonKey.DESCRIPTION, additionalCourseInfo.get(JsonKey.DESCRIPTION));
-        if (!ProjectUtil.isStringNullOREmpty(additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT))) {
+        if (!StringUtils.isBlank(additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT))) {
             userCourses.put(JsonKey.LEAF_NODE_COUNT,
                     Integer.parseInt("" + additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT)));
         }
@@ -691,11 +694,11 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                     }
                 }
             } else if (concurrentHashMap.containsKey(JsonKey.PROVIDER)
-                    && !(ProjectUtil.isStringNullOREmpty(JsonKey.PROVIDER))) {
+                    && !(StringUtils.isBlank(JsonKey.PROVIDER))) {
                 String rootOrgId = Util
                         .getRootOrgIdFromChannel((String) concurrentHashMap.get(JsonKey.PROVIDER));
 
-                if (!(ProjectUtil.isStringNullOREmpty(rootOrgId))) {
+                if (!(StringUtils.isBlank(rootOrgId))) {
                     concurrentHashMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
                 } else {
                     concurrentHashMap.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
@@ -710,7 +713,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         // we can put logic here to check uniqueness of hash tag id in order to create
         // new organisation
         // ...
-        if (!ProjectUtil.isStringNullOREmpty((String) concurrentHashMap.get(JsonKey.HASHTAGID))) {
+        if (!StringUtils.isBlank((String) concurrentHashMap.get(JsonKey.HASHTAGID))) {
 
             Map<String, Object> dbMap1 = new HashMap<>();
             dbMap1.put(JsonKey.HASHTAGID, concurrentHashMap.get(JsonKey.HASHTAGID));
@@ -741,7 +744,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         concurrentHashMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
         concurrentHashMap.put(JsonKey.CREATED_BY, dataMap.get(JsonKey.UPLOADED_BY));
         String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(1);
-        if (ProjectUtil.isStringNullOREmpty((String) concurrentHashMap.get(JsonKey.ID))) {
+        if (StringUtils.isBlank((String) concurrentHashMap.get(JsonKey.ID))) {
             concurrentHashMap.put(JsonKey.ID, uniqueId);
             // if user does not provide hash tag id in the file set it to equivalent to org
             // id
@@ -856,7 +859,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     private String validateOrgType(String orgType) {
         String orgTypeId = null;
         try {
-            if (!ProjectUtil.isStringNullOREmpty(
+            if (!StringUtils.isBlank(
                     DataCacheHandler.getOrgTypeMap().get(orgType.toLowerCase()))) {
                 orgTypeId = DataCacheHandler.getOrgTypeMap().get(orgType.toLowerCase());
             } else {
@@ -904,7 +907,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         for (int i = 0; i < dataMapList.size(); i++) {
             userMap = dataMapList.get(i);
             Map<String, Object> welcomeMailTemplateMap = new HashMap<>();
-            if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PASSWORD))) {
+            if (StringUtils.isBlank((String) userMap.get(JsonKey.PASSWORD))) {
                 String randomPassword = ProjectUtil.generateRandomPassword();
                 userMap.put(JsonKey.PASSWORD, randomPassword);
                 welcomeMailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, randomPassword);
@@ -1213,7 +1216,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         map.put(JsonKey.USER_ID, requestMap.get(JsonKey.ID));
         map.put(JsonKey.IS_VERIFIED, false);
         if (requestMap.containsKey(JsonKey.USERNAME)
-                && !(ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.USERNAME)))) {
+                && !(StringUtils.isBlank((String) requestMap.get(JsonKey.USERNAME)))) {
             map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
             map.put(JsonKey.EXTERNAL_ID, JsonKey.USERNAME);
             map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.USERNAME));
@@ -1226,7 +1229,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             }
         }
         if (requestMap.containsKey(JsonKey.PHONE)
-                && !(ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.PHONE)))) {
+                && !(StringUtils.isBlank((String) requestMap.get(JsonKey.PHONE)))) {
             map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
             map.put(JsonKey.EXTERNAL_ID, JsonKey.PHONE);
             map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.PHONE));
@@ -1245,7 +1248,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             }
         }
         if (requestMap.containsKey(JsonKey.EMAIL)
-                && !(ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.EMAIL)))) {
+                && !(StringUtils.isBlank((String) requestMap.get(JsonKey.EMAIL)))) {
             map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
             map.put(JsonKey.EXTERNAL_ID, JsonKey.EMAIL);
             map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.EMAIL));
@@ -1339,7 +1342,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             String updatedBy) {
         Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
         if (userMap.containsKey(JsonKey.PROVIDER)
-                && !ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PROVIDER))) {
+                && !StringUtils.isBlank((String) userMap.get(JsonKey.PROVIDER))) {
             userMap.put(JsonKey.LOGIN_ID, (String) userMap.get(JsonKey.USERNAME) + "@"
                     + (String) userMap.get(JsonKey.PROVIDER));
         } else {
@@ -1415,7 +1418,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                     Map<String, String> userKeyClaokResp = ssoManager.createUser(userMap);
                     userMap.remove(JsonKey.BULK_USER_UPLOAD);
                     userId = userKeyClaokResp.get(JsonKey.USER_ID);
-                    if (!ProjectUtil.isStringNullOREmpty(userId)) {
+                    if (!StringUtils.isBlank(userId)) {
                         userMap.put(JsonKey.USER_ID, userId);
                         userMap.put(JsonKey.ID, userId);
                     } else {
@@ -1432,7 +1435,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
                 userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
                 userMap.put(JsonKey.IS_DELETED, false);
-                if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.COUNTRY_CODE))) {
+                if (!StringUtils.isBlank((String) userMap.get(JsonKey.COUNTRY_CODE))) {
                     userMap.put(JsonKey.COUNTRY_CODE,
                             propertiesCache.getProperty("sunbird_default_country_code"));
                 }
@@ -1456,7 +1459,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 }
             }
         }
-        if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PASSWORD))) {
+        if (!StringUtils.isBlank((String) userMap.get(JsonKey.PASSWORD))) {
             userMap.put(JsonKey.PASSWORD,
                     OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
         }
@@ -1503,7 +1506,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         String emailSetting = DataCacheHandler.getConfigSettings().get(JsonKey.EMAIL);
         if (null != emailSetting && JsonKey.UNIQUE.equalsIgnoreCase(emailSetting)) {
             String email = (String) userMap.get(JsonKey.EMAIL);
-            if (!ProjectUtil.isStringNullOREmpty(email)) {
+            if (!StringUtils.isBlank(email)) {
                 try {
                     email = encryptionService.encryptData(email);
                 } catch (Exception e) {
@@ -1544,7 +1547,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         String phoneSetting = DataCacheHandler.getConfigSettings().get(JsonKey.PHONE);
         if (null != phoneSetting && JsonKey.UNIQUE.equalsIgnoreCase(phoneSetting)) {
             String phone = (String) userMap.get(JsonKey.PHONE);
-            if (!ProjectUtil.isStringNullOREmpty(phone)) {
+            if (!StringUtils.isBlank(phone)) {
                 try {
                     phone = encryptionService.encryptData(phone);
                 } catch (Exception e) {
@@ -1589,7 +1592,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 return "Incorrect DOB date format.";
             }
         }
-        if (!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.PHONE))) {
+        if (!StringUtils.isBlank((String) map.get(JsonKey.PHONE))) {
             if (((String) map.get(JsonKey.PHONE)).contains("+")) {
                 return ResponseCode.invalidPhoneNumber.getErrorMessage();
             }
@@ -1599,29 +1602,29 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 return ResponseCode.phoneNoFormatError.getErrorMessage();
             }
         }
-        if (!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.COUNTRY_CODE))) {
+        if (!StringUtils.isBlank((String) map.get(JsonKey.COUNTRY_CODE))) {
             boolean bool = ProjectUtil.validateCountryCode((String) map.get(JsonKey.COUNTRY_CODE));
             if (!bool) {
                 return ResponseCode.invalidCountryCode.getErrorMessage();
             }
         }
-        if (ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.EMAIL))
-                && ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.PHONE))) {
+        if (StringUtils.isBlank((String) map.get(JsonKey.EMAIL))
+                && StringUtils.isBlank((String) map.get(JsonKey.PHONE))) {
             return ResponseCode.emailorPhoneRequired.getErrorMessage();
         }
         if (map.get(JsonKey.USERNAME) == null
-                || (ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.USERNAME)))) {
+                || (StringUtils.isBlank((String) map.get(JsonKey.USERNAME)))) {
             return ResponseCode.userNameRequired.getErrorMessage();
         }
         if (map.get(JsonKey.FIRST_NAME) == null
-                || (ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.FIRST_NAME)))) {
+                || (StringUtils.isBlank((String) map.get(JsonKey.FIRST_NAME)))) {
             return ResponseCode.firstNameRequired.getErrorMessage();
         }
-        if (!(ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.EMAIL)))
+        if (!(StringUtils.isBlank((String) map.get(JsonKey.EMAIL)))
                 && !ProjectUtil.isEmailvalid((String) map.get(JsonKey.EMAIL))) {
             return ResponseCode.emailFormatError.getErrorMessage();
         }
-        if (!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.PHONE_VERIFIED))) {
+        if (!StringUtils.isBlank((String) map.get(JsonKey.PHONE_VERIFIED))) {
             try {
                 map.put(JsonKey.PHONE_VERIFIED,
                         Boolean.parseBoolean((String) map.get(JsonKey.PHONE_VERIFIED)));
@@ -1629,7 +1632,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 return "property phoneVerified should be instanceOf type Boolean.";
             }
         }
-        if (!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.EMAIL_VERIFIED))) {
+        if (!StringUtils.isBlank((String) map.get(JsonKey.EMAIL_VERIFIED))) {
             try {
                 map.put(JsonKey.EMAIL_VERIFIED,
                         Boolean.parseBoolean((String) map.get(JsonKey.EMAIL_VERIFIED)));
@@ -1637,8 +1640,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 return "property emailVerified should be instanceOf type Boolean.";
             }
         }
-        if (!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.PROVIDER))
-                && !ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.PHONE))) {
+        if (!StringUtils.isBlank((String) map.get(JsonKey.PROVIDER))
+                && !StringUtils.isBlank((String) map.get(JsonKey.PHONE))) {
             if (null != map.get(JsonKey.PHONE_VERIFIED)) {
                 if (map.get(JsonKey.PHONE_VERIFIED) instanceof Boolean) {
                     if (!((boolean) map.get(JsonKey.PHONE_VERIFIED))) {
@@ -1723,13 +1726,13 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     private void updateKeyCloakUserBase(Map<String, Object> userMap) {
         try {
             String userId = ssoManager.updateUser(userMap);
-            if (!(!ProjectUtil.isStringNullOREmpty(userId)
+            if (!(!StringUtils.isBlank(userId)
                     && userId.equalsIgnoreCase(JsonKey.SUCCESS))) {
                 throw new ProjectCommonException(
                         ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
                         ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
                         ResponseCode.SERVER_ERROR.getResponseCode());
-            } else if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EMAIL))) {
+            } else if (!StringUtils.isBlank((String) userMap.get(JsonKey.EMAIL))) {
                 // if Email is Null or Empty , it means we are not updating email
                 Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
                 Map<String, Object> map = new HashMap<>();
@@ -1785,10 +1788,10 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
     private void sendOnboardingMail(Map<String, Object> emailTemplateMap) {
 
-        if (!(ProjectUtil.isStringNullOREmpty((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
+        if (!(StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
 
             String envName = System.getenv(JsonKey.SUNBIRD_INSTALLATION);
-            if (ProjectUtil.isStringNullOREmpty(envName)) {
+            if (StringUtils.isBlank(envName)) {
                 envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
             }
 
@@ -1800,17 +1803,17 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
 
             String webUrl = Util.getSunbirdWebUrlPerTenent(emailTemplateMap);
-            if ((!ProjectUtil.isStringNullOREmpty(webUrl))
+            if ((!StringUtils.isBlank(webUrl))
                     && (!SUNBIRD_WEB_URL.equalsIgnoreCase(webUrl))) {
                 emailTemplateMap.put(JsonKey.WEB_URL, webUrl);
             }
 
             String appUrl = System.getenv(SUNBIRD_APP_URL);
-            if (ProjectUtil.isStringNullOREmpty(appUrl)) {
+            if (StringUtils.isBlank(appUrl)) {
                 appUrl = propertiesCache.getProperty(SUNBIRD_APP_URL);
             }
 
-            if ((!ProjectUtil.isStringNullOREmpty(appUrl))
+            if ((!StringUtils.isBlank(appUrl))
                     && (!SUNBIRD_APP_URL.equalsIgnoreCase(appUrl))) {
                 emailTemplateMap.put(JsonKey.APP_URL, appUrl);
             }
@@ -1833,7 +1836,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     }
 
     private boolean isSlugUnique(String slug) {
-        if (!ProjectUtil.isStringNullOREmpty(slug)) {
+        if (!StringUtils.isBlank(slug)) {
             Map<String, Object> filters = new HashMap<>();
             filters.put(JsonKey.SLUG, slug);
             filters.put(JsonKey.IS_ROOT_ORG, true);
@@ -1848,13 +1851,13 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     }
 
     private void sendSMS(Map<String, Object> userMap) {
-        if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EMAIL))
-                && !ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PHONE))) {
+        if (StringUtils.isBlank((String) userMap.get(JsonKey.EMAIL))
+                && !StringUtils.isBlank((String) userMap.get(JsonKey.PHONE))) {
             UserUtility.decryptUserData(userMap);
             String name = (String) userMap.get(JsonKey.FIRST_NAME) + " "
                     + (String) userMap.get(JsonKey.LAST_NAME);
             String envName = System.getenv(JsonKey.SUNBIRD_INSTALLATION);
-            if (ProjectUtil.isStringNullOREmpty(envName)) {
+            if (StringUtils.isBlank(envName)) {
                 envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
             }
 
@@ -1862,13 +1865,13 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
             ProjectLogger.log("shortened url :: " + webUrl);
             String sms = ProjectUtil.getSMSBody(name, webUrl, envName);
-            if (ProjectUtil.isStringNullOREmpty(sms)) {
+            if (StringUtils.isBlank(sms)) {
                 sms = PropertiesCache.getInstance().getProperty("sunbird_default_welcome_sms");
             }
             ProjectLogger.log("SMS text : " + sms);
 
             String countryCode = "";
-            if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.COUNTRY_CODE))) {
+            if (StringUtils.isBlank((String) userMap.get(JsonKey.COUNTRY_CODE))) {
                 countryCode =
                         PropertiesCache.getInstance().getProperty("sunbird_default_country_code");
             } else {

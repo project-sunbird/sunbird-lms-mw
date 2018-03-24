@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -71,7 +72,7 @@ public class CourseManagementActor extends BaseActor {
 		Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.COURSE);
 		String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
 		Map<String, Object> queryMap = new LinkedHashMap<String, Object>();
-		if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
+		if (!(StringUtils.isBlank(updatedBy))) {
 			String updatedByName = getUserNamebyUserId(updatedBy);
 			queryMap.put(JsonKey.UPDATED_BY_NAME, updatedByName);
 		}
@@ -102,7 +103,7 @@ public class CourseManagementActor extends BaseActor {
 		try {
 
 			String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-			if (ProjectUtil.isStringNullOREmpty(ekStepBaseUrl)) {
+			if (StringUtils.isBlank(ekStepBaseUrl)) {
 				ekStepBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
 			}
 
@@ -138,7 +139,7 @@ public class CourseManagementActor extends BaseActor {
 		String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
 
 		String updatedByName = null;
-		if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
+		if (!(StringUtils.isBlank(updatedBy))) {
 			updatedByName = getUserNamebyUserId(updatedBy);
 		}
 
@@ -185,7 +186,7 @@ public class CourseManagementActor extends BaseActor {
 		Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.COURSE);
 		String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
 
-		if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
+		if (!(StringUtils.isBlank(updatedBy))) {
 			String updatedByName = getUserNamebyUserId(updatedBy);
 			req.put(JsonKey.ADDED_BY_NAME, updatedByName);
 			req.put(JsonKey.ADDED_BY, updatedBy);

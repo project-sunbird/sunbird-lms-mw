@@ -68,7 +68,7 @@ public class ClientManagementActor extends BaseActor {
 
 		// check uniqueness of channel , channel is optional ...
 		String channel = (String) actorMessage.getRequest().get(JsonKey.CHANNEL);
-		if (!ProjectUtil.isStringNullOREmpty(channel)) {
+		if (!StringUtils.isBlank(channel)) {
 			data = getDataFromCassandra(JsonKey.CHANNEL, channel);
 			dataList = (List<Map<String, Object>>) data.getResult().get(JsonKey.RESPONSE);
 			if (!dataList.isEmpty()) {
@@ -128,7 +128,7 @@ public class ClientManagementActor extends BaseActor {
 
 		// check uniqueness of channel , channel is optional ...
 		String channel = (String) actorMessage.getRequest().get(JsonKey.CHANNEL);
-		if (!ProjectUtil.isStringNullOREmpty(channel)
+		if (!StringUtils.isBlank(channel)
 				&& !channel.equalsIgnoreCase((String) dataList.get(0).get(JsonKey.CHANNEL))) {
 			data = getDataFromCassandra(JsonKey.CHANNEL, channel);
 			List<Map<String, Object>> dataList1 = (List<Map<String, Object>>) data.getResult().get(JsonKey.RESPONSE);
@@ -140,7 +140,7 @@ public class ClientManagementActor extends BaseActor {
 		}
 
 		String clientName = (String) actorMessage.getRequest().get(JsonKey.CLIENT_NAME);
-		if (!ProjectUtil.isStringNullOREmpty(clientName)
+		if (!StringUtils.isBlank(clientName)
 				&& !clientName.equalsIgnoreCase((String) dataList.get(0).get(JsonKey.CLIENT_NAME))) {
 			data = getDataFromCassandra(JsonKey.CLIENT_NAME, clientName);
 			List<Map<String, Object>> dataList1 = (List<Map<String, Object>>) data.getResult().get(JsonKey.RESPONSE);
@@ -156,10 +156,10 @@ public class ClientManagementActor extends BaseActor {
 		req.put(JsonKey.MASTER_KEY, newMasterKey);
 		req.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
 		req.put(JsonKey.ID, clientId);
-		if (!ProjectUtil.isStringNullOREmpty(channel)) {
+		if (!StringUtils.isBlank(channel)) {
 			req.put(JsonKey.CHANNEL, channel);
 		}
-		if (!ProjectUtil.isStringNullOREmpty(clientName)) {
+		if (!StringUtils.isBlank(clientName)) {
 			req.put(JsonKey.CLIENT_NAME, clientName);
 		}
 		req.remove(JsonKey.CLIENT_ID);

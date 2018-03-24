@@ -3,17 +3,18 @@ package org.sunbird.util.lmaxdisruptor;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.request.Request;
+import org.sunbird.common.request.TelemetryV3Request;
 
 import com.google.gson.Gson;
 import com.lmax.disruptor.EventHandler;
-import org.sunbird.common.request.Request;
-import org.sunbird.common.request.TelemetryV3Request;
 
 
 /**
@@ -43,7 +44,7 @@ public class EkstepEventConsumer implements EventHandler<TelemetryEvent> {
 	 */
 	private String getTelemetryUrl() {
 		String telemetryBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-		if (ProjectUtil.isStringNullOREmpty(telemetryBaseUrl)) {
+		if (StringUtils.isBlank(telemetryBaseUrl)) {
 			telemetryBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
 		}
 		telemetryBaseUrl = telemetryBaseUrl

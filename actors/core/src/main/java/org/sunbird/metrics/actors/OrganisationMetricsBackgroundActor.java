@@ -346,7 +346,7 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
 		List<String> result = new ArrayList<>();
 		for (String concept : data) {
 			String conceptName = getConcept(concept);
-			if (!ProjectUtil.isStringNullOREmpty(conceptName)) {
+			if (!StringUtils.isBlank(conceptName)) {
 				result.add(conceptName);
 			}
 		}

@@ -8,6 +8,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.velocity.VelocityContext;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -162,7 +164,7 @@ public class MetricsBackGroundJobActor extends BaseActor {
 
         List<List<Object>> finalList = (List<List<Object>>) map.get(JsonKey.DATA);
         String fileName = (String) map.get(JsonKey.FILE_NAME);
-        if (ProjectUtil.isStringNullOREmpty(fileName)) {
+        if (StringUtils.isBlank(fileName)) {
             fileName = "File-" + requestId;
         }
         File file = null;

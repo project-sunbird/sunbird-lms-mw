@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
@@ -70,13 +71,13 @@ public class CourseMetricsActor extends BaseMetricsActor {
 		Map<String, Object> requestedByInfo = ElasticSearchUtil.getDataByIdentifier(EsIndex.sunbird.getIndexName(),
 				EsType.user.getTypeName(), requestedBy);
 		if (isNull(requestedByInfo)
-				|| ProjectUtil.isStringNullOREmpty((String) requestedByInfo.get(JsonKey.FIRST_NAME))) {
+				|| StringUtils.isBlank((String) requestedByInfo.get(JsonKey.FIRST_NAME))) {
 			throw new ProjectCommonException(ResponseCode.invalidUserId.getErrorCode(),
 					ResponseCode.invalidUserId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
 		}
 
 		String batchId = (String) actorMessage.getRequest().get(JsonKey.BATCH_ID);
-		if (ProjectUtil.isStringNullOREmpty(batchId)) {
+		if (StringUtils.isBlank(batchId)) {
 			ProjectLogger.log("CourseMetricsActor-courseProgressMetrics-- batch is not valid .");
 			ProjectCommonException exception = new ProjectCommonException(
 					ResponseCode.invalidCourseBatchId.getErrorCode(),
@@ -145,12 +146,12 @@ public class CourseMetricsActor extends BaseMetricsActor {
 		Map<String, Object> requestedByInfo = ElasticSearchUtil.getDataByIdentifier(EsIndex.sunbird.getIndexName(),
 				EsType.user.getTypeName(), requestedBy);
 		if (isNull(requestedByInfo)
-				|| ProjectUtil.isStringNullOREmpty((String) requestedByInfo.get(JsonKey.FIRST_NAME))) {
+				|| StringUtils.isBlank((String) requestedByInfo.get(JsonKey.FIRST_NAME))) {
 			throw new ProjectCommonException(ResponseCode.invalidUserId.getErrorCode(),
 					ResponseCode.invalidUserId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
 		}
 
-		if (ProjectUtil.isStringNullOREmpty(batchId)) {
+		if (StringUtils.isBlank(batchId)) {
 			ProjectLogger.log("CourseMetricsActor-courseProgressMetrics-- batch is not valid .");
 			ProjectCommonException exception = new ProjectCommonException(
 					ResponseCode.invalidCourseBatchId.getErrorCode(),
@@ -387,7 +388,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 			}
 
 			String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
-			if (ProjectUtil.isStringNullOREmpty(rootOrgId)) {
+			if (StringUtils.isBlank(rootOrgId)) {
 				ProjectCommonException exception = new ProjectCommonException(
 						ResponseCode.noDataForConsumption.getErrorCode(),
 						ResponseCode.noDataForConsumption.getErrorMessage(),
@@ -410,7 +411,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 			// requestObject,
 			// channel);
 			String responseFormat = (String) cache.getData(JsonKey.CourseConsumption, courseId, periodStr);
-			if (ProjectUtil.isStringNullOREmpty(responseFormat)) {
+			if (StringUtils.isBlank(responseFormat)) {
 				responseFormat = getCourseConsumptionData(periodStr, courseId, requestObject, channel);
 				cache.setData(JsonKey.CourseConsumption, courseId, periodStr, responseFormat);
 			}

@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
@@ -87,7 +88,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 		Map<String, Object> requestedByInfo = ElasticSearchUtil.getDataByIdentifier(EsIndex.sunbird.getIndexName(),
 				EsType.user.getTypeName(), requestedBy);
 		if (ProjectUtil.isNull(requestedByInfo)
-				|| ProjectUtil.isStringNullOREmpty((String) requestedByInfo.get(JsonKey.FIRST_NAME))) {
+				|| StringUtils.isBlank((String) requestedByInfo.get(JsonKey.FIRST_NAME))) {
 			throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
 					ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
 		}
@@ -410,7 +411,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 				return;
 			}
 			String orgName = (String) orgData.get(JsonKey.ORG_NAME);
-			if (ProjectUtil.isStringNullOREmpty(orgName)) {
+			if (StringUtils.isBlank(orgName)) {
 				ProjectCommonException exception = new ProjectCommonException(
 						ResponseCode.invalidOrgData.getErrorCode(), ResponseCode.invalidOrgData.getErrorMessage(),
 						ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -464,18 +465,18 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 			String orgName = (String) orgData.get(JsonKey.ORG_NAME);
 			String orgHashId = (String) orgData.get(JsonKey.HASHTAGID);
 			ProjectLogger.log("orgId" + orgHashId);
-			if (ProjectUtil.isStringNullOREmpty(orgName)) {
+			if (StringUtils.isBlank(orgName)) {
 				ProjectCommonException exception = new ProjectCommonException(
 						ResponseCode.invalidOrgData.getErrorCode(), ResponseCode.invalidOrgData.getErrorMessage(),
 						ResponseCode.CLIENT_ERROR.getResponseCode());
 				sender().tell(exception, self());
 				return;
 			}
-			if (ProjectUtil.isStringNullOREmpty(orgHashId)) {
+			if (StringUtils.isBlank(orgHashId)) {
 				orgHashId = orgId;
 			}
 			String orgRootId = (String) orgData.get(JsonKey.ROOT_ORG_ID);
-			if (ProjectUtil.isStringNullOREmpty(orgRootId)) {
+			if (StringUtils.isBlank(orgRootId)) {
 				orgRootId = orgId;
 			}
 			ProjectLogger.log("RootOrgId " + orgRootId);
@@ -490,7 +491,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 			String channel = (String) rootOrgData.get(JsonKey.HASHTAGID);
 			ProjectLogger.log("channel" + channel);
 			String responseFormat = (String) cache.getData(JsonKey.OrgConsumption, orgId, periodStr);
-			if (ProjectUtil.isStringNullOREmpty(responseFormat)) {
+			if (StringUtils.isBlank(responseFormat)) {
 				responseFormat = getOrgConsumptionData(actorMessage, periodStr, orgHashId, channel);
 				ProjectLogger.log("Response" + responseFormat);
 				cache.setData(JsonKey.OrgConsumption, orgId, periodStr, responseFormat);
@@ -523,7 +524,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 		requestObject.put(JsonKey.PERIOD, getEkstepPeriod(periodStr));
 		Map<String, Object> filterMap = new HashMap<>();
 		filterMap.put(JsonKey.TAG, orgHashId);
-		if (!ProjectUtil.isStringNullOREmpty(userId)) {
+		if (!StringUtils.isBlank(userId)) {
 			filterMap.put(USER_ID, userId);
 		}
 		requestObject.put(JsonKey.FILTER, filterMap);

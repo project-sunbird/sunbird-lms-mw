@@ -1,12 +1,11 @@
 package org.sunbird.badge.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.JsonObject;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
+
 import org.apache.commons.lang.StringUtils;
 import org.sunbird.badge.model.BadgeClassExtension;
 import org.sunbird.badge.service.BadgingService;
@@ -18,10 +17,12 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.MapperUtil;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.JsonObject;
 
 public class BadgingUtil {
 
@@ -42,9 +43,9 @@ public class BadgingUtil {
 
     public static String getBadgrBaseUrl() {
         String badgerBaseUrl = SUNBIRD_BADGR_SERVER_URL_DEFAULT;
-        if (!ProjectUtil.isStringNullOREmpty(System.getenv(BadgingJsonKey.BADGER_BASE_URL))) {
+        if (!StringUtils.isBlank(System.getenv(BadgingJsonKey.BADGER_BASE_URL))) {
             badgerBaseUrl = System.getenv(BadgingJsonKey.BADGER_BASE_URL);
-        } else if (!ProjectUtil.isStringNullOREmpty(
+        } else if (!StringUtils.isBlank(
                 propertiesCache.readProperty(BadgingJsonKey.BADGER_BASE_URL))) {
             badgerBaseUrl = propertiesCache.readProperty(BadgingJsonKey.BADGER_BASE_URL);
         }
@@ -64,7 +65,7 @@ public class BadgingUtil {
         HashMap<String, String> headers = new HashMap<>();
 
         String authToken = System.getenv(BadgingJsonKey.BADGING_AUTHORIZATION_KEY);
-        if (ProjectUtil.isStringNullOREmpty(authToken)) {
+        if (StringUtils.isBlank(authToken)) {
             authToken = propertiesCache.readProperty(BadgingJsonKey.BADGING_AUTHORIZATION_KEY);
         }
         if (!StringUtils.isBlank(authToken)) {
@@ -167,7 +168,7 @@ public class BadgingUtil {
         JsonObject json = new JsonObject();
         json.addProperty(BadgingJsonKey.RECIPIENT_IDENTIFIER,
                 (String) map.get(BadgingJsonKey.RECIPIENT_EMAIL));
-        if (!ProjectUtil.isStringNullOREmpty((String) map.get(BadgingJsonKey.EVIDENCE))) {
+        if (!StringUtils.isBlank((String) map.get(BadgingJsonKey.EVIDENCE))) {
             json.addProperty(BadgingJsonKey.EVIDENCE, (String) map.get(BadgingJsonKey.EVIDENCE));
         }
         json.addProperty(BadgingJsonKey.CREATE_NOTIFICATION, false);
@@ -377,7 +378,7 @@ public class BadgingUtil {
      */
     public static boolean matchAssertionData(String issuerId, String badgeId,
             Map<String, Object> resp) {
-        if (ProjectUtil.isStringNullOREmpty(issuerId) || ProjectUtil.isStringNullOREmpty(badgeId)) {
+        if (StringUtils.isBlank(issuerId) || StringUtils.isBlank(badgeId)) {
             return false;
         }
         if (issuerId.equals(resp.get(BadgingJsonKey.ISSUER_ID))

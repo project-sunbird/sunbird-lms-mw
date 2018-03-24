@@ -64,7 +64,7 @@ public class SocialMediaType {
 	private static String validateMediaURL(String type, String url) {
 		String pattern = "";
 
-		if (ProjectUtil.isStringNullOREmpty(url)) {
+		if (StringUtils.isBlank(url)) {
 			return url;
 		}
 		if (validateUrls(url)) {
@@ -185,7 +185,7 @@ public class SocialMediaType {
 				}
 			}
 			String mediaUrl = SocialMediaType.validateMediaURL(mediaType, socialMedia.get(JsonKey.URL));
-			if (ProjectUtil.isStringNullOREmpty(mediaUrl)) {
+			if (StringUtils.isBlank(mediaUrl)) {
 				throw new ProjectCommonException(ResponseCode.invalidWebPageUrl.getErrorCode(),
 						ProjectUtil.formatMessage(ResponseCode.invalidWebPageUrl.getErrorMessage(),
 								getMediaTypes().get(mediaType)),

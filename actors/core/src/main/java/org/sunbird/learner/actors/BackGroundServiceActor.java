@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -49,7 +50,7 @@ public class BackGroundServiceActor extends BaseActor {
 				Long userCountTTL = 0L;
 				int userCount = (map.get(JsonKey.USER_COUNT) == null) ? 0 : (int) (map.get(JsonKey.USER_COUNT));
 				ProjectLogger.log("userCount is " + userCount + "for location id " + locationId);
-				if (userCount == 0 && !ProjectUtil.isStringNullOREmpty(operation)
+				if (userCount == 0 && !StringUtils.isBlank(operation)
 						&& operation.equalsIgnoreCase("UpdateUserCountScheduler")) {
 					ProjectLogger.log("Processing start for LocationId for Scheduler " + locationId);
 					int count = getUserCount(locationId);
@@ -58,11 +59,11 @@ public class BackGroundServiceActor extends BaseActor {
 					reqMap.put(JsonKey.USER_COUNT, count);
 					reqMap.put(JsonKey.USER_COUNT_TTL, String.valueOf(System.currentTimeMillis()));
 					cassandraOperation.updateRecord(locDbInfo.getKeySpace(), locDbInfo.getTableName(), reqMap);
-				} else if (!ProjectUtil.isStringNullOREmpty(operation)
+				} else if (!StringUtils.isBlank(operation)
 						&& operation.equalsIgnoreCase("GeoLocationManagementActor")) {
 					ProjectLogger.log("Processing start for LocationId for GeoLocationManagementActor " + locationId);
 					try {
-						if (!ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.USER_COUNT_TTL))) {
+						if (!StringUtils.isBlank((String) map.get(JsonKey.USER_COUNT_TTL))) {
 							userCountTTL = Long.valueOf((String) map.get(JsonKey.USER_COUNT_TTL));
 						}
 					} catch (Exception ex) {

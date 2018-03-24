@@ -1,7 +1,5 @@
 package org.sunbird.badge.service.impl;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -9,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.stream.Collectors;
+
 import org.apache.commons.lang.StringUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -34,6 +33,9 @@ import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 /**
  * 
  * @author Manzarul
@@ -48,7 +50,7 @@ public class BadgrServiceImpl implements BadgingService {
 
     static {
         String header = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
-        if (ProjectUtil.isStringNullOREmpty(header)) {
+        if (StringUtils.isBlank(header)) {
             header = PropertiesCache.getInstance().readProperty(JsonKey.EKSTEP_AUTHORIZATION);
         } else {
             header = JsonKey.BEARER + header;
@@ -520,7 +522,7 @@ public class BadgrServiceImpl implements BadgingService {
             return email;
         } else {
             String adminEmail = System.getenv(BadgingJsonKey.SUNBIRD_INSTALLATION_EMAIL);
-            if (ProjectUtil.isStringNullOREmpty(adminEmail)) {
+            if (StringUtils.isBlank(adminEmail)) {
                 return userId + ASSERTION_DUMMY_DOMAIN;
             }
             return adminEmail;

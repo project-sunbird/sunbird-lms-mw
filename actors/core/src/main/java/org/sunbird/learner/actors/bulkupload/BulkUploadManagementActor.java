@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -253,7 +254,7 @@ public class BulkUploadManagementActor extends BaseActor {
 		DbInfo orgDb = Util.dbInfoMap.get(JsonKey.ORG_DB);
 		String orgId = "";
 		Response response = null;
-		if (!ProjectUtil.isStringNullOREmpty((String) req.get(JsonKey.ORGANISATION_ID))) {
+		if (!StringUtils.isBlank((String) req.get(JsonKey.ORGANISATION_ID))) {
 			response = cassandraOperation.getRecordById(orgDb.getKeySpace(), orgDb.getTableName(),
 					(String) req.get(JsonKey.ORGANISATION_ID));
 		} else {
@@ -285,7 +286,7 @@ public class BulkUploadManagementActor extends BaseActor {
 			rootOrgId = orgId;
 		} else {
 			String channel = (String) orgMap.get(JsonKey.CHANNEL);
-			if (!ProjectUtil.isStringNullOREmpty(channel)) {
+			if (!StringUtils.isBlank(channel)) {
 				Map<String, Object> filters = new HashMap<>();
 				filters.put(JsonKey.CHANNEL, channel);
 				filters.put(JsonKey.IS_ROOT_ORG, true);
@@ -364,7 +365,7 @@ public class BulkUploadManagementActor extends BaseActor {
 						String value = (valueArr[j].trim().length() == 0 ? null : valueArr[j].trim());
 						dataMap.put(columnArr[j], value);
 					}
-					if (!ProjectUtil.isStringNullOREmpty(objectType) && objectType.equalsIgnoreCase(JsonKey.USER)) {
+					if (!StringUtils.isBlank(objectType) && objectType.equalsIgnoreCase(JsonKey.USER)) {
 						dataMap.put(JsonKey.REGISTERED_ORG_ID, orgId.trim());
 						dataMap.put(JsonKey.ROOT_ORG_ID, rootOrgId.trim());
 					}

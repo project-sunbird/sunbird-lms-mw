@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Months;
 import org.sunbird.actor.core.BaseActor;
@@ -177,7 +178,7 @@ public class ActorAuditLogServiceImpl extends BaseActor implements AuditLogServi
 		String toDate = (String) filters.get("toDate");
 		Map<String, Object> map = null;
 		Calendar cal = Calendar.getInstance();
-		if (ProjectUtil.isStringNullOREmpty(fromDate) && ProjectUtil.isStringNullOREmpty(toDate)) {
+		if (StringUtils.isBlank(fromDate) && StringUtils.isBlank(toDate)) {
 			toDate = dateFormat2.format(new Date());
 			cal.add(Calendar.DATE, -(Integer.parseInt(cache.getProperty("default_date_range"))));
 			Date toDate1 = cal.getTime();
@@ -190,7 +191,7 @@ public class ActorAuditLogServiceImpl extends BaseActor implements AuditLogServi
 				ProjectLogger.log("Exception occurred while parsing date ", e);
 			}
 			filters.put(JsonKey.DATE, map);
-		} else if (!ProjectUtil.isStringNullOREmpty(fromDate) && !ProjectUtil.isStringNullOREmpty(toDate)) {
+		} else if (!StringUtils.isBlank(fromDate) && !StringUtils.isBlank(toDate)) {
 			Date date1 = null;
 			Date date2 = null;
 			try {
@@ -213,7 +214,7 @@ public class ActorAuditLogServiceImpl extends BaseActor implements AuditLogServi
 
 				filters.put(JsonKey.DATE, map);
 			}
-		} else if (!ProjectUtil.isStringNullOREmpty(fromDate) && ProjectUtil.isStringNullOREmpty(toDate)) {
+		} else if (!StringUtils.isBlank(fromDate) && StringUtils.isBlank(toDate)) {
 			cal.add(Calendar.DATE, Integer.parseInt(cache.getProperty("default_date_range")));
 			Date todate = cal.getTime();
 
@@ -225,7 +226,7 @@ public class ActorAuditLogServiceImpl extends BaseActor implements AuditLogServi
 			}
 			map.put("<=", dateFormat.format(todate));
 			filters.put(JsonKey.DATE, map);
-		} else if (ProjectUtil.isStringNullOREmpty(fromDate) && !ProjectUtil.isStringNullOREmpty(toDate)) {
+		} else if (StringUtils.isBlank(fromDate) && !StringUtils.isBlank(toDate)) {
 			try {
 				map = new HashMap<>();
 				map.put(">=", dateFormat.format(dateFormat2.parse(toDate)));

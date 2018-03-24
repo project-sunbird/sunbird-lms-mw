@@ -8,6 +8,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -157,7 +159,7 @@ public class EsSyncActor extends BaseActor {
         Map<String, Object> orgMap = (Map<String, Object>) entry.getValue();
         orgMap.remove(JsonKey.ORG_TYPE);
         if (orgMap.containsKey(JsonKey.ADDRESS_ID)
-                && !ProjectUtil.isStringNullOREmpty((String) orgMap.get(JsonKey.ADDRESS_ID))) {
+                && !StringUtils.isBlank((String) orgMap.get(JsonKey.ADDRESS_ID))) {
             orgMap.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),
                     (String) orgMap.get(JsonKey.ADDRESS_ID)));
         }
@@ -171,7 +173,7 @@ public class EsSyncActor extends BaseActor {
         ProjectLogger.log("fetching user data started");
         Map<String, Object> userMap = (Map<String, Object>) entry.getValue();
         Util.removeAttributes(userMap, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY));
-        if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.COUNTRY_CODE))) {
+        if (StringUtils.isBlank((String) userMap.get(JsonKey.COUNTRY_CODE))) {
             userMap.put(JsonKey.COUNTRY_CODE,
                     PropertiesCache.getInstance().getProperty("sunbird_default_country_code"));
         }
@@ -245,11 +247,11 @@ public class EsSyncActor extends BaseActor {
     private void addMaskEmailAndPhone(Map<String, Object> userMap) {
         String phone = (String) userMap.get(JsonKey.PHONE);
         String email = (String) userMap.get(JsonKey.EMAIL);
-        if (!ProjectUtil.isStringNullOREmpty(phone)) {
+        if (!StringUtils.isBlank(phone)) {
             userMap.put(JsonKey.ENC_PHONE, phone);
             userMap.put(JsonKey.PHONE, maskingService.maskPhone(decService.decryptData(phone)));
         }
-        if (!ProjectUtil.isStringNullOREmpty(email)) {
+        if (!StringUtils.isBlank(email)) {
             userMap.put(JsonKey.ENC_EMAIL, email);
             userMap.put(JsonKey.EMAIL, maskingService.maskEmail(decService.decryptData(email)));
         }
@@ -279,7 +281,7 @@ public class EsSyncActor extends BaseActor {
                 getDetails(Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB), userId, JsonKey.USER_ID);
         for (Map<String, Object> map : jobMap) {
             if (map.containsKey(JsonKey.ADDRESS_ID)
-                    && !ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.ADDRESS_ID))) {
+                    && !StringUtils.isBlank((String) map.get(JsonKey.ADDRESS_ID))) {
                 map.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),
                         (String) map.get(JsonKey.ADDRESS_ID)));
             }
@@ -292,7 +294,7 @@ public class EsSyncActor extends BaseActor {
                 getDetails(Util.dbInfoMap.get(JsonKey.EDUCATION_DB), userId, JsonKey.USER_ID);
         for (Map<String, Object> map : eduMap) {
             if (map.containsKey(JsonKey.ADDRESS_ID)
-                    && !ProjectUtil.isStringNullOREmpty((String) map.get(JsonKey.ADDRESS_ID))) {
+                    && !StringUtils.isBlank((String) map.get(JsonKey.ADDRESS_ID))) {
                 map.put(JsonKey.ADDRESS, getDetailsById(Util.dbInfoMap.get(JsonKey.ADDRESS_DB),
                         (String) map.get(JsonKey.ADDRESS_ID)));
             }

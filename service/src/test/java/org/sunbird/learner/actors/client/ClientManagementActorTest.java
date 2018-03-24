@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -17,7 +18,6 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.helper.ServiceFactory;
@@ -58,8 +58,8 @@ public class ClientManagementActorTest {
 		Response res = probe.expectMsgClass(duration("10 second"), Response.class);
 		clientId = (String) res.getResult().get(JsonKey.CLIENT_ID);
 		masterKey = (String) res.getResult().get(JsonKey.MASTER_KEY);
-		Assert.assertTrue(!ProjectUtil.isStringNullOREmpty(clientId));
-		Assert.assertTrue(!ProjectUtil.isStringNullOREmpty(masterKey));
+		Assert.assertTrue(!StringUtils.isBlank(clientId));
+		Assert.assertTrue(!StringUtils.isBlank(masterKey));
 	}
 
 	@SuppressWarnings("deprecation")
@@ -100,8 +100,8 @@ public class ClientManagementActorTest {
 		Assert.assertEquals(clientId, dataList.get(0).get(JsonKey.ID));
 		Assert.assertEquals(masterKey, dataList.get(0).get(JsonKey.MASTER_KEY));
 		Assert.assertEquals("test", dataList.get(0).get(JsonKey.CLIENT_NAME));
-		Assert.assertTrue(!ProjectUtil.isStringNullOREmpty((String) dataList.get(0).get(JsonKey.CREATED_DATE)));
-		Assert.assertTrue(!ProjectUtil.isStringNullOREmpty((String) dataList.get(0).get(JsonKey.UPDATED_DATE)));
+		Assert.assertTrue(!StringUtils.isBlank((String) dataList.get(0).get(JsonKey.CREATED_DATE)));
+		Assert.assertTrue(!StringUtils.isBlank((String) dataList.get(0).get(JsonKey.UPDATED_DATE)));
 	}
 
 	@SuppressWarnings("deprecation")

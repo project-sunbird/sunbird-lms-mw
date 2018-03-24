@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -138,7 +139,7 @@ public class GeoLocationManagementActor extends BaseActor {
 		String locationId = (String) actorMessage.getRequest().get(JsonKey.LOCATION_ID);
 		Response finalResponse = new Response();
 
-		if (ProjectUtil.isStringNullOREmpty(locationId)) {
+		if (StringUtils.isBlank(locationId)) {
 			throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
 					ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
 		}
@@ -171,7 +172,7 @@ public class GeoLocationManagementActor extends BaseActor {
 		String location = (String) actorMessage.getRequest().get(JsonKey.LOCATION);
 		Response finalResponse = new Response();
 
-		if (ProjectUtil.isStringNullOREmpty(locationId)) {
+		if (StringUtils.isBlank(locationId)) {
 			throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
 					ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
 		}
@@ -187,10 +188,10 @@ public class GeoLocationManagementActor extends BaseActor {
 		Map<String, Object> dbResult = list.get(0);
 
 		Map<String, Object> dbMap = new HashMap<>();
-		if (!ProjectUtil.isStringNullOREmpty(type)) {
+		if (!StringUtils.isBlank(type)) {
 			dbMap.put(JsonKey.TYPE, type);
 		}
-		if (!ProjectUtil.isStringNullOREmpty(location)) {
+		if (!StringUtils.isBlank(location)) {
 			dbMap.put(JsonKey.LOCATION, location);
 		}
 
@@ -221,7 +222,7 @@ public class GeoLocationManagementActor extends BaseActor {
 		String type = (String) actorMessage.getRequest().get(JsonKey.TYPE);
 		Response finalResponse = new Response();
 
-		if (ProjectUtil.isStringNullOREmpty(id) || ProjectUtil.isStringNullOREmpty(type)) {
+		if (StringUtils.isBlank(id) || StringUtils.isBlank(type)) {
 			throw new ProjectCommonException(ResponseCode.invalidRequestData.getErrorCode(),
 					ResponseCode.invalidRequestData.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
 		}
@@ -271,7 +272,7 @@ public class GeoLocationManagementActor extends BaseActor {
 		String requestedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
 		String rootOrgId = (String) actorMessage.getRequest().get(JsonKey.ROOT_ORG_ID);
 
-		if (ProjectUtil.isStringNullOREmpty(rootOrgId)) {
+		if (StringUtils.isBlank(rootOrgId)) {
 			// throw invalid ord id ,org id should not be null or empty .
 			throw new ProjectCommonException(ResponseCode.invalidOrgId.getErrorCode(),
 					ResponseCode.invalidOrgId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -294,7 +295,7 @@ public class GeoLocationManagementActor extends BaseActor {
 
 			String location = (String) dataMap.get(JsonKey.LOCATION);
 			String type = (String) dataMap.get(JsonKey.TYPE);
-			if (ProjectUtil.isStringNullOREmpty(location)) {
+			if (StringUtils.isBlank(location)) {
 				continue;
 			}
 

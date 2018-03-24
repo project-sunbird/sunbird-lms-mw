@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -60,10 +61,10 @@ public class ApplicationConfigActor extends BaseActor {
 		if (null != responseList && !responseList.isEmpty()) {
 			for (Map<String, Object> resultMap : responseList) {
 				if ((JsonKey.PHONE_UNIQUE).equalsIgnoreCase((String) resultMap.get(JsonKey.FIELD))
-						&& !ProjectUtil.isStringNullOREmpty((String) resultMap.get(JsonKey.FIELD))) {
+						&& !StringUtils.isBlank((String) resultMap.get(JsonKey.FIELD))) {
 					dbPhoneUniqueValue = Boolean.parseBoolean((String) resultMap.get(JsonKey.FIELD));
 				} else if ((JsonKey.EMAIL_UNIQUE).equalsIgnoreCase((String) resultMap.get(JsonKey.FIELD))
-						&& !ProjectUtil.isStringNullOREmpty((String) resultMap.get(JsonKey.FIELD))) {
+						&& !StringUtils.isBlank((String) resultMap.get(JsonKey.FIELD))) {
 					dbEmailUniqueValue = Boolean.parseBoolean((String) resultMap.get(JsonKey.FIELD));
 				}
 			}

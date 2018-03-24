@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.sunbird.actor.background.BackgroundOperations;
@@ -13,7 +14,6 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.TelemetryUtil;
@@ -39,7 +39,7 @@ public class ChannelRegistrationScheduler extends BaseJob {
 			Map<String, Object> resultMap = responseList.get(0);
 			ProjectLogger.log("value for CHANNEL_REG_STATUS_ID (003) from SYSTEM_SETTINGS_DB is : "
 					+ (String) resultMap.get(JsonKey.VALUE));
-			if (ProjectUtil.isStringNullOREmpty((String) resultMap.get(JsonKey.VALUE))
+			if (StringUtils.isBlank((String) resultMap.get(JsonKey.VALUE))
 					&& !Boolean.parseBoolean((String) resultMap.get(JsonKey.VALUE))) {
 				ProjectLogger.log("calling ChannelRegistrationActor from ChannelRegistrationScheduler execute method.");
 				tellToBGRouter(request);

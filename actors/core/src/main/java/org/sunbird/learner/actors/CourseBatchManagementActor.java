@@ -8,6 +8,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -155,7 +157,7 @@ public class CourseBatchManagementActor extends BaseActor {
         }
 
         String batchCreator = (String) courseBatchObject.get(JsonKey.CREATED_BY);
-        if (ProjectUtil.isStringNullOREmpty(batchCreator)) {
+        if (StringUtils.isBlank(batchCreator)) {
             throw new ProjectCommonException(ResponseCode.invalidCourseCreatorId.getErrorCode(),
                     ResponseCode.invalidCourseCreatorId.getErrorMessage(),
                     ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
@@ -303,7 +305,7 @@ public class CourseBatchManagementActor extends BaseActor {
         userCourses.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.COURSE_LOGO_URL));
         userCourses.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.COURSE_NAME));
         userCourses.put(JsonKey.DESCRIPTION, additionalCourseInfo.get(JsonKey.DESCRIPTION));
-        if (!ProjectUtil.isStringNullOREmpty(additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT))) {
+        if (!StringUtils.isBlank(additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT))) {
             userCourses.put(JsonKey.LEAF_NODE_COUNT,
                     Integer.parseInt("" + additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT)));
         }
@@ -420,7 +422,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
         req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
         req.put(JsonKey.COURSE_ADDITIONAL_INFO, getAdditionalCourseInfo(ekStepContent));
-        if (!ProjectUtil.isStringNullOREmpty(((String) req.get(JsonKey.HASHTAGID)))) {
+        if (!StringUtils.isBlank(((String) req.get(JsonKey.HASHTAGID)))) {
             req.put(JsonKey.HASHTAGID,
                     validateHashTagId(((String) req.get(JsonKey.HASHTAGID)), JsonKey.CREATE, ""));
         } else {
@@ -537,7 +539,7 @@ public class CourseBatchManagementActor extends BaseActor {
         req.remove(JsonKey.COUNTER_INCREMENT_STATUS);
         req.remove(JsonKey.COUNTER_DECREMENT_STATUS);
         req.remove(JsonKey.PARTICIPANT);
-        if (!ProjectUtil.isStringNullOREmpty(((String) req.get(JsonKey.HASHTAGID)))) {
+        if (!StringUtils.isBlank(((String) req.get(JsonKey.HASHTAGID)))) {
             req.put(JsonKey.HASHTAGID, validateHashTagId(((String) req.get(JsonKey.HASHTAGID)),
                     JsonKey.UPDATE, (String) req.get(JsonKey.ID)));
         }
@@ -549,7 +551,7 @@ public class CourseBatchManagementActor extends BaseActor {
             Date todate = null;
             Date endDate = null;
             try {
-                if (!ProjectUtil.isStringNullOREmpty((String) res.get(JsonKey.END_DATE))) {
+                if (!StringUtils.isBlank((String) res.get(JsonKey.END_DATE))) {
                     endDate = format.parse((String) res.get(JsonKey.END_DATE));
                 }
                 todate = format.parse(format.format(new Date()));
@@ -572,7 +574,7 @@ public class CourseBatchManagementActor extends BaseActor {
                     requestedStartDate = format.parse((String) req.get(JsonKey.START_DATE));
                     dbBatchStartDate = format.parse((String) res.get(JsonKey.START_DATE));
                     todaydate = format.parse(format.format(new Date()));
-                    if (!ProjectUtil.isStringNullOREmpty((String) res.get(JsonKey.END_DATE))) {
+                    if (!StringUtils.isBlank((String) res.get(JsonKey.END_DATE))) {
                         dbBatchEndDate = format.parse((String) res.get(JsonKey.END_DATE));
                     }
                 } catch (Exception e) {
@@ -612,7 +614,7 @@ public class CourseBatchManagementActor extends BaseActor {
                     dbBatchStartDate = format.parse((String) res.get(JsonKey.START_DATE));
                     requestedStartDate = format.parse((String) req.get(JsonKey.START_DATE));
                     todaydate = format.parse(format.format(new Date()));
-                    if (!ProjectUtil.isStringNullOREmpty((String) res.get(JsonKey.END_DATE))) {
+                    if (!StringUtils.isBlank((String) res.get(JsonKey.END_DATE))) {
                         dbBatchEndDate = format.parse((String) res.get(JsonKey.END_DATE));
                     }
                 } catch (Exception e) {
@@ -655,7 +657,7 @@ public class CourseBatchManagementActor extends BaseActor {
                     dbBatchStartDate = format.parse((String) res.get(JsonKey.START_DATE));
                     requestedEndDate = format.parse((String) req.get(JsonKey.END_DATE));
                     todaydate = format.parse(format.format(new Date()));
-                    if (!ProjectUtil.isStringNullOREmpty((String) res.get(JsonKey.END_DATE))) {
+                    if (!StringUtils.isBlank((String) res.get(JsonKey.END_DATE))) {
                         dbBatchEndDate = format.parse((String) res.get(JsonKey.END_DATE));
                     }
                 } catch (ParseException e) {

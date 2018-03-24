@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -41,14 +42,14 @@ public class FileUploadServiceActor extends BaseActor {
 		Response response = new Response();
 		String fileExtension = "";
 		String fileName = (String) req.get(JsonKey.FILE_NAME);
-		if (!ProjectUtil.isStringNullOREmpty(fileName)) {
+		if (!StringUtils.isBlank(fileName)) {
 			String[] split = fileName.split("\\.");
 			if (split.length > 1) {
 				fileExtension = split[split.length - 1];
 			}
 		}
 		String fName = "File-" + processId;
-		if (!ProjectUtil.isStringNullOREmpty(fileExtension)) {
+		if (!StringUtils.isBlank(fileExtension)) {
 			fName = fName + "." + fileExtension.toLowerCase();
 			ProjectLogger.log("File - " + fName + " Extension is " + fileExtension);
 		}

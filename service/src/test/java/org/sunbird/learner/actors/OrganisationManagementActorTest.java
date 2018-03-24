@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -1654,30 +1655,30 @@ public class OrganisationManagementActorTest {
 		} catch (Exception th) {
 			ProjectLogger.log(th.getMessage(), th);
 		}
-		if (!ProjectUtil.isStringNullOREmpty(usrId)) {
+		if (!StringUtils.isBlank(usrId)) {
 			ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
 					ProjectUtil.EsType.user.getTypeName(), usrId);
 		}
 
-		if (!ProjectUtil.isStringNullOREmpty(USER_ID)) {
+		if (!StringUtils.isBlank(USER_ID)) {
 			ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
 					ProjectUtil.EsType.user.getTypeName(), USER_ID);
 		}
 
-		if (!ProjectUtil.isStringNullOREmpty(USER_ID + "01")) {
+		if (!StringUtils.isBlank(USER_ID + "01")) {
 			ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
 					ProjectUtil.EsType.user.getTypeName(), USER_ID + "01");
 		}
 
-		if (!ProjectUtil.isStringNullOREmpty(orgId)) {
+		if (!StringUtils.isBlank(orgId)) {
 			ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
 					ProjectUtil.EsType.organisation.getTypeName(), orgId);
 		}
-		if (!ProjectUtil.isStringNullOREmpty(OrgIDWithoutSourceAndExternalId)) {
+		if (!StringUtils.isBlank(OrgIDWithoutSourceAndExternalId)) {
 			ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
 					ProjectUtil.EsType.organisation.getTypeName(), OrgIDWithoutSourceAndExternalId);
 		}
-		if (!ProjectUtil.isStringNullOREmpty(OrgIdWithSourceAndExternalId)) {
+		if (!StringUtils.isBlank(OrgIdWithSourceAndExternalId)) {
 			ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
 					ProjectUtil.EsType.organisation.getTypeName(), OrgIdWithSourceAndExternalId);
 		}

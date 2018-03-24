@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -153,7 +154,7 @@ public class CourseEnrollmentActor extends BaseActor {
 
 	@SuppressWarnings("unchecked")
 	public static Map<String, Object> getCourseObjectFromEkStep(String courseId, Map<String, String> headers) {
-		if (!ProjectUtil.isStringNullOREmpty(courseId)) {
+		if (!StringUtils.isBlank(courseId)) {
 			try {
 				String query = EKSTEP_COURSE_SEARCH_QUERY.replaceAll("COURSE_ID_PLACEHOLDER", courseId);
 				Map<String, Object> result = EkStepRequestUtil.searchContent(query, headers);

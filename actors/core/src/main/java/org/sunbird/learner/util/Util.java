@@ -14,6 +14,7 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -242,7 +243,7 @@ public final class Util {
         PropertiesCache propertiesCache = PropertiesCache.getInstance();
 
         String cassandraMode = propertiesCache.getProperty(JsonKey.SUNBIRD_CASSANDRA_MODE);
-        if (ProjectUtil.isStringNullOREmpty(cassandraMode)
+        if (StringUtils.isBlank(cassandraMode)
                 || cassandraMode.equalsIgnoreCase(JsonKey.EMBEDDED_MODE)) {
 
             // configure the Embedded mode and return true here ....
@@ -311,7 +312,7 @@ public final class Util {
         CassandraConnectionManager cassandraConnectionManager =
                 CassandraConnectionMngrFactory.getObject(JsonKey.STANDALONE_MODE);
 
-        if (ProjectUtil.isStringNullOREmpty(ips) || ProjectUtil.isStringNullOREmpty(envPort)) {
+        if (StringUtils.isBlank(ips) || StringUtils.isBlank(envPort)) {
             ProjectLogger.log("Configuration value is not coming form System variable.");
             return response;
         }
@@ -580,12 +581,12 @@ public final class Util {
         ObjectMapper mapper = new ObjectMapper();
         try {
             String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-            if (ProjectUtil.isStringNullOREmpty(baseSearchUrl)) {
+            if (StringUtils.isBlank(baseSearchUrl)) {
                 baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
             }
             headers.put(JsonKey.AUTHORIZATION,
                     JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
-            if (ProjectUtil.isStringNullOREmpty(headers.get(JsonKey.AUTHORIZATION))) {
+            if (StringUtils.isBlank(headers.get(JsonKey.AUTHORIZATION))) {
                 headers.put(JsonKey.AUTHORIZATION,
                         PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
             }
@@ -644,7 +645,7 @@ public final class Util {
     }
 
     public static String getRootOrgIdFromChannel(String channel) {
-        if (!ProjectUtil.isStringNullOREmpty(channel)) {
+        if (!StringUtils.isBlank(channel)) {
             Map<String, Object> filters = new HashMap<>();
             filters.put(JsonKey.CHANNEL, channel);
             filters.put(JsonKey.IS_ROOT_ORG, true);
@@ -694,7 +695,7 @@ public final class Util {
                 .log("channel registration for hashTag Id = " + req.get(JsonKey.HASHTAGID) + "");
         Map<String, String> headerMap = new HashMap<>();
         String header = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
-        if (ProjectUtil.isStringNullOREmpty(header)) {
+        if (StringUtils.isBlank(header)) {
             header = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION);
         } else {
             header = JsonKey.BEARER + header;
@@ -708,7 +709,7 @@ public final class Util {
             ProjectLogger.log("start call for registering the channel for hashTag id =="
                     + req.get(JsonKey.HASHTAGID));
             String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-            if (ProjectUtil.isStringNullOREmpty(ekStepBaseUrl)) {
+            if (StringUtils.isBlank(ekStepBaseUrl)) {
                 ekStepBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
             }
             Map<String, Object> map = new HashMap<>();
@@ -744,7 +745,7 @@ public final class Util {
         ProjectLogger.log("channel update for hashTag Id = " + req.get(JsonKey.HASHTAGID) + "");
         Map<String, String> headerMap = new HashMap<>();
         String header = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
-        if (ProjectUtil.isStringNullOREmpty(header)) {
+        if (StringUtils.isBlank(header)) {
             header = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION);
         } else {
             header = JsonKey.BEARER + header;
@@ -758,7 +759,7 @@ public final class Util {
             ProjectLogger.log("start call for registering the channel for hashTag id =="
                     + req.get(JsonKey.HASHTAGID));
             String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-            if (ProjectUtil.isStringNullOREmpty(ekStepBaseUrl)) {
+            if (StringUtils.isBlank(ekStepBaseUrl)) {
                 ekStepBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
             }
             Map<String, Object> map = new HashMap<>();
@@ -817,12 +818,12 @@ public final class Util {
                     String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
                     String registeredOrgId = (String) result.get(JsonKey.REGISTERED_ORG_ID);
 
-                    if (!(ProjectUtil.isStringNullOREmpty(rootOrgId)
-                            && ProjectUtil.isStringNullOREmpty(registeredOrgId))) {
+                    if (!(StringUtils.isBlank(rootOrgId)
+                            && StringUtils.isBlank(registeredOrgId))) {
                         Map<String, String> rollup = new HashMap<>();
 
                         rollup.put("l1", rootOrgId);
-                        if (!(ProjectUtil.isStringNullOREmpty(registeredOrgId))) {
+                        if (!(StringUtils.isBlank(registeredOrgId))) {
                             rollup.put("l2", registeredOrgId);
                         }
                         requestContext.put(JsonKey.ROLLUP, rollup);
@@ -850,16 +851,16 @@ public final class Util {
     public static String getSunbirdWebUrlPerTenent(Map<String, Object> userMap) {
         StringBuilder webUrl = new StringBuilder();
         String slug = "";
-        if (ProjectUtil.isStringNullOREmpty(System.getenv(SUNBIRD_WEB_URL))) {
+        if (StringUtils.isBlank(System.getenv(SUNBIRD_WEB_URL))) {
             webUrl.append(propertiesCache.getProperty(SUNBIRD_WEB_URL));
         } else {
             webUrl.append(System.getenv(SUNBIRD_WEB_URL));
         }
-        if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.ROOT_ORG_ID))) {
+        if (!StringUtils.isBlank((String) userMap.get(JsonKey.ROOT_ORG_ID))) {
             Map<String, Object> orgMap = getOrgDetails((String) userMap.get(JsonKey.ROOT_ORG_ID));
             slug = (String) orgMap.get(JsonKey.SLUG);
         }
-        if (!ProjectUtil.isStringNullOREmpty(slug)) {
+        if (!StringUtils.isBlank(slug)) {
             webUrl.append("/" + slug);
         }
         return webUrl.toString();

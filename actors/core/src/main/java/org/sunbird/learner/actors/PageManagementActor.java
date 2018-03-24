@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -218,7 +219,7 @@ public class PageManagementActor extends BaseActor {
 		Map<String, Object> reqFilters = (Map<String, Object>) req.get(JsonKey.FILTERS);
 		List<Map<String, Object>> result = null;
 		try {
-			if (!ProjectUtil.isStringNullOREmpty(orgCode)) {
+			if (!StringUtils.isBlank(orgCode)) {
 				response = cassandraOperation.getRecordsByProperty(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(),
 						JsonKey.ORG_CODE, orgCode);
 				result = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
@@ -316,10 +317,10 @@ public class PageManagementActor extends BaseActor {
 		Map<String, Object> targetObject = new HashMap<>();
 		List<Map<String, Object>> correlatedObject = new ArrayList<>();
 		// default value for orgId
-		if (ProjectUtil.isStringNullOREmpty((String) pageMap.get(JsonKey.ORGANISATION_ID))) {
+		if (StringUtils.isBlank((String) pageMap.get(JsonKey.ORGANISATION_ID))) {
 			pageMap.put(JsonKey.ORGANISATION_ID, "NA");
 		}
-		if (!ProjectUtil.isStringNullOREmpty((String) pageMap.get(JsonKey.PAGE_NAME))) {
+		if (!StringUtils.isBlank((String) pageMap.get(JsonKey.PAGE_NAME))) {
 			Map<String, Object> map = new HashMap<>();
 			map.put(JsonKey.PAGE_NAME, pageMap.get(JsonKey.PAGE_NAME));
 			map.put(JsonKey.ORGANISATION_ID, pageMap.get(JsonKey.ORGANISATION_ID));
@@ -387,11 +388,11 @@ public class PageManagementActor extends BaseActor {
 		Map<String, Object> targetObject = new HashMap<>();
 		List<Map<String, Object>> correlatedObject = new ArrayList<>();
 		// default value for orgId
-		if (ProjectUtil.isStringNullOREmpty((String) pageMap.get(JsonKey.ORGANISATION_ID))) {
+		if (StringUtils.isBlank((String) pageMap.get(JsonKey.ORGANISATION_ID))) {
 			pageMap.put(JsonKey.ORGANISATION_ID, "NA");
 		}
 		String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
-		if (!ProjectUtil.isStringNullOREmpty((String) pageMap.get(JsonKey.PAGE_NAME))) {
+		if (!StringUtils.isBlank((String) pageMap.get(JsonKey.PAGE_NAME))) {
 			Map<String, Object> map = new HashMap<>();
 			map.put(JsonKey.PAGE_NAME, pageMap.get(JsonKey.PAGE_NAME));
 			map.put(JsonKey.ORGANISATION_ID, pageMap.get(JsonKey.ORGANISATION_ID));
@@ -474,7 +475,7 @@ public class PageManagementActor extends BaseActor {
 		} catch (Exception e) {
 			ProjectLogger.log("Exception occurred while parsing filters for Ekstep search query", e);
 		}
-		if (ProjectUtil.isStringNullOREmpty(query)) {
+		if (StringUtils.isBlank(query)) {
 			query = (String) section.get(JsonKey.SEARCH_QUERY);
 		}
 		ProjectLogger.log("search query after applying filter for ekstep for page data assemble api : " + query);

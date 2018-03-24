@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -84,7 +85,7 @@ public class LearnerStateUpdateActor extends BaseActor {
 
 					// code to validate the whether request for valid batch range(start and end
 					// date)
-					if (!(ProjectUtil.isStringNullOREmpty(batchId))) {
+					if (!(StringUtils.isBlank(batchId))) {
 						Response batchResponse = cassandraOperation.getRecordById(batchdbInfo.getKeySpace(),
 								batchdbInfo.getTableName(), batchId);
 						List<Map<String, Object>> batches = (List<Map<String, Object>>) batchResponse.getResult()
@@ -162,7 +163,7 @@ public class LearnerStateUpdateActor extends BaseActor {
 			todaydate = format.parse((String) format.format(new Date()));
 			startDate = format.parse(start);
 			endDate = null;
-			if (!(ProjectUtil.isStringNullOREmpty(end))) {
+			if (!(StringUtils.isBlank(end))) {
 				endDate = format.parse(end);
 			}
 		} catch (ParseException e) {

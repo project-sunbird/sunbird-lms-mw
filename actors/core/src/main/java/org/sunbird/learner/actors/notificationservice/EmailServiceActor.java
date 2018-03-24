@@ -108,7 +108,7 @@ public class EmailServiceActor extends BaseActor {
 
 		if (emailIds.size() > 1) {
 			name = "All";
-		} else if (ProjectUtil.isStringNullOREmpty(name)) {
+		} else if (StringUtils.isBlank(name)) {
 			name = "";
 		} else {
 			name = StringUtils.capitalize(name);
@@ -137,7 +137,7 @@ public class EmailServiceActor extends BaseActor {
 				EsType.user.getTypeName(), usrId);
 		if (null != esUserResult) {
 			String rootOrgId = (String) esUserResult.get(JsonKey.ROOT_ORG_ID);
-			if (!(ProjectUtil.isStringNullOREmpty(rootOrgId))) {
+			if (!(StringUtils.isBlank(rootOrgId))) {
 				Map<String, Object> esOrgResult = ElasticSearchUtil.getDataByIdentifier(EsIndex.sunbird.getIndexName(),
 						EsType.organisation.getTypeName(), rootOrgId);
 				if (null != esOrgResult) {

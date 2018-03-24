@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -91,7 +92,7 @@ public class SkillmanagementActor extends BaseActor {
 
 		ProjectLogger.log("SkillmanagementActor-getSkill called");
 		String endorsedUserId = (String) actorMessage.getRequest().get(JsonKey.ENDORSED_USER_ID);
-		if (ProjectUtil.isStringNullOREmpty(endorsedUserId)) {
+		if (StringUtils.isBlank(endorsedUserId)) {
 			throw new ProjectCommonException(ResponseCode.endorsedUserIdRequired.getErrorCode(),
 					ResponseCode.endorsedUserIdRequired.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
 		}
@@ -167,7 +168,7 @@ public class SkillmanagementActor extends BaseActor {
 
 		for (String skillName : skillset) {
 
-			if (!ProjectUtil.isStringNullOREmpty(skillName)) {
+			if (!StringUtils.isBlank(skillName)) {
 
 				// check whether user have already this skill or not -
 				String id = OneWayHashing

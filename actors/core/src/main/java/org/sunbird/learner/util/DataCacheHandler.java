@@ -7,11 +7,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.helper.ServiceFactory;
 
 /**
@@ -49,10 +49,10 @@ public class DataCacheHandler implements Runnable {
 		if (null != responseList && !responseList.isEmpty()) {
 			for (Map<String, Object> resultMap : responseList) {
 				if (((String) resultMap.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.PHONE_UNIQUE)
-						&& ProjectUtil.isStringNullOREmpty((String) resultMap.get(JsonKey.VALUE))) {
+						&& StringUtils.isBlank((String) resultMap.get(JsonKey.VALUE))) {
 					configSettings.put(((String) resultMap.get(JsonKey.FIELD)), String.valueOf(false));
 				} else if (((String) resultMap.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.EMAIL_UNIQUE)
-						&& ProjectUtil.isStringNullOREmpty((String) resultMap.get(JsonKey.VALUE))) {
+						&& StringUtils.isBlank((String) resultMap.get(JsonKey.VALUE))) {
 					configSettings.put(((String) resultMap.get(JsonKey.FIELD)), String.valueOf(false));
 				} else {
 					configSettings.put(((String) resultMap.get(JsonKey.FIELD)), (String) resultMap.get(JsonKey.VALUE));

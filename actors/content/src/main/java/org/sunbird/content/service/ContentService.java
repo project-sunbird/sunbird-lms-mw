@@ -10,7 +10,6 @@ import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -26,7 +25,7 @@ public class ContentService {
 
 	static {
 		String authorization = System.getenv(JsonKey.SUNBIRD_AUTHORIZATION);
-		if (ProjectUtil.isStringNullOREmpty(authorization)) {
+		if (StringUtils.isBlank(authorization)) {
 			authorization = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_AUTHORIZATION);
 		} else {
 			authorization = JsonKey.BEARER + authorization;

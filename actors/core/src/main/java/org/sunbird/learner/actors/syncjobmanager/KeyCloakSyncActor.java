@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -112,7 +113,7 @@ public class KeyCloakSyncActor extends BaseActor {
 		if (isSSOEnabled) {
 			try {
 				String res = ssoManager.syncUserData(userMap);
-				if (!(!ProjectUtil.isStringNullOREmpty(res) && res.equalsIgnoreCase(JsonKey.SUCCESS))) {
+				if (!(!StringUtils.isBlank(res) && res.equalsIgnoreCase(JsonKey.SUCCESS))) {
 					if (null == userMap.get(JsonKey.EMAIL_VERIFIED)) {
 						Map<String, Object> map = new HashMap<>();
 						if (SSOServiceFactory.getInstance().isEmailVerified(userId)) {

@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -185,13 +186,13 @@ public class HealthActor extends BaseActor {
 			String body = "{\"request\":{\"filters\":{\"identifier\":\"test\"}}}";
 			Map<String, String> headers = new HashMap<>();
 			headers.put(JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
-			if (ProjectUtil.isStringNullOREmpty((String) headers.get(JsonKey.AUTHORIZATION))) {
+			if (StringUtils.isBlank((String) headers.get(JsonKey.AUTHORIZATION))) {
 				headers.put(JsonKey.AUTHORIZATION,
 						PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
 				headers.put("Content_Type", "application/json; charset=utf-8");
 			}
 			String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-			if (ProjectUtil.isStringNullOREmpty(ekStepBaseUrl)) {
+			if (StringUtils.isBlank(ekStepBaseUrl)) {
 				ekStepBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
 			}
 			String response = HttpUtil.sendPostRequest(

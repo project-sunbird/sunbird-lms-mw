@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -19,7 +20,6 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
@@ -397,7 +397,7 @@ public class GeoLocationManagementActorTest {
 		for (Map<String, Object> m : createResponse) {
 
 			String id = (String) m.get(JsonKey.ID);
-			if (!ProjectUtil.isStringNullOREmpty(id)) {
+			if (!StringUtils.isBlank(id)) {
 				cassandraOperation.deleteRecord(geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), id);
 			}
 

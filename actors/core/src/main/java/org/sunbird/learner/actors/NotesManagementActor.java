@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -83,7 +84,7 @@ public class NotesManagementActor extends BaseActor {
 			req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
 			req.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
 			String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
-			if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
+			if (!(StringUtils.isBlank(updatedBy))) {
 				req.put(JsonKey.CREATED_BY, updatedBy);
 				req.put(JsonKey.UPDATED_BY, updatedBy);
 			}
@@ -344,7 +345,7 @@ public class NotesManagementActor extends BaseActor {
 	private Boolean validUser(String userId) {
 		Boolean result = false;
 
-		if (!ProjectUtil.isStringNullOREmpty(userId)) {
+		if (!StringUtils.isBlank(userId)) {
 			Map<String, Object> data = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
 					EsType.user.getTypeName(), userId);
 			if (null != data && !data.isEmpty()) {
@@ -383,7 +384,7 @@ public class NotesManagementActor extends BaseActor {
 	private Boolean validateUserForNoteUpdation(String userId, String noteId) {
 		Boolean result = false;
 		Map<String, Object> noteData = getNoteRecordById(noteId);
-		if ((null != noteData && !noteData.isEmpty()) && !ProjectUtil.isStringNullOREmpty(userId)
+		if ((null != noteData && !noteData.isEmpty()) && !StringUtils.isBlank(userId)
 				&& userId.equalsIgnoreCase((String) noteData.get(JsonKey.USER_ID))) {
 			result = true;
 		}

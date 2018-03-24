@@ -2,7 +2,6 @@ package org.sunbird.metrics.actors;
 
 import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -16,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -28,10 +28,11 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 
 public abstract class BaseMetricsActor extends BaseActor {
@@ -63,7 +64,7 @@ public abstract class BaseMetricsActor extends BaseActor {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put(JsonKey.NAME, name);
         snapshot.put(VALUE, value);
-        if (!ProjectUtil.isStringNullOREmpty(timeUnit)) {
+        if (!StringUtils.isBlank(timeUnit)) {
             snapshot.put(JsonKey.TIME_UNIT, timeUnit);
         }
         return snapshot;
@@ -276,12 +277,12 @@ public abstract class BaseMetricsActor extends BaseActor {
         String response = null;
         try {
             String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-            if (ProjectUtil.isStringNullOREmpty(baseSearchUrl)) {
+            if (StringUtils.isBlank(baseSearchUrl)) {
                 baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
             }
             headers.put(JsonKey.AUTHORIZATION,
                     JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
-            if (ProjectUtil.isStringNullOREmpty(headers.get(JsonKey.AUTHORIZATION))) {
+            if (StringUtils.isBlank(headers.get(JsonKey.AUTHORIZATION))) {
                 headers.put(JsonKey.AUTHORIZATION,
                         PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
                 headers.put("Content_Type", "application/json; charset=utf-8");
@@ -304,12 +305,12 @@ public abstract class BaseMetricsActor extends BaseActor {
         String response = null;
         try {
             String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-            if (ProjectUtil.isStringNullOREmpty(baseSearchUrl)) {
+            if (StringUtils.isBlank(baseSearchUrl)) {
                 baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
             }
             headers.put(JsonKey.AUTHORIZATION,
                     JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
-            if (ProjectUtil.isStringNullOREmpty(headers.get(JsonKey.AUTHORIZATION))) {
+            if (StringUtils.isBlank(headers.get(JsonKey.AUTHORIZATION))) {
                 headers.put(JsonKey.AUTHORIZATION,
                         PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
                 headers.put("Content_Type", "application/json; charset=utf-8");
@@ -328,11 +329,11 @@ public abstract class BaseMetricsActor extends BaseActor {
     public static String makePostRequest(String url, String body) throws IOException {
         ProjectLogger.log("Request to Ekstep for Metrics" + body);
         String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-        if (ProjectUtil.isStringNullOREmpty(baseSearchUrl)) {
+        if (StringUtils.isBlank(baseSearchUrl)) {
             baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
         }
         String authKey = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
-        if (ProjectUtil.isStringNullOREmpty(authKey)) {
+        if (StringUtils.isBlank(authKey)) {
             authKey = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION);
         } else {
             authKey = JsonKey.BEARER + authKey;

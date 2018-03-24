@@ -7,13 +7,13 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,12 +47,12 @@ public final class EkStepRequestUtil {
 		JSONObject jObject;
 		try {
 			String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-			if (ProjectUtil.isStringNullOREmpty(baseSearchUrl)) {
+			if (StringUtils.isBlank(baseSearchUrl)) {
 				baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
 			}
 			headers.put(JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
 			headers.put("Content-Type", "application/json");
-			if (ProjectUtil.isStringNullOREmpty((String) headers.get(JsonKey.AUTHORIZATION))) {
+			if (StringUtils.isBlank((String) headers.get(JsonKey.AUTHORIZATION))) {
 				headers.put(JsonKey.AUTHORIZATION,
 						PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
 			}

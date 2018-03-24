@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.util.HttpUtil;
@@ -33,7 +34,7 @@ public final class CourseBatchSchedulerUtil {
 	public static Map<String, String> headerMap = new HashMap<>();
 	static {
 		String header = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
-		if (ProjectUtil.isStringNullOREmpty(header)) {
+		if (StringUtils.isBlank(header)) {
 			header = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION);
 		} else {
 			header = JsonKey.BEARER + header;
@@ -167,7 +168,7 @@ public final class CourseBatchSchedulerUtil {
 			try {
 				ProjectLogger.log("updating content details to Ekstep start", LoggerEnum.INFO.name());
 				String contentUpdateBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-				if (ProjectUtil.isStringNullOREmpty(contentUpdateBaseUrl)) {
+				if (StringUtils.isBlank(contentUpdateBaseUrl)) {
 					contentUpdateBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
 				}
 				response = HttpUtil.sendPatchRequest(contentUpdateBaseUrl

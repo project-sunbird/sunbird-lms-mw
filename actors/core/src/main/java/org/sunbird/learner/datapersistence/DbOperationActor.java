@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -15,7 +16,6 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -98,7 +98,7 @@ public class DbOperationActor extends BaseActor {
 		try {
 			Response response = new Response();
 			List<String> requiredFields = null;
-			if (!ProjectUtil.isStringNullOREmpty((String) reqObj.getRequest().get(ENTITY_NAME))) {
+			if (!StringUtils.isBlank((String) reqObj.getRequest().get(ENTITY_NAME))) {
 				String esType = (String) reqObj.getRequest().get(ENTITY_NAME);
 				if (reqObj.getRequest().containsKey(REQUIRED_FIELDS)) {
 					requiredFields = (List<String>) reqObj.getRequest().get(REQUIRED_FIELDS);
@@ -146,7 +146,7 @@ public class DbOperationActor extends BaseActor {
 		try {
 			Response response = null;
 			validateTableName(reqObj);
-			if (!ProjectUtil.isStringNullOREmpty((String) reqObj.getRequest().get(ENTITY_NAME))) {
+			if (!StringUtils.isBlank((String) reqObj.getRequest().get(ENTITY_NAME))) {
 				response = cassandraOperation.getAllRecords(JsonKey.SUNBIRD_PLUGIN,
 						(String) reqObj.getRequest().get(ENTITY_NAME));
 			} else {
@@ -164,7 +164,7 @@ public class DbOperationActor extends BaseActor {
 		try {
 			Response response = null;
 			validateTableName(reqObj);
-			if (!ProjectUtil.isStringNullOREmpty((String) reqObj.getRequest().get(ENTITY_NAME))) {
+			if (!StringUtils.isBlank((String) reqObj.getRequest().get(ENTITY_NAME))) {
 				response = cassandraOperation.getRecordById(JsonKey.SUNBIRD_PLUGIN,
 						(String) reqObj.getRequest().get(ENTITY_NAME), (String) reqObj.getRequest().get(JsonKey.ID));
 			} else {
@@ -201,7 +201,7 @@ public class DbOperationActor extends BaseActor {
 			validateRequestData(payload);
 			Response response = null;
 			boolean esResult = false;
-			if (!ProjectUtil.isStringNullOREmpty((String) reqObj.getRequest().get(ENTITY_NAME))
+			if (!StringUtils.isBlank((String) reqObj.getRequest().get(ENTITY_NAME))
 					&& ((boolean) reqObj.getRequest().get(INDEXED))) {
 				esResult = updateDataToElastic(ES_INDEX_NAME, (String) reqObj.getRequest().get(ENTITY_NAME),
 						(String) payload.get(JsonKey.ID), payload);
@@ -246,7 +246,7 @@ public class DbOperationActor extends BaseActor {
 			if (((String) response.get(JsonKey.RESPONSE)).equals(JsonKey.SUCCESS)
 					&& ((boolean) reqObj.getRequest().get(INDEXED))) {
 				boolean esResult = false;
-				if (!ProjectUtil.isStringNullOREmpty((String) reqObj.getRequest().get(ENTITY_NAME))) {
+				if (!StringUtils.isBlank((String) reqObj.getRequest().get(ENTITY_NAME))) {
 					esResult = insertDataToElastic(ES_INDEX_NAME, (String) reqObj.getRequest().get(ENTITY_NAME),
 							(String) payload.get(JsonKey.ID), payload);
 					if (!esResult) {
@@ -294,7 +294,7 @@ public class DbOperationActor extends BaseActor {
 		String response = ElasticSearchUtil.createData(index, type, identifier, data);
 		ProjectLogger
 				.log("Getting ES save response for type , identiofier==" + type + "  " + identifier + "  " + response);
-		if (!ProjectUtil.isStringNullOREmpty(response)) {
+		if (!StringUtils.isBlank(response)) {
 			ProjectLogger.log("Data is saved successfully ES ." + type + "  " + identifier);
 			return true;
 		}

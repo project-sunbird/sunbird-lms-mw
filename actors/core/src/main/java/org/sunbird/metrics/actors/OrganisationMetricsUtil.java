@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.JsonKey;
@@ -69,7 +70,7 @@ public final class OrganisationMetricsUtil {
 		requestObject.put(JsonKey.PERIOD, BaseMetricsActor.getEkstepPeriod(periodStr));
 		Map<String, Object> filterMap = new HashMap<>();
 		filterMap.put(JsonKey.TAG, orgHashId);
-		if (!ProjectUtil.isStringNullOREmpty(userId)) {
+		if (!StringUtils.isBlank(userId)) {
 			filterMap.put(BaseMetricsActor.USER_ID, userId);
 		}
 		requestObject.put(JsonKey.FILTER, filterMap);

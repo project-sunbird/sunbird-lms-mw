@@ -11,6 +11,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.velocity.VelocityContext;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
@@ -336,7 +338,7 @@ public class UserManagementActor extends BaseActor {
                             decryptionService.decryptData((String) userMap.get(JsonKey.EMAIL));
                     String name = (String) userMap.get(JsonKey.FIRST_NAME);
                     String userId = (String) userMap.get(JsonKey.USER_ID);
-                    if (!ProjectUtil.isStringNullOREmpty(email)) {
+                    if (!StringUtils.isBlank(email)) {
                         response = new Response();
                         response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
                         sender().tell(response, self());
@@ -664,7 +666,7 @@ public class UserManagementActor extends BaseActor {
         }
         if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
             String requestFields = (String) actorMessage.getRequest().get(JsonKey.FIELDS);
-            if (!ProjectUtil.isStringNullOREmpty(requestFields)) {
+            if (!StringUtils.isBlank(requestFields)) {
                 if (!requestFields.contains(JsonKey.COMPLETENESS)) {
                     result.remove(JsonKey.COMPLETENESS);
                 }
@@ -743,7 +745,7 @@ public class UserManagementActor extends BaseActor {
 
                 if (!esContent.isEmpty()) {
                     for (Map<String, Object> m : esContent) {
-                        if (!ProjectUtil.isStringNullOREmpty((String) m.get(JsonKey.LOCATION_ID))) {
+                        if (!StringUtils.isBlank((String) m.get(JsonKey.LOCATION_ID))) {
                             String locationId = (String) m.get(JsonKey.LOCATION_ID);
                             if (locationCache.containsKey(locationId)) {
                                 topicSet.add((String) locationCache.get(locationId));
@@ -858,7 +860,7 @@ public class UserManagementActor extends BaseActor {
             boolean isChangePasswordReqquired = false;
             if (null != resultMap.get(JsonKey.STATUS) && (ProjectUtil.Status.ACTIVE
                     .getValue()) == (int) resultMap.get(JsonKey.STATUS)) {
-                if (ProjectUtil.isStringNullOREmpty(((String) reqMap.get(JsonKey.LOGIN_TYPE)))) {
+                if (StringUtils.isBlank(((String) reqMap.get(JsonKey.LOGIN_TYPE)))) {
                     // here login type is general
                     boolean password = ((String) resultMap.get(JsonKey.PASSWORD)).equals(
                             OneWayHashing.encryptVal((String) reqMap.get(JsonKey.PASSWORD)));
@@ -1009,7 +1011,7 @@ public class UserManagementActor extends BaseActor {
         // not allowing user to update the status,provider,userName
         removeFieldsFrmReq(userMap);
 
-        if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EMAIL))) {
+        if (!StringUtils.isBlank((String) userMap.get(JsonKey.EMAIL))) {
             boolean flag = checkEmailSameOrDiff(userMap);
             if (flag) {
                 userMap.remove(JsonKey.EMAIL);
@@ -1113,7 +1115,7 @@ public class UserManagementActor extends BaseActor {
         for (Map<String, Object> reqMap : reqList) {
             if (reqMap.containsKey(JsonKey.IS_DELETED) && null != reqMap.get(JsonKey.IS_DELETED)
                     && ((boolean) reqMap.get(JsonKey.IS_DELETED))
-                    && !ProjectUtil.isStringNullOREmpty((String) reqMap.get(JsonKey.ID))) {
+                    && !StringUtils.isBlank((String) reqMap.get(JsonKey.ID))) {
                 String addrsId = null;
                 if (reqMap.containsKey(JsonKey.ADDRESS) && null != reqMap.get(JsonKey.ADDRESS)) {
                     addrsId = (String) ((Map<String, Object>) reqMap.get(JsonKey.ADDRESS))
@@ -1142,7 +1144,7 @@ public class UserManagementActor extends BaseActor {
             Map<String, Object> reqMap = reqList.get(i);
             if (reqMap.containsKey(JsonKey.IS_DELETED) && null != reqMap.get(JsonKey.IS_DELETED)
                     && ((boolean) reqMap.get(JsonKey.IS_DELETED))
-                    && !ProjectUtil.isStringNullOREmpty((String) reqMap.get(JsonKey.ID))) {
+                    && !StringUtils.isBlank((String) reqMap.get(JsonKey.ID))) {
                 String addrsId = null;
                 if (reqMap.containsKey(JsonKey.ADDRESS) && null != reqMap.get(JsonKey.ADDRESS)) {
                     addrsId = (String) ((Map<String, Object>) reqMap.get(JsonKey.ADDRESS))
@@ -1170,7 +1172,7 @@ public class UserManagementActor extends BaseActor {
             Map<String, Object> reqMap = reqList.get(i);
             if (reqMap.containsKey(JsonKey.IS_DELETED) && null != reqMap.get(JsonKey.IS_DELETED)
                     && ((boolean) reqMap.get(JsonKey.IS_DELETED))
-                    && !ProjectUtil.isStringNullOREmpty((String) reqMap.get(JsonKey.ID))) {
+                    && !StringUtils.isBlank((String) reqMap.get(JsonKey.ID))) {
                 deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(),
                         (String) reqMap.get(JsonKey.ID));
                 continue;
@@ -1383,13 +1385,13 @@ public class UserManagementActor extends BaseActor {
     private void updateKeyCloakUserBase(Map<String, Object> userMap) {
         try {
             String userId = ssoManager.updateUser(userMap);
-            if (!(!ProjectUtil.isStringNullOREmpty(userId)
+            if (!(!StringUtils.isBlank(userId)
                     && userId.equalsIgnoreCase(JsonKey.SUCCESS))) {
                 throw new ProjectCommonException(
                         ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
                         ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
                         ResponseCode.SERVER_ERROR.getResponseCode());
-            } else if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EMAIL))) {
+            } else if (!StringUtils.isBlank((String) userMap.get(JsonKey.EMAIL))) {
                 // if Email is Null or Empty , it means we are not updating email
                 Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
                 Map<String, Object> map = new HashMap<>();
@@ -1435,7 +1437,7 @@ public class UserManagementActor extends BaseActor {
         userMap.remove(JsonKey.EMAIL_VERIFIED);
 
         if (userMap.containsKey(JsonKey.PROVIDER)
-                && !ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PROVIDER))) {
+                && !StringUtils.isBlank((String) userMap.get(JsonKey.PROVIDER))) {
             userMap.put(JsonKey.LOGIN_ID, (String) userMap.get(JsonKey.USERNAME) + "@"
                     + (String) userMap.get(JsonKey.PROVIDER));
         } else {
@@ -1468,12 +1470,12 @@ public class UserManagementActor extends BaseActor {
         }
         // validate root org and reg org
         userMap.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
-        if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.REGISTERED_ORG_ID))) {
+        if (!StringUtils.isBlank((String) userMap.get(JsonKey.REGISTERED_ORG_ID))) {
             validateRegAndRootOrg(userMap);
         } else {
             String provider = (String) userMap.get(JsonKey.PROVIDER);
             String rootOrgId = Util.getRootOrgIdFromChannel(provider);
-            if (!ProjectUtil.isStringNullOREmpty(rootOrgId)) {
+            if (!StringUtils.isBlank(rootOrgId)) {
                 userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
             }
         }
@@ -1492,7 +1494,7 @@ public class UserManagementActor extends BaseActor {
                 Map<String, String> responseMap = ssoManager.createUser(userMap);
                 userId = responseMap.get(JsonKey.USER_ID);
                 accessToken = responseMap.get(JsonKey.ACCESSTOKEN);
-                if (!ProjectUtil.isStringNullOREmpty(userId)) {
+                if (!StringUtils.isBlank(userId)) {
                     userMap.put(JsonKey.USER_ID, userId);
                     userMap.put(JsonKey.ID, userId);
                 } else {
@@ -1518,7 +1520,7 @@ public class UserManagementActor extends BaseActor {
         userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
         userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
 
-        if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PASSWORD))) {
+        if (!StringUtils.isBlank((String) userMap.get(JsonKey.PASSWORD))) {
             emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, userMap.get(JsonKey.PASSWORD));
             userMap.put(JsonKey.PASSWORD,
                     OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
@@ -1549,7 +1551,7 @@ public class UserManagementActor extends BaseActor {
             profileVisbility.put(field, JsonKey.PRIVATE);
         }
         requestMap.put(JsonKey.PROFILE_VISIBILITY, profileVisbility);
-        if (!ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.COUNTRY_CODE))) {
+        if (!StringUtils.isBlank((String) requestMap.get(JsonKey.COUNTRY_CODE))) {
             requestMap.put(JsonKey.COUNTRY_CODE,
                     propertiesCache.getProperty("sunbird_default_country_code"));
         }
@@ -1608,7 +1610,7 @@ public class UserManagementActor extends BaseActor {
                 insertJobProfileDetails(userMap);
                 ProjectLogger.log("User insertation for Job profile done--.....");
             }
-            if (!ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.REGISTERED_ORG_ID))) {
+            if (!StringUtils.isBlank((String) userMap.get(JsonKey.REGISTERED_ORG_ID))) {
                 Response orgResponse = null;
                 try {
                     orgResponse = cassandraOperation.getRecordById(orgDb.getKeySpace(),
@@ -1701,7 +1703,7 @@ public class UserManagementActor extends BaseActor {
                 rootOrgId = orgId;
             } else {
                 String channel = (String) orgMap.get(JsonKey.CHANNEL);
-                if (!ProjectUtil.isStringNullOREmpty(channel)) {
+                if (!StringUtils.isBlank(channel)) {
                     Map<String, Object> filters = new HashMap<>();
                     filters.put(JsonKey.CHANNEL, channel);
                     filters.put(JsonKey.IS_ROOT_ORG, true);
@@ -1733,26 +1735,26 @@ public class UserManagementActor extends BaseActor {
     }
 
     private void sendSMS(Map<String, Object> userMap) {
-        if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EMAIL))
-                && !ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.PHONE))) {
+        if (StringUtils.isBlank((String) userMap.get(JsonKey.EMAIL))
+                && !StringUtils.isBlank((String) userMap.get(JsonKey.PHONE))) {
             UserUtility.decryptUserData(userMap);
             String name = (String) userMap.get(JsonKey.FIRST_NAME) + " "
                     + (String) userMap.get(JsonKey.LAST_NAME);
 
             String envName = System.getenv(JsonKey.SUNBIRD_INSTALLATION);
-            if (ProjectUtil.isStringNullOREmpty(envName)) {
+            if (StringUtils.isBlank(envName)) {
                 envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
             }
             String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
 
             ProjectLogger.log("shortened url :: " + webUrl);
             String sms = ProjectUtil.getSMSBody(name, webUrl, envName);
-            if (ProjectUtil.isStringNullOREmpty(sms)) {
+            if (StringUtils.isBlank(sms)) {
                 sms = PropertiesCache.getInstance().getProperty("sunbird_default_welcome_sms");
             }
             ProjectLogger.log("SMS text : " + sms);
             String countryCode = "";
-            if (ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.COUNTRY_CODE))) {
+            if (StringUtils.isBlank((String) userMap.get(JsonKey.COUNTRY_CODE))) {
                 countryCode =
                         PropertiesCache.getInstance().getProperty("sunbird_default_country_code");
             } else {
@@ -1778,7 +1780,7 @@ public class UserManagementActor extends BaseActor {
         String emailSetting = DataCacheHandler.getConfigSettings().get(JsonKey.EMAIL_UNIQUE);
         if (null != emailSetting && Boolean.parseBoolean(emailSetting)) {
             String email = (String) userMap.get(JsonKey.EMAIL);
-            if (!ProjectUtil.isStringNullOREmpty(email)) {
+            if (!StringUtils.isBlank(email)) {
                 try {
                     email = encryptionService.encryptData(email);
                 } catch (Exception e) {
@@ -1819,7 +1821,7 @@ public class UserManagementActor extends BaseActor {
         String phoneSetting = DataCacheHandler.getConfigSettings().get(JsonKey.PHONE_UNIQUE);
         if (null != phoneSetting && Boolean.parseBoolean(phoneSetting)) {
             String phone = (String) userMap.get(JsonKey.PHONE);
-            if (!ProjectUtil.isStringNullOREmpty(phone)) {
+            if (!StringUtils.isBlank(phone)) {
                 try {
                     phone = encryptionService.encryptData(phone);
                 } catch (Exception e) {
@@ -1993,7 +1995,7 @@ public class UserManagementActor extends BaseActor {
         map.put(JsonKey.USER_ID, requestMap.get(JsonKey.ID));
         map.put(JsonKey.IS_VERIFIED, false);
         if (requestMap.containsKey(JsonKey.USERNAME)
-                && !(ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.USERNAME)))) {
+                && !(StringUtils.isBlank((String) requestMap.get(JsonKey.USERNAME)))) {
             map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
             map.put(JsonKey.EXTERNAL_ID, JsonKey.USERNAME);
             map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.USERNAME));
@@ -2006,12 +2008,12 @@ public class UserManagementActor extends BaseActor {
             }
         }
         if (requestMap.containsKey(JsonKey.PHONE)
-                && !(ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.PHONE)))) {
+                && !(StringUtils.isBlank((String) requestMap.get(JsonKey.PHONE)))) {
             map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
             map.put(JsonKey.EXTERNAL_ID, JsonKey.PHONE);
             map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.PHONE));
 
-            if (!ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.PHONE_VERIFIED))
+            if (!StringUtils.isBlank((String) requestMap.get(JsonKey.PHONE_VERIFIED))
                     && (boolean) requestMap.get(JsonKey.PHONE_VERIFIED)) {
                 map.put(JsonKey.IS_VERIFIED, true);
             }
@@ -2025,7 +2027,7 @@ public class UserManagementActor extends BaseActor {
             }
         }
         if (requestMap.containsKey(JsonKey.EMAIL)
-                && !(ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.EMAIL)))) {
+                && !(StringUtils.isBlank((String) requestMap.get(JsonKey.EMAIL)))) {
             map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
             map.put(JsonKey.EXTERNAL_ID, JsonKey.EMAIL);
             map.put(JsonKey.EXTERNAL_ID_VALUE, requestMap.get(JsonKey.EMAIL));
@@ -2299,7 +2301,7 @@ public class UserManagementActor extends BaseActor {
 
         String id = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
         usrOrgData.put(JsonKey.ID, id);
-        if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
+        if (!(StringUtils.isBlank(updatedBy))) {
             String updatedByName = getUserNamebyUserId(updatedBy);
             usrOrgData.put(JsonKey.ADDED_BY_NAME, updatedByName);
             usrOrgData.put(JsonKey.ADDED_BY, updatedBy);
@@ -2394,7 +2396,7 @@ public class UserManagementActor extends BaseActor {
 
         Map<String, Object> userOrgDBO = list.get(0);
 
-        if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
+        if (!(StringUtils.isBlank(updatedBy))) {
             String updatedByName = getUserNamebyUserId(updatedBy);
             updateUserOrgDBO.put(JsonKey.UPDATED_BY, updatedBy);
             updateUserOrgDBO.put(JsonKey.APPROVED_BY, updatedByName);
@@ -2491,7 +2493,7 @@ public class UserManagementActor extends BaseActor {
 
         Map<String, Object> userOrgDBO = list.get(0);
 
-        if (!(ProjectUtil.isStringNullOREmpty(updatedBy))) {
+        if (!(StringUtils.isBlank(updatedBy))) {
             String updatedByName = getUserNamebyUserId(updatedBy);
             updateUserOrgDBO.put(JsonKey.UPDATED_BY, updatedBy);
             updateUserOrgDBO.put(JsonKey.APPROVED_BY, updatedByName);
@@ -2635,7 +2637,7 @@ public class UserManagementActor extends BaseActor {
         String provider = (String) requestMap.get(JsonKey.PROVIDER);
         String userName = (String) requestMap.get(JsonKey.USERNAME);
         String loginId = "";
-        if (ProjectUtil.isStringNullOREmpty(userId) && ProjectUtil.isStringNullOREmpty(userName)) {
+        if (StringUtils.isBlank(userId) && StringUtils.isBlank(userName)) {
             ProjectCommonException exception =
                     new ProjectCommonException(ResponseCode.userNameOrUserIdRequired.getErrorCode(),
                             ResponseCode.userNameOrUserIdRequired.getErrorMessage(),
@@ -2643,13 +2645,13 @@ public class UserManagementActor extends BaseActor {
             sender().tell(exception, self());
             return;
         }
-        if (!ProjectUtil.isStringNullOREmpty(userId)) {
+        if (!StringUtils.isBlank(userId)) {
             esUsrRes = ElasticSearchUtil.getDataByIdentifier(
                     ProjectUtil.EsIndex.sunbird.getIndexName(),
                     ProjectUtil.EsType.user.getTypeName(), userId);
         } else {
-            if (!ProjectUtil.isStringNullOREmpty(userName)
-                    && !ProjectUtil.isStringNullOREmpty(provider)) {
+            if (!StringUtils.isBlank(userName)
+                    && !StringUtils.isBlank(provider)) {
                 loginId = userName + JsonKey.LOGIN_ID_DELIMETER + provider;
             } else {
                 loginId = userName;
@@ -2687,9 +2689,9 @@ public class UserManagementActor extends BaseActor {
             requestMap.put(JsonKey.USER_ID, esUsrRes.get(JsonKey.ID));
         }
 
-        if (ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.ORGANISATION_ID))
-                && !ProjectUtil.isStringNullOREmpty(externalId)
-                && !ProjectUtil.isStringNullOREmpty(provider)) {
+        if (StringUtils.isBlank((String) requestMap.get(JsonKey.ORGANISATION_ID))
+                && !StringUtils.isBlank(externalId)
+                && !StringUtils.isBlank(provider)) {
             SearchDTO searchDto = new SearchDTO();
             Map<String, Object> filter = new HashMap<>();
             filter.put(JsonKey.EXTERNAL_ID, externalId);
@@ -2951,10 +2953,10 @@ public class UserManagementActor extends BaseActor {
 
     private void sendOnboardingMail(Map<String, Object> emailTemplateMap) {
 
-        if (!(ProjectUtil.isStringNullOREmpty((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
+        if (!(StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
 
             String envName = System.getenv(JsonKey.SUNBIRD_INSTALLATION);
-            if (ProjectUtil.isStringNullOREmpty(envName)) {
+            if (StringUtils.isBlank(envName)) {
                 envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
             }
 
@@ -2966,17 +2968,17 @@ public class UserManagementActor extends BaseActor {
             emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
 
             String webUrl = Util.getSunbirdWebUrlPerTenent(emailTemplateMap);
-            if ((!ProjectUtil.isStringNullOREmpty(webUrl))
+            if ((!StringUtils.isBlank(webUrl))
                     && (!SUNBIRD_WEB_URL.equalsIgnoreCase(webUrl))) {
                 emailTemplateMap.put(JsonKey.WEB_URL, webUrl);
             }
 
             String appUrl = System.getenv(SUNBIRD_APP_URL);
-            if (ProjectUtil.isStringNullOREmpty(appUrl)) {
+            if (StringUtils.isBlank(appUrl)) {
                 appUrl = propertiesCache.getProperty(SUNBIRD_APP_URL);
             }
 
-            if ((!ProjectUtil.isStringNullOREmpty(appUrl))
+            if ((!StringUtils.isBlank(appUrl))
                     && (!SUNBIRD_APP_URL.equalsIgnoreCase(appUrl))) {
                 emailTemplateMap.put(JsonKey.APP_URL, appUrl);
             }
@@ -3013,12 +3015,12 @@ public class UserManagementActor extends BaseActor {
         context.put(JsonKey.NOTE, propertiesCache.getProperty(JsonKey.MAIL_NOTE));
         context.put(JsonKey.ORG_NAME, propertiesCache.getProperty(JsonKey.ORG_NAME));
         String appUrl = System.getenv(JsonKey.SUNBIRD_APP_URL);
-        if (ProjectUtil.isStringNullOREmpty(appUrl)) {
+        if (StringUtils.isBlank(appUrl)) {
             appUrl = propertiesCache.getProperty(JsonKey.SUNBIRD_APP_URL);
         }
-        context.put(JsonKey.WEB_URL, ProjectUtil.isStringNullOREmpty(System.getenv(SUNBIRD_WEB_URL))
+        context.put(JsonKey.WEB_URL, StringUtils.isBlank(System.getenv(SUNBIRD_WEB_URL))
                 ? propertiesCache.getProperty(SUNBIRD_WEB_URL) : System.getenv(SUNBIRD_WEB_URL));
-        if (!ProjectUtil.isStringNullOREmpty(appUrl)
+        if (!StringUtils.isBlank(appUrl)
                 && !JsonKey.SUNBIRD_APP_URL.equalsIgnoreCase(appUrl)) {
             context.put(JsonKey.APP_URL, appUrl);
         }
@@ -3078,7 +3080,7 @@ public class UserManagementActor extends BaseActor {
         } else {
             lastLoginTime = time;
         }
-        if (ProjectUtil.isStringNullOREmpty(lastLoginTime)) {
+        if (StringUtils.isBlank(lastLoginTime)) {
             return "0";
         }
         return lastLoginTime;

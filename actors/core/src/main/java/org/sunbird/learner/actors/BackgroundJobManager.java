@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.actor.core.BaseActor;
@@ -265,7 +266,7 @@ public class BackgroundJobManager extends BaseActor {
 			if (!(orgList.isEmpty())) {
 				esMap = orgList.get(0);
 				String contactDetails = (String) esMap.get(JsonKey.CONTACT_DETAILS);
-				if (!ProjectUtil.isStringNullOREmpty(contactDetails)) {
+				if (!StringUtils.isBlank(contactDetails)) {
 					ObjectMapper mapper = new ObjectMapper();
 					Object[] arr;
 					try {
@@ -283,7 +284,7 @@ public class BackgroundJobManager extends BaseActor {
 			String hashOrgId = (String) esMap.getOrDefault(JsonKey.HASH_TAG_ID, "");
 			ProjectLogger.log("hashOrgId value is ==" + hashOrgId);
 			// Just check it if hashOrgId is null or empty then replace with org id.
-			if (ProjectUtil.isStringNullOREmpty(hashOrgId)) {
+			if (StringUtils.isBlank(hashOrgId)) {
 				hashOrgId = id;
 			}
 			// making call to register tag
@@ -372,7 +373,7 @@ public class BackgroundJobManager extends BaseActor {
 			}
 			for (Map<String, Object> eduMap : list) {
 				String addressId = (String) eduMap.get(JsonKey.ADDRESS_ID);
-				if (!ProjectUtil.isStringNullOREmpty(addressId)) {
+				if (!StringUtils.isBlank(addressId)) {
 
 					Response addrResponseMap;
 					List<Map<String, Object>> addrList = null;
@@ -409,7 +410,7 @@ public class BackgroundJobManager extends BaseActor {
 			}
 			for (Map<String, Object> eduMap : list) {
 				String addressId = (String) eduMap.get(JsonKey.ADDRESS_ID);
-				if (!ProjectUtil.isStringNullOREmpty(addressId)) {
+				if (!StringUtils.isBlank(addressId)) {
 					Response addrResponseMap;
 					List<Map<String, Object>> addrList = null;
 					try {
@@ -460,11 +461,11 @@ public class BackgroundJobManager extends BaseActor {
 			String phone = (String) map.get(JsonKey.PHONE);
 			String email = (String) map.get(JsonKey.EMAIL);
 
-			if (!ProjectUtil.isStringNullOREmpty(phone)) {
+			if (!StringUtils.isBlank(phone)) {
 				map.put(JsonKey.ENC_PHONE, phone);
 				map.put(JsonKey.PHONE, maskingService.maskPhone(decService.decryptData(phone)));
 			}
-			if (!ProjectUtil.isStringNullOREmpty(email)) {
+			if (!StringUtils.isBlank(email)) {
 				map.put(JsonKey.ENC_EMAIL, email);
 				map.put(JsonKey.EMAIL, maskingService.maskEmail(decService.decryptData(email)));
 			}
@@ -546,9 +547,9 @@ public class BackgroundJobManager extends BaseActor {
 		List<Map<String, Object>> list = (List<Map<String, Object>>) data.get(JsonKey.RESPONSE);
 		Map<String, Object> content = list.get(0);
 		String contentId = (String) content.get(JsonKey.CONTENT_ID);
-		if (!ProjectUtil.isStringNullOREmpty(contentId)) {
+		if (!StringUtils.isBlank(contentId)) {
 			String contentData = getCourseData(contentId);
-			if (!ProjectUtil.isStringNullOREmpty(contentData)) {
+			if (!StringUtils.isBlank(contentData)) {
 				Map<String, Object> map = getContentDetails(contentData);
 				map.put(JsonKey.ID, (String) content.get(JsonKey.COURSE_ID));
 				updateCourseManagement(map);
@@ -580,7 +581,7 @@ public class BackgroundJobManager extends BaseActor {
 		String responseData = null;
 		try {
 			String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-			if (ProjectUtil.isStringNullOREmpty(ekStepBaseUrl)) {
+			if (StringUtils.isBlank(ekStepBaseUrl)) {
 				ekStepBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
 			}
 
@@ -670,7 +671,7 @@ public class BackgroundJobManager extends BaseActor {
 		String response = ElasticSearchUtil.createData(index, type, identifier, data);
 		ProjectLogger
 				.log("Getting ES save response for type , identiofier==" + type + "  " + identifier + "  " + response);
-		if (!ProjectUtil.isStringNullOREmpty(response)) {
+		if (!StringUtils.isBlank(response)) {
 			ProjectLogger.log("User Data is saved successfully ES ." + type + "  " + identifier);
 			return true;
 		}
@@ -694,7 +695,7 @@ public class BackgroundJobManager extends BaseActor {
 		try {
 			ProjectLogger.log("start call for registering the tag ==" + tagId);
 			String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-			if (ProjectUtil.isStringNullOREmpty(ekStepBaseUrl)) {
+			if (StringUtils.isBlank(ekStepBaseUrl)) {
 				ekStepBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
 			}
 			tagStatus = HttpUtil.sendPostRequest(

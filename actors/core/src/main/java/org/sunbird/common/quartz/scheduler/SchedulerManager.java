@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
+import org.apache.commons.lang3.StringUtils;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
@@ -19,7 +20,6 @@ import org.quartz.impl.StdSchedulerFactory;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.metrics.actors.MetricsJobScheduler;
 
@@ -267,9 +267,9 @@ public final class SchedulerManager {
 		String password = System.getenv(JsonKey.SUNBIRD_PG_PASSWORD);
 		ProjectLogger.log("Environment variable value for PostGress SQl= host, port,db,username,password " + host + " ,"
 				+ port + "," + db + "," + username + "," + password, LoggerEnum.INFO.name());
-		if (!ProjectUtil.isStringNullOREmpty(host) && !ProjectUtil.isStringNullOREmpty(port)
-				&& !ProjectUtil.isStringNullOREmpty(db) && !ProjectUtil.isStringNullOREmpty(username)
-				&& !ProjectUtil.isStringNullOREmpty(password)) {
+		if (!StringUtils.isBlank(host) && !StringUtils.isBlank(port)
+				&& !StringUtils.isBlank(db) && !StringUtils.isBlank(username)
+				&& !StringUtils.isBlank(password)) {
 			ProjectLogger.log("Taking Postgres value from Environment variable...", LoggerEnum.INFO.name());
 			configProp.load(in);
 			configProp.put("org.quartz.dataSource.MySqlDS.URL", "jdbc:postgresql://" + host + ":" + port + "/" + db);

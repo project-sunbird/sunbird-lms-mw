@@ -1,5 +1,6 @@
 package org.sunbird.learner.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
@@ -13,7 +14,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
-
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -41,8 +41,6 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.CassandraConnectionManager;
 import org.sunbird.helper.CassandraConnectionMngrFactory;
 import org.sunbird.helper.ServiceFactory;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Utility class for actors
@@ -213,6 +211,8 @@ public final class Util {
 
         dbInfoMap.put(BadgingJsonKey.USER_BADGE_ASSERTION_DB,
                 getDbInfoObject(KEY_SPACE_NAME, "user_badge_assertion"));
+        dbInfoMap.put(BadgingJsonKey.TELEMETRY_DB,
+                getDbInfoObject(KEY_SPACE_NAME, "telemetry_raw_data"));
     }
 
     /**
@@ -818,8 +818,7 @@ public final class Util {
                     String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
                     String registeredOrgId = (String) result.get(JsonKey.REGISTERED_ORG_ID);
 
-                    if (!(StringUtils.isBlank(rootOrgId)
-                            && StringUtils.isBlank(registeredOrgId))) {
+                    if (!(StringUtils.isBlank(rootOrgId) && StringUtils.isBlank(registeredOrgId))) {
                         Map<String, String> rollup = new HashMap<>();
 
                         rollup.put("l1", rootOrgId);

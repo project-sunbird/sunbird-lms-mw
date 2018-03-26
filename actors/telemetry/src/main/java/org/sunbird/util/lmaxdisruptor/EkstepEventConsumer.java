@@ -30,7 +30,7 @@ public class EkstepEventConsumer implements EventHandler<TelemetryEvent> {
         if (writeEvent != null && writeEvent.getData().getRequest() != null) {
             Request req = writeEvent.getData().getRequest();
             Map<String, Object> reqMap = req.getRequest();
-            String contentEncoding = (String) reqMap.get("Content-Encoding");
+            String contentEncoding = (String) reqMap.get(JsonKey.CONTENT_ENCODING);
             if ("gzip".equalsIgnoreCase(contentEncoding)) {
                 if (null != reqMap.get(JsonKey.FILE)) {
                     sendTelemetryToEkstep((byte[]) reqMap.get(JsonKey.FILE), writeEvent);
@@ -52,7 +52,7 @@ public class EkstepEventConsumer implements EventHandler<TelemetryEvent> {
     }
 
     private void sendTelemetryToEkstep(byte[] bs, TelemetryEvent writeEvent) {
-        writeEvent.getData().getHeaders().put("Content-Encoding", "gzip");
+        writeEvent.getData().getHeaders().put(JsonKey.CONTENT_ENCODING, "gzip");
         writeEvent.getData().getHeaders().remove("content-type");
         writeEvent.getData().getHeaders().remove("Content-Type");
 

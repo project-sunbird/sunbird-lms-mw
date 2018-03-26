@@ -34,7 +34,7 @@ public class ESEventConsumer implements EventHandler<TelemetryEvent> {
         if (writeEvent != null && writeEvent.getData().getRequest() != null) {
             Request req = writeEvent.getData().getRequest();
             Map<String, Object> reqMap = req.getRequest();
-            String contentEncoding = (String) reqMap.get("Content-Encoding");
+            String contentEncoding = (String) reqMap.get(JsonKey.CONTENT_ENCODING);
             List<String> teleList = null;
             if ("gzip".equalsIgnoreCase(contentEncoding)) {
                 if (null != reqMap.get(JsonKey.FILE)) {
@@ -53,9 +53,9 @@ public class ESEventConsumer implements EventHandler<TelemetryEvent> {
         for (String teleData : teleList) {
             Gson gson = new Gson();
             Map<String, Object> teleObj = gson.fromJson(teleData, HashMap.class);
-            list.add(teleObj);
             Map<String, Object> data = (Map<String, Object>) teleObj.get(JsonKey.DATA);
             List<Map<String, Object>> events = (List<Map<String, Object>>) data.get(JsonKey.EVENTS);
+            list.addAll(events);
             saveTelemetryDataToES(events);
         }
 

@@ -20,6 +20,7 @@ import org.quartz.impl.StdSchedulerFactory;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.metrics.actors.MetricsJobScheduler;
 
@@ -45,6 +46,8 @@ public final class SchedulerManager {
 	 * This method will register the quartz scheduler job.
 	 */
 	private void schedule() {
+		ProjectLogger.log("Call to start scheduler jobs - org.sunbird.common.quartz.scheduler.SchedulerManager");
+
 		try {
 			Thread.sleep(240000);
 			boolean isEmbedded = false;
@@ -71,10 +74,11 @@ public final class SchedulerManager {
 			scheduleUpdateUserCountJob(identifier);
 			scheduleChannelReg(identifier);
 		} catch (Exception e) {
-			ProjectLogger.log("Error in properties cache", e);
+			ProjectLogger.log("Error in starting scheduler jobs - org.sunbird.common.quartz.scheduler.SchedulerManager ", e);
 		} finally {
 			registerShutDownHook();
 		}
+		ProjectLogger.log("started scheduler jobs - org.sunbird.common.quartz.scheduler.SchedulerManager");
 	}
 
 	public static void scheduleChannelReg(String identifier) {
@@ -237,7 +241,7 @@ public final class SchedulerManager {
 		// time only.
 		Trigger trigger = TriggerBuilder.newTrigger().withIdentity("schedulertrigger", identifier)
 				.withSchedule(CronScheduleBuilder
-						.cronSchedule(PropertiesCache.getInstance().getProperty("quartz_course_batch_timer")))
+						.cronSchedule(PropertiesCache.getInstance().readProperty("quartz_course_batch_timer")))
 				.build();
 		try {
 			if (scheduler.checkExists(job.getKey())) {

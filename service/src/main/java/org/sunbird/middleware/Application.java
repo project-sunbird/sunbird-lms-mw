@@ -23,5 +23,6 @@ public class Application {
 		Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
 		Util.checkCassandraDbConnections(JsonKey.SUNBIRD_PLUGIN);
 		SchedulerManager.schedule();
+		org.sunbird.common.quartz.scheduler.SchedulerManager.getInstance();
 	}
 }

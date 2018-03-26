@@ -365,6 +365,10 @@ public class BadgrServiceImpl implements BadgingService {
 
         String email = getEmail((String) requestedData.get(BadgingJsonKey.RECIPIENT_ID),
                 (String) requestedData.get(BadgingJsonKey.RECIPIENT_TYPE));
+		if (StringUtils.isBlank(email) && !ProjectUtil.isEmailvalid(email)) {
+			ProjectLogger.log("Recipient email is not valid ==" + email);
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), null);
+		}
         requestedData.put(BadgingJsonKey.RECIPIENT_EMAIL, email);
         String requestBody = BadgingUtil.createAssertionReqData(requestedData);
         String url = BadgingUtil.createBadgerUrl(requestedData,
@@ -443,7 +447,8 @@ public class BadgrServiceImpl implements BadgingService {
         Map<String, Object> requestedData = request.getRequest();
         Map<String, Object> targetObject = null;
         List<Map<String, Object>> correlatedObject = new ArrayList<>();
-
+        // This is doing the validation of incoming userId or contnetId 
+        //only this value is not passed to badgr.io
         getEmail((String) requestedData.get(BadgingJsonKey.RECIPIENT_ID),
                 (String) requestedData.get(BadgingJsonKey.RECIPIENT_TYPE));
         String url = BadgingUtil.createBadgerUrl(request.getRequest(),
@@ -505,29 +510,23 @@ public class BadgrServiceImpl implements BadgingService {
      * @param userId String
      * @return String
      */
-    private static String getUserEmailFromDB(String userId) {
-        Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-        Response response = cassandraOperation.getRecordById(usrDbInfo.getKeySpace(),
-                usrDbInfo.getTableName(), userId);
-        List<Map<String, Object>> user = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-        if ((user == null) || user.isEmpty()) {
-            BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
-                    ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), "User not found.");
-        }
-        String email = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
-                .getDecryptionServiceInstance(null)
-                .decryptData((String) user.get(0).get(JsonKey.EMAIL));
-        // verify the email format.
-        if (ProjectUtil.isEmailvalid(email)) {
-            return email;
-        } else {
-            String adminEmail = System.getenv(BadgingJsonKey.SUNBIRD_INSTALLATION_EMAIL);
-            if (StringUtils.isBlank(adminEmail)) {
-                return userId + ASSERTION_DUMMY_DOMAIN;
-            }
-            return adminEmail;
-        }
-    }
+	private static String getUserEmailFromDB(String userId) {
+		Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+		Response response = cassandraOperation.getRecordById(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userId);
+		List<Map<String, Object>> user = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+		if ((user == null) || user.isEmpty()) {
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(),
+					"User not found.");
+		}
+		String email = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
+				.getDecryptionServiceInstance(null).decryptData((String) user.get(0).get(JsonKey.EMAIL));
+		// verify the email format.
+		if (ProjectUtil.isEmailvalid(email)) {
+			return email;
+		} else {
+			return getDefaultEmail();
+		}
+	}
 
     /**
      * This method will take contentId and make EKstep api call to do the content validation, if
@@ -537,32 +536,63 @@ public class BadgrServiceImpl implements BadgingService {
      * @param contentId String
      * @return String
      */
-    private static String verifyContent(String contentId) {
-        String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-        String url =
-                ekStepBaseUrl + PropertiesCache.getInstance().getProperty("sunbird_content_read")
-                        + "/" + contentId;
-        try {
-            HttpUtilResponse response =
-                    HttpUtil.doGetRequest(url, CourseBatchSchedulerUtil.headerMap);
-            if (response == null || response.getStatusCode() >= 300) {
-                BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
-                        ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), "Content not found.");
-            }
-            JSONObject object = new JSONObject(response.getBody());
-            JSONObject data = object.getJSONObject(JsonKey.RESULT);
-            JSONObject contentData = data.getJSONObject(JsonKey.CONTENT);
-            String userId = contentData.getString(JsonKey.CREATED_BY);
-            try {
-                return getUserEmailFromDB(userId);
-            } catch (Exception e) {
-                // no need to throw the exception if content id is valid.
-            }
-        } catch (IOException | JSONException e) {
-            ProjectLogger.log(e.getMessage(), e);
-            BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
-                    ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), "Content not found.");
-        }
-        return contentId + ASSERTION_DUMMY_DOMAIN;
-    }
+	private static String verifyContent(String contentId) {
+		String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
+		String url = ekStepBaseUrl + PropertiesCache.getInstance().getProperty("sunbird_content_read") + "/"
+				+ contentId;
+		try {
+			HttpUtilResponse response = HttpUtil.doGetRequest(url, CourseBatchSchedulerUtil.headerMap);
+			if (response == null || response.getStatusCode() >= 300) {
+				BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(),
+						"Content not found.");
+			}
+			String userId = getUserIdFromContent(response.getBody());
+			// some of the content won't have createdBy , so in that case
+			// take do the content validation only and used default
+			// set admin email
+			if (StringUtils.isNotBlank(userId)) {
+				return getDefaultEmail();
+			}
+			try {
+				return getUserEmailFromDB(userId);
+			} catch (Exception e) {
+				// no need to throw the exception if content id is valid.
+			}
+		} catch (IOException e) {
+			ProjectLogger.log(e.getMessage(), e);
+			BadgingUtil.throwBadgeClassExceptionOnErrorStatus(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(),
+					"Content not found.");
+		}
+		return getDefaultEmail();
+	}
+    
+    /**
+     * This method will provide default email set inside env.
+     * @return String
+     */
+	private static String getDefaultEmail() {
+		String adminEmail = System.getenv(BadgingJsonKey.SUNBIRD_INSTALLATION_EMAIL);
+		ProjectLogger.log("Default email is set to ==" + adminEmail);
+		return adminEmail;
+	}
+	
+	/**
+	 * This method will read ekstep content body and get createdBy from that,
+	 * which will internally refer to our user id.
+	 * @param body Stirng
+	 * @return String
+	 */
+	private static String getUserIdFromContent(String body) {
+		String userId = null;
+		try {
+			JSONObject object = new JSONObject(body);
+			JSONObject data = object.getJSONObject(JsonKey.RESULT);
+			JSONObject contentData = data.getJSONObject(JsonKey.CONTENT);
+			userId = contentData.getString(JsonKey.CREATED_BY);
+		} catch (JSONException e) {
+			ProjectLogger.log(e.getMessage(), e);
+		}
+		return userId;
+	}
 }
+	

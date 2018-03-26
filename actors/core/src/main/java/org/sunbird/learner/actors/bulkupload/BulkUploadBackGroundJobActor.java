@@ -31,6 +31,7 @@ import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.Status;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.Slug;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.ExecutionContext;
@@ -67,6 +68,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     private final EncryptionService encryptionService =
             org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
                     .getEncryptionServiceInstance(null);
+    private final DecryptionService decryptionService =
+        org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
+            .getDecryptionServiceInstance(null);
     private final PropertiesCache propertiesCache = PropertiesCache.getInstance();
     private final List<String> locnIdList = new ArrayList<>();
     private final CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -1402,6 +1406,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                     // check user is active for this organization or not
                     isUserDeletedFromOrg(userMap, updatedBy);
                     updateKeyCloakUserBase(userMap);
+                    email = decryptionService.decryptData(email);
                     userMap.put(JsonKey.EMAIL, email);
                 } else {
                     throw new ProjectCommonException(ResponseCode.userRegOrgError.getErrorCode(),

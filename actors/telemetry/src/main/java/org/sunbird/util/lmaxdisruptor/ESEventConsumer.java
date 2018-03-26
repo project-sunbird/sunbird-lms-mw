@@ -51,8 +51,8 @@ public class ESEventConsumer implements EventHandler<TelemetryEvent> {
     private void extractEventData(List<String> teleList) {
         List<Map<String, Object>> list = new ArrayList<>();
         for (String teleData : teleList) {
-            Gson g = new Gson();
-            Map<String, Object> teleObj = g.fromJson(teleData, HashMap.class);
+            Gson gson = new Gson();
+            Map<String, Object> teleObj = gson.fromJson(teleData, HashMap.class);
             list.add(teleObj);
             Map<String, Object> data = (Map<String, Object>) teleObj.get(JsonKey.DATA);
             List<Map<String, Object>> events = (List<Map<String, Object>>) data.get(JsonKey.EVENTS);

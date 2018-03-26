@@ -57,7 +57,6 @@ public class TelemetryActor extends BaseActor {
 	private Map<String, String> createHeader() {
 		Map<String, String> map = new HashMap<>();
 		String authKey = System.getenv("ekstep_authorization");
-		ProjectLogger.log("Telemetry auth value is comming as =" + authKey);
 		map.put("Content-Type", "application/json");
 		map.put("authorization", JsonKey.BEARER + authKey);
 		return map;

@@ -33,12 +33,8 @@ import org.sunbird.learner.actors.CourseEnrollmentActor;
 public final class CourseBatchSchedulerUtil {
 	public static Map<String, String> headerMap = new HashMap<>();
 	static {
-		String header = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
-		if (StringUtils.isBlank(header)) {
-			header = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION);
-		} else {
-			header = JsonKey.BEARER + header;
-		}
+		String header = ProjectUtil.getValue(JsonKey.EKSTEP_AUTHORIZATION);
+		header = JsonKey.BEARER + header;
 		headerMap.put(JsonKey.AUTHORIZATION, header);
 		headerMap.put("Content-Type", "application/json");
 	}
@@ -105,7 +101,8 @@ public final class CourseBatchSchedulerUtil {
 
 	/**
 	 * 
-	 * @param value
+	 * @param increment
+	 * @param map
 	 */
 	public static void updateCourseBatchDbStatus(Map<String, Object> map, Boolean increment) {
 		ProjectLogger.log("updating course batch details start", LoggerEnum.INFO.name());
@@ -113,7 +110,7 @@ public final class CourseBatchSchedulerUtil {
 		Util.DbInfo courseBatchDBInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
 		try {
 			String response = doOperationInEkStepCourse((String) map.get(JsonKey.COURSE_ID), increment,
-					(String) map.get(JsonKey.ENROLLMENT_TYPE));
+					(String) map.get(JsonKey.ENROLLMENT_TYPE), (String) map.get(JsonKey.HASHTAGID));
 			if (response.equals(JsonKey.SUCCESS)) {
 				boolean flag = updateDataIntoES(map);
 				if (flag) {
@@ -130,7 +127,7 @@ public final class CourseBatchSchedulerUtil {
 
 	/**
 	 * 
-	 * @param val
+	 * @param map
 	 */
 	public static boolean updateDataIntoES(Map<String, Object> map) {
 		Boolean flag = true;
@@ -144,10 +141,9 @@ public final class CourseBatchSchedulerUtil {
 		return flag;
 	}
 
-	public static String doOperationInEkStepCourse(String courseId, boolean increment, String enrollmentType) {
-		String name = System.getenv(JsonKey.SUNBIRD_INSTALLATION) == null
-				? PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_INSTALLATION)
-				: System.getenv("sunbird.installation");
+	public static String doOperationInEkStepCourse(String courseId, boolean increment,
+			String enrollmentType, String hashTagId) {
+		String name = ProjectUtil.getValue(JsonKey.SUNBIRD_INSTALLATION);
 		String contentName = "";
 		String response = "";
 		if (enrollmentType.equals(ProjectUtil.EnrolmentType.open.getVal())) {
@@ -155,8 +151,10 @@ public final class CourseBatchSchedulerUtil {
 		} else {
 			contentName = "c_" + name + "_private_batch_count";
 		}
+		Map<String, String> ekstepHeader = getBasicHeader();
+		addHeaderProps(ekstepHeader, JsonKey.CHANNEL_ID , hashTagId);
 		// collect data from EKStep.
-		Map<String, Object> ekStepContent = CourseEnrollmentActor.getCourseObjectFromEkStep(courseId, headerMap);
+		Map<String, Object> ekStepContent = CourseEnrollmentActor.getCourseObjectFromEkStep(courseId, ekstepHeader);
 		if (ekStepContent != null && ekStepContent.size() > 0) {
 			int val = (int) ekStepContent.getOrDefault(contentName, 0);
 			if (increment) {
@@ -167,13 +165,10 @@ public final class CourseBatchSchedulerUtil {
 			}
 			try {
 				ProjectLogger.log("updating content details to Ekstep start", LoggerEnum.INFO.name());
-				String contentUpdateBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-				if (StringUtils.isBlank(contentUpdateBaseUrl)) {
-					contentUpdateBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
-				}
+				String contentUpdateBaseUrl = ProjectUtil.getValue(JsonKey.EKSTEP_BASE_URL);
 				response = HttpUtil.sendPatchRequest(contentUpdateBaseUrl
 						+ PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_UPDATE_URL) + courseId,
-						"{\"request\": {\"content\": {\"" + contentName + "\": " + val + "}}}", headerMap);
+						"{\"request\": {\"content\": {\"" + contentName + "\": " + val + "}}}", ekstepHeader);
 				ProjectLogger.log("batch count update response==" + response + " " + courseId, LoggerEnum.INFO.name());
 			} catch (IOException e) {
 				ProjectLogger.log("Error while updating content value " + e.getMessage(), e);
@@ -182,6 +177,14 @@ public final class CourseBatchSchedulerUtil {
 			ProjectLogger.log("EKstep content not found for course id==" + courseId, LoggerEnum.INFO.name());
 		}
 		return response;
+	}
+
+	private static void addHeaderProps(Map<String, String> header, String key, String value){
+		header.put(key , value);
+	}
+
+	private static Map<String, String> getBasicHeader(){
+		return headerMap;
 	}
 
 }

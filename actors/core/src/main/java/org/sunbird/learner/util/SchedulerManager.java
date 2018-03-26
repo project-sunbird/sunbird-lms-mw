@@ -24,7 +24,7 @@ public class SchedulerManager {
 	 * all scheduler job will be configure here.
 	 */
 	public static void schedule() {
-		ProjectLogger.log("started scheduler job.");
 		service.scheduleWithFixedDelay(new DataCacheHandler(), 0, PAGE_DATA_TTL, TimeUnit.HOURS);
-	}
+    ProjectLogger.log("started scheduler job - org.sunbird.learner.util.SchedulerManager");
+  }
 }

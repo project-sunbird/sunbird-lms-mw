@@ -26,6 +26,7 @@ import org.sunbird.common.request.Request;
  *
  */
 public class ESEventConsumer implements EventHandler<TelemetryEvent> {
+
     private static final String INDEX_NAME = "telemetry.raw";
 
     @Override
@@ -95,4 +96,5 @@ public class ESEventConsumer implements EventHandler<TelemetryEvent> {
                         : "0" + (cal.get(Calendar.MONTH) + 1)))
                 .toString();
     }
+
 }

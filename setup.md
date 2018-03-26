@@ -73,7 +73,9 @@ Below are the list of environment variables to setup.
 | sunbird_msg_91_auth                   | msg 91 auth  
 | sunbird_msg_sender                    | message sender name  
 | sunbird_installation_email            | email of admin per installation
-   
+| sunbird_lms_base_url                  | sunbird lms service based url
+| sunbird_lms_authorization             | api gateway auth key
+
 
 - Do the below env setup, if you are planing to run background actor in remote mode.
 

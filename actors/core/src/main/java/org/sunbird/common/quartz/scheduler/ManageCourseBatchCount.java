@@ -30,7 +30,7 @@ import org.sunbird.learner.util.Util;
 public class ManageCourseBatchCount implements Job {
 
 	public void execute(JobExecutionContext ctx) throws JobExecutionException {
-		ProjectLogger.log("Executing at: " + Calendar.getInstance().getTime() + " triggered by: "
+		ProjectLogger.log("Executing COURSE_BATCH_COUNT job at: " + Calendar.getInstance().getTime() + " triggered by: "
 				+ ctx.getJobDetail().toString());
 		Util.initializeContextForSchedulerJob(JsonKey.SYSTEM, ctx.getFireInstanceId(), JsonKey.SCHEDULER_JOB);
 		Map<String, Object> logInfo = genarateLogInfo(JsonKey.SYSTEM, ctx.getJobDetail().getDescription());
@@ -70,6 +70,7 @@ public class ManageCourseBatchCount implements Job {
 					weakMap.put(JsonKey.COUNT_INCREMENT_DATE, ProjectUtil.getFormattedDate());
 					weakMap.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.STARTED.getValue());
 					weakMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+					weakMap.put(JsonKey.HASHTAGID ,(String) map.get(JsonKey.HASHTAGID));
 					CourseBatchSchedulerUtil.updateCourseBatchDbStatus(weakMap, true);
 				}
 			}
@@ -84,6 +85,7 @@ public class ManageCourseBatchCount implements Job {
 					weakMap.put(JsonKey.COUNT_DECREMENT_DATE, ProjectUtil.getFormattedDate());
 					weakMap.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.COMPLETED.getValue());
 					weakMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+					weakMap.put(JsonKey.HASHTAGID ,(String) map.get(JsonKey.HASHTAGID));
 					CourseBatchSchedulerUtil.updateCourseBatchDbStatus(weakMap, false);
 				}
 			}

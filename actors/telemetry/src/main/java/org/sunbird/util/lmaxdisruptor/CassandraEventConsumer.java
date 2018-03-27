@@ -5,7 +5,6 @@ import com.google.gson.Gson;
 import com.lmax.disruptor.EventHandler;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.sql.Timestamp;
@@ -15,15 +14,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
 import org.apache.commons.lang3.StringUtils;
-import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
-import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.Util;
+import org.sunbird.services.imp.CassandraTelemetryDaoImpl;
+import org.sunbird.services.service.TelemetryDao;
 
 /**
  * 
@@ -31,8 +29,8 @@ import org.sunbird.learner.util.Util;
  *
  */
 public class CassandraEventConsumer implements EventHandler<TelemetryEvent> {
-    private Util.DbInfo teleDbInfo = Util.dbInfoMap.get(BadgingJsonKey.TELEMETRY_DB);
-    private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+
+    private TelemetryDao telemetryDao = new CassandraTelemetryDaoImpl();
 
     @SuppressWarnings("unchecked")
     @Override
@@ -49,20 +47,16 @@ public class CassandraEventConsumer implements EventHandler<TelemetryEvent> {
                     extractEventData(teleList);
                 }
             } else {
-                saveTelemetryDataToCassandra((List<Map<String, Object>>) writeEvent.getData()
-                        .getRequest().getRequest().get(JsonKey.EVENTS));
+                saveTelemetryData((List<Map<String, Object>>) writeEvent.getData().getRequest()
+                        .getRequest().get(JsonKey.EVENTS));
             }
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private void saveTelemetryDataToCassandra(List<Map<String, Object>> list) {
-        ObjectMapper mapper = new ObjectMapper();
-        String eventdata = "";
+    private void saveTelemetryData(List<Map<String, Object>> list) {
         String reason = "";
         for (Map<String, Object> tele : list) {
             try {
-                eventdata = mapper.writeValueAsString(tele);
                 reason = validateEventData(tele);
                 if (StringUtils.isNotBlank(reason)) {
                     ProjectLogger.log("Telemetry event " + reason + " for event mid : "
@@ -70,24 +64,37 @@ public class CassandraEventConsumer implements EventHandler<TelemetryEvent> {
                             + tele.get(BadgingJsonKey.TELE_EID), LoggerEnum.WARN.name());
                     continue;
                 }
-
-                Timestamp currentTimestamp =
-                        new Timestamp(((Double) tele.get(BadgingJsonKey.TELE_ETS)).longValue());
-                Map<String, Object> pdata =
-                        (Map<String, Object>) tele.get(BadgingJsonKey.TELE_PDATA);
-                TelemetryData teleEvent = new TelemetryData(OneWayHashing.encryptVal(eventdata),
-                        (String) tele.get(BadgingJsonKey.TELE_MID),
-                        (String) tele.get(JsonKey.CHANNEL), currentTimestamp, eventdata,
-                        (String) pdata.get(JsonKey.ID), (String) pdata.get(JsonKey.VER),
-                        (String) tele.get(BadgingJsonKey.TELE_EID));
-                cassandraOperation.upsertRecord(teleDbInfo.getKeySpace(), teleDbInfo.getTableName(),
-                        teleEvent.asMap());
-            } catch (IOException e) {
+                TelemetryData teleEvent = getTelemetryDataObj(tele);
+                if (null != teleEvent) {
+                    telemetryDao.save(teleEvent);
+                }
+            } catch (Exception e) {
                 ProjectLogger.log(e.getMessage(), e);
             }
-
         }
+    }
 
+    @SuppressWarnings("unchecked")
+    private TelemetryData getTelemetryDataObj(Map<String, Object> tele) {
+        ObjectMapper mapper = new ObjectMapper();
+        String eventdata = "";
+        try {
+            Timestamp currentTimestamp =
+                    new Timestamp(((Double) tele.get(BadgingJsonKey.TELE_ETS)).longValue());
+            Map<String, Object> pdata = (Map<String, Object>) tele.get(BadgingJsonKey.TELE_PDATA);
+            /**
+             * creating id by encrypting complete event data using SHA-256 to check whether event we
+             * received is duplicate or new if duplicate then it will update the existing data
+             */
+            eventdata = mapper.writeValueAsString(tele);
+            return new TelemetryData(OneWayHashing.encryptVal(eventdata),
+                    (String) tele.get(BadgingJsonKey.TELE_MID), (String) tele.get(JsonKey.CHANNEL),
+                    currentTimestamp, eventdata, (String) pdata.get(JsonKey.ID),
+                    (String) pdata.get(JsonKey.VER), (String) tele.get(BadgingJsonKey.TELE_EID));
+        } catch (Exception e) {
+            ProjectLogger.log("Exception occurred while creating TelemetryData Obj.", e);
+        }
+        return null;
     }
 
     private String validateEventData(Map<String, Object> tele) {
@@ -110,7 +117,7 @@ public class CassandraEventConsumer implements EventHandler<TelemetryEvent> {
             List<Map<String, Object>> events = (List<Map<String, Object>>) data.get(JsonKey.EVENTS);
             list.addAll(events);
         }
-        saveTelemetryDataToCassandra(list);
+        saveTelemetryData(list);
 
     }
 

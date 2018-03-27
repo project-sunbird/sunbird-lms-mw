@@ -21,45 +21,44 @@ import org.sunbird.common.request.TelemetryV3Request;
  * @author Manzarul
  *
  */
-public class EkstepEventConsumer implements EventHandler<TelemetryEvent> {
+public class EkstepEventConsumer implements EventHandler<Request> {
 
 	@Override
-	public void onEvent(TelemetryEvent writeEvent, long sequence, boolean endOfBatch) throws Exception {
-		if (writeEvent != null && writeEvent.getData().getRequest() != null) {
-			Request req = writeEvent.getData().getRequest();
+	public void onEvent(Request req, long sequence, boolean endOfBatch) throws Exception {
+		if (req != null) {
 			Map<String, Object> reqMap = req.getRequest();
 			String contentEncoding = (String) reqMap.get(JsonKey.CONTENT_ENCODING);
 			if ("gzip".equalsIgnoreCase(contentEncoding)) {
 				if (null != reqMap.get(JsonKey.FILE)) {
-					sendTelemetryToEkstep((byte[]) reqMap.get(JsonKey.FILE), writeEvent);
+					sendTelemetryToEkstep((byte[]) reqMap.get(JsonKey.FILE), req);
 				}
 			} else {
 				try {
 					Gson gson = new Gson();
+					Map<String, String> headers = (Map<String, String>) req.get(JsonKey.HEADER);
 					String response = HttpUtil.sendPostRequest(getTelemetryUrl(),
-							gson.toJson(getEkstepTelemetryRequest(writeEvent.getData().getRequest())),
-							writeEvent.getData().getHeaders());
+							gson.toJson(getEkstepTelemetryRequest(req)), headers);
 					ProjectLogger.log(response + " processed.", LoggerEnum.INFO.name());
 				} catch (Exception e) {
 					ProjectLogger.log(e.getMessage(), e);
-					ProjectLogger.log("Failure Data==" + writeEvent.getData().getRequest());
+					ProjectLogger.log("Failure Data==" + req);
 				}
 			}
 		}
 	}
 
-	private void sendTelemetryToEkstep(byte[] bs, TelemetryEvent writeEvent) {
-		writeEvent.getData().getHeaders().put(JsonKey.CONTENT_ENCODING, "gzip");
-		writeEvent.getData().getHeaders().remove("content-type");
-		writeEvent.getData().getHeaders().remove("Content-Type");
+	private void sendTelemetryToEkstep(byte[] bs, Request request) {
+		Map<String, String> headers = (Map<String, String>) request.get(JsonKey.HEADER);
+		headers.put(JsonKey.CONTENT_ENCODING, "gzip");
+		headers.remove("content-type");
+		headers.remove("Content-Type");
 
 		try {
-			HttpUtilResponse response = HttpUtil.postInputStream(bs, writeEvent.getData().getHeaders(),
-					getTelemetryUrl());
+			HttpUtilResponse response = HttpUtil.postInputStream(bs, headers, getTelemetryUrl());
 			ProjectLogger.log(response.getStatusCode() + " " + response.getBody(), LoggerEnum.INFO.name());
 		} catch (Exception e) {
 			ProjectLogger.log(e.getMessage(), e);
-			ProjectLogger.log("Failure Data==" + writeEvent.getData().getRequest());
+			ProjectLogger.log("Failure Data==" + request);
 		}
 	}
 

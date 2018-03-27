@@ -28,16 +28,15 @@ import org.sunbird.services.service.TelemetryDao;
  * @author Amit Kumar
  *
  */
-public class CassandraEventConsumer implements EventHandler<TelemetryEvent> {
+public class CassandraEventConsumer implements EventHandler<Request> {
 
     private TelemetryDao telemetryDao = new CassandraTelemetryDaoImpl();
 
     @SuppressWarnings("unchecked")
     @Override
-    public void onEvent(TelemetryEvent writeEvent, long sequence, boolean endOfBatch)
+    public void onEvent(Request req, long sequence, boolean endOfBatch)
             throws Exception {
-        if (writeEvent != null && writeEvent.getData().getRequest() != null) {
-            Request req = writeEvent.getData().getRequest();
+        if (req != null) {
             Map<String, Object> reqMap = req.getRequest();
             String contentEncoding = (String) reqMap.get(JsonKey.CONTENT_ENCODING);
             List<String> teleList = null;
@@ -47,8 +46,7 @@ public class CassandraEventConsumer implements EventHandler<TelemetryEvent> {
                     extractEventData(teleList);
                 }
             } else {
-                saveTelemetryData((List<Map<String, Object>>) writeEvent.getData().getRequest()
-                        .getRequest().get(JsonKey.EVENTS));
+                saveTelemetryData((List<Map<String, Object>>) req.getRequest().get(JsonKey.EVENTS));
             }
         }
     }

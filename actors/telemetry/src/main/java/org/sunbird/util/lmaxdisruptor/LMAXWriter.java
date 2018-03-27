@@ -4,13 +4,14 @@ import com.lmax.disruptor.dsl.Disruptor;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.request.Request;
 
 /**
  * @author Manzarul A class to control the disruptor engine. It initialize the disruptor, submits
  *         messages to event producers and closes the disruptor.
  */
 public class LMAXWriter {
-    static private Disruptor<TelemetryEvent> disruptor;
+    static private Disruptor<Request> disruptor;
     private WriteEventProducer writeEventProducer;
     private static final int BUFFER_SIZE = 1024;
     private int ringBufferSize;
@@ -74,10 +75,10 @@ public class LMAXWriter {
         writeEventProducer = new WriteEventProducer(disruptor);
     }
 
-    public void submitMessage(TelemetryEvent message) {
+    public void submitMessage(Request message) {
         if (writeEventProducer != null) {
             // publish the messages via event producer
-            writeEventProducer.onData(message.getData());
+            writeEventProducer.onData(message);
         }
     }
 

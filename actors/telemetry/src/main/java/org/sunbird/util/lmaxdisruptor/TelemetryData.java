@@ -134,6 +134,7 @@ public class TelemetryData {
         map.put("id", this.id);
         map.put("mid", this.mid);
         map.put("channel", this.channel);
+        map.put("ts", this.ts);
         map.put("eventData", this.eventData);
         map.put("pdataId", this.pdataId);
         map.put("pdataVer", this.pdataVer);

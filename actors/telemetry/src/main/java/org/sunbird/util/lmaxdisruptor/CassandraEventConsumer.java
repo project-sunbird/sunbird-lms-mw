@@ -14,15 +14,22 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
+/**
+ * 
+ * @author Amit Kumar
+ *
+ */
 public class CassandraEventConsumer implements EventHandler<TelemetryEvent> {
     private Util.DbInfo teleDbInfo = Util.dbInfoMap.get(BadgingJsonKey.TELEMETRY_DB);
     private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -52,24 +59,27 @@ public class CassandraEventConsumer implements EventHandler<TelemetryEvent> {
     private void saveTelemetryDataToCassandra(List<Map<String, Object>> list) {
         ObjectMapper mapper = new ObjectMapper();
         String eventdata = "";
+        String reason = "";
         for (Map<String, Object> tele : list) {
             try {
                 eventdata = mapper.writeValueAsString(tele);
+                reason = validateEventData(tele);
+                if (StringUtils.isNotBlank(reason)) {
+                    ProjectLogger.log("Telemetry event " + reason + " for event mid : "
+                            + tele.get(BadgingJsonKey.TELE_MID) + "and eid : "
+                            + tele.get(BadgingJsonKey.TELE_EID), LoggerEnum.WARN.name());
+                    continue;
+                }
+
                 Timestamp currentTimestamp =
                         new Timestamp(((Double) tele.get(BadgingJsonKey.TELE_ETS)).longValue());
                 Map<String, Object> pdata =
                         (Map<String, Object>) tele.get(BadgingJsonKey.TELE_PDATA);
-                String pdataId = null;
-                String pdataVer = null;
-                if (null != pdata) {
-                    pdataId = (String) pdata.get(JsonKey.ID);
-                    pdataVer = (String) pdata.get(JsonKey.VER);
-                }
-                String id = OneWayHashing.encryptVal(eventdata);
-                TelemetryData teleEvent =
-                        new TelemetryData(id, (String) tele.get(BadgingJsonKey.TELE_MID),
-                                (String) tele.get(JsonKey.CHANNEL), currentTimestamp, eventdata,
-                                pdataId, pdataVer, (String) tele.get(BadgingJsonKey.TELE_EID));
+                TelemetryData teleEvent = new TelemetryData(OneWayHashing.encryptVal(eventdata),
+                        (String) tele.get(BadgingJsonKey.TELE_MID),
+                        (String) tele.get(JsonKey.CHANNEL), currentTimestamp, eventdata,
+                        (String) pdata.get(JsonKey.ID), (String) pdata.get(JsonKey.VER),
+                        (String) tele.get(BadgingJsonKey.TELE_EID));
                 cassandraOperation.upsertRecord(teleDbInfo.getKeySpace(), teleDbInfo.getTableName(),
                         teleEvent.asMap());
             } catch (IOException e) {
@@ -78,6 +88,16 @@ public class CassandraEventConsumer implements EventHandler<TelemetryEvent> {
 
         }
 
+    }
+
+    private String validateEventData(Map<String, Object> tele) {
+        if (null == tele.get(BadgingJsonKey.TELE_ETS)) {
+            return "ets is null";
+        }
+        if (null == tele.get(BadgingJsonKey.TELE_PDATA)) {
+            return "pdata is null";
+        }
+        return "";
     }
 
     @SuppressWarnings("unchecked")

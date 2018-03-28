@@ -2,6 +2,7 @@ package org.sunbird.util.lmaxdisruptor;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPOutputStream;
@@ -33,8 +34,10 @@ public class EkstepEventConsumer implements EventHandler<Request> {
 		if (request != null) {
 			Map<String, Object> reqMap = request.getRequest();
 			Map<String, String> headers = (Map<String, String>) reqMap.get(JsonKey.HEADER);
-			String encoding = (String) headers.get(JsonKey.CONTENT_ENCODING);
-			if ("gzip".equalsIgnoreCase(encoding)) {
+			if (null == headers) {
+				headers = getHeaders();
+			}
+			if ("gzip".equalsIgnoreCase((String) headers.get(JsonKey.CONTENT_ENCODING))) {
 				if (null != reqMap.get(JsonKey.FILE)) {
 					sendTelemetryToEkstep((byte[]) reqMap.get(JsonKey.FILE), request);
 				}
@@ -51,6 +54,14 @@ public class EkstepEventConsumer implements EventHandler<Request> {
 				}
 			}
 		}
+	}
+	
+	private Map<String, String> getHeaders() {
+		Map<String, String> headers = new HashMap<String, String>();
+		String authKey = System.getenv("ekstep_authorization");
+		headers.put("authorization", JsonKey.BEARER + authKey);
+		headers.put("Content-Type", "application/json");
+		return headers;
 	}
 
 	private void sendTelemetryToEkstep(byte[] bs, Request request) {

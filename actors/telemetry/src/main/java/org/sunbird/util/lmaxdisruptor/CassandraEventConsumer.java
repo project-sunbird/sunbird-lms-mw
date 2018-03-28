@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.zip.GZIPInputStream;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
@@ -36,9 +35,10 @@ public class CassandraEventConsumer implements EventHandler<Request> {
     public void onEvent(Request req, long sequence, boolean endOfBatch) throws Exception {
         if (req != null) {
             Map<String, Object> reqMap = req.getRequest();
-            String contentEncoding = (String) reqMap.get(JsonKey.CONTENT_ENCODING);
+            Map<String, String> headers = (Map<String, String>) reqMap.get(JsonKey.HEADER);
+            String encoding = (String) headers.get(JsonKey.CONTENT_ENCODING);
             List<String> teleList = null;
-            if ("gzip".equalsIgnoreCase(contentEncoding)) {
+            if ("gzip".equalsIgnoreCase(encoding)) {
                 if (null != reqMap.get(JsonKey.FILE)) {
                     teleList = parseFile((byte[]) reqMap.get(JsonKey.FILE));
                     extractEventData(teleList);
@@ -118,10 +118,8 @@ public class CassandraEventConsumer implements EventHandler<Request> {
 
     private List<String> parseFile(byte[] bs) {
         List<String> teleList = new ArrayList<>();
-        InputStream ungzippedResponse = null;
         try (InputStream is = new ByteArrayInputStream(bs)) {
-            ungzippedResponse = new GZIPInputStream(is);
-            InputStreamReader reader = new InputStreamReader(ungzippedResponse);
+            InputStreamReader reader = new InputStreamReader(is);
             BufferedReader in = new BufferedReader(reader);
             String line = "";
             while ((line = in.readLine()) != null) {

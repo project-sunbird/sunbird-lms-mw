@@ -44,7 +44,7 @@ public class TelemetryActor extends BaseActor {
 	 *            Request
 	 */
 	private void saveTelemetry(Request request) throws IOException {
-		ProjectLogger.log("collecting telemetry data ", request.getRequest(), LoggerEnum.INFO.name());
+		ProjectLogger.log("Saving telemetry data.", LoggerEnum.DEBUG.name());
 		request.put(JsonKey.HEADER, createHeader(request));
 		LMAXWriter.getInstance().submitMessage(request);
 		sender().tell(new Response(), self());

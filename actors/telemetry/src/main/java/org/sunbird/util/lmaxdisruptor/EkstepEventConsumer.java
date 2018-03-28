@@ -24,24 +24,26 @@ import org.sunbird.common.request.TelemetryV3Request;
 public class EkstepEventConsumer implements EventHandler<Request> {
 
 	@Override
-	public void onEvent(Request req, long sequence, boolean endOfBatch) throws Exception {
-		if (req != null) {
-			Map<String, Object> reqMap = req.getRequest();
-			String contentEncoding = (String) reqMap.get(JsonKey.CONTENT_ENCODING);
-			if ("gzip".equalsIgnoreCase(contentEncoding)) {
+	@SuppressWarnings("unchecked")
+	public void onEvent(Request request, long sequence, boolean endOfBatch) throws Exception {
+		if (request != null) {
+			Map<String, Object> reqMap = request.getRequest();
+			Map<String, String> headers = (Map<String, String>) reqMap.get(JsonKey.HEADER);
+			String encoding = (String) headers.get(JsonKey.CONTENT_ENCODING);
+			if ("gzip".equalsIgnoreCase(encoding)) {
 				if (null != reqMap.get(JsonKey.FILE)) {
-					sendTelemetryToEkstep((byte[]) reqMap.get(JsonKey.FILE), req);
+					sendTelemetryToEkstep((byte[]) reqMap.get(JsonKey.FILE), request);
 				}
 			} else {
 				try {
 					Gson gson = new Gson();
-					Map<String, String> headers = (Map<String, String>) req.get(JsonKey.HEADER);
 					String response = HttpUtil.sendPostRequest(getTelemetryUrl(),
-							gson.toJson(getEkstepTelemetryRequest(req)), headers);
+							gson.toJson(getEkstepTelemetryRequest(request)), headers);
 					ProjectLogger.log(response + " processed.", LoggerEnum.INFO.name());
 				} catch (Exception e) {
 					ProjectLogger.log(e.getMessage(), e);
-					ProjectLogger.log("Failure Data==" + req);
+					e.printStackTrace();
+					ProjectLogger.log("Failure Data==" + request);
 				}
 			}
 		}

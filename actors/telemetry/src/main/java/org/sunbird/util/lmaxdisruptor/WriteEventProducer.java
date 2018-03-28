@@ -2,6 +2,7 @@ package org.sunbird.util.lmaxdisruptor;
 
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.request.Request;
 
 import com.lmax.disruptor.EventTranslatorOneArg;
 import com.lmax.disruptor.dsl.Disruptor;
@@ -15,22 +16,21 @@ import com.lmax.disruptor.dsl.Disruptor;
 public class WriteEventProducer {
 
 
-  private final Disruptor<TelemetryEvent> disruptor;
+  private final Disruptor<Request> disruptor;
 
-  public WriteEventProducer(Disruptor<TelemetryEvent> disruptor) {
+  public WriteEventProducer(Disruptor<Request> disruptor) {
     this.disruptor = disruptor;
   }
 
-  private static final EventTranslatorOneArg<TelemetryEvent, TelemetryEvent.EventData> TRANSLATOR_ONE_ARG =
-      new EventTranslatorOneArg<TelemetryEvent, TelemetryEvent.EventData>() {
-        public void translateTo(TelemetryEvent writeEvent, long sequence,
-            TelemetryEvent.EventData request) {
-          ProjectLogger.log("Inside translator");
-          writeEvent.setData(request);
+  private static final EventTranslatorOneArg<Request, Request> TRANSLATOR_ONE_ARG =
+      new EventTranslatorOneArg<Request, Request>() {
+        public void translateTo(Request writeEvent, long sequence,
+        		Request request) {
+          writeEvent.setRequest(request.getRequest());
         }
       };
 
-  public void onData(TelemetryEvent.EventData request) {
+  public void onData(Request request) {
     ProjectLogger.log("Publishing " + request.toString(), LoggerEnum.INFO.name());
     // publish the message to disruptor
     disruptor.publishEvent(TRANSLATOR_ONE_ARG, request);

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.sunbird.telemetry.actors;
+package org.sunbird.telemetry;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -14,8 +14,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
-import org.sunbird.services.imp.TelemetryServiceFactory;
-import org.sunbird.services.service.TelemetryDataHandlerService;
+import org.sunbird.util.lmaxdisruptor.LMAXWriter;
 
 /**
  * @author Manzarul
@@ -24,8 +23,6 @@ import org.sunbird.services.service.TelemetryDataHandlerService;
 
 @ActorConfig(tasks = { "saveTelemetry" }, asyncTasks = {})
 public class TelemetryActor extends BaseActor {
-
-	private TelemetryDataHandlerService service = TelemetryServiceFactory.getInstance();
 
 	@Override
 	public void onReceive(Request request) throws Throwable {
@@ -47,20 +44,22 @@ public class TelemetryActor extends BaseActor {
 	 *            Request
 	 */
 	private void saveTelemetry(Request request) throws IOException {
-		ProjectLogger.log("collecting telemetry data ", request.getRequest(), LoggerEnum.INFO.name());
-		service.processData(request, createHeader());
-		Response result = new Response();
-		sender().tell(result, self());
+		ProjectLogger.log("Saving telemetry data.", LoggerEnum.DEBUG.name());
+		request.put(JsonKey.HEADER, createHeader(request));
+		LMAXWriter.getInstance().submitMessage(request);
+		sender().tell(new Response(), self());
 	}
 
-	
-	private Map<String, String> createHeader() {
+	private Map<String, String> createHeader(Request request) {
 		Map<String, String> map = new HashMap<>();
 		String authKey = System.getenv("ekstep_authorization");
-		map.put("Content-Type", "application/json");
 		map.put("authorization", JsonKey.BEARER + authKey);
+		if (request.getRequest().containsKey(JsonKey.FILE)) {
+			map.put(JsonKey.CONTENT_ENCODING, "gzip");
+		} else {
+			map.put("Content-Type", "application/json");
+		}
 		return map;
 	}
-	
-	
+
 }

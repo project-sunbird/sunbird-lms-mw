@@ -18,7 +18,7 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
-import org.sunbird.learner.util.TelemetryUtil;
+import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
 /**

@@ -11,13 +11,13 @@
 	<packaging>pom</packaging>
 	<name>Middleware Actors</name>
 	<modules>
+		<module>telemetry</module>
 		<module>core</module>
 		<module>user</module>
 		<module>organization</module>
 		<module>course</module>
-      <module>content</module>
+      	<module>content</module>
 		<module>badge</module>
-    <module>dashboard</module>
-	<module>telemetry</module>
+    	<module>dashboard</module>
   </modules>
 </project>

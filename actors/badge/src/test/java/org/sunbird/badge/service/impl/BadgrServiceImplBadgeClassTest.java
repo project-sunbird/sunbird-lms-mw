@@ -29,7 +29,7 @@ import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.learner.util.TelemetryUtil;
+import org.sunbird.telemetry.util.TelemetryUtil;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({HttpUtil.class, TelemetryUtil.class})

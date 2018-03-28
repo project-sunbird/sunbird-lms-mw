@@ -23,7 +23,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.TelemetryUtil;
+import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 

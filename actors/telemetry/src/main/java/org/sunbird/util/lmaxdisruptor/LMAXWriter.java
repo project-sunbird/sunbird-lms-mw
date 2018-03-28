@@ -11,7 +11,7 @@ import org.sunbird.common.request.Request;
  *         messages to event producers and closes the disruptor.
  */
 public class LMAXWriter {
-    static private Disruptor<Request> disruptor;
+    private static Disruptor<Request> disruptor;
     private WriteEventProducer writeEventProducer;
     private static final int BUFFER_SIZE = 1024;
     private int ringBufferSize;

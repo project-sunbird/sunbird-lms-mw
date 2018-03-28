@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -36,7 +35,7 @@ public class CassandraEventConsumer implements EventHandler<Request> {
         if (req != null) {
             Map<String, Object> reqMap = req.getRequest();
             Map<String, String> headers = (Map<String, String>) reqMap.get(JsonKey.HEADER);
-            String encoding = (String) headers.get(JsonKey.CONTENT_ENCODING);
+            String encoding = headers.get(JsonKey.CONTENT_ENCODING);
             List<String> teleList = null;
             if ("gzip".equalsIgnoreCase(encoding)) {
                 if (null != reqMap.get(JsonKey.FILE)) {
@@ -50,16 +49,15 @@ public class CassandraEventConsumer implements EventHandler<Request> {
     }
 
     private void saveTelemetryData(List<Map<String, Object>> list) {
-        String reason = "";
         for (Map<String, Object> tele : list) {
             try {
-                reason = validateEventData(tele);
-                if (StringUtils.isNotBlank(reason)) {
-                    ProjectLogger.log("Telemetry event " + reason + " for event mid : "
-                            + tele.get(BadgingJsonKey.TELE_MID) + "and eid : "
-                            + tele.get(BadgingJsonKey.TELE_EID), LoggerEnum.WARN.name());
-                    continue;
+                if (null == tele.get(BadgingJsonKey.TELE_ETS)) {
+                    ProjectLogger.log(
+                            "ets for event mid : " + tele.get(BadgingJsonKey.TELE_MID)
+                                    + "and eid : " + tele.get(BadgingJsonKey.TELE_EID),
+                            LoggerEnum.WARN.name());
                 }
+                ProjectLogger.log("TELE_EVENT:: " + tele);
                 TelemetryData teleEvent = getTelemetryDataObj(tele);
                 if (null != teleEvent) {
                     telemetryDao.save(teleEvent);
@@ -75,32 +73,31 @@ public class CassandraEventConsumer implements EventHandler<Request> {
         ObjectMapper mapper = new ObjectMapper();
         String eventdata = "";
         try {
-            Timestamp currentTimestamp =
-                    new Timestamp(((Double) tele.get(BadgingJsonKey.TELE_ETS)).longValue());
+            Timestamp currentTimestamp = null;
+            if (null != tele.get(BadgingJsonKey.TELE_ETS)) {
+                currentTimestamp =
+                        new Timestamp(((Double) tele.get(BadgingJsonKey.TELE_ETS)).longValue());
+            }
             Map<String, Object> pdata = (Map<String, Object>) tele.get(BadgingJsonKey.TELE_PDATA);
+            String pdataId = "";
+            String pdataVer = "";
+            if (null != pdata) {
+                pdataId = (String) pdata.get(JsonKey.ID);
+                pdataVer = (String) pdata.get(JsonKey.VER);
+            }
             /**
              * TelemetryData id is mid
              */
             eventdata = mapper.writeValueAsString(tele);
             return new TelemetryData((String) tele.get(BadgingJsonKey.TELE_MID),
-                    (String) tele.get(JsonKey.CHANNEL), currentTimestamp, eventdata,
-                    (String) pdata.get(JsonKey.ID), (String) pdata.get(JsonKey.VER),
-                    (String) tele.get(BadgingJsonKey.TELE_EID));
+                    (String) tele.get(JsonKey.CHANNEL), currentTimestamp, eventdata, pdataId,
+                    pdataVer, (String) tele.get(BadgingJsonKey.TELE_EID));
         } catch (Exception e) {
             ProjectLogger.log("Exception occurred while creating TelemetryData Obj.", e);
         }
         return null;
     }
 
-    private String validateEventData(Map<String, Object> tele) {
-        if (null == tele.get(BadgingJsonKey.TELE_ETS)) {
-            return "ets is null";
-        }
-        if (null == tele.get(BadgingJsonKey.TELE_PDATA)) {
-            return "pdata is null";
-        }
-        return "";
-    }
 
     @SuppressWarnings("unchecked")
     private void extractEventData(List<String> teleList) {

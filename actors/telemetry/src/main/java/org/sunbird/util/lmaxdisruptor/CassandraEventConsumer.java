@@ -73,37 +73,61 @@ public class CassandraEventConsumer implements EventHandler<Request> {
     private TelemetryData getTelemetryDataObj(Map<String, Object> tele) {
         ObjectMapper mapper = new ObjectMapper();
         String eventdata = "";
+        Map<String, Object> pdata = null;
         try {
             Timestamp currentTimestamp = null;
             if (null != tele.get(BadgingJsonKey.TELE_ETS)) {
-                // when request coming from controller ets type is BigInteger and when reading from
-                // file its double
-                if (tele.get(BadgingJsonKey.TELE_ETS) instanceof BigInteger) {
-                    currentTimestamp = new Timestamp(
-                            ((BigInteger) tele.get(BadgingJsonKey.TELE_ETS)).longValue());
-                } else {
-                    currentTimestamp =
-                            new Timestamp(((Double) tele.get(BadgingJsonKey.TELE_ETS)).longValue());
-                }
+                currentTimestamp = getTimestamp(tele);
             }
-            Map<String, Object> pdata = (Map<String, Object>) tele.get(BadgingJsonKey.TELE_PDATA);
             String pdataId = "";
             String pdataVer = "";
-            if (null != pdata) {
-                pdataId = (String) pdata.get(JsonKey.ID);
-                pdataVer = (String) pdata.get(JsonKey.VER);
+            String channel = "";
+            if (tele.get(BadgingJsonKey.TELE_VERSION).equals("3.0")) {
+                Map<String, Object> context =
+                        (Map<String, Object>) tele.get(BadgingJsonKey.TELE_CONTEXT);
+                channel = (String) context.get(JsonKey.CHANNEL);
+                pdata = (Map<String, Object>) context.get(BadgingJsonKey.TELE_PDATA);
+                if (null != pdata) {
+                    pdataId = (String) pdata.get(JsonKey.ID);
+                    pdataVer = (String) pdata.get(JsonKey.VER);
+                }
+            } else {
+                pdata = (Map<String, Object>) tele.get(BadgingJsonKey.TELE_PDATA);
+                if (null != pdata) {
+                    pdataId = (String) pdata.get(JsonKey.ID);
+                    pdataVer = (String) pdata.get(JsonKey.VER);
+                }
+                channel = (String) tele.get(JsonKey.CHANNEL);
             }
+
+
+
             /**
              * TelemetryData id is mid
              */
             eventdata = mapper.writeValueAsString(tele);
-            return new TelemetryData((String) tele.get(BadgingJsonKey.TELE_MID),
-                    (String) tele.get(JsonKey.CHANNEL), currentTimestamp, eventdata, pdataId,
-                    pdataVer, (String) tele.get(BadgingJsonKey.TELE_EID));
+            return new TelemetryData((String) tele.get(BadgingJsonKey.TELE_MID), channel,
+                    currentTimestamp, eventdata, pdataId, pdataVer,
+                    (String) tele.get(BadgingJsonKey.TELE_EID),
+                    (String) tele.get(BadgingJsonKey.TELE_VERSION));
         } catch (Exception e) {
             ProjectLogger.log("Exception occurred while creating TelemetryData Obj.", e);
         }
         return null;
+    }
+
+    private Timestamp getTimestamp(Map<String, Object> tele) {
+        Timestamp currentTimestamp;
+        // when request coming from controller ets type is BigInteger and when reading from
+        // file its double
+        if (tele.get(BadgingJsonKey.TELE_ETS) instanceof BigInteger) {
+            currentTimestamp =
+                    new Timestamp(((BigInteger) tele.get(BadgingJsonKey.TELE_ETS)).longValue());
+        } else {
+            currentTimestamp =
+                    new Timestamp(((Double) tele.get(BadgingJsonKey.TELE_ETS)).longValue());
+        }
+        return currentTimestamp;
     }
 
 

@@ -13,13 +13,14 @@ public class TelemetryData {
     private String pdataId;
     private String pdataVer;
     private String eid;
+    private String version;
 
     Map<String, Object> map = null;
 
     public TelemetryData() {}
 
     public TelemetryData(String id, String channel, Timestamp ts, String eventData, String pdataId,
-            String pdataVer, String eid) {
+            String pdataVer, String eid, String version) {
         map = new HashMap<>();
         this.id = id;
         this.channel = channel;
@@ -28,6 +29,35 @@ public class TelemetryData {
         this.pdataId = pdataId;
         this.pdataVer = pdataVer;
         this.eid = eid;
+        this.version = version;
+    }
+
+    /**
+     * @return the pdataVer
+     */
+    public String getPdataVer() {
+        return pdataVer;
+    }
+
+    /**
+     * @param pdataVer the pdataVer to set
+     */
+    public void setPdataVer(String pdataVer) {
+        this.pdataVer = pdataVer;
+    }
+
+    /**
+     * @return the version
+     */
+    public String getVersion() {
+        return version;
+    }
+
+    /**
+     * @param version the version to set
+     */
+    public void setVersion(String version) {
+        this.version = version;
     }
 
     /**
@@ -123,6 +153,7 @@ public class TelemetryData {
         map.put("pdataId", this.pdataId);
         map.put("pdataVer", this.pdataVer);
         map.put("eid", this.eid);
+        map.put("version", this.version);
         return map;
     }
 

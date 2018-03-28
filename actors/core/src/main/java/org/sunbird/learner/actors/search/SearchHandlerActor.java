@@ -18,10 +18,10 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.dto.SearchDTO;
-import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.UserUtility;
+import org.sunbird.telemetry.util.TelemetryLmaxWriter;
+import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryLmaxWriter;
 
 /**
  * This class will handle search operation for all different type of index and

@@ -1,4 +1,4 @@
-package org.sunbird.learner.util;
+package org.sunbird.telemetry.util;
 
 import java.util.HashMap;
 import java.util.List;
@@ -10,7 +10,6 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
-import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryLmaxWriter;
 
 
 /**

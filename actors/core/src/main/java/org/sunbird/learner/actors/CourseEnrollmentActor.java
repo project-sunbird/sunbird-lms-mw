@@ -23,7 +23,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.EkStepRequestUtil;
-import org.sunbird.learner.util.TelemetryUtil;
+import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
 /**

@@ -7,6 +7,7 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -75,8 +76,15 @@ public class CassandraEventConsumer implements EventHandler<Request> {
         try {
             Timestamp currentTimestamp = null;
             if (null != tele.get(BadgingJsonKey.TELE_ETS)) {
-                currentTimestamp =
-                        new Timestamp(((Double) tele.get(BadgingJsonKey.TELE_ETS)).longValue());
+                // when request coming from controller ets type is BigInteger and when reading from
+                // file its double
+                if (tele.get(BadgingJsonKey.TELE_ETS) instanceof BigInteger) {
+                    currentTimestamp = new Timestamp(
+                            ((BigInteger) tele.get(BadgingJsonKey.TELE_ETS)).longValue());
+                } else {
+                    currentTimestamp =
+                            new Timestamp(((Double) tele.get(BadgingJsonKey.TELE_ETS)).longValue());
+                }
             }
             Map<String, Object> pdata = (Map<String, Object>) tele.get(BadgingJsonKey.TELE_PDATA);
             String pdataId = "";

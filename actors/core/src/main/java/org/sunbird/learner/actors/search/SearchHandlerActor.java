@@ -18,8 +18,8 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.dto.SearchDTO;
-import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.UserUtility;
+import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryLmaxWriter;
 

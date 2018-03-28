@@ -30,8 +30,8 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
-import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.TelemetryUtil;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

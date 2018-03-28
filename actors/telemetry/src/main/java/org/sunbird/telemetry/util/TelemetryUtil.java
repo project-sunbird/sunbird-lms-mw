@@ -1,4 +1,4 @@
-package org.sunbird.learner.util;
+package org.sunbird.telemetry.util;
 
 import java.util.HashMap;
 import java.util.List;

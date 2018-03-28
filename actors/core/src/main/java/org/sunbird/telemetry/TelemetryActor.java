@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.sunbird.telemetry.actors;
+package org.sunbird.telemetry;
 
 import java.io.IOException;
 import java.util.HashMap;

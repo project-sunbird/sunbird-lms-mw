@@ -42,14 +42,14 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.SocialMediaType;
-import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.UserUtility;
-import org.sunbird.learner.util.Util;
-import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.notification.sms.provider.ISmsProvider;
 import org.sunbird.notification.utils.SMSFactory;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
+import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.learner.util.Util;
+import org.sunbird.learner.util.Util.DbInfo;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -85,11 +85,13 @@ public class CassandraEventConsumer implements EventHandler<Request> {
             if (tele.get(BadgingJsonKey.TELE_VERSION).equals("3.0")) {
                 Map<String, Object> context =
                         (Map<String, Object>) tele.get(BadgingJsonKey.TELE_CONTEXT);
-                channel = (String) context.get(JsonKey.CHANNEL);
-                pdata = (Map<String, Object>) context.get(BadgingJsonKey.TELE_PDATA);
-                if (null != pdata) {
-                    pdataId = (String) pdata.get(JsonKey.ID);
-                    pdataVer = (String) pdata.get(JsonKey.VER);
+                if (null != context) {
+                    channel = (String) context.get(JsonKey.CHANNEL);
+                    pdata = (Map<String, Object>) context.get(BadgingJsonKey.TELE_PDATA);
+                    if (null != pdata) {
+                        pdataId = (String) pdata.get(JsonKey.ID);
+                        pdataVer = (String) pdata.get(JsonKey.VER);
+                    }
                 }
             } else {
                 pdata = (Map<String, Object>) tele.get(BadgingJsonKey.TELE_PDATA);
@@ -135,11 +137,16 @@ public class CassandraEventConsumer implements EventHandler<Request> {
     private void extractEventData(List<String> teleList) {
         List<Map<String, Object>> list = new ArrayList<>();
         for (String teleData : teleList) {
-            Gson gson = new Gson();
-            Map<String, Object> teleObj = gson.fromJson(teleData, HashMap.class);
-            Map<String, Object> data = (Map<String, Object>) teleObj.get(JsonKey.DATA);
-            List<Map<String, Object>> events = (List<Map<String, Object>>) data.get(JsonKey.EVENTS);
-            list.addAll(events);
+            try {
+                Gson gson = new Gson();
+                Map<String, Object> teleObj = gson.fromJson(teleData, HashMap.class);
+                Map<String, Object> data = (Map<String, Object>) teleObj.get(JsonKey.DATA);
+                List<Map<String, Object>> events =
+                        (List<Map<String, Object>>) data.get(JsonKey.EVENTS);
+                list.addAll(events);
+            } catch (Exception e) {
+                ProjectLogger.log(e.getMessage(), e);
+            }
         }
         saveTelemetryData(list);
 

@@ -7,7 +7,6 @@ import java.util.Map;
 public class TelemetryData {
 
     private String id;
-    private String mid;
     private String channel;
     private Timestamp ts;
     private String eventData;
@@ -19,11 +18,10 @@ public class TelemetryData {
 
     public TelemetryData() {}
 
-    public TelemetryData(String id, String mid, String channel, Timestamp ts, String eventData,
-            String pdataId, String pdataVer, String eid) {
+    public TelemetryData(String id, String channel, Timestamp ts, String eventData, String pdataId,
+            String pdataVer, String eid) {
         map = new HashMap<>();
         this.id = id;
-        this.mid = mid;
         this.channel = channel;
         this.ts = ts;
         this.eventData = eventData;
@@ -46,19 +44,6 @@ public class TelemetryData {
         this.id = id;
     }
 
-    /**
-     * @return the mid
-     */
-    public String getMid() {
-        return mid;
-    }
-
-    /**
-     * @param mid the mid to set
-     */
-    public void setMid(String mid) {
-        this.mid = mid;
-    }
 
     /**
      * @return the channel
@@ -132,7 +117,6 @@ public class TelemetryData {
 
     public Map<String, Object> asMap() {
         map.put("id", this.id);
-        map.put("mid", this.mid);
         map.put("channel", this.channel);
         map.put("ts", this.ts);
         map.put("eventData", this.eventData);

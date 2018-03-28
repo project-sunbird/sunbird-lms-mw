@@ -18,7 +18,6 @@ import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.services.imp.CassandraTelemetryDaoImpl;
 import org.sunbird.services.service.TelemetryDao;
@@ -34,8 +33,7 @@ public class CassandraEventConsumer implements EventHandler<Request> {
 
     @SuppressWarnings("unchecked")
     @Override
-    public void onEvent(Request req, long sequence, boolean endOfBatch)
-            throws Exception {
+    public void onEvent(Request req, long sequence, boolean endOfBatch) throws Exception {
         if (req != null) {
             Map<String, Object> reqMap = req.getRequest();
             String contentEncoding = (String) reqMap.get(JsonKey.CONTENT_ENCODING);
@@ -81,14 +79,13 @@ public class CassandraEventConsumer implements EventHandler<Request> {
                     new Timestamp(((Double) tele.get(BadgingJsonKey.TELE_ETS)).longValue());
             Map<String, Object> pdata = (Map<String, Object>) tele.get(BadgingJsonKey.TELE_PDATA);
             /**
-             * creating id by encrypting complete event data using SHA-256 to check whether event we
-             * received is duplicate or new if duplicate then it will update the existing data
+             * TelemetryData id is mid
              */
             eventdata = mapper.writeValueAsString(tele);
-            return new TelemetryData(OneWayHashing.encryptVal(eventdata),
-                    (String) tele.get(BadgingJsonKey.TELE_MID), (String) tele.get(JsonKey.CHANNEL),
-                    currentTimestamp, eventdata, (String) pdata.get(JsonKey.ID),
-                    (String) pdata.get(JsonKey.VER), (String) tele.get(BadgingJsonKey.TELE_EID));
+            return new TelemetryData((String) tele.get(BadgingJsonKey.TELE_MID),
+                    (String) tele.get(JsonKey.CHANNEL), currentTimestamp, eventdata,
+                    (String) pdata.get(JsonKey.ID), (String) pdata.get(JsonKey.VER),
+                    (String) tele.get(BadgingJsonKey.TELE_EID));
         } catch (Exception e) {
             ProjectLogger.log("Exception occurred while creating TelemetryData Obj.", e);
         }

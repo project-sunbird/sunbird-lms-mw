@@ -1,10 +1,11 @@
 package org.sunbird.util.lmaxdisruptor;
 
-import com.google.gson.Gson;
-import com.lmax.disruptor.EventHandler;
+import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.GZIPOutputStream;
+
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.models.response.HttpUtilResponse;
 import org.sunbird.common.models.util.HttpUtil;
@@ -14,6 +15,9 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.request.TelemetryV3Request;
+
+import com.google.gson.Gson;
+import com.lmax.disruptor.EventHandler;
 
 /**
  * This class will send telemetry data to Ekstep.
@@ -53,15 +57,27 @@ public class EkstepEventConsumer implements EventHandler<Request> {
 		Map<String, String> headers = (Map<String, String>) request.get(JsonKey.HEADER);
 		headers.put(JsonKey.CONTENT_ENCODING, "gzip");
 		headers.remove("content-type");
-		headers.remove("Content-Type");
+		headers.put("Content-Type", "application/zip");
 
 		try {
-			HttpUtilResponse response = HttpUtil.postInputStream(bs, headers, getTelemetryUrl());
+			byte[] gzipBytes = compressedBytes(bs);
+			HttpUtilResponse response = HttpUtil.postInputStream(gzipBytes, headers, getTelemetryUrl());
 			ProjectLogger.log(response.getStatusCode() + " " + response.getBody(), LoggerEnum.INFO.name());
 		} catch (Exception e) {
 			ProjectLogger.log(e.getMessage(), e);
 			ProjectLogger.log("Failure Data==" + request);
 		}
+	}
+
+	private byte[] compressedBytes(byte[] bs) throws Exception {
+		ByteArrayOutputStream byteStream = new ByteArrayOutputStream(bs.length);
+		GZIPOutputStream zipStream = new GZIPOutputStream(byteStream);
+		try {
+			zipStream.write(bs);
+		} finally {
+			zipStream.close();
+		}
+		return byteStream.toByteArray();
 	}
 
 	/**

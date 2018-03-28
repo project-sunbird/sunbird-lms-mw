@@ -10,7 +10,6 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
-import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryLmaxWriter;
 
 
 /**

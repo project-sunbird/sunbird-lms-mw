@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.ElasticSearchUtil;
@@ -22,6 +21,7 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.TelemetryUtil;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryLmaxWriter;
 
 /**
  * This class will handle search operation for all different type of index and
@@ -101,12 +101,9 @@ public class SearchHandlerActor extends BaseActor {
 		params.put(JsonKey.SIZE, result.get(JsonKey.COUNT));
 		params.put(JsonKey.TOPN, generateTopnResult(result)); // need to get topn value from
 																// response
-
-		//
 		Request req = new Request();
 		req.setRequest(telemetryRequestForSearch(telemetryContext, params));
-		req.setOperation(BackgroundOperations.telemetryProcessing.name());
-		tellToAnother(req);
+		TelemetryLmaxWriter.getInstance().submitMessage(req);
 	}
 
 	private List<Map<String, Object>> generateTopnResult(Map<String, Object> result) {

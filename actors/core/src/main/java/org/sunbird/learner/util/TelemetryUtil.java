@@ -5,14 +5,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.sunbird.actor.background.BackgroundOperations;
-import org.sunbird.actor.service.SunbirdMWService;
+
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
+import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryLmaxWriter;
 
-import akka.actor.ActorRef;
 
 /**
  * Created by arvind on 17/1/18.
@@ -96,8 +95,7 @@ public final class TelemetryUtil {
 		Request req = new Request();
 		req.setRequest(TelemetryUtil.genarateTelemetryRequest(targetObject, correlatedObject,
 				TelemetryEvents.AUDIT.getName(), params));
-		req.setOperation(BackgroundOperations.telemetryProcessing.name());
-		callBackGroundActor(req);
+		generateTelemetry(req);
 	}
 
 	public static void telemetryProcessingCall(Map<String, Object> request, Map<String, Object> targetObject,
@@ -112,16 +110,14 @@ public final class TelemetryUtil {
 			Request req = new Request();
 			req.setRequest(TelemetryUtil.genarateTelemetryRequest(targetObject, correlatedObject,
 					TelemetryEvents.AUDIT.getName(), params));
-			req.setOperation(BackgroundOperations.telemetryProcessing.name());
-			callBackGroundActor(req);
+			generateTelemetry(req);
 		} else if (eventType.equalsIgnoreCase(TelemetryEvents.LOG.getName())) {
 			Map<String, Object> logInfo = request;
 			long endTime = System.currentTimeMillis();
 			logInfo.put(JsonKey.END_TIME, endTime);
 			Request req = new Request();
 			req.setRequest(generateTelemetryRequest(eventType, logInfo, TelemetryUtil.getTelemetryContext()));
-			req.setOperation(BackgroundOperations.telemetryProcessing.name());
-			callBackGroundActor(req);
+			generateTelemetry(req);
 		}
 	}
 
@@ -135,9 +131,9 @@ public final class TelemetryUtil {
 		return map;
 	}
 
-	private static void callBackGroundActor(Request request){
+	private static void generateTelemetry(Request request) {
 		request.getContext().put(JsonKey.TELEMETRY_CONTEXT, ExecutionContext.getCurrent().getRequestContext());
-		SunbirdMWService.tellToBGRouter(request, ActorRef.noSender());
+		TelemetryLmaxWriter.getInstance().submitMessage(request);
 	}
 
 }

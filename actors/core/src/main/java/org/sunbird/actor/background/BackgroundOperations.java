@@ -7,5 +7,5 @@ package org.sunbird.actor.background;
  */
 
 public enum BackgroundOperations {
-	telemetryProcessing, registerChannel, updateUserCountToLocationID, emailService;
+	registerChannel, updateUserCountToLocationID, emailService;
 }

@@ -118,6 +118,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 		requestDbInfo.put(JsonKey.EMAIL, decryptedEmail);
 		requestDbInfo.put(JsonKey.TYPE, COURSE_PROGRESS_REPORT);
 		requestDbInfo.put(JsonKey.FORMAT, fileFormat);
+		requestDbInfo.put(JsonKey.RESOURCE_NAME , getCourseNameFromBatch(courseBatchResult));
 
 		cassandraOperation.insertRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
 				requestDbInfo);
@@ -132,6 +133,16 @@ public class CourseMetricsActor extends BaseMetricsActor {
 		backGroundRequest.getRequest().put(JsonKey.REQUEST, JsonKey.CourseProgress);
 		backGroundRequest.getRequest().put(JsonKey.REQUEST_ID, requestId);
 		tellToAnother(backGroundRequest);
+	}
+
+	private String getCourseNameFromBatch(Map<String, Object> courseBatchResult) {
+
+		String courseName = null;
+		if(courseBatchResult.get(JsonKey.COURSE_ADDITIONAL_INFO) != null && courseBatchResult.get(JsonKey.COURSE_ADDITIONAL_INFO) instanceof Map){
+			Map<String, String> map = (Map<String, String>) courseBatchResult.get(JsonKey.COURSE_ADDITIONAL_INFO);
+			courseName = map.get(JsonKey.COURSE_NAME);
+		}
+		return courseName;
 	}
 
 	@SuppressWarnings("unchecked")

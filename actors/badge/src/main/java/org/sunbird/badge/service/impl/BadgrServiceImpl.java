@@ -84,6 +84,7 @@ public class BadgrServiceImpl implements BadgingService {
         requestData.put(JsonKey.DESCRIPTION, (String) req.get(JsonKey.DESCRIPTION));
         requestData.put(JsonKey.URL, (String) req.get(JsonKey.URL));
         requestData.put(JsonKey.EMAIL, (String) req.get(JsonKey.EMAIL));
+        requestData.put(JsonKey.SLUG, BadgingJsonKey.ISSUER_SLUG);
 
 		if (null != image) {
 			fileData.put(JsonKey.IMAGE, image);
@@ -151,6 +152,7 @@ public class BadgrServiceImpl implements BadgingService {
             formParams.put(JsonKey.NAME, (String) requestData.get(JsonKey.NAME));
             formParams.put(JsonKey.DESCRIPTION, (String) requestData.get(JsonKey.DESCRIPTION));
             formParams.put(JsonKey.CRITERIA, (String) requestData.get(JsonKey.CRITERIA));
+            formParams.put(JsonKey.SLUG, BadgingJsonKey.BADGE_SLUG);
 
             Map<String, byte[]> fileParams = new HashMap<>();
             fileParams.put(JsonKey.IMAGE, (byte[]) requestData.get(JsonKey.IMAGE));

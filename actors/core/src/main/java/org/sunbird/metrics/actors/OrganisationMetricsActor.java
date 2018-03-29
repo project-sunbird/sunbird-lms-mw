@@ -113,6 +113,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 		String decryptedEmail = decryptionService.decryptData((String) requestedByInfo.get(JsonKey.ENC_EMAIL));
 		requestDbInfo.put(JsonKey.EMAIL, decryptedEmail);
 		requestDbInfo.put(JsonKey.FORMAT, actorMessage.get(JsonKey.FORMAT));
+		requestDbInfo.put(JsonKey.RESOURCE_NAME, orgData.get(JsonKey.ORGANISATION_NAME));
 
 		cassandraOperation.insertRecord(reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(),
 				requestDbInfo);

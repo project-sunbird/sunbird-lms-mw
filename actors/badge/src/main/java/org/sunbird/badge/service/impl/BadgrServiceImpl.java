@@ -181,7 +181,9 @@ public class BadgrServiceImpl implements BadgingService {
             } else {
                 rolesList = new ArrayList<>();
             }
-
+            //validating incoming roles. 
+            validateRoles(rolesList);
+            
             Map<String, String> headers = BadgingUtil.getBadgrHeaders(false);
 
             HttpUtilResponse httpUtilResponse = HttpUtil.postFormData(formParams, fileParams,
@@ -594,5 +596,19 @@ public class BadgrServiceImpl implements BadgingService {
 		}
 		return userId;
 	}
+	
+	/**
+	 * This method will validate the roles.
+	 * @param roleList
+	 */
+	private static void validateRoles(List<String> roleList){
+	      if(null == roleList || roleList.isEmpty()){
+	      throw new ProjectCommonException(ResponseCode.badgeRolesRequired.getErrorCode(), ResponseCode.badgeRolesRequired.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+	    }
+	      String result = Util.validateRoles(roleList);
+	      if(!(JsonKey.SUCCESS.equalsIgnoreCase(result))){
+	      throw new ProjectCommonException(ResponseCode.badgeRolesRequired.getErrorCode(), ResponseCode.badgeRolesRequired.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+	    }
+	  }
 }
 	

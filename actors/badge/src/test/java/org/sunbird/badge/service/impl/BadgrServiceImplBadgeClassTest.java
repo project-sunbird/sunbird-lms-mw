@@ -29,6 +29,7 @@ import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.telemetry.util.TelemetryUtil;
 
 @RunWith(PowerMockRunner.class)
@@ -85,6 +86,9 @@ public class BadgrServiceImplBadgeClassTest {
 
         badgrServiceImpl = new BadgrServiceImpl(mockBadgeClassExtensionService);
         request = new Request();
+        Map<String, Object> roles = new HashMap<>();
+        roles.put("roleId1", "roleId1");
+        DataCacheHandler.setRoleMap(roles);
     }
 
     private void validateSuccessResponse(ResponseCode responseCode,
@@ -401,6 +405,36 @@ public class BadgrServiceImplBadgeClassTest {
         } catch (ProjectCommonException exception) {
             thrown = true;
             assertEquals(ResponseCode.SERVER_ERROR.getResponseCode(), exception.getResponseCode());
+        }
+
+        assertEquals(true, thrown);
+    }
+    
+    @Test
+    public void testCreateBadgeClassFailureExceptionInvalidRole() throws IOException {
+        PowerMockito.when(
+            HttpUtil.postFormData(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+            .thenThrow(new IOException());
+        PowerMockito.doNothing().when(mockBadgeClassExtensionService).save(Mockito.any());
+
+        request.put(BadgingJsonKey.ISSUER_ID, INVALID_VALUE);
+
+        request.put(BadgingJsonKey.BADGE_CRITERIA, VALUE_BADGE_CRITERIA);
+        request.put(JsonKey.NAME, VALUE_NAME);
+        request.put(JsonKey.DESCRIPTION, VALUE_DESCRIPTION);
+        request.put(JsonKey.ROOT_ORG_ID, VALUE_ROOT_ORG_ID);
+        request.put(JsonKey.TYPE, VALUE_TYPE);
+        request.put(JsonKey.SUBTYPE, VALUE_SUBTYPE);
+        request.put(JsonKey.ROLES, "[]");
+        request.put(JsonKey.IMAGE, VALUE_IMAGE.getBytes());
+
+        boolean thrown = false;
+
+        try {
+            badgrServiceImpl.createBadgeClass(request);
+        } catch (ProjectCommonException exception) {
+            thrown = true;
+            assertEquals(ResponseCode.CLIENT_ERROR.getResponseCode(), exception.getResponseCode());
         }
 
         assertEquals(true, thrown);

@@ -239,6 +239,11 @@ public final class SchedulerManager {
 		// This scheduler will run every day 11:30 PM IN GMT and 6 PM on UTC.
 		// server time is set in UTC so all scheduler need to be manage based on that
 		// time only.
+		String configValue = PropertiesCache.getInstance().readProperty("quartz_course_batch_timer");
+		if(StringUtils.isEmpty(configValue)){
+			ProjectLogger.log("Error in starting Course batch count scheduler , quartz_course_batch_timer value not found");
+			return;
+		}
 		Trigger trigger = TriggerBuilder.newTrigger().withIdentity("schedulertrigger", identifier)
 				.withSchedule(CronScheduleBuilder
 						.cronSchedule(PropertiesCache.getInstance().readProperty("quartz_course_batch_timer")))

@@ -230,16 +230,27 @@ public class MetricsBackGroundJobActor extends BaseActor {
         Map<String, Object> templateMap = new HashMap<>();
         templateMap.put(JsonKey.ACTION_URL, reportDbInfo.get(JsonKey.FILE_URL));
         templateMap.put(JsonKey.NAME, reportDbInfo.get(JsonKey.FIRST_NAME));
+        String resource = getReportResourceName(reportDbInfo);
         templateMap.put(JsonKey.BODY,
-                "Please Find Attached Report for " + reportDbInfo.get(JsonKey.RESOURCE_ID)
+                "Please Find Attached Report for " + resource
                         + " for the Period  " + getPeriod((String) reportDbInfo.get(JsonKey.PERIOD))
                         + " as requested on : " + reportDbInfo.get(JsonKey.CREATED_DATE));
         templateMap.put(JsonKey.ACTION_NAME, "DOWNLOAD REPORT");
         VelocityContext context = ProjectUtil.getContext(templateMap);
 
         return SendMail.sendMail(new String[] {(String) reportDbInfo.get(JsonKey.EMAIL)},
-                reportDbInfo.get(JsonKey.TYPE) + " for " + reportDbInfo.get(JsonKey.RESOURCE_ID),
+                reportDbInfo.get(JsonKey.TYPE) + " for " + resource,
                 context, ProjectUtil.getTemplate(Collections.emptyMap()));
+    }
+
+    private String getReportResourceName(
+        Map<String, Object> reportDbInfo) {
+
+        String resource = (String)reportDbInfo.get(JsonKey.RESOURCE_NAME);
+        if(StringUtils.isEmpty(resource)){
+            resource = (String)reportDbInfo.get(JsonKey.RESOURCE_ID);
+        }
+        return resource;
     }
 
     private String getPeriod(String period) {

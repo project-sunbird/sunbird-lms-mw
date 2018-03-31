@@ -1767,6 +1767,7 @@ public class UserManagementActor extends BaseActor {
                     LoggerEnum.INFO);
             boolean response =
                     smsProvider.send((String) userMap.get(JsonKey.PHONE), countryCode, sms);
+            ProjectLogger.log("Response from smsProvider : " + response, LoggerEnum.INFO);
             if (response) {
                 ProjectLogger.log("Welcome Message sent successfully to ."
                         + (String) userMap.get(JsonKey.PHONE), LoggerEnum.INFO);

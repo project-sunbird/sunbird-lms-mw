@@ -1651,11 +1651,11 @@ public class UserManagementActor extends BaseActor {
         // putting rootOrgId to get web url per tenant while sending mail
         emailTemplateMap.put(JsonKey.ROOT_ORG_ID, userMap.get(JsonKey.ROOT_ORG_ID));
         sendOnboardingMail(emailTemplateMap);
-        ProjectLogger.log("callind Send SMS method:", LoggerEnum.INFO);
+        ProjectLogger.log("calling Send SMS method:", LoggerEnum.INFO);
         sendSMS(userMap);
 
         if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-            ProjectLogger.log("method call going to satrt for ES--.....");
+            ProjectLogger.log("method call going to start for ES--.....");
             Request userRequest = new Request();
             userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
             userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));

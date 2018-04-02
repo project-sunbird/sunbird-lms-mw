@@ -11,7 +11,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.velocity.VelocityContext;
 import org.sunbird.actor.background.BackgroundOperations;
@@ -1385,8 +1384,7 @@ public class UserManagementActor extends BaseActor {
     private void updateKeyCloakUserBase(Map<String, Object> userMap) {
         try {
             String userId = ssoManager.updateUser(userMap);
-            if (!(!StringUtils.isBlank(userId)
-                    && userId.equalsIgnoreCase(JsonKey.SUCCESS))) {
+            if (!(!StringUtils.isBlank(userId) && userId.equalsIgnoreCase(JsonKey.SUCCESS))) {
                 throw new ProjectCommonException(
                         ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
                         ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
@@ -1653,6 +1651,7 @@ public class UserManagementActor extends BaseActor {
         // putting rootOrgId to get web url per tenant while sending mail
         emailTemplateMap.put(JsonKey.ROOT_ORG_ID, userMap.get(JsonKey.ROOT_ORG_ID));
         sendOnboardingMail(emailTemplateMap);
+        ProjectLogger.log("callind Send SMS method:", LoggerEnum.INFO);
         sendSMS(userMap);
 
         if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
@@ -1735,8 +1734,10 @@ public class UserManagementActor extends BaseActor {
     }
 
     private void sendSMS(Map<String, Object> userMap) {
+        ProjectLogger.log("Inside Send SMS method:", LoggerEnum.INFO);
         if (StringUtils.isBlank((String) userMap.get(JsonKey.EMAIL))
                 && !StringUtils.isBlank((String) userMap.get(JsonKey.PHONE))) {
+
             UserUtility.decryptUserData(userMap);
             String name = (String) userMap.get(JsonKey.FIRST_NAME) + " "
                     + (String) userMap.get(JsonKey.LAST_NAME);
@@ -1747,12 +1748,12 @@ public class UserManagementActor extends BaseActor {
             }
             String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
 
-            ProjectLogger.log("shortened url :: " + webUrl);
+            ProjectLogger.log("shortened url :: " + webUrl, LoggerEnum.INFO);
             String sms = ProjectUtil.getSMSBody(name, webUrl, envName);
             if (StringUtils.isBlank(sms)) {
                 sms = PropertiesCache.getInstance().getProperty("sunbird_default_welcome_sms");
             }
-            ProjectLogger.log("SMS text : " + sms);
+            ProjectLogger.log("SMS text : " + sms, LoggerEnum.INFO);
             String countryCode = "";
             if (StringUtils.isBlank((String) userMap.get(JsonKey.COUNTRY_CODE))) {
                 countryCode =
@@ -1761,14 +1762,19 @@ public class UserManagementActor extends BaseActor {
                 countryCode = (String) userMap.get(JsonKey.COUNTRY_CODE);
             }
             ISmsProvider smsProvider = SMSFactory.getInstance("91SMS");
+            ProjectLogger.log(
+                    "SMS text : " + sms + " with phone " + (String) userMap.get(JsonKey.PHONE),
+                    LoggerEnum.INFO);
             boolean response =
                     smsProvider.send((String) userMap.get(JsonKey.PHONE), countryCode, sms);
+            ProjectLogger.log("Response from smsProvider : " + response, LoggerEnum.INFO);
             if (response) {
                 ProjectLogger.log("Welcome Message sent successfully to ."
-                        + (String) userMap.get(JsonKey.PHONE));
+                        + (String) userMap.get(JsonKey.PHONE), LoggerEnum.INFO);
             } else {
-                ProjectLogger
-                        .log("Welcome Message failed for ." + (String) userMap.get(JsonKey.PHONE));
+                ProjectLogger.log(
+                        "Welcome Message failed for ." + (String) userMap.get(JsonKey.PHONE),
+                        LoggerEnum.INFO);
             }
         }
     }
@@ -2650,8 +2656,7 @@ public class UserManagementActor extends BaseActor {
                     ProjectUtil.EsIndex.sunbird.getIndexName(),
                     ProjectUtil.EsType.user.getTypeName(), userId);
         } else {
-            if (!StringUtils.isBlank(userName)
-                    && !StringUtils.isBlank(provider)) {
+            if (!StringUtils.isBlank(userName) && !StringUtils.isBlank(provider)) {
                 loginId = userName + JsonKey.LOGIN_ID_DELIMETER + provider;
             } else {
                 loginId = userName;
@@ -2690,8 +2695,7 @@ public class UserManagementActor extends BaseActor {
         }
 
         if (StringUtils.isBlank((String) requestMap.get(JsonKey.ORGANISATION_ID))
-                && !StringUtils.isBlank(externalId)
-                && !StringUtils.isBlank(provider)) {
+                && !StringUtils.isBlank(externalId) && !StringUtils.isBlank(provider)) {
             SearchDTO searchDto = new SearchDTO();
             Map<String, Object> filter = new HashMap<>();
             filter.put(JsonKey.EXTERNAL_ID, externalId);
@@ -2968,8 +2972,7 @@ public class UserManagementActor extends BaseActor {
             emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
 
             String webUrl = Util.getSunbirdWebUrlPerTenent(emailTemplateMap);
-            if ((!StringUtils.isBlank(webUrl))
-                    && (!SUNBIRD_WEB_URL.equalsIgnoreCase(webUrl))) {
+            if ((!StringUtils.isBlank(webUrl)) && (!SUNBIRD_WEB_URL.equalsIgnoreCase(webUrl))) {
                 emailTemplateMap.put(JsonKey.WEB_URL, webUrl);
             }
 
@@ -2978,8 +2981,7 @@ public class UserManagementActor extends BaseActor {
                 appUrl = propertiesCache.getProperty(SUNBIRD_APP_URL);
             }
 
-            if ((!StringUtils.isBlank(appUrl))
-                    && (!SUNBIRD_APP_URL.equalsIgnoreCase(appUrl))) {
+            if ((!StringUtils.isBlank(appUrl)) && (!SUNBIRD_APP_URL.equalsIgnoreCase(appUrl))) {
                 emailTemplateMap.put(JsonKey.APP_URL, appUrl);
             }
 
@@ -3020,8 +3022,7 @@ public class UserManagementActor extends BaseActor {
         }
         context.put(JsonKey.WEB_URL, StringUtils.isBlank(System.getenv(SUNBIRD_WEB_URL))
                 ? propertiesCache.getProperty(SUNBIRD_WEB_URL) : System.getenv(SUNBIRD_WEB_URL));
-        if (!StringUtils.isBlank(appUrl)
-                && !JsonKey.SUNBIRD_APP_URL.equalsIgnoreCase(appUrl)) {
+        if (!StringUtils.isBlank(appUrl) && !JsonKey.SUNBIRD_APP_URL.equalsIgnoreCase(appUrl)) {
             context.put(JsonKey.APP_URL, appUrl);
         }
         ProjectLogger.log("Starting to update password inside cassandra", LoggerEnum.INFO.name());

@@ -321,6 +321,7 @@ public class BackgroundJobManager extends BaseActor {
 	@SuppressWarnings("unchecked")
 	private void getUserProfile(String userId) {
 		ProjectLogger.log("get user profile method call started user Id : " + userId);
+		DbInfo badgeDbInfo = Util.dbInfoMap.get(JsonKey.USER_BADGE_ASSERTION_DB);
 		Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
 		Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
 		Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
@@ -448,6 +449,22 @@ public class BackgroundJobManager extends BaseActor {
 			}
 			map.put(JsonKey.ORGANISATIONS, organisations);
 			Util.removeAttributes(map, Arrays.asList(JsonKey.PASSWORD));
+
+			// sync badges
+			try {
+				Map<String, Object> reqMap = new HashMap<>();
+				reqMap.put(JsonKey.USER_ID, userId);
+				Response result = cassandraOperation.getRecordsByProperties(badgeDbInfo.getKeySpace(),
+						badgeDbInfo.getTableName(), reqMap);
+				List<Map<String, Object>> badges = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+				if (null != badges) {
+					map.put(JsonKey.BADGE_ASSERTIONS, badges);
+					ProjectLogger.log("Syncing user badge for  user Id : " + userId, LoggerEnum.INFO.name());
+				}
+			} catch (Exception e) {
+				ProjectLogger.log(e.getMessage(), e);
+			}
+
 		} else {
 			ProjectLogger.log("User data not found to save to ES user Id : " + userId, LoggerEnum.INFO.name());
 		}

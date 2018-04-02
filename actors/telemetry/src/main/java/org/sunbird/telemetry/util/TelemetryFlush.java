@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import org.apache.commons.lang.StringUtils;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.util.lmaxdisruptor.LMAXWriter;
 
@@ -37,11 +37,7 @@ public class TelemetryFlush {
     }
 
     public TelemetryFlush() {
-        String queueThreshold = System.getenv(JsonKey.TELEMETRY_QUEUE_THRESHOLD_VALUE);
-        if (StringUtils.isBlank(queueThreshold)) {
-            queueThreshold = PropertiesCache.getInstance()
-                    .getProperty(JsonKey.TELEMETRY_QUEUE_THRESHOLD_VALUE);
-        }
+        String queueThreshold = ProjectUtil.getConfigValue(JsonKey.TELEMETRY_QUEUE_THRESHOLD_VALUE);
         if (!StringUtils.isBlank(queueThreshold)
                 && !queueThreshold.equalsIgnoreCase(JsonKey.TELEMETRY_QUEUE_THRESHOLD_VALUE)) {
             try {

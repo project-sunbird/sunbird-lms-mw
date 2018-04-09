@@ -227,7 +227,7 @@ public class UserManagementActor extends BaseActor {
         targetObject =
                 TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
         Map<String, Object> telemetryAction = new HashMap<>();
-        telemetryAction.put("profileVisibility" , "profileVisibility");
+        telemetryAction.put("profileVisibility", "profileVisibility");
         TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, new ArrayList<>());
     }
 
@@ -2578,6 +2578,8 @@ public class UserManagementActor extends BaseActor {
     private void blockUser(Request actorMessage) {
 
         ProjectLogger.log("Method call  " + "deleteUser");
+        // object of telemetry event...
+        Map<String, Object> targetObject = null;
         Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
         Map<String, Object> userMap =
                 (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
@@ -2625,6 +2627,12 @@ public class UserManagementActor extends BaseActor {
         request.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
         request.getRequest().put(JsonKey.ID, userId);
         tellToAnother(request);
+
+        targetObject =
+                TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+        Map<String, Object> telemetryAction = new HashMap<>();
+        telemetryAction.put("blockUser", "delete user");
+        TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, new ArrayList<>());
     }
 
     /**
@@ -2873,6 +2881,8 @@ public class UserManagementActor extends BaseActor {
     private void unBlockUser(Request actorMessage) {
 
         ProjectLogger.log("Method call  " + "UnblockeUser");
+        // object of telemetry event...
+        Map<String, Object> targetObject = null;
         Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
         Map<String, Object> userMap =
                 (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
@@ -2931,6 +2941,12 @@ public class UserManagementActor extends BaseActor {
         request.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
         request.getRequest().put(JsonKey.ID, userId);
         tellToAnother(request);
+
+        targetObject =
+                TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+        Map<String, Object> telemetryAction = new HashMap<>();
+        telemetryAction.put("unBlockUser", "unblock the user");
+        TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, new ArrayList<>());
     }
 
     /**

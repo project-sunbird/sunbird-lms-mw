@@ -49,6 +49,7 @@ public class TelemetryFlush {
     }
 
     public void flushTelemetry(String message) {
+        System.out.println("TELE EVNT : " + message);
         writeToQueue(message);
     }
 

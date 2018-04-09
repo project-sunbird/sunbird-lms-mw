@@ -2626,6 +2626,9 @@ public class UserManagementActor extends BaseActor {
      */
     @SuppressWarnings("unchecked")
     private void assignRoles(Request actorMessage) {
+        // object of telemetry event...
+        Map<String, Object> targetObject = null;
+        List<Map<String, Object>> correlatedObject = new ArrayList<>();
         Map<String, Object> requestMap = actorMessage.getRequest();
         if (requestMap == null || requestMap.size() == 0) {
             ProjectCommonException exception =
@@ -2776,6 +2779,12 @@ public class UserManagementActor extends BaseActor {
             } else {
                 ProjectLogger.log("no call for ES to save user");
             }
+            targetObject =
+                    TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+            TelemetryUtil.generateCorrelatedObject((String) requestMap.get(JsonKey.ORGANISATION_ID),
+                    JsonKey.ORGANISATION, null, correlatedObject);
+            TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
+                    correlatedObject);
             return;
 
         } else {
@@ -2817,6 +2826,11 @@ public class UserManagementActor extends BaseActor {
             } else {
                 ProjectLogger.log("no call for ES to save user");
             }
+
+            targetObject =
+                    TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+            TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
+                    correlatedObject);
             return;
         }
     }

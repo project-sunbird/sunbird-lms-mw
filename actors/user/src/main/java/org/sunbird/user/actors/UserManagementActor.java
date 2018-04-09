@@ -149,6 +149,8 @@ public class UserManagementActor extends BaseActor {
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void profileVisibility(Request actorMessage) {
+        // object of telemetry event...
+        Map<String, Object> targetObject = null;
         Map<String, Object> map = (Map) actorMessage.getRequest().get(JsonKey.USER);
         String userId = (String) map.get(JsonKey.USER_ID);
         List<String> privateList = (List) map.get(JsonKey.PRIVATE);
@@ -221,6 +223,12 @@ public class UserManagementActor extends BaseActor {
             response.put(JsonKey.RESPONSE, JsonKey.FAILURE);
         }
         sender().tell(response, self());
+
+        targetObject =
+                TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+        Map<String, Object> telemetryAction = new HashMap<>();
+        telemetryAction.put("profileVisibility" , "profileVisibility");
+        TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, new ArrayList<>());
     }
 
     private Map<String, Object> handlePrivateVisibility(List<String> privateFieldList,
@@ -2783,8 +2791,9 @@ public class UserManagementActor extends BaseActor {
                     TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
             TelemetryUtil.generateCorrelatedObject((String) requestMap.get(JsonKey.ORGANISATION_ID),
                     JsonKey.ORGANISATION, null, correlatedObject);
-            TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
-                    correlatedObject);
+            Map<String, Object> telemetryAction = new HashMap<>();
+            telemetryAction.put("assignRole", "role assigned at org level");
+            TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
             return;
 
         } else {
@@ -2829,8 +2838,9 @@ public class UserManagementActor extends BaseActor {
 
             targetObject =
                     TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-            TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
-                    correlatedObject);
+            Map<String, Object> telemetryAction = new HashMap<>();
+            telemetryAction.put("assignRole", "role assigned at user level");
+            TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
             return;
         }
     }

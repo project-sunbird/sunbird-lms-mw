@@ -18,3 +18,5 @@ dist
 .settings
 .classpath
 .project
+*.iml
+actors/badge/logs

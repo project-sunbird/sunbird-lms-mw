@@ -26,7 +26,6 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.Status;
 import org.sunbird.common.models.util.PropertiesCache;
@@ -1701,26 +1700,8 @@ public class UserManagementActor extends BaseActor {
             if (isRootOrg) {
                 rootOrgId = orgId;
             } else {
-                String channel = (String) orgMap.get(JsonKey.CHANNEL);
-                if (!StringUtils.isBlank(channel)) {
-                    Map<String, Object> filters = new HashMap<>();
-                    filters.put(JsonKey.CHANNEL, channel);
-                    filters.put(JsonKey.IS_ROOT_ORG, true);
-                    Map<String, Object> esResult = elasticSearchComplexSearch(filters,
-                            EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
-                    if (isNotNull(esResult) && esResult.containsKey(JsonKey.CONTENT)
-                            && isNotNull(esResult.get(JsonKey.CONTENT))
-                            && !(((List<String>) esResult.get(JsonKey.CONTENT)).isEmpty())) {
-                        Map<String, Object> esContent =
-                                ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
-                        rootOrgId = (String) esContent.get(JsonKey.ID);
-                    } else {
-                        throw new ProjectCommonException(
-                                ResponseCode.invalidRootOrgData.getErrorCode(),
-                                ProjectUtil.formatMessage(
-                                        ResponseCode.invalidRootOrgData.getErrorMessage(), channel),
-                                ResponseCode.CLIENT_ERROR.getResponseCode());
-                    }
+                if (!StringUtils.isBlank((String) orgMap.get(JsonKey.ROOT_ORG_ID))) {
+                    rootOrgId = (String) orgMap.get(JsonKey.ROOT_ORG_ID);
                 } else {
                     rootOrgId = JsonKey.DEFAULT_ROOT_ORG_ID;
                 }

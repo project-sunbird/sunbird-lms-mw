@@ -605,7 +605,6 @@ public class OrganisationManagementActor extends BaseActor {
 
         // object of telemetry event...
         Map<String, Object> targetObject = null;
-        List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
         try {
             Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
@@ -663,15 +662,17 @@ public class OrganisationManagementActor extends BaseActor {
             response.getResult().put(JsonKey.ORGANISATION_ID, orgDBO.get(JsonKey.ID));
             sender().tell(response, self());
 
-            targetObject = TelemetryUtil.generateTargetObject(orgId, JsonKey.ORGANISATION,
-                    JsonKey.UPDATE, null);
-            TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
-                    correlatedObject);
             // update the ES --
             Request request = new Request();
             request.getRequest().put(JsonKey.ORGANISATION, updateOrgDBO);
             request.setOperation(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
             tellToAnother(request);
+
+            targetObject = TelemetryUtil.generateTargetObject(orgId, JsonKey.ORGANISATION,
+                    JsonKey.UPDATE, null);
+            Map<String, Object> telemetryAction = new HashMap<>();
+            telemetryAction.put("updateOrgStatus", "org status updated.");
+            TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, new ArrayList<>());
 
             return;
         } catch (ProjectCommonException e) {

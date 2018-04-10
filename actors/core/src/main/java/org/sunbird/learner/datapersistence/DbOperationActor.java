@@ -59,7 +59,8 @@ public class DbOperationActor extends BaseActor {
 
     @Override
     public void onReceive(Request actorMessage) throws Throwable {
-        Util.initializeContext(actorMessage, JsonKey.SUNBIRD_PLUGIN);
+
+        Util.initializeContext(actorMessage, JsonKey.ANNOUNCEMENT);
         // set request id to thread local...
         ExecutionContext.setRequestId(actorMessage.getRequestId());
         if (null == tableList) {

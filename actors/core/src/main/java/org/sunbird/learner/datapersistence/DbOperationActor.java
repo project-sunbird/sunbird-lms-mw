@@ -60,7 +60,7 @@ public class DbOperationActor extends BaseActor {
     @Override
     public void onReceive(Request actorMessage) throws Throwable {
 
-        Util.initializeContext(actorMessage, "object-store");
+        Util.initializeContext(actorMessage, JsonKey.OBJECT_STORE);
         // set request id to thread local...
         ExecutionContext.setRequestId(actorMessage.getRequestId());
         if (null == tableList) {
@@ -104,6 +104,7 @@ public class DbOperationActor extends BaseActor {
                     (String) actorMessage.getRequest().get(ENTITY_NAME), rawQuery);
             sender().tell(response, self());
         } catch (Exception ex) {
+            ProjectLogger.log(ex.getMessage(), ex);
             sender().tell(ex, self());
         }
     }
@@ -159,6 +160,7 @@ public class DbOperationActor extends BaseActor {
             generateSearchTelemetryEvent(searchDto, new String[] {ES_INDEX_NAME},
                     (Map<String, Object>) response.get(JsonKey.RESPONSE));
         } catch (Exception ex) {
+            ProjectLogger.log(ex.getMessage(), ex);
             sender().tell(ex, self());
         }
     }
@@ -177,6 +179,7 @@ public class DbOperationActor extends BaseActor {
             }
             sender().tell(response, self());
         } catch (Exception ex) {
+            ProjectLogger.log(ex.getMessage(), ex);
             sender().tell(ex, self());
         }
     }
@@ -196,6 +199,7 @@ public class DbOperationActor extends BaseActor {
             }
             sender().tell(response, self());
         } catch (Exception ex) {
+            ProjectLogger.log(ex.getMessage(), ex);
             sender().tell(ex, self());
         }
     }
@@ -214,6 +218,7 @@ public class DbOperationActor extends BaseActor {
             sender().tell(response, self());
             generateTelemetryObjectStore(reqObj, JsonKey.DELETE);
         } catch (Exception ex) {
+            ProjectLogger.log(ex.getMessage(), ex);
             sender().tell(ex, self());
         }
     }
@@ -262,6 +267,7 @@ public class DbOperationActor extends BaseActor {
             sender().tell(response, self());
             generateTelemetryObjectStore(reqObj, JsonKey.UPDATE);
         } catch (Exception ex) {
+            ProjectLogger.log(ex.getMessage(), ex);
             sender().tell(ex, self());
         }
     }
@@ -294,6 +300,7 @@ public class DbOperationActor extends BaseActor {
             sender().tell(response, self());
             generateTelemetryObjectStore(reqObj, JsonKey.CREATE);
         } catch (Exception ex) {
+            ProjectLogger.log(ex.getMessage(), ex);
             sender().tell(ex, self());
         }
     }
@@ -403,14 +410,8 @@ public class DbOperationActor extends BaseActor {
         List<Map<String, Object>> dataMapList =
                 (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
         Integer topN = Integer.parseInt(topn);
-        int count = 0;
+        int count = Math.min(topN, dataMapList.size());
         List<Map<String, Object>> list = new ArrayList<>();
-        if (topN < dataMapList.size()) {
-            count = topN;
-
-        } else {
-            count = dataMapList.size();
-        }
         for (int i = 0; i < count; i++) {
             Map<String, Object> m = new HashMap<>();
             m.put(JsonKey.ID, dataMapList.get(i).get(JsonKey.ID));

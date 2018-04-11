@@ -2848,12 +2848,12 @@ public class UserManagementActor extends BaseActor {
         Map<String, Object> targetObject;
         targetObject =
                 TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-        TelemetryUtil.generateCorrelatedObject((String) requestMap.get(JsonKey.ORGANISATION_ID),
-                JsonKey.ORGANISATION, null, correlatedObject);
         Map<String, Object> telemetryAction = new HashMap<>();
         String msg = "";
         if(objectType.equalsIgnoreCase("orgLevel")){
             msg ="role assigned at org level";
+            TelemetryUtil.generateCorrelatedObject((String) requestMap.get(JsonKey.ORGANISATION_ID),
+                    JsonKey.ORGANISATION, null, correlatedObject);
         }else{
             msg ="role assigned at user level";
         }

@@ -343,6 +343,7 @@ public class OrganisationManagementActor extends BaseActor {
                 }
                 upsertAddress(addressReq);
                 req.put(JsonKey.ADDRESS_ID, addressId);
+                telemetryGenerationForOrgAddress(addressReq, req, false);
             }
 
             Boolean isRootOrg = (Boolean) req.get(JsonKey.IS_ROOT_ORG);
@@ -429,7 +430,7 @@ public class OrganisationManagementActor extends BaseActor {
                     JsonKey.CREATE, null);
             TelemetryUtil.generateCorrelatedObject(uniqueId, JsonKey.ORGANISATION, null,
                     correlatedObject);
-            TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
+            TelemetryUtil.telemetryProcessingCall((Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION), targetObject,
                     correlatedObject);
             if (null != addressReq) {
                 req.put(JsonKey.ADDRESS, addressReq);
@@ -827,22 +828,25 @@ public class OrganisationManagementActor extends BaseActor {
                 return;
             }
 
-            // update address if present in request
-            if (null != addressReq && addressReq.size() > 0) {
-                if (orgDBO.get(JsonKey.ADDRESS_ID) != null) {
-                    String addressId = (String) orgDBO.get(JsonKey.ADDRESS_ID);
-                    addressReq.put(JsonKey.ID, addressId);
-                }
-                // add new address record
-                else {
-                    String addressId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
-                    addressReq.put(JsonKey.ID, addressId);
-                }
-                if (!(StringUtils.isBlank(updatedBy))) {
-                    addressReq.put(JsonKey.UPDATED_BY, updatedBy);
-                    upsertAddress(addressReq);
-                }
-            }
+					boolean isAddressUpdated = false;
+					// update address if present in request
+					if (null != addressReq && addressReq.size() > 0) {
+						if (orgDBO.get(JsonKey.ADDRESS_ID) != null) {
+							String addressId = (String) orgDBO.get(JsonKey.ADDRESS_ID);
+							addressReq.put(JsonKey.ID, addressId);
+							isAddressUpdated = true;
+						}
+						// add new address record
+						else {
+							String addressId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
+							addressReq.put(JsonKey.ID, addressId);
+							orgDBO.put(JsonKey.ADDRESS_ID, addressId);
+						}
+						if (!(StringUtils.isBlank(updatedBy))) {
+							addressReq.put(JsonKey.UPDATED_BY, updatedBy);
+						}
+              telemetryGenerationForOrgAddress(addressReq , orgDBO , isAddressUpdated);
+					}
             if (!StringUtils.isBlank(((String) req.get(JsonKey.HASHTAGID)))) {
                 req.put(JsonKey.HASHTAGID, validateHashTagId(((String) req.get(JsonKey.HASHTAGID)),
                         JsonKey.UPDATE, orgId));
@@ -927,7 +931,7 @@ public class OrganisationManagementActor extends BaseActor {
 
             targetObject = TelemetryUtil.generateTargetObject((String) orgDBO.get(JsonKey.ID),
                     JsonKey.ORGANISATION, JsonKey.UPDATE, null);
-            TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
+            TelemetryUtil.telemetryProcessingCall(updateOrgDBO, targetObject,
                     correlatedObject);
 
             if (null != addressReq) {
@@ -949,7 +953,23 @@ public class OrganisationManagementActor extends BaseActor {
         }
     }
 
-    /**
+	private void telemetryGenerationForOrgAddress(Map<String, Object> addressReq,
+			Map<String, Object> orgDBO, boolean isAddressUpdated) {
+
+		String addressState = JsonKey.CREATE;
+		if(isAddressUpdated){
+			addressState = JsonKey.UPDATE;
+		}
+		Map<String ,Object> targetObject = TelemetryUtil.generateTargetObject((String)addressReq.get(JsonKey.ID), JsonKey.ADDRESS,
+				addressState, null);
+		List<Map<String, Object>> correlatedObject = new ArrayList<>();
+		TelemetryUtil.generateCorrelatedObject((String)orgDBO.get(JsonKey.ID), JsonKey.ORGANISATION, null,
+				correlatedObject);
+		TelemetryUtil.telemetryProcessingCall(addressReq, targetObject,
+				correlatedObject);
+	}
+
+	/**
      * Method to add member to the organisation
      */
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -1081,14 +1101,6 @@ public class OrganisationManagementActor extends BaseActor {
 
         sender().tell(response, self());
 
-        targetObject =
-                TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.CREATE, null);
-        TelemetryUtil.generateCorrelatedObject(userId, "userOrgMember", null, correlatedObject);
-        TelemetryUtil.generateCorrelatedObject(orgId, "orgUserMember", null, correlatedObject);
-
-        TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
-                correlatedObject);
-
         // update ES with latest data through background job manager
         if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
             ProjectLogger.log("method call going to satrt for ES--.....");
@@ -1106,6 +1118,13 @@ public class OrganisationManagementActor extends BaseActor {
         } else {
             ProjectLogger.log("no call for ES to save user");
         }
+
+        targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.CREATE, null);
+        TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
+        TelemetryUtil.generateCorrelatedObject(orgId, JsonKey.ORGANISATION, null, correlatedObject);
+        Map<String, Object> telemetryAction = new HashMap<>();
+        telemetryAction.put("orgMembershipAdded" , "orgMembershipAdded");
+        TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
     }
 
     /**
@@ -1199,13 +1218,6 @@ public class OrganisationManagementActor extends BaseActor {
                 }
             }
             sender().tell(response, self());
-            Map<String, Object> targetObject =
-                    TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-            TelemetryUtil.generateCorrelatedObject(userId, "userOrgMember", null, correlatedObject);
-            TelemetryUtil.generateCorrelatedObject(orgId, "orgUserMember", null, correlatedObject);
-
-            TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
-                    correlatedObject);
 
             // update ES with latest data through background job manager
             if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
@@ -1224,7 +1236,12 @@ public class OrganisationManagementActor extends BaseActor {
             } else {
                 ProjectLogger.log("no call for ES to save user");
             }
-            return;
+            Map<String, Object> targetObject= TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.CREATE, null);
+            TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
+            TelemetryUtil.generateCorrelatedObject(orgId, JsonKey.ORGANISATION, null, correlatedObject);
+            Map<String, Object> telemetryAction = new HashMap<>();
+            telemetryAction.put("orgMembershipRemoved" , "orgMembershipRemoved");
+            TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
         }
     }
 
@@ -1384,13 +1401,12 @@ public class OrganisationManagementActor extends BaseActor {
         }
 
         sender().tell(response, self());
-        targetObject =
-                TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+        targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.CREATE, null);
         TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
         TelemetryUtil.generateCorrelatedObject(orgId, JsonKey.ORGANISATION, null, correlatedObject);
-        TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
-                correlatedObject);
-
+        Map<String, Object> telemetryAction = new HashMap<>();
+        telemetryAction.put("userJoinedOrg" , "userJoinedOrg");
+        TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
     }
 
     /**
@@ -1485,12 +1501,12 @@ public class OrganisationManagementActor extends BaseActor {
                 userOrgDbInfo.getTableName(), updateUserOrgDBO);
         sender().tell(response, self());
 
-        targetObject =
-                TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+        targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.CREATE, null);
         TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
         TelemetryUtil.generateCorrelatedObject(orgId, JsonKey.ORGANISATION, null, correlatedObject);
-        TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
-                correlatedObject);
+        Map<String, Object> telemetryAction = new HashMap<>();
+        telemetryAction.put("userApprovedForOrg" , "userApprovedForOrg");
+        TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
 
     }
 
@@ -1581,12 +1597,12 @@ public class OrganisationManagementActor extends BaseActor {
                 userOrgDbInfo.getTableName(), updateUserOrgDBO);
         sender().tell(response, self());
 
-        targetObject =
-                TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+        targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.CREATE, null);
         TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
         TelemetryUtil.generateCorrelatedObject(orgId, JsonKey.ORGANISATION, null, correlatedObject);
-        TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
-                correlatedObject);
+        Map<String, Object> telemetryAction = new HashMap<>();
+        telemetryAction.put("userRejectedForOrg" , "userRejectedForOrg");
+        TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
     }
 
     /**

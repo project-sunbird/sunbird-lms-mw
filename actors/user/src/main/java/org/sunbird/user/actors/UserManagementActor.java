@@ -1067,7 +1067,7 @@ public class UserManagementActor extends BaseActor {
 
         targetObject = TelemetryUtil.generateTargetObject((String) userMap.get(JsonKey.USER_ID),
                 JsonKey.USER, JsonKey.UPDATE, null);
-        TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
+        TelemetryUtil.telemetryProcessingCall((Map<String, Object>) req.get(JsonKey.USER), targetObject,
                 correlatedObject);
 
         if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
@@ -1127,15 +1127,27 @@ public class UserManagementActor extends BaseActor {
                 if (reqMap.containsKey(JsonKey.ADDRESS) && null != reqMap.get(JsonKey.ADDRESS)) {
                     addrsId = (String) ((Map<String, Object>) reqMap.get(JsonKey.ADDRESS))
                             .get(JsonKey.ID);
-                    deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
                 } else {
                     addrsId = getAddressId((String) reqMap.get(JsonKey.ID), jobProDbInfo);
-                    if (null != addrsId) {
-                        deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
+                }
+                if (null != addrsId) {
+                    deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
+
+                    // genarate telemetry for user job profile address
+                    Map<String, Object> actions;
+                    if(reqMap.containsKey(JsonKey.ADDRESS) && null != reqMap.get(JsonKey.ADDRESS)) {
+                        actions = (Map<String, Object>) reqMap.get(JsonKey.ADDRESS);
+                    }else{
+                        actions = new HashMap<>();
+                        actions.put("jobProfileAddressDeleted" ,"");
+                        actions.put(JsonKey.ID , addrsId);
                     }
+                    telemetryGenerationForUserSubFieldsDeletion(actions, reqMap,
+                        JsonKey.ADDRESS, JsonKey.JOB_PROFILE);
                 }
                 deleteRecord(jobProDbInfo.getKeySpace(), jobProDbInfo.getTableName(),
                         (String) reqMap.get(JsonKey.ID));
+                telemetryGenerationForUserSubFieldsDeletion(reqMap , userMap , JsonKey.JOB_PROFILE, JsonKey.USER);
                 continue;
             }
             processJobProfileInfo(reqMap, userMap, req, addrDbInfo, jobProDbInfo);
@@ -1156,15 +1168,26 @@ public class UserManagementActor extends BaseActor {
                 if (reqMap.containsKey(JsonKey.ADDRESS) && null != reqMap.get(JsonKey.ADDRESS)) {
                     addrsId = (String) ((Map<String, Object>) reqMap.get(JsonKey.ADDRESS))
                             .get(JsonKey.ID);
-                    deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
                 } else {
                     addrsId = getAddressId((String) reqMap.get(JsonKey.ID), eduDbInfo);
-                    if (null != addrsId) {
-                        deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
+                }
+                if (null != addrsId) {
+                    // delete eductaion address
+                    deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
+                    Map<String, Object> actions;
+                    if(reqMap.containsKey(JsonKey.ADDRESS) && null != reqMap.get(JsonKey.ADDRESS)) {
+                        actions = (Map<String, Object>) reqMap.get(JsonKey.ADDRESS);
+                    }else{
+                        actions = new HashMap<>();
+                        actions.put("educationAddressDeleted" ,"");
+                        actions.put(JsonKey.ID , addrsId);
                     }
+                    telemetryGenerationForUserSubFieldsDeletion(actions, reqMap,
+                        JsonKey.ADDRESS, JsonKey.EDUCATION);
                 }
                 deleteRecord(eduDbInfo.getKeySpace(), eduDbInfo.getTableName(),
                         (String) reqMap.get(JsonKey.ID));
+                telemetryGenerationForUserSubFieldsDeletion(reqMap , userMap, JsonKey.EDUCATION, JsonKey.USER);
                 continue;
             }
             processEducationInfo(reqMap, userMap, req, addrDbInfo, eduDbInfo);
@@ -1182,6 +1205,7 @@ public class UserManagementActor extends BaseActor {
                     && !StringUtils.isBlank((String) reqMap.get(JsonKey.ID))) {
                 deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(),
                         (String) reqMap.get(JsonKey.ID));
+                telemetryGenerationForUserSubFieldsDeletion(reqMap , userMap , JsonKey.ADDRESS, JsonKey.USER);
                 continue;
             }
             processUserAddress(reqMap, req, userMap, addrDbInfo);
@@ -1211,6 +1235,7 @@ public class UserManagementActor extends BaseActor {
 
     private void processUserAddress(Map<String, Object> reqMap, Map<String, Object> req,
             Map<String, Object> userMap, DbInfo addrDbInfo) {
+        Boolean isAddressUpdated = true;
         String encUserId = "";
         String encreqById = "";
         try {
@@ -1229,6 +1254,7 @@ public class UserManagementActor extends BaseActor {
             reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
             reqMap.put(JsonKey.CREATED_BY, encreqById);
             reqMap.put(JsonKey.USER_ID, encUserId);
+            isAddressUpdated = false;
         } else {
             reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
             reqMap.put(JsonKey.UPDATED_BY, encreqById);
@@ -1237,6 +1263,7 @@ public class UserManagementActor extends BaseActor {
         try {
             cassandraOperation.upsertRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(),
                     reqMap);
+            telemetryGenerationForUserSubFields(reqMap , userMap, isAddressUpdated, JsonKey.ADDRESS, JsonKey.USER);
         } catch (Exception ex) {
             ProjectLogger.log(ex.getMessage(), ex);
         }
@@ -1270,8 +1297,14 @@ public class UserManagementActor extends BaseActor {
     private void processJobProfileInfo(Map<String, Object> reqMap, Map<String, Object> userMap,
             Map<String, Object> req, DbInfo addrDbInfo, DbInfo jobProDbInfo) {
         String addrId = null;
+        Boolean isProfileUpdated = true;
         Response addrResponse = null;
+        if(!(reqMap.containsKey(JsonKey.ID))){
+            reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+            isProfileUpdated = false;
+        }
         if (reqMap.containsKey(JsonKey.ADDRESS)) {
+            Boolean isProfileAddressUpdated = true;
             @SuppressWarnings("unchecked")
             Map<String, Object> address = (Map<String, Object>) reqMap.get(JsonKey.ADDRESS);
             if (!address.containsKey(JsonKey.ID)) {
@@ -1279,6 +1312,8 @@ public class UserManagementActor extends BaseActor {
                 address.put(JsonKey.ID, addrId);
                 address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
                 address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
+                isProfileAddressUpdated = false;
+                isProfileUpdated = false;
             } else {
                 addrId = (String) address.get(JsonKey.ID);
                 address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
@@ -1288,6 +1323,7 @@ public class UserManagementActor extends BaseActor {
             try {
                 addrResponse = cassandraOperation.upsertRecord(addrDbInfo.getKeySpace(),
                         addrDbInfo.getTableName(), address);
+                telemetryGenerationForUserSubFields(address , reqMap, isProfileAddressUpdated , JsonKey.ADDRESS, JsonKey.JOB_PROFILE);
             } catch (Exception ex) {
                 ProjectLogger.log(ex.getMessage(), ex);
             }
@@ -1298,12 +1334,11 @@ public class UserManagementActor extends BaseActor {
             reqMap.remove(JsonKey.ADDRESS);
         }
 
-        if (reqMap.containsKey(JsonKey.ID)) {
+        if (isProfileUpdated) {
             reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
             reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
             reqMap.remove(JsonKey.USER_ID);
         } else {
-            reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
             reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
             reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
             reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
@@ -1311,6 +1346,7 @@ public class UserManagementActor extends BaseActor {
         try {
             cassandraOperation.upsertRecord(jobProDbInfo.getKeySpace(), jobProDbInfo.getTableName(),
                     reqMap);
+            telemetryGenerationForUserSubFields(reqMap , userMap, isProfileUpdated , JsonKey.JOB_PROFILE , JsonKey.USER);
         } catch (Exception ex) {
             ProjectLogger.log(ex.getMessage(), ex);
         }
@@ -1319,8 +1355,14 @@ public class UserManagementActor extends BaseActor {
     private void processEducationInfo(Map<String, Object> reqMap, Map<String, Object> userMap,
             Map<String, Object> req, DbInfo addrDbInfo, DbInfo eduDbInfo) {
 
+        Boolean isEducationUpdated = true;
+        Boolean isEducationAddressUpdated = true;
         String addrId = null;
         Response addrResponse = null;
+        if(!(reqMap.containsKey(JsonKey.ID))){
+            reqMap.put(JsonKey.ID , ProjectUtil.getUniqueIdFromTimestamp(1));
+            isEducationUpdated = false;
+        }
         if (reqMap.containsKey(JsonKey.ADDRESS)) {
             @SuppressWarnings("unchecked")
             Map<String, Object> address = (Map<String, Object>) reqMap.get(JsonKey.ADDRESS);
@@ -1329,6 +1371,8 @@ public class UserManagementActor extends BaseActor {
                 address.put(JsonKey.ID, addrId);
                 address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
                 address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
+                isEducationUpdated = false;
+                isEducationAddressUpdated = false;
             } else {
                 addrId = (String) address.get(JsonKey.ID);
                 address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
@@ -1338,6 +1382,7 @@ public class UserManagementActor extends BaseActor {
             try {
                 addrResponse = cassandraOperation.upsertRecord(addrDbInfo.getKeySpace(),
                         addrDbInfo.getTableName(), address);
+                telemetryGenerationForUserSubFields(address , reqMap, isEducationAddressUpdated, JsonKey.ADDRESS, JsonKey.EDUCATION);
             } catch (Exception ex) {
                 ProjectLogger.log(ex.getMessage(), ex);
             }
@@ -1370,12 +1415,11 @@ public class UserManagementActor extends BaseActor {
             ProjectLogger.log(ex.getMessage(), ex);
         }
 
-        if (reqMap.containsKey(JsonKey.ID)) {
+        if (isEducationUpdated) {
             reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
             reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
             reqMap.remove(JsonKey.USER_ID);
         } else {
-            reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
             reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
             reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
             reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
@@ -1383,6 +1427,7 @@ public class UserManagementActor extends BaseActor {
         try {
             cassandraOperation.upsertRecord(eduDbInfo.getKeySpace(), eduDbInfo.getTableName(),
                     reqMap);
+            telemetryGenerationForUserSubFields(reqMap , userMap, isEducationUpdated, JsonKey.EDUCATION, JsonKey.USER);
         } catch (Exception ex) {
             ProjectLogger.log(ex.getMessage(), ex);
         }
@@ -1602,6 +1647,7 @@ public class UserManagementActor extends BaseActor {
                     try {
                         cassandraOperation.insertRecord(addrDbInfo.getKeySpace(),
                                 addrDbInfo.getTableName(), reqMap);
+                        telemetryGenerationForUserSubFields(reqMap , userMap , false, JsonKey.ADDRESS, JsonKey.USER);
                     } catch (Exception e) {
                         ProjectLogger.log(e.getMessage(), e);
                     }
@@ -1652,7 +1698,8 @@ public class UserManagementActor extends BaseActor {
 
         targetObject = TelemetryUtil.generateTargetObject((String) userMap.get(JsonKey.ID),
                 JsonKey.USER, JsonKey.CREATE, null);
-        TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject,
+        TelemetryUtil.telemetryProcessingCall(
+            (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER), targetObject,
                 correlatedObject);
 
         // user created successfully send the onboarding mail
@@ -1909,6 +1956,7 @@ public class UserManagementActor extends BaseActor {
                 try {
                     addrResponse = cassandraOperation.insertRecord(addrDbInfo.getKeySpace(),
                             addrDbInfo.getTableName(), address);
+                    telemetryGenerationForUserSubFields(address , reqMap , false, JsonKey.ADDRESS, JsonKey.JOB_PROFILE);
                 } catch (Exception e) {
                     ProjectLogger.log(e.getMessage(), e);
                 }
@@ -1924,6 +1972,7 @@ public class UserManagementActor extends BaseActor {
             try {
                 cassandraOperation.insertRecord(jobProDbInfo.getKeySpace(),
                         jobProDbInfo.getTableName(), reqMap);
+                telemetryGenerationForUserSubFields(reqMap , userMap , false, JsonKey.JOB_PROFILE, JsonKey.USER);
             } catch (Exception e) {
                 ProjectLogger.log(e.getMessage(), e);
             }
@@ -1951,6 +2000,7 @@ public class UserManagementActor extends BaseActor {
                 try {
                     addrResponse = cassandraOperation.insertRecord(addrDbInfo.getKeySpace(),
                             addrDbInfo.getTableName(), address);
+                    telemetryGenerationForUserSubFields(address , reqMap, false, JsonKey.ADDRESS, JsonKey.EDUCATION);
                 } catch (Exception e) {
                     ProjectLogger.log(e.getMessage(), e);
                 }
@@ -1988,10 +2038,42 @@ public class UserManagementActor extends BaseActor {
             try {
                 cassandraOperation.insertRecord(eduDbInfo.getKeySpace(), eduDbInfo.getTableName(),
                         reqMap);
+                telemetryGenerationForUserSubFields(reqMap , userMap, false, JsonKey.EDUCATION, JsonKey.USER);
             } catch (Exception e) {
                 ProjectLogger.log(e.getMessage(), e);
             }
         }
+
+    }
+
+    private void telemetryGenerationForUserSubFields(Map<String, Object> reqMap,
+        Map<String, Object> userMap, boolean isUpdated, String type, String correlatedOjectType) {
+
+        String currentState = JsonKey.CREATE;
+        if(isUpdated){
+            currentState = JsonKey.UPDATE;
+        }
+        Map<String ,Object> targetObject = TelemetryUtil.generateTargetObject((String)reqMap.get(JsonKey.ID), type,
+            currentState, null);
+        List<Map<String, Object>> correlatedObject = new ArrayList<>();
+        TelemetryUtil.generateCorrelatedObject((String)userMap.get(JsonKey.ID), correlatedOjectType, null,
+            correlatedObject);
+        TelemetryUtil.telemetryProcessingCall(reqMap, targetObject,
+            correlatedObject);
+
+    }
+
+    private void telemetryGenerationForUserSubFieldsDeletion(Map<String, Object> reqMap,
+        Map<String, Object> userMap, String type, String correlatedObjectType) {
+
+        String currentState = JsonKey.DELETE;
+        Map<String ,Object> targetObject = TelemetryUtil.generateTargetObject((String)reqMap.get(JsonKey.ID), type,
+            currentState, null);
+        List<Map<String, Object>> correlatedObject = new ArrayList<>();
+        TelemetryUtil.generateCorrelatedObject((String)userMap.get(JsonKey.ID), correlatedObjectType, null,
+            correlatedObject);
+        TelemetryUtil.telemetryProcessingCall(reqMap, targetObject,
+            correlatedObject);
 
     }
 

@@ -61,7 +61,7 @@ public class WriteEventHandler implements EventHandler<Request> {
 		Map<String, Object> context = (Map<String, Object>) request.get(JsonKey.CONTEXT);
 		Map<String, Object> params = (Map<String, Object>) request.get(JsonKey.PARAMS);
 		String telemetry = telemetryDataAssembler.error(context, params);
-		if (telemetryObjectValidator.validateError(telemetry)) {
+		if (StringUtils.isNotBlank(telemetry) && telemetryObjectValidator.validateError(telemetry)) {
 			telemetryFlush.flushTelemetry(telemetry);
 			success = true;
 		}
@@ -74,7 +74,7 @@ public class WriteEventHandler implements EventHandler<Request> {
 		Map<String, Object> context = (Map<String, Object>) request.get(JsonKey.CONTEXT);
 		Map<String, Object> params = (Map<String, Object>) request.get(JsonKey.PARAMS);
 		String telemetry = telemetryDataAssembler.search(context, params);
-		if (telemetryObjectValidator.validateSearch(telemetry)) {
+		if (StringUtils.isNotBlank(telemetry) && telemetryObjectValidator.validateSearch(telemetry)) {
 			telemetryFlush.flushTelemetry(telemetry);
 			success = true;
 		}
@@ -93,7 +93,7 @@ public class WriteEventHandler implements EventHandler<Request> {
 		params.put(JsonKey.TARGET_OBJECT, targetObject);
 		params.put(JsonKey.CORRELATED_OBJECTS, correlatedObjects);
 		String telemetry = telemetryDataAssembler.audit(context, params);
-		if (StringUtils.isNotBlank(telemetry)) {
+		if (StringUtils.isNotBlank(telemetry) && telemetryObjectValidator.validateAudit(telemetry)) {
 			telemetryFlush.flushTelemetry(telemetry);
 			success = true;
 		} else {

@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.ExecutionContext;
+import org.sunbird.common.request.HeaderParam;
 import org.sunbird.common.request.Request;
 import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 
@@ -131,6 +132,8 @@ public final class TelemetryUtil {
 	}
 
 	private static void generateTelemetry(Request request) {
+		//set request id to the context so that can be captured into the telemetry c-data section ...
+		ExecutionContext.getCurrent().getRequestContext().put(JsonKey.REQUEST_ID , ExecutionContext.getCurrent().getGlobalContext().get(HeaderParam.REQUEST_ID.getParamName()));
 		request.getContext().put(JsonKey.TELEMETRY_CONTEXT, ExecutionContext.getCurrent().getRequestContext());
 		TelemetryLmaxWriter.getInstance().submitMessage(request);
 	}

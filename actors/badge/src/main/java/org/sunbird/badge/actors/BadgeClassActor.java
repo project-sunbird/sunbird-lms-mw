@@ -8,6 +8,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.util.Util;
@@ -34,7 +35,7 @@ public class BadgeClassActor extends BaseActor {
 		ProjectLogger.log("BadgeClassActor onReceive called");
 		String operation = request.getOperation();
 
-		Util.initializeContext(request, JsonKey.USER);
+		Util.initializeContext(request, TelemetryEnvKey.BADGE_CLASS);
 		ExecutionContext.setRequestId(request.getRequestId());
 
 		switch (operation) {

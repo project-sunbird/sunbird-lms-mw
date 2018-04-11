@@ -25,6 +25,7 @@ import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
 import org.sunbird.common.models.util.ProjectUtil.Status;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -57,7 +58,7 @@ public class CourseBatchManagementActor extends BaseActor {
     public void onReceive(Request request) throws Throwable {
         dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
 
-        Util.initializeContext(request, JsonKey.BATCH);
+        Util.initializeContext(request, TelemetryEnvKey.BATCH);
         // set request id to thread local...
         ExecutionContext.setRequestId(request.getRequestId());
 

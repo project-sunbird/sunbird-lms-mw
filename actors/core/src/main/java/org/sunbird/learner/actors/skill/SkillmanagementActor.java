@@ -23,6 +23,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -49,7 +50,7 @@ public class SkillmanagementActor extends BaseActor {
 	@Override
 	public void onReceive(Request request) throws Throwable {
 
-		Util.initializeContext(request, JsonKey.USER);
+		Util.initializeContext(request, TelemetryEnvKey.USER);
 		// set request id fto thread loacl...
 		ExecutionContext.setRequestId(request.getRequestId());
 		if (request.getOperation().equalsIgnoreCase(ActorOperations.ADD_SKILL.getValue())) {
@@ -178,7 +179,7 @@ public class SkillmanagementActor extends BaseActor {
 				List<Map<String, Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
 
 				// prepare correlted object ...
-				TelemetryUtil.generateCorrelatedObject(id, "skill", "user.skill", correlatedObject);
+				TelemetryUtil.generateCorrelatedObject(id, "skill", null, correlatedObject);
 
 				if (responseList.isEmpty()) {
 					// means this is first time skill coming so add this one
@@ -245,7 +246,7 @@ public class SkillmanagementActor extends BaseActor {
 		response3.getResult().put(JsonKey.RESULT, "SUCCESS");
 		sender().tell(response3, self());
 
-		targetObject = TelemetryUtil.generateTargetObject(endoresedUserId, JsonKey.USER, JsonKey.CREATE, null);
+		targetObject = TelemetryUtil.generateTargetObject(endoresedUserId, JsonKey.USER, JsonKey.UPDATE, null);
 		TelemetryUtil.generateCorrelatedObject(endoresedUserId, JsonKey.USER, null, correlatedObject);
 		TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
 

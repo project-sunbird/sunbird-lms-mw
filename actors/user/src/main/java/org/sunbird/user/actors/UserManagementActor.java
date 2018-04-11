@@ -149,8 +149,6 @@ public class UserManagementActor extends BaseActor {
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void profileVisibility(Request actorMessage) {
-        // object of telemetry event...
-        Map<String, Object> targetObject = null;
         Map<String, Object> map = (Map) actorMessage.getRequest().get(JsonKey.USER);
         String userId = (String) map.get(JsonKey.USER_ID);
         List<String> privateList = (List) map.get(JsonKey.PRIVATE);
@@ -223,12 +221,7 @@ public class UserManagementActor extends BaseActor {
             response.put(JsonKey.RESPONSE, JsonKey.FAILURE);
         }
         sender().tell(response, self());
-
-        targetObject =
-                TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-        Map<String, Object> telemetryAction = new HashMap<>();
-        telemetryAction.put("profileVisibility", "profileVisibility");
-        TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, new ArrayList<>());
+        generateTeleEventForUser(null, userId, "profileVisibility");
     }
 
     private Map<String, Object> handlePrivateVisibility(List<String> privateFieldList,
@@ -2578,8 +2571,6 @@ public class UserManagementActor extends BaseActor {
     private void blockUser(Request actorMessage) {
 
         ProjectLogger.log("Method call  " + "deleteUser");
-        // object of telemetry event...
-        Map<String, Object> targetObject = null;
         Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
         Map<String, Object> userMap =
                 (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
@@ -2627,12 +2618,7 @@ public class UserManagementActor extends BaseActor {
         request.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
         request.getRequest().put(JsonKey.ID, userId);
         tellToAnother(request);
-
-        targetObject =
-                TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-        Map<String, Object> telemetryAction = new HashMap<>();
-        telemetryAction.put("blockUser", "delete user");
-        TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, new ArrayList<>());
+        generateTeleEventForUser(null, userId, "blockUser");
     }
 
     /**
@@ -2643,8 +2629,6 @@ public class UserManagementActor extends BaseActor {
     @SuppressWarnings("unchecked")
     private void assignRoles(Request actorMessage) {
         // object of telemetry event...
-        Map<String, Object> targetObject = null;
-        List<Map<String, Object>> correlatedObject = new ArrayList<>();
         Map<String, Object> requestMap = actorMessage.getRequest();
         if (requestMap == null || requestMap.size() == 0) {
             ProjectCommonException exception =
@@ -2795,7 +2779,7 @@ public class UserManagementActor extends BaseActor {
             } else {
                 ProjectLogger.log("no call for ES to save user");
             }
-            generateTeleEventForAssignedRole(correlatedObject, requestMap, userId, "userLevel");
+            generateTeleEventForUser(requestMap, userId, "userLevel");
             return;
 
         } else {
@@ -2838,26 +2822,34 @@ public class UserManagementActor extends BaseActor {
                 ProjectLogger.log("no call for ES to save user");
             }
 
-            generateTeleEventForAssignedRole(correlatedObject, requestMap, userId, "orgLevel");
+            generateTeleEventForUser(requestMap, userId, "orgLevel");
             return;
         }
     }
 
-    private void generateTeleEventForAssignedRole(List<Map<String, Object>> correlatedObject,
-            Map<String, Object> requestMap, String userId, String objectType) {
-        Map<String, Object> targetObject;
-        targetObject =
+    private void generateTeleEventForUser(Map<String, Object> requestMap, String userId,
+            String objectType) {
+        List<Map<String, Object>> correlatedObject = new ArrayList<>();
+        Map<String, Object> targetObject =
                 TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
         Map<String, Object> telemetryAction = new HashMap<>();
-        String msg = "";
         if(objectType.equalsIgnoreCase("orgLevel")){
-            msg ="role assigned at org level";
+            telemetryAction.put("AssignRole", "role assigned at org level");
+            if (null != requestMap) {
             TelemetryUtil.generateCorrelatedObject((String) requestMap.get(JsonKey.ORGANISATION_ID),
-                    JsonKey.ORGANISATION, null, correlatedObject);
+                        JsonKey.ORGANISATION, null, correlatedObject);
+            }
         }else{
-            msg ="role assigned at user level";
+            if(objectType.equalsIgnoreCase("userLevel")){
+                telemetryAction.put("AssignRole", "role assigned at user level");
+            } else if (objectType.equalsIgnoreCase("blockUser")) {
+                telemetryAction.put("BlockUser", "user blocked");
+            } else if (objectType.equalsIgnoreCase("unBlockUser")) {
+                telemetryAction.put("UnBlockUser", "user unblocked");
+            } else if (objectType.equalsIgnoreCase("profileVisibility")) {
+                telemetryAction.put("ProfileVisibility", "profile Visibility setting changed");
+            }
         }
-        telemetryAction.put("assignRole", msg);
         TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
     }
 
@@ -2889,8 +2881,6 @@ public class UserManagementActor extends BaseActor {
     private void unBlockUser(Request actorMessage) {
 
         ProjectLogger.log("Method call  " + "UnblockeUser");
-        // object of telemetry event...
-        Map<String, Object> targetObject = null;
         Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
         Map<String, Object> userMap =
                 (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
@@ -2949,12 +2939,7 @@ public class UserManagementActor extends BaseActor {
         request.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
         request.getRequest().put(JsonKey.ID, userId);
         tellToAnother(request);
-
-        targetObject =
-                TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-        Map<String, Object> telemetryAction = new HashMap<>();
-        telemetryAction.put("unBlockUser", "unblock the user");
-        TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, new ArrayList<>());
+        generateTeleEventForUser(null, userId, "unBlockUser");
     }
 
     /**

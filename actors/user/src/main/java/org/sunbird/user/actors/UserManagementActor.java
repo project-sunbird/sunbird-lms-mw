@@ -2795,13 +2795,7 @@ public class UserManagementActor extends BaseActor {
             } else {
                 ProjectLogger.log("no call for ES to save user");
             }
-            targetObject =
-                    TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-            TelemetryUtil.generateCorrelatedObject((String) requestMap.get(JsonKey.ORGANISATION_ID),
-                    JsonKey.ORGANISATION, null, correlatedObject);
-            Map<String, Object> telemetryAction = new HashMap<>();
-            telemetryAction.put("assignRole", "role assigned at org level");
-            TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
+            generateTeleEventForAssignedRole(correlatedObject, requestMap, userId, "userLevel");
             return;
 
         } else {
@@ -2844,13 +2838,27 @@ public class UserManagementActor extends BaseActor {
                 ProjectLogger.log("no call for ES to save user");
             }
 
-            targetObject =
-                    TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-            Map<String, Object> telemetryAction = new HashMap<>();
-            telemetryAction.put("assignRole", "role assigned at user level");
-            TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
+            generateTeleEventForAssignedRole(correlatedObject, requestMap, userId, "orgLevel");
             return;
         }
+    }
+
+    private void generateTeleEventForAssignedRole(List<Map<String, Object>> correlatedObject,
+            Map<String, Object> requestMap, String userId, String objectType) {
+        Map<String, Object> targetObject;
+        targetObject =
+                TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+        TelemetryUtil.generateCorrelatedObject((String) requestMap.get(JsonKey.ORGANISATION_ID),
+                JsonKey.ORGANISATION, null, correlatedObject);
+        Map<String, Object> telemetryAction = new HashMap<>();
+        String msg = "";
+        if(objectType.equalsIgnoreCase("orgLevel")){
+            msg ="role assigned at org level";
+        }else{
+            msg ="role assigned at user level";
+        }
+        telemetryAction.put("assignRole", msg);
+        TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
     }
 
     private void updateRoleToEs(Map<String, Object> tempMap, String type, String userid,

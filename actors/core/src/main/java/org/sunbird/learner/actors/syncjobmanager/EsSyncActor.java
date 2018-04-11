@@ -8,7 +8,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -121,9 +120,10 @@ public class EsSyncActor extends BaseActor {
         Iterator<Entry<String, Object>> itr = responseMap.entrySet().iterator();
         while (itr.hasNext()) {
             if (objectType.equals(JsonKey.USER)) {
-                Map<String, Object> userMap = (Map<String, Object>) itr.next().getValue();
+                Entry<String, Object> entry = itr.next();
+                Map<String, Object> userMap = (Map<String, Object>) entry.getValue();
                 if (!((boolean) userMap.get(JsonKey.IS_DELETED))) {
-                    result.add(getUserDetails(itr.next()));
+                    result.add(getUserDetails(entry));
                 }
             } else if (objectType.equals(JsonKey.ORGANISATION)) {
                 result.add(getOrgDetails(itr.next()));

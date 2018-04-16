@@ -137,18 +137,8 @@ public class PageManagementActor extends BaseActor {
 		targetObject = TelemetryUtil.generateTargetObject((String) sectionMap.get(JsonKey.ID), JsonKey.PAGE_SECTION,
 				JsonKey.CREATE, null);
 		TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
-		// TelemetryUtil.generateCorrelatedObject(endoresedUserId, JsonKey.USER , null ,
-		// correlatedObject);
-
 		// update DataCacheHandler section map with updated page section data
-		new Thread() {
-			@Override
-			public void run() {
-				if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-					DataCacheHandler.getSectionMap().put((String) sectionMap.get(JsonKey.ID), sectionMap);
-				}
-			}
-		}.start();
+		updateSectionDataCache(response, sectionMap);
 	}
 
 	private void createPageSection(Request actorMessage) {
@@ -185,14 +175,15 @@ public class PageManagementActor extends BaseActor {
 		sender().tell(response, self());
 		targetObject = TelemetryUtil.generateTargetObject(uniqueId, JsonKey.PAGE_SECTION, JsonKey.CREATE, null);
 		TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
-		// TelemetryUtil.generateCorrelatedObject(endoresedUserId, JsonKey.USER , null ,
-		// correlatedObject);
-
 		// update DataCacheHandler section map with new page section data
+		updateSectionDataCache(response , sectionMap);
+	}
+
+	private void updateSectionDataCache(Response response, Map<String, Object> sectionMap) {
 		new Thread() {
 			@Override
 			public void run() {
-				if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+				if ((JsonKey.SUCCESS).equalsIgnoreCase((String) response.get(JsonKey.RESPONSE))) {
 					DataCacheHandler.getSectionMap().put((String) sectionMap.get(JsonKey.ID), sectionMap);
 				}
 			}
@@ -364,7 +355,7 @@ public class PageManagementActor extends BaseActor {
 				JsonKey.CREATE, null);
 		TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
 		// update DataCacheHandler page map with updated page data
-		updateDataCacheHandler(response , pageMap);
+		updatePageDataCacheHandler(response , pageMap);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -419,10 +410,10 @@ public class PageManagementActor extends BaseActor {
 		targetObject = TelemetryUtil.generateTargetObject(uniqueId, JsonKey.PAGE, JsonKey.CREATE, null);
 		TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
 
-		updateDataCacheHandler(response , pageMap);
+		updatePageDataCacheHandler(response , pageMap);
 	}
 
-	private void updateDataCacheHandler(Response response, Map<String, Object> pageMap) {
+	private void updatePageDataCacheHandler(Response response, Map<String, Object> pageMap) {
 		// update DataCacheHandler page map with new page data
 		new Thread() {
 			@Override

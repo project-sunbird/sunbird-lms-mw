@@ -208,7 +208,7 @@ public class PageManagementActor extends BaseActor {
 		Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.PAGE);
 		String pageName = (String) req.get(JsonKey.PAGE_NAME);
 		String source = (String) req.get(JsonKey.SOURCE);
-		String orgCode = (String) req.get(JsonKey.ORG_CODE);
+		String orgId = (String) req.get(JsonKey.ORGANISATION_ID);
 		Map<String, String> headers = (Map<String, String>) actorMessage.getRequest().get(JsonKey.HEADER);
 		filterMap.putAll(req);
 		filterMap.remove(JsonKey.PAGE_NAME);
@@ -219,9 +219,9 @@ public class PageManagementActor extends BaseActor {
 		Map<String, Object> reqFilters = (Map<String, Object>) req.get(JsonKey.FILTERS);
 		List<Map<String, Object>> result = null;
 		try {
-			if (!StringUtils.isBlank(orgCode)) {
-				response = cassandraOperation.getRecordsByProperty(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(),
-						JsonKey.ORG_CODE, orgCode);
+			if (!StringUtils.isBlank(orgId)) {
+				response = cassandraOperation.getRecordById(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(),
+						orgId);
 				result = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
 			}
 		} catch (Exception e) {
@@ -229,18 +229,18 @@ public class PageManagementActor extends BaseActor {
 		}
 
 		Map<String, Object> map = null;
-		String orgId = "NA";
-		if (null != result && !result.isEmpty()) {
-			map = result.get(0);
-			orgId = (String) map.get(JsonKey.ID);
+		/**
+		 * if orgId is not then consider default page
+		 */
+		if (null == result || result.isEmpty()) {
+			orgId = "NA";
 		}
 
 		Map<String, Object> pageMap = DataCacheHandler.getPageMap().get(orgId + ":" + pageName);
-		/**
-		 * if requested page for this organization is not found, return default NTP page
-		 */
 		if (null == pageMap) {
-			pageMap = DataCacheHandler.getPageMap().get("NA" + ":" + pageName);
+			throw new ProjectCommonException(
+					ResponseCode.pageDoesNotExist.getErrorCode(), ResponseCode.pageDoesNotExist.getErrorMessage(),
+					ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
 		}
 		if (source.equalsIgnoreCase(ProjectUtil.Source.WEB.getValue())) {
 			if (null != pageMap && null != pageMap.get(JsonKey.PORTAL_MAP)) {
@@ -363,21 +363,8 @@ public class PageManagementActor extends BaseActor {
 		targetObject = TelemetryUtil.generateTargetObject((String) pageMap.get(JsonKey.ID), JsonKey.PAGE,
 				JsonKey.CREATE, null);
 		TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
-		// TelemetryUtil.generateCorrelatedObject(endoresedUserId, JsonKey.USER , null ,
-		// correlatedObject);
 		// update DataCacheHandler page map with updated page data
-		new Thread() {
-			@Override
-			public void run() {
-				if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-					String orgId = "NA";
-					if (pageMap.containsKey(JsonKey.ORGANISATION_ID)) {
-						orgId = (String) pageMap.get(JsonKey.ORGANISATION_ID);
-					}
-					DataCacheHandler.getPageMap().put(orgId + ":" + (String) pageMap.get(JsonKey.PAGE_NAME), pageMap);
-				}
-			}
-		}.start();
+		updateDataCacheHandler(response , pageMap);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -432,11 +419,15 @@ public class PageManagementActor extends BaseActor {
 		targetObject = TelemetryUtil.generateTargetObject(uniqueId, JsonKey.PAGE, JsonKey.CREATE, null);
 		TelemetryUtil.telemetryProcessingCall(actorMessage.getRequest(), targetObject, correlatedObject);
 
+		updateDataCacheHandler(response , pageMap);
+	}
+
+	private void updateDataCacheHandler(Response response, Map<String, Object> pageMap) {
 		// update DataCacheHandler page map with new page data
 		new Thread() {
 			@Override
 			public void run() {
-				if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+				if (JsonKey.SUCCESS.equalsIgnoreCase((String) response.get(JsonKey.RESPONSE))) {
 					String orgId = "NA";
 					if (pageMap.containsKey(JsonKey.ORGANISATION_ID)) {
 						orgId = (String) pageMap.get(JsonKey.ORGANISATION_ID);
@@ -445,6 +436,7 @@ public class PageManagementActor extends BaseActor {
 				}
 			}
 		}.start();
+
 	}
 
 	@SuppressWarnings("unchecked")

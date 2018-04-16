@@ -18,6 +18,7 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.models.util.fcm.Notification;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -27,7 +28,8 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
 
 /**
- * Class for providing Geo Location for Organisation Created by arvind on
+ * Class for providing Geo Location for Organisation
+ * Created by arvind on
  * 31/10/17.
  */
 
@@ -43,7 +45,7 @@ public class GeoLocationManagementActor extends BaseActor {
 	@Override
 	public void onReceive(Request request) throws Throwable {
 		ExecutionContext.setRequestId(request.getRequestId());
-		Util.initializeContext(request, JsonKey.LOCATION);
+		Util.initializeContext(request, TelemetryEnvKey.GEO_LOCATION);
 		if (request.getOperation().equalsIgnoreCase(ActorOperations.CREATE_GEO_LOCATION.getValue())) {
 			createGeoLocation(request);
 		} else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_GEO_LOCATION.getValue())) {

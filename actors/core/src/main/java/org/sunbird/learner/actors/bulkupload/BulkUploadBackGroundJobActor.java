@@ -176,6 +176,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                     "Exception Occurred while updating bulk_upload_process in BulkUploadBackGroundJobActor : ",
                     e);
         }
+
     }
 
     @SuppressWarnings("unchecked")
@@ -308,6 +309,13 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             userCourses.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
             insertUserCoursesToES(userCourses);
             flag = true;
+            Map<String, Object> targetObject = TelemetryUtil
+                .generateTargetObject(userId, JsonKey.USER,
+                    JsonKey.UPDATE, null);
+            List<Map<String, Object>> correlatedObject = new ArrayList<>();
+            TelemetryUtil.generateCorrelatedObject(batchId, JsonKey.BATCH, null,
+                correlatedObject);
+            TelemetryUtil.telemetryProcessingCall(userCourses, targetObject, correlatedObject);
         } catch (Exception ex) {
             ProjectLogger.log("INSERT RECORD TO USER COURSES EXCEPTION ", ex);
             flag = false;
@@ -401,6 +409,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
         Object[] orgContactList = null;
         String contactDetails = null;
+        boolean isOrgUpdated = false;
 
         // object of telemetry event...
         Map<String, Object> targetObject = new HashMap<>();
@@ -553,6 +562,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                     // process Audit Log
                     processAuditLog(concurrentHashMap, ActorOperations.UPDATE_ORG.getValue(), "",
                             JsonKey.ORGANISATION);
+                    //TODO: create telemetry for update org
+                    isOrgUpdated = true;
+                    generateTelemetryForOrganisation(concurrentHashMap ,(String)orgResult.get(JsonKey.ID), isOrgUpdated );
                     return;
                 } catch (Exception ex) {
 
@@ -654,6 +666,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                     // process Audit Log
                     processAuditLog(concurrentHashMap, ActorOperations.UPDATE_ORG.getValue(), "",
                             JsonKey.ORGANISATION);
+                    //TODO: create telemetry for update org
+                    isOrgUpdated = true;
+                    generateTelemetryForOrganisation(concurrentHashMap ,(String)concurrentHashMap.get(JsonKey.ID), isOrgUpdated );
                     return;
                 } catch (Exception ex) {
 
@@ -826,11 +841,22 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             failureList.add(concurrentHashMap);
             return;
         }
+        generateTelemetryForOrganisation(map ,uniqueId, isOrgUpdated);
+    }
 
-        targetObject = TelemetryUtil.generateTargetObject(uniqueId, JsonKey.ORGANISATION,
-                JsonKey.CREATE, null);
-        TelemetryUtil.generateCorrelatedObject(uniqueId, JsonKey.ORGANISATION, null,
-                correlatedObject);
+    private void generateTelemetryForOrganisation(Map<String, Object> map, String id,
+        boolean isOrgUpdated) {
+
+        String orgState = JsonKey.CREATE;
+        if(isOrgUpdated){
+            orgState = JsonKey.UPDATE;
+        }
+        Map<String, Object> targetObject = TelemetryUtil
+            .generateTargetObject(id, JsonKey.ORGANISATION,
+                orgState, null);
+        List<Map<String, Object>> correlatedObject = new ArrayList<>();
+        TelemetryUtil.generateCorrelatedObject(id, JsonKey.ORGANISATION, null,
+            correlatedObject);
         TelemetryUtil.telemetryProcessingCall(map, targetObject, correlatedObject);
     }
 

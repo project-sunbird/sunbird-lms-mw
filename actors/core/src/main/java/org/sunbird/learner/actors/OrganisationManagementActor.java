@@ -1168,13 +1168,15 @@ public class OrganisationManagementActor extends BaseActor {
 		String orgId = (String) req.get(JsonKey.ORGANISATION_ID);
 		Map<String, Object> result = ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(),
 				ProjectUtil.EsType.organisation.getTypeName(), orgId);
-		Response response = new Response();
-		if (result != null) {
-			response.put(JsonKey.RESPONSE, result);
-		} else {
-			result = new HashMap<>();
-			response.put(JsonKey.RESPONSE, result);
+
+		if (result == null || result.isEmpty()) {
+			throw new ProjectCommonException(
+					ResponseCode.orgDoesNotExist.getErrorCode(), ResponseCode.orgDoesNotExist.getErrorMessage(),
+					ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
 		}
+
+		Response response = new Response();
+		response.put(JsonKey.RESPONSE, result);
 		sender().tell(response, self());
 	}
 

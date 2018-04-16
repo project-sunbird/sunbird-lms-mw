@@ -10,6 +10,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.util.Util;
@@ -37,7 +38,7 @@ public class BadgeIssuerActor extends BaseActor {
         ProjectLogger.log("BadgeIssuerActor  onReceive called", LoggerEnum.INFO.name());
         String operation = request.getOperation();
 
-        Util.initializeContext(request, JsonKey.USER);
+        Util.initializeContext(request, TelemetryEnvKey.BADGE);
         ExecutionContext.setRequestId(request.getRequestId());
 
         switch (operation) {

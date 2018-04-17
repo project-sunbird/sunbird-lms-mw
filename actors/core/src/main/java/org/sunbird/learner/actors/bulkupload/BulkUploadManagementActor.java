@@ -448,17 +448,17 @@ public class BulkUploadManagementActor extends BaseActor {
         try {
             // Reading the csv file
             csvReader = new CSVReader(new FileReader(file), ',', '"', 0);
-            String[] nextLine;
+            String[] strArray;
             // Read one line at a time
-            while ((nextLine = csvReader.readNext()) != null) {
-                if (isLineEmpty(nextLine)) {
+            while ((strArray = csvReader.readNext()) != null) {
+                if (ProjectUtil.isNotEmptyStringArray(strArray)) {
                     continue;
                 }
                 List<String> list = new ArrayList<>();
-                for (String token : nextLine) {
+                for (String token : strArray) {
                     list.add(token);
                 }
-                rows.add(list.toArray(list.toArray(new String[nextLine.length])));
+                rows.add(list.toArray(list.toArray(new String[strArray.length])));
             }
         } catch (Exception e) {
             ProjectLogger.log("Exception occured while processing csv file : ", e);
@@ -472,15 +472,6 @@ public class BulkUploadManagementActor extends BaseActor {
             }
         }
         return rows;
-    }
-
-    private boolean isLineEmpty(String[] nextLine) {
-        for (String str : nextLine) {
-            if (StringUtils.isNotEmpty(str)) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private void validateUserProperty(String[] property) {

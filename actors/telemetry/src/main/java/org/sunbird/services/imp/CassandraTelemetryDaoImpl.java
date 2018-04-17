@@ -8,11 +8,10 @@ import org.sunbird.util.lmaxdisruptor.TelemetryData;
 
 public class CassandraTelemetryDaoImpl implements TelemetryDao {
 
-	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
-	@Override
-	public Response save(TelemetryData teleData) {
-		return cassandraOperation.upsertRecord("sunbird", "telemetry_raw_data", teleData.asMap());
-	}
-
+  @Override
+  public Response save(TelemetryData teleData) {
+    return cassandraOperation.upsertRecord("sunbird", "telemetry_raw_data", teleData.asMap());
+  }
 }

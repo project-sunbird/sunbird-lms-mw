@@ -2,6 +2,10 @@ package org.sunbird.learner.actors;
 
 import static akka.testkit.JavaTestKit.duration;
 
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.testkit.javadsl.TestKit;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -13,81 +17,75 @@ import org.sunbird.common.request.Request;
 import org.sunbird.learner.actors.health.HealthActor;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.testkit.javadsl.TestKit;
-
 public class BadgeActorTest {
 
-	private static ActorSystem system;
-	private static final Props props = Props.create(HealthActor.class);
+  private static ActorSystem system;
+  private static final Props props = Props.create(HealthActor.class);
 
-	@BeforeClass
-	public static void setUp() {
-		SunbirdMWService.init();
-		system = ActorSystem.create("system");
-		Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-	}
+  @BeforeClass
+  public static void setUp() {
+    SunbirdMWService.init();
+    system = ActorSystem.create("system");
+    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
+  }
 
-	@Test
-	public void getAllBadges() {
-		TestKit probe = new TestKit(system);
-		ActorRef subject = system.actorOf(props);
+  @Test
+  public void getAllBadges() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
-		Request reqObj = new Request();
-		reqObj.setOperation(ActorOperations.GET_ALL_BADGE.getValue());
-		subject.tell(reqObj, probe.getRef());
-		Response res = probe.expectMsgClass(duration("200 second"), Response.class);
-		Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
-	}
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.GET_ALL_BADGE.getValue());
+    subject.tell(reqObj, probe.getRef());
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+  }
 
-	@Test
-	public void getHealthCheck() {
-		TestKit probe = new TestKit(system);
-		ActorRef subject = system.actorOf(props);
+  @Test
+  public void getHealthCheck() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
-		Request reqObj = new Request();
-		reqObj.setOperation(ActorOperations.HEALTH_CHECK.getValue());
-		subject.tell(reqObj, probe.getRef());
-		Response res = probe.expectMsgClass(duration("200 second"), Response.class);
-		Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
-	}
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.HEALTH_CHECK.getValue());
+    subject.tell(reqObj, probe.getRef());
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+  }
 
-	@Test
-	public void getACTORHealthCheck() {
-		TestKit probe = new TestKit(system);
-		ActorRef subject = system.actorOf(props);
+  @Test
+  public void getACTORHealthCheck() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
-		Request reqObj = new Request();
-		reqObj.setOperation(ActorOperations.ACTOR.getValue());
-		subject.tell(reqObj, probe.getRef());
-		Response res = probe.expectMsgClass(duration("200 second"), Response.class);
-		Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
-	}
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.ACTOR.getValue());
+    subject.tell(reqObj, probe.getRef());
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+  }
 
-	@Test
-	public void getESHealthCheck() {
-		TestKit probe = new TestKit(system);
-		ActorRef subject = system.actorOf(props);
+  @Test
+  public void getESHealthCheck() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
-		Request reqObj = new Request();
-		reqObj.setOperation(ActorOperations.ES.getValue());
-		subject.tell(reqObj, probe.getRef());
-		Response res = probe.expectMsgClass(duration("200 second"), Response.class);
-		Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
-	}
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.ES.getValue());
+    subject.tell(reqObj, probe.getRef());
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+  }
 
-	@Test
-	public void getCASSANDRAHealthCheck() {
-		TestKit probe = new TestKit(system);
-		ActorRef subject = system.actorOf(props);
+  @Test
+  public void getCASSANDRAHealthCheck() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
-		Request reqObj = new Request();
-		reqObj.setOperation(ActorOperations.CASSANDRA.getValue());
-		subject.tell(reqObj, probe.getRef());
-		Response res = probe.expectMsgClass(duration("200 second"), Response.class);
-		Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
-	}
-
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.CASSANDRA.getValue());
+    subject.tell(reqObj, probe.getRef());
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+  }
 }

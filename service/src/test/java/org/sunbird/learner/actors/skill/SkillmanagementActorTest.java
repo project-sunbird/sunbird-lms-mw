@@ -2,11 +2,14 @@ package org.sunbird.learner.actors.skill;
 
 import static akka.testkit.JavaTestKit.duration;
 
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -26,186 +29,190 @@ import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.testkit.javadsl.TestKit;
-
-/**
- * Created by arvind on 24/10/17.
- */
+/** Created by arvind on 24/10/17. */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class SkillmanagementActorTest {
 
-	private static ActorSystem system;
-	private static final Props props = Props.create(SkillmanagementActor.class);
-	private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-	private static Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
-	private static Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-	private static final String USER_ID = "vcurc633r89yv";
-	private static final String ROOT_ORG_ID = "7838hhucy83yuuy";
-	private static final String ENDORSED_USER_ID = "nmnkfiiuvcehuybgu";
-	private static final String SKILL_NAME = "Java";
-	private static List<String> skillsList = new ArrayList<>();
+  private static ActorSystem system;
+  private static final Props props = Props.create(SkillmanagementActor.class);
+  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
+  private static Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+  private static final String USER_ID = "vcurc633r89yv";
+  private static final String ROOT_ORG_ID = "7838hhucy83yuuy";
+  private static final String ENDORSED_USER_ID = "nmnkfiiuvcehuybgu";
+  private static final String SKILL_NAME = "Java";
+  private static List<String> skillsList = new ArrayList<>();
 
-	@BeforeClass
-	public static void setUp() {
-		system = ActorSystem.create("system");
-		skillsList.add("Java");
-		Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-		insertUserDataInCassandraAndEs();
+  @BeforeClass
+  public static void setUp() {
+    system = ActorSystem.create("system");
+    skillsList.add("Java");
+    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
+    insertUserDataInCassandraAndEs();
+  }
 
-	}
+  private static void insertUserDataInCassandraAndEs() {
 
-	private static void insertUserDataInCassandraAndEs() {
+    Map<String, Object> userMap = new HashMap<>();
+    userMap.put(JsonKey.ID, USER_ID);
+    userMap.put(JsonKey.ROOT_ORG_ID, ROOT_ORG_ID);
+    cassandraOperation.insertRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(), userMap);
+    userMap.put(JsonKey.USER_ID, USER_ID);
+    ElasticSearchUtil.createData(
+        EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID, userMap);
+    Map<String, Object> endorseduserMap = new HashMap<>();
+    endorseduserMap.put(JsonKey.ID, ENDORSED_USER_ID);
+    endorseduserMap.put(JsonKey.ROOT_ORG_ID, ROOT_ORG_ID);
+    cassandraOperation.insertRecord(
+        userDbInfo.getKeySpace(), userDbInfo.getTableName(), endorseduserMap);
+    endorseduserMap.put(JsonKey.USER_ID, ENDORSED_USER_ID);
+    ElasticSearchUtil.createData(
+        EsIndex.sunbird.getIndexName(),
+        EsType.user.getTypeName(),
+        ENDORSED_USER_ID,
+        endorseduserMap);
+  }
 
-		Map<String, Object> userMap = new HashMap<>();
-		userMap.put(JsonKey.ID, USER_ID);
-		userMap.put(JsonKey.ROOT_ORG_ID, ROOT_ORG_ID);
-		cassandraOperation.insertRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(), userMap);
-		userMap.put(JsonKey.USER_ID, USER_ID);
-		ElasticSearchUtil.createData(EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID, userMap);
-		Map<String, Object> endorseduserMap = new HashMap<>();
-		endorseduserMap.put(JsonKey.ID, ENDORSED_USER_ID);
-		endorseduserMap.put(JsonKey.ROOT_ORG_ID, ROOT_ORG_ID);
-		cassandraOperation.insertRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(), endorseduserMap);
-		endorseduserMap.put(JsonKey.USER_ID, ENDORSED_USER_ID);
-		ElasticSearchUtil.createData(EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), ENDORSED_USER_ID,
-				endorseduserMap);
+  @Test
+  public void testaAddSkill() {
 
-	}
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
-	@Test
-	public void testaAddSkill() {
+    Request actorMessage = new Request();
+    actorMessage.put(JsonKey.REQUESTED_BY, USER_ID);
+    actorMessage.put(JsonKey.ENDORSED_USER_ID, ENDORSED_USER_ID);
+    actorMessage.put(JsonKey.SKILL_NAME, skillsList);
+    actorMessage.setOperation(ActorOperations.ADD_SKILL.getValue());
 
-		TestKit probe = new TestKit(system);
-		ActorRef subject = system.actorOf(props);
+    subject.tell(actorMessage, probe.getRef());
+    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
+    Assert.assertTrue(null != res);
+  }
 
-		Request actorMessage = new Request();
-		actorMessage.put(JsonKey.REQUESTED_BY, USER_ID);
-		actorMessage.put(JsonKey.ENDORSED_USER_ID, ENDORSED_USER_ID);
-		actorMessage.put(JsonKey.SKILL_NAME, skillsList);
-		actorMessage.setOperation(ActorOperations.ADD_SKILL.getValue());
+  @Test
+  public void testabAddSkillAgain() {
 
-		subject.tell(actorMessage, probe.getRef());
-		Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-		Assert.assertTrue(null != res);
-	}
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
-	@Test
-	public void testabAddSkillAgain() {
+    Request actorMessage = new Request();
+    actorMessage.put(JsonKey.REQUESTED_BY, USER_ID);
+    actorMessage.put(JsonKey.ENDORSED_USER_ID, ENDORSED_USER_ID);
+    actorMessage.put(JsonKey.SKILL_NAME, skillsList);
+    actorMessage.setOperation(ActorOperations.ADD_SKILL.getValue());
 
-		TestKit probe = new TestKit(system);
-		ActorRef subject = system.actorOf(props);
+    subject.tell(actorMessage, probe.getRef());
+    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
+    Assert.assertTrue(null != res);
+  }
 
-		Request actorMessage = new Request();
-		actorMessage.put(JsonKey.REQUESTED_BY, USER_ID);
-		actorMessage.put(JsonKey.ENDORSED_USER_ID, ENDORSED_USER_ID);
-		actorMessage.put(JsonKey.SKILL_NAME, skillsList);
-		actorMessage.setOperation(ActorOperations.ADD_SKILL.getValue());
+  @Test
+  public void testbAddSkillWithInvalidUserId() {
 
-		subject.tell(actorMessage, probe.getRef());
-		Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-		Assert.assertTrue(null != res);
-	}
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
-	@Test
-	public void testbAddSkillWithInvalidUserId() {
+    Request actorMessage = new Request();
+    actorMessage.put(JsonKey.REQUESTED_BY, USER_ID);
+    actorMessage.put(JsonKey.ENDORSED_USER_ID, ENDORSED_USER_ID + 1123);
+    actorMessage.put(JsonKey.SKILL_NAME, skillsList);
+    actorMessage.setOperation(ActorOperations.ADD_SKILL.getValue());
 
-		TestKit probe = new TestKit(system);
-		ActorRef subject = system.actorOf(props);
+    subject.tell(actorMessage, probe.getRef());
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
+  }
 
-		Request actorMessage = new Request();
-		actorMessage.put(JsonKey.REQUESTED_BY, USER_ID);
-		actorMessage.put(JsonKey.ENDORSED_USER_ID, ENDORSED_USER_ID + 1123);
-		actorMessage.put(JsonKey.SKILL_NAME, skillsList);
-		actorMessage.setOperation(ActorOperations.ADD_SKILL.getValue());
+  @Test
+  public void testcGetSkill() {
 
-		subject.tell(actorMessage, probe.getRef());
-		ProjectCommonException exc = probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-		Assert.assertTrue(null != exc);
-	}
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
-	@Test
-	public void testcGetSkill() {
+    Request actorMessage = new Request();
+    actorMessage.put(JsonKey.REQUESTED_BY, USER_ID);
+    actorMessage.put(JsonKey.ENDORSED_USER_ID, ENDORSED_USER_ID);
+    actorMessage.setOperation(ActorOperations.GET_SKILL.getValue());
 
-		TestKit probe = new TestKit(system);
-		ActorRef subject = system.actorOf(props);
+    subject.tell(actorMessage, probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertTrue(null != res);
+  }
 
-		Request actorMessage = new Request();
-		actorMessage.put(JsonKey.REQUESTED_BY, USER_ID);
-		actorMessage.put(JsonKey.ENDORSED_USER_ID, ENDORSED_USER_ID);
-		actorMessage.setOperation(ActorOperations.GET_SKILL.getValue());
+  @Test
+  public void testdGetSkillWithInvalidUserId() {
 
-		subject.tell(actorMessage, probe.getRef());
-		Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-		Assert.assertTrue(null != res);
-	}
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
-	@Test
-	public void testdGetSkillWithInvalidUserId() {
+    Request actorMessage = new Request();
+    actorMessage.put(JsonKey.REQUESTED_BY, USER_ID);
+    actorMessage.put(JsonKey.ENDORSED_USER_ID, ENDORSED_USER_ID + 1123);
+    actorMessage.setOperation(ActorOperations.GET_SKILL.getValue());
 
-		TestKit probe = new TestKit(system);
-		ActorRef subject = system.actorOf(props);
+    subject.tell(actorMessage, probe.getRef());
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
+  }
 
-		Request actorMessage = new Request();
-		actorMessage.put(JsonKey.REQUESTED_BY, USER_ID);
-		actorMessage.put(JsonKey.ENDORSED_USER_ID, ENDORSED_USER_ID + 1123);
-		actorMessage.setOperation(ActorOperations.GET_SKILL.getValue());
+  @Test
+  public void testeSkills() {
 
-		subject.tell(actorMessage, probe.getRef());
-		ProjectCommonException exc = probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-		Assert.assertTrue(null != exc);
-	}
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
-	@Test
-	public void testeSkills() {
+    Request actorMessage = new Request();
+    actorMessage.setOperation(ActorOperations.GET_SKILLS_LIST.getValue());
 
-		TestKit probe = new TestKit(system);
-		ActorRef subject = system.actorOf(props);
+    subject.tell(actorMessage, probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertTrue(null != res);
+  }
 
-		Request actorMessage = new Request();
-		actorMessage.setOperation(ActorOperations.GET_SKILLS_LIST.getValue());
+  @Test
+  public void testwithinvalidOperationName() {
 
-		subject.tell(actorMessage, probe.getRef());
-		Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-		Assert.assertTrue(null != res);
-	}
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
-	@Test
-	public void testwithinvalidOperationName() {
+    Request actorMessage = new Request();
+    actorMessage.setOperation(ActorOperations.GET_SKILLS_LIST.getValue() + "Invalid");
 
-		TestKit probe = new TestKit(system);
-		ActorRef subject = system.actorOf(props);
+    subject.tell(actorMessage, probe.getRef());
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
+  }
 
-		Request actorMessage = new Request();
-		actorMessage.setOperation(ActorOperations.GET_SKILLS_LIST.getValue() + "Invalid");
+  @Test
+  public void testwithUnSupportedMsg() {
 
-		subject.tell(actorMessage, probe.getRef());
-		ProjectCommonException exc = probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-		Assert.assertTrue(null != exc);
-	}
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
-	@Test
-	public void testwithUnSupportedMsg() {
+    subject.tell("UNSUPPORTED OJECT STRING", probe.getRef());
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exc);
+  }
 
-		TestKit probe = new TestKit(system);
-		ActorRef subject = system.actorOf(props);
-
-		subject.tell("UNSUPPORTED OJECT STRING", probe.getRef());
-		ProjectCommonException exc = probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-		Assert.assertTrue(null != exc);
-	}
-
-	@AfterClass
-	public static void destroy() {
-		cassandraOperation.deleteRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(), USER_ID);
-		cassandraOperation.deleteRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(), ENDORSED_USER_ID);
-		ElasticSearchUtil.removeData(EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID);
-		ElasticSearchUtil.removeData(EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), ENDORSED_USER_ID);
-		cassandraOperation.deleteRecord(userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(),
-				OneWayHashing.encryptVal(ENDORSED_USER_ID + JsonKey.PRIMARY_KEY_DELIMETER + SKILL_NAME.toLowerCase()));
-
-	}
-
+  @AfterClass
+  public static void destroy() {
+    cassandraOperation.deleteRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(), USER_ID);
+    cassandraOperation.deleteRecord(
+        userDbInfo.getKeySpace(), userDbInfo.getTableName(), ENDORSED_USER_ID);
+    ElasticSearchUtil.removeData(
+        EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID);
+    ElasticSearchUtil.removeData(
+        EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), ENDORSED_USER_ID);
+    cassandraOperation.deleteRecord(
+        userSkillDbInfo.getKeySpace(),
+        userSkillDbInfo.getTableName(),
+        OneWayHashing.encryptVal(
+            ENDORSED_USER_ID + JsonKey.PRIMARY_KEY_DELIMETER + SKILL_NAME.toLowerCase()));
+  }
 }

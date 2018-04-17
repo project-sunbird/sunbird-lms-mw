@@ -1,20 +1,13 @@
 package org.sunbird.util.lmaxdisruptor;
 
+import com.lmax.disruptor.EventTranslatorOneArg;
+import com.lmax.disruptor.dsl.Disruptor;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 
-import com.lmax.disruptor.EventTranslatorOneArg;
-import com.lmax.disruptor.dsl.Disruptor;
-
-
-/**
- * 
- * @author Manzarul
- *
- */
+/** @author Manzarul */
 public class WriteEventProducer {
-
 
   private final Disruptor<Request> disruptor;
 
@@ -24,8 +17,7 @@ public class WriteEventProducer {
 
   private static final EventTranslatorOneArg<Request, Request> TRANSLATOR_ONE_ARG =
       new EventTranslatorOneArg<Request, Request>() {
-        public void translateTo(Request writeEvent, long sequence,
-        		Request request) {
+        public void translateTo(Request writeEvent, long sequence, Request request) {
           writeEvent.setRequest(request.getRequest());
         }
       };

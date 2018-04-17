@@ -1,20 +1,24 @@
 package org.sunbird.badge;
 
-/**
- * 
- * @author Mahesh Kumar Gangula
- *
- */
-
+/** @author Mahesh Kumar Gangula */
 public enum BadgeOperations {
+  assignBadgeMessage,
+  revokeBadgeMessage,
 
-    assignBadgeMessage, revokeBadgeMessage,
+  createBadgeClass,
+  getBadgeClass,
+  searchBadgeClass,
+  deleteBadgeClass,
 
-    createBadgeClass, getBadgeClass, searchBadgeClass, deleteBadgeClass,
+  createBadgeIssuer,
+  createBadgeAssertion,
+  getBadgeAssertion,
+  getBadgeAssertionList,
+  revokeBadge,
+  assignBadgeToUser,
+  revokeBadgeFromUser,
 
-    createBadgeIssuer, createBadgeAssertion, getBadgeAssertion, getBadgeAssertionList, revokeBadge, assignBadgeToUser, revokeBadgeFromUser,
-
-    getBadgeIssuer, getAllIssuer , deleteIssuer
-
+  getBadgeIssuer,
+  getAllIssuer,
+  deleteIssuer
 }
-

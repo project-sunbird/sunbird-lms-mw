@@ -6,16 +6,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * 
- * @author Mahesh Kumar Gangula
- *
- */
-
+/** @author Mahesh Kumar Gangula */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 public @interface ActorConfig {
-	String[] tasks();
-	String[] asyncTasks();
+  String[] tasks();
+
+  String[] asyncTasks();
 }

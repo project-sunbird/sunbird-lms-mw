@@ -554,7 +554,7 @@ public class BadgrServiceImpl implements BadgingService {
 			// some of the content won't have createdBy , so in that case
 			// take do the content validation only and used default
 			// set admin email
-			if (StringUtils.isNotBlank(userId)) {
+			if (StringUtils.isBlank(userId)) {
 				return getDefaultEmail();
 			}
 			try {
@@ -575,7 +575,7 @@ public class BadgrServiceImpl implements BadgingService {
      * @return String
      */
 	private static String getDefaultEmail() {
-		String adminEmail = System.getenv(BadgingJsonKey.SUNBIRD_INSTALLATION_EMAIL);
+		String adminEmail = ProjectUtil.getConfigValue(BadgingJsonKey.SUNBIRD_INSTALLATION_EMAIL);
 		ProjectLogger.log("Default email is set to ==" + adminEmail);
 		return adminEmail;
 	}

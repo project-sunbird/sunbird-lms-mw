@@ -451,6 +451,9 @@ public class BulkUploadManagementActor extends BaseActor {
             String[] nextLine;
             // Read one line at a time
             while ((nextLine = csvReader.readNext()) != null) {
+                if (isLineEmpty(nextLine)) {
+                    continue;
+                }
                 List<String> list = new ArrayList<>();
                 for (String token : nextLine) {
                     list.add(token);
@@ -469,6 +472,15 @@ public class BulkUploadManagementActor extends BaseActor {
             }
         }
         return rows;
+    }
+
+    private boolean isLineEmpty(String[] nextLine) {
+        for (String str : nextLine) {
+            if (StringUtils.isNotEmpty(str)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void validateUserProperty(String[] property) {

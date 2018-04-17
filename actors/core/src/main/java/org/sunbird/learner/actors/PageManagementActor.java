@@ -366,7 +366,10 @@ public class PageManagementActor extends BaseActor {
 		Map<String, Object> targetObject = new HashMap<>();
 		List<Map<String, Object>> correlatedObject = new ArrayList<>();
 		// default value for orgId
-		if (StringUtils.isBlank((String) pageMap.get(JsonKey.ORGANISATION_ID))) {
+		String orgId = (String) pageMap.get(JsonKey.ORGANISATION_ID);
+		if (StringUtils.isNotBlank(orgId)) {
+			validateOrg(orgId);
+		}else{
 			pageMap.put(JsonKey.ORGANISATION_ID, "NA");
 		}
 		String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
@@ -572,6 +575,18 @@ public class PageManagementActor extends BaseActor {
 			ProjectLogger.log(e.getMessage(), e);
 		}
 		return sections;
+	}
+
+	private void validateOrg(String orgId){
+		Response result = cassandraOperation.getRecordById(orgDbInfo.getKeySpace(),
+				orgDbInfo.getTableName(), orgId);
+		List<Map<String, Object>> list =
+				(List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+		if (list == null || list.isEmpty()) {
+			throw new ProjectCommonException(ResponseCode.invalidOrgId.getErrorCode(),
+					ResponseCode.invalidOrgId.getErrorMessage(),
+					ResponseCode.CLIENT_ERROR.getResponseCode());
+		}
 	}
 
 }

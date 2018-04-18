@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -207,14 +208,11 @@ public class PageManagementActor extends BaseActor {
   }
 
   private void updateSectionDataCache(Response response, Map<String, Object> sectionMap) {
-    new Thread() {
-      @Override
-      public void run() {
+      new Thread(()->{
         if ((JsonKey.SUCCESS).equalsIgnoreCase((String) response.get(JsonKey.RESPONSE))) {
           DataCacheHandler.getSectionMap().put((String) sectionMap.get(JsonKey.ID), sectionMap);
         }
-      }
-    }.start();
+      }).start();
   }
 
   @SuppressWarnings("unchecked")
@@ -250,7 +248,7 @@ public class PageManagementActor extends BaseActor {
 
     Map<String, Object> map = null;
     /** if orgId is not then consider default page */
-    if (null == result || result.isEmpty()) {
+    if (CollectionUtils.isEmpty(result)) {
       orgId = "NA";
     }
 
@@ -461,19 +459,16 @@ public class PageManagementActor extends BaseActor {
 
   private void updatePageDataCacheHandler(Response response, Map<String, Object> pageMap) {
     // update DataCacheHandler page map with new page data
-    new Thread() {
-      @Override
-      public void run() {
-        if (JsonKey.SUCCESS.equalsIgnoreCase((String) response.get(JsonKey.RESPONSE))) {
-          String orgId = "NA";
-          if (pageMap.containsKey(JsonKey.ORGANISATION_ID)) {
-            orgId = (String) pageMap.get(JsonKey.ORGANISATION_ID);
-          }
-          DataCacheHandler.getPageMap()
-              .put(orgId + ":" + (String) pageMap.get(JsonKey.PAGE_NAME), pageMap);
+    new Thread(() -> {
+      if (JsonKey.SUCCESS.equalsIgnoreCase((String)response.get(JsonKey.RESPONSE))) {
+        String orgId = "NA";
+        if (pageMap.containsKey(JsonKey.ORGANISATION_ID)) {
+          orgId = (String) pageMap.get(JsonKey.ORGANISATION_ID);
         }
+        DataCacheHandler.getPageMap()
+            .put(orgId + ":" + (String) pageMap.get(JsonKey.PAGE_NAME), pageMap);
       }
-    }.start();
+    }).start();
   }
 
   @SuppressWarnings("unchecked")
@@ -632,7 +627,7 @@ public class PageManagementActor extends BaseActor {
     Response result =
         cassandraOperation.getRecordById(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), orgId);
     List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-    if (list == null || list.isEmpty()) {
+    if (CollectionUtils.isEmpty(list)) {
       throw new ProjectCommonException(
           ResponseCode.invalidOrgId.getErrorCode(),
           ResponseCode.invalidOrgId.getErrorMessage(),

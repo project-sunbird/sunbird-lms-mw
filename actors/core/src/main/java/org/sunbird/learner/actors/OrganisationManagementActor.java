@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -1324,7 +1325,7 @@ public class OrganisationManagementActor extends BaseActor {
             ProjectUtil.EsType.organisation.getTypeName(),
             orgId);
 
-    if (result == null || result.isEmpty()) {
+    if (MapUtils.isEmpty(result)) {
       throw new ProjectCommonException(
           ResponseCode.orgDoesNotExist.getErrorCode(),
           ResponseCode.orgDoesNotExist.getErrorMessage(),

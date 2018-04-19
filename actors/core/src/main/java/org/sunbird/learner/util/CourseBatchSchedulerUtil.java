@@ -175,7 +175,10 @@ public final class CourseBatchSchedulerUtil {
 					val = val - 1;
 			}
 			 if(ekStepContent.get(JsonKey.CHANNEL) != null) {
+				ProjectLogger.log("Channel value is coming from Contnet " +(String)ekStepContent.get(JsonKey.CHANNEL) + " Id "+ courseId  ); 
 				addHeaderProps(ekstepHeader, JsonKey.CHANNEL_ID , (String)ekStepContent.get(JsonKey.CHANNEL)); 
+			 }else {
+				 ProjectLogger.log("Channel value is  not coming from Contnet Id "+ courseId  ); 
 			 }
 			
 			try {

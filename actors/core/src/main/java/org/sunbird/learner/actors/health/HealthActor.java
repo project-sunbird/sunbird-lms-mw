@@ -25,8 +25,8 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.TelemetryUtil;
 
 /**
  * @author Manzarul
@@ -128,6 +128,7 @@ public class HealthActor extends BaseActor {
 		} catch (Exception e) {
 			responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, true, e));
 			isallHealthy = false;
+			ProjectLogger.log("Elastic search health Error == ", e);
 		}
 		finalResponseMap.put(JsonKey.CHECKS, responseList);
 		finalResponseMap.put(JsonKey.NAME, "ES health check api");

@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.util.HttpUtil;
@@ -21,7 +20,6 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.CourseEnrollmentActor;
-import org.sunbird.learner.util.Util;
 
 /**
  * This class will update course batch count to EKStep. First it will get batch
@@ -165,7 +163,7 @@ public final class CourseBatchSchedulerUtil {
 			contentName = "c_" + name + "_private_batch_count";
 		}
 		Map<String, String> ekstepHeader = getBasicHeader();
-		addHeaderProps(ekstepHeader, JsonKey.CHANNEL_ID , hashTagId);
+		//addHeaderProps(ekstepHeader, JsonKey.CHANNEL_ID , hashTagId);
 		// collect data from EKStep.
 		Map<String, Object> ekStepContent = CourseEnrollmentActor.getCourseObjectFromEkStep(courseId, ekstepHeader);
 		if (ekStepContent != null && ekStepContent.size() > 0) {
@@ -176,6 +174,10 @@ public final class CourseBatchSchedulerUtil {
 				if (val != 0)
 					val = val - 1;
 			}
+			 if(ekStepContent.get(JsonKey.CHANNEL) != null) {
+				addHeaderProps(ekstepHeader, JsonKey.CHANNEL_ID , (String)ekStepContent.get(JsonKey.CHANNEL)); 
+			 }
+			
 			try {
 				ProjectLogger.log("updating content details to Ekstep start", LoggerEnum.INFO.name());
 				String contentUpdateBaseUrl = ProjectUtil.getConfigValue(JsonKey.EKSTEP_BASE_URL);

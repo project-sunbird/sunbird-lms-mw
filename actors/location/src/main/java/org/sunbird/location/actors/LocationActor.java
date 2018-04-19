@@ -5,7 +5,7 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LocationServiceOperation;
+import org.sunbird.common.models.util.LocationActorOperation;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
@@ -129,7 +129,7 @@ public class LocationActor extends BaseActor {
   private void saveDataToES(Map<String, Object> locData, String opType) {
     ProjectLogger.log("saveDataToES method called");
     Request request = new Request();
-    request.setOperation(LocationServiceOperation.UPSERT_LOCATION_TO_ES.getValue());
+    request.setOperation(LocationActorOperation.UPSERT_LOCATION_TO_ES.getValue());
     request.getRequest().put(JsonKey.LOCATION, locData);
     request.getRequest().put(JsonKey.OPERATION_TYPE, opType);
     ProjectLogger.log("making a call to save location data to ES");
@@ -143,7 +143,7 @@ public class LocationActor extends BaseActor {
   private void deleteDataFromES(String locId) {
     ProjectLogger.log("saveDataToES method called");
     Request request = new Request();
-    request.setOperation(LocationServiceOperation.DELETE_LOCATION_FROM_ES.getValue());
+    request.setOperation(LocationActorOperation.DELETE_LOCATION_FROM_ES.getValue());
     request.getRequest().put(JsonKey.LOCATION_ID, locId);
     ProjectLogger.log("making a call to delete location data from ES");
     try {

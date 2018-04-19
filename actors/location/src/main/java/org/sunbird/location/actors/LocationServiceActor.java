@@ -10,6 +10,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LocationServiceOperation;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
@@ -23,12 +24,19 @@ import org.sunbird.learner.util.Util;
  * @author Amit Kumar
  */
 @ActorConfig(
-  tasks = {},
+  tasks = {
+    "createLocation",
+    "updateLocation",
+    "searchLocation",
+    "deleteLocation",
+    "readLocationType"
+  },
   asyncTasks = {}
 )
 public class LocationServiceActor extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private Util.DbInfo locDbInfo = Util.dbInfoMap.get(JsonKey.LOCATION);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -49,7 +57,7 @@ public class LocationServiceActor extends BaseActor {
         deleteLocation(request);
         break;
       case "readLocationType":
-        readLocationType(request);
+        readLocationType();
         break;
       default:
         onReceiveUnsupportedOperation("LocationServiceActor");
@@ -59,8 +67,8 @@ public class LocationServiceActor extends BaseActor {
   private void createLocation(Request request) {
     ProjectLogger.log("createLocation method called");
     List<Map<String, Object>> dataList =
-        (List<Map<String, Object>>) request.getRequest().get("data");
-    String objectType = (String) request.getRequest().get("objectType");
+        (List<Map<String, Object>>) request.getRequest().get(JsonKey.DATA);
+    String objectType = (String) request.getRequest().get(JsonKey.OBJECT_TYPE);
     List<Map<String, Object>> reponseList = new ArrayList<>();
     for (Map<String, Object> location : dataList) {
       reponseList.add(processLocationData(location, objectType));
@@ -87,7 +95,7 @@ public class LocationServiceActor extends BaseActor {
   private void searchLocation(Request request) {
     ProjectLogger.log("searchLocation method called");
     SearchDTO searchDto = Util.createSearchDto(request.getRequest());
-    String[] types = {"location"};
+    String[] types = {ProjectUtil.EsType.location.getTypeName()};
     Map<String, Object> result =
         ElasticSearchUtil.complexSearch(
             searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
@@ -103,30 +111,29 @@ public class LocationServiceActor extends BaseActor {
 
   private void deleteLocation(Request request) {
     ProjectLogger.log("deleteLocation method called");
-    String status = deleteRecordFromDb((String) request.getRequest().get("locationId"));
+    String status = deleteRecordFromDb((String) request.getRequest().get(JsonKey.LOCATION_ID));
     Response response = new Response();
     response.getResult().put(JsonKey.RESPONSE, status);
     sender().tell(response, self());
   }
 
-  private void readLocationType(Request request) {
+  private void readLocationType() {
     ProjectLogger.log("readLocationType method called");
+    // TODO: Need to check from where will read location type from DB or from propeeties file
     sender().tell(cassandraOperation.getAllRecords("keyspaceName", "tableName"), self());
   }
 
   private Map<String, Object> processLocationData(Map<String, Object> location, String objectType) {
     ProjectLogger.log("processLocationData method called");
-    String id = ProjectUtil.generateUniqueId();
-    location.put(JsonKey.ID, id);
+    location.put(JsonKey.ID, ProjectUtil.generateUniqueId());
     location.put(JsonKey.OBJECT_TYPE, objectType);
-    String status = insertRecordToDb(location);
-    return generateResponse(location, status);
+    return generateResponse(location, insertRecordToDb(location));
   }
 
   private Map<String, Object> generateResponse(Map<String, Object> location, String status) {
     ProjectLogger.log("generateResponse method called");
     // remove all unwanted data and add status
-    location.remove("objectType");
+    location.remove(JsonKey.OBJECT_TYPE);
 
     if (JsonKey.FAILURE.equalsIgnoreCase(status)) {
       location.remove(JsonKey.ID);
@@ -138,7 +145,7 @@ public class LocationServiceActor extends BaseActor {
   private String insertRecordToDb(Map<String, Object> location) {
     ProjectLogger.log("insertRecordToDb method called");
     try {
-      cassandraOperation.insertRecord("keyspaceName", "tableName", location);
+      cassandraOperation.insertRecord(locDbInfo.getKeySpace(), locDbInfo.getTableName(), location);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       return JsonKey.FAILURE;
@@ -149,7 +156,7 @@ public class LocationServiceActor extends BaseActor {
   private String updateRecordToDb(Map<String, Object> location) {
     ProjectLogger.log("updateRecordToDb method called");
     try {
-      cassandraOperation.updateRecord("keyspaceName", "tableName", location);
+      cassandraOperation.updateRecord(locDbInfo.getKeySpace(), locDbInfo.getTableName(), location);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       return JsonKey.FAILURE;
@@ -160,7 +167,7 @@ public class LocationServiceActor extends BaseActor {
   private String deleteRecordFromDb(String locId) {
     ProjectLogger.log("deleteRecordFromDb method called");
     try {
-      cassandraOperation.deleteRecord("keyspaceName", "tableName", locId);
+      cassandraOperation.deleteRecord(locDbInfo.getKeySpace(), locDbInfo.getTableName(), locId);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       return JsonKey.FAILURE;
@@ -171,7 +178,7 @@ public class LocationServiceActor extends BaseActor {
   private void saveDataToES(Map<String, Object> locData, String opType) {
     ProjectLogger.log("saveDataToES method called");
     Request request = new Request();
-    request.setOperation("upsertLocationDataToES");
+    request.setOperation(LocationServiceOperation.UPSERT_LOCATION_TO_ES.getValue());
     request.getRequest().put(JsonKey.LOCATION, locData);
     request.getRequest().put(JsonKey.OPERATION_TYPE, opType);
     ProjectLogger.log("making a call to save location data to ES");

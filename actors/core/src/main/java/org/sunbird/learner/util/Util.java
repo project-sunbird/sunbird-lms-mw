@@ -224,6 +224,8 @@ public final class Util {
     dbInfoMap.put(
         BadgingJsonKey.USER_BADGE_ASSERTION_DB,
         getDbInfoObject(KEY_SPACE_NAME, "user_badge_assertion"));
+
+    dbInfoMap.put(JsonKey.LOCATION, getDbInfoObject(KEY_SPACE_NAME, "location"));
   }
 
   /**

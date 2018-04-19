@@ -24,6 +24,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.BadgingJsonKey;
+import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -226,6 +227,8 @@ public final class Util {
         getDbInfoObject(KEY_SPACE_NAME, "user_badge_assertion"));
 
     dbInfoMap.put(JsonKey.LOCATION, getDbInfoObject(KEY_SPACE_NAME, "location"));
+    dbInfoMap.put(
+        GeoLocationJsonKey.LOCATION_TYPE, getDbInfoObject(KEY_SPACE_NAME, "locationtype"));
   }
 
   /**

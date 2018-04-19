@@ -10,28 +10,39 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 
 /**
- * This class will handle all background service for locationServiceActor.
+ * This class will handle all background service for locationActor.
  *
  * @author Amit Kumar
  */
 @ActorConfig(
   tasks = {},
-  asyncTasks = {"upsertLocationDataToES"}
+  asyncTasks = {"upsertLocationDataToES", "deleteLocationDataFromES"}
 )
-public class LocationServiceBackgroundActor extends BaseActor {
+public class LocationBackgroundActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    ProjectLogger.log("LocationServiceBackgroundActor onReceive called");
+    ProjectLogger.log("LocationBackgroundActor onReceive called");
     String operation = request.getOperation();
 
     switch (operation) {
       case "upsertLocationDataToES":
         upsertLocationDataToES(request);
         break;
+      case "deleteLocationDataFromES":
+        deleteLocationDataFromES(request);
+        break;
       default:
-        onReceiveUnsupportedOperation("LocationServiceBackgroundActor");
+        onReceiveUnsupportedOperation("LocationBackgroundActor");
     }
+  }
+
+  private void deleteLocationDataFromES(Request request) {
+    String locationId = (String) request.get(JsonKey.LOCATION_ID);
+    ElasticSearchUtil.removeData(
+        ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.location.getTypeName(),
+        locationId);
   }
 
   private void upsertLocationDataToES(Request request) {

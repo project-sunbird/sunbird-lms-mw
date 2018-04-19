@@ -110,7 +110,8 @@ public final class CourseBatchSchedulerUtil {
 		try {
 			String response = doOperationInEkStepCourse((String) map.get(JsonKey.COURSE_ID), increment,
 					(String) map.get(JsonKey.ENROLLMENT_TYPE), (String) map.get(JsonKey.HASHTAGID));
-			if (response.equals(JsonKey.SUCCESS)) {
+			ProjectLogger.log("Geeting response code back for update content == "+response );
+			if (response.equalsIgnoreCase(JsonKey.SUCCESS)) {
 				boolean flag = updateDataIntoES(map);
 				if (flag) {
 					cassandraOperation.updateRecord(courseBatchDBInfo.getKeySpace(), courseBatchDBInfo.getTableName(),

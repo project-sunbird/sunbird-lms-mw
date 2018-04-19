@@ -19,5 +19,6 @@
       	<module>content</module>
 		<module>badge</module>
     	<module>dashboard</module>
+		<module>location</module>
   </modules>
 </project>

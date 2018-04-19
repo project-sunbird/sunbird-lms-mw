@@ -1,5 +1,6 @@
 package org.sunbird.location.actors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -12,7 +13,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.location.dao.LocationDao;
 import org.sunbird.location.dao.impl.LocationDaoImpl;
 import org.sunbird.location.model.Location;
-import org.sunbird.location.util.LocationUtil;
 
 /**
  * This class will handle all location related request.
@@ -31,6 +31,7 @@ import org.sunbird.location.util.LocationUtil;
 )
 public class LocationActor extends BaseActor {
 
+  private ObjectMapper mapper = new ObjectMapper();
   private LocationDao locationDao = new LocationDaoImpl();
 
   @Override
@@ -65,7 +66,7 @@ public class LocationActor extends BaseActor {
       Map<String, Object> data = ((Map<String, Object>) request.getRequest().get(JsonKey.DATA));
       // put unique identifier in request for Id
       data.put(JsonKey.ID, ProjectUtil.generateUniqueId());
-      Location location = LocationUtil.convertMapToPojo(data);
+      Location location = mapper.convertValue(data, Location.class);
       Response response = locationDao.create(location);
       sender().tell(response, self());
       ProjectLogger.log("insert location data to ES");
@@ -80,7 +81,7 @@ public class LocationActor extends BaseActor {
     ProjectLogger.log("updateLocation method called");
     try {
       Map<String, Object> data = ((Map<String, Object>) request.getRequest().get(JsonKey.DATA));
-      Response response = locationDao.update(LocationUtil.convertMapToPojo(data));
+      Response response = locationDao.update(mapper.convertValue(data, Location.class));
       sender().tell(response, self());
       ProjectLogger.log("update location data to ES");
       saveDataToES(data, JsonKey.UPDATE);

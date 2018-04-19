@@ -1,5 +1,6 @@
 package org.sunbird.location.dao.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
@@ -12,16 +13,17 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.location.dao.LocationDao;
 import org.sunbird.location.model.Location;
-import org.sunbird.location.util.LocationUtil;
 
+/** @author Amit Kumar */
 public class LocationDaoImpl implements LocationDao {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo locDbInfo = Util.dbInfoMap.get(JsonKey.LOCATION);
+  private ObjectMapper mapper = new ObjectMapper();
 
   @Override
   public Response create(Location location) {
-    Map<String, Object> map = LocationUtil.convertPojoToMap(location);
+    Map<String, Object> map = mapper.convertValue(location, Map.class);
     Response response =
         cassandraOperation.insertRecord(locDbInfo.getKeySpace(), locDbInfo.getTableName(), map);
     // need to send ID and name along with success msg
@@ -32,7 +34,7 @@ public class LocationDaoImpl implements LocationDao {
 
   @Override
   public Response update(Location location) {
-    Map<String, Object> map = LocationUtil.convertPojoToMap(location);
+    Map<String, Object> map = mapper.convertValue(location, Map.class);
     return cassandraOperation.updateRecord(locDbInfo.getKeySpace(), locDbInfo.getTableName(), map);
   }
 

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
@@ -28,7 +29,7 @@ public class BaseLocationActor extends BaseActor {
   static {
     locationTypeList =
         Arrays.asList(ProjectUtil.getConfigValue(GeoLocationJsonKey.LOCATION_TYPE).split(","));
-    locationTypeOrderMap = new HashMap<>();
+    locationTypeOrderMap = new LinkedHashMap<>();
     for (int i = 0; i < locationTypeList.size(); i++) {
       locationTypeOrderMap.put(locationTypeList.get(i), i);
     }
@@ -168,7 +169,7 @@ public class BaseLocationActor extends BaseActor {
     // location type with last order can be deleted without validation
     if (order != list.get(0)) {
       Map<String, Object> filters = new HashMap<>();
-      filters.put(GeoLocationJsonKey.PARENT_ID, location.get(GeoLocationJsonKey.PARENT_ID));
+      filters.put(GeoLocationJsonKey.PARENT_ID, location.get(JsonKey.ID));
       Map<String, Object> map = new HashMap<>();
       map.put(JsonKey.FILTERS, filters);
       List<Map<String, Object>> locationMapList =
@@ -183,8 +184,7 @@ public class BaseLocationActor extends BaseActor {
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
     }
-
-    return false;
+    return true;
   }
 
   public void validateParentIdWithType(Map<String, Object> location) {

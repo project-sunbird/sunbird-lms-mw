@@ -51,12 +51,12 @@ public class LocationDaoImpl implements LocationDao {
             searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
     Response response = new Response();
     if (result != null) {
-      response.put(JsonKey.RESPONSE, result);
+      response.put(JsonKey.RESPONSE, result.get(JsonKey.CONTENT));
     } else {
       result = new HashMap<>();
-      response.put(JsonKey.RESPONSE, result);
+      response.put(JsonKey.RESPONSE, result.get(JsonKey.CONTENT));
     }
-    return null;
+    return response;
   }
 
   @Override

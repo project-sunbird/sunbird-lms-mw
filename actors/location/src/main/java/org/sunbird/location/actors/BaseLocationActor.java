@@ -50,7 +50,7 @@ public class BaseLocationActor extends BaseActor {
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.location.getTypeName());
     if (!locationMapList.isEmpty()) {
-      if (opType.equalsIgnoreCase(JsonKey.CREATE)) {
+      if (opType.equalsIgnoreCase(JsonKey.INSERT)) {
         throw new ProjectCommonException(
             ResponseCode.locationCodeAlreadyExist.getErrorCode(),
             ResponseCode.locationCodeAlreadyExist.getErrorMessage(),

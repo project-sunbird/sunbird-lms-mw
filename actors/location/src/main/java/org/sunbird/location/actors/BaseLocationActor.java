@@ -113,7 +113,9 @@ public class BaseLocationActor extends BaseActor {
 
     String parentType = (String) parentLocation.get(JsonKey.TYPE);
     String currentLocType = (String) location.get(JsonKey.TYPE);
-    if ((locationTypeOrderMap.get(currentLocType) - locationTypeOrderMap.get(parentType)) != 1) {
+    if ((locationTypeOrderMap.get(currentLocType.toLowerCase())
+            - locationTypeOrderMap.get(parentType.toLowerCase()))
+        != 1) {
       throw new ProjectCommonException(
           ResponseCode.invalidLocationParentId.getErrorCode(),
           ResponseCode.invalidLocationParentId.getErrorMessage(),
@@ -162,7 +164,7 @@ public class BaseLocationActor extends BaseActor {
     Map<String, Object> location = getLocationById(locationId);
     List<Integer> list = new ArrayList<>(locationTypeOrderMap.values());
     list.sort(Comparator.reverseOrder());
-    int order = locationTypeOrderMap.get(location.get(JsonKey.TYPE));
+    int order = locationTypeOrderMap.get(((String) location.get(JsonKey.TYPE)).toLowerCase());
     // location type with last order can be deleted without validation
     if (order != list.get(0)) {
       Map<String, Object> filters = new HashMap<>();
@@ -201,7 +203,9 @@ public class BaseLocationActor extends BaseActor {
     String subLocnType = (String) location.get(JsonKey.TYPE);
     String parentLocnType = (String) parentLocMap.get(JsonKey.TYPE);
 
-    if ((locationTypeOrderMap.get(subLocnType) - locationTypeOrderMap.get(parentLocnType)) != 1) {
+    if ((locationTypeOrderMap.get(subLocnType.toLowerCase())
+            - locationTypeOrderMap.get(parentLocnType.toLowerCase()))
+        != 1) {
       throw new ProjectCommonException(
           ResponseCode.locationTypeConflicts.getErrorCode(),
           ResponseCode.locationTypeConflicts.getErrorMessage(),

@@ -56,6 +56,9 @@ public class LocationActor extends BaseLocationActor {
     ProjectLogger.log("createLocation method called");
     try {
       Map<String, Object> data = ((Map<String, Object>) request.getRequest().get(JsonKey.DATA));
+      if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.CODE))) {
+        isValidLocationCode(data, JsonKey.INSERT);
+      }
       validateRequest(data);
       // put unique identifier in request for Id
       data.put(JsonKey.ID, ProjectUtil.generateUniqueId());
@@ -74,6 +77,9 @@ public class LocationActor extends BaseLocationActor {
     ProjectLogger.log("updateLocation method called");
     try {
       Map<String, Object> data = ((Map<String, Object>) request.getRequest().get(JsonKey.DATA));
+      if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.CODE))) {
+        isValidLocationCode(data, JsonKey.UPDATE);
+      }
       validateRequest(data);
       if (StringUtils.isNotEmpty((String) data.get(JsonKey.TYPE))) {
         validateParentIdWithType(data);
@@ -142,9 +148,6 @@ public class LocationActor extends BaseLocationActor {
   }
 
   private void validateRequest(Map<String, Object> data) {
-    if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.CODE))) {
-      isValidLocationCode(data, JsonKey.INSERT);
-    }
     if (StringUtils.isNotEmpty((String) data.get(JsonKey.TYPE))) {
       isValidLocationType((String) data.get(JsonKey.TYPE));
     }

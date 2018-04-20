@@ -28,6 +28,7 @@ public class BaseLocationActor extends BaseActor {
   static {
     locationTypeList =
         Arrays.asList(ProjectUtil.getConfigValue(GeoLocationJsonKey.LOCATION_TYPE).split(","));
+    locationTypeOrderMap = new HashMap<>();
     for (int i = 0; i < locationTypeList.size(); i++) {
       locationTypeOrderMap.put(locationTypeList.get(i), i);
     }

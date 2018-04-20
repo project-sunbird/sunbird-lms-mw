@@ -21,13 +21,7 @@ import org.sunbird.location.model.Location;
  * @author Amit Kumar
  */
 @ActorConfig(
-  tasks = {
-    "createLocation",
-    "updateLocation",
-    "searchLocation",
-    "deleteLocation",
-    "readLocationType"
-  },
+  tasks = {"createLocation", "updateLocation", "searchLocation", "deleteLocation"},
   asyncTasks = {}
 )
 public class LocationActor extends BaseLocationActor {

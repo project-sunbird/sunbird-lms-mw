@@ -18,30 +18,28 @@ import org.sunbird.location.model.Location;
 public class LocationDaoImpl implements LocationDao {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private Util.DbInfo locDbInfo = Util.dbInfoMap.get(JsonKey.LOCATION);
   private ObjectMapper mapper = new ObjectMapper();
+  private static final String KEYSPACE_NAME = "sunbird";
+  private static final String LOCATION_TABLE_NAME = "location";
 
   @Override
   public Response create(Location location) {
     Map<String, Object> map = mapper.convertValue(location, Map.class);
-    Response response =
-        cassandraOperation.insertRecord(locDbInfo.getKeySpace(), locDbInfo.getTableName(), map);
-    // need to send ID and name along with success msg
+    Response response = cassandraOperation.insertRecord(KEYSPACE_NAME, LOCATION_TABLE_NAME, map);
+    // need to send ID along with success msg
     response.put(JsonKey.ID, map.get(JsonKey.ID));
-    response.put(JsonKey.NAME, map.get(JsonKey.NAME));
     return response;
   }
 
   @Override
   public Response update(Location location) {
     Map<String, Object> map = mapper.convertValue(location, Map.class);
-    return cassandraOperation.updateRecord(locDbInfo.getKeySpace(), locDbInfo.getTableName(), map);
+    return cassandraOperation.updateRecord(KEYSPACE_NAME, LOCATION_TABLE_NAME, map);
   }
 
   @Override
   public Response delete(String locationId) {
-    return cassandraOperation.deleteRecord(
-        locDbInfo.getKeySpace(), locDbInfo.getTableName(), locationId);
+    return cassandraOperation.deleteRecord(KEYSPACE_NAME, LOCATION_TABLE_NAME, locationId);
   }
 
   @Override
@@ -62,7 +60,7 @@ public class LocationDaoImpl implements LocationDao {
   }
 
   @Override
-  public Response readAll() {
-    return null;
+  public Response read(String locationId) {
+    return cassandraOperation.getRecordById(KEYSPACE_NAME, LOCATION_TABLE_NAME, locationId);
   }
 }

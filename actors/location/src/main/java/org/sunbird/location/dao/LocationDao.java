@@ -7,29 +7,32 @@ import org.sunbird.location.model.Location;
 /** @author Amit Kumar */
 public interface LocationDao {
   /**
-   * @param location Location
+   * @param location Location Details
    * @return response Response
    */
-  public Response create(Location location);
+  Response create(Location location);
 
   /**
-   * @param location Location
+   * @param location Location Details
    * @return response Response
    */
-  public Response update(Location location);
+  Response update(Location location);
 
   /**
-   * @param locationId String
+   * @param locationId its a unique identity for Location
    * @return response Response
    */
-  public Response delete(String locationId);
+  Response delete(String locationId);
 
   /**
-   * @param searchQueryMap Map<String,Object>
+   * @param searchQueryMap Map<String,Object> it contains the filters to search Location from ES
    * @return response Response
    */
-  public Response search(Map<String, Object> searchQueryMap);
+  Response search(Map<String, Object> searchQueryMap);
 
-  /** @return response Response */
-  public Response readAll();
+  /**
+   * @param locationId
+   * @return response Response
+   */
+  Response read(String locationId);
 }

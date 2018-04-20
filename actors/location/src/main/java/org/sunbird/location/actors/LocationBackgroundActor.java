@@ -1,7 +1,6 @@
 package org.sunbird.location.actors;
 
 import java.util.Map;
-import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.util.JsonKey;
@@ -18,7 +17,7 @@ import org.sunbird.common.request.Request;
   tasks = {},
   asyncTasks = {"upsertLocationDataToES", "deleteLocationDataFromES"}
 )
-public class LocationBackgroundActor extends BaseActor {
+public class LocationBackgroundActor extends BaseLocationActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {

@@ -19,8 +19,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.Util;
-import org.sunbird.location.dao.LocationDao;
-import org.sunbird.location.dao.impl.LocationDaoImpl;
 
 /** @author Amit Kumar */
 public class BaseLocationActor extends BaseActor {
@@ -34,8 +32,6 @@ public class BaseLocationActor extends BaseActor {
       locationTypeOrderMap.put(locationTypeList.get(i), i);
     }
   }
-
-  private LocationDao locationDao = new LocationDaoImpl();
 
   @Override
   public void onReceive(Request request) throws Throwable {

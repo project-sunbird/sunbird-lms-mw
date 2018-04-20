@@ -59,7 +59,13 @@ public class LocationActor extends BaseLocationActor {
       if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.CODE))) {
         isValidLocationCode(data, JsonKey.INSERT);
       }
-      validateRequest(data);
+      if (StringUtils.isNotEmpty((String) data.get(JsonKey.TYPE))) {
+        isValidLocationType((String) data.get(JsonKey.TYPE));
+      }
+      isValidParentIdAndCode(data);
+      // once parentCode validated remove from req as we are not saving this to our db
+      data.remove(GeoLocationJsonKey.PARENT_CODE);
+
       // put unique identifier in request for Id
       data.put(JsonKey.ID, ProjectUtil.generateUniqueId());
       Location location = mapper.convertValue(data, Location.class);
@@ -80,7 +86,10 @@ public class LocationActor extends BaseLocationActor {
       if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.CODE))) {
         isValidLocationCode(data, JsonKey.UPDATE);
       }
-      validateRequest(data);
+      isValidParentIdAndCode(data);
+      // once parentCode validated remove from req as we are not saving this to our db
+      data.remove(GeoLocationJsonKey.PARENT_CODE);
+
       if (StringUtils.isNotEmpty((String) data.get(JsonKey.TYPE))) {
         validateParentIdWithType(data);
       }

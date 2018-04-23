@@ -31,9 +31,8 @@ public class LocationActor extends BaseLocationActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    ProjectLogger.log("LocationActor onReceive called");
     String operation = request.getOperation();
-
+    ProjectLogger.log("LocationActor onReceive called for operation : " + operation);
     switch (operation) {
       case "createLocation":
         createLocation(request);

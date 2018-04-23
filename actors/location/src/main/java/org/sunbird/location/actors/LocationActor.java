@@ -60,7 +60,7 @@ public class LocationActor extends BaseLocationActor {
   private void createLocation(Request request) {
     try {
       Map<String, Object> data = request.getRequest();
-      validateLocationCodeTypeAndParentCode(data, JsonKey.CREATE);
+      validateUpsertLocnReq(data, JsonKey.CREATE);
       // put unique identifier in request for Id
       String id = ProjectUtil.generateUniqueId();
       data.put(JsonKey.ID, id);
@@ -79,7 +79,7 @@ public class LocationActor extends BaseLocationActor {
   private void updateLocation(Request request) {
     try {
       Map<String, Object> data = request.getRequest();
-      validateLocationCodeTypeAndParentCode(data, JsonKey.UPDATE);
+      validateUpsertLocnReq(data, JsonKey.UPDATE);
       Response response = locationDao.update(mapper.convertValue(data, Location.class));
       sender().tell(response, self());
       ProjectLogger.log("Update location data to ES");
@@ -142,7 +142,7 @@ public class LocationActor extends BaseLocationActor {
     }
   }
 
-  private void validateLocationCodeTypeAndParentCode(Map<String, Object> data, String operation) {
+  private void validateUpsertLocnReq(Map<String, Object> data, String operation) {
     if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.CODE))) {
       LocationRequestValidator.isValidLocationCode(data, operation);
     }

@@ -42,12 +42,15 @@ public class LocationRequestValidator {
   }
 
   public static boolean isValidLocationCode(Map<String, Object> location, String opType) {
-    Map<String, Object> reqMap = new HashMap<>();
-    reqMap.put(GeoLocationJsonKey.PROPERTY_NAME, GeoLocationJsonKey.CODE);
-    reqMap.put(GeoLocationJsonKey.PROPERTY_VALUE, location.get(GeoLocationJsonKey.CODE));
-    Response response = locationDao.getRecordByProperty(reqMap);
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(GeoLocationJsonKey.CODE, location.get(GeoLocationJsonKey.CODE));
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.FILTERS, filters);
     List<Map<String, Object>> locationMapList =
-        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+        getESSearchResult(
+            map,
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.location.getTypeName());
     if (!locationMapList.isEmpty()) {
       if (opType.equalsIgnoreCase(JsonKey.CREATE)) {
         throw new ProjectCommonException(
@@ -68,6 +71,16 @@ public class LocationRequestValidator {
       }
     }
     return true;
+  }
+
+  public static boolean isValidLocationCode(Map<String, Object> location) {
+    Map<String, Object> reqMap = new HashMap<>();
+    reqMap.put(GeoLocationJsonKey.PROPERTY_NAME, GeoLocationJsonKey.CODE);
+    reqMap.put(GeoLocationJsonKey.PROPERTY_VALUE, location.get(GeoLocationJsonKey.CODE));
+    Response response = locationDao.getRecordByProperty(reqMap);
+    List<Map<String, Object>> locationMapList =
+        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    return (!locationMapList.isEmpty());
   }
 
   public static boolean isValidLocationType(String type) {

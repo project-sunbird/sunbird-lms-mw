@@ -73,10 +73,10 @@ public class LocationRequestValidator {
     return true;
   }
 
-  public static boolean isValidLocationCode(Map<String, Object> location) {
+  public static boolean isValidLocationCode(String code) {
     Map<String, Object> reqMap = new HashMap<>();
     reqMap.put(GeoLocationJsonKey.PROPERTY_NAME, GeoLocationJsonKey.CODE);
-    reqMap.put(GeoLocationJsonKey.PROPERTY_VALUE, location.get(GeoLocationJsonKey.CODE));
+    reqMap.put(GeoLocationJsonKey.PROPERTY_VALUE, code);
     Response response = locationDao.getRecordByProperty(reqMap);
     List<Map<String, Object>> locationMapList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);

@@ -35,4 +35,10 @@ public interface LocationDao {
    * @return response Response
    */
   Response read(String locationId);
+
+  /**
+   * @param queryMap
+   * @return response Response
+   */
+  Response getRecordByProperty(Map<String, Object> queryMap);
 }

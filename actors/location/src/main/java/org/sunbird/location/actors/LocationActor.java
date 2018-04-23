@@ -18,6 +18,7 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.location.dao.LocationDao;
 import org.sunbird.location.dao.impl.LocationDaoImpl;
 import org.sunbird.location.model.Location;
+import org.sunbird.location.util.LocationRequestValidator;
 
 /**
  * This class will handle all location related request.
@@ -66,7 +67,7 @@ public class LocationActor extends BaseLocationActor {
       Location location = mapper.convertValue(data, Location.class);
       Response response = locationDao.create(location);
       sender().tell(response, self());
-      ProjectLogger.log("insert location data to ES");
+      ProjectLogger.log("Insert location data to ES");
       saveDataToES(data, JsonKey.INSERT);
       generateTelemetryForLocation(id, data, JsonKey.CREATE);
     } catch (Exception ex) {
@@ -81,7 +82,7 @@ public class LocationActor extends BaseLocationActor {
       validateLocationCodeTypeAndParentCode(data, JsonKey.UPDATE);
       Response response = locationDao.update(mapper.convertValue(data, Location.class));
       sender().tell(response, self());
-      ProjectLogger.log("update location data to ES");
+      ProjectLogger.log("Update location data to ES");
       saveDataToES(data, JsonKey.UPDATE);
       generateTelemetryForLocation((String) data.get(JsonKey.ID), data, JsonKey.UPDATE);
     } catch (Exception ex) {
@@ -106,10 +107,10 @@ public class LocationActor extends BaseLocationActor {
   private void deleteLocation(Request request) {
     try {
       String locationId = (String) request.getRequest().get(JsonKey.LOCATION_ID);
-      isLocationHasSubLocation(locationId);
+      LocationRequestValidator.isLocationHasChild(locationId);
       Response response = locationDao.delete(locationId);
       sender().tell(response, self());
-      ProjectLogger.log("delete location data from ES");
+      ProjectLogger.log("Delete location data from ES");
       deleteDataFromES(locationId);
       generateTelemetryForLocation(locationId, new HashMap<>(), JsonKey.DELETE);
     } catch (Exception ex) {
@@ -123,11 +124,10 @@ public class LocationActor extends BaseLocationActor {
     request.setOperation(LocationActorOperation.UPSERT_LOCATION_TO_ES.getValue());
     request.getRequest().put(JsonKey.LOCATION, locData);
     request.getRequest().put(JsonKey.OPERATION_TYPE, opType);
-    ProjectLogger.log("making a call to save location data to ES");
     try {
       tellToAnother(request);
     } catch (Exception ex) {
-      ProjectLogger.log("Exception Occured during saving location data to ES : ", ex);
+      ProjectLogger.log("Exception Ocurred during saving location data to ES : ", ex);
     }
   }
 
@@ -135,22 +135,22 @@ public class LocationActor extends BaseLocationActor {
     Request request = new Request();
     request.setOperation(LocationActorOperation.DELETE_LOCATION_FROM_ES.getValue());
     request.getRequest().put(JsonKey.LOCATION_ID, locId);
-    ProjectLogger.log("making a call to delete location data from ES");
     try {
       tellToAnother(request);
     } catch (Exception ex) {
-      ProjectLogger.log("Exception Occured during saving location data to ES : ", ex);
+      ProjectLogger.log("Exception Ocurred during saving location data to ES : ", ex);
     }
   }
 
   private void validateLocationCodeTypeAndParentCode(Map<String, Object> data, String operation) {
     if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.CODE))) {
-      isValidLocationCode(data, operation);
+      LocationRequestValidator.isValidLocationCode(data, operation);
     }
     if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.LOCATION_TYPE))) {
-      isValidLocationType((String) data.get(GeoLocationJsonKey.LOCATION_TYPE));
+      LocationRequestValidator.isValidLocationType(
+          (String) data.get(GeoLocationJsonKey.LOCATION_TYPE));
     }
-    isValidParentIdAndCode(data);
+    LocationRequestValidator.isValidParentIdAndCode(data);
     // once parentCode validated remove from req as we are not saving this to our db
     data.remove(GeoLocationJsonKey.PARENT_CODE);
   }

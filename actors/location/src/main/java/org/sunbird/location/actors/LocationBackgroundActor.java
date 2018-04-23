@@ -46,19 +46,10 @@ public class LocationBackgroundActor extends BaseLocationActor {
 
   private void upsertLocationDataToES(Request request) {
     Map<String, Object> location = (Map<String, Object>) request.getRequest().get(JsonKey.LOCATION);
-    String opType = (String) request.getRequest().get(JsonKey.OPERATION_TYPE);
-    if (JsonKey.INSERT.equalsIgnoreCase(opType)) {
-      ElasticSearchUtil.createData(
-          ProjectUtil.EsIndex.sunbird.getIndexName(),
-          ProjectUtil.EsType.location.getTypeName(),
-          (String) location.get(JsonKey.ID),
-          location);
-    } else if (JsonKey.UPDATE.equalsIgnoreCase(opType)) {
-      ElasticSearchUtil.updateData(
-          ProjectUtil.EsIndex.sunbird.getIndexName(),
-          ProjectUtil.EsType.location.getTypeName(),
-          (String) location.get(JsonKey.ID),
-          location);
-    }
+    ElasticSearchUtil.upsertData(
+        ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.location.getTypeName(),
+        (String) location.get(JsonKey.ID),
+        location);
   }
 }

@@ -6,6 +6,7 @@ import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.dto.SearchDTO;
@@ -62,5 +63,14 @@ public class LocationDaoImpl implements LocationDao {
   @Override
   public Response read(String locationId) {
     return cassandraOperation.getRecordById(KEYSPACE_NAME, LOCATION_TABLE_NAME, locationId);
+  }
+
+  @Override
+  public Response getRecordByProperty(Map<String, Object> queryMap) {
+    return cassandraOperation.getRecordsByProperty(
+        KEYSPACE_NAME,
+        LOCATION_TABLE_NAME,
+        (String) queryMap.get(GeoLocationJsonKey.PROPERTY_NAME),
+        queryMap.get(GeoLocationJsonKey.PROPERTY_VALUE));
   }
 }

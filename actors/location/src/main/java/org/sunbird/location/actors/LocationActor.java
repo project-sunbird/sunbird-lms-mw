@@ -1,6 +1,7 @@
 package org.sunbird.location.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.HashMap;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
@@ -10,7 +11,10 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LocationActorOperation;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
+import org.sunbird.dto.SearchDTO;
+import org.sunbird.learner.util.Util;
 import org.sunbird.location.dao.LocationDao;
 import org.sunbird.location.dao.impl.LocationDaoImpl;
 import org.sunbird.location.model.Location;
@@ -31,8 +35,9 @@ public class LocationActor extends BaseLocationActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
+    Util.initializeContext(request, JsonKey.LOCATION);
+    ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();
-    ProjectLogger.log("LocationActor onReceive called for operation : " + operation);
     switch (operation) {
       case "createLocation":
         createLocation(request);
@@ -54,23 +59,16 @@ public class LocationActor extends BaseLocationActor {
   private void createLocation(Request request) {
     try {
       Map<String, Object> data = request.getRequest();
-      if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.CODE))) {
-        isValidLocationCode(data, JsonKey.CREATE);
-      }
-      if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.LOCATION_TYPE))) {
-        isValidLocationType((String) data.get(GeoLocationJsonKey.LOCATION_TYPE));
-      }
-      isValidParentIdAndCode(data);
-      // once parentCode validated remove from req as we are not saving this to our db
-      data.remove(GeoLocationJsonKey.PARENT_CODE);
-
+      validateLocationCodeTypeAndParentCode(data, JsonKey.CREATE);
       // put unique identifier in request for Id
-      data.put(JsonKey.ID, ProjectUtil.generateUniqueId());
+      String id = ProjectUtil.generateUniqueId();
+      data.put(JsonKey.ID, id);
       Location location = mapper.convertValue(data, Location.class);
       Response response = locationDao.create(location);
       sender().tell(response, self());
       ProjectLogger.log("insert location data to ES");
       saveDataToES(data, JsonKey.INSERT);
+      generateTelemetryForLocation(id, data, JsonKey.CREATE);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       sender().tell(ex, self());
@@ -80,17 +78,12 @@ public class LocationActor extends BaseLocationActor {
   private void updateLocation(Request request) {
     try {
       Map<String, Object> data = request.getRequest();
-      if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.CODE))) {
-        isValidLocationCode(data, JsonKey.UPDATE);
-      }
-      isValidParentIdAndCode(data);
-      // once parentCode validated remove from req as we are not saving this to our db
-      data.remove(GeoLocationJsonKey.PARENT_CODE);
-
+      validateLocationCodeTypeAndParentCode(data, JsonKey.UPDATE);
       Response response = locationDao.update(mapper.convertValue(data, Location.class));
       sender().tell(response, self());
       ProjectLogger.log("update location data to ES");
       saveDataToES(data, JsonKey.UPDATE);
+      generateTelemetryForLocation((String) data.get(JsonKey.ID), data, JsonKey.UPDATE);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       sender().tell(ex, self());
@@ -101,6 +94,9 @@ public class LocationActor extends BaseLocationActor {
     try {
       Response response = locationDao.search(request.getRequest());
       sender().tell(response, self());
+      SearchDTO searchDto = Util.createSearchDto(request.getRequest());
+      String[] types = {ProjectUtil.EsType.location.getTypeName()};
+      generateSearchTelemetryEvent(searchDto, types, response.getResult());
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       sender().tell(ex, self());
@@ -110,11 +106,12 @@ public class LocationActor extends BaseLocationActor {
   private void deleteLocation(Request request) {
     try {
       String locationId = (String) request.getRequest().get(JsonKey.LOCATION_ID);
-      validateDeleteRequest(locationId);
+      isLocationHasSubLocation(locationId);
       Response response = locationDao.delete(locationId);
       sender().tell(response, self());
       ProjectLogger.log("delete location data from ES");
       deleteDataFromES(locationId);
+      generateTelemetryForLocation(locationId, new HashMap<>(), JsonKey.DELETE);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       sender().tell(ex, self());
@@ -144,5 +141,17 @@ public class LocationActor extends BaseLocationActor {
     } catch (Exception ex) {
       ProjectLogger.log("Exception Occured during saving location data to ES : ", ex);
     }
+  }
+
+  private void validateLocationCodeTypeAndParentCode(Map<String, Object> data, String operation) {
+    if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.CODE))) {
+      isValidLocationCode(data, operation);
+    }
+    if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.LOCATION_TYPE))) {
+      isValidLocationType((String) data.get(GeoLocationJsonKey.LOCATION_TYPE));
+    }
+    isValidParentIdAndCode(data);
+    // once parentCode validated remove from req as we are not saving this to our db
+    data.remove(GeoLocationJsonKey.PARENT_CODE);
   }
 }

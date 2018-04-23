@@ -15,14 +15,18 @@ import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.TelemetryLmaxWriter;
+import org.sunbird.telemetry.util.TelemetryUtil;
 
 /** @author Amit Kumar */
-public class BaseLocationActor extends BaseActor {
+public abstract class BaseLocationActor extends BaseActor {
 
   protected static List<String> locationTypeList = null;
   protected static Map<String, Integer> locationTypeOrderMap = null;
@@ -34,11 +38,6 @@ public class BaseLocationActor extends BaseActor {
     for (int i = 0; i < locationTypeList.size(); i++) {
       locationTypeOrderMap.put(locationTypeList.get(i), i);
     }
-  }
-
-  @Override
-  public void onReceive(Request request) throws Throwable {
-    onReceiveUnsupportedOperation("BaseLocationActor");
   }
 
   public boolean isValidLocationCode(Map<String, Object> location, String opType) {
@@ -116,9 +115,9 @@ public class BaseLocationActor extends BaseActor {
 
   private boolean validateTypeWithParentLocn(
       Map<String, Object> parentLocation, Map<String, Object> location) {
-
+    Map<String, Object> locn = getLocationById((String) location.get(JsonKey.ID));
     String parentType = (String) parentLocation.get(GeoLocationJsonKey.LOCATION_TYPE);
-    String currentLocType = (String) location.get(GeoLocationJsonKey.LOCATION_TYPE);
+    String currentLocType = (String) locn.get(GeoLocationJsonKey.LOCATION_TYPE);
     if ((locationTypeOrderMap.get(currentLocType.toLowerCase())
             - locationTypeOrderMap.get(parentType.toLowerCase()))
         != 1) {
@@ -166,7 +165,7 @@ public class BaseLocationActor extends BaseActor {
     }
   }
 
-  public boolean validateDeleteRequest(String locationId) {
+  public boolean isLocationHasSubLocation(String locationId) {
     Map<String, Object> location = getLocationById(locationId);
     List<Integer> list = new ArrayList<>(locationTypeOrderMap.values());
     list.sort(Comparator.reverseOrder());
@@ -230,5 +229,70 @@ public class BaseLocationActor extends BaseActor {
     SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
     Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto, esIndex, esType);
     return (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+  }
+
+  public void generateTelemetryForLocation(
+      String targetObjId, Map<String, Object> data, String operation) {
+    // object of telemetry event...
+    try {
+      Map<String, Object> targetObject = null;
+      List<Map<String, Object>> correlatedObject = new ArrayList<>();
+      targetObject =
+          TelemetryUtil.generateTargetObject(targetObjId, JsonKey.LOCATION, operation, null);
+      if (!MapUtils.isEmpty(data)
+          && StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.PARENT_ID))) {
+        TelemetryUtil.generateCorrelatedObject(
+            (String) data.get(GeoLocationJsonKey.PARENT_ID),
+            JsonKey.LOCATION,
+            null,
+            correlatedObject);
+      }
+      TelemetryUtil.telemetryProcessingCall(data, targetObject, correlatedObject);
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+  }
+
+  public void generateSearchTelemetryEvent(
+      SearchDTO searchDto, String[] types, Map<String, Object> result) {
+    try {
+      Map<String, Object> telemetryContext = TelemetryUtil.getTelemetryContext();
+      Map<String, Object> params = new HashMap<>();
+      params.put(JsonKey.QUERY, searchDto.getQuery());
+      params.put(JsonKey.FILTERS, searchDto.getAdditionalProperties().get(JsonKey.FILTERS));
+      params.put(JsonKey.SORT, searchDto.getSortBy());
+      params.put(JsonKey.TOPN, generateTopNResult(result));
+      params.put(JsonKey.SIZE, result.get(JsonKey.COUNT));
+      params.put(JsonKey.TYPE, String.join(",", types));
+
+      Request request = new Request();
+      request.setRequest(telemetryRequestForSearch(telemetryContext, params));
+      TelemetryLmaxWriter.getInstance().submitMessage(request);
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+  }
+
+  private List<Map<String, Object>> generateTopNResult(Map<String, Object> result) {
+    List<Map<String, Object>> dataMapList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+    Integer topN =
+        Integer.parseInt(PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_TOP_N));
+    int count = Math.min(topN, dataMapList.size());
+    List<Map<String, Object>> list = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      Map<String, Object> m = new HashMap<>();
+      m.put(JsonKey.ID, dataMapList.get(i).get(JsonKey.ID));
+      list.add(m);
+    }
+    return list;
+  }
+
+  private static Map<String, Object> telemetryRequestForSearch(
+      Map<String, Object> telemetryContext, Map<String, Object> params) {
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.CONTEXT, telemetryContext);
+    map.put(JsonKey.PARAMS, params);
+    map.put(JsonKey.TELEMETRY_EVENT_TYPE, "SEARCH");
+    return map;
   }
 }

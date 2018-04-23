@@ -133,9 +133,18 @@ public class LocationRequestValidator {
 
   private static boolean validateParentLocationType(
       Map<String, Object> parentLocation, Map<String, Object> location) {
-    Map<String, Object> locn = getLocationById((String) location.get(JsonKey.ID));
     String parentType = (String) parentLocation.get(GeoLocationJsonKey.LOCATION_TYPE);
-    String currentLocType = (String) locn.get(GeoLocationJsonKey.LOCATION_TYPE);
+    String currentLocType = (String) location.get(GeoLocationJsonKey.LOCATION_TYPE);
+    if (StringUtils.isNotEmpty(currentLocType)) {
+      Map<String, Object> locn = getLocationById((String) location.get(JsonKey.ID));
+      currentLocType = (String) locn.get(GeoLocationJsonKey.LOCATION_TYPE);
+    } else {
+      throw new ProjectCommonException(
+          ResponseCode.invalidParameter.getErrorCode(),
+          ProjectUtil.formatMessage(
+              ResponseCode.invalidParameter.getErrorMessage(), GeoLocationJsonKey.PARENT_ID),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
     if ((locationTypeOrderMap.get(currentLocType.toLowerCase())
             - locationTypeOrderMap.get(parentType.toLowerCase()))
         != 1) {

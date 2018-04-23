@@ -53,14 +53,13 @@ public class LocationActor extends BaseLocationActor {
   }
 
   private void createLocation(Request request) {
-    ProjectLogger.log("createLocation method called");
     try {
-      Map<String, Object> data = ((Map<String, Object>) request.getRequest().get(JsonKey.DATA));
+      Map<String, Object> data = request.getRequest();
       if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.CODE))) {
-        isValidLocationCode(data, JsonKey.INSERT);
+        isValidLocationCode(data, JsonKey.CREATE);
       }
-      if (StringUtils.isNotEmpty((String) data.get(JsonKey.TYPE))) {
-        isValidLocationType((String) data.get(JsonKey.TYPE));
+      if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.LOCATION_TYPE))) {
+        isValidLocationType((String) data.get(GeoLocationJsonKey.LOCATION_TYPE));
       }
       isValidParentIdAndCode(data);
       // once parentCode validated remove from req as we are not saving this to our db
@@ -80,9 +79,8 @@ public class LocationActor extends BaseLocationActor {
   }
 
   private void updateLocation(Request request) {
-    ProjectLogger.log("updateLocation method called");
     try {
-      Map<String, Object> data = ((Map<String, Object>) request.getRequest().get(JsonKey.DATA));
+      Map<String, Object> data = request.getRequest();
       if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.CODE))) {
         isValidLocationCode(data, JsonKey.UPDATE);
       }
@@ -90,9 +88,6 @@ public class LocationActor extends BaseLocationActor {
       // once parentCode validated remove from req as we are not saving this to our db
       data.remove(GeoLocationJsonKey.PARENT_CODE);
 
-      if (StringUtils.isNotEmpty((String) data.get(JsonKey.TYPE))) {
-        validateParentIdWithType(data);
-      }
       Response response = locationDao.update(mapper.convertValue(data, Location.class));
       sender().tell(response, self());
       ProjectLogger.log("update location data to ES");
@@ -104,7 +99,6 @@ public class LocationActor extends BaseLocationActor {
   }
 
   private void searchLocation(Request request) {
-    ProjectLogger.log("searchLocation method called");
     try {
       Response response = locationDao.search(request.getRequest());
       sender().tell(response, self());
@@ -115,7 +109,6 @@ public class LocationActor extends BaseLocationActor {
   }
 
   private void deleteLocation(Request request) {
-    ProjectLogger.log("deleteLocation method called");
     try {
       String locationId = (String) request.getRequest().get(JsonKey.LOCATION_ID);
       validateDeleteRequest(locationId);
@@ -130,7 +123,6 @@ public class LocationActor extends BaseLocationActor {
   }
 
   private void saveDataToES(Map<String, Object> locData, String opType) {
-    ProjectLogger.log("saveDataToES method called");
     Request request = new Request();
     request.setOperation(LocationActorOperation.UPSERT_LOCATION_TO_ES.getValue());
     request.getRequest().put(JsonKey.LOCATION, locData);
@@ -144,7 +136,6 @@ public class LocationActor extends BaseLocationActor {
   }
 
   private void deleteDataFromES(String locId) {
-    ProjectLogger.log("saveDataToES method called");
     Request request = new Request();
     request.setOperation(LocationActorOperation.DELETE_LOCATION_FROM_ES.getValue());
     request.getRequest().put(JsonKey.LOCATION_ID, locId);
@@ -154,15 +145,5 @@ public class LocationActor extends BaseLocationActor {
     } catch (Exception ex) {
       ProjectLogger.log("Exception Occured during saving location data to ES : ", ex);
     }
-  }
-
-  private void validateRequest(Map<String, Object> data) {
-    if (StringUtils.isNotEmpty((String) data.get(JsonKey.TYPE))) {
-      isValidLocationType((String) data.get(JsonKey.TYPE));
-    }
-    isValidParentIdAndCode(data);
-
-    // once parentCode validated remove from req as we are not saving this to our db
-    data.remove(GeoLocationJsonKey.PARENT_CODE);
   }
 }

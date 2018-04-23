@@ -1,12 +1,16 @@
 package org.sunbird.location.model;
 
+import java.io.Serializable;
+
 /** @author Amit Kumar */
-public class Location {
+public class Location implements Serializable {
+
+  private static final long serialVersionUID = -7967252522327069670L;
 
   private String id;
   private String code;
   private String name;
-  private String type;
+  private String locationType;
   private String parentId;
 
   public String getId() {
@@ -33,12 +37,12 @@ public class Location {
     this.name = name;
   }
 
-  public String getType() {
-    return type;
+  public String getLocationType() {
+    return locationType;
   }
 
-  public void setType(String type) {
-    this.type = type;
+  public void setLocationType(String locationType) {
+    this.locationType = locationType;
   }
 
   public String getParentId() {

@@ -99,6 +99,9 @@ public class LocationRequestValidator {
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
       } else if (locationTypeList.get(0).equalsIgnoreCase(type.toLowerCase())) {
+        if (StringUtils.isNotEmpty((String) location.get(GeoLocationJsonKey.CODE))) {
+          isValidLocationCode(location, opType);
+        }
         // if type is top level then parentCode and parentId is null
         location.put(GeoLocationJsonKey.PARENT_CODE, null);
         location.put(GeoLocationJsonKey.PARENT_ID, null);
@@ -251,5 +254,37 @@ public class LocationRequestValidator {
     SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
     Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto, esIndex, esType);
     return (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+  }
+
+  public static boolean isValidLocationCode(Map<String, Object> location, String opType) {
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(GeoLocationJsonKey.CODE, location.get(GeoLocationJsonKey.CODE));
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.FILTERS, filters);
+    List<Map<String, Object>> locationMapList =
+        getESSearchResult(
+            map,
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.location.getTypeName());
+    if (!locationMapList.isEmpty()) {
+      if (opType.equalsIgnoreCase(JsonKey.CREATE)) {
+        throw new ProjectCommonException(
+            ResponseCode.alreadyExist.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.alreadyExist.getErrorMessage(), GeoLocationJsonKey.CODE),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      } else if (opType.equalsIgnoreCase(JsonKey.UPDATE)) {
+        Map<String, Object> locn = locationMapList.get(0);
+        if (!(((String) locn.get(JsonKey.ID))
+            .equalsIgnoreCase((String) location.get(JsonKey.ID)))) {
+          throw new ProjectCommonException(
+              ResponseCode.alreadyExist.getErrorCode(),
+              ProjectUtil.formatMessage(
+                  ResponseCode.alreadyExist.getErrorMessage(), GeoLocationJsonKey.CODE),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
+      }
+    }
+    return true;
   }
 }

@@ -110,7 +110,7 @@ public class LocationRequestValidator {
     String parentCode = (String) location.get(GeoLocationJsonKey.PARENT_CODE);
     String parentId = (String) location.get(GeoLocationJsonKey.PARENT_ID);
     if (StringUtils.isNotEmpty(parentCode)) {
-      parentId = getLocationId(location, opType);
+      parentId = getLocationId(parentCode);
       location.put(GeoLocationJsonKey.PARENT_ID, parentId);
     }
     if (StringUtils.isNotEmpty(parentId)) {
@@ -183,9 +183,9 @@ public class LocationRequestValidator {
    * @param opType (for which operation we are validating i.e CREATE or UPDATE)
    * @return locationId String
    */
-  private static String getLocationId(Map<String, Object> location, String opType) {
+  private static String getLocationId(String parentCode) {
     Map<String, Object> filters = new HashMap<>();
-    filters.put(GeoLocationJsonKey.CODE, location.get(GeoLocationJsonKey.CODE));
+    filters.put(GeoLocationJsonKey.CODE, parentCode);
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.FILTERS, filters);
     List<Map<String, Object>> locationMapList =
@@ -193,26 +193,16 @@ public class LocationRequestValidator {
             map,
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.location.getTypeName());
-    if (!locationMapList.isEmpty()) {
-      if (opType.equalsIgnoreCase(JsonKey.CREATE)) {
-        throw new ProjectCommonException(
-            ResponseCode.alreadyExist.getErrorCode(),
-            ProjectUtil.formatMessage(
-                ResponseCode.alreadyExist.getErrorMessage(), GeoLocationJsonKey.CODE),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-      } else if (opType.equalsIgnoreCase(JsonKey.UPDATE)) {
-        Map<String, Object> locn = locationMapList.get(0);
-        if (!(((String) locn.get(JsonKey.ID))
-            .equalsIgnoreCase((String) location.get(JsonKey.ID)))) {
-          throw new ProjectCommonException(
-              ResponseCode.alreadyExist.getErrorCode(),
-              ProjectUtil.formatMessage(
-                  ResponseCode.alreadyExist.getErrorMessage(), GeoLocationJsonKey.CODE),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-        }
-      }
+    if (CollectionUtils.isNotEmpty(locationMapList)) {
+      Map<String, Object> location = locationMapList.get(0);
+      return (String) location.get(JsonKey.ID);
+    } else {
+      throw new ProjectCommonException(
+          ResponseCode.invalidParameter.getErrorCode(),
+          ProjectUtil.formatMessage(
+              ResponseCode.invalidParameter.getErrorMessage(), GeoLocationJsonKey.PARENT_CODE),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-    return (String) locationMapList.get(0).get(JsonKey.ID);
   }
 
   /**

@@ -1,7 +1,8 @@
 package org.sunbird.location.dao.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
@@ -54,8 +55,8 @@ public class LocationDaoImpl implements LocationDao {
     if (result != null) {
       response.put(JsonKey.RESPONSE, result.get(JsonKey.CONTENT));
     } else {
-      result = new HashMap<>();
-      response.put(JsonKey.RESPONSE, result.get(JsonKey.CONTENT));
+      List<Map<String, Object>> list = new ArrayList<>();
+      response.put(JsonKey.RESPONSE, list);
     }
     return response;
   }

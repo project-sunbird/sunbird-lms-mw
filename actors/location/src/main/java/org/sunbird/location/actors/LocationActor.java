@@ -143,14 +143,11 @@ public class LocationActor extends BaseLocationActor {
   }
 
   private void validateUpsertLocnReq(Map<String, Object> data, String operation) {
-    if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.CODE))) {
-      LocationRequestValidator.isValidLocationCode(data, operation);
-    }
     if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.LOCATION_TYPE))) {
       LocationRequestValidator.isValidLocationType(
           (String) data.get(GeoLocationJsonKey.LOCATION_TYPE));
     }
-    LocationRequestValidator.isValidParentIdAndCode(data);
+    LocationRequestValidator.isValidParentIdAndCode(data, operation);
     // once parentCode validated remove from req as we are not saving this to our db
     data.remove(GeoLocationJsonKey.PARENT_CODE);
   }

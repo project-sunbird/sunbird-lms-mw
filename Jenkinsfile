@@ -13,7 +13,11 @@ node('build-slave') {
       stage('Build'){
         env.NODE_ENV = "build"
         print "Environment will be : ${env.NODE_ENV}"
+<<<<<<< HEAD
         sh('git submodule foreach git pull origin release-1.6.0')
+=======
+        sh('git submodule foreach git pull origin release-1.5.2')
+>>>>>>> 60ae5962f557af78ff32ac5a93180f534d44ac01
         sh('sudo mvn clean install -DskipTests=true')
          sh('chmod 777 ./build.sh')
          sh('./build.sh')

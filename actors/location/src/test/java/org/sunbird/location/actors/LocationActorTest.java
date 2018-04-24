@@ -75,4 +75,61 @@ public class LocationActorTest {
     Response resp = probe.expectMsgClass(ACTOR_MAX_WAIT_DURATION, Response.class);
     Assert.assertTrue(null != resp);
   }
+
+  @Test
+  public void testUpdateLocation() throws IOException {
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    response.put(JsonKey.RESPONSE, response);
+    Map<String, Object> data = new HashMap<String, Object>();
+    data.put(GeoLocationJsonKey.LOCATION_TYPE, "STATE");
+    data.put(GeoLocationJsonKey.CODE, "S01");
+    data.put(JsonKey.NAME, "DUMMY_STATE_CHANGE");
+    data.put(JsonKey.ID, "id_01");
+    Location location = mapper.convertValue(data, Location.class);
+    PowerMockito.when(LocationDaoFactory.getInstance()).thenReturn(locDaoImpl);
+    PowerMockito.when(locDaoImpl.create(location)).thenReturn(response);
+    actorMessage.setOperation(LocationActorOperation.UPDATE_LOCATION.getValue());
+    actorMessage.getRequest().putAll(data);
+    subject.tell(actorMessage, probe.getRef());
+    Response resp = probe.expectMsgClass(ACTOR_MAX_WAIT_DURATION, Response.class);
+    Assert.assertTrue(null != resp);
+  }
+
+  @Test
+  public void testDeleteLocation() throws IOException {
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    response.put(JsonKey.RESPONSE, response);
+    Map<String, Object> data = new HashMap<String, Object>();
+    data.put(JsonKey.ID, "id_01");
+    Location location = mapper.convertValue(data, Location.class);
+    PowerMockito.when(LocationDaoFactory.getInstance()).thenReturn(locDaoImpl);
+    PowerMockito.when(locDaoImpl.create(location)).thenReturn(response);
+    actorMessage.setOperation(LocationActorOperation.DELETE_LOCATION.getValue());
+    actorMessage.getRequest().putAll(data);
+    subject.tell(actorMessage, probe.getRef());
+    Response resp = probe.expectMsgClass(ACTOR_MAX_WAIT_DURATION, Response.class);
+    Assert.assertTrue(null != resp);
+  }
+
+  @Test
+  public void testSearchLocation() throws IOException {
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    response.put(JsonKey.RESPONSE, response);
+    Map<String, Object> data = new HashMap<String, Object>();
+    data.put(GeoLocationJsonKey.LOCATION_TYPE, "STATE");
+    data.put(GeoLocationJsonKey.CODE, "S01");
+    data.put(JsonKey.NAME, "DUMMY_STATE_CHANGE");
+    data.put(JsonKey.ID, "id_01");
+    Location location = mapper.convertValue(data, Location.class);
+    PowerMockito.when(LocationDaoFactory.getInstance()).thenReturn(locDaoImpl);
+    PowerMockito.when(locDaoImpl.create(location)).thenReturn(response);
+    actorMessage.setOperation(LocationActorOperation.SEARCH_LOCATION.getValue());
+    actorMessage.getRequest().put(JsonKey.FILTERS, data);
+    subject.tell(actorMessage, probe.getRef());
+    Response resp = probe.expectMsgClass(ACTOR_MAX_WAIT_DURATION, Response.class);
+    Assert.assertTrue(null != resp);
+  }
 }

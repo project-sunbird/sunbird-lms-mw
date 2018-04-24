@@ -16,7 +16,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.Util;
 import org.sunbird.location.dao.LocationDao;
-import org.sunbird.location.dao.impl.LocationDaoImpl;
+import org.sunbird.location.dao.impl.LocationDaoFactory;
 import org.sunbird.location.model.Location;
 import org.sunbird.location.util.LocationRequestValidator;
 
@@ -32,7 +32,11 @@ import org.sunbird.location.util.LocationRequestValidator;
 public class LocationActor extends BaseLocationActor {
 
   private ObjectMapper mapper = new ObjectMapper();
-  private LocationDao locationDao = new LocationDaoImpl();
+  private LocationDao locationDao = LocationDaoFactory.getInstance();
+
+  public LocationActor(LocationDao locationDao) {
+    this.locationDao = locationDao;
+  }
 
   @Override
   public void onReceive(Request request) throws Throwable {

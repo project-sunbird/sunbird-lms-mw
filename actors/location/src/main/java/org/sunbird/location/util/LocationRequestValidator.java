@@ -64,7 +64,7 @@ public class LocationRequestValidator {
    * @return
    */
   public static boolean isValidLocationType(String type) {
-    if (null != type && !locationTypeList.contains(type)) {
+    if (null != type && !locationTypeList.contains(type.toLowerCase())) {
       throw new ProjectCommonException(
           ResponseCode.invalidValue.getErrorCode(),
           ProjectUtil.formatMessage(

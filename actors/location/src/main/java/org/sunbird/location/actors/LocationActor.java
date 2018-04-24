@@ -34,10 +34,6 @@ public class LocationActor extends BaseLocationActor {
   private ObjectMapper mapper = new ObjectMapper();
   private LocationDao locationDao = LocationDaoFactory.getInstance();
 
-  public LocationActor(LocationDao locationDao) {
-    this.locationDao = locationDao;
-  }
-
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.LOCATION);

@@ -61,8 +61,8 @@ public class LocationBulkUpload extends BaseActor {
   private void upload(Request request) throws IOException {
 
     String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
-    String locationType = (String) request.getRequest().get(GeoLocationJsonKey.LOCATION_TYPE);
     Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
+    String locationType = (String) req.get(GeoLocationJsonKey.LOCATION_TYPE);
     req.put(JsonKey.CREATED_BY, req.get(JsonKey.CREATED_BY));
     processLocationBulkUpload(req, processId, locationType);
   }

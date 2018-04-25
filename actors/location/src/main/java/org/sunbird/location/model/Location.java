@@ -1,8 +1,13 @@
 package org.sunbird.location.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import java.io.Serializable;
 
 /** @author Amit Kumar */
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(Include.NON_NULL)
 public class Location implements Serializable {
 
   private static final long serialVersionUID = -7967252522327069670L;

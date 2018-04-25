@@ -1,16 +1,18 @@
 package org.sunbird.bean;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(Include.NON_NULL)
 public class Organization implements Serializable {
 
   private static final long serialVersionUID = 3617862727235741692L;
-
   private String id;
   private String addressId;
   private String approvedBy;

@@ -105,7 +105,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
       Request request = new Request();
       Map<String, Object> filters = new HashMap<>();
       filters.put(GeoLocationJsonKey.CODE, row.get(GeoLocationJsonKey.CODE));
-      filters.put(GeoLocationJsonKey.CODE, row.get(GeoLocationJsonKey.LOCATION_TYPE));
+      filters.put(GeoLocationJsonKey.LOCATION_TYPE, row.get(GeoLocationJsonKey.LOCATION_TYPE));
       request.getRequest().put(JsonKey.FILTERS, filters);
 
       Object obj =

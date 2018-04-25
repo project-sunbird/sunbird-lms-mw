@@ -16,7 +16,7 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.BulkUploadActorOperation;
 import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -51,7 +51,9 @@ public class LocationBulkUpload extends BaseActor {
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, TelemetryEnvKey.GEO_LOCATION);
     ExecutionContext.setRequestId(request.getRequestId());
-    if (request.getOperation().equalsIgnoreCase(ActorOperations.BULK_UPLOAD.getValue())) {
+    if (request
+        .getOperation()
+        .equalsIgnoreCase(BulkUploadActorOperation.LOCATION_BULK_UPLOAD.getValue())) {
       upload(request);
     }
   }
@@ -110,7 +112,7 @@ public class LocationBulkUpload extends BaseActor {
       // send processId for data processing to background job
       Request request = new Request();
       request.put(JsonKey.PROCESS_ID, processId);
-      request.setOperation(ActorOperations.PROCESS_BULK_UPLOAD.getValue());
+      request.setOperation(BulkUploadActorOperation.LOCATION_BULK_UPLOAD_BACKGROUND_JOB.getValue());
       tellToAnother(request);
     }
   }

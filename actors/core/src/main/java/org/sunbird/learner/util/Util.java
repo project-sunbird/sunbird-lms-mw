@@ -910,16 +910,16 @@ public final class Util {
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.location.getTypeName());
     List<String> locationIdList = new ArrayList<>();
-    if (CollectionUtils.isEmpty(locationList) || (locationList.size() < codeList.size())) {
+    if (!CollectionUtils.isEmpty(locationList)) {
       List<String> responseLocCodeList = new ArrayList<>();
       for (Map<String, Object> map : locationList) {
-        responseLocCodeList.add((String) map.get(JsonKey.CODE));
+        responseLocCodeList.add(((String) map.get(JsonKey.CODE)).toLowerCase());
         locationIdList.add((String) map.get(JsonKey.ID));
       }
       List<String> invalidValueList = new ArrayList<>();
       for (Object code : codeList) {
         String loc = (String) code;
-        if (!responseLocCodeList.contains(loc)) {
+        if (!responseLocCodeList.contains(loc.toLowerCase())) {
           invalidValueList.add(loc);
         }
       }
@@ -927,15 +927,22 @@ public final class Util {
         throw new ProjectCommonException(
             ResponseCode.invalidParameterValue.getErrorCode(),
             ProjectUtil.formatMessage(
-                ResponseCode.invalidParameter.getErrorMessage(),
+                ResponseCode.invalidParameterValue.getErrorMessage(),
                 invalidValueList,
                 JsonKey.LOCATION_CODE),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       } else {
         return locationIdList;
       }
+    } else {
+      throw new ProjectCommonException(
+          ResponseCode.invalidParameterValue.getErrorCode(),
+          ProjectUtil.formatMessage(
+              ResponseCode.invalidParameterValue.getErrorMessage(),
+              codeList,
+              JsonKey.LOCATION_CODE),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-    return locationIdList;
   }
 
   public static List<Map<String, Object>> getESSearchResult(

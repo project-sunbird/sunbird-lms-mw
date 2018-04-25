@@ -267,9 +267,7 @@ public class BulkUploadManagementActor extends BaseActor {
                 JsonKey.CONTACT_DETAILS,
                 JsonKey.LOC_ID,
                 JsonKey.HASHTAGID,
-                JsonKey.LOCATION_CODE,
-                JsonKey.LATITUDE,
-                JsonKey.LONGITUDE));
+                JsonKey.LOCATION_CODE));
 
     for (String key : property) {
       if (!properties.contains(key)) {

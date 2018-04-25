@@ -46,8 +46,6 @@ public class Organization implements Serializable {
   private String updatedBy;
   private String updatedDate;
   private List<String> locationIds;
-  private Float latitude;
-  private Float longitude;
 
   public String getId() {
     return id;
@@ -330,21 +328,5 @@ public class Organization implements Serializable {
 
   public void setRootOrg(Boolean isRootOrg) {
     this.isRootOrg = isRootOrg;
-  }
-
-  public Float getLatitude() {
-    return latitude;
-  }
-
-  public void setLatitude(Float latitude) {
-    this.latitude = latitude;
-  }
-
-  public Float getLongitude() {
-    return longitude;
-  }
-
-  public void setLongitude(Float longitude) {
-    this.longitude = longitude;
   }
 }

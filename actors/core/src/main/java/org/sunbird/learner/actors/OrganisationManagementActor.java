@@ -279,10 +279,7 @@ public class OrganisationManagementActor extends BaseActor {
           (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
       if (req.containsKey(JsonKey.LOCATION_CODE)
           && !CollectionUtils.isEmpty((List<String>) req.get(JsonKey.LOCATION_CODE))) {
-        List<String> locationIdList =
-            Util.validateLocationCode((List<Object>) req.get(JsonKey.LOCATION_CODE));
-        req.put(JsonKey.LOCATION_IDS, locationIdList);
-        req.remove(JsonKey.LOCATION_CODE);
+        validateCodeAndAddLocationIds(req);
       }
       if (req.containsKey(JsonKey.ORG_TYPE)
           && !StringUtils.isBlank((String) req.get(JsonKey.ORG_TYPE))) {
@@ -502,6 +499,13 @@ public class OrganisationManagementActor extends BaseActor {
       sender().tell(e, self());
       return;
     }
+  }
+
+  private void validateCodeAndAddLocationIds(Map<String, Object> req) {
+    List<String> locationIdList =
+        Util.validateLocationCode((List<Object>) req.get(JsonKey.LOCATION_CODE));
+    req.put(JsonKey.LOCATION_IDS, locationIdList);
+    req.remove(JsonKey.LOCATION_CODE);
   }
 
   private String validateHashTagId(String hashTagId, String opType, String orgId) {
@@ -752,10 +756,7 @@ public class OrganisationManagementActor extends BaseActor {
           (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
       if (req.containsKey(JsonKey.LOCATION_CODE)
           && !CollectionUtils.isEmpty((List<String>) req.get(JsonKey.LOCATION_CODE))) {
-        List<String> locationIdList =
-            Util.validateLocationCode((List<Object>) req.get(JsonKey.LOCATION_CODE));
-        req.put(JsonKey.LOCATION_IDS, locationIdList);
-        req.remove(JsonKey.LOCATION_CODE);
+        validateCodeAndAddLocationIds(req);
       }
       if (req.containsKey(JsonKey.ORG_TYPE)
           && !StringUtils.isBlank((String) req.get(JsonKey.ORG_TYPE))) {

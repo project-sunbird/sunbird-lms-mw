@@ -6,14 +6,14 @@ node('build-slave') {
 
    try {
       cleanWs()
-      stage('Checkout'){         
+      stage('Checkout'){
          checkout scm
        }
 
       stage('Build'){
         env.NODE_ENV = "build"
         print "Environment will be : ${env.NODE_ENV}"
-        sh('git submodule foreach git pull origin release-1.6.0')
+        sh('git submodule foreach git pull origin location')
         sh('sudo mvn clean install -DskipTests=true')
          sh('chmod 777 ./build.sh')
          sh('./build.sh')
@@ -24,7 +24,7 @@ node('build-slave') {
         sh 'ls -al ~/'
         sh('chmod 777 ./dockerPushToRepo.sh')
         sh 'ARTIFACT_LABEL=bronze ./dockerPushToRepo.sh'
-        sh './metadata.sh > metadata.json'      
+        sh './metadata.sh > metadata.json'
         sh 'cat metadata.json'
         archive includes: "metadata.json"
       }

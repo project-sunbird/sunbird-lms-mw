@@ -11,9 +11,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.bean.Organization;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -62,7 +64,7 @@ import org.sunbird.telemetry.util.TelemetryUtil;
   asyncTasks = {}
 )
 public class OrganisationManagementActor extends BaseActor {
-
+  private ObjectMapper mapper = new ObjectMapper();
   private final CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private final EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
@@ -275,6 +277,13 @@ public class OrganisationManagementActor extends BaseActor {
     try {
       Map<String, Object> req =
           (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+      if (req.containsKey(JsonKey.LOCATION_CODE)
+          && !CollectionUtils.isEmpty((List<String>) req.get(JsonKey.LOCATION_CODE))) {
+        List<String> locationIdList =
+            Util.validateLocationCode((List<Object>) req.get(JsonKey.LOCATION_CODE));
+        req.put(JsonKey.LOCATION_IDS, locationIdList);
+        req.remove(JsonKey.LOCATION_CODE);
+      }
       if (req.containsKey(JsonKey.ORG_TYPE)
           && !StringUtils.isBlank((String) req.get(JsonKey.ORG_TYPE))) {
         req.put(JsonKey.ORG_TYPE_ID, validateOrgType((String) req.get(JsonKey.ORG_TYPE)));
@@ -423,7 +432,6 @@ public class OrganisationManagementActor extends BaseActor {
       if (req.containsKey(JsonKey.CONTACT_DETAILS)) {
         listOfMap = (List<Map<String, Object>>) req.get(JsonKey.CONTACT_DETAILS);
         if (listOfMap != null && !listOfMap.isEmpty()) {
-          ObjectMapper mapper = new ObjectMapper();
           try {
             req.put(JsonKey.CONTACT_DETAILS, mapper.writeValueAsString(listOfMap));
           } catch (IOException e) {
@@ -447,6 +455,9 @@ public class OrganisationManagementActor extends BaseActor {
         req.put(JsonKey.IS_ROOT_ORG, false);
       }
 
+      // This will remove all extra unnecessary parameter from request
+      Organization org = mapper.convertValue(req, Organization.class);
+      req = mapper.convertValue(org, Map.class);
       Response result =
           cassandraOperation.insertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), req);
       ProjectLogger.log("Org data saved into cassandra.");
@@ -600,7 +611,6 @@ public class OrganisationManagementActor extends BaseActor {
       if (!(list.isEmpty())) {
         orgDBO = list.get(0);
       } else {
-        ProjectLogger.log("Invalid Org Id");
         ProjectCommonException exception =
             new ProjectCommonException(
                 ResponseCode.invalidRequestData.getErrorCode(),
@@ -740,6 +750,13 @@ public class OrganisationManagementActor extends BaseActor {
     try {
       Map<String, Object> req =
           (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+      if (req.containsKey(JsonKey.LOCATION_CODE)
+          && !CollectionUtils.isEmpty((List<String>) req.get(JsonKey.LOCATION_CODE))) {
+        List<String> locationIdList =
+            Util.validateLocationCode((List<Object>) req.get(JsonKey.LOCATION_CODE));
+        req.put(JsonKey.LOCATION_IDS, locationIdList);
+        req.remove(JsonKey.LOCATION_CODE);
+      }
       if (req.containsKey(JsonKey.ORG_TYPE)
           && !StringUtils.isBlank((String) req.get(JsonKey.ORG_TYPE))) {
         req.put(JsonKey.ORG_TYPE_ID, validateOrgType((String) req.get(JsonKey.ORG_TYPE)));
@@ -973,7 +990,6 @@ public class OrganisationManagementActor extends BaseActor {
       if (updateOrgDBO.containsKey(JsonKey.CONTACT_DETAILS)) {
         listOfMap = (List<Map<String, Object>>) updateOrgDBO.get(JsonKey.CONTACT_DETAILS);
         if (listOfMap != null && !listOfMap.isEmpty()) {
-          ObjectMapper mapper = new ObjectMapper();
           try {
             updateOrgDBO.put(JsonKey.CONTACT_DETAILS, mapper.writeValueAsString(listOfMap));
           } catch (IOException e) {
@@ -981,6 +997,9 @@ public class OrganisationManagementActor extends BaseActor {
           }
         }
       }
+      // This will remove all extra unnecessary parameter from request
+      Organization org = mapper.convertValue(updateOrgDBO, Organization.class);
+      updateOrgDBO = mapper.convertValue(org, Map.class);
       Response response =
           cassandraOperation.updateRecord(
               orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), updateOrgDBO);

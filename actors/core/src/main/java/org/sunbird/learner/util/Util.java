@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -14,6 +15,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -888,5 +890,44 @@ public final class Util {
       return res.get(0);
     }
     return Collections.emptyMap();
+  }
+
+  /**
+   * This method will validate the list of location code whether its valid or not. If valid will
+   * return the locationId List.
+   *
+   * @param codeList
+   */
+  public static List<String> validateLocationCode(List<Object> codeList) {
+    List<Map<String, Object>> locationList =
+        (List<Map<String, Object>>)
+            cassandraOperation.getRecordsByProperty("sunbird", "location", JsonKey.CODE, codeList);
+    List<String> locationIdList = new ArrayList<>();
+    if (CollectionUtils.isEmpty(locationList) || (locationList.size() < codeList.size())) {
+      List<String> responseLocCodeList = new ArrayList<>();
+      for (Map<String, Object> map : locationList) {
+        responseLocCodeList.add((String) map.get(JsonKey.CODE));
+        locationIdList.add((String) map.get(JsonKey.ID));
+      }
+      List<String> invalidValueList = new ArrayList<>();
+      for (Object code : codeList) {
+        String loc = (String) code;
+        if (!responseLocCodeList.contains(loc)) {
+          invalidValueList.add(loc);
+        }
+      }
+      if (CollectionUtils.isNotEmpty(invalidValueList)) {
+        throw new ProjectCommonException(
+            ResponseCode.invalidParameterValue.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.invalidParameter.getErrorMessage(),
+                invalidValueList,
+                JsonKey.LOCATION_CODE),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      } else {
+        return locationIdList;
+      }
+    }
+    return locationIdList;
   }
 }

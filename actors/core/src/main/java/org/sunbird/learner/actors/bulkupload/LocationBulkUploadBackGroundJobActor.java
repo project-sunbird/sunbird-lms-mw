@@ -3,12 +3,15 @@ package org.sunbird.learner.actors.bulkupload;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.core.service.InterServiceCommunication;
+import org.sunbird.actor.core.service.InterServiceCommunicationFactory;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -22,11 +25,10 @@ import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
 import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.dao.BulkUploadDao;
 import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadDaoImpl;
 import org.sunbird.learner.actors.bulkupload.model.BulkUpload;
-import org.sunbird.learner.actors.bulkupload.service.InterServiceCommunication;
-import org.sunbird.learner.actors.bulkupload.service.InterServiceCommunicationFactory;
 import org.sunbird.learner.util.Util;
 
 /** Created by arvind on 24/4/18. */
@@ -44,15 +46,12 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
   @Override
   public void onReceive(Request request) throws Throwable {
 
-    ProjectLogger.log(
-        "LocationBulkUploadBackGroundJobActor  onReceive called", LoggerEnum.INFO.name());
     String operation = request.getOperation();
-
     Util.initializeContext(request, TelemetryEnvKey.GEO_LOCATION);
     ExecutionContext.setRequestId(request.getRequestId());
 
     switch (operation) {
-      case "locationBulkUploadBackGround":
+      case "locationBulkUploadBackground":
         bulkLocationUpload(request);
         break;
       default:
@@ -60,12 +59,13 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
     }
   }
 
-  private void bulkLocationUpload(Request request) {
+  private void bulkLocationUpload(Request request) throws IOException {
 
     String processId = (String) request.get(JsonKey.PROCESS_ID);
     BulkUpload bulkUpload = bulkUploadDao.read(processId);
     if (null == bulkUpload) {
-      // stop processing here ..
+      ProjectLogger.log("Process Id does not exist : " + processId, LoggerEnum.ERROR);
+      return;
     }
     Integer status = bulkUpload.getStatus();
     if (!(status == (ProjectUtil.BulkProcessStatus.COMPLETED.getValue())
@@ -74,7 +74,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
     }
   }
 
-  private void processLocationBulkUpoad(BulkUpload bulkUpload) {
+  private void processLocationBulkUpoad(BulkUpload bulkUpload) throws IOException {
 
     TypeReference<List<Map<String, Object>>> mapType =
         new TypeReference<List<Map<String, Object>>>() {};
@@ -84,30 +84,28 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
     try {
       jsonList = mapper.readValue(bulkUpload.getData(), mapType);
     } catch (IOException e) {
-      // throw exception here and stop processing ...
       ProjectLogger.log(
           "Exception occurred while converting json String to List in BulkUploadBackGroundJobActor : ",
           e);
+      throw e;
     }
 
     for (Map<String, Object> row : jsonList) {
-      processLoc(row, bulkUpload, successList, failureList);
+      processLocation(row, successList, failureList);
     }
 
-    bulkUpload.setSuccessResult(convertMapToJsonString(successList));
-    bulkUpload.setFailureResult(convertMapToJsonString(failureList));
+    bulkUpload.setSuccessResult(ProjectUtil.convertMapToJsonString(successList));
+    bulkUpload.setFailureResult(ProjectUtil.convertMapToJsonString(failureList));
     bulkUpload.setStatus(BulkProcessStatus.COMPLETED.getValue());
     bulkUploadDao.update(bulkUpload);
   }
 
-  private void processLoc(
+  private void processLocation(
       Map<String, Object> row,
-      BulkUpload bulkUpload,
       List<Map<String, Object>> successList,
       List<Map<String, Object>> failureList) {
 
-    if (row.containsKey(GeoLocationJsonKey.CODE)) {
-
+    if (checkMandatoryFields(row, GeoLocationJsonKey.CODE)) {
       Request request = new Request();
       Map<String, Object> filters = new HashMap<>();
       filters.put(GeoLocationJsonKey.CODE, row.get(GeoLocationJsonKey.CODE));
@@ -118,26 +116,41 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
           interServiceCommunication.getResponse(
               request, LocationActorOperation.SEARCH_LOCATION.getValue());
       if (obj instanceof ProjectCommonException) {
-
+        row.put(JsonKey.ERROR_MSG, ((ProjectCommonException) obj).getMessage());
+        failureList.add(row);
       } else if (obj instanceof Response) {
         Response response = (Response) obj;
         List<Map<String, Object>> responseList =
             (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
         if (CollectionUtils.isEmpty(responseList)) {
-          callCreateLocation(row, bulkUpload, successList, failureList);
+          callCreateLocation(row, successList, failureList);
         } else {
-          callUpdateLocation(row, bulkUpload, successList, failureList, responseList.get(0));
+          callUpdateLocation(row, successList, failureList, responseList.get(0));
         }
       }
     } else {
-
-      // put in failures .. code does not exist so not valid request ..
+      row.put(
+          JsonKey.ERROR_MSG,
+          MessageFormat.format(
+              ResponseCode.mandatoryParamsMissing.getErrorMessage(), GeoLocationJsonKey.CODE));
+      failureList.add(row);
     }
+  }
+
+  private boolean checkMandatoryFields(Map<String, Object> row, String... fields) {
+
+    boolean flag = true;
+    for (String field : fields) {
+      if (!(row.containsKey(field))) {
+        flag = false;
+        break;
+      }
+    }
+    return flag;
   }
 
   private void callUpdateLocation(
       Map<String, Object> row,
-      BulkUpload bulkUpload,
       List<Map<String, Object>> successList,
       List<Map<String, Object>> failureList,
       Map<String, Object> response) {
@@ -152,7 +165,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
             request, LocationActorOperation.UPDATE_LOCATION.getValue());
 
     if (obj instanceof ProjectCommonException) {
-
+      row.put(JsonKey.ERROR_MSG, ((ProjectCommonException) obj).getMessage());
       failureList.add(row);
     } else if (obj instanceof Response) {
       successList.add(row);
@@ -161,7 +174,6 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
 
   private void callCreateLocation(
       Map<String, Object> row,
-      BulkUpload bulkUpload,
       List<Map<String, Object>> successList,
       List<Map<String, Object>> failureList) {
 
@@ -172,6 +184,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
             request, LocationActorOperation.CREATE_LOCATION.getValue());
 
     if (obj instanceof ProjectCommonException) {
+      row.put(JsonKey.ERROR_MSG, ((ProjectCommonException) obj).getMessage());
       failureList.add(row);
     } else if (obj instanceof Response) {
       successList.add(row);

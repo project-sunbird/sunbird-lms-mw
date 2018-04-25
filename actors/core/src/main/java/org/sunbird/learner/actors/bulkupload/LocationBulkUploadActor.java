@@ -36,7 +36,7 @@ import org.sunbird.learner.util.Util;
   tasks = {"locationBulkUpload"},
   asyncTasks = {}
 )
-public class LocationBulkUpload extends BaseActor {
+public class LocationBulkUploadActor extends BaseActor {
 
   private static final String CSV_FILE_EXTENSION = ".csv";
   BulkUploadDao bulkUploadDao = new BulkUploadDaoImpl();
@@ -51,10 +51,14 @@ public class LocationBulkUpload extends BaseActor {
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, TelemetryEnvKey.GEO_LOCATION);
     ExecutionContext.setRequestId(request.getRequestId());
-    if (request
-        .getOperation()
-        .equalsIgnoreCase(BulkUploadActorOperation.LOCATION_BULK_UPLOAD.getValue())) {
-      upload(request);
+    String operation = request.getOperation();
+
+    switch (operation) {
+      case "locationBulkUpload":
+        upload(request);
+        break;
+      default:
+        onReceiveUnsupportedOperation("LocationBulkUploadActor");
     }
   }
 
@@ -211,16 +215,9 @@ public class LocationBulkUpload extends BaseActor {
   private void validateBulkUploadFields(
       String[] csvHeaderLine, String[] bulkLocationAllowedFields) {
 
-    ArrayUtils.isEmpty(csvHeaderLine);
-
-    if (ArrayUtils.isEmpty(csvHeaderLine) || ArrayUtils.isEmpty(bulkLocationAllowedFields)) {
-      throw new ProjectCommonException(
-          ResponseCode.InvalidColumnError.getErrorCode(),
-          ResponseCode.InvalidColumnError.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
-
-    if (!ArrayUtils.isSameLength(csvHeaderLine, bulkLocationAllowedFields)) {
+    if (ArrayUtils.isEmpty(csvHeaderLine)
+        || ArrayUtils.isEmpty(bulkLocationAllowedFields)
+        || !ArrayUtils.isSameLength(csvHeaderLine, bulkLocationAllowedFields)) {
       throw new ProjectCommonException(
           ResponseCode.InvalidColumnError.getErrorCode(),
           ResponseCode.InvalidColumnError.getErrorMessage(),
@@ -257,14 +254,14 @@ public class LocationBulkUpload extends BaseActor {
         lines.add(list.toArray(list.toArray(new String[csvLine.length])));
       }
     } catch (Exception e) {
-      ProjectLogger.log("Exception occured while processing csv file : ", e);
+      ProjectLogger.log("Exception occurred while processing csv file : ", e);
     } finally {
       try {
         // closing the reader
         csvReader.close();
         file.delete();
       } catch (Exception e) {
-        ProjectLogger.log("Exception occured while closing csv reader : ", e);
+        ProjectLogger.log("Exception occurred while closing csv reader : ", e);
       }
     }
     return lines;

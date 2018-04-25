@@ -162,8 +162,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     // Insert record to BulkDb table
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.ID, processId);
-    map.put(JsonKey.SUCCESS_RESULT, convertMapToJsonString(successResultList));
-    map.put(JsonKey.FAILURE_RESULT, convertMapToJsonString(failureResultList));
+    map.put(JsonKey.SUCCESS_RESULT, ProjectUtil.convertMapToJsonString(successResultList));
+    map.put(JsonKey.FAILURE_RESULT, ProjectUtil.convertMapToJsonString(failureResultList));
     map.put(JsonKey.PROCESS_END_TIME, ProjectUtil.getFormattedDate());
     map.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
     try {
@@ -390,8 +390,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       }
     }
 
-    dataMap.put(JsonKey.SUCCESS_RESULT, convertMapToJsonString(successList));
-    dataMap.put(JsonKey.FAILURE_RESULT, convertMapToJsonString(failureList));
+    dataMap.put(JsonKey.SUCCESS_RESULT, ProjectUtil.convertMapToJsonString(successList));
+    dataMap.put(JsonKey.FAILURE_RESULT, ProjectUtil.convertMapToJsonString(failureList));
     dataMap.put(JsonKey.STATUS, BulkProcessStatus.COMPLETED.getValue());
 
     cassandraOperation.updateRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), dataMap);
@@ -1113,9 +1113,11 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     map.put(JsonKey.ID, processId);
     try {
       map.put(
-          JsonKey.SUCCESS_RESULT, UserUtility.encryptData(convertMapToJsonString(successUserReq)));
+          JsonKey.SUCCESS_RESULT,
+          UserUtility.encryptData(ProjectUtil.convertMapToJsonString(successUserReq)));
       map.put(
-          JsonKey.FAILURE_RESULT, UserUtility.encryptData(convertMapToJsonString(failureUserReq)));
+          JsonKey.FAILURE_RESULT,
+          UserUtility.encryptData(ProjectUtil.convertMapToJsonString(failureUserReq)));
     } catch (Exception e1) {
       ProjectLogger.log(
           "Exception occurred while encrypting success and failure result in bulk upload process : ",

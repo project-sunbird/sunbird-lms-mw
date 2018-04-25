@@ -26,6 +26,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.BadgingJsonKey;
+import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -899,9 +900,15 @@ public final class Util {
    * @param codeList
    */
   public static List<String> validateLocationCode(List<Object> codeList) {
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(GeoLocationJsonKey.CODE, codeList);
+    Map<String, Object> locMap = new HashMap<>();
+    locMap.put(JsonKey.FILTERS, filters);
     List<Map<String, Object>> locationList =
-        (List<Map<String, Object>>)
-            cassandraOperation.getRecordsByProperty("sunbird", "location", JsonKey.CODE, codeList);
+        getESSearchResult(
+            locMap,
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.location.getTypeName());
     List<String> locationIdList = new ArrayList<>();
     if (CollectionUtils.isEmpty(locationList) || (locationList.size() < codeList.size())) {
       List<String> responseLocCodeList = new ArrayList<>();
@@ -929,5 +936,12 @@ public final class Util {
       }
     }
     return locationIdList;
+  }
+
+  public static List<Map<String, Object>> getESSearchResult(
+      Map<String, Object> searchQueryMap, String esIndex, String esType) {
+    SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
+    Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto, esIndex, esType);
+    return (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
   }
 }

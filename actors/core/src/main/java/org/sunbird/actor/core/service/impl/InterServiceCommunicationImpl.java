@@ -1,4 +1,4 @@
-package org.sunbird.learner.actors.bulkupload.service.impl;
+package org.sunbird.actor.core.service.impl;
 
 import static akka.pattern.PatternsCS.ask;
 
@@ -7,10 +7,10 @@ import akka.actor.ActorSelection;
 import akka.util.Timeout;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import org.sunbird.actor.core.service.InterServiceCommunication;
 import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.actor.service.BaseMWService;
 import org.sunbird.common.request.Request;
-import org.sunbird.learner.actors.bulkupload.service.InterServiceCommunication;
 import scala.concurrent.duration.Duration;
 
 /** Created by arvind on 24/4/18. */
@@ -27,12 +27,12 @@ public class InterServiceCommunicationImpl extends BaseMWService
     Object obj = null;
     if (null == actor) {
       ActorSelection select = getRemoteRouter(RequestRouter.class.getSimpleName());
-      actor = (ActorRef) select.resolveOne(new Timeout(10, TimeUnit.SECONDS));
+      actor = (ActorRef) select.resolveOne(new Timeout(WAIT_TIME, TimeUnit.SECONDS));
     }
     CompletableFuture<Object> future = ask(actor, request, t).toCompletableFuture();
 
     try {
-      obj = future.get(15, TimeUnit.SECONDS);
+      obj = future.get(WAIT_TIME + 2, TimeUnit.SECONDS);
     } catch (Exception e) {
       e.printStackTrace();
     }

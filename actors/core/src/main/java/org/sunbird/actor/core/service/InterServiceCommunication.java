@@ -1,4 +1,4 @@
-package org.sunbird.learner.actors.bulkupload.service;
+package org.sunbird.actor.core.service;
 
 import org.sunbird.common.request.Request;
 

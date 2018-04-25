@@ -1,8 +1,8 @@
-package org.sunbird.learner.actors.bulkupload.service;
+package org.sunbird.actor.core.service;
 
 import java.util.HashMap;
 import java.util.Map;
-import org.sunbird.learner.actors.bulkupload.service.impl.InterServiceCommunicationImpl;
+import org.sunbird.actor.core.service.impl.InterServiceCommunicationImpl;
 
 /** Created by arvind on 24/4/18. */
 public class InterServiceCommunicationFactory {

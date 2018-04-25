@@ -1,10 +1,6 @@
 package org.sunbird.actor.core;
 
 import akka.actor.UntypedAbstractActor;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -92,15 +88,5 @@ public abstract class BaseActor extends UntypedAbstractActor {
     }
     response.setParams(resStatus);
     return response;
-  }
-
-  public String convertMapToJsonString(List<Map<String, Object>> mapList) {
-    ObjectMapper mapper = new ObjectMapper();
-    try {
-      return mapper.writeValueAsString(mapList);
-    } catch (IOException e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-    return null;
   }
 }

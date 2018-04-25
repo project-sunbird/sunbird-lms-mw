@@ -14,10 +14,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.bean.Organization;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -77,6 +79,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
   private final SSOManager ssoManager = SSOServiceFactory.getInstance();
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String SUNBIRD_APP_URL = "sunbird_app_url";
+  private ObjectMapper mapper = new ObjectMapper();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -410,10 +413,20 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     Object[] orgContactList = null;
     String contactDetails = null;
     boolean isOrgUpdated = false;
-
-    // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+    // validate location code
+    if (concurrentHashMap.containsKey(JsonKey.LOCATION_CODE)
+        && !CollectionUtils.isEmpty((List<String>) concurrentHashMap.get(JsonKey.LOCATION_CODE))) {
+      try {
+        List<String> locationIdList =
+            Util.validateLocationCode((List<Object>) concurrentHashMap.get(JsonKey.LOCATION_CODE));
+        concurrentHashMap.put(JsonKey.LOCATION_IDS, locationIdList);
+        concurrentHashMap.remove(JsonKey.LOCATION_CODE);
+      } catch (Exception ex) {
+        concurrentHashMap.put(JsonKey.ERROR_MSG, "Invalid value for LocationCode.");
+        failureList.add(concurrentHashMap);
+        return;
+      }
+    }
 
     if (concurrentHashMap.containsKey(JsonKey.ORG_TYPE)
         && !ProjectUtil.isStringNullOREmpty((String) concurrentHashMap.get(JsonKey.ORG_TYPE))) {
@@ -463,7 +476,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       contactDetails = (String) concurrentHashMap.get(JsonKey.CONTACT_DETAILS);
       contactDetails = contactDetails.replaceAll("'", "\"");
       try {
-        ObjectMapper mapper = new ObjectMapper();
         orgContactList = mapper.readValue(contactDetails, Object[].class);
 
       } catch (IOException ex) {
@@ -540,6 +552,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         concurrentHashMap.put(JsonKey.ID, orgResult.get(JsonKey.ID));
 
         try {
+          // This will remove all extra unnecessary parameter from request
+          Organization org = mapper.convertValue(concurrentHashMap, Organization.class);
+          concurrentHashMap = mapper.convertValue(org, Map.class);
           cassandraOperation.upsertRecord(
               orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), concurrentHashMap);
           Response orgResponse = new Response();
@@ -645,6 +660,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         }
 
         try {
+          // This will remove all extra unnecessary parameter from request
+          Organization org = mapper.convertValue(concurrentHashMap, Organization.class);
+          concurrentHashMap = mapper.convertValue(org, Map.class);
           cassandraOperation.upsertRecord(
               orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), concurrentHashMap);
           Response orgResponse = new Response();
@@ -817,6 +835,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     concurrentHashMap.put(JsonKey.CONTACT_DETAILS, contactDetails);
 
     try {
+      // This will remove all extra unnecessary parameter from request
+      Organization org = mapper.convertValue(concurrentHashMap, Organization.class);
+      concurrentHashMap = mapper.convertValue(org, Map.class);
       cassandraOperation.upsertRecord(
           orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), concurrentHashMap);
       Response orgResponse = new Response();

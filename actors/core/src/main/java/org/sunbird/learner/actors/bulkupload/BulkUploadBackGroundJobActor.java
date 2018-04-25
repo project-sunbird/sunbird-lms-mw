@@ -1198,16 +1198,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     }
   }
 
-  private String convertMapToJsonString(List<Map<String, Object>> mapList) {
-    ObjectMapper mapper = new ObjectMapper();
-    try {
-      return mapper.writeValueAsString(mapList);
-    } catch (IOException e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-    return null;
-  }
-
   @SuppressWarnings("unchecked")
   private Map<String, Object> getBulkData(String processId) {
     try {

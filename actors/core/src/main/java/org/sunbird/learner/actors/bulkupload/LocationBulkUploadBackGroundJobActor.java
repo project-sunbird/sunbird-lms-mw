@@ -18,6 +18,7 @@ import org.sunbird.common.models.util.LocationActorOperation;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
 import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -92,6 +93,11 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
     for (Map<String, Object> row : jsonList) {
       processLoc(row, bulkUpload, successList, failureList);
     }
+
+    bulkUpload.setSuccessResult(convertMapToJsonString(successList));
+    bulkUpload.setFailureResult(convertMapToJsonString(failureList));
+    bulkUpload.setStatus(BulkProcessStatus.COMPLETED.getValue());
+    bulkUploadDao.update(bulkUpload);
   }
 
   private void processLoc(

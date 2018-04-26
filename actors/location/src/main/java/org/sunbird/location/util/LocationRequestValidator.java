@@ -116,6 +116,11 @@ public class LocationRequestValidator {
         location.put(GeoLocationJsonKey.PARENT_ID, null);
       }
     }
+    validateParentIDAndCode(location, opType);
+    return true;
+  }
+
+  private static void validateParentIDAndCode(Map<String, Object> location, String opType) {
     String parentCode = (String) location.get(GeoLocationJsonKey.PARENT_CODE);
     String parentId = (String) location.get(GeoLocationJsonKey.PARENT_ID);
     if (StringUtils.isNotEmpty(parentCode)) {
@@ -131,7 +136,6 @@ public class LocationRequestValidator {
       Map<String, Object> parentLocation = getLocationById(parentId, operation);
       validateParentLocationType(parentLocation, location, opType);
     }
-    return true;
   }
 
   /**

@@ -102,8 +102,8 @@ public class LocationRequestValidator {
         if (StringUtils.isNotEmpty((String) location.get(GeoLocationJsonKey.CODE))) {
           isValidLocationCode(location, opType);
         }
-        if (StringUtils.isNotEmpty(GeoLocationJsonKey.PARENT_CODE)
-            || StringUtils.isNotEmpty(GeoLocationJsonKey.PARENT_ID)) {
+        if (StringUtils.isNotEmpty((String) location.get(GeoLocationJsonKey.PARENT_CODE))
+            || StringUtils.isNotEmpty((String) location.get(GeoLocationJsonKey.PARENT_ID))) {
           throw new ProjectCommonException(
               ResponseCode.parentNotAllowed.getErrorCode(),
               ProjectUtil.formatMessage(
@@ -124,9 +124,9 @@ public class LocationRequestValidator {
       location.put(GeoLocationJsonKey.PARENT_ID, map.get(JsonKey.ID));
     }
     if (StringUtils.isNotEmpty(parentId)) {
-      String operation = parentId;
+      String operation = GeoLocationJsonKey.PARENT_ID;
       if (StringUtils.isNotEmpty(parentCode)) {
-        operation = parentCode;
+        operation = GeoLocationJsonKey.PARENT_CODE;
       }
       Map<String, Object> parentLocation = getLocationById(parentId, operation);
       validateParentLocationType(parentLocation, location, opType);
@@ -140,28 +140,16 @@ public class LocationRequestValidator {
    *
    * @param parentLocation
    * @param location
-   * @param opType
    * @return
    */
   private static boolean validateParentLocationType(
       Map<String, Object> parentLocation, Map<String, Object> location, String opType) {
     String parentType = (String) parentLocation.get(GeoLocationJsonKey.LOCATION_TYPE);
     String currentLocType = (String) location.get(GeoLocationJsonKey.LOCATION_TYPE);
-    if (StringUtils.isNotEmpty(currentLocType)) {
-      Map<String, Object> locn = null;
-      if (opType.equalsIgnoreCase(JsonKey.CREATE)) {
-        locn = getLocation((String) location.get(GeoLocationJsonKey.PARENT_CODE));
-      } else if (opType.equalsIgnoreCase(JsonKey.UPDATE)) {
-        locn = getLocationById((String) location.get(JsonKey.ID), JsonKey.LOCATION_ID);
-      }
-
+    Map<String, Object> locn = null;
+    if (opType.equalsIgnoreCase(JsonKey.UPDATE)) {
+      locn = getLocationById((String) location.get(JsonKey.ID), JsonKey.LOCATION_ID);
       currentLocType = (String) locn.get(GeoLocationJsonKey.LOCATION_TYPE);
-    } else {
-      throw new ProjectCommonException(
-          ResponseCode.invalidParameter.getErrorCode(),
-          ProjectUtil.formatMessage(
-              ResponseCode.invalidParameter.getErrorMessage(), GeoLocationJsonKey.PARENT_ID),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     if ((locationTypeOrderMap.get(currentLocType.toLowerCase())
             - locationTypeOrderMap.get(parentType.toLowerCase()))
@@ -169,7 +157,8 @@ public class LocationRequestValidator {
       throw new ProjectCommonException(
           ResponseCode.invalidParameter.getErrorCode(),
           ProjectUtil.formatMessage(
-              ResponseCode.invalidParameter.getErrorMessage(), GeoLocationJsonKey.PARENT_ID),
+              ResponseCode.invalidParameter.getErrorMessage(),
+              (GeoLocationJsonKey.PARENT_ID + " or " + GeoLocationJsonKey.PARENT_CODE)),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     return false;

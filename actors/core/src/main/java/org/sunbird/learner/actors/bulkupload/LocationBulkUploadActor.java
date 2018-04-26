@@ -19,6 +19,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BulkUploadActorOperation;
 import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
@@ -80,7 +81,7 @@ public class LocationBulkUploadActor extends BaseActor {
       fos = new FileOutputStream(file);
       fos.write((byte[]) req.get(JsonKey.FILE));
       csvLines = parseCsvFile(file);
-    } catch (IOException e) {
+    } catch (Exception e) {
       ProjectLogger.log("Exception Occurred while reading file in BulkUploadManagementActor", e);
       throw e;
     } finally {
@@ -111,12 +112,13 @@ public class LocationBulkUploadActor extends BaseActor {
     Response res = bulkUploadDao.create(bulkUploadProcess);
 
     sender().tell(res, self());
-
     if (((String) res.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      // send processId for data processing to background job
       Request request = new Request();
       request.put(JsonKey.PROCESS_ID, processId);
       request.setOperation(BulkUploadActorOperation.LOCATION_BULK_UPLOAD_BACKGROUND_JOB.getValue());
+      ProjectLogger.log(
+          "LocationBulkUploadActor : calling action"
+              + BulkUploadActorOperation.LOCATION_BULK_UPLOAD_BACKGROUND_JOB.getValue());
       tellToAnother(request);
     }
   }
@@ -128,6 +130,7 @@ public class LocationBulkUploadActor extends BaseActor {
       String requestedBy,
       String locationType) {
 
+    ProjectLogger.log("LocationBulkUploadActor : uploadCsvToDB method started", LoggerEnum.INFO);
     List<Map<String, Object>> dataMapList = new ArrayList<>();
     if (csvLines.size() > 1) {
       try {
@@ -145,14 +148,15 @@ public class LocationBulkUploadActor extends BaseActor {
           dataMapList.add(dataMap);
         }
       } catch (Exception e) {
-        ProjectLogger.log(e.getMessage(), e);
+        ProjectLogger.log(
+            "LocationBulkUploadActor : error while uploading csv to db" + e.getMessage(), e);
         throw new ProjectCommonException(
             ResponseCode.csvError.getErrorCode(),
             ResponseCode.csvError.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
     } else {
-      // tell sender that csv file is empty
+      ProjectLogger.log("CSV size error ", LoggerEnum.INFO);
       throw new ProjectCommonException(
           ResponseCode.csvError.getErrorCode(),
           ResponseCode.csvError.getErrorMessage(),
@@ -164,17 +168,30 @@ public class LocationBulkUploadActor extends BaseActor {
     ObjectMapper mapper = new ObjectMapper();
     try {
       map.put(JsonKey.DATA, mapper.writeValueAsString(dataMapList));
-    } catch (IOException e) {
-      ProjectLogger.log(e.getMessage(), e);
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "LocationBulkUploadActor : exception while converting data map list to string "
+              + e.getMessage(),
+          e);
+      throw new ProjectCommonException(
+          ResponseCode.unableToParseData.getErrorCode(),
+          ResponseCode.unableToParseData.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
     BulkUploadProcess bulkUploadProcess = new BulkUploadProcess();
     bulkUploadProcess.setId(processId);
     try {
       bulkUploadProcess.setData(mapper.writeValueAsString(dataMapList));
-    } catch (IOException e) {
-      // throw exception here... unale to parse file
-      ProjectLogger.log(e.getMessage(), e);
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "LocationBulkUploadActor : exception while setting data to bulkUploadProcess Pojo "
+              + e.getMessage(),
+          e);
+      throw new ProjectCommonException(
+          ResponseCode.unableToParseData.getErrorCode(),
+          ResponseCode.unableToParseData.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
     bulkUploadProcess.setId(processId);

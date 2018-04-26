@@ -145,7 +145,9 @@ public class LocationBulkUploadActor extends BaseActor {
           dataMapList.add(dataMap);
         }
       } catch (Exception e) {
-        ProjectLogger.log(e.getMessage(), e);
+
+        ProjectLogger.log(
+            "BulkUploadLocation : error while uploading csv to db" + e.getMessage(), e);
         throw new ProjectCommonException(
             ResponseCode.csvError.getErrorCode(),
             ResponseCode.csvError.getErrorMessage(),
@@ -165,7 +167,14 @@ public class LocationBulkUploadActor extends BaseActor {
     try {
       map.put(JsonKey.DATA, mapper.writeValueAsString(dataMapList));
     } catch (IOException e) {
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log(
+          "LocationBulkUpload : exception while converting data map list to string "
+              + e.getMessage(),
+          e);
+      throw new ProjectCommonException(
+          ResponseCode.unableToParseData.getErrorCode(),
+          ResponseCode.unableToParseData.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
     BulkUploadProcess bulkUploadProcess = new BulkUploadProcess();
@@ -173,8 +182,14 @@ public class LocationBulkUploadActor extends BaseActor {
     try {
       bulkUploadProcess.setData(mapper.writeValueAsString(dataMapList));
     } catch (IOException e) {
-      // throw exception here... unale to parse file
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log(
+          "LocationBulkUpload : exception while setting data to ulkUploadProcess Pojo "
+              + e.getMessage(),
+          e);
+      throw new ProjectCommonException(
+          ResponseCode.unableToParseData.getErrorCode(),
+          ResponseCode.unableToParseData.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
     bulkUploadProcess.setId(processId);

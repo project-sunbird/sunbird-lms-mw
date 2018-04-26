@@ -34,7 +34,7 @@ import org.sunbird.learner.util.Util;
 /** Created by arvind on 24/4/18. */
 @ActorConfig(
   tasks = {},
-  asyncTasks = {"locationBulkUploadBackGround"}
+  asyncTasks = {"locationBulkUploadBackground"}
 )
 public class LocationBulkUploadBackGroundJobActor extends BaseActor {
 
@@ -115,7 +115,10 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
       Object obj =
           interServiceCommunication.getResponse(
               request, LocationActorOperation.SEARCH_LOCATION.getValue());
-      if (obj instanceof ProjectCommonException) {
+      if (null == obj) {
+        ProjectLogger.log("Null receive from interservice communication", LoggerEnum.ERROR);
+        failureList.add(row);
+      } else if (obj instanceof ProjectCommonException) {
         row.put(JsonKey.ERROR_MSG, ((ProjectCommonException) obj).getMessage());
         failureList.add(row);
       } else if (obj instanceof Response) {
@@ -164,7 +167,10 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
         interServiceCommunication.getResponse(
             request, LocationActorOperation.UPDATE_LOCATION.getValue());
 
-    if (obj instanceof ProjectCommonException) {
+    if (null == obj) {
+      ProjectLogger.log("Null receive from interservice communication", LoggerEnum.ERROR);
+      failureList.add(row);
+    } else if (obj instanceof ProjectCommonException) {
       row.put(JsonKey.ERROR_MSG, ((ProjectCommonException) obj).getMessage());
       failureList.add(row);
     } else if (obj instanceof Response) {
@@ -183,7 +189,10 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
         interServiceCommunication.getResponse(
             request, LocationActorOperation.CREATE_LOCATION.getValue());
 
-    if (obj instanceof ProjectCommonException) {
+    if (null == obj) {
+      ProjectLogger.log("Null receive from interservice communication", LoggerEnum.ERROR);
+      failureList.add(row);
+    } else if (obj instanceof ProjectCommonException) {
       row.put(JsonKey.ERROR_MSG, ((ProjectCommonException) obj).getMessage());
       failureList.add(row);
     } else if (obj instanceof Response) {

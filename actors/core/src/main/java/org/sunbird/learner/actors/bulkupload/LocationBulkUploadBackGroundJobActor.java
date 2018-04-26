@@ -164,7 +164,10 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
         interServiceCommunication.getResponse(
             request, LocationActorOperation.UPDATE_LOCATION.getValue());
 
-    if (obj instanceof ProjectCommonException) {
+    if (null == obj) {
+      ProjectLogger.log("Null receive from interservice communication", LoggerEnum.ERROR);
+      failureList.add(row);
+    } else if (obj instanceof ProjectCommonException) {
       row.put(JsonKey.ERROR_MSG, ((ProjectCommonException) obj).getMessage());
       failureList.add(row);
     } else if (obj instanceof Response) {

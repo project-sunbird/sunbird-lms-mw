@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import org.sunbird.actor.core.service.InterServiceCommunication;
 import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.actor.service.BaseMWService;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import scala.concurrent.duration.Duration;
 
@@ -30,11 +31,10 @@ public class InterServiceCommunicationImpl extends BaseMWService
       actor = (ActorRef) select.resolveOne(new Timeout(WAIT_TIME, TimeUnit.SECONDS));
     }
     CompletableFuture<Object> future = ask(actor, request, t).toCompletableFuture();
-
     try {
       obj = future.get(WAIT_TIME + 2, TimeUnit.SECONDS);
     } catch (Exception e) {
-      e.printStackTrace();
+      ProjectLogger.log("Interservice communication error " + e.getMessage(), e);
     }
     return obj;
   }

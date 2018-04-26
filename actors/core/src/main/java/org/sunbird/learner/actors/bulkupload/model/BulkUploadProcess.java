@@ -1,10 +1,13 @@
 package org.sunbird.learner.actors.bulkupload.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import java.io.Serializable;
 
 /** Created by arvind on 24/4/18. */
 @JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(Include.NON_NULL)
 public class BulkUploadProcess implements Serializable {
 
   private static final long serialVersionUID = 1L;

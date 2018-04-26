@@ -34,7 +34,7 @@ import org.sunbird.learner.util.Util;
 /** Created by arvind on 24/4/18. */
 @ActorConfig(
   tasks = {},
-  asyncTasks = {"locationBulkUploadBackGround"}
+  asyncTasks = {"locationBulkUploadBackground"}
 )
 public class LocationBulkUploadBackGroundJobActor extends BaseActor {
 

@@ -80,7 +80,7 @@ public class LocationBulkUploadActor extends BaseActor {
       fos = new FileOutputStream(file);
       fos.write((byte[]) req.get(JsonKey.FILE));
       csvLines = parseCsvFile(file);
-    } catch (IOException e) {
+    } catch (Exception e) {
       ProjectLogger.log("Exception Occurred while reading file in BulkUploadManagementActor", e);
       throw e;
     } finally {
@@ -183,7 +183,7 @@ public class LocationBulkUploadActor extends BaseActor {
       bulkUploadProcess.setData(mapper.writeValueAsString(dataMapList));
     } catch (IOException e) {
       ProjectLogger.log(
-          "LocationBulkUpload : exception while setting data to ulkUploadProcess Pojo "
+          "LocationBulkUpload : exception while setting data to bulkUploadProcess Pojo "
               + e.getMessage(),
           e);
       throw new ProjectCommonException(

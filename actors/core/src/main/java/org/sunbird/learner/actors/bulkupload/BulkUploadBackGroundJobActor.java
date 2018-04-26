@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
@@ -414,9 +413,11 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     String contactDetails = null;
     boolean isOrgUpdated = false;
     // validate location code
+
     if (concurrentHashMap.containsKey(JsonKey.LOCATION_CODE)
-        && !CollectionUtils.isEmpty((List<String>) concurrentHashMap.get(JsonKey.LOCATION_CODE))) {
+        && StringUtils.isNotEmpty((String) concurrentHashMap.get(JsonKey.LOCATION_CODE))) {
       try {
+        convertCommaSepStringToList(concurrentHashMap, JsonKey.LOCATION_CODE);
         List<String> locationIdList =
             Util.validateLocationCode((List<Object>) concurrentHashMap.get(JsonKey.LOCATION_CODE));
         concurrentHashMap.put(JsonKey.LOCATION_IDS, locationIdList);
@@ -1156,10 +1157,10 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     }
   }
 
-  private void convertCommaSepStringToList(Map<String, Object> userMap, String property) {
-    String[] userGrade = ((String) userMap.get(property)).split(",");
-    List<String> list = new ArrayList<>(Arrays.asList(userGrade));
-    userMap.put(property, list);
+  private void convertCommaSepStringToList(Map<String, Object> map, String property) {
+    String[] props = ((String) map.get(property)).split(",");
+    List<String> list = new ArrayList<>(Arrays.asList(props));
+    map.put(property, list);
   }
 
   private void updateUserOrgData(Map<String, Object> userMap, String updatedBy) {

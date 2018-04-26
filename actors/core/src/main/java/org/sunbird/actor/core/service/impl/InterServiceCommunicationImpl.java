@@ -6,10 +6,12 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
 import akka.util.Timeout;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import org.sunbird.actor.core.service.InterServiceCommunication;
 import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.actor.service.BaseMWService;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import scala.concurrent.duration.Duration;
@@ -28,7 +30,21 @@ public class InterServiceCommunicationImpl extends BaseMWService
     Object obj = null;
     if (null == actor) {
       ActorSelection select = getRemoteRouter(RequestRouter.class.getSimpleName());
-      actor = (ActorRef) select.resolveOne(new Timeout(WAIT_TIME, TimeUnit.SECONDS));
+      CompletionStage<ActorRef> futureActor =
+          select.resolveOneCS(Duration.create(WAIT_TIME, "seconds"));
+      try {
+        actor = futureActor.toCompletableFuture().get();
+      } catch (Exception e) {
+        ProjectLogger.log(
+            "InterServiceCommunicationImpl : getResponse - unable to get actorref from actorselection "
+                + e.getMessage(),
+            e);
+      }
+    }
+    if (null == actor) {
+      ProjectLogger.log(
+          "InterServiceCommunicationImpl : getResponse - actorRef is null ", LoggerEnum.INFO);
+      return obj;
     }
     CompletableFuture<Object> future = ask(actor, request, t).toCompletableFuture();
     try {

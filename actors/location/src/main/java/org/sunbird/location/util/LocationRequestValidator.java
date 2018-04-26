@@ -102,8 +102,8 @@ public class LocationRequestValidator {
         if (StringUtils.isNotEmpty((String) location.get(GeoLocationJsonKey.CODE))) {
           isValidLocationCode(location, opType);
         }
-        if (StringUtils.isNotEmpty(GeoLocationJsonKey.PARENT_CODE)
-            || StringUtils.isNotEmpty(GeoLocationJsonKey.PARENT_ID)) {
+        if (StringUtils.isNotEmpty((String) location.get(GeoLocationJsonKey.PARENT_CODE))
+            || StringUtils.isNotEmpty((String) location.get(GeoLocationJsonKey.PARENT_ID))) {
           throw new ProjectCommonException(
               ResponseCode.parentNotAllowed.getErrorCode(),
               ProjectUtil.formatMessage(

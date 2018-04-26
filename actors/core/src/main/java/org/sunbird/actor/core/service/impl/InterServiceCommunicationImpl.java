@@ -9,7 +9,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import org.sunbird.actor.core.service.InterServiceCommunication;
-import org.sunbird.actor.router.BackgroundRequestRouter;
 import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.actor.service.BaseMWService;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -30,7 +29,7 @@ public class InterServiceCommunicationImpl extends BaseMWService
     request.setOperation(operation);
     Object obj = null;
     if (null == actor) {
-      ActorSelection select = getRemoteRouter(BackgroundRequestRouter.class.getSimpleName());
+      ActorSelection select = getRemoteRouter(RequestRouter.class.getSimpleName());
       CompletionStage<ActorRef> futureActor =
           select.resolveOneCS(Duration.create(WAIT_TIME, "seconds"));
       try {

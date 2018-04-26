@@ -160,7 +160,8 @@ public class LocationRequestValidator {
       throw new ProjectCommonException(
           ResponseCode.invalidParameter.getErrorCode(),
           ProjectUtil.formatMessage(
-              ResponseCode.invalidParameter.getErrorMessage(), GeoLocationJsonKey.PARENT_ID),
+              ResponseCode.invalidParameter.getErrorMessage(),
+              (GeoLocationJsonKey.PARENT_ID + "" + GeoLocationJsonKey.PARENT_CODE)),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     if ((locationTypeOrderMap.get(currentLocType.toLowerCase())
@@ -169,7 +170,8 @@ public class LocationRequestValidator {
       throw new ProjectCommonException(
           ResponseCode.invalidParameter.getErrorCode(),
           ProjectUtil.formatMessage(
-              ResponseCode.invalidParameter.getErrorMessage(), GeoLocationJsonKey.PARENT_ID),
+              ResponseCode.invalidParameter.getErrorMessage(),
+              (GeoLocationJsonKey.PARENT_ID + "" + GeoLocationJsonKey.PARENT_CODE)),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     return false;

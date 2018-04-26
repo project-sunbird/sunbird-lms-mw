@@ -83,9 +83,9 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
     List<Map<String, Object>> failureList = new LinkedList<>();
     try {
       jsonList = mapper.readValue(bulkUploadProcess.getData(), mapType);
-    } catch (IOException e) {
+    } catch (Exception e) {
       ProjectLogger.log(
-          "Exception occurred while converting json String to List in BulkUploadBackGroundJobActor : ",
+          "LocationBulkUploadBackGroundJobActor : Exception occurred while converting json String to List:",
           e);
       throw e;
     }
@@ -94,6 +94,9 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
       processLocation(row, successList, failureList);
     }
 
+    ProjectLogger.log(
+        "LocationBulkUploadBackGroundJobActor : processLocationBulkUpoad process finished",
+        LoggerEnum.INFO);
     bulkUploadProcess.setSuccessResult(ProjectUtil.convertMapToJsonString(successList));
     bulkUploadProcess.setFailureResult(ProjectUtil.convertMapToJsonString(failureList));
     bulkUploadProcess.setStatus(BulkProcessStatus.COMPLETED.getValue());
@@ -104,6 +107,9 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
       Map<String, Object> row,
       List<Map<String, Object>> successList,
       List<Map<String, Object>> failureList) {
+
+    ProjectLogger.log(
+        "LocationBulkUploadBackGroundJobActor : processLocation method called", LoggerEnum.INFO);
 
     if (checkMandatoryFields(row, GeoLocationJsonKey.CODE)) {
       Request request = new Request();

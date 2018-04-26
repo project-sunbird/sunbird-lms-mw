@@ -26,9 +26,9 @@ import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.learner.actors.bulkupload.dao.BulkUploadDao;
-import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadDaoImpl;
-import org.sunbird.learner.actors.bulkupload.model.BulkUpload;
+import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessDao;
+import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
+import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.util.Util;
 
 /** Created by arvind on 23/4/18. */
@@ -39,7 +39,7 @@ import org.sunbird.learner.util.Util;
 public class LocationBulkUploadActor extends BaseActor {
 
   private static final String CSV_FILE_EXTENSION = ".csv";
-  BulkUploadDao bulkUploadDao = new BulkUploadDaoImpl();
+  BulkUploadProcessDao bulkUploadDao = new BulkUploadProcessDaoImpl();
   String[] bulkLocationAllowedFields = {
     GeoLocationJsonKey.CODE,
     JsonKey.NAME,
@@ -101,14 +101,14 @@ public class LocationBulkUploadActor extends BaseActor {
     // validation
     validateBulkUploadFields(csvLines.get(0), bulkLocationAllowedFields);
     // save csv file to db
-    BulkUpload bulkUpload =
+    BulkUploadProcess bulkUploadProcess =
         uploadCsvToDB(
             csvLines,
             processId,
             JsonKey.LOCATION,
             (String) req.get(JsonKey.CREATED_BY),
             locationType);
-    Response res = bulkUploadDao.create(bulkUpload);
+    Response res = bulkUploadDao.create(bulkUploadProcess);
 
     sender().tell(res, self());
 
@@ -121,7 +121,7 @@ public class LocationBulkUploadActor extends BaseActor {
     }
   }
 
-  private BulkUpload uploadCsvToDB(
+  private BulkUploadProcess uploadCsvToDB(
       List<String[]> csvLines,
       String processId,
       String objectType,
@@ -168,22 +168,22 @@ public class LocationBulkUploadActor extends BaseActor {
       ProjectLogger.log(e.getMessage(), e);
     }
 
-    BulkUpload bulkUpload = new BulkUpload();
-    bulkUpload.setId(processId);
+    BulkUploadProcess bulkUploadProcess = new BulkUploadProcess();
+    bulkUploadProcess.setId(processId);
     try {
-      bulkUpload.setData(mapper.writeValueAsString(dataMapList));
+      bulkUploadProcess.setData(mapper.writeValueAsString(dataMapList));
     } catch (IOException e) {
       // throw exception here... unale to parse file
       ProjectLogger.log(e.getMessage(), e);
     }
 
-    bulkUpload.setId(processId);
-    bulkUpload.setObjectType(objectType);
-    bulkUpload.setUploadedBy(requestedBy);
-    bulkUpload.setUploadedDate(ProjectUtil.getFormattedDate());
-    bulkUpload.setProcessStartTime(ProjectUtil.getFormattedDate());
-    bulkUpload.setStatus(ProjectUtil.BulkProcessStatus.NEW.getValue());
-    return bulkUpload;
+    bulkUploadProcess.setId(processId);
+    bulkUploadProcess.setObjectType(objectType);
+    bulkUploadProcess.setUploadedBy(requestedBy);
+    bulkUploadProcess.setUploadedDate(ProjectUtil.getFormattedDate());
+    bulkUploadProcess.setProcessStartTime(ProjectUtil.getFormattedDate());
+    bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.NEW.getValue());
+    return bulkUploadProcess;
   }
 
   private void validateBulkUploadSize(List<String[]> csvLines) {

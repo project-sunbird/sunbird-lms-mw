@@ -1,9 +1,11 @@
 package org.sunbird.learner.actors.bulkupload.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.Serializable;
 
 /** Created by arvind on 24/4/18. */
-public class BulkUpload implements Serializable {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class BulkUploadProcess implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
@@ -114,24 +116,5 @@ public class BulkUpload implements Serializable {
 
   public void setProcessStartTime(String processStartTime) {
     this.processStartTime = processStartTime;
-  }
-
-  public static class Builder {
-
-    private String id;
-    private String data;
-    private String failureResult;
-    private String objectType;
-    private String organisationId;
-    private String processEndTime;
-    private String processStartTime;
-    private Integer retryCount;
-    private Integer status;
-    private String successResult;
-    private String uploadedBy;
-    private String uploadedDate;
-
-    // public Builder sugar(double cup){this.sugar = cup; return this; }
-
   }
 }

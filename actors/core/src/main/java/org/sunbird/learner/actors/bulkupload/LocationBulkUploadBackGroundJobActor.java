@@ -26,9 +26,9 @@ import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.learner.actors.bulkupload.dao.BulkUploadDao;
-import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadDaoImpl;
-import org.sunbird.learner.actors.bulkupload.model.BulkUpload;
+import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessDao;
+import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
+import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.util.Util;
 
 /** Created by arvind on 24/4/18. */
@@ -38,7 +38,7 @@ import org.sunbird.learner.util.Util;
 )
 public class LocationBulkUploadBackGroundJobActor extends BaseActor {
 
-  BulkUploadDao bulkUploadDao = new BulkUploadDaoImpl();
+  BulkUploadProcessDao bulkUploadDao = new BulkUploadProcessDaoImpl();
   ObjectMapper mapper = new ObjectMapper();
   InterServiceCommunication interServiceCommunication =
       InterServiceCommunicationFactory.getInstance().getCommunicationPath("actorCommunication");
@@ -62,19 +62,19 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
   private void bulkLocationUpload(Request request) throws IOException {
 
     String processId = (String) request.get(JsonKey.PROCESS_ID);
-    BulkUpload bulkUpload = bulkUploadDao.read(processId);
-    if (null == bulkUpload) {
+    BulkUploadProcess bulkUploadProcess = bulkUploadDao.read(processId);
+    if (null == bulkUploadProcess) {
       ProjectLogger.log("Process Id does not exist : " + processId, LoggerEnum.ERROR);
       return;
     }
-    Integer status = bulkUpload.getStatus();
+    Integer status = bulkUploadProcess.getStatus();
     if (!(status == (ProjectUtil.BulkProcessStatus.COMPLETED.getValue())
         || status == (ProjectUtil.BulkProcessStatus.INTERRUPT.getValue()))) {
-      processLocationBulkUpoad(bulkUpload);
+      processLocationBulkUpoad(bulkUploadProcess);
     }
   }
 
-  private void processLocationBulkUpoad(BulkUpload bulkUpload) throws IOException {
+  private void processLocationBulkUpoad(BulkUploadProcess bulkUploadProcess) throws IOException {
 
     TypeReference<List<Map<String, Object>>> mapType =
         new TypeReference<List<Map<String, Object>>>() {};
@@ -82,7 +82,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
     List<Map<String, Object>> successList = new LinkedList<>();
     List<Map<String, Object>> failureList = new LinkedList<>();
     try {
-      jsonList = mapper.readValue(bulkUpload.getData(), mapType);
+      jsonList = mapper.readValue(bulkUploadProcess.getData(), mapType);
     } catch (IOException e) {
       ProjectLogger.log(
           "Exception occurred while converting json String to List in BulkUploadBackGroundJobActor : ",
@@ -94,10 +94,10 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
       processLocation(row, successList, failureList);
     }
 
-    bulkUpload.setSuccessResult(ProjectUtil.convertMapToJsonString(successList));
-    bulkUpload.setFailureResult(ProjectUtil.convertMapToJsonString(failureList));
-    bulkUpload.setStatus(BulkProcessStatus.COMPLETED.getValue());
-    bulkUploadDao.update(bulkUpload);
+    bulkUploadProcess.setSuccessResult(ProjectUtil.convertMapToJsonString(successList));
+    bulkUploadProcess.setFailureResult(ProjectUtil.convertMapToJsonString(failureList));
+    bulkUploadProcess.setStatus(BulkProcessStatus.COMPLETED.getValue());
+    bulkUploadDao.update(bulkUploadProcess);
   }
 
   private void processLocation(

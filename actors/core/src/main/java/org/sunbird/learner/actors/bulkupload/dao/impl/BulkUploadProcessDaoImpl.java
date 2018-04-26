@@ -1,6 +1,5 @@
 package org.sunbird.learner.actors.bulkupload.dao.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.List;
@@ -8,15 +7,14 @@ import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.bulkupload.dao.BulkUploadDao;
-import org.sunbird.learner.actors.bulkupload.model.BulkUpload;
+import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessDao;
+import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 
 /** Created by arvind on 24/4/18. */
-public class BulkUploadDaoImpl implements BulkUploadDao {
+public class BulkUploadProcessDaoImpl implements BulkUploadProcessDao {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
@@ -24,8 +22,8 @@ public class BulkUploadDaoImpl implements BulkUploadDao {
   private static final String TABLE_NAME = "bulk_upload_process";
 
   @Override
-  public Response create(BulkUpload bulkUpload) {
-    Map<String, Object> map = mapper.convertValue(bulkUpload, Map.class);
+  public Response create(BulkUploadProcess bulkUploadProcess) {
+    Map<String, Object> map = mapper.convertValue(bulkUploadProcess, Map.class);
     Response response = cassandraOperation.insertRecord(KEYSPACE_NAME, TABLE_NAME, map);
     // need to send ID along with success msg
     response.put(JsonKey.ID, map.get(JsonKey.ID));
@@ -33,13 +31,13 @@ public class BulkUploadDaoImpl implements BulkUploadDao {
   }
 
   @Override
-  public Response update(BulkUpload bulkUpload) {
-    Map<String, Object> map = mapper.convertValue(bulkUpload, Map.class);
+  public Response update(BulkUploadProcess bulkUploadProcess) {
+    Map<String, Object> map = mapper.convertValue(bulkUploadProcess, Map.class);
     return cassandraOperation.updateRecord(KEYSPACE_NAME, TABLE_NAME, map);
   }
 
   @Override
-  public BulkUpload read(String id) {
+  public BulkUploadProcess read(String id) {
     Response response = cassandraOperation.getRecordById(KEYSPACE_NAME, TABLE_NAME, id);
     List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (CollectionUtils.isEmpty(list)) {
@@ -47,21 +45,10 @@ public class BulkUploadDaoImpl implements BulkUploadDao {
     }
     try {
       String jsonString = mapper.writeValueAsString((Map<String, Object>) list.get(0));
-      return mapper.readValue(jsonString, BulkUpload.class);
-    } catch (JsonProcessingException e) {
-      ProjectLogger.log(e.getMessage(), e);
+      return mapper.readValue(jsonString, BulkUploadProcess.class);
     } catch (IOException e) {
       ProjectLogger.log(e.getMessage(), e);
     }
     return null;
-  }
-
-  @Override
-  public Response getRecordByProperty(Map<String, Object> queryMap) {
-    return cassandraOperation.getRecordsByProperty(
-        KEYSPACE_NAME,
-        TABLE_NAME,
-        (String) queryMap.get(GeoLocationJsonKey.PROPERTY_NAME),
-        queryMap.get(GeoLocationJsonKey.PROPERTY_VALUE));
   }
 }

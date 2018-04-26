@@ -115,8 +115,11 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
       Object obj =
           interServiceCommunication.getResponse(
               request, LocationActorOperation.SEARCH_LOCATION.getValue());
-      if (obj instanceof ProjectCommonException) {
-        row.put(JsonKey.ERROR_MSG, "InterService Communication error.");
+      if (null == obj) {
+        ProjectLogger.log("Null receive from interservice communication", LoggerEnum.ERROR);
+        failureList.add(row);
+      } else if (obj instanceof ProjectCommonException) {
+        row.put(JsonKey.ERROR_MSG, ((ProjectCommonException) obj).getMessage());
         failureList.add(row);
       } else if (obj instanceof Response) {
         Response response = (Response) obj;
@@ -186,7 +189,10 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
         interServiceCommunication.getResponse(
             request, LocationActorOperation.CREATE_LOCATION.getValue());
 
-    if (obj instanceof ProjectCommonException) {
+    if (null == obj) {
+      ProjectLogger.log("Null receive from interservice communication", LoggerEnum.ERROR);
+      failureList.add(row);
+    } else if (obj instanceof ProjectCommonException) {
       row.put(JsonKey.ERROR_MSG, ((ProjectCommonException) obj).getMessage());
       failureList.add(row);
     } else if (obj instanceof Response) {

@@ -129,7 +129,7 @@ public class LocationRequestValidator {
         operation = GeoLocationJsonKey.PARENT_CODE;
       }
       Map<String, Object> parentLocation = getLocationById(parentId, operation);
-      validateParentLocationType(parentLocation, location);
+      validateParentLocationType(parentLocation, location, opType);
     }
     return true;
   }
@@ -143,9 +143,14 @@ public class LocationRequestValidator {
    * @return
    */
   private static boolean validateParentLocationType(
-      Map<String, Object> parentLocation, Map<String, Object> location) {
+      Map<String, Object> parentLocation, Map<String, Object> location, String opType) {
     String parentType = (String) parentLocation.get(GeoLocationJsonKey.LOCATION_TYPE);
     String currentLocType = (String) location.get(GeoLocationJsonKey.LOCATION_TYPE);
+    Map<String, Object> locn = null;
+    if (opType.equalsIgnoreCase(JsonKey.UPDATE)) {
+      locn = getLocationById((String) location.get(JsonKey.ID), JsonKey.LOCATION_ID);
+      currentLocType = (String) locn.get(GeoLocationJsonKey.LOCATION_TYPE);
+    }
     if ((locationTypeOrderMap.get(currentLocType.toLowerCase())
             - locationTypeOrderMap.get(parentType.toLowerCase()))
         != 1) {

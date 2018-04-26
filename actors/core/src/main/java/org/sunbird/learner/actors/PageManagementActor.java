@@ -17,6 +17,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.ExecutionContext;
@@ -124,6 +125,7 @@ public class PageManagementActor extends BaseActor {
   }
 
   private void updatePageSection(Request actorMessage) {
+    ProjectLogger.log("Inside updatePageSection method", LoggerEnum.INFO);
     Map<String, Object> req = actorMessage.getRequest();
     // object of telemetry event...
     Map<String, Object> targetObject = new HashMap<>();
@@ -136,7 +138,7 @@ public class PageManagementActor extends BaseActor {
         sectionMap.put(
             JsonKey.SEARCH_QUERY, mapper.writeValueAsString(sectionMap.get(JsonKey.SEARCH_QUERY)));
       } catch (IOException e) {
-        ProjectLogger.log(e.getMessage(), e);
+        ProjectLogger.log("Exception occured while processing search query " + e.getMessage(), e);
       }
     }
     if (null != sectionMap.get(JsonKey.SECTION_DISPLAY)) {
@@ -146,10 +148,11 @@ public class PageManagementActor extends BaseActor {
             JsonKey.SECTION_DISPLAY,
             mapper.writeValueAsString(sectionMap.get(JsonKey.SECTION_DISPLAY)));
       } catch (IOException e) {
-        ProjectLogger.log(e.getMessage(), e);
+        ProjectLogger.log("Exception occured while processing display " + e.getMessage(), e);
       }
     }
     sectionMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+    ProjectLogger.log("update section details", LoggerEnum.INFO);
     Response response =
         cassandraOperation.updateRecord(
             sectionDbInfo.getKeySpace(), sectionDbInfo.getTableName(), sectionMap);
@@ -160,10 +163,12 @@ public class PageManagementActor extends BaseActor {
     TelemetryUtil.telemetryProcessingCall(
         actorMessage.getRequest(), targetObject, correlatedObject);
     // update DataCacheHandler section map with updated page section data
+    ProjectLogger.log("Calling  updateSectionDataCache method", LoggerEnum.INFO);
     updateSectionDataCache(response, sectionMap);
   }
 
   private void createPageSection(Request actorMessage) {
+    ProjectLogger.log("Inside createPageSection method", LoggerEnum.INFO);
     Map<String, Object> req = actorMessage.getRequest();
     @SuppressWarnings("unchecked")
     Map<String, Object> sectionMap = (Map<String, Object>) req.get(JsonKey.SECTION);
@@ -177,7 +182,7 @@ public class PageManagementActor extends BaseActor {
         sectionMap.put(
             JsonKey.SEARCH_QUERY, mapper.writeValueAsString(sectionMap.get(JsonKey.SEARCH_QUERY)));
       } catch (IOException e) {
-        ProjectLogger.log(e.getMessage(), e);
+        ProjectLogger.log("Exception occured while processing search Query " + e.getMessage(), e);
       }
     }
     if (null != sectionMap.get(JsonKey.SECTION_DISPLAY)) {
@@ -185,7 +190,9 @@ public class PageManagementActor extends BaseActor {
       try {
         sectionMap.put(
             JsonKey.SECTION_DISPLAY,
-            mapper.writeValueAsString(sectionMap.get(JsonKey.SECTION_DISPLAY)));
+            mapper.writeValueAsString(
+                "Exception occured while processing search Query "
+                    + sectionMap.get(JsonKey.SECTION_DISPLAY)));
       } catch (IOException e) {
         ProjectLogger.log(e.getMessage(), e);
       }
@@ -203,6 +210,7 @@ public class PageManagementActor extends BaseActor {
     TelemetryUtil.telemetryProcessingCall(
         actorMessage.getRequest(), targetObject, correlatedObject);
     // update DataCacheHandler section map with new page section data
+    ProjectLogger.log("Calling  updateSectionDataCache method", LoggerEnum.INFO);
     updateSectionDataCache(response, sectionMap);
   }
 
@@ -219,6 +227,7 @@ public class PageManagementActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private void getPageData(Request actorMessage) {
+    ProjectLogger.log("Inside getPageData method", LoggerEnum.INFO);
     String sectionQuery = null;
     List<Map<String, Object>> sectionList = new ArrayList<>();
     Map<String, Object> filterMap = new HashMap<>();
@@ -245,7 +254,7 @@ public class PageManagementActor extends BaseActor {
         result = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
       }
     } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log("Exception occured while validating org id " + e.getMessage(), e);
     }
 
     Map<String, Object> map = null;
@@ -253,7 +262,7 @@ public class PageManagementActor extends BaseActor {
     if (null == result || result.isEmpty()) {
       orgId = "NA";
     }
-
+    ProjectLogger.log("Fetching data from Cache for " + orgId + ":" + pageName, LoggerEnum.INFO);
     Map<String, Object> pageMap = DataCacheHandler.getPageMap().get(orgId + ":" + pageName);
     if (null == pageMap) {
       throw new ProjectCommonException(
@@ -279,8 +288,7 @@ public class PageManagementActor extends BaseActor {
       for (Object obj : arr) {
         Map<String, Object> sectionMap = (Map<String, Object>) obj;
         Map<String, Object> sectionData =
-            new HashMap<>(
-                DataCacheHandler.getSectionMap().get((String) sectionMap.get(JsonKey.ID)));
+            new HashMap<>(DataCacheHandler.getSectionMap().get(sectionMap.get(JsonKey.ID)));
         getContentData(sectionData, reqFilters, headers, filterMap);
         sectionData.put(JsonKey.GROUP, sectionMap.get(JsonKey.GROUP));
         sectionData.put(JsonKey.INDEX, sectionMap.get(JsonKey.INDEX));
@@ -335,6 +343,7 @@ public class PageManagementActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private void updatePage(Request actorMessage) {
+    ProjectLogger.log("Inside updatePage method", LoggerEnum.INFO);
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> pageMap = (Map<String, Object>) req.get(JsonKey.PAGE);
     // object of telemetry event...
@@ -354,7 +363,7 @@ public class PageManagementActor extends BaseActor {
               pageDbInfo.getKeySpace(), pageDbInfo.getTableName(), map);
       if (!((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).isEmpty()) {
         Map<String, Object> page = ((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).get(0);
-        if (!(((String) page.get(JsonKey.ID)).equals((String) pageMap.get(JsonKey.ID)))) {
+        if (!(((String) page.get(JsonKey.ID)).equals(pageMap.get(JsonKey.ID)))) {
           ProjectCommonException exception =
               new ProjectCommonException(
                   ResponseCode.pageAlreadyExist.getErrorCode(),
@@ -371,7 +380,7 @@ public class PageManagementActor extends BaseActor {
       try {
         pageMap.put(JsonKey.PORTAL_MAP, mapper.writeValueAsString(pageMap.get(JsonKey.PORTAL_MAP)));
       } catch (IOException e) {
-        ProjectLogger.log(e.getMessage(), e);
+        ProjectLogger.log("Exception occured while updating portal map data " + e.getMessage(), e);
       }
     }
     if (null != pageMap.get(JsonKey.APP_MAP)) {
@@ -379,7 +388,7 @@ public class PageManagementActor extends BaseActor {
       try {
         pageMap.put(JsonKey.APP_MAP, mapper.writeValueAsString(pageMap.get(JsonKey.APP_MAP)));
       } catch (IOException e) {
-        ProjectLogger.log(e.getMessage(), e);
+        ProjectLogger.log("Exception occured while updating app map data " + e.getMessage(), e);
       }
     }
     Response response =
@@ -393,6 +402,8 @@ public class PageManagementActor extends BaseActor {
     TelemetryUtil.telemetryProcessingCall(
         actorMessage.getRequest(), targetObject, correlatedObject);
     // update DataCacheHandler page map with updated page data
+    ProjectLogger.log(
+        "Calling updatePageDataCacheHandler while updating page data ", LoggerEnum.INFO);
     updatePageDataCacheHandler(response, pageMap);
   }
 
@@ -499,7 +510,8 @@ public class PageManagementActor extends BaseActor {
         (Map<String, Object>) ((Map<String, Object>) map.get(JsonKey.REQUEST)).get(JsonKey.FILTERS);
     ProjectLogger.log(
         "default search query for ekstep for page data assemble api : "
-            + (String) section.get(JsonKey.SEARCH_QUERY));
+            + (String) section.get(JsonKey.SEARCH_QUERY),
+        LoggerEnum.INFO);
     applyFilters(filters, reqFilters);
     String query = "";
 
@@ -512,13 +524,17 @@ public class PageManagementActor extends BaseActor {
       query = (String) section.get(JsonKey.SEARCH_QUERY);
     }
     ProjectLogger.log(
-        "search query after applying filter for ekstep for page data assemble api : " + query);
+        "search query after applying filter for ekstep for page data assemble api : " + query,
+        LoggerEnum.INFO);
     Map<String, Object> result = EkStepRequestUtil.searchContent(query, headers);
     if (null != result && !result.isEmpty()) {
       section.put(JsonKey.CONTENTS, result.get(JsonKey.CONTENTS));
       Map<String, Object> tempMap = (Map<String, Object>) result.get(JsonKey.PARAMS);
       section.put(JsonKey.RES_MSG_ID, tempMap.get(JsonKey.RES_MSG_ID));
       section.put(JsonKey.API_ID, tempMap.get(JsonKey.API_ID));
+    } else {
+      ProjectLogger.log(
+          "Search query result from ekstep is null or empty for query " + query, LoggerEnum.INFO);
     }
   }
 
@@ -545,8 +561,8 @@ public class PageManagementActor extends BaseActor {
             } else if (filters.get(key) instanceof Map) {
               filters.put(key, obj);
             } else {
-              if (!(((List<Object>) obj).contains((String) filters.get(key)))) {
-                ((List<Object>) obj).add((String) filters.get(key));
+              if (!(((List<Object>) obj).contains(filters.get(key)))) {
+                ((List<Object>) obj).add(filters.get(key));
               }
               filters.put(key, obj);
             }
@@ -580,10 +596,10 @@ public class PageManagementActor extends BaseActor {
     responseMap.put(JsonKey.ID, pageDO.get(JsonKey.ID));
 
     if (pageDO.containsKey(JsonKey.APP_MAP) && null != pageDO.get(JsonKey.APP_MAP)) {
-      responseMap.put(JsonKey.APP_SECTIONS, parsePage(pageDO, (String) JsonKey.APP_MAP));
+      responseMap.put(JsonKey.APP_SECTIONS, parsePage(pageDO, JsonKey.APP_MAP));
     }
     if (pageDO.containsKey(JsonKey.PORTAL_MAP) && null != pageDO.get(JsonKey.PORTAL_MAP)) {
-      responseMap.put(JsonKey.PORTAL_SECTIONS, parsePage(pageDO, (String) JsonKey.PORTAL_MAP));
+      responseMap.put(JsonKey.PORTAL_SECTIONS, parsePage(pageDO, JsonKey.PORTAL_MAP));
     }
     return responseMap;
   }

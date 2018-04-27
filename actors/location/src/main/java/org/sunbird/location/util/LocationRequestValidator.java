@@ -84,8 +84,8 @@ public class LocationRequestValidator {
           ResponseCode.invalidValue.getErrorCode(),
           ProjectUtil.formatMessage(
               ResponseCode.invalidValue.getErrorMessage(),
-              type,
               GeoLocationJsonKey.LOCATION_TYPE,
+              type,
               typeList),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }

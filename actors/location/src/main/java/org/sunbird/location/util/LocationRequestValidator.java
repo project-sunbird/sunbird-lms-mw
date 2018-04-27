@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -28,16 +29,30 @@ public class LocationRequestValidator {
   private LocationRequestValidator() {}
 
   private static LocationDao locationDao = new LocationDaoImpl();
-  protected static List<String> locationTypeList = null;
-  protected static Map<String, Integer> locationTypeOrderMap = null;
+  protected static List<List<String>> locationTypeGroupList = new ArrayList<>();
+  protected static List<String> typeList = new ArrayList<>();
 
   static {
-    locationTypeList =
+    List<String> subTypeList =
         Arrays.asList(
-            ProjectUtil.getConfigValue(GeoLocationJsonKey.SUNBIRD_VALID_LOCATION_TYPES).split(","));
-    locationTypeOrderMap = new LinkedHashMap<>();
-    for (int i = 0; i < locationTypeList.size(); i++) {
-      locationTypeOrderMap.put(locationTypeList.get(i), i);
+            ProjectUtil.getConfigValue(GeoLocationJsonKey.SUNBIRD_VALID_LOCATION_TYPES).split(";"));
+    for (String str : subTypeList) {
+      typeList.addAll(
+          ((Arrays.asList(str.split(",")))
+                  .stream()
+                  .map(
+                      x -> {
+                        return x.toLowerCase();
+                      }))
+              .collect(Collectors.toList()));
+      locationTypeGroupList.add(
+          ((Arrays.asList(str.split(",")))
+                  .stream()
+                  .map(
+                      x -> {
+                        return x.toLowerCase();
+                      }))
+              .collect(Collectors.toList()));
     }
   }
 
@@ -64,14 +79,14 @@ public class LocationRequestValidator {
    * @return
    */
   public static boolean isValidLocationType(String type) {
-    if (null != type && !locationTypeList.contains(type.toLowerCase())) {
+    if (null != type && !typeList.contains(type.toLowerCase())) {
       throw new ProjectCommonException(
           ResponseCode.invalidValue.getErrorCode(),
           ProjectUtil.formatMessage(
               ResponseCode.invalidValue.getErrorMessage(),
               type,
               GeoLocationJsonKey.LOCATION_TYPE,
-              locationTypeList),
+              typeList),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     return true;
@@ -87,6 +102,7 @@ public class LocationRequestValidator {
   public static boolean isValidParentIdAndCode(Map<String, Object> location, String opType) {
     String type = (String) location.get(GeoLocationJsonKey.LOCATION_TYPE);
     if (StringUtils.isNotEmpty(type)) {
+      List<String> locationTypeList = getLocationSubTypeListForType(type);
       // if type is of top level then no need to validate parentCode and parentId
       if (!locationTypeList.get(0).equalsIgnoreCase(type.toLowerCase())) {
         // while creating new location, if locationType is not top level then type and parent id is
@@ -94,14 +110,13 @@ public class LocationRequestValidator {
         if ((StringUtils.isEmpty((String) location.get(GeoLocationJsonKey.PARENT_CODE))
             && StringUtils.isEmpty((String) location.get(GeoLocationJsonKey.PARENT_ID)))) {
           throw new ProjectCommonException(
-              ResponseCode.parentCodeAndIdValidationError.getErrorCode(),
-              ResponseCode.parentCodeAndIdValidationError.getErrorMessage(),
+              ResponseCode.mandatoryParamsMissing.getErrorCode(),
+              ProjectUtil.formatMessage(
+                  ResponseCode.mandatoryParamsMissing.getErrorMessage(),
+                  (GeoLocationJsonKey.PARENT_ID + " or " + GeoLocationJsonKey.PARENT_CODE)),
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
       } else if (locationTypeList.get(0).equalsIgnoreCase(type.toLowerCase())) {
-        if (StringUtils.isNotEmpty((String) location.get(GeoLocationJsonKey.CODE))) {
-          isValidLocationCode(location, opType);
-        }
         if (StringUtils.isNotEmpty((String) location.get(GeoLocationJsonKey.PARENT_CODE))
             || StringUtils.isNotEmpty((String) location.get(GeoLocationJsonKey.PARENT_ID))) {
           throw new ProjectCommonException(
@@ -116,11 +131,23 @@ public class LocationRequestValidator {
         location.put(GeoLocationJsonKey.PARENT_ID, null);
       }
     }
-    validateParentIDAndCode(location, opType);
+    if (StringUtils.isNotEmpty((String) location.get(GeoLocationJsonKey.CODE))) {
+      isValidLocationCode(location, opType);
+    }
+    validateParentIDAndParentCode(location, opType);
     return true;
   }
 
-  private static void validateParentIDAndCode(Map<String, Object> location, String opType) {
+  private static List<String> getLocationSubTypeListForType(String type) {
+    for (List<String> subList : locationTypeGroupList) {
+      if (subList.contains(type.toLowerCase())) {
+        return subList;
+      }
+    }
+    return (new ArrayList<>());
+  }
+
+  private static void validateParentIDAndParentCode(Map<String, Object> location, String opType) {
     String parentCode = (String) location.get(GeoLocationJsonKey.PARENT_CODE);
     String parentId = (String) location.get(GeoLocationJsonKey.PARENT_ID);
     if (StringUtils.isNotEmpty(parentCode)) {
@@ -155,8 +182,12 @@ public class LocationRequestValidator {
       locn = getLocationById((String) location.get(JsonKey.ID), JsonKey.LOCATION_ID);
       currentLocType = (String) locn.get(GeoLocationJsonKey.LOCATION_TYPE);
     }
-    if ((locationTypeOrderMap.get(currentLocType.toLowerCase())
-            - locationTypeOrderMap.get(parentType.toLowerCase()))
+    Map<String, Integer> currentLocTypeoOrdermap =
+        getLocationTypeOrderMap(currentLocType.toLowerCase());
+    Map<String, Integer> parentLocTypeoOrdermap =
+        getLocationTypeOrderMap(currentLocType.toLowerCase());
+    if ((currentLocTypeoOrdermap.get(currentLocType.toLowerCase())
+            - parentLocTypeoOrdermap.get(parentType.toLowerCase()))
         != 1) {
       throw new ProjectCommonException(
           ResponseCode.invalidParameter.getErrorCode(),
@@ -166,6 +197,15 @@ public class LocationRequestValidator {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     return false;
+  }
+
+  private static Map<String, Integer> getLocationTypeOrderMap(String type) {
+    List<String> list = getLocationSubTypeListForType(type);
+    Map<String, Integer> locTypeOrderMap = new LinkedHashMap<>();
+    for (int i = 0; i < list.size(); i++) {
+      locTypeOrderMap.put(list.get(i), i);
+    }
+    return locTypeOrderMap;
   }
 
   /**
@@ -225,10 +265,13 @@ public class LocationRequestValidator {
    */
   public static boolean isLocationHasChild(String locationId) {
     Map<String, Object> location = getLocationById(locationId, JsonKey.LOCATION_ID);
-    List<Integer> list = new ArrayList<>(locationTypeOrderMap.values());
+    Map<String, Integer> locTypeoOrdermap =
+        getLocationTypeOrderMap(
+            ((String) location.get(GeoLocationJsonKey.LOCATION_TYPE)).toLowerCase());
+    List<Integer> list = new ArrayList<>(locTypeoOrdermap.values());
     list.sort(Comparator.reverseOrder());
     int order =
-        locationTypeOrderMap.get(
+        locTypeoOrdermap.get(
             ((String) location.get(GeoLocationJsonKey.LOCATION_TYPE)).toLowerCase());
     // location type with last order can be deleted without validation
     if (order != list.get(0)) {

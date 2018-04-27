@@ -169,6 +169,13 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
 
     Request request = new Request();
     request.getRequest().putAll(row);
+    ProjectLogger.log(
+        "callUpdateLocation - "
+            + (request instanceof Request)
+            + "Operation -"
+            + LocationActorOperation.UPDATE_LOCATION.getValue(),
+        LoggerEnum.INFO);
+
     Object obj =
         interServiceCommunication.getResponse(
             request, LocationActorOperation.UPDATE_LOCATION.getValue());
@@ -177,6 +184,10 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
       ProjectLogger.log("Null receive from interservice communication", LoggerEnum.ERROR);
       failureList.add(row);
     } else if (obj instanceof ProjectCommonException) {
+      ProjectLogger.log(
+          "callUpdateLocation - got exception from UpdateLocationService "
+              + ((ProjectCommonException) obj).getMessage(),
+          LoggerEnum.INFO);
       row.put(JsonKey.ERROR_MSG, ((ProjectCommonException) obj).getMessage());
       failureList.add(row);
     } else if (obj instanceof Response) {
@@ -191,6 +202,12 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
 
     Request request = new Request();
     request.getRequest().putAll(row);
+    ProjectLogger.log(
+        "callCreateLocation - "
+            + (request instanceof Request)
+            + "Operation -"
+            + LocationActorOperation.CREATE_LOCATION.getValue(),
+        LoggerEnum.INFO);
     Object obj =
         interServiceCommunication.getResponse(
             request, LocationActorOperation.CREATE_LOCATION.getValue());
@@ -199,6 +216,10 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
       ProjectLogger.log("Null receive from interservice communication", LoggerEnum.ERROR);
       failureList.add(row);
     } else if (obj instanceof ProjectCommonException) {
+      ProjectLogger.log(
+          "callCreateLocation - got exception from CreateLocationService "
+              + ((ProjectCommonException) obj).getMessage(),
+          LoggerEnum.INFO);
       row.put(JsonKey.ERROR_MSG, ((ProjectCommonException) obj).getMessage());
       failureList.add(row);
     } else if (obj instanceof Response) {

@@ -46,6 +46,8 @@ public class InterServiceCommunicationImpl extends BaseMWService
           "InterServiceCommunicationImpl : getResponse - actorRef is null ", LoggerEnum.INFO);
       return obj;
     }
+    ProjectLogger.log(
+        "Operation " + operation + " with request type " + (request instanceof Request));
     CompletableFuture<Object> future = ask(actor, request, t).toCompletableFuture();
     try {
       obj = future.get(WAIT_TIME + 2, TimeUnit.SECONDS);

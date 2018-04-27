@@ -22,7 +22,6 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -98,8 +97,7 @@ public class LocationBulkUploadActor extends BaseActor {
       }
     }
 
-    // validateBulkUploadSize(csvLines); // TODO : have move to controller side with file size
-    // validation
+    validateBulkUploadSize(csvLines);
     validateBulkUploadFields(csvLines.get(0), bulkLocationAllowedFields);
     // save csv file to db
     BulkUploadProcess bulkUploadProcess =
@@ -205,26 +203,17 @@ public class LocationBulkUploadActor extends BaseActor {
 
   private void validateBulkUploadSize(List<String[]> csvLines) {
 
-    int allowedNoOfLines = 0;
     if (null != csvLines) {
-      if (null != PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_ORG_DATA_SIZE)) {
-        allowedNoOfLines =
-            (Integer.parseInt(
-                PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_ORG_DATA_SIZE)));
-        ProjectLogger.log(
-            "bulk location upload data size read from config file " + allowedNoOfLines);
-      }
-      if (csvLines.size() < 2 || csvLines.size() > allowedNoOfLines) {
+      if (csvLines.size() < 2) {
         throw new ProjectCommonException(
-            ResponseCode.dataSizeError.getErrorCode(),
-            ProjectUtil.formatMessage(
-                ResponseCode.dataSizeError.getErrorMessage(), allowedNoOfLines),
+            ResponseCode.emptyFile.getErrorCode(),
+            ResponseCode.emptyFile.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
     } else {
       throw new ProjectCommonException(
-          ResponseCode.dataSizeError.getErrorCode(),
-          ProjectUtil.formatMessage(ResponseCode.dataSizeError.getErrorMessage(), allowedNoOfLines),
+          ResponseCode.emptyFile.getErrorCode(),
+          ResponseCode.emptyFile.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
   }
@@ -236,9 +225,10 @@ public class LocationBulkUploadActor extends BaseActor {
         || ArrayUtils.isEmpty(bulkLocationAllowedFields)
         || !ArrayUtils.isSameLength(csvHeaderLine, bulkLocationAllowedFields)) {
       throw new ProjectCommonException(
-          ResponseCode.InvalidColumnError.getErrorCode(),
-          ResponseCode.InvalidColumnError.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
+          ResponseCode.invalidColumns.getErrorCode(),
+          ResponseCode.invalidColumns.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode(),
+          String.join(",", bulkLocationAllowedFields));
     }
 
     Arrays.stream(bulkLocationAllowedFields)
@@ -246,9 +236,10 @@ public class LocationBulkUploadActor extends BaseActor {
             x -> {
               if (!(ArrayUtils.contains(csvHeaderLine, x))) {
                 throw new ProjectCommonException(
-                    ResponseCode.InvalidColumnError.getErrorCode(),
-                    ResponseCode.InvalidColumnError.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
+                    ResponseCode.invalidColumns.getErrorCode(),
+                    ResponseCode.invalidColumns.getErrorMessage(),
+                    ResponseCode.CLIENT_ERROR.getResponseCode(),
+                    String.join(",", bulkLocationAllowedFields));
               }
             });
   }

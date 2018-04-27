@@ -67,7 +67,9 @@ public class SchedularActor extends BaseActor {
         req.put(JsonKey.PROCESS_ID, map.get(JsonKey.ID));
         ProjectLogger.log(
             "calling bulkUploadBackGroundJobActor for processId from schedular actor "
-                + map.get(JsonKey.ID));
+                + map.get(JsonKey.ID)
+                + " for object type:"
+                + map.get(JsonKey.OBJECT_TYPE));
         if (JsonKey.LOCATION.equalsIgnoreCase((String) map.get(JsonKey.OBJECT_TYPE))) {
           req.setOperation(BulkUploadActorOperation.LOCATION_BULK_UPLOAD_BACKGROUND_JOB.getValue());
         } else {

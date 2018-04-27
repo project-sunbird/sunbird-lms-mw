@@ -92,6 +92,34 @@ public class HealthActor extends BaseActor {
   }
 
   /** */
+  private void esHealthCheck() {
+    // check the elastic search
+    boolean isallHealthy = true;
+    Map<String, Object> finalResponseMap = new HashMap<>();
+    List<Map<String, Object>> responseList = new ArrayList<>();
+    responseList.add(ProjectUtil.createCheckResponse(JsonKey.ACTOR_SERVICE, false, null));
+    try {
+      boolean esResponse = ElasticSearchUtil.healthCheck();
+      responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, esResponse, null));
+      isallHealthy = esResponse;
+    } catch (Exception e) {
+      responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, true, e));
+      isallHealthy = false;
+      ProjectLogger.log("Elastic search health Error == ", e);
+    }
+    finalResponseMap.put(JsonKey.CHECKS, responseList);
+    finalResponseMap.put(JsonKey.NAME, "ES health check api");
+    if (isallHealthy) {
+      finalResponseMap.put(JsonKey.Healthy, true);
+    } else {
+      finalResponseMap.put(JsonKey.Healthy, false);
+    }
+    Response response = new Response();
+    response.getResult().put(JsonKey.RESPONSE, finalResponseMap);
+    sender().tell(response, self());
+  }
+
+  /** */
   private void cassandraHealthCheck() {
     Map<String, Object> finalResponseMap = new HashMap<>();
     List<Map<String, Object>> responseList = new ArrayList<>();
@@ -107,33 +135,6 @@ public class HealthActor extends BaseActor {
     }
     finalResponseMap.put(JsonKey.CHECKS, responseList);
     finalResponseMap.put(JsonKey.NAME, "cassandra health check api");
-    if (isallHealthy) {
-      finalResponseMap.put(JsonKey.Healthy, true);
-    } else {
-      finalResponseMap.put(JsonKey.Healthy, false);
-    }
-    Response response = new Response();
-    response.getResult().put(JsonKey.RESPONSE, finalResponseMap);
-    sender().tell(response, self());
-  }
-
-  /** */
-  private void esHealthCheck() {
-    // check the elastic search
-    boolean isallHealthy = true;
-    Map<String, Object> finalResponseMap = new HashMap<>();
-    List<Map<String, Object>> responseList = new ArrayList<>();
-    responseList.add(ProjectUtil.createCheckResponse(JsonKey.ACTOR_SERVICE, false, null));
-    try {
-      boolean esResponse = ElasticSearchUtil.healthCheck();
-      responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, esResponse, null));
-      isallHealthy = esResponse;
-    } catch (Exception e) {
-      responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, true, e));
-      isallHealthy = false;
-    }
-    finalResponseMap.put(JsonKey.CHECKS, responseList);
-    finalResponseMap.put(JsonKey.NAME, "ES health check api");
     if (isallHealthy) {
       finalResponseMap.put(JsonKey.Healthy, true);
     } else {

@@ -104,7 +104,6 @@ public final class CourseBatchSchedulerUtil {
         LoggerEnum.INFO.name());
     return response;
   }
-
   /**
    * Method to update course batch status to db as well as EkStep .
    *
@@ -122,7 +121,8 @@ public final class CourseBatchSchedulerUtil {
               increment,
               (String) map.get(JsonKey.ENROLLMENT_TYPE),
               (String) map.get(JsonKey.HASHTAGID));
-      if (response.equals(JsonKey.SUCCESS)) {
+      ProjectLogger.log("Geeting response code back for update content == " + response);
+      if (response.equalsIgnoreCase(JsonKey.SUCCESS)) {
         boolean flag = updateDataIntoES(map);
         if (flag) {
           cassandraOperation.updateRecord(
@@ -156,7 +156,6 @@ public final class CourseBatchSchedulerUtil {
   private static void addHeaderProps(Map<String, String> header, String key, String value) {
     header.put(key, value);
   }
-
   /**
    * Method to update the content state at ekstep : batch count
    *
@@ -177,7 +176,7 @@ public final class CourseBatchSchedulerUtil {
       contentName = "c_" + name + "_private_batch_count";
     }
     Map<String, String> ekstepHeader = getBasicHeader();
-    addHeaderProps(ekstepHeader, JsonKey.CHANNEL_ID, hashTagId);
+    // addHeaderProps(ekstepHeader, JsonKey.CHANNEL_ID , hashTagId);
     // collect data from EKStep.
     Map<String, Object> ekStepContent =
         CourseEnrollmentActor.getCourseObjectFromEkStep(courseId, ekstepHeader);
@@ -188,6 +187,20 @@ public final class CourseBatchSchedulerUtil {
       } else {
         if (val != 0) val = val - 1;
       }
+      if (ekStepContent.get(JsonKey.CHANNEL) != null) {
+        ProjectLogger.log(
+            "Channel value is coming from Contnet "
+                + (String) ekStepContent.get(JsonKey.CHANNEL)
+                + " Id "
+                + courseId,
+            LoggerEnum.INFO.name());
+        addHeaderProps(
+            ekstepHeader, JsonKey.CHANNEL_ID, (String) ekStepContent.get(JsonKey.CHANNEL));
+      } else {
+        ProjectLogger.log(
+            "Channel value is  not coming from Contnet Id " + courseId, LoggerEnum.INFO.name());
+      }
+
       try {
         ProjectLogger.log("updating content details to Ekstep start", LoggerEnum.INFO.name());
         String contentUpdateBaseUrl = ProjectUtil.getConfigValue(JsonKey.EKSTEP_BASE_URL);

@@ -132,7 +132,11 @@ public class EsSyncActor extends BaseActor {
       if (objectType.equals(JsonKey.USER)) {
         Entry<String, Object> entry = itr.next();
         Map<String, Object> userMap = (Map<String, Object>) entry.getValue();
-        if (!((boolean) userMap.get(JsonKey.IS_DELETED))) {
+        Boolean isDeleted = false;
+        if (null != userMap.get(JsonKey.IS_DELETED)) {
+          isDeleted = (Boolean) userMap.get(JsonKey.IS_DELETED);
+        }
+        if (!isDeleted) {
           result.add(getUserDetails(entry));
         }
       } else if (objectType.equals(JsonKey.ORGANISATION)) {

@@ -4,6 +4,7 @@ package org.sunbird.learner.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
@@ -69,6 +70,13 @@ public final class EkStepRequestUtil {
       param.put(JsonKey.API_ID, apiId);
       resMap.put(JsonKey.PARAMS, param);
       resMap.put(JsonKey.CONTENTS, result);
+      @SuppressWarnings("unchecked")
+      Iterator<String> itr = data.keys();
+      while(itr.hasNext()) {
+    	  	String key = itr.next();
+    	  	if (!JsonKey.CONTENT.equals(key))
+    	  		resMap.put(key, data.get(key));
+      }
     } catch (IOException | JSONException e) {
       ProjectLogger.log(e.getMessage(), e);
     }

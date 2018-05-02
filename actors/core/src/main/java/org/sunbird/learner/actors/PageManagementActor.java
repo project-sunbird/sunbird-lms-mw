@@ -528,7 +528,8 @@ public class PageManagementActor extends BaseActor {
         LoggerEnum.INFO);
     Map<String, Object> result = EkStepRequestUtil.searchContent(query, headers);
     if (null != result && !result.isEmpty()) {
-      section.put(JsonKey.CONTENTS, result.get(JsonKey.CONTENTS));
+    	  section.putAll(result);
+    	  section.remove(JsonKey.PARAMS);
       Map<String, Object> tempMap = (Map<String, Object>) result.get(JsonKey.PARAMS);
       section.put(JsonKey.RES_MSG_ID, tempMap.get(JsonKey.RES_MSG_ID));
       section.put(JsonKey.API_ID, tempMap.get(JsonKey.API_ID));

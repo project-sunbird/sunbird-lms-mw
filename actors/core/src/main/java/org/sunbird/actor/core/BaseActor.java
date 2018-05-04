@@ -1,6 +1,11 @@
 package org.sunbird.actor.core;
 
+import akka.actor.ActorRef;
+import akka.actor.ActorSelection;
 import akka.actor.UntypedAbstractActor;
+import org.sunbird.actor.router.BackgroundRequestRouter;
+import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.service.BaseMWService;
 import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -88,5 +93,20 @@ public abstract class BaseActor extends UntypedAbstractActor {
     }
     response.setParams(resStatus);
     return response;
+  }
+
+  protected Object getActorRef(String operation) {
+    ActorSelection select = null;
+    ActorRef actor = RequestRouter.getActor(operation);
+    ;
+    if (null != actor) {
+      return actor;
+    } else {
+      select =
+          (BaseMWService.getRemoteRouter(RequestRouter.class.getSimpleName()) == null
+              ? (BaseMWService.getRemoteRouter(BackgroundRequestRouter.class.getSimpleName()))
+              : BaseMWService.getRemoteRouter(RequestRouter.class.getSimpleName()));
+      return select;
+    }
   }
 }

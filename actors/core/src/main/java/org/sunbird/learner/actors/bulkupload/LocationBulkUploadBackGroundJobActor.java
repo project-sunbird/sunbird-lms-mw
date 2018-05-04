@@ -10,9 +10,9 @@ import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actor.core.service.InterServiceCommunication;
-import org.sunbird.actor.core.service.InterServiceCommunicationFactory;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.actorUtil.InterServiceCommunication;
+import org.sunbird.actorUtil.InterServiceCommunicationFactory;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.GeoLocationJsonKey;
@@ -117,10 +117,10 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
       filters.put(GeoLocationJsonKey.CODE, row.get(GeoLocationJsonKey.CODE));
       filters.put(GeoLocationJsonKey.LOCATION_TYPE, row.get(GeoLocationJsonKey.LOCATION_TYPE));
       request.getRequest().put(JsonKey.FILTERS, filters);
-
+      request.setOperation(LocationActorOperation.SEARCH_LOCATION.getValue());
       Object obj =
           interServiceCommunication.getResponse(
-              request, LocationActorOperation.SEARCH_LOCATION.getValue());
+              request, getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()));
       if (null == obj) {
         ProjectLogger.log("Null receive from interservice communication", LoggerEnum.ERROR);
         failureList.add(row);
@@ -178,7 +178,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
 
     Object obj =
         interServiceCommunication.getResponse(
-            request, LocationActorOperation.UPDATE_LOCATION.getValue());
+            request, getActorRef(LocationActorOperation.UPDATE_LOCATION.getValue()));
 
     if (null == obj) {
       ProjectLogger.log("Null receive from interservice communication", LoggerEnum.ERROR);
@@ -210,7 +210,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
         LoggerEnum.INFO);
     Object obj =
         interServiceCommunication.getResponse(
-            request, LocationActorOperation.CREATE_LOCATION.getValue());
+            request, getActorRef(LocationActorOperation.CREATE_LOCATION.getValue()));
 
     if (null == obj) {
       ProjectLogger.log("Null receive from interservice communication", LoggerEnum.ERROR);

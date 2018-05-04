@@ -31,10 +31,8 @@ public final class EkStepRequestUtil {
    * @return Map<String,Object>
    */
   public static Map<String, Object> searchContent(String params, Map<String, String> headers) {
-    Object[] result = null;
     Map<String, Object> resMap = new HashMap<>();
     String response = "";
-
     JSONObject jObject;
     try {
       String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);

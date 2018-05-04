@@ -23,6 +23,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LocationActorOperation;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
@@ -33,6 +34,7 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
+import org.sunbird.common.validator.location.BaseLocationRequestValidator;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
@@ -504,7 +506,9 @@ public class OrganisationManagementActor extends BaseActor {
 
   private void validateCodeAndAddLocationIds(Map<String, Object> req) {
     List<String> locationIdList =
-        Util.validateLocationCode((List<Object>) req.get(JsonKey.LOCATION_CODE));
+        BaseLocationRequestValidator.validateLocationCode(
+            (List<Object>) req.get(JsonKey.LOCATION_CODE),
+            getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()));
     req.put(JsonKey.LOCATION_IDS, locationIdList);
     req.remove(JsonKey.LOCATION_CODE);
   }

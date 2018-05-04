@@ -14,6 +14,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
@@ -177,6 +178,7 @@ public class CourseEnrollmentActor extends BaseActor {
   @SuppressWarnings("unchecked")
   public static Map<String, Object> getCourseObjectFromEkStep(
       String courseId, Map<String, String> headers) {
+    ProjectLogger.log("Requested course id is ==" + courseId, LoggerEnum.INFO.name());
     if (!StringUtils.isBlank(courseId)) {
       try {
         String query = EKSTEP_COURSE_SEARCH_QUERY.replaceAll("COURSE_ID_PLACEHOLDER", courseId);

@@ -11,6 +11,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
 
@@ -49,19 +50,22 @@ public final class EkStepRequestUtil {
             JsonKey.AUTHORIZATION,
             PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
       }
+      ProjectLogger.log("making call for content search ==" + params, LoggerEnum.INFO.name());
       response =
           HttpUtil.sendPostRequest(
               baseSearchUrl
                   + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_URL),
               params,
               headers);
+      ProjectLogger.log("Content serach response is ==" + response, LoggerEnum.INFO.name());
       jObject = new JSONObject(response);
       String resmsgId = (String) jObject.getJSONObject("params").get("resmsgid");
       String apiId = jObject.getString("id");
       data = jObject.getJSONObject(JsonKey.RESULT);
       ProjectLogger.log(
           "Total number of content fetched from Ekstep while assembling page data : "
-              + data.get("count"));
+              + data.get("count"),
+          LoggerEnum.INFO.name());
       JSONArray contentArray = data.getJSONArray(JsonKey.CONTENT);
       result = mapper.readValue(contentArray.toString(), Object[].class);
       Map<String, Object> param = new HashMap<>();
@@ -70,7 +74,7 @@ public final class EkStepRequestUtil {
       resMap.put(JsonKey.PARAMS, param);
       resMap.put(JsonKey.CONTENTS, result);
     } catch (IOException | JSONException e) {
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log("Error found during contnet search parse==" + e.getMessage(), e);
     }
     return resMap;
   }

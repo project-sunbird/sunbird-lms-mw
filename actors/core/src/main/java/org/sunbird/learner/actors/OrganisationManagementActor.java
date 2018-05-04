@@ -507,7 +507,7 @@ public class OrganisationManagementActor extends BaseActor {
   private void validateCodeAndAddLocationIds(Map<String, Object> req) {
     List<String> locationIdList =
         BaseLocationRequestValidator.validateLocationCode(
-            (List<Object>) req.get(JsonKey.LOCATION_CODE),
+            (List<String>) req.get(JsonKey.LOCATION_CODE),
             getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()));
     req.put(JsonKey.LOCATION_IDS, locationIdList);
     req.remove(JsonKey.LOCATION_CODE);

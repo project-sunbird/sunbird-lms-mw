@@ -7,6 +7,7 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.BulkUploadActorOperation;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
@@ -66,8 +67,14 @@ public class SchedularActor extends BaseActor {
         req.put(JsonKey.PROCESS_ID, map.get(JsonKey.ID));
         ProjectLogger.log(
             "calling bulkUploadBackGroundJobActor for processId from schedular actor "
-                + map.get(JsonKey.ID));
-        req.setOperation(ActorOperations.PROCESS_BULK_UPLOAD.getValue());
+                + map.get(JsonKey.ID)
+                + " for object type:"
+                + map.get(JsonKey.OBJECT_TYPE));
+        if (JsonKey.LOCATION.equalsIgnoreCase((String) map.get(JsonKey.OBJECT_TYPE))) {
+          req.setOperation(BulkUploadActorOperation.LOCATION_BULK_UPLOAD_BACKGROUND_JOB.getValue());
+        } else {
+          req.setOperation(ActorOperations.PROCESS_BULK_UPLOAD.getValue());
+        }
         tellToAnother(req);
       }
     }

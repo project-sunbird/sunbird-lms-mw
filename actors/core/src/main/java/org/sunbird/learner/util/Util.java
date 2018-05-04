@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -14,6 +15,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -24,6 +26,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.BadgingJsonKey;
+import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -888,5 +891,64 @@ public final class Util {
       return res.get(0);
     }
     return Collections.emptyMap();
+  }
+
+  /**
+   * This method will validate the list of location code whether its valid or not. If valid will
+   * return the locationId List.
+   *
+   * @param codeList
+   */
+  public static List<String> validateLocationCode(List<Object> codeList) {
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(GeoLocationJsonKey.CODE, codeList);
+    Map<String, Object> locMap = new HashMap<>();
+    locMap.put(JsonKey.FILTERS, filters);
+    List<Map<String, Object>> locationList =
+        getESSearchResult(
+            locMap,
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.location.getTypeName());
+    List<String> locationIdList = new ArrayList<>();
+    if (!CollectionUtils.isEmpty(locationList)) {
+      List<String> responseLocCodeList = new ArrayList<>();
+      for (Map<String, Object> map : locationList) {
+        responseLocCodeList.add(((String) map.get(JsonKey.CODE)).toLowerCase());
+        locationIdList.add((String) map.get(JsonKey.ID));
+      }
+      List<String> invalidValueList = new ArrayList<>();
+      for (Object code : codeList) {
+        String loc = (String) code;
+        if (!responseLocCodeList.contains(loc.toLowerCase())) {
+          invalidValueList.add(loc);
+        }
+      }
+      if (CollectionUtils.isNotEmpty(invalidValueList)) {
+        throw new ProjectCommonException(
+            ResponseCode.invalidParameterValue.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.invalidParameterValue.getErrorMessage(),
+                invalidValueList,
+                JsonKey.LOCATION_CODE),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      } else {
+        return locationIdList;
+      }
+    } else {
+      throw new ProjectCommonException(
+          ResponseCode.invalidParameterValue.getErrorCode(),
+          ProjectUtil.formatMessage(
+              ResponseCode.invalidParameterValue.getErrorMessage(),
+              codeList,
+              JsonKey.LOCATION_CODE),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+  }
+
+  public static List<Map<String, Object>> getESSearchResult(
+      Map<String, Object> searchQueryMap, String esIndex, String esType) {
+    SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
+    Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto, esIndex, esType);
+    return (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
   }
 }

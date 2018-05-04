@@ -18,6 +18,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
@@ -59,7 +60,6 @@ public class EsSyncActor extends BaseActor {
   @Override
   public void onReceive(Request request) throws Throwable {
     String requestedOperation = request.getOperation();
-    ProjectLogger.log("Operation name is ==" + requestedOperation);
     if (requestedOperation.equalsIgnoreCase(ActorOperations.SYNC.getValue())) {
       // return SUCCESS to controller and run the sync process in background
       Response response = new Response();
@@ -72,7 +72,7 @@ public class EsSyncActor extends BaseActor {
   }
 
   private void syncData(Request message) {
-    ProjectLogger.log("DB data sync operation to elastic search started ");
+    ProjectLogger.log("DB data sync operation to elastic search started ", LoggerEnum.INFO);
     long startTime = System.currentTimeMillis();
     Map<String, Object> req = message.getRequest();
     Map<String, Object> responseMap = new HashMap<>();
@@ -97,7 +97,8 @@ public class EsSyncActor extends BaseActor {
               + objectType
               + " for these ids "
               + Arrays.toString(objectIds.toArray())
-              + " started");
+              + " started",
+          LoggerEnum.INFO);
       Response response =
           cassandraOperation.getRecordsByProperty(
               dbInfo.getKeySpace(), dbInfo.getTableName(), JsonKey.ID, objectIds);
@@ -107,20 +108,22 @@ public class EsSyncActor extends BaseActor {
               + objectType
               + " for these ids "
               + Arrays.toString(objectIds.toArray())
-              + " done");
+              + " done",
+          LoggerEnum.INFO);
     }
     if (null != reponseList && !reponseList.isEmpty()) {
       for (Map<String, Object> map : reponseList) {
         responseMap.put((String) map.get(JsonKey.ID), map);
       }
     } else {
-      ProjectLogger.log("fetching all data for " + objectType + " started");
+      ProjectLogger.log("fetching all data for " + objectType + " started", LoggerEnum.INFO);
       Response response =
           cassandraOperation.getAllRecords(dbInfo.getKeySpace(), dbInfo.getTableName());
       reponseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-      ProjectLogger.log("fetching all data for " + objectType + " done");
+      ProjectLogger.log("fetching all data for " + objectType + " done", LoggerEnum.INFO);
       ProjectLogger.log(
-          "total db data to sync for " + objectType + " to Elastic search " + reponseList.size());
+          "total db data to sync for " + objectType + " to Elastic search " + reponseList.size(),
+          LoggerEnum.INFO);
       if (null != reponseList) {
         for (Map<String, Object> map : reponseList) {
           responseMap.put((String) map.get(JsonKey.ID), map);
@@ -132,7 +135,11 @@ public class EsSyncActor extends BaseActor {
       if (objectType.equals(JsonKey.USER)) {
         Entry<String, Object> entry = itr.next();
         Map<String, Object> userMap = (Map<String, Object>) entry.getValue();
-        if (!((boolean) userMap.get(JsonKey.IS_DELETED))) {
+        Boolean isDeleted = false;
+        if (null != userMap.get(JsonKey.IS_DELETED)) {
+          isDeleted = (Boolean) userMap.get(JsonKey.IS_DELETED);
+        }
+        if (!isDeleted) {
           result.add(getUserDetails(entry));
         }
       } else if (objectType.equals(JsonKey.ORGANISATION)) {
@@ -151,7 +158,8 @@ public class EsSyncActor extends BaseActor {
             + objectType
             + " to Elastic search "
             + elapsedTime
-            + " ms.");
+            + " ms.",
+        LoggerEnum.INFO);
   }
 
   private String getType(String objectType) {
@@ -169,7 +177,7 @@ public class EsSyncActor extends BaseActor {
   }
 
   private Map<String, Object> getOrgDetails(Entry<String, Object> entry) {
-    ProjectLogger.log("fetching org data started");
+    ProjectLogger.log("fetching org data started", LoggerEnum.INFO);
     Map<String, Object> orgMap = (Map<String, Object>) entry.getValue();
     orgMap.remove(JsonKey.ORG_TYPE);
     if (orgMap.containsKey(JsonKey.ADDRESS_ID)
@@ -179,14 +187,14 @@ public class EsSyncActor extends BaseActor {
           getDetailsById(
               Util.dbInfoMap.get(JsonKey.ADDRESS_DB), (String) orgMap.get(JsonKey.ADDRESS_ID)));
     }
-    ProjectLogger.log("fetching org data completed");
+    ProjectLogger.log("fetching org data completed", LoggerEnum.INFO);
     return orgMap;
   }
 
   @SuppressWarnings("unchecked")
   private Map<String, Object> getUserDetails(Entry<String, Object> entry) {
     String userId = entry.getKey();
-    ProjectLogger.log("fetching user data started");
+    ProjectLogger.log("fetching user data started", LoggerEnum.INFO);
     Map<String, Object> userMap = (Map<String, Object>) entry.getValue();
     Util.removeAttributes(userMap, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY));
     if (StringUtils.isBlank((String) userMap.get(JsonKey.COUNTRY_CODE))) {
@@ -194,19 +202,19 @@ public class EsSyncActor extends BaseActor {
           JsonKey.COUNTRY_CODE,
           PropertiesCache.getInstance().getProperty("sunbird_default_country_code"));
     }
-    ProjectLogger.log("fetching user address data started");
+    ProjectLogger.log("fetching user address data started", LoggerEnum.INFO);
     String encryption = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_ENCRYPTION);
     String uid = userId;
     uid = encryptUserData(encryption, uid);
     userMap.put(
         JsonKey.ADDRESS, getDetails(Util.dbInfoMap.get(JsonKey.ADDRESS_DB), uid, JsonKey.USER_ID));
-    ProjectLogger.log("fetching user education data started");
+    ProjectLogger.log("fetching user education data started", LoggerEnum.INFO);
     fetchEducationDetails(userId, userMap);
-    ProjectLogger.log("fetching user job profile data started");
+    ProjectLogger.log("fetching user job profile data started", LoggerEnum.INFO);
     fetchJobDetails(userId, userMap);
-    ProjectLogger.log("fetching user org data started");
+    ProjectLogger.log("fetching user org data started", LoggerEnum.INFO);
     fetchUserOrgDetails(userId, userMap);
-    ProjectLogger.log("fetching user Badge data  started");
+    ProjectLogger.log("fetching user Badge data  started", LoggerEnum.INFO);
     fetchUserBadgeDetails(userId, userMap);
 
     // save masked email and phone number
@@ -215,7 +223,7 @@ public class EsSyncActor extends BaseActor {
     fetchUserSkills(userId, userMap);
     // compute profile completeness and error field.
     checkProfileCompleteness(userId, userMap);
-    ProjectLogger.log("fetching user data completed");
+    ProjectLogger.log("fetching user data completed", LoggerEnum.INFO);
     return userMap;
   }
 

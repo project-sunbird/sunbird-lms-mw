@@ -18,6 +18,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.bean.Organization;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -77,6 +78,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
   private final SSOManager ssoManager = SSOServiceFactory.getInstance();
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String SUNBIRD_APP_URL = "sunbird_app_url";
+  private ObjectMapper mapper = new ObjectMapper();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -162,8 +164,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     // Insert record to BulkDb table
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.ID, processId);
-    map.put(JsonKey.SUCCESS_RESULT, convertMapToJsonString(successResultList));
-    map.put(JsonKey.FAILURE_RESULT, convertMapToJsonString(failureResultList));
+    map.put(JsonKey.SUCCESS_RESULT, ProjectUtil.convertMapToJsonString(successResultList));
+    map.put(JsonKey.FAILURE_RESULT, ProjectUtil.convertMapToJsonString(failureResultList));
     map.put(JsonKey.PROCESS_END_TIME, ProjectUtil.getFormattedDate());
     map.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
     try {
@@ -390,8 +392,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       }
     }
 
-    dataMap.put(JsonKey.SUCCESS_RESULT, convertMapToJsonString(successList));
-    dataMap.put(JsonKey.FAILURE_RESULT, convertMapToJsonString(failureList));
+    dataMap.put(JsonKey.SUCCESS_RESULT, ProjectUtil.convertMapToJsonString(successList));
+    dataMap.put(JsonKey.FAILURE_RESULT, ProjectUtil.convertMapToJsonString(failureList));
     dataMap.put(JsonKey.STATUS, BulkProcessStatus.COMPLETED.getValue());
 
     cassandraOperation.updateRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), dataMap);
@@ -410,10 +412,22 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     Object[] orgContactList = null;
     String contactDetails = null;
     boolean isOrgUpdated = false;
+    // validate location code
 
-    // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+    if (concurrentHashMap.containsKey(JsonKey.LOCATION_CODE)
+        && StringUtils.isNotEmpty((String) concurrentHashMap.get(JsonKey.LOCATION_CODE))) {
+      try {
+        convertCommaSepStringToList(concurrentHashMap, JsonKey.LOCATION_CODE);
+        List<String> locationIdList =
+            Util.validateLocationCode((List<Object>) concurrentHashMap.get(JsonKey.LOCATION_CODE));
+        concurrentHashMap.put(JsonKey.LOCATION_IDS, locationIdList);
+        concurrentHashMap.remove(JsonKey.LOCATION_CODE);
+      } catch (Exception ex) {
+        concurrentHashMap.put(JsonKey.ERROR_MSG, "Invalid value for LocationCode.");
+        failureList.add(concurrentHashMap);
+        return;
+      }
+    }
 
     if (concurrentHashMap.containsKey(JsonKey.ORG_TYPE)
         && !ProjectUtil.isStringNullOREmpty((String) concurrentHashMap.get(JsonKey.ORG_TYPE))) {
@@ -463,7 +477,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       contactDetails = (String) concurrentHashMap.get(JsonKey.CONTACT_DETAILS);
       contactDetails = contactDetails.replaceAll("'", "\"");
       try {
-        ObjectMapper mapper = new ObjectMapper();
         orgContactList = mapper.readValue(contactDetails, Object[].class);
 
       } catch (IOException ex) {
@@ -540,6 +553,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         concurrentHashMap.put(JsonKey.ID, orgResult.get(JsonKey.ID));
 
         try {
+          // This will remove all extra unnecessary parameter from request
+          Organization org = mapper.convertValue(concurrentHashMap, Organization.class);
+          concurrentHashMap = mapper.convertValue(org, Map.class);
           cassandraOperation.upsertRecord(
               orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), concurrentHashMap);
           Response orgResponse = new Response();
@@ -645,6 +661,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         }
 
         try {
+          // This will remove all extra unnecessary parameter from request
+          Organization org = mapper.convertValue(concurrentHashMap, Organization.class);
+          concurrentHashMap = mapper.convertValue(org, Map.class);
           cassandraOperation.upsertRecord(
               orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), concurrentHashMap);
           Response orgResponse = new Response();
@@ -817,6 +836,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     concurrentHashMap.put(JsonKey.CONTACT_DETAILS, contactDetails);
 
     try {
+      // This will remove all extra unnecessary parameter from request
+      Organization org = mapper.convertValue(concurrentHashMap, Organization.class);
+      concurrentHashMap = mapper.convertValue(org, Map.class);
       cassandraOperation.upsertRecord(
           orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), concurrentHashMap);
       Response orgResponse = new Response();
@@ -1113,9 +1135,11 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     map.put(JsonKey.ID, processId);
     try {
       map.put(
-          JsonKey.SUCCESS_RESULT, UserUtility.encryptData(convertMapToJsonString(successUserReq)));
+          JsonKey.SUCCESS_RESULT,
+          UserUtility.encryptData(ProjectUtil.convertMapToJsonString(successUserReq)));
       map.put(
-          JsonKey.FAILURE_RESULT, UserUtility.encryptData(convertMapToJsonString(failureUserReq)));
+          JsonKey.FAILURE_RESULT,
+          UserUtility.encryptData(ProjectUtil.convertMapToJsonString(failureUserReq)));
     } catch (Exception e1) {
       ProjectLogger.log(
           "Exception occurred while encrypting success and failure result in bulk upload process : ",
@@ -1133,10 +1157,10 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     }
   }
 
-  private void convertCommaSepStringToList(Map<String, Object> userMap, String property) {
-    String[] userGrade = ((String) userMap.get(property)).split(",");
-    List<String> list = new ArrayList<>(Arrays.asList(userGrade));
-    userMap.put(property, list);
+  private void convertCommaSepStringToList(Map<String, Object> map, String property) {
+    String[] props = ((String) map.get(property)).split(",");
+    List<String> list = new ArrayList<>(Arrays.asList(props));
+    map.put(property, list);
   }
 
   private void updateUserOrgData(Map<String, Object> userMap, String updatedBy) {
@@ -1196,16 +1220,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           "Exception Occurred while updating bulk_upload_process in BulkUploadBackGroundJobActor : ",
           e);
     }
-  }
-
-  private String convertMapToJsonString(List<Map<String, Object>> mapList) {
-    ObjectMapper mapper = new ObjectMapper();
-    try {
-      return mapper.writeValueAsString(mapList);
-    } catch (IOException e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-    return null;
   }
 
   @SuppressWarnings("unchecked")

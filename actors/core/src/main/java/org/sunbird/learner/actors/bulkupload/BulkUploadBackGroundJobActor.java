@@ -25,6 +25,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LocationActorOperation;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
@@ -39,6 +40,7 @@ import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.validator.location.BaseLocationRequestValidator;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.AuditOperation;
@@ -419,7 +421,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       try {
         convertCommaSepStringToList(concurrentHashMap, JsonKey.LOCATION_CODE);
         List<String> locationIdList =
-            Util.validateLocationCode((List<Object>) concurrentHashMap.get(JsonKey.LOCATION_CODE));
+            BaseLocationRequestValidator.validateLocationCode(
+                (List<String>) concurrentHashMap.get(JsonKey.LOCATION_CODE),
+                getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()));
         concurrentHashMap.put(JsonKey.LOCATION_IDS, locationIdList);
         concurrentHashMap.remove(JsonKey.LOCATION_CODE);
       } catch (Exception ex) {

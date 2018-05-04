@@ -184,8 +184,8 @@ public class CourseEnrollmentActor extends BaseActor {
         String query = EKSTEP_COURSE_SEARCH_QUERY.replaceAll("COURSE_ID_PLACEHOLDER", courseId);
         Map<String, Object> result = EkStepRequestUtil.searchContent(query, headers);
         if (null != result && !result.isEmpty()) {
-          Object contentObject = ((Object[]) result.get(JsonKey.CONTENTS))[0];
-          return (Map<String, Object>) contentObject;
+          return ((List<Map<String, Object>>) result.get(JsonKey.CONTENTS)).get(0);
+          //  return (Map<String, Object>) contentObject;
         }
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);

@@ -262,14 +262,14 @@ public class CoursePublishedUpdate extends BaseJob {
         EkStepRequestUtil.searchContent(
             requestData.replace("dataVal", identifier.toString()),
             CourseBatchSchedulerUtil.headerMap);
-    Object[] reslt = (Object[]) result.get(JsonKey.CONTENTS);
-    for (int i = 0; i < reslt.length; i++) {
-      Map<String, Object> map = (Map<String, Object>) reslt[i];
-      String status = (String) map.get(JsonKey.STATUS);
-      if (ProjectUtil.CourseMgmtStatus.LIVE.getValue().equalsIgnoreCase(status)) {
-        liveCourseIds.add((String) map.get(JsonKey.IDENTIFIER));
+    List<Map<String, Object>> reslt = (List<Map<String, Object>>) result.get(JsonKey.CONTENTS);
+    if (reslt != null)
+      for (Map<String, Object> map : reslt) {
+        String status = (String) map.get(JsonKey.STATUS);
+        if (ProjectUtil.CourseMgmtStatus.LIVE.getValue().equalsIgnoreCase(status)) {
+          liveCourseIds.add((String) map.get(JsonKey.IDENTIFIER));
+        }
       }
-    }
     ProjectLogger.log("fetching course details from Ekstep completed", LoggerEnum.INFO.name());
     return liveCourseIds;
   }

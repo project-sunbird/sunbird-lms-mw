@@ -69,6 +69,8 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 public class OrganisationManagementActor extends BaseActor {
   private ObjectMapper mapper = new ObjectMapper();
   private final CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static final BaseLocationRequestValidator baseLocationRequestValidator =
+      new BaseLocationRequestValidator();
   private final EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
           null);
@@ -506,7 +508,7 @@ public class OrganisationManagementActor extends BaseActor {
 
   private void validateCodeAndAddLocationIds(Map<String, Object> req) {
     List<String> locationIdList =
-        BaseLocationRequestValidator.validateLocationCode(
+        baseLocationRequestValidator.validateLocationCode(
             (List<String>) req.get(JsonKey.LOCATION_CODE),
             getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()));
     req.put(JsonKey.LOCATION_IDS, locationIdList);

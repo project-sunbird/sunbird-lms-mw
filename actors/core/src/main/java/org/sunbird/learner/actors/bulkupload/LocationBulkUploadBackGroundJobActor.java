@@ -4,15 +4,14 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.text.MessageFormat;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.actorUtil.InterServiceCommunication;
-import org.sunbird.actorUtil.InterServiceCommunicationFactory;
+import org.sunbird.actorutil.location.LocationClient;
+import org.sunbird.actorutil.location.impl.LocationClientImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.GeoLocationJsonKey;
@@ -40,8 +39,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
 
   BulkUploadProcessDao bulkUploadDao = new BulkUploadProcessDaoImpl();
   ObjectMapper mapper = new ObjectMapper();
-  InterServiceCommunication interServiceCommunication =
-      InterServiceCommunicationFactory.getInstance().getCommunicationPath("actorCommunication");
+  private LocationClient locationClient = new LocationClientImpl();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -112,15 +110,10 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
         "LocationBulkUploadBackGroundJobActor : processLocation method called", LoggerEnum.INFO);
 
     if (checkMandatoryFields(row, GeoLocationJsonKey.CODE)) {
-      Request request = new Request();
-      Map<String, Object> filters = new HashMap<>();
-      filters.put(GeoLocationJsonKey.CODE, row.get(GeoLocationJsonKey.CODE));
-      filters.put(GeoLocationJsonKey.LOCATION_TYPE, row.get(GeoLocationJsonKey.LOCATION_TYPE));
-      request.getRequest().put(JsonKey.FILTERS, filters);
-      request.setOperation(LocationActorOperation.SEARCH_LOCATION.getValue());
       Object obj =
-          interServiceCommunication.getResponse(
-              request, getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()));
+          locationClient.getLocationByCode(
+              getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
+              (String) row.get(GeoLocationJsonKey.CODE));
       if (null == obj) {
         ProjectLogger.log("Null receive from interservice communication", LoggerEnum.ERROR);
         failureList.add(row);
@@ -166,20 +159,9 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
 
     String id = (String) response.get(JsonKey.ID);
     row.put(JsonKey.ID, id);
-
-    Request request = new Request();
-    request.getRequest().putAll(row);
-    ProjectLogger.log(
-        "callUpdateLocation - "
-            + (request instanceof Request)
-            + "Operation -"
-            + LocationActorOperation.UPDATE_LOCATION.getValue(),
-        LoggerEnum.INFO);
-
     Object obj =
-        interServiceCommunication.getResponse(
-            request, getActorRef(LocationActorOperation.UPDATE_LOCATION.getValue()));
-
+        locationClient.updateLocation(
+            getActorRef(LocationActorOperation.UPDATE_LOCATION.getValue()), row);
     if (null == obj) {
       ProjectLogger.log("Null receive from interservice communication", LoggerEnum.ERROR);
       failureList.add(row);
@@ -200,17 +182,9 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
       List<Map<String, Object>> successList,
       List<Map<String, Object>> failureList) {
 
-    Request request = new Request();
-    request.getRequest().putAll(row);
-    ProjectLogger.log(
-        "callCreateLocation - "
-            + (request instanceof Request)
-            + "Operation -"
-            + LocationActorOperation.CREATE_LOCATION.getValue(),
-        LoggerEnum.INFO);
     Object obj =
-        interServiceCommunication.getResponse(
-            request, getActorRef(LocationActorOperation.CREATE_LOCATION.getValue()));
+        locationClient.updateLocation(
+            getActorRef(LocationActorOperation.CREATE_LOCATION.getValue()), row);
 
     if (null == obj) {
       ProjectLogger.log("Null receive from interservice communication", LoggerEnum.ERROR);

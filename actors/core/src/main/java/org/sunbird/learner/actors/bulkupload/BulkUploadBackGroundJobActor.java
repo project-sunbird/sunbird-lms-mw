@@ -81,6 +81,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String SUNBIRD_APP_URL = "sunbird_app_url";
   private ObjectMapper mapper = new ObjectMapper();
+  private static final BaseLocationRequestValidator baseLocationRequestValidator =
+      new BaseLocationRequestValidator();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -94,7 +96,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
   }
 
   private void process(Request actorMessage) {
-    ObjectMapper mapper = new ObjectMapper();
     processId = (String) actorMessage.get(JsonKey.PROCESS_ID);
     Map<String, Object> dataMap = getBulkData(processId);
     int status = (int) dataMap.get(JsonKey.STATUS);
@@ -421,7 +422,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       try {
         convertCommaSepStringToList(concurrentHashMap, JsonKey.LOCATION_CODE);
         List<String> locationIdList =
-            BaseLocationRequestValidator.validateLocationCode(
+            baseLocationRequestValidator.validateLocationCode(
                 (List<String>) concurrentHashMap.get(JsonKey.LOCATION_CODE),
                 getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()));
         concurrentHashMap.put(JsonKey.LOCATION_IDS, locationIdList);

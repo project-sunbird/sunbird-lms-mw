@@ -115,7 +115,9 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
               getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
               (String) row.get(GeoLocationJsonKey.CODE));
       if (null == obj) {
-        ProjectLogger.log("Null receive from interservice communication", LoggerEnum.ERROR);
+        ProjectLogger.log(
+            "LocationBulkUploadBackGroundJobActor : Null receive from interservice communication",
+            LoggerEnum.ERROR);
         failureList.add(row);
       } else if (obj instanceof ProjectCommonException) {
         row.put(JsonKey.ERROR_MSG, ((ProjectCommonException) obj).getMessage());
@@ -163,11 +165,13 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
         locationClient.updateLocation(
             getActorRef(LocationActorOperation.UPDATE_LOCATION.getValue()), row);
     if (null == obj) {
-      ProjectLogger.log("Null receive from interservice communication", LoggerEnum.ERROR);
+      ProjectLogger.log(
+          "LocationBulkUploadBackGroundJobActor : Null receive from interservice communication",
+          LoggerEnum.ERROR);
       failureList.add(row);
     } else if (obj instanceof ProjectCommonException) {
       ProjectLogger.log(
-          "callUpdateLocation - got exception from UpdateLocationService "
+          "LocationBulkUploadBackGroundJobActor : callUpdateLocation - got exception from UpdateLocationService "
               + ((ProjectCommonException) obj).getMessage(),
           LoggerEnum.INFO);
       row.put(JsonKey.ERROR_MSG, ((ProjectCommonException) obj).getMessage());
@@ -187,11 +191,13 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
             getActorRef(LocationActorOperation.CREATE_LOCATION.getValue()), row);
 
     if (null == obj) {
-      ProjectLogger.log("Null receive from interservice communication", LoggerEnum.ERROR);
+      ProjectLogger.log(
+          "LocationBulkUploadBackGroundJobActor : Null receive from interservice communication",
+          LoggerEnum.ERROR);
       failureList.add(row);
     } else if (obj instanceof ProjectCommonException) {
       ProjectLogger.log(
-          "callCreateLocation - got exception from CreateLocationService "
+          "LocationBulkUploadBackGroundJobActor : callCreateLocation - got exception from CreateLocationService "
               + ((ProjectCommonException) obj).getMessage(),
           LoggerEnum.INFO);
       row.put(JsonKey.ERROR_MSG, ((ProjectCommonException) obj).getMessage());

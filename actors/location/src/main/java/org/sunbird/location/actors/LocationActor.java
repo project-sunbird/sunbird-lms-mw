@@ -17,8 +17,8 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.Util;
 import org.sunbird.location.dao.LocationDao;
 import org.sunbird.location.dao.impl.LocationDaoFactory;
-import org.sunbird.location.model.Location;
 import org.sunbird.location.util.LocationRequestValidator;
+import org.sunbird.models.location.Location;
 
 /**
  * This class will handle all location related request.

@@ -2,7 +2,7 @@ package org.sunbird.location.dao;
 
 import java.util.Map;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.location.model.Location;
+import org.sunbird.models.location.Location;
 
 /** @author Amit Kumar */
 public interface LocationDao {

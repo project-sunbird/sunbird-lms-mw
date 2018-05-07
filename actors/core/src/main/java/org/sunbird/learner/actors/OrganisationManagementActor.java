@@ -16,7 +16,7 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.bean.Organization;
+import org.sunbird.actorutil.location.LocationUtil;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -34,11 +34,11 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
-import org.sunbird.common.validator.location.BaseLocationRequestValidator;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
+import org.sunbird.models.organization.Organization;
 import org.sunbird.telemetry.util.TelemetryUtil;
 
 /**
@@ -69,8 +69,7 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 public class OrganisationManagementActor extends BaseActor {
   private ObjectMapper mapper = new ObjectMapper();
   private final CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static final BaseLocationRequestValidator baseLocationRequestValidator =
-      new BaseLocationRequestValidator();
+  private static final LocationUtil locationUtil = new LocationUtil();
   private final EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
           null);
@@ -508,7 +507,7 @@ public class OrganisationManagementActor extends BaseActor {
 
   private void validateCodeAndAddLocationIds(Map<String, Object> req) {
     List<String> locationIdList =
-        baseLocationRequestValidator.validateLocationCode(
+        locationUtil.getValidatedLocationIds(
             (List<String>) req.get(JsonKey.LOCATION_CODE),
             getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()));
     req.put(JsonKey.LOCATION_IDS, locationIdList);

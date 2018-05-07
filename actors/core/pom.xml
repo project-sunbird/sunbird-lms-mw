@@ -20,6 +20,16 @@
 		<logback.version>1.0.7</logback.version>
 	</properties>
 	<dependencies>
+	    <dependency>
+		    <groupId>org.sunbird.actorutil</groupId>
+	        <artifactId>actor-util</artifactId>
+	        <version>0.0.1-SNAPSHOT</version>
+	    </dependency>
+	    <dependency>
+			<groupId>org.sunbird</groupId>
+		    <artifactId>models</artifactId>
+		    <version>0.0.1-SNAPSHOT</version>
+		</dependency>
 		<dependency>
 			<groupId>org.sunbird</groupId>
 			<artifactId>telemetry</artifactId>

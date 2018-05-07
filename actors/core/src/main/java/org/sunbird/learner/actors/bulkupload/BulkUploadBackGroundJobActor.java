@@ -18,7 +18,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.bean.Organization;
+import org.sunbird.actorutil.location.LocationUtil;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -40,7 +40,6 @@ import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.common.validator.location.BaseLocationRequestValidator;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.AuditOperation;
@@ -49,6 +48,7 @@ import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
+import org.sunbird.models.organization.Organization;
 import org.sunbird.notification.sms.provider.ISmsProvider;
 import org.sunbird.notification.utils.SMSFactory;
 import org.sunbird.services.sso.SSOManager;
@@ -81,8 +81,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String SUNBIRD_APP_URL = "sunbird_app_url";
   private ObjectMapper mapper = new ObjectMapper();
-  private static final BaseLocationRequestValidator baseLocationRequestValidator =
-      new BaseLocationRequestValidator();
+  private static final LocationUtil locationUtil = new LocationUtil();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -378,7 +377,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           }
         }
       } catch (Exception ex) {
-        ProjectLogger.log("Exception occurs  ", ex);
+        ProjectLogger.log("Exception ", ex);
         map.put(JsonKey.ERROR_MSG, ex.getMessage());
         failureList.add(map);
       }
@@ -422,7 +421,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       try {
         convertCommaSepStringToList(concurrentHashMap, JsonKey.LOCATION_CODE);
         List<String> locationIdList =
-            baseLocationRequestValidator.validateLocationCode(
+            locationUtil.getValidatedLocationIds(
                 (List<String>) concurrentHashMap.get(JsonKey.LOCATION_CODE),
                 getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()));
         concurrentHashMap.put(JsonKey.LOCATION_IDS, locationIdList);

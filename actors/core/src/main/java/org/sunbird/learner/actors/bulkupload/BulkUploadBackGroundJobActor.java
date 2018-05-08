@@ -422,8 +422,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         convertCommaSepStringToList(concurrentHashMap, JsonKey.LOCATION_CODE);
         List<String> locationIdList =
             locationUtil.getValidatedLocationIds(
-                (List<String>) concurrentHashMap.get(JsonKey.LOCATION_CODE),
-                getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()));
+                getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
+                (List<String>) concurrentHashMap.get(JsonKey.LOCATION_CODE));
         concurrentHashMap.put(JsonKey.LOCATION_IDS, locationIdList);
         concurrentHashMap.remove(JsonKey.LOCATION_CODE);
       } catch (Exception ex) {

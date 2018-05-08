@@ -7,13 +7,11 @@ import java.text.MessageFormat;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.location.LocationClient;
 import org.sunbird.actorutil.location.impl.LocationClientImpl;
-import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LocationActorOperation;
@@ -29,16 +27,20 @@ import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessDao;
 import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.util.Util;
+import org.sunbird.models.location.Location;
 
-/** Created by arvind on 24/4/18. */
+/**
+ * @desc This class will do the bulk processing of Location
+ * @author Arvind
+ */
 @ActorConfig(
   tasks = {},
   asyncTasks = {"locationBulkUploadBackground"}
 )
 public class LocationBulkUploadBackGroundJobActor extends BaseActor {
 
-  BulkUploadProcessDao bulkUploadDao = new BulkUploadProcessDaoImpl();
-  ObjectMapper mapper = new ObjectMapper();
+  private BulkUploadProcessDao bulkUploadDao = new BulkUploadProcessDaoImpl();
+  private ObjectMapper mapper = new ObjectMapper();
   private LocationClient locationClient = new LocationClientImpl();
 
   @Override
@@ -110,27 +112,20 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
         "LocationBulkUploadBackGroundJobActor : processLocation method called", LoggerEnum.INFO);
 
     if (checkMandatoryFields(row, GeoLocationJsonKey.CODE)) {
-      Object obj =
-          locationClient.getLocationByCode(
-              getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
-              (String) row.get(GeoLocationJsonKey.CODE));
-      if (null == obj) {
-        ProjectLogger.log(
-            "LocationBulkUploadBackGroundJobActor : Null receive from interservice communication",
-            LoggerEnum.ERROR);
+      Location location = null;
+      try {
+        location =
+            locationClient.getLocationByCode(
+                getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
+                (String) row.get(GeoLocationJsonKey.CODE));
+      } catch (Exception ex) {
+        row.put(JsonKey.ERROR_MSG, ex.getMessage());
         failureList.add(row);
-      } else if (obj instanceof ProjectCommonException) {
-        row.put(JsonKey.ERROR_MSG, ((ProjectCommonException) obj).getMessage());
-        failureList.add(row);
-      } else if (obj instanceof Response) {
-        Response response = (Response) obj;
-        List<Map<String, Object>> responseList =
-            (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
-        if (CollectionUtils.isEmpty(responseList)) {
-          callCreateLocation(row, successList, failureList);
-        } else {
-          callUpdateLocation(row, successList, failureList, responseList.get(0));
-        }
+      }
+      if (null == location) {
+        callCreateLocation(row, successList, failureList);
+      } else {
+        callUpdateLocation(row, successList, failureList, mapper.convertValue(location, Map.class));
       }
     } else {
       row.put(
@@ -161,22 +156,26 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
 
     String id = (String) response.get(JsonKey.ID);
     row.put(JsonKey.ID, id);
-    Object obj =
-        locationClient.updateLocation(
-            getActorRef(LocationActorOperation.UPDATE_LOCATION.getValue()), row);
-    if (null == obj) {
+    String responseMsg = "";
+    try {
+      responseMsg =
+          locationClient.updateLocation(
+              getActorRef(LocationActorOperation.UPDATE_LOCATION.getValue()),
+              mapper.convertValue(row, Location.class));
+    } catch (Exception ex) {
+      ProjectLogger.log(
+          "LocationBulkUploadBackGroundJobActor : callUpdateLocation - got exception "
+              + ex.getMessage(),
+          LoggerEnum.INFO);
+      row.put(JsonKey.ERROR_MSG, ex.getMessage());
+      failureList.add(row);
+    }
+    if (StringUtils.isEmpty(responseMsg)) {
       ProjectLogger.log(
           "LocationBulkUploadBackGroundJobActor : Null receive from interservice communication",
           LoggerEnum.ERROR);
       failureList.add(row);
-    } else if (obj instanceof ProjectCommonException) {
-      ProjectLogger.log(
-          "LocationBulkUploadBackGroundJobActor : callUpdateLocation - got exception from UpdateLocationService "
-              + ((ProjectCommonException) obj).getMessage(),
-          LoggerEnum.INFO);
-      row.put(JsonKey.ERROR_MSG, ((ProjectCommonException) obj).getMessage());
-      failureList.add(row);
-    } else if (obj instanceof Response) {
+    } else {
       successList.add(row);
     }
   }
@@ -185,24 +184,27 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
       Map<String, Object> row,
       List<Map<String, Object>> successList,
       List<Map<String, Object>> failureList) {
+    String locationId = "";
+    try {
+      locationId =
+          locationClient.createLocation(
+              getActorRef(LocationActorOperation.CREATE_LOCATION.getValue()),
+              mapper.convertValue(row, Location.class));
+    } catch (Exception ex) {
+      ProjectLogger.log(
+          "LocationBulkUploadBackGroundJobActor : callCreateLocation - got exception "
+              + ex.getMessage(),
+          LoggerEnum.INFO);
+      row.put(JsonKey.ERROR_MSG, ex.getMessage());
+      failureList.add(row);
+    }
 
-    Object obj =
-        locationClient.updateLocation(
-            getActorRef(LocationActorOperation.CREATE_LOCATION.getValue()), row);
-
-    if (null == obj) {
+    if (StringUtils.isEmpty(locationId)) {
       ProjectLogger.log(
           "LocationBulkUploadBackGroundJobActor : Null receive from interservice communication",
           LoggerEnum.ERROR);
       failureList.add(row);
-    } else if (obj instanceof ProjectCommonException) {
-      ProjectLogger.log(
-          "LocationBulkUploadBackGroundJobActor : callCreateLocation - got exception from CreateLocationService "
-              + ((ProjectCommonException) obj).getMessage(),
-          LoggerEnum.INFO);
-      row.put(JsonKey.ERROR_MSG, ((ProjectCommonException) obj).getMessage());
-      failureList.add(row);
-    } else if (obj instanceof Response) {
+    } else {
       successList.add(row);
     }
   }

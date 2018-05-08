@@ -21,7 +21,7 @@
 	</properties>
 	<dependencies>
 	    <dependency>
-		    <groupId>org.sunbird.actorutil</groupId>
+		    <groupId>org.sunbird</groupId>
 	        <artifactId>actor-util</artifactId>
 	        <version>0.0.1-SNAPSHOT</version>
 	    </dependency>

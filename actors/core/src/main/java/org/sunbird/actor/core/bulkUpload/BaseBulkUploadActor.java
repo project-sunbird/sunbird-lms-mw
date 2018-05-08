@@ -19,11 +19,21 @@ import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessDao;
 import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 
-/** @author arvind. */
+/**
+ * Actor contains the common functionality for bulk upload
+ *
+ * @author arvind.
+ */
 public abstract class BaseBulkUploadActor extends BaseActor {
 
   BulkUploadProcessDao bulkUploadDao = new BulkUploadProcessDaoImpl();
 
+  /**
+   * Method to validate whether the header line fields are valid.
+   *
+   * @param csvHeaderLine Array of string represents the header line of file.
+   * @param bulkLocationAllowedFields List of mandatory header fields.
+   */
   public void validateBulkUploadFields(String[] csvHeaderLine, String[] bulkLocationAllowedFields) {
 
     if (ArrayUtils.isEmpty(csvHeaderLine)
@@ -49,6 +59,12 @@ public abstract class BaseBulkUploadActor extends BaseActor {
             });
   }
 
+  /**
+   * Method to validate whether the header line fields are valid.
+   *
+   * @param csvHeaderLine Array of string represents the header line of file.
+   * @param bulkLocationAllowedFields List of allowed header fields.
+   */
   public void validateBulkUploadAcceptableFields(
       String[] csvHeaderLine, String[] bulkLocationAllowedFields) {
 
@@ -89,8 +105,16 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     return bulkUploadProcess;
   }
 
+  /**
+   * Method to get CsvReader for byte array.
+   *
+   * @param byteArray represents the content of file.
+   * @param seperator character represents the string separator.
+   * @param quoteChar
+   * @param lineNum represents from which line csv file to start reading.
+   * @return CsvReader.
+   */
   public CSVReader getCsvReader(byte[] byteArray, char seperator, char quoteChar, int lineNum) {
-
     InputStreamReader inputStreamReader =
         new InputStreamReader(new ByteArrayInputStream(byteArray));
     CSVReader csvReader = new CSVReader(inputStreamReader, seperator, quoteChar, lineNum);
@@ -131,6 +155,12 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     return rows;
   }
 
+  /**
+   * Method to check whether number of lines in the file is permissible or not.
+   *
+   * @param maxLines Number represents the max allowed lines in the file.
+   * @param actualLines Number represents the nuner of lines in the file.
+   */
   public void validateFileSizeAgainstLineNumbers(int maxLines, int actualLines) {
     if (actualLines > 0 && actualLines > maxLines) {
       throw new ProjectCommonException(
@@ -140,6 +170,11 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     }
   }
 
+  /**
+   * Method to check whether file content is not empty.
+   *
+   * @param csvLines
+   */
   public void validateBulkUploadSize(List<String[]> csvLines) {
 
     if (null != csvLines) {

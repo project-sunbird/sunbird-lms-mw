@@ -123,15 +123,17 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       String objectType = (String) resMap.get(JsonKey.OBJECT_TYPE);
       if ((int) resMap.get(JsonKey.STATUS) == ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
         if (!(JsonKey.LOCATION.equalsIgnoreCase(objectType))) {
-          resMap.remove(JsonKey.STATUS);
-          resMap.remove(JsonKey.PROCESS_END_TIME);
-          resMap.remove(JsonKey.PROCESS_START_TIME);
-          resMap.remove(JsonKey.DATA);
-          resMap.remove(JsonKey.UPLOADED_BY);
-          resMap.remove(JsonKey.UPLOADED_DATE);
-          resMap.remove(JsonKey.ORGANISATION_ID);
           resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
-          resMap.remove(JsonKey.ID);
+          ProjectUtil.removeUnwantedFields(
+              resMap,
+              JsonKey.STATUS,
+              JsonKey.PROCESS_END_TIME,
+              JsonKey.PROCESS_START_TIME,
+              JsonKey.DATA,
+              JsonKey.UPLOADED_BY,
+              JsonKey.UPLOADED_DATE,
+              JsonKey.ORGANISATION_ID,
+              JsonKey.ID);
           ObjectMapper mapper = new ObjectMapper();
           Object[] successMap = null;
           Object[] failureMap = null;
@@ -153,8 +155,18 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
           } catch (IOException e) {
             ProjectLogger.log(e.getMessage(), e);
           }
-          sender().tell(response, self());
         } else {
+          resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
+          ProjectUtil.removeUnwantedFields(
+              resMap,
+              JsonKey.STATUS,
+              JsonKey.PROCESS_END_TIME,
+              JsonKey.PROCESS_START_TIME,
+              JsonKey.DATA,
+              JsonKey.UPLOADED_BY,
+              JsonKey.UPLOADED_DATE,
+              JsonKey.ORGANISATION_ID,
+              JsonKey.ID);
           Map<String, Object> queryMap = new HashMap<>();
           queryMap.put(JsonKey.PROCESS_ID, processId);
           Map<String, Object> sequenceRange = new HashMap<>();
@@ -182,6 +194,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
           resMap.put(JsonKey.SUCCESS_RESULT, successList);
           resMap.put(JsonKey.FAILURE_RESULT, successList);
         }
+        sender().tell(response, self());
       } else {
         response = new Response();
         response.put(

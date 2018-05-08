@@ -156,12 +156,10 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
 
     String id = (String) response.get(JsonKey.ID);
     row.put(JsonKey.ID, id);
-    String responseMsg = "";
     try {
-      responseMsg =
-          locationClient.updateLocation(
-              getActorRef(LocationActorOperation.UPDATE_LOCATION.getValue()),
-              mapper.convertValue(row, Location.class));
+      locationClient.updateLocation(
+          getActorRef(LocationActorOperation.UPDATE_LOCATION.getValue()),
+          mapper.convertValue(row, Location.class));
     } catch (Exception ex) {
       ProjectLogger.log(
           "LocationBulkUploadBackGroundJobActor : callUpdateLocation - got exception "
@@ -170,14 +168,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
       row.put(JsonKey.ERROR_MSG, ex.getMessage());
       failureList.add(row);
     }
-    if (StringUtils.isEmpty(responseMsg)) {
-      ProjectLogger.log(
-          "LocationBulkUploadBackGroundJobActor : Null receive from interservice communication",
-          LoggerEnum.ERROR);
-      failureList.add(row);
-    } else {
-      successList.add(row);
-    }
+    successList.add(row);
   }
 
   private void callCreateLocation(

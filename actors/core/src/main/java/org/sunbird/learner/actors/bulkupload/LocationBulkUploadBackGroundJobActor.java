@@ -108,9 +108,14 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
       List<BulkUploadProcessTasks> tasks = bulkUploadProcessTasksDao.readByPrimaryKeys(queryMap);
       for (BulkUploadProcessTasks task : tasks) {
         try {
-          processLocation(task);
-          task.setUpdatedTs(new Timestamp(System.currentTimeMillis()));
-          task.setIterationId(task.getIterationId() + 1);
+          // since the same bblock of code will be use by the scheduler , so do not process those
+          // records which are completed.
+          if (task.getStatus() != null
+              && task.getStatus() != ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
+            processLocation(task);
+            task.setUpdatedTs(new Timestamp(System.currentTimeMillis()));
+            task.setIterationId(task.getIterationId() + 1);
+          }
         } catch (Exception ex) {
           task.setFailureResult(ex.getMessage());
         }

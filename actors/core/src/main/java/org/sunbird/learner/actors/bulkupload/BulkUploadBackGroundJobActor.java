@@ -18,7 +18,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.actorutil.location.LocationUtil;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -54,6 +53,7 @@ import org.sunbird.notification.utils.SMSFactory;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.validator.location.LocationRequestValidator;
 
 /**
  * This actor will handle bulk upload operation .
@@ -81,7 +81,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String SUNBIRD_APP_URL = "sunbird_app_url";
   private ObjectMapper mapper = new ObjectMapper();
-  private static final LocationUtil locationUtil = new LocationUtil();
+  private static final LocationRequestValidator validator = new LocationRequestValidator();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -421,7 +421,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       try {
         convertCommaSepStringToList(concurrentHashMap, JsonKey.LOCATION_CODE);
         List<String> locationIdList =
-            locationUtil.getValidatedLocationIds(
+            validator.getValidatedLocationIds(
                 getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
                 (List<String>) concurrentHashMap.get(JsonKey.LOCATION_CODE));
         concurrentHashMap.put(JsonKey.LOCATION_IDS, locationIdList);

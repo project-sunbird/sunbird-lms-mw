@@ -16,7 +16,6 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.actorutil.location.LocationUtil;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -40,6 +39,7 @@ import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organization.Organization;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.validator.location.LocationRequestValidator;
 
 /**
  * This actor will handle organisation related operation .
@@ -69,7 +69,7 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 public class OrganisationManagementActor extends BaseActor {
   private ObjectMapper mapper = new ObjectMapper();
   private final CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static final LocationUtil locationUtil = new LocationUtil();
+  private static final LocationRequestValidator validator = new LocationRequestValidator();
   private final EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
           null);
@@ -507,7 +507,7 @@ public class OrganisationManagementActor extends BaseActor {
 
   private void validateCodeAndAddLocationIds(Map<String, Object> req) {
     List<String> locationIdList =
-        locationUtil.getValidatedLocationIds(
+        validator.getValidatedLocationIds(
             getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
             (List<String>) req.get(JsonKey.LOCATION_CODE));
     req.put(JsonKey.LOCATION_IDS, locationIdList);

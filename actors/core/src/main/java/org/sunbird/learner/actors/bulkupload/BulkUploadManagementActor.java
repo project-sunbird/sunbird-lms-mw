@@ -1,34 +1,32 @@
 package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.opencsv.CSVReader;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
-import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.core.bulkUpload.BaseBulkUploadActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.BulkUploadJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessTasksDao;
+import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessTasksDaoImpl;
+import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTasks;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
@@ -41,14 +39,57 @@ import org.sunbird.learner.util.Util.DbInfo;
   tasks = {"bulkUpload", "getBulkOpStatus"},
   asyncTasks = {}
 )
-public class BulkUploadManagementActor extends BaseActor {
+public class BulkUploadManagementActor extends BaseBulkUploadActor {
 
-  private static final String CSV_FILE_EXTENSION = ".csv";
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
   private int userDataSize = 0;
   private int orgDataSize = 0;
   private int batchDataSize = 0;
+  BulkUploadProcessTasksDao bulkUploadProcessTasksDao = new BulkUploadProcessTasksDaoImpl();
+
+  private String[] bulkUserAllowedFields = {
+    JsonKey.FIRST_NAME,
+    JsonKey.COUNTRY_CODE,
+    JsonKey.LAST_NAME,
+    JsonKey.PHONE,
+    JsonKey.COUNTRY_CODE,
+    JsonKey.EMAIL,
+    JsonKey.PASSWORD,
+    JsonKey.USERNAME,
+    JsonKey.PROVIDER,
+    JsonKey.PHONE_VERIFIED,
+    JsonKey.EMAIL_VERIFIED,
+    JsonKey.ROLES,
+    JsonKey.POSITION,
+    JsonKey.GRADE,
+    JsonKey.LOCATION,
+    JsonKey.DOB,
+    JsonKey.GENDER,
+    JsonKey.LANGUAGE,
+    JsonKey.PROFILE_SUMMARY,
+    JsonKey.SUBJECT,
+    JsonKey.WEB_PAGES
+  };
+
+  private String[] bulkBatchAllowedFields = {JsonKey.BATCH_ID, JsonKey.USER_IDs};
+  private String[] bulkOrgAllowedFields = {
+    JsonKey.ORGANISATION_NAME,
+    JsonKey.CHANNEL,
+    JsonKey.IS_ROOT_ORG,
+    JsonKey.PROVIDER,
+    JsonKey.EXTERNAL_ID,
+    JsonKey.DESCRIPTION,
+    JsonKey.HOME_URL,
+    JsonKey.ORG_CODE,
+    JsonKey.ORG_TYPE,
+    JsonKey.PREFERRED_LANGUAGE,
+    JsonKey.THEME,
+    JsonKey.CONTACT_DETAILS,
+    JsonKey.LOC_ID,
+    JsonKey.HASHTAGID,
+    JsonKey.LOCATION_CODE
+  };
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -79,38 +120,68 @@ public class BulkUploadManagementActor extends BaseActor {
         ((List<Map<String, Object>>) response.get(JsonKey.RESPONSE));
     if (!resList.isEmpty()) {
       Map<String, Object> resMap = resList.get(0);
+      String objectType = (String) resMap.get(JsonKey.OBJECT_TYPE);
       if ((int) resMap.get(JsonKey.STATUS) == ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
-        resMap.remove(JsonKey.STATUS);
-        resMap.remove(JsonKey.PROCESS_END_TIME);
-        resMap.remove(JsonKey.PROCESS_START_TIME);
-        resMap.remove(JsonKey.DATA);
-        resMap.remove(JsonKey.UPLOADED_BY);
-        resMap.remove(JsonKey.UPLOADED_DATE);
-        resMap.remove(JsonKey.ORGANISATION_ID);
-        resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
-        resMap.remove(JsonKey.ID);
-        ObjectMapper mapper = new ObjectMapper();
-        Object[] successMap = null;
-        Object[] failureMap = null;
-        try {
-          if (null != resMap.get(JsonKey.SUCCESS_RESULT)) {
-            successMap =
-                mapper.readValue(
-                    decryptionService.decryptData((String) resMap.get(JsonKey.SUCCESS_RESULT)),
-                    Object[].class);
-            resMap.put(JsonKey.SUCCESS_RESULT, successMap);
+        if (!(JsonKey.LOCATION.equalsIgnoreCase(objectType))) {
+          resMap.remove(JsonKey.STATUS);
+          resMap.remove(JsonKey.PROCESS_END_TIME);
+          resMap.remove(JsonKey.PROCESS_START_TIME);
+          resMap.remove(JsonKey.DATA);
+          resMap.remove(JsonKey.UPLOADED_BY);
+          resMap.remove(JsonKey.UPLOADED_DATE);
+          resMap.remove(JsonKey.ORGANISATION_ID);
+          resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
+          resMap.remove(JsonKey.ID);
+          ObjectMapper mapper = new ObjectMapper();
+          Object[] successMap = null;
+          Object[] failureMap = null;
+          try {
+            if (null != resMap.get(JsonKey.SUCCESS_RESULT)) {
+              successMap =
+                  mapper.readValue(
+                      decryptionService.decryptData((String) resMap.get(JsonKey.SUCCESS_RESULT)),
+                      Object[].class);
+              resMap.put(JsonKey.SUCCESS_RESULT, successMap);
+            }
+            if (null != resMap.get(JsonKey.FAILURE_RESULT)) {
+              failureMap =
+                  mapper.readValue(
+                      decryptionService.decryptData((String) resMap.get(JsonKey.FAILURE_RESULT)),
+                      Object[].class);
+              resMap.put(JsonKey.FAILURE_RESULT, failureMap);
+            }
+          } catch (IOException e) {
+            ProjectLogger.log(e.getMessage(), e);
           }
-          if (null != resMap.get(JsonKey.FAILURE_RESULT)) {
-            failureMap =
-                mapper.readValue(
-                    decryptionService.decryptData((String) resMap.get(JsonKey.FAILURE_RESULT)),
-                    Object[].class);
-            resMap.put(JsonKey.FAILURE_RESULT, failureMap);
-          }
-        } catch (IOException e) {
-          ProjectLogger.log(e.getMessage(), e);
+          sender().tell(response, self());
+        } else {
+          Map<String, Object> queryMap = new HashMap<>();
+          queryMap.put(JsonKey.PROCESS_ID, processId);
+          Map<String, Object> sequenceRange = new HashMap<>();
+          Integer defaultStart = 0;
+          Integer defaultSize = 100;
+          sequenceRange.put(JsonKey.GT, defaultStart);
+          sequenceRange.put(JsonKey.LTE, defaultStart + defaultSize);
+          queryMap.put(BulkUploadJsonKey.SEQUENCE_ID, sequenceRange);
+          List<BulkUploadProcessTasks> tasks =
+              bulkUploadProcessTasksDao.readByPrimaryKeys(queryMap);
+
+          List<String> successList = new ArrayList<>();
+          List<String> failureList = new ArrayList<>();
+
+          tasks
+              .stream()
+              .forEach(
+                  x -> {
+                    if (x.getStatus() == ProgressStatus.COMPLETED.getValue()) {
+                      successList.add(x.getData());
+                    } else {
+                      failureList.add(x.getData());
+                    }
+                  });
+          resMap.put(JsonKey.SUCCESS_RESULT, successList);
+          resMap.put(JsonKey.FAILURE_RESULT, successList);
         }
-        sender().tell(response, self());
       } else {
         response = new Response();
         response.put(
@@ -139,24 +210,9 @@ public class BulkUploadManagementActor extends BaseActor {
     }
   }
 
-  private void processBulkBatchEnrollment(Map<String, Object> req, String processId) {
-    File file = new File("bulk.csv");
-    FileOutputStream fos = null;
-    try {
-      fos = new FileOutputStream(file);
-      fos.write((byte[]) req.get(JsonKey.FILE));
-    } catch (IOException e) {
-      ProjectLogger.log("Exception Occurred while reading file in BulkUploadManagementActor", e);
-    } finally {
-      try {
-        fos.close();
-      } catch (IOException e) {
-        ProjectLogger.log(
-            "Exception Occurred while closing fileInputStream in BulkUploadManagementActor", e);
-      }
-    }
-
-    List<String[]> batchList = parseCsvFile(file);
+  private void processBulkBatchEnrollment(Map<String, Object> req, String processId)
+      throws IOException {
+    List<String[]> batchList = parseCsvFile((byte[]) req.get(JsonKey.FILE), processId);
     if (null != batchList) {
 
       if (null != PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_BATCH_DATA_SIZE)) {
@@ -165,15 +221,10 @@ public class BulkUploadManagementActor extends BaseActor {
                 PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_BATCH_DATA_SIZE)));
         ProjectLogger.log("bulk upload batch data size read from config file " + batchDataSize);
       }
-      if (batchDataSize > 0 && batchList.size() > batchDataSize) {
-        throw new ProjectCommonException(
-            ResponseCode.dataSizeError.getErrorCode(),
-            ProjectUtil.formatMessage(ResponseCode.dataSizeError.getErrorMessage(), batchDataSize),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-      }
+      validateFileSizeAgainstLineNumbers(batchDataSize, batchList.size());
       if (!batchList.isEmpty()) {
         String[] columns = batchList.get(0);
-        validateBatchProperty(columns);
+        validateBulkUploadAcceptableFields(columns, bulkBatchAllowedFields);
       } else {
         throw new ProjectCommonException(
             ResponseCode.csvError.getErrorCode(),
@@ -193,29 +244,8 @@ public class BulkUploadManagementActor extends BaseActor {
 
   private void processBulkOrgUpload(Map<String, Object> req, String processId) throws IOException {
 
-    File file = new File("bulk-" + processId + CSV_FILE_EXTENSION);
     List<String[]> orgList = null;
-    FileOutputStream fos = null;
-    try {
-      fos = new FileOutputStream(file);
-      fos.write((byte[]) req.get(JsonKey.FILE));
-      orgList = parseCsvFile(file);
-    } catch (IOException e) {
-      ProjectLogger.log("Exception Occurred while reading file in BulkUploadManagementActor", e);
-      throw e;
-    } finally {
-      try {
-        if (ProjectUtil.isNotNull(fos)) {
-          fos.close();
-        }
-        if (ProjectUtil.isNotNull(file)) {
-          file.delete();
-        }
-      } catch (IOException e) {
-        ProjectLogger.log(
-            "Exception Occurred while closing fileInputStream in BulkUploadManagementActor", e);
-      }
-    }
+    orgList = parseCsvFile((byte[]) req.get(JsonKey.FILE), processId);
     if (null != orgList) {
       if (null != PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_ORG_DATA_SIZE)) {
         orgDataSize =
@@ -223,15 +253,10 @@ public class BulkUploadManagementActor extends BaseActor {
                 PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_ORG_DATA_SIZE)));
         ProjectLogger.log("bulk upload org data size read from config file " + orgDataSize);
       }
-      if (orgDataSize > 0 && orgList.size() > orgDataSize) {
-        throw new ProjectCommonException(
-            ResponseCode.dataSizeError.getErrorCode(),
-            ProjectUtil.formatMessage(ResponseCode.dataSizeError.getErrorMessage(), orgDataSize),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-      }
+      validateFileSizeAgainstLineNumbers(orgDataSize, orgList.size());
       if (!orgList.isEmpty()) {
         String[] columns = orgList.get(0);
-        validateOrgProperty(columns);
+        validateBulkUploadAcceptableFields(columns, bulkOrgAllowedFields);
       } else {
         throw new ProjectCommonException(
             ResponseCode.dataSizeError.getErrorCode(),
@@ -249,39 +274,8 @@ public class BulkUploadManagementActor extends BaseActor {
         orgList, processId, null, JsonKey.ORGANISATION, (String) req.get(JsonKey.CREATED_BY), null);
   }
 
-  private void validateOrgProperty(String[] property) {
-    ArrayList<String> properties =
-        new ArrayList<>(
-            Arrays.asList(
-                JsonKey.ORGANISATION_NAME,
-                JsonKey.CHANNEL,
-                JsonKey.IS_ROOT_ORG,
-                JsonKey.PROVIDER,
-                JsonKey.EXTERNAL_ID,
-                JsonKey.DESCRIPTION,
-                JsonKey.HOME_URL,
-                JsonKey.ORG_CODE,
-                JsonKey.ORG_TYPE,
-                JsonKey.PREFERRED_LANGUAGE,
-                JsonKey.THEME,
-                JsonKey.CONTACT_DETAILS,
-                JsonKey.LOC_ID,
-                JsonKey.HASHTAGID,
-                JsonKey.LOCATION_CODE));
-
-    for (String key : property) {
-      if (!properties.contains(key)) {
-        ProjectLogger.log("Invalid Column bulk upload management actor :: " + key);
-        throw new ProjectCommonException(
-            ResponseCode.InvalidColumnError.getErrorCode(),
-            ResponseCode.InvalidColumnError.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-      }
-    }
-  }
-
   @SuppressWarnings("unchecked")
-  private void processBulkUserUpload(Map<String, Object> req, String processId) {
+  private void processBulkUserUpload(Map<String, Object> req, String processId) throws IOException {
 
     DbInfo orgDb = Util.dbInfoMap.get(JsonKey.ORG_DB);
     String orgId = "";
@@ -328,24 +322,8 @@ public class BulkUploadManagementActor extends BaseActor {
         rootOrgId = JsonKey.DEFAULT_ROOT_ORG_ID;
       }
     }
-    // --------------------------------------------------
-    File file = new File("bulk.csv");
-    FileOutputStream fos = null;
-    try {
-      fos = new FileOutputStream(file);
-      fos.write((byte[]) req.get(JsonKey.FILE));
-    } catch (IOException e) {
-      ProjectLogger.log("Exception Occurred while reading file in BulkUploadManagementActor", e);
-    } finally {
-      try {
-        fos.close();
-      } catch (IOException e) {
-        ProjectLogger.log(
-            "Exception Occurred while closing fileInputStream in BulkUploadManagementActor", e);
-      }
-    }
 
-    List<String[]> userList = parseCsvFile(file);
+    List<String[]> userList = parseCsvFile((byte[]) req.get(JsonKey.FILE), processId);
     if (null != userList) {
       if (null != PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_USER_DATA_SIZE)) {
         userDataSize =
@@ -354,15 +332,10 @@ public class BulkUploadManagementActor extends BaseActor {
 
         ProjectLogger.log("bulk upload user data size read from config file " + userDataSize);
       }
-      if (userDataSize > 0 && userList.size() > userDataSize) {
-        throw new ProjectCommonException(
-            ResponseCode.dataSizeError.getErrorCode(),
-            ProjectUtil.formatMessage(ResponseCode.dataSizeError.getErrorMessage(), userDataSize),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-      }
+      validateFileSizeAgainstLineNumbers(userDataSize, userList.size());
       if (!userList.isEmpty()) {
         String[] columns = userList.get(0);
-        validateUserProperty(columns);
+        validateBulkUploadAcceptableFields(columns, bulkUserAllowedFields);
       } else {
         throw new ProjectCommonException(
             ResponseCode.csvError.getErrorCode(),
@@ -447,102 +420,5 @@ public class BulkUploadManagementActor extends BaseActor {
       request.setOperation(ActorOperations.PROCESS_BULK_UPLOAD.getValue());
       tellToAnother(request);
     }
-  }
-
-  private String[] trimColumnAttriutes(String[] columnArr) {
-
-    for (int i = 0; i < columnArr.length; i++) {
-      columnArr[i] = columnArr[i].trim();
-    }
-    return columnArr;
-  }
-
-  private List<String[]> parseCsvFile(File file) {
-    CSVReader csvReader = null;
-    // Create List for holding objects
-    List<String[]> rows = new ArrayList<>();
-    try {
-      // Reading the csv file
-      csvReader = new CSVReader(new FileReader(file), ',', '"', 0);
-      String[] strArray;
-      // Read one line at a time
-      while ((strArray = csvReader.readNext()) != null) {
-        if (ProjectUtil.isNotEmptyStringArray(strArray)) {
-          continue;
-        }
-        List<String> list = new ArrayList<>();
-        for (String token : strArray) {
-          list.add(token);
-        }
-        rows.add(list.toArray(list.toArray(new String[strArray.length])));
-      }
-    } catch (Exception e) {
-      ProjectLogger.log("Exception occured while processing csv file : ", e);
-    } finally {
-      try {
-        // closing the reader
-        csvReader.close();
-        file.delete();
-      } catch (Exception e) {
-        ProjectLogger.log("Exception occured while closing csv reader : ", e);
-      }
-    }
-    return rows;
-  }
-
-  private void validateUserProperty(String[] property) {
-    ArrayList<String> properties =
-        new ArrayList<>(
-            Arrays.asList(
-                JsonKey.FIRST_NAME,
-                JsonKey.COUNTRY_CODE,
-                JsonKey.LAST_NAME,
-                JsonKey.PHONE,
-                JsonKey.COUNTRY_CODE,
-                JsonKey.EMAIL,
-                JsonKey.PASSWORD,
-                JsonKey.USERNAME,
-                JsonKey.PROVIDER,
-                JsonKey.PHONE_VERIFIED,
-                JsonKey.EMAIL_VERIFIED,
-                JsonKey.ROLES,
-                JsonKey.POSITION,
-                JsonKey.GRADE,
-                JsonKey.LOCATION,
-                JsonKey.DOB,
-                JsonKey.GENDER,
-                JsonKey.LANGUAGE,
-                JsonKey.PROFILE_SUMMARY,
-                JsonKey.SUBJECT,
-                JsonKey.WEB_PAGES));
-
-    for (String key : property) {
-      if (!properties.contains(key)) {
-        throw new ProjectCommonException(
-            ResponseCode.InvalidColumnError.getErrorCode(),
-            ResponseCode.InvalidColumnError.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-      }
-    }
-  }
-
-  private void validateBatchProperty(String[] property) {
-    ArrayList<String> properties =
-        new ArrayList<>(Arrays.asList(JsonKey.BATCH_ID, JsonKey.USER_IDs));
-    for (String key : property) {
-      if (!properties.contains(key)) {
-        throw new ProjectCommonException(
-            ResponseCode.InvalidColumnError.getErrorCode(),
-            ResponseCode.InvalidColumnError.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-      }
-    }
-  }
-
-  private Map<String, Object> elasticSearchComplexSearch(
-      Map<String, Object> filters, String index, String type) {
-    SearchDTO searchDTO = new SearchDTO();
-    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
-    return ElasticSearchUtil.complexSearch(searchDTO, index, type);
   }
 }

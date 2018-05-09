@@ -64,7 +64,7 @@ public class DbOperationActor extends BaseActor {
     try {
       tableList = manager.getTableList(JsonKey.SUNBIRD_PLUGIN);
     } catch (Exception e) {
-      ProjectLogger.log("Error occured" + e.getMessage(), e);
+      ProjectLogger.log("Error occurred" + e.getMessage(), e);
     }
   }
 

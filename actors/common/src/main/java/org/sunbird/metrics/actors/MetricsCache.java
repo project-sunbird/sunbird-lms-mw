@@ -37,7 +37,7 @@ public class MetricsCache {
               ResponseCode.CLIENT_ERROR.getResponseCode());
       }
     } catch (Exception e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
       return null;
     }
   }

@@ -237,7 +237,7 @@ public abstract class BaseMetricsActor extends BaseActor {
         cal.add(Calendar.DATE, +1);
         date = new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime());
       } catch (ParseException e) {
-        ProjectLogger.log("Error occured", e);
+        ProjectLogger.log("Error occurred", e);
       }
       bucketData.put(KEY, key);
       bucketData.put(KEYNAME, keyName);
@@ -296,7 +296,7 @@ public abstract class BaseMetricsActor extends BaseActor {
               baseSearchUrl + PropertiesCache.getInstance().getProperty(apiUrl), request, headers);
 
     } catch (Exception e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
       throw new ProjectCommonException(
           ResponseCode.unableToConnect.getErrorCode(),
           ResponseCode.unableToConnect.getErrorMessage(),
@@ -324,7 +324,7 @@ public abstract class BaseMetricsActor extends BaseActor {
       response = HttpUtil.sendGetRequest(baseSearchUrl + apiUrl, headers);
 
     } catch (Exception e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
       throw new ProjectCommonException(
           ResponseCode.unableToConnect.getErrorCode(),
           ResponseCode.unableToConnect.getErrorMessage(),
@@ -424,7 +424,7 @@ public abstract class BaseMetricsActor extends BaseActor {
       try {
         date = new SimpleDateFormat("yyyy-MM-dd").parse((String) keyName);
       } catch (Exception e) {
-        ProjectLogger.log("Error occured", e);
+        ProjectLogger.log("Error occurred", e);
       }
     }
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
@@ -450,7 +450,7 @@ public abstract class BaseMetricsActor extends BaseActor {
       responseData.put(JsonKey.SNAPSHOT, esData.get(JsonKey.SNAPSHOT));
       responseData.put(JsonKey.SERIES, esData.get(JsonKey.SERIES));
     } catch (IOException e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
     }
     response.putAll(responseData);
     return response;

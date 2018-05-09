@@ -41,7 +41,7 @@ public class HealthActor extends BaseActor {
     if (message instanceof Request) {
       try {
         ProjectLogger.log("AssessmentItemActor onReceive called");
-        Request actorMessage = (Request) message;
+        Request actorMessage = message;
         Util.initializeContext(actorMessage, JsonKey.USER);
         // set request id fto thread loacl...
         ExecutionContext.setRequestId(actorMessage.getRequestId());
@@ -188,7 +188,7 @@ public class HealthActor extends BaseActor {
       Map<String, String> headers = new HashMap<>();
       headers.put(
           JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
-      if (StringUtils.isBlank((String) headers.get(JsonKey.AUTHORIZATION))) {
+      if (StringUtils.isBlank(headers.get(JsonKey.AUTHORIZATION))) {
         headers.put(
             JsonKey.AUTHORIZATION,
             PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
@@ -285,10 +285,10 @@ public class HealthActor extends BaseActor {
     try {
       map = new HashMap<>();
       map.put(JsonKey.RECEIVER_ID, receiverId);
-      map.put(JsonKey.BADGE_TYPE_ID, (String) req.get(JsonKey.BADGE_TYPE_ID));
+      map.put(JsonKey.BADGE_TYPE_ID, req.get(JsonKey.BADGE_TYPE_ID));
       map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv()));
       map.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-      map.put(JsonKey.CREATED_BY, (String) req.get(JsonKey.REQUESTED_BY));
+      map.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
       cassandraOperation.insertRecord(
           userBadgesDbInfo.getKeySpace(), userBadgesDbInfo.getTableName(), map);
       result.put(JsonKey.ID, map.get(JsonKey.ID));
@@ -307,7 +307,7 @@ public class HealthActor extends BaseActor {
       request.getRequest().put(JsonKey.RECEIVER_ID, receiverId);
       tellToAnother(request);
     } catch (Exception ex) {
-      ProjectLogger.log("Exception Occured during saving user badges to ES : ", ex);
+      ProjectLogger.log("Exception Occurred during saving user badges to ES : ", ex);
     }
   }
 

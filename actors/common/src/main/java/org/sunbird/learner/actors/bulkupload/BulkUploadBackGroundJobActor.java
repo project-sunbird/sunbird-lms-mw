@@ -18,13 +18,13 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.bean.Organization;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LocationActorOperation;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
@@ -47,11 +47,13 @@ import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
+import org.sunbird.models.organization.Organization;
 import org.sunbird.notification.sms.provider.ISmsProvider;
 import org.sunbird.notification.utils.SMSFactory;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.validator.location.LocationRequestValidator;
 
 /**
  * This actor will handle bulk upload operation .
@@ -79,6 +81,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String SUNBIRD_APP_URL = "sunbird_app_url";
   private ObjectMapper mapper = new ObjectMapper();
+  private static final LocationRequestValidator validator = new LocationRequestValidator();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -92,7 +95,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
   }
 
   private void process(Request actorMessage) {
-    ObjectMapper mapper = new ObjectMapper();
     processId = (String) actorMessage.get(JsonKey.PROCESS_ID);
     Map<String, Object> dataMap = getBulkData(processId);
     int status = (int) dataMap.get(JsonKey.STATUS);
@@ -256,7 +258,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       tellToAnother(request);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "Exception Occured during saving Course Batch to Es while updating Course Batch : ", ex);
+          "Exception Occurred during saving Course Batch to Es while updating Course Batch : ", ex);
     }
   }
 
@@ -332,7 +334,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     try {
       tellToAnother(request);
     } catch (Exception ex) {
-      ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
+      ProjectLogger.log("Exception Occurred during saving user count to Es : ", ex);
     }
   }
 
@@ -375,7 +377,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           }
         }
       } catch (Exception ex) {
-        ProjectLogger.log("Exception occurs  ", ex);
+        ProjectLogger.log("Exception ", ex);
         map.put(JsonKey.ERROR_MSG, ex.getMessage());
         failureList.add(map);
       }
@@ -419,7 +421,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       try {
         convertCommaSepStringToList(concurrentHashMap, JsonKey.LOCATION_CODE);
         List<String> locationIdList =
-            Util.validateLocationCode((List<Object>) concurrentHashMap.get(JsonKey.LOCATION_CODE));
+            validator.getValidatedLocationIds(
+                getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
+                (List<String>) concurrentHashMap.get(JsonKey.LOCATION_CODE));
         concurrentHashMap.put(JsonKey.LOCATION_IDS, locationIdList);
         concurrentHashMap.remove(JsonKey.LOCATION_CODE);
       } catch (Exception ex) {
@@ -1318,7 +1322,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), reqMap);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "Exception Occured while fetching data from user Ext Table in bulk upload", ex);
+          "Exception Occurred while fetching data from user Ext Table in bulk upload", ex);
     }
     if (null != response) {
       responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
@@ -1467,7 +1471,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 ResponseCode.SERVER_ERROR.getResponseCode());
           }
         } catch (Exception exception) {
-          ProjectLogger.log("Exception occured while creating user in keycloak ", exception);
+          ProjectLogger.log("Exception occurred while creating user in keycloak ", exception);
           throw exception;
         }
         userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
@@ -1545,7 +1549,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         try {
           email = encryptionService.encryptData(email);
         } catch (Exception e) {
-          ProjectLogger.log("Exception occured while encrypting Email ", e);
+          ProjectLogger.log("Exception occurred while encrypting Email ", e);
         }
         Map<String, Object> filters = new HashMap<>();
         filters.put(JsonKey.ENC_EMAIL, email);
@@ -1590,7 +1594,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         try {
           phone = encryptionService.encryptData(phone);
         } catch (Exception e) {
-          ProjectLogger.log("Exception occured while encrypting phone number ", e);
+          ProjectLogger.log("Exception occurred while encrypting phone number ", e);
         }
         Map<String, Object> filters = new HashMap<>();
         filters.put(JsonKey.ENC_PHONE, phone);

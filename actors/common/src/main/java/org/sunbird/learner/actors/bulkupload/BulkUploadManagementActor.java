@@ -477,14 +477,14 @@ public class BulkUploadManagementActor extends BaseActor {
         rows.add(list.toArray(list.toArray(new String[strArray.length])));
       }
     } catch (Exception e) {
-      ProjectLogger.log("Exception occured while processing csv file : ", e);
+      ProjectLogger.log("Exception occurred while processing csv file : ", e);
     } finally {
       try {
         // closing the reader
         csvReader.close();
         file.delete();
       } catch (Exception e) {
-        ProjectLogger.log("Exception occured while closing csv reader : ", e);
+        ProjectLogger.log("Exception occurred while closing csv reader : ", e);
       }
     }
     return rows;

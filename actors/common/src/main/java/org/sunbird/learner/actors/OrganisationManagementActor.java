@@ -16,13 +16,13 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.bean.Organization;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LocationActorOperation;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
@@ -37,7 +37,9 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
+import org.sunbird.models.organization.Organization;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.validator.location.LocationRequestValidator;
 
 /**
  * This actor will handle organisation related operation .
@@ -67,6 +69,7 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 public class OrganisationManagementActor extends BaseActor {
   private ObjectMapper mapper = new ObjectMapper();
   private final CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static final LocationRequestValidator validator = new LocationRequestValidator();
   private final EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
           null);
@@ -504,7 +507,9 @@ public class OrganisationManagementActor extends BaseActor {
 
   private void validateCodeAndAddLocationIds(Map<String, Object> req) {
     List<String> locationIdList =
-        Util.validateLocationCode((List<Object>) req.get(JsonKey.LOCATION_CODE));
+        validator.getValidatedLocationIds(
+            getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
+            (List<String>) req.get(JsonKey.LOCATION_CODE));
     req.put(JsonKey.LOCATION_IDS, locationIdList);
     req.remove(JsonKey.LOCATION_CODE);
   }
@@ -1193,7 +1198,7 @@ public class OrganisationManagementActor extends BaseActor {
         tellToAnother(request);
       } catch (Exception ex) {
         ProjectLogger.log(
-            "Exception Occured during saving user to Es while addMemberOrganisation : ", ex);
+            "Exception Occurred during saving user to Es while addMemberOrganisation : ", ex);
       }
     } else {
       ProjectLogger.log("no call for ES to save user");
@@ -1312,7 +1317,7 @@ public class OrganisationManagementActor extends BaseActor {
           tellToAnother(request);
         } catch (Exception ex) {
           ProjectLogger.log(
-              "Exception Occured during saving user to Es while removing memeber from Organisation : ",
+              "Exception Occurred during saving user to Es while removing memeber from Organisation : ",
               ex);
         }
       } else {

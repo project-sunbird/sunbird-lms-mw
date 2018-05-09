@@ -225,7 +225,7 @@ public class CourseBatchManagementActor extends BaseActor {
       tellToAnother(request);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "Exception Occured during saving Course Batch to Es while updating Course Batch : ", ex);
+          "Exception Occurred during saving Course Batch to Es while updating Course Batch : ", ex);
     }
   }
 
@@ -429,7 +429,7 @@ public class CourseBatchManagementActor extends BaseActor {
         req.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
       }
     } catch (ParseException e) {
-      ProjectLogger.log("Exception occured while parsing date in CourseBatchManagementActor ", e);
+      ProjectLogger.log("Exception occurred while parsing date in CourseBatchManagementActor ", e);
     }
 
     req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
@@ -483,7 +483,7 @@ public class CourseBatchManagementActor extends BaseActor {
         tellToAnother(request);
       } catch (Exception ex) {
         ProjectLogger.log(
-            "Exception Occured during saving Course Batch to Es while creating Course Batch : ",
+            "Exception Occurred during saving Course Batch to Es while creating Course Batch : ",
             ex);
       }
     } else {
@@ -592,7 +592,7 @@ public class CourseBatchManagementActor extends BaseActor {
         }
         todate = format.parse(format.format(new Date()));
       } catch (ParseException e) {
-        ProjectLogger.log("Exception occured while parsing date in CourseBatchManagementActor ", e);
+        ProjectLogger.log("Exception occurred while parsing date in CourseBatchManagementActor ", e);
       }
       if (null != endDate && endDate.before(todate)) {
         throw new ProjectCommonException(
@@ -615,7 +615,7 @@ public class CourseBatchManagementActor extends BaseActor {
           }
         } catch (Exception e) {
           ProjectLogger.log(
-              "Exception occured while parsing date in CourseBatchManagementActor ", e);
+              "Exception occurred while parsing date in CourseBatchManagementActor ", e);
         }
         if (null != dbBatchEndDate && dbBatchEndDate.before(todaydate)) {
           throw new ProjectCommonException(
@@ -654,7 +654,7 @@ public class CourseBatchManagementActor extends BaseActor {
           }
         } catch (Exception e) {
           ProjectLogger.log(
-              "Exception occured while parsing date in CourseBatchManagementActor ", e);
+              "Exception occurred while parsing date in CourseBatchManagementActor ", e);
         }
         if (dbBatchStartDate.before(todaydate)) {
           if (!(requestedStartDate.equals(dbBatchStartDate))) {
@@ -696,7 +696,7 @@ public class CourseBatchManagementActor extends BaseActor {
           }
         } catch (ParseException e) {
           ProjectLogger.log(
-              "Exception occured while parsing date in CourseBatchManagementActor ", e);
+              "Exception occurred while parsing date in CourseBatchManagementActor ", e);
         }
         if (dbBatchEndDate != null && dbBatchEndDate.before(todaydate)) {
           throw new ProjectCommonException(
@@ -806,7 +806,7 @@ public class CourseBatchManagementActor extends BaseActor {
           tellToAnother(request);
         } catch (Exception ex) {
           ProjectLogger.log(
-              "Exception Occured during saving Course Batch to Es while updating Course Batch : ",
+              "Exception Occurred during saving Course Batch to Es while updating Course Batch : ",
               ex);
         }
       } else {
@@ -847,7 +847,7 @@ public class CourseBatchManagementActor extends BaseActor {
     try {
       tellToAnother(request);
     } catch (Exception ex) {
-      ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
+      ProjectLogger.log("Exception Occurred during saving user count to Es : ", ex);
     }
   }
 }

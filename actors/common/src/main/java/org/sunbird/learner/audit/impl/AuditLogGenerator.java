@@ -32,7 +32,7 @@ public class AuditLogGenerator {
     try {
       auditLogMap = mapper.convertValue(auditLog, Map.class);
     } catch (Exception e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
     }
     return auditLogMap;
   }

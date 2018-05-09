@@ -57,7 +57,7 @@ public final class OrganisationMetricsUtil {
       ProjectLogger.log("Result:" + result.toString());
       return result;
     } catch (Exception e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
       throw new ProjectCommonException(
           ResponseCode.esError.getErrorCode(),
           ResponseCode.esError.getErrorMessage(),

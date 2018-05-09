@@ -420,7 +420,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
       result = mapper.writeValueAsString(responseMap);
     } catch (JsonProcessingException e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
     }
     return result;
   }
@@ -667,7 +667,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
       result = mapper.writeValueAsString(responseMap);
     } catch (Exception e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
     }
     return result;
   }
@@ -685,7 +685,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       ProjectLogger.log("Result:" + result.toString());
       return result;
     } catch (Exception e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
       throw new ProjectCommonException(
           ResponseCode.esError.getErrorCode(),
           ResponseCode.esError.getErrorMessage(),

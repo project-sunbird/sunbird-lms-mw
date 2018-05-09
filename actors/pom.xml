@@ -11,7 +11,7 @@
 	<packaging>pom</packaging>
 	<name>Middleware Actors</name>
 	<modules>
-		<module>telemetry</module>
+		<module>telemetry-core</module>
 		<module>common</module>
 		<module>user</module>
 		<module>organization</module>

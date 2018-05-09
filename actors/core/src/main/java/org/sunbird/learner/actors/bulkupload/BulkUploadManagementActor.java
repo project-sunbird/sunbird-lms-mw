@@ -47,6 +47,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
   private int orgDataSize = 0;
   private int batchDataSize = 0;
   BulkUploadProcessTasksDao bulkUploadProcessTasksDao = new BulkUploadProcessTasksDaoImpl();
+  private ObjectMapper mapper = new ObjectMapper();
 
   private String[] bulkUserAllowedFields = {
     JsonKey.FIRST_NAME,
@@ -178,21 +179,21 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
           List<BulkUploadProcessTasks> tasks =
               bulkUploadProcessTasksDao.readByPrimaryKeys(queryMap);
 
-          List<String> successList = new ArrayList<>();
-          List<String> failureList = new ArrayList<>();
+          List<Map> successList = new ArrayList<>();
+          List<Map> failureList = new ArrayList<>();
 
           tasks
               .stream()
               .forEach(
                   x -> {
                     if (x.getStatus() == ProgressStatus.COMPLETED.getValue()) {
-                      successList.add(x.getData());
+                      addTaskDataToList(successList, x.getData());
                     } else {
-                      failureList.add(x.getData());
+                      addTaskDataToList(failureList, x.getData());
                     }
                   });
           resMap.put(JsonKey.SUCCESS_RESULT, successList);
-          resMap.put(JsonKey.FAILURE_RESULT, successList);
+          resMap.put(JsonKey.FAILURE_RESULT, failureList);
         }
         sender().tell(response, self());
       } else {
@@ -206,6 +207,14 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
           ResponseCode.invalidProcessId.getErrorCode(),
           ResponseCode.invalidProcessId.getErrorMessage(),
           ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+    }
+  }
+
+  private void addTaskDataToList(List<Map> list, String data) {
+    try {
+      list.add(mapper.readValue(data, Map.class));
+    } catch (IOException ex) {
+      ProjectLogger.log("Error while converting success list to map" + ex.getMessage(), ex);
     }
   }
 
@@ -237,7 +246,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       validateFileSizeAgainstLineNumbers(batchDataSize, batchList.size());
       if (!batchList.isEmpty()) {
         String[] columns = batchList.get(0);
-        validateBulkUploadAcceptableFields(columns, bulkBatchAllowedFields);
+        validateBulkUploadFields(columns, bulkBatchAllowedFields, false);
       } else {
         throw new ProjectCommonException(
             ResponseCode.csvError.getErrorCode(),
@@ -269,7 +278,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       validateFileSizeAgainstLineNumbers(orgDataSize, orgList.size());
       if (!orgList.isEmpty()) {
         String[] columns = orgList.get(0);
-        validateBulkUploadAcceptableFields(columns, bulkOrgAllowedFields);
+        validateBulkUploadFields(columns, bulkOrgAllowedFields, false);
       } else {
         throw new ProjectCommonException(
             ResponseCode.dataSizeError.getErrorCode(),
@@ -348,7 +357,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       validateFileSizeAgainstLineNumbers(userDataSize, userList.size());
       if (!userList.isEmpty()) {
         String[] columns = userList.get(0);
-        validateBulkUploadAcceptableFields(columns, bulkUserAllowedFields);
+        validateBulkUploadFields(columns, bulkUserAllowedFields, false);
       } else {
         throw new ProjectCommonException(
             ResponseCode.csvError.getErrorCode(),
@@ -377,7 +386,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     if (dataList.size() > 1) {
       try {
         String[] columnArr = dataList.get(0);
-        columnArr = trimColumnAttriutes(columnArr);
+        columnArr = trimColumnAttributes(columnArr);
         Map<String, Object> dataMap = null;
         for (int i = 1; i < dataList.size(); i++) {
           dataMap = new HashMap<>();

@@ -1,5 +1,6 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.sql.Timestamp;
@@ -211,7 +212,8 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
     performLocationOperation(request, LocationActorOperation.UPDATE_LOCATION.getValue(), task);
   }
 
-  private void callCreateLocation(Map<String, Object> row, BulkUploadProcessTasks task) {
+  private void callCreateLocation(Map<String, Object> row, BulkUploadProcessTasks task)
+      throws JsonProcessingException {
 
     Request request = new Request();
     request.getRequest().putAll(row);
@@ -221,10 +223,15 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
             + "Operation -"
             + LocationActorOperation.CREATE_LOCATION.getValue(),
         LoggerEnum.INFO);
-    performLocationOperation(request, LocationActorOperation.CREATE_LOCATION.getValue(), task);
+    Response response =
+        performLocationOperation(request, LocationActorOperation.CREATE_LOCATION.getValue(), task);
+    if (response != null) {
+      row.put(JsonKey.ID, response.get(JsonKey.ID));
+      task.setData(mapper.writeValueAsString(row));
+    }
   }
 
-  private void performLocationOperation(
+  private Response performLocationOperation(
       Request request, String operation, BulkUploadProcessTasks task) {
     Object obj = interServiceCommunication.getResponse(request, operation);
     if (null == obj) {
@@ -242,7 +249,9 @@ public class LocationBulkUploadBackGroundJobActor extends BaseActor {
           task, BulkProcessStatus.FAILED.getValue(), ((ProjectCommonException) obj).getMessage());
     } else if (obj instanceof Response) {
       setTaskStatus(task, BulkProcessStatus.COMPLETED.getValue());
+      return (Response) obj;
     }
+    return null;
   }
 
   private void setTaskStatus(BulkUploadProcessTasks task, Integer status, String failMessage) {

@@ -20,7 +20,7 @@ import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 
 /**
- * Actor contains the common functionality for bulk upload
+ * Actor contains the common functionality for bulk upload.
  *
  * @author arvind.
  */
@@ -29,67 +29,51 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   BulkUploadProcessDao bulkUploadDao = new BulkUploadProcessDaoImpl();
 
   /**
-   * Method to validate whether the header line fields are valid.
+   * Method to validate whether the header fields are valid.
    *
    * @param csvHeaderLine Array of string represents the header line of file.
-   * @param bulkLocationAllowedFields List of mandatory header fields.
+   * @param allowedFields List of mandatory header fields.
+   * @param allFieldsMandatory Boolean value . If true then all allowed fields should be in the
+   *     csvHeaderline . In case of false- csvHeader could be subset of the allowed fields.
    */
-  public void validateBulkUploadFields(String[] csvHeaderLine, String[] bulkLocationAllowedFields) {
+  public void validateBulkUploadFields(
+      String[] csvHeaderLine, String[] allowedFields, Boolean allFieldsMandatory) {
 
-    if (ArrayUtils.isEmpty(csvHeaderLine)
-        || ArrayUtils.isEmpty(bulkLocationAllowedFields)
-        || !ArrayUtils.isSameLength(csvHeaderLine, bulkLocationAllowedFields)) {
-      throw new ProjectCommonException(
-          ResponseCode.invalidColumns.getErrorCode(),
-          ResponseCode.invalidColumns.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode(),
-          String.join(",", bulkLocationAllowedFields));
+    if (ArrayUtils.isEmpty(csvHeaderLine) || ArrayUtils.isEmpty(allowedFields)) {
+      throwInvalidColumnException(String.join(",", allowedFields));
     }
 
-    Arrays.stream(bulkLocationAllowedFields)
-        .forEach(
-            x -> {
-              if (!(ArrayUtils.contains(csvHeaderLine, x))) {
-                throw new ProjectCommonException(
-                    ResponseCode.invalidColumns.getErrorCode(),
-                    ResponseCode.invalidColumns.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode(),
-                    String.join(",", bulkLocationAllowedFields));
-              }
-            });
-  }
-
-  /**
-   * Method to validate whether the header line fields are valid.
-   *
-   * @param csvHeaderLine Array of string represents the header line of file.
-   * @param bulkLocationAllowedFields List of allowed header fields.
-   */
-  public void validateBulkUploadAcceptableFields(
-      String[] csvHeaderLine, String[] bulkLocationAllowedFields) {
-
-    if (ArrayUtils.isEmpty(csvHeaderLine) || ArrayUtils.isEmpty(bulkLocationAllowedFields)) {
-      throw new ProjectCommonException(
-          ResponseCode.invalidColumns.getErrorCode(),
-          ResponseCode.invalidColumns.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode(),
-          String.join(",", bulkLocationAllowedFields));
+    if (allFieldsMandatory) {
+      if (!ArrayUtils.isSameLength(csvHeaderLine, allowedFields)) {
+        throwInvalidColumnException(String.join(",", allowedFields));
+      }
+      Arrays.stream(allowedFields)
+          .forEach(
+              x -> {
+                if (!(ArrayUtils.contains(csvHeaderLine, x))) {
+                  throwInvalidColumnException(String.join(",", allowedFields));
+                }
+              });
+    } else {
+      Arrays.stream(csvHeaderLine)
+          .forEach(
+              x -> {
+                if (!(ArrayUtils.contains(allowedFields, x))) {
+                  throwInvalidColumnException(String.join(",", allowedFields));
+                }
+              });
     }
-
-    Arrays.stream(csvHeaderLine)
-        .forEach(
-            x -> {
-              if (!(ArrayUtils.contains(bulkLocationAllowedFields, x))) {
-                throw new ProjectCommonException(
-                    ResponseCode.invalidColumn.getErrorCode(),
-                    ResponseCode.invalidColumn.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode(),
-                    String.join(",", x));
-              }
-            });
   }
 
-  public String[] trimColumnAttriutes(String[] columnArr) {
+  private void throwInvalidColumnException(String exceptionMessage) {
+    throw new ProjectCommonException(
+        ResponseCode.invalidColumns.getErrorCode(),
+        ResponseCode.invalidColumns.getErrorMessage(),
+        ResponseCode.CLIENT_ERROR.getResponseCode(),
+        exceptionMessage);
+  }
+
+  public String[] trimColumnAttributes(String[] columnArr) {
     for (int i = 0; i < columnArr.length; i++) {
       columnArr[i] = columnArr[i].trim();
     }
@@ -106,12 +90,12 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   }
 
   /**
-   * Method to get CsvReader for byte array.
+   * Method to get CsvReader from byte array.
    *
-   * @param byteArray represents the content of file.
-   * @param seperator character represents the string separator.
-   * @param quoteChar
-   * @param lineNum represents from which line csv file to start reading.
+   * @param byteArray represents the content of file in bytes.
+   * @param seperator The delimiter to use for separating entries.
+   * @param quoteChar The character to use for quoted elements.
+   * @param lineNum The number of lines to skip before reading.
    * @return CsvReader.
    */
   public CSVReader getCsvReader(byte[] byteArray, char seperator, char quoteChar, int lineNum) {
@@ -173,7 +157,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   /**
    * Method to check whether file content is not empty.
    *
-   * @param csvLines
+   * @param csvLines list of csvlines.
    */
   public void validateBulkUploadSize(List<String[]> csvLines) {
 

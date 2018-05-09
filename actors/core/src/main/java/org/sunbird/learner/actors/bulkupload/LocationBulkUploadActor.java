@@ -129,8 +129,8 @@ public class LocationBulkUploadActor extends BaseBulkUploadActor {
         }
         if (sequence == 0) {
           sequence++;
-          header = trimColumnAttriutes(csvLine);
-          validateBulkUploadFields(header, bulkUploadAllowedFields);
+          header = trimColumnAttributes(csvLine);
+          validateBulkUploadFields(header, bulkUploadAllowedFields, true);
         } else {
           for (int j = 0; j < header.length; j++) {
             String value = (csvLine[j].trim().length() == 0 ? null : csvLine[j].trim());

@@ -117,7 +117,7 @@ public class NotesManagementActor extends BaseActor {
       ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
       tellToAnother(request);
     } catch (Exception e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
       sender().tell(e, self());
       return;
     }
@@ -198,7 +198,7 @@ public class NotesManagementActor extends BaseActor {
       tellToAnother(request);
 
     } catch (Exception e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
       sender().tell(e, self());
       return;
     }
@@ -239,7 +239,7 @@ public class NotesManagementActor extends BaseActor {
       response.put(JsonKey.RESPONSE, result);
       sender().tell(response, self());
     } catch (Exception e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
       sender().tell(e, self());
       return;
     }
@@ -259,7 +259,7 @@ public class NotesManagementActor extends BaseActor {
       response.put(JsonKey.RESPONSE, result);
       sender().tell(response, self());
     } catch (Exception e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
       sender().tell(e, self());
       return;
     }
@@ -356,7 +356,7 @@ public class NotesManagementActor extends BaseActor {
       request.setOperation(ActorOperations.UPDATE_USER_NOTES_ES.getValue());
       tellToAnother(request);
     } catch (Exception e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
       sender().tell(e, self());
       return;
     }

@@ -139,7 +139,7 @@ public class PageManagementActor extends BaseActor {
         sectionMap.put(
             JsonKey.SEARCH_QUERY, mapper.writeValueAsString(sectionMap.get(JsonKey.SEARCH_QUERY)));
       } catch (IOException e) {
-        ProjectLogger.log("Exception occured while processing search query " + e.getMessage(), e);
+        ProjectLogger.log("Exception occurred while processing search query " + e.getMessage(), e);
       }
     }
     if (null != sectionMap.get(JsonKey.SECTION_DISPLAY)) {
@@ -149,7 +149,7 @@ public class PageManagementActor extends BaseActor {
             JsonKey.SECTION_DISPLAY,
             mapper.writeValueAsString(sectionMap.get(JsonKey.SECTION_DISPLAY)));
       } catch (IOException e) {
-        ProjectLogger.log("Exception occured while processing display " + e.getMessage(), e);
+        ProjectLogger.log("Exception occurred while processing display " + e.getMessage(), e);
       }
     }
     sectionMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
@@ -183,7 +183,7 @@ public class PageManagementActor extends BaseActor {
         sectionMap.put(
             JsonKey.SEARCH_QUERY, mapper.writeValueAsString(sectionMap.get(JsonKey.SEARCH_QUERY)));
       } catch (IOException e) {
-        ProjectLogger.log("Exception occured while processing search Query " + e.getMessage(), e);
+        ProjectLogger.log("Exception occurred while processing search Query " + e.getMessage(), e);
       }
     }
     if (null != sectionMap.get(JsonKey.SECTION_DISPLAY)) {
@@ -192,7 +192,7 @@ public class PageManagementActor extends BaseActor {
         sectionMap.put(
             JsonKey.SECTION_DISPLAY,
             mapper.writeValueAsString(
-                "Exception occured while processing search Query "
+                "Exception occurred while processing search Query "
                     + sectionMap.get(JsonKey.SECTION_DISPLAY)));
       } catch (IOException e) {
         ProjectLogger.log(e.getMessage(), e);
@@ -255,7 +255,7 @@ public class PageManagementActor extends BaseActor {
         result = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
       }
     } catch (Exception e) {
-      ProjectLogger.log("Exception occured while validating org id " + e.getMessage(), e);
+      ProjectLogger.log("Exception occurred while validating org id " + e.getMessage(), e);
     }
 
     Map<String, Object> map = null;
@@ -381,7 +381,7 @@ public class PageManagementActor extends BaseActor {
       try {
         pageMap.put(JsonKey.PORTAL_MAP, mapper.writeValueAsString(pageMap.get(JsonKey.PORTAL_MAP)));
       } catch (IOException e) {
-        ProjectLogger.log("Exception occured while updating portal map data " + e.getMessage(), e);
+        ProjectLogger.log("Exception occurred while updating portal map data " + e.getMessage(), e);
       }
     }
     if (null != pageMap.get(JsonKey.APP_MAP)) {
@@ -389,7 +389,7 @@ public class PageManagementActor extends BaseActor {
       try {
         pageMap.put(JsonKey.APP_MAP, mapper.writeValueAsString(pageMap.get(JsonKey.APP_MAP)));
       } catch (IOException e) {
-        ProjectLogger.log("Exception occured while updating app map data " + e.getMessage(), e);
+        ProjectLogger.log("Exception occurred while updating app map data " + e.getMessage(), e);
       }
     }
     Response response =

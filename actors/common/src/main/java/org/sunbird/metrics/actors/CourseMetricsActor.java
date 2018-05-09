@@ -349,11 +349,11 @@ public class CourseMetricsActor extends BaseMetricsActor {
             map.put(
                 "org",
                 orgInfoCache.get(
-                    (String) userInfoCache.get(userId).get(JsonKey.REGISTERED_ORG_ID)));
-            if (isNotNull(batchInfoCache.get((String) map.get(JsonKey.BATCH_ID)))) {
+                    userInfoCache.get(userId).get(JsonKey.REGISTERED_ORG_ID)));
+            if (isNotNull(batchInfoCache.get(map.get(JsonKey.BATCH_ID)))) {
               map.put(
                   "batchEndsOn",
-                  batchInfoCache.get((String) map.get(JsonKey.BATCH_ID)).get(JsonKey.END_DATE));
+                  batchInfoCache.get(map.get(JsonKey.BATCH_ID)).get(JsonKey.END_DATE));
             }
           } else {
             map.put(JsonKey.USERNAME, null);
@@ -604,7 +604,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       resultData = (Map<String, Object>) resultData.get(JsonKey.RESULT);
       userTimeConsumed = (Double) resultData.get("m_total_ts");
     } catch (Exception e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
     }
     return userTimeConsumed;
   }
@@ -711,7 +711,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       responseMap.put(JsonKey.SERIES, series);
       result = mapper.writeValueAsString(responseMap);
     } catch (Exception e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
     }
     return result;
   }

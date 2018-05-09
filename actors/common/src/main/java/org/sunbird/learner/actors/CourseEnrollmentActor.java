@@ -170,7 +170,7 @@ public class CourseEnrollmentActor extends BaseActor {
     try {
       tellToAnother(request);
     } catch (Exception ex) {
-      ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
+      ProjectLogger.log("Exception Occurred during saving user count to Es : ", ex);
     }
   }
 
@@ -231,7 +231,7 @@ public class CourseEnrollmentActor extends BaseActor {
     try {
       tellToAnother(request);
     } catch (Exception ex) {
-      ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
+      ProjectLogger.log("Exception Occurred during saving user count to Es : ", ex);
     }
   }
 }

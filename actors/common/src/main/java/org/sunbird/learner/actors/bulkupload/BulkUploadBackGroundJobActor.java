@@ -258,7 +258,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       tellToAnother(request);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "Exception Occured during saving Course Batch to Es while updating Course Batch : ", ex);
+          "Exception Occurred during saving Course Batch to Es while updating Course Batch : ", ex);
     }
   }
 
@@ -334,7 +334,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     try {
       tellToAnother(request);
     } catch (Exception ex) {
-      ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
+      ProjectLogger.log("Exception Occurred during saving user count to Es : ", ex);
     }
   }
 
@@ -1322,7 +1322,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), reqMap);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "Exception Occured while fetching data from user Ext Table in bulk upload", ex);
+          "Exception Occurred while fetching data from user Ext Table in bulk upload", ex);
     }
     if (null != response) {
       responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
@@ -1471,7 +1471,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 ResponseCode.SERVER_ERROR.getResponseCode());
           }
         } catch (Exception exception) {
-          ProjectLogger.log("Exception occured while creating user in keycloak ", exception);
+          ProjectLogger.log("Exception occurred while creating user in keycloak ", exception);
           throw exception;
         }
         userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
@@ -1549,7 +1549,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         try {
           email = encryptionService.encryptData(email);
         } catch (Exception e) {
-          ProjectLogger.log("Exception occured while encrypting Email ", e);
+          ProjectLogger.log("Exception occurred while encrypting Email ", e);
         }
         Map<String, Object> filters = new HashMap<>();
         filters.put(JsonKey.ENC_EMAIL, email);
@@ -1594,7 +1594,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         try {
           phone = encryptionService.encryptData(phone);
         } catch (Exception e) {
-          ProjectLogger.log("Exception occured while encrypting phone number ", e);
+          ProjectLogger.log("Exception occurred while encrypting phone number ", e);
         }
         Map<String, Object> filters = new HashMap<>();
         filters.put(JsonKey.ENC_PHONE, phone);

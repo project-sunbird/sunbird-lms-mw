@@ -1198,7 +1198,7 @@ public class OrganisationManagementActor extends BaseActor {
         tellToAnother(request);
       } catch (Exception ex) {
         ProjectLogger.log(
-            "Exception Occured during saving user to Es while addMemberOrganisation : ", ex);
+            "Exception Occurred during saving user to Es while addMemberOrganisation : ", ex);
       }
     } else {
       ProjectLogger.log("no call for ES to save user");
@@ -1317,7 +1317,7 @@ public class OrganisationManagementActor extends BaseActor {
           tellToAnother(request);
         } catch (Exception ex) {
           ProjectLogger.log(
-              "Exception Occured during saving user to Es while removing memeber from Organisation : ",
+              "Exception Occurred during saving user to Es while removing memeber from Organisation : ",
               ex);
         }
       } else {

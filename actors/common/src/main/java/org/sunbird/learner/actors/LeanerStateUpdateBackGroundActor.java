@@ -137,7 +137,7 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
           updateDb.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.STARTED.getValue());
         }
         Timestamp ts = new Timestamp(new Date().getTime());
-        updateDb.put(JsonKey.ID, (String) course.get(JsonKey.ID));
+        updateDb.put(JsonKey.ID, course.get(JsonKey.ID));
         updateDb.put(JsonKey.COURSE_PROGRESS, courseProgress);
         updateDb.put(JsonKey.DATE_TIME, ts);
         updateDb.put(
@@ -146,7 +146,7 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
         updateDb.put(
             JsonKey.LAST_READ_CONTENT_STATUS,
             (contentStateInfo.get(
-                (String) ((Map<String, Object>) value.get("content")).get(JsonKey.ID))));
+                ((Map<String, Object>) value.get("content")).get(JsonKey.ID))));
         try {
           cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), updateDb);
           // TODO: for some reason, ES indexing is failing with Timestamp value. need to
@@ -213,7 +213,7 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
     try {
       tellToAnother(request);
     } catch (Exception ex) {
-      ProjectLogger.log("Exception Occured during saving user count to Es : ", ex);
+      ProjectLogger.log("Exception Occurred during saving user count to Es : ", ex);
     }
   }
 }

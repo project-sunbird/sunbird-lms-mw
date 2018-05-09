@@ -164,7 +164,7 @@ public final class SchedulerManager {
       scheduler.start();
       ProjectLogger.log("MetricsJob schedular started", LoggerEnum.INFO.name());
     } catch (Exception e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
     }
   }
 
@@ -361,6 +361,7 @@ public final class SchedulerManager {
    * @author Manzarul
    */
   static class ResourceCleanUp extends Thread {
+    @Override
     public void run() {
       ProjectLogger.log("started resource cleanup for Quartz job.");
       try {

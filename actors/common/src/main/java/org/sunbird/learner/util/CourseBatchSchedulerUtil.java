@@ -77,7 +77,7 @@ public final class CourseBatchSchedulerUtil {
     response.put(JsonKey.START_DATE, listOfMap);
     map.clear();
     dateRangeFilter.clear();
-    dateRangeFilter.put("<=", (String) endDate);
+    dateRangeFilter.put("<=", endDate);
     map.put(JsonKey.END_DATE, dateRangeFilter);
     map.put(JsonKey.COUNTER_DECREMENT_STATUS, false);
     dto.addAdditionalProperty(JsonKey.FILTERS, map);
@@ -132,7 +132,7 @@ public final class CourseBatchSchedulerUtil {
         ProjectLogger.log("Ekstep content updatation failed.", LoggerEnum.INFO.name());
       }
     } catch (Exception e) {
-      ProjectLogger.log("Exception occured while savin data to course batch db ", e);
+      ProjectLogger.log("Exception occurred while savin data to course batch db ", e);
     }
   }
 
@@ -147,7 +147,7 @@ public final class CourseBatchSchedulerUtil {
               (String) map.get(JsonKey.ID),
               map);
     } catch (Exception e) {
-      ProjectLogger.log("Exception occured while saving course batch data to ES", e);
+      ProjectLogger.log("Exception occurred while saving course batch data to ES", e);
       flag = false;
     }
     return flag;

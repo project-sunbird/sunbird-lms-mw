@@ -187,7 +187,7 @@ public class MetricsBackGroundJobActor extends BaseActor {
 
     } catch (Exception e) {
       ProjectLogger.log(
-          "Error occured while uploading file on storage for requset " + requestId, e);
+          "Error occurred while uploading file on storage for requset " + requestId, e);
       increasetryCount(reportDbInfo);
       if ((Integer) reportDbInfo.get(JsonKey.TRY_COUNT) > 3) {
         dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.FAILED.getValue());

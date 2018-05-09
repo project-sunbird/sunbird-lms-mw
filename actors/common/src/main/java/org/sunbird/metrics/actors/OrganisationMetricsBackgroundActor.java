@@ -325,7 +325,7 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
     try {
       requestStr = mapper.writeValueAsString(request);
     } catch (JsonProcessingException e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
     }
     return requestStr;
   }
@@ -369,7 +369,7 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
         result.add(data);
       }
     } catch (Exception e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
     }
     return result;
   }
@@ -410,7 +410,7 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
           conceptsList.put(id, name);
         }
       } catch (IOException e) {
-        ProjectLogger.log("Error occured", e);
+        ProjectLogger.log("Error occurred", e);
       }
     }
     return conceptsList;
@@ -430,7 +430,7 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
         domainList.add(id);
       }
     } catch (IOException e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
     }
     return domainList;
   }
@@ -486,7 +486,7 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
       resultMap.put(headers.get(5), result.get("m_total_content_count"));
       resultMap.put(headers.get(6), result.get("m_avg_ts_session"));
     } catch (Exception e) {
-      ProjectLogger.log("Error occured", e);
+      ProjectLogger.log("Error occurred", e);
     }
     return resultMap;
   }

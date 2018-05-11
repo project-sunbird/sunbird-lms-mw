@@ -15,7 +15,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -211,7 +210,6 @@ public abstract class BaseBulkUploadActor extends BaseActor {
 
   protected Integer validateAndParseRecords(
       byte[] fileByteArray,
-      String locationType,
       String processId,
       String[] bulkUploadAllowedFields,
       Map<String, Object> additionalRowFields)
@@ -239,7 +237,6 @@ public abstract class BaseBulkUploadActor extends BaseActor {
             String value = (csvLine[j].trim().length() == 0 ? null : csvLine[j].trim());
             record.put(header[j], value);
           }
-          record.put(GeoLocationJsonKey.LOCATION_TYPE, locationType);
           record.putAll(additionalRowFields);
           BulkUploadProcessTask tasks = new BulkUploadProcessTask();
           tasks.setStatus(ProjectUtil.BulkProcessStatus.NEW.getValue());

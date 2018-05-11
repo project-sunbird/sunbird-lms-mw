@@ -90,7 +90,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadActor {
         bulkUploadProcess.setStatus(BulkProcessStatus.FAILED.getValue());
         bulkUploadProcess.setFailureResult(ex.getMessage());
         bulkUploadDao.update(bulkUploadProcess);
-        ProjectLogger.log("Location Bulk BackGroungJob failed processId - " + processId, ex);
+        ProjectLogger.log("Location Bulk BackGroundJob failed processId - " + processId, ex);
       }
     }
     bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.COMPLETED.getValue());

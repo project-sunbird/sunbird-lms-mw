@@ -72,7 +72,7 @@ public class LocationBulkUploadActor extends BaseBulkUploadActor {
     additionalRowFields.put(GeoLocationJsonKey.LOCATION_TYPE, locationType);
     Integer recordCount =
         validateAndParseRecords(
-            fileByteArray, locationType, processId, bulkLocationAllowedFields, additionalRowFields);
+            fileByteArray, processId, bulkLocationAllowedFields, additionalRowFields);
     BulkUploadProcess bulkUploadProcess =
         getBulkUploadProcess(
             processId, JsonKey.LOCATION, (String) req.get(JsonKey.CREATED_BY), recordCount);

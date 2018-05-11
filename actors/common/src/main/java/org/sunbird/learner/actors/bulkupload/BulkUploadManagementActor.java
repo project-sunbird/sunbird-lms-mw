@@ -30,7 +30,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-import org.sunbird.learner.util.Util.DbInfo;
 
 /**
  * This actor will handle bulk upload operation .
@@ -280,53 +279,14 @@ public class BulkUploadManagementActor extends BaseActor {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private void processBulkUserUpload(Map<String, Object> req, String processId) {
-
-    DbInfo orgDb = Util.dbInfoMap.get(JsonKey.ORG_DB);
-    String orgId = "";
-    Response response = null;
-    if (!StringUtils.isBlank((String) req.get(JsonKey.ORGANISATION_ID))) {
-      response =
-          cassandraOperation.getRecordById(
-              orgDb.getKeySpace(), orgDb.getTableName(), (String) req.get(JsonKey.ORGANISATION_ID));
-    } else {
-      Map<String, Object> map = new HashMap<>();
-      map.put(JsonKey.EXTERNAL_ID, ((String) req.get(JsonKey.EXTERNAL_ID)).toLowerCase());
-      map.put(JsonKey.PROVIDER, ((String) req.get(JsonKey.PROVIDER)).toLowerCase());
-      response =
-          cassandraOperation.getRecordsByProperties(orgDb.getKeySpace(), orgDb.getTableName(), map);
-    }
-    List<Map<String, Object>> responseList =
-        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-
-    if (responseList.isEmpty()) {
-      throw new ProjectCommonException(
-          ResponseCode.invalidOrgData.getErrorCode(),
-          ResponseCode.invalidOrgData.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    } else {
-      orgId = (String) responseList.get(0).get(JsonKey.ID);
-    }
-
-    // validate root org id
-
     String rootOrgId = "";
-    Map<String, Object> orgMap = responseList.get(0);
-    boolean isRootOrg = false;
-    if (null != orgMap.get(JsonKey.IS_ROOT_ORG)) {
-      isRootOrg = (boolean) orgMap.get(JsonKey.IS_ROOT_ORG);
-    } else {
-      isRootOrg = false;
-    }
-    if (isRootOrg) {
-      rootOrgId = orgId;
-    } else {
-      if (!StringUtils.isBlank((String) orgMap.get(JsonKey.ROOT_ORG_ID))) {
-        rootOrgId = (String) orgMap.get(JsonKey.ROOT_ORG_ID);
-      } else {
-        rootOrgId = JsonKey.DEFAULT_ROOT_ORG_ID;
-      }
+    try{
+      // validate channel and set rootOrgId of user
+      rootOrgId = Util.getRootOrgIdFromChannel((String) req.get(JsonKey.CHANNEL));
+    }catch(Exception ex){
+      sender().tell(ex, self());
+      return;
     }
     // --------------------------------------------------
     File file = new File("bulk.csv");
@@ -377,13 +337,13 @@ public class BulkUploadManagementActor extends BaseActor {
     }
     // save csv file to db
     uploadCsvToDB(
-        userList, processId, orgId, JsonKey.USER, (String) req.get(JsonKey.CREATED_BY), rootOrgId);
+        userList, processId, (String) req.get(JsonKey.CHANNEL), JsonKey.USER, (String) req.get(JsonKey.CREATED_BY), rootOrgId);
   }
 
   private void uploadCsvToDB(
       List<String[]> dataList,
       String processId,
-      String orgId,
+      String channel,
       String objectType,
       String requestedBy,
       String rootOrgId) {
@@ -401,8 +361,8 @@ public class BulkUploadManagementActor extends BaseActor {
             dataMap.put(columnArr[j], value);
           }
           if (!StringUtils.isBlank(objectType) && objectType.equalsIgnoreCase(JsonKey.USER)) {
-            dataMap.put(JsonKey.REGISTERED_ORG_ID, orgId.trim());
             dataMap.put(JsonKey.ROOT_ORG_ID, rootOrgId.trim());
+            dataMap.put(JsonKey.CHANNEL, channel.trim());
           }
           dataMapList.add(dataMap);
         }
@@ -514,6 +474,7 @@ public class BulkUploadManagementActor extends BaseActor {
                 JsonKey.LANGUAGE,
                 JsonKey.PROFILE_SUMMARY,
                 JsonKey.SUBJECT,
+                JsonKey.EXTERNAL_ID,
                 JsonKey.WEB_PAGES));
 
     for (String key : property) {

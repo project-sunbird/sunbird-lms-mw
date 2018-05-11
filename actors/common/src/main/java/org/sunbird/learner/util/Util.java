@@ -4,7 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -14,6 +17,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Collectors;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -33,6 +39,7 @@ import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.quartz.scheduler.SchedulerManager;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -41,6 +48,7 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.CassandraConnectionManager;
 import org.sunbird.helper.CassandraConnectionMngrFactory;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.models.user.User;
 
 /**
  * Utility class for actors
@@ -657,25 +665,56 @@ public final class Util {
   }
 
   public static String getRootOrgIdFromChannel(String channel) {
-    if (!StringUtils.isBlank(channel)) {
-      Map<String, Object> filters = new HashMap<>();
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(JsonKey.IS_ROOT_ORG, true);
+    if(StringUtils.isNotEmpty(channel)){
       filters.put(JsonKey.CHANNEL, channel);
-      filters.put(JsonKey.IS_ROOT_ORG, true);
-      Map<String, Object> esResult =
-          elasticSearchComplexSearch(
-              filters, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
-      if (isNotNull(esResult)
-          && esResult.containsKey(JsonKey.CONTENT)
-          && isNotNull(esResult.get(JsonKey.CONTENT))
-          && ((List) esResult.get(JsonKey.CONTENT)).size() > 0) {
-        Map<String, Object> esContent =
-            ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
-        return (String) esContent.getOrDefault(JsonKey.ID, "");
+    }
+    Map<String, Object> esResult =
+        elasticSearchComplexSearch(
+            filters, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
+      if(MapUtils.isNotEmpty(esResult) && CollectionUtils.isNotEmpty((List) esResult.get(JsonKey.CONTENT))){
+        Map<String, Object> esContent = null;
+        if(StringUtils.isNotEmpty(channel)){
+         esContent =
+          ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
+        }else{
+          List<Map<String, Object>> esContentList = ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT));
+          if(esContentList.size() > 1){
+            //throw exception for multiple root org association 
+            throw new ProjectCommonException(
+                ResponseCode.invalidParameterValue.getErrorCode(),
+                ProjectUtil.formatMessage(
+                    ResponseCode.invalidParameterValue.getErrorMessage(),
+                    channel,
+                    JsonKey.CHANNEL),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+          }else {
+            esContent =
+                ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
+          }
+        }
+        return (String) esContent.get(JsonKey.ID);
+    }else{
+      if(StringUtils.isNotEmpty(channel)){
+        throw new ProjectCommonException(
+            ResponseCode.invalidParameterValue.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.invalidParameterValue.getErrorMessage(),
+                channel,
+                JsonKey.CHANNEL),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }else{
+        throw new ProjectCommonException(
+            ResponseCode.mandatoryParamsMissing.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.mandatoryParamsMissing.getErrorMessage(),
+                JsonKey.CHANNEL),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
       }
     }
-    return "";
   }
-
+  
   private static Map<String, Object> elasticSearchComplexSearch(
       Map<String, Object> filters, String index, String type) {
 
@@ -829,15 +868,11 @@ public final class Util {
                 ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), requestedby);
         if (result != null) {
           String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
-          String registeredOrgId = (String) result.get(JsonKey.REGISTERED_ORG_ID);
 
-          if (!(StringUtils.isBlank(rootOrgId) && StringUtils.isBlank(registeredOrgId))) {
+          if (StringUtils.isNotBlank(rootOrgId)) {
             Map<String, String> rollup = new HashMap<>();
 
             rollup.put("l1", rootOrgId);
-            if (!(StringUtils.isBlank(registeredOrgId))) {
-              rollup.put("l2", registeredOrgId);
-            }
             requestContext.put(JsonKey.ROLLUP, rollup);
           }
         }
@@ -888,5 +923,127 @@ public final class Util {
       return res.get(0);
     }
     return Collections.emptyMap();
+  }
+  
+  //--------------------------------------------------------
+  //user utility methods
+  private static EncryptionService encryptionService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
+          null);
+  public static String getEncryptedData(String value){
+    try {
+      return encryptionService.encryptData(value);
+    } catch (Exception e) {
+      throw new ProjectCommonException(
+              ResponseCode.userDataEncryptionError.getErrorCode(),
+              ResponseCode.userDataEncryptionError.getErrorMessage(),
+              ResponseCode.SERVER_ERROR.getResponseCode());
+    }
+  }
+
+  public static void checkUserExistOrNot(User user){
+    Map<String,Object> searchQueryMap = new HashMap<>();
+    //loginId is encrypted in our application
+    searchQueryMap.put(JsonKey.LOGIN_ID, getEncryptedData(user.getLoginId()));
+    if (CollectionUtils.isNotEmpty(searchUser(searchQueryMap))) {
+      throw new ProjectCommonException(
+              ResponseCode.userAlreadyExist.getErrorCode(),
+              ResponseCode.userAlreadyExist.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+  }
+  
+  public static void checkExternalIdAndProviderUniqueness(User user){
+    if (StringUtils.isNotEmpty(user.getExternalId()) && StringUtils.isNotEmpty(user.getProvider()) ){
+      Map<String,Object> searchQueryMap = new HashMap<>();
+      searchQueryMap.put(JsonKey.EXTERNAL_ID, user.getExternalId());
+      searchQueryMap.put(JsonKey.PROVIDER, user.getProvider());
+      if (CollectionUtils.isNotEmpty(getRecordsFromUserExtIdentityByProperties(searchQueryMap))) {
+        throw new ProjectCommonException(
+                ResponseCode.userAlreadyExist.getErrorCode(),
+                ResponseCode.userAlreadyExist.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
+  }
+  
+  private static List<User> searchUser(Map<String, Object> searchQueryMap) {
+    List<User> userList = new ArrayList<>();
+    ObjectMapper mapper = new ObjectMapper();
+    Map<String, Object> searchRequestMap = new HashMap<>();
+    searchRequestMap.put(JsonKey.FILTERS, searchQueryMap);
+    SearchDTO searchDto = Util.createSearchDto(searchRequestMap);
+    String[] types = {ProjectUtil.EsType.user.getTypeName()};
+    Map<String, Object> result =
+        ElasticSearchUtil.complexSearch(
+            searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
+    if (MapUtils.isNotEmpty(result)) {
+      List<Map<String, Object>> searchResult = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+      if(CollectionUtils.isNotEmpty(searchResult)){
+        userList = searchResult.stream().map(s -> mapper.convertValue(s, User.class)).collect(Collectors.toList());
+      }
+    }
+    return userList;
+  }
+  
+  public static List<Map<String, Object>> getRecordsFromUserExtIdentityByProperties(
+      Map<String, Object> propertyMap) {
+    Response response = cassandraOperation.getRecordsByProperties("sunbird", "user_external_identity", propertyMap);
+    return (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+  }
+  
+  public static String getLoginId(Map<String, Object> userMap) {
+    String loginId;
+    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.CHANNEL))) {
+      loginId = (String) userMap.get(JsonKey.USERNAME) + "@" + (String) userMap.get(JsonKey.CHANNEL);
+    } else {
+      loginId = (String) userMap.get(JsonKey.USERNAME);
+    }
+    return loginId;
+  }
+  
+  public static void updateUserExtId(Map<String, Object> requestMap) {
+    Map<String,Object> map = new HashMap<>();
+    map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EXTERNAL_ID));
+    map.put(JsonKey.PROVIDER, requestMap.get(JsonKey.PROVIDER));
+    map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
+    map.put(JsonKey.ID, String.valueOf(System.currentTimeMillis()));
+    map.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
+    map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
+    cassandraOperation.upsertRecord("sunbird", "user_external_identity", map);
+  }
+  
+  public static void registerUserToOrg(Map<String, Object> userMap) {
+    Map<String, Object> reqMap = new HashMap<>();
+    reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+    reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+    reqMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ROOT_ORG_ID));
+    reqMap.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
+    reqMap.put(JsonKey.IS_DELETED, false);
+    Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
+    try {
+        cassandraOperation.insertRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(),
+                reqMap);
+    } catch (Exception e) {
+        ProjectLogger.log(e.getMessage(), e);
+    }
+  }
+  
+  public static Map<String, Object> getUserFromExternalIdAndProvider(Map<String, Object> userMap) {
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    Map<String, Object> user = null;
+    Map<String,Object> map = new HashMap<>();
+    map.put(JsonKey.PROVIDER, userMap.get(JsonKey.PROVIDER));
+    map.put(JsonKey.EXTERNAL_ID,  userMap.get(JsonKey.EXTERNAL_ID));
+    List<Map<String,Object>> userRecordList = Util.getRecordsFromUserExtIdentityByProperties(map);
+    if(CollectionUtils.isNotEmpty(userRecordList)){
+     Map<String,Object> userExtIdRecord = userRecordList.get(0);
+     Response res = cassandraOperation.getRecordById(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), (String)userExtIdRecord.get(JsonKey.ID));
+     if(CollectionUtils.isNotEmpty((List<Map<String, Object>>)res.get(JsonKey.RESPONSE))){
+       // user exist
+       user = ((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).get(0);
+     }
+    }
+    return user;
   }
 }

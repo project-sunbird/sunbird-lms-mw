@@ -28,7 +28,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.location.dao.LocationDao;
 import org.sunbird.location.dao.impl.LocationDaoFactory;
 import org.sunbird.location.dao.impl.LocationDaoImpl;
-import org.sunbird.location.model.Location;
+import org.sunbird.models.location.Location;
 import scala.concurrent.duration.FiniteDuration;
 
 @Ignore

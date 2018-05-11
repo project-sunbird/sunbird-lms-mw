@@ -8,7 +8,11 @@ import java.sql.Timestamp;
 import org.sunbird.cassandraannotation.ClusteringKey;
 import org.sunbird.cassandraannotation.PartitioningKey;
 
-/** @author arvind. Model class to represent the bulk_upload_process_tasks column family. */
+/**
+ * Model class to represent the bulk_upload_process_tasks column family.
+ *
+ * @author arvind.
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)
 public class BulkUploadProcessTask implements Serializable {
@@ -21,8 +25,8 @@ public class BulkUploadProcessTask implements Serializable {
   private String data;
   private String failureResult;
   private String successResult;
-  private Timestamp createdTs;
-  private Timestamp updatedTs;
+  private Timestamp createdOn;
+  private Timestamp lastUpdatedOn;
   private Integer iterationId = new Integer(0);
   private Integer status;
 
@@ -62,14 +66,6 @@ public class BulkUploadProcessTask implements Serializable {
     return iterationId;
   }
 
-  public Timestamp getUpdatedTs() {
-    return updatedTs;
-  }
-
-  public void setUpdatedTs(Timestamp updatedTs) {
-    this.updatedTs = updatedTs;
-  }
-
   public void setIterationId(Integer iterationId) {
     this.iterationId = iterationId;
   }
@@ -90,11 +86,19 @@ public class BulkUploadProcessTask implements Serializable {
     this.status = status;
   }
 
-  public Timestamp getCreatedTs() {
-    return createdTs;
+  public Timestamp getCreatedOn() {
+    return createdOn;
   }
 
-  public void setCreatedTs(Timestamp createdTs) {
-    this.createdTs = createdTs;
+  public void setCreatedOn(Timestamp createdOn) {
+    this.createdOn = createdOn;
+  }
+
+  public Timestamp getLastUpdatedOn() {
+    return lastUpdatedOn;
+  }
+
+  public void setLastUpdatedOn(Timestamp lastUpdatedOn) {
+    this.lastUpdatedOn = lastUpdatedOn;
   }
 }

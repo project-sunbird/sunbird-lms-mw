@@ -16,7 +16,11 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessTaskDao;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 
-/** @author arvind. */
+/**
+ * Data access implementation for BulkUploadProcessTask entity.
+ *
+ * @author arvind
+ */
 public class BulkUploadProcessTaskDaoImpl implements BulkUploadProcessTaskDao {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();

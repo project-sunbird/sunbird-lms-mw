@@ -1,14 +1,8 @@
 package org.sunbird.learner.actors.bulkupload;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.opencsv.CSVReader;
 import java.io.IOException;
-import java.sql.Timestamp;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import org.apache.commons.io.IOUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BulkUploadActorOperation;
@@ -16,16 +10,10 @@ import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
 import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
-import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessDao;
-import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessTaskDao;
-import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
-import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessTaskDaoImpl;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
-import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -39,15 +27,12 @@ import org.sunbird.learner.util.Util;
 )
 public class LocationBulkUploadActor extends BaseBulkUploadActor {
 
-  BulkUploadProcessDao bulkUploadDao = new BulkUploadProcessDaoImpl();
-  BulkUploadProcessTaskDao bulkUploadProcessTaskDao = new BulkUploadProcessTaskDaoImpl();
   String[] bulkLocationAllowedFields = {
     GeoLocationJsonKey.CODE,
     JsonKey.NAME,
     GeoLocationJsonKey.PARENT_CODE,
     GeoLocationJsonKey.PARENT_ID
   };
-  ObjectMapper mapper = new ObjectMapper();
   private Integer DEFAULT_WRITE_BATCH_SIZE = 10;
   private Integer CASSANDRA_WRITE_BATCH_SIZE = getBatchSize(JsonKey.CASSANDRA_WRITE_BATCH_SIZE);
 
@@ -83,8 +68,11 @@ public class LocationBulkUploadActor extends BaseBulkUploadActor {
     if (null != req.get(JsonKey.FILE)) {
       fileByteArray = (byte[]) req.get(JsonKey.FILE);
     }
+    Map<String, Object> additionalRowFields = new HashMap<>();
+    additionalRowFields.put(GeoLocationJsonKey.LOCATION_TYPE, locationType);
     Integer recordCount =
-        validateAndParseRecords(fileByteArray, locationType, processId, bulkLocationAllowedFields);
+        validateAndParseRecords(
+            fileByteArray, locationType, processId, bulkLocationAllowedFields, additionalRowFields);
     BulkUploadProcess bulkUploadProcess =
         getBulkUploadProcess(
             processId, JsonKey.LOCATION, (String) req.get(JsonKey.CREATED_BY), recordCount);
@@ -112,82 +100,5 @@ public class LocationBulkUploadActor extends BaseBulkUploadActor {
     bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.NEW.getValue());
     bulkUploadProcess.setTaskCount(taskCount);
     return bulkUploadProcess;
-  }
-
-  private Integer validateAndParseRecords(
-      byte[] fileByteArray, String locationType, String processId, String[] bulkUploadAllowedFields)
-      throws IOException {
-
-    Integer sequence = 0;
-    Integer count = 0;
-    CSVReader csvReader = null;
-    String[] csvLine;
-    String[] header = null;
-    Map<String, Object> record = new HashMap<>();
-    List<BulkUploadProcessTask> records = new ArrayList<>();
-    try {
-      csvReader = getCsvReader(fileByteArray, ',', '"', 0);
-      while ((csvLine = csvReader.readNext()) != null) {
-        if (ProjectUtil.isNotEmptyStringArray(csvLine)) {
-          continue;
-        }
-        if (sequence == 0) {
-          sequence++;
-          header = trimColumnAttributes(csvLine);
-          validateBulkUploadFields(header, bulkUploadAllowedFields, true);
-        } else {
-          for (int j = 0; j < header.length; j++) {
-            String value = (csvLine[j].trim().length() == 0 ? null : csvLine[j].trim());
-            record.put(header[j], value);
-          }
-          record.put(GeoLocationJsonKey.LOCATION_TYPE, locationType);
-          BulkUploadProcessTask tasks = new BulkUploadProcessTask();
-          tasks.setStatus(ProjectUtil.BulkProcessStatus.NEW.getValue());
-          tasks.setSequenceId(sequence);
-          tasks.setProcessId(processId);
-          tasks.setData(mapper.writeValueAsString(record));
-          tasks.setCreatedTs(new Timestamp(System.currentTimeMillis()));
-          records.add(tasks);
-          sequence++;
-          count++;
-          if (count >= CASSANDRA_WRITE_BATCH_SIZE) {
-            performBatchInsert(records);
-            count = 0;
-          }
-          record.clear();
-        }
-      }
-      if (count != 0) {
-        performBatchInsert(records);
-        count = 0;
-      }
-    } catch (Exception ex) {
-      BulkUploadProcess bulkUploadProcess =
-          getBulkUploadProcessForFailedStatus(processId, BulkProcessStatus.FAILED.getValue(), ex);
-      bulkUploadDao.update(bulkUploadProcess);
-      throw ex;
-    } finally {
-      IOUtils.closeQuietly(csvReader);
-    }
-    // since one record represents the header
-    return sequence - 1;
-  }
-
-  private <T> void performBatchInsert(List<BulkUploadProcessTask> records) {
-    try {
-      bulkUploadProcessTaskDao.insertBatchRecord(records);
-    } catch (Exception ex) {
-      for (BulkUploadProcessTask task : records) {
-        try {
-          bulkUploadProcessTaskDao.create(task);
-        } catch (Exception exception) {
-          ProjectLogger.log(
-              "Cassandra Insert failed for BulkUploadProcessTask-"
-                  + task.getProcessId()
-                  + task.getSequenceId(),
-              exception);
-        }
-      }
-    }
   }
 }

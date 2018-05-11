@@ -1,24 +1,33 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.CSVReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessDao;
+import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessTaskDao;
 import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
+import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessTaskDaoImpl;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
+import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 
 /**
  * Actor contains the common functionality for bulk upload.
@@ -27,10 +36,12 @@ import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
  */
 public abstract class BaseBulkUploadActor extends BaseActor {
 
-  BulkUploadProcessDao bulkUploadDao = new BulkUploadProcessDaoImpl();
+  protected BulkUploadProcessTaskDao bulkUploadProcessTaskDao = new BulkUploadProcessTaskDaoImpl();
+  protected BulkUploadProcessDao bulkUploadDao = new BulkUploadProcessDaoImpl();
   protected Integer DEFAULT_BATCH_SIZE = 10;
   protected Integer CASSANDRA_WRITE_BATCH_SIZE = getBatchSize(JsonKey.CASSANDRA_WRITE_BATCH_SIZE);
   protected Integer CASSANDRA_UPDATE_BATCH_SIZE = getBatchSize(JsonKey.CASSANDRA_UPDATE_BATCH_SIZE);
+  protected ObjectMapper mapper = new ObjectMapper();
 
   /**
    * Method to validate whether the header fields are valid.
@@ -168,7 +179,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   /**
    * Method to check whether file content is not empty.
    *
-   * @param csvLines list of csv lines.Here we are checking file size should greater than 1 since
+   * @param csvLines list of csv lines. Here we are checking file size should greater than 1 since
    *     first line represents the header.
    */
   public void validateEmptyBulkUploadFile(List<String[]> csvLines) {
@@ -193,8 +204,110 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     try {
       batchSize = Integer.parseInt(ProjectUtil.getConfigValue(key));
     } catch (Exception ex) {
-      ProjectLogger.log("FAILED TO READ CASSANDRA BATCH SIZE " + key, ex);
+      ProjectLogger.log("Failed to read cassandra batch size for:" + key, ex);
     }
     return batchSize;
+  }
+
+  protected Integer validateAndParseRecords(
+      byte[] fileByteArray,
+      String locationType,
+      String processId,
+      String[] bulkUploadAllowedFields,
+      Map<String, Object> additionalRowFields)
+      throws IOException {
+
+    Integer sequence = 0;
+    Integer count = 0;
+    CSVReader csvReader = null;
+    String[] csvLine;
+    String[] header = null;
+    Map<String, Object> record = new HashMap<>();
+    List<BulkUploadProcessTask> records = new ArrayList<>();
+    try {
+      csvReader = getCsvReader(fileByteArray, ',', '"', 0);
+      while ((csvLine = csvReader.readNext()) != null) {
+        if (ProjectUtil.isNotEmptyStringArray(csvLine)) {
+          continue;
+        }
+        if (sequence == 0) {
+          sequence++;
+          header = trimColumnAttributes(csvLine);
+          validateBulkUploadFields(header, bulkUploadAllowedFields, true);
+        } else {
+          for (int j = 0; j < header.length; j++) {
+            String value = (csvLine[j].trim().length() == 0 ? null : csvLine[j].trim());
+            record.put(header[j], value);
+          }
+          record.put(GeoLocationJsonKey.LOCATION_TYPE, locationType);
+          record.putAll(additionalRowFields);
+          BulkUploadProcessTask tasks = new BulkUploadProcessTask();
+          tasks.setStatus(ProjectUtil.BulkProcessStatus.NEW.getValue());
+          tasks.setSequenceId(sequence);
+          tasks.setProcessId(processId);
+          tasks.setData(mapper.writeValueAsString(record));
+          tasks.setCreatedOn(new Timestamp(System.currentTimeMillis()));
+          records.add(tasks);
+          sequence++;
+          count++;
+          if (count >= CASSANDRA_WRITE_BATCH_SIZE) {
+            performBatchInsert(records);
+            count = 0;
+          }
+          record.clear();
+        }
+      }
+      if (count != 0) {
+        performBatchInsert(records);
+        count = 0;
+      }
+    } catch (Exception ex) {
+      BulkUploadProcess bulkUploadProcess =
+          getBulkUploadProcessForFailedStatus(processId, BulkProcessStatus.FAILED.getValue(), ex);
+      bulkUploadDao.update(bulkUploadProcess);
+      throw ex;
+    } finally {
+      IOUtils.closeQuietly(csvReader);
+    }
+    // since one record represents the header
+    return sequence - 1;
+  }
+
+  protected void performBatchInsert(List<BulkUploadProcessTask> records) {
+    try {
+      bulkUploadProcessTaskDao.insertBatchRecord(records);
+    } catch (Exception ex) {
+      ProjectLogger.log("Cassandra batch insert failed , performing retry logic.", LoggerEnum.INFO);
+      for (BulkUploadProcessTask task : records) {
+        try {
+          bulkUploadProcessTaskDao.create(task);
+        } catch (Exception exception) {
+          ProjectLogger.log(
+              "Cassandra Insert failed for BulkUploadProcessTask-"
+                  + task.getProcessId()
+                  + task.getSequenceId(),
+              exception);
+        }
+      }
+    }
+  }
+
+  protected void performBatchUpdate(List<BulkUploadProcessTask> records) {
+    try {
+      bulkUploadProcessTaskDao.updateBatchRecord(records);
+    } catch (Exception ex) {
+      ProjectLogger.log("Cassandra batch update failed , performing retry logic.", LoggerEnum.INFO);
+      for (BulkUploadProcessTask task : records) {
+        try {
+          bulkUploadProcessTaskDao.update(task);
+        } catch (Exception exception) {
+          ProjectLogger.log(
+              "Cassandra Update failed for BulkUploadProcessTask-"
+                  + task.getProcessId()
+                  + task.getSequenceId(),
+              exception);
+        }
+      }
+    }
   }
 }

@@ -75,7 +75,8 @@ public class BadgeClassExtensionServiceImplTest {
     response.put(
         JsonKey.RESPONSE, new ArrayList<Map<String, Object>>(Arrays.asList(new HashMap<>())));
 
-    PowerMockito.when(mockDBService.getRecordById(Mockito.any(), Mockito.any(), Mockito.any()))
+    PowerMockito.when(
+            mockDBService.getRecordById(Mockito.any(), Mockito.any(), Mockito.anyString()))
         .thenReturn(response);
 
     BadgeClassExtension badgeClassExtension = badgeClassExtensionServiceImpl.get(VALUE_BADGE_ID);
@@ -145,7 +146,8 @@ public class BadgeClassExtensionServiceImplTest {
     Response response = new Response();
     response.put(JsonKey.RESPONSE, new ArrayList<Map<String, Object>>());
 
-    PowerMockito.when(mockDBService.getRecordById(Mockito.any(), Mockito.any(), Mockito.any()))
+    PowerMockito.when(
+            mockDBService.getRecordById(Mockito.any(), Mockito.any(), Mockito.anyString()))
         .thenReturn(new Response());
 
     boolean thrown = false;
@@ -167,7 +169,8 @@ public class BadgeClassExtensionServiceImplTest {
     Response response = new Response();
     response.put(JsonKey.RESPONSE, new ArrayList<Map<String, Object>>());
 
-    PowerMockito.when(mockDBService.getRecordById(Mockito.any(), Mockito.any(), Mockito.any()))
+    PowerMockito.when(
+            mockDBService.getRecordById(Mockito.any(), Mockito.any(), Mockito.anyString()))
         .thenReturn(response);
 
     boolean thrown = false;

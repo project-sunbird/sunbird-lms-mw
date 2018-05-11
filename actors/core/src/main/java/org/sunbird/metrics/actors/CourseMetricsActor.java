@@ -443,8 +443,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
       if (null == result || result.isEmpty()) {
         ProjectCommonException exception =
             new ProjectCommonException(
-                ResponseCode.unAuthorised.getErrorCode(),
-                ResponseCode.unAuthorised.getErrorMessage(),
+                ResponseCode.unAuthorized.getErrorCode(),
+                ResponseCode.unAuthorized.getErrorMessage(),
                 ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
       }

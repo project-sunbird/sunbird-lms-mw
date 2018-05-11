@@ -299,7 +299,7 @@ public class BulkUploadManagementActor extends BaseActor {
     } finally {
       try {
         fos.close();
-      } catch (IOException e) {
+      } catch (Exception e) {
         ProjectLogger.log(
             "Exception Occurred while closing fileInputStream in BulkUploadManagementActor", e);
       }

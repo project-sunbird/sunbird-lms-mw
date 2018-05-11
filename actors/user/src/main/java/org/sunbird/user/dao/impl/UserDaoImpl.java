@@ -20,7 +20,7 @@ import org.sunbird.models.user.User;
 import org.sunbird.user.dao.UserDao;
 
 /**
- * Implementation class for UserDao interface.
+ * Implementation class of UserDao interface.
  * 
  * @author Amit Kumar
  *

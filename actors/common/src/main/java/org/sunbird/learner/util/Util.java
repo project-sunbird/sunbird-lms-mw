@@ -663,37 +663,36 @@ public final class Util {
     }
     return null;
   }
-
+  /**
+   * This method will validate channel and return the id of organization associated with this channel.
+   * 
+   * @param channel value of channel of an organization
+   * @return Id of Root organization.
+   */
   public static String getRootOrgIdFromChannel(String channel) {
     Map<String, Object> filters = new HashMap<>();
     filters.put(JsonKey.IS_ROOT_ORG, true);
     if(StringUtils.isNotEmpty(channel)){
       filters.put(JsonKey.CHANNEL, channel);
+    }else{
+      // If channel value is not coming in request then read the default channel value provided from ENV.
+      if(StringUtils.isNotEmpty(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL))){
+        filters.put(JsonKey.CHANNEL, ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL));
+      }else{
+        throw new ProjectCommonException(
+            ResponseCode.mandatoryParamsMissing.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.mandatoryParamsMissing.getErrorMessage(),
+                JsonKey.CHANNEL),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
     }
     Map<String, Object> esResult =
         elasticSearchComplexSearch(
             filters, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
       if(MapUtils.isNotEmpty(esResult) && CollectionUtils.isNotEmpty((List) esResult.get(JsonKey.CONTENT))){
-        Map<String, Object> esContent = null;
-        if(StringUtils.isNotEmpty(channel)){
-         esContent =
+        Map<String, Object> esContent = 
           ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
-        }else{
-          List<Map<String, Object>> esContentList = ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT));
-          if(esContentList.size() > 1){
-            //throw exception for multiple root org association 
-            throw new ProjectCommonException(
-                ResponseCode.invalidParameterValue.getErrorCode(),
-                ProjectUtil.formatMessage(
-                    ResponseCode.invalidParameterValue.getErrorMessage(),
-                    channel,
-                    JsonKey.CHANNEL),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-          }else {
-            esContent =
-                ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
-          }
-        }
         return (String) esContent.get(JsonKey.ID);
     }else{
       if(StringUtils.isNotEmpty(channel)){
@@ -940,7 +939,11 @@ public final class Util {
               ResponseCode.SERVER_ERROR.getResponseCode());
     }
   }
-
+/**
+ * This method will check for user in our application with userName@channel i.e loginId value.
+ * 
+ * @param user User object.
+ */
   public static void checkUserExistOrNot(User user){
     Map<String,Object> searchQueryMap = new HashMap<>();
     //loginId is encrypted in our application
@@ -953,6 +956,11 @@ public final class Util {
     }
   }
   
+  /**
+   * This method will check the uniqueness for externalId and provider combination.
+   * 
+   * @param user
+   */
   public static void checkExternalIdAndProviderUniqueness(User user){
     if (StringUtils.isNotEmpty(user.getExternalId()) && StringUtils.isNotEmpty(user.getProvider()) ){
       Map<String,Object> searchQueryMap = new HashMap<>();
@@ -967,6 +975,11 @@ public final class Util {
     }
   }
   
+  /**
+   * This method will search in ES for user with given search query
+   * @param searchQueryMap
+   * @return List<User> List of User object.
+   */
   private static List<User> searchUser(Map<String, Object> searchQueryMap) {
     List<User> userList = new ArrayList<>();
     ObjectMapper mapper = new ObjectMapper();

@@ -156,7 +156,6 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadActor {
 
     ProjectLogger.log(
         "LocationBulkUploadBackGroundJobActor : processLocation method called", LoggerEnum.INFO);
-
     String data = task.getData();
     Map<String, Object> row = mapper.readValue(data, Map.class);
 

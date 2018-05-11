@@ -157,7 +157,6 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
 
           List<Map> successList = new ArrayList<>();
           List<Map> failureList = new ArrayList<>();
-
           tasks
               .stream()
               .forEach(

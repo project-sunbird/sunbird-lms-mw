@@ -1139,7 +1139,7 @@ public class UserManagementActor extends BaseActor {
       try {
         tellToAnother(userRequest);
       } catch (Exception ex) {
-        ProjectLogger.log("Exception Occured during saving user to Es while updating user : ", ex);
+        ProjectLogger.log("Exception Occurred during saving user to Es while updating user : ", ex);
       }
     }
   }
@@ -1756,7 +1756,7 @@ public class UserManagementActor extends BaseActor {
                   orgDb.getTableName(),
                   (String) userMap.get(JsonKey.REGISTERED_ORG_ID));
         } catch (Exception e) {
-          ProjectLogger.log("Exception occured while verifying regOrgId during create user : ", e);
+          ProjectLogger.log("Exception occurred while verifying regOrgId during create user : ", e);
         }
         if (null != orgResponse
             && (!((List<Map<String, Object>>) orgResponse.get(JsonKey.RESPONSE)).isEmpty())) {
@@ -1810,7 +1810,7 @@ public class UserManagementActor extends BaseActor {
         tellToAnother(userRequest);
         // ActorUtil.tell(userRequest);
       } catch (Exception ex) {
-        ProjectLogger.log("Exception Occured during saving user to Es while creating user : ", ex);
+        ProjectLogger.log("Exception Occurred during saving user to Es while creating user : ", ex);
       }
     } else {
       ProjectLogger.log("no call for ES to save user");
@@ -1827,7 +1827,7 @@ public class UserManagementActor extends BaseActor {
               orgDb.getTableName(),
               (String) userMap.get(JsonKey.REGISTERED_ORG_ID));
     } catch (Exception e) {
-      ProjectLogger.log("Exception occured while verifying regOrgId during create user : ", e);
+      ProjectLogger.log("Exception occurred while verifying regOrgId during create user : ", e);
       throw new ProjectCommonException(
           ResponseCode.invalidOrgId.getErrorCode(),
           ResponseCode.invalidOrgId.getErrorMessage(),
@@ -1918,7 +1918,7 @@ public class UserManagementActor extends BaseActor {
         try {
           email = encryptionService.encryptData(email);
         } catch (Exception e) {
-          ProjectLogger.log("Exception occured while encrypting Email ", e);
+          ProjectLogger.log("Exception occurred while encrypting Email ", e);
         }
         Map<String, Object> filters = new HashMap<>();
         filters.put(JsonKey.ENC_EMAIL, email);
@@ -1963,7 +1963,7 @@ public class UserManagementActor extends BaseActor {
         try {
           phone = encryptionService.encryptData(phone);
         } catch (Exception e) {
-          ProjectLogger.log("Exception occured while encrypting phone number ", e);
+          ProjectLogger.log("Exception occurred while encrypting phone number ", e);
         }
         Map<String, Object> filters = new HashMap<>();
         filters.put(JsonKey.ENC_PHONE, phone);
@@ -3073,7 +3073,7 @@ public class UserManagementActor extends BaseActor {
       tellToAnother(request);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "Exception Occured during saving user to Es while joinUserOrganisation : ", ex);
+          "Exception Occurred during saving user to Es while joinUserOrganisation : ", ex);
     }
   }
 
@@ -3184,7 +3184,7 @@ public class UserManagementActor extends BaseActor {
               usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), reqMap);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "Exception Occured while fetching data from user Ext Table in bulk upload", ex);
+          "Exception Occurred while fetching data from user Ext Table in bulk upload", ex);
     }
     if (null != response) {
       responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);

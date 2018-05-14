@@ -38,8 +38,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   protected BulkUploadProcessTaskDao bulkUploadProcessTaskDao = new BulkUploadProcessTaskDaoImpl();
   protected BulkUploadProcessDao bulkUploadDao = new BulkUploadProcessDaoImpl();
   protected Integer DEFAULT_BATCH_SIZE = 10;
-  protected Integer CASSANDRA_WRITE_BATCH_SIZE = getBatchSize(JsonKey.CASSANDRA_WRITE_BATCH_SIZE);
-  protected Integer CASSANDRA_UPDATE_BATCH_SIZE = getBatchSize(JsonKey.CASSANDRA_UPDATE_BATCH_SIZE);
+  protected Integer CASSANDRA_BATCH_SIZE = getBatchSize(JsonKey.CASSANDRA_WRITE_BATCH_SIZE);
   protected ObjectMapper mapper = new ObjectMapper();
 
   /**
@@ -247,7 +246,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
           records.add(tasks);
           sequence++;
           count++;
-          if (count >= CASSANDRA_WRITE_BATCH_SIZE) {
+          if (count >= CASSANDRA_BATCH_SIZE) {
             performBatchInsert(records);
             count = 0;
           }

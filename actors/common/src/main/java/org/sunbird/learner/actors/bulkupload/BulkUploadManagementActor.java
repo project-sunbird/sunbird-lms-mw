@@ -128,7 +128,6 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         if (!(JsonKey.LOCATION.equalsIgnoreCase(objectType))) {
           resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
           ProjectUtil.removeUnwantedFields(resMap, JsonKey.STATUS, JsonKey.ID);
-          ObjectMapper mapper = new ObjectMapper();
           Object[] successMap = null;
           Object[] failureMap = null;
           try {
@@ -270,37 +269,6 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     // save csv file to db
     uploadCsvToDB(
         orgList, processId, null, JsonKey.ORGANISATION, (String) req.get(JsonKey.CREATED_BY), null);
-  }
-
-  private void validateOrgProperty(String[] property) {
-    ArrayList<String> properties =
-        new ArrayList<>(
-            Arrays.asList(
-                JsonKey.ORGANISATION_NAME,
-                JsonKey.CHANNEL,
-                JsonKey.IS_ROOT_ORG,
-                JsonKey.PROVIDER,
-                JsonKey.EXTERNAL_ID,
-                JsonKey.DESCRIPTION,
-                JsonKey.HOME_URL,
-                JsonKey.ORG_CODE,
-                JsonKey.ORG_TYPE,
-                JsonKey.PREFERRED_LANGUAGE,
-                JsonKey.THEME,
-                JsonKey.CONTACT_DETAILS,
-                JsonKey.LOC_ID,
-                JsonKey.HASHTAGID,
-                JsonKey.LOCATION_CODE));
-
-    for (String key : property) {
-      if (!properties.contains(key)) {
-        ProjectLogger.log("Invalid Column bulk upload management actor :: " + key);
-        throw new ProjectCommonException(
-            ResponseCode.InvalidColumnError.getErrorCode(),
-            ResponseCode.InvalidColumnError.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-      }
-    }
   }
 
   private void processBulkUserUpload(Map<String, Object> req, String processId) {

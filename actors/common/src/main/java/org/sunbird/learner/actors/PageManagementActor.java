@@ -258,7 +258,6 @@ public class PageManagementActor extends BaseActor {
       ProjectLogger.log("Exception occurred while validating org id " + e.getMessage(), e);
     }
 
-    Map<String, Object> map = null;
     /** if orgId is not then consider default page */
     if (CollectionUtils.isEmpty(result)) {
       orgId = "NA";

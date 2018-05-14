@@ -592,7 +592,8 @@ public class CourseBatchManagementActor extends BaseActor {
         }
         todate = format.parse(format.format(new Date()));
       } catch (ParseException e) {
-        ProjectLogger.log("Exception occurred while parsing date in CourseBatchManagementActor ", e);
+        ProjectLogger.log(
+            "Exception occurred while parsing date in CourseBatchManagementActor ", e);
       }
       if (null != endDate && endDate.before(todate)) {
         throw new ProjectCommonException(

@@ -145,8 +145,7 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
             ((Map<String, Object>) value.get("content")).get(JsonKey.CONTENT_ID));
         updateDb.put(
             JsonKey.LAST_READ_CONTENT_STATUS,
-            (contentStateInfo.get(
-                ((Map<String, Object>) value.get("content")).get(JsonKey.ID))));
+            (contentStateInfo.get(((Map<String, Object>) value.get("content")).get(JsonKey.ID))));
         try {
           cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), updateDb);
           // TODO: for some reason, ES indexing is failing with Timestamp value. need to

@@ -347,9 +347,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
           if (isNotNull(userInfoCache.get(userId))) {
             map.put(JsonKey.USERNAME, userInfoCache.get(userId).get(JsonKey.USERNAME));
             map.put(
-                "org",
-                orgInfoCache.get(
-                    userInfoCache.get(userId).get(JsonKey.REGISTERED_ORG_ID)));
+                "org", orgInfoCache.get(userInfoCache.get(userId).get(JsonKey.REGISTERED_ORG_ID)));
             if (isNotNull(batchInfoCache.get(map.get(JsonKey.BATCH_ID)))) {
               map.put(
                   "batchEndsOn",

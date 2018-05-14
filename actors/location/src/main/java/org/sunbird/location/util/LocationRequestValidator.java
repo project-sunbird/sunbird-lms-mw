@@ -1,5 +1,6 @@
 package org.sunbird.location.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -22,6 +23,7 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.Util;
 import org.sunbird.location.dao.LocationDao;
 import org.sunbird.location.dao.impl.LocationDaoImpl;
+import org.sunbird.models.location.apirequest.LocationRequest;
 
 /** @author Amit Kumar */
 public class LocationRequestValidator {
@@ -31,6 +33,7 @@ public class LocationRequestValidator {
   private static LocationDao locationDao = new LocationDaoImpl();
   protected static List<List<String>> locationTypeGroupList = new ArrayList<>();
   protected static List<String> typeList = new ArrayList<>();
+  private static ObjectMapper mapper = new ObjectMapper();
 
   static {
     List<String> subTypeList =
@@ -93,22 +96,22 @@ public class LocationRequestValidator {
   }
 
   /**
-   * This method will validate parentId , parentCode and locationType from a given request
+   * This method will validate parentId , parentCode for given type.
    *
-   * @param location
-   * @param opType
-   * @return boolean
+   * @param locationRequest represents the location request object which has to be validate.
+   * @param opType type of location.
+   * @return boolean If parent id and code are valid return true else false.
    */
-  public static boolean isValidParentIdAndCode(Map<String, Object> location, String opType) {
-    String type = (String) location.get(GeoLocationJsonKey.LOCATION_TYPE);
+  public static boolean isValidParentIdAndCode(LocationRequest locationRequest, String opType) {
+    String type = locationRequest.getType();
     if (StringUtils.isNotEmpty(type)) {
       List<String> locationTypeList = getLocationSubTypeListForType(type);
       // if type is of top level then no need to validate parentCode and parentId
       if (!locationTypeList.get(0).equalsIgnoreCase(type.toLowerCase())) {
         // while creating new location, if locationType is not top level then type and parent id is
         // mandatory
-        if ((StringUtils.isEmpty((String) location.get(GeoLocationJsonKey.PARENT_CODE))
-            && StringUtils.isEmpty((String) location.get(GeoLocationJsonKey.PARENT_ID)))) {
+        if ((StringUtils.isEmpty(locationRequest.getParentCode())
+            && StringUtils.isEmpty(locationRequest.getParentId()))) {
           throw new ProjectCommonException(
               ResponseCode.mandatoryParamsMissing.getErrorCode(),
               ProjectUtil.formatMessage(
@@ -117,8 +120,8 @@ public class LocationRequestValidator {
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
       } else if (locationTypeList.get(0).equalsIgnoreCase(type.toLowerCase())) {
-        if (StringUtils.isNotEmpty((String) location.get(GeoLocationJsonKey.PARENT_CODE))
-            || StringUtils.isNotEmpty((String) location.get(GeoLocationJsonKey.PARENT_ID))) {
+        if (StringUtils.isNotEmpty(locationRequest.getParentCode())
+            || StringUtils.isNotEmpty(locationRequest.getParentId())) {
           throw new ProjectCommonException(
               ResponseCode.parentNotAllowed.getErrorCode(),
               ProjectUtil.formatMessage(
@@ -127,14 +130,14 @@ public class LocationRequestValidator {
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
         // if type is top level then parentCode and parentId is null
-        location.put(GeoLocationJsonKey.PARENT_CODE, null);
-        location.put(GeoLocationJsonKey.PARENT_ID, null);
+        locationRequest.setParentCode(null);
+        locationRequest.setParentId(null);
       }
     }
-    if (StringUtils.isNotEmpty((String) location.get(GeoLocationJsonKey.CODE))) {
-      isValidLocationCode(location, opType);
+    if (StringUtils.isNotEmpty(locationRequest.getCode())) {
+      isValidLocationCode(locationRequest, opType);
     }
-    validateParentIDAndParentCode(location, opType);
+    validateParentIDAndParentCode(locationRequest, opType);
     return true;
   }
 
@@ -147,13 +150,15 @@ public class LocationRequestValidator {
     return (new ArrayList<>());
   }
 
-  private static void validateParentIDAndParentCode(Map<String, Object> location, String opType) {
-    String parentCode = (String) location.get(GeoLocationJsonKey.PARENT_CODE);
-    String parentId = (String) location.get(GeoLocationJsonKey.PARENT_ID);
+  private static void validateParentIDAndParentCode(
+      LocationRequest locationRequest, String opType) {
+    String parentCode = locationRequest.getParentCode();
+    String parentId = locationRequest.getParentId();
     if (StringUtils.isNotEmpty(parentCode)) {
       Map<String, Object> map = getLocation(parentCode);
       parentId = (String) map.get(JsonKey.ID);
-      location.put(GeoLocationJsonKey.PARENT_ID, map.get(JsonKey.ID));
+      // location.put(GeoLocationJsonKey.PARENT_ID, map.get(JsonKey.ID));
+      locationRequest.setParentId((String) map.get(JsonKey.ID));
     }
     if (StringUtils.isNotEmpty(parentId)) {
       String operation = GeoLocationJsonKey.PARENT_ID;
@@ -161,25 +166,26 @@ public class LocationRequestValidator {
         operation = GeoLocationJsonKey.PARENT_CODE;
       }
       Map<String, Object> parentLocation = getLocationById(parentId, operation);
-      validateParentLocationType(parentLocation, location, opType);
+      validateParentLocationType(
+          mapper.convertValue(parentLocation, LocationRequest.class), locationRequest, opType);
     }
   }
 
   /**
    * This method will validate the parent location type means parent should be only one level up
-   * from child
+   * from child.
    *
-   * @param parentLocation
-   * @param location
-   * @return
+   * @param parentLocation represents parent location request object.
+   * @param location represents child location request object.
+   * @return boolean If child location has valid hierarchy with parent return true otherwise false.
    */
   private static boolean validateParentLocationType(
-      Map<String, Object> parentLocation, Map<String, Object> location, String opType) {
-    String parentType = (String) parentLocation.get(GeoLocationJsonKey.LOCATION_TYPE);
-    String currentLocType = (String) location.get(GeoLocationJsonKey.LOCATION_TYPE);
+      LocationRequest parentLocation, LocationRequest location, String opType) {
+    String parentType = parentLocation.getType();
+    String currentLocType = location.getType();
     Map<String, Object> locn = null;
     if (opType.equalsIgnoreCase(JsonKey.UPDATE)) {
-      locn = getLocationById((String) location.get(JsonKey.ID), JsonKey.LOCATION_ID);
+      locn = getLocationById(location.getId(), JsonKey.LOCATION_ID);
       currentLocType = (String) locn.get(GeoLocationJsonKey.LOCATION_TYPE);
     }
     Map<String, Integer> currentLocTypeoOrdermap =
@@ -232,13 +238,12 @@ public class LocationRequestValidator {
   /**
    * This method will validate location code and if code is valid will return location .
    *
-   * @param location Map<String,Object> complete location details
-   * @param opType (for which operation we are validating i.e CREATE or UPDATE)
+   * @param code Value of location code we are looking for.
    * @return location details Map<String, Object>
    */
-  private static Map<String, Object> getLocation(String parentCode) {
+  private static Map<String, Object> getLocation(String code) {
     Map<String, Object> filters = new HashMap<>();
-    filters.put(GeoLocationJsonKey.CODE, parentCode);
+    filters.put(GeoLocationJsonKey.CODE, code);
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.FILTERS, filters);
     List<Map<String, Object>> locationMapList =
@@ -301,9 +306,9 @@ public class LocationRequestValidator {
     return (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
   }
 
-  public static boolean isValidLocationCode(Map<String, Object> location, String opType) {
+  public static boolean isValidLocationCode(LocationRequest locationRequest, String opType) {
     Map<String, Object> filters = new HashMap<>();
-    filters.put(GeoLocationJsonKey.CODE, location.get(GeoLocationJsonKey.CODE));
+    filters.put(GeoLocationJsonKey.CODE, locationRequest.getCode());
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.FILTERS, filters);
     List<Map<String, Object>> locationMapList =
@@ -318,18 +323,17 @@ public class LocationRequestValidator {
             ProjectUtil.formatMessage(
                 ResponseCode.alreadyExists.getErrorMessage(),
                 GeoLocationJsonKey.CODE,
-                location.get(GeoLocationJsonKey.CODE)),
+                locationRequest.getCode()),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       } else if (opType.equalsIgnoreCase(JsonKey.UPDATE)) {
         Map<String, Object> locn = locationMapList.get(0);
-        if (!(((String) locn.get(JsonKey.ID))
-            .equalsIgnoreCase((String) location.get(JsonKey.ID)))) {
+        if (!(((String) locn.get(JsonKey.ID)).equalsIgnoreCase(locationRequest.getId()))) {
           throw new ProjectCommonException(
               ResponseCode.alreadyExists.getErrorCode(),
               ProjectUtil.formatMessage(
                   ResponseCode.alreadyExists.getErrorMessage(),
                   GeoLocationJsonKey.CODE,
-                  location.get(GeoLocationJsonKey.CODE)),
+                  locationRequest.getCode()),
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
       }

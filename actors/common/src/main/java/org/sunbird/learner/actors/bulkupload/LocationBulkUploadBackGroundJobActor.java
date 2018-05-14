@@ -39,6 +39,7 @@ import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.location.Location;
+import org.sunbird.models.location.apirequest.LocationRequest;
 
 /**
  * @desc This class will do the bulk processing of Location.
@@ -196,7 +197,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadActor {
     try {
       locationClient.updateLocation(
           getActorRef(LocationActorOperation.UPDATE_LOCATION.getValue()),
-          mapper.convertValue(row, Location.class));
+          mapper.convertValue(row, LocationRequest.class));
     } catch (Exception ex) {
       ProjectLogger.log(
           "LocationBulkUploadBackGroundJobActor : callUpdateLocation - got exception "
@@ -219,7 +220,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadActor {
       locationId =
           locationClient.createLocation(
               getActorRef(LocationActorOperation.CREATE_LOCATION.getValue()),
-              mapper.convertValue(row, Location.class));
+              mapper.convertValue(row, LocationRequest.class));
     } catch (Exception ex) {
       ProjectLogger.log(
           "LocationBulkUploadBackGroundJobActor : callCreateLocation - got exception "
@@ -227,6 +228,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadActor {
           LoggerEnum.INFO);
       row.put(JsonKey.ERROR_MSG, ex.getMessage());
       setTaskStatus(task, BulkProcessStatus.FAILED.getValue(), ex.getMessage(), row);
+      return;
     }
 
     if (StringUtils.isEmpty(locationId)) {

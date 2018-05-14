@@ -365,7 +365,7 @@ public class CourseBatchManagementActor extends BaseActor {
     Map<String, Object> ekStepContent =
         CourseEnrollmentActor.getCourseObjectFromEkStep(courseId, headers);
     if (null == ekStepContent || ekStepContent.size() == 0) {
-      ProjectLogger.log("Course Id not found in EkStep");
+      ProjectLogger.log("Course Id not found in EkStep===" + courseId, LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.invalidCourseId.getErrorCode(),
           ResponseCode.invalidCourseId.getErrorMessage(),

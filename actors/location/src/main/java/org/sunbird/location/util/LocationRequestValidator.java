@@ -158,7 +158,6 @@ public class LocationRequestValidator {
     if (StringUtils.isNotEmpty(parentCode)) {
       Map<String, Object> map = getLocation(parentCode);
       parentId = (String) map.get(JsonKey.ID);
-      // location.put(GeoLocationJsonKey.PARENT_ID, map.get(JsonKey.ID));
       locationRequest.setParentId((String) map.get(JsonKey.ID));
     }
     if (StringUtils.isNotEmpty(parentId)) {

@@ -117,7 +117,7 @@ public class DataCacheHandler implements Runnable {
         }
       }
       ProjectLogger.log("pagemap keyset " + map.keySet());
-      ProjectLogger.log(tableName +  " cache size: " + map.size(), LoggerEnum.INFO.name());
+      ProjectLogger.log(tableName + " cache size: " + map.size(), LoggerEnum.INFO.name());
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }

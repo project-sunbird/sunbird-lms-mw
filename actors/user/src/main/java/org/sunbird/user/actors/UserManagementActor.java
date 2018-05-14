@@ -1518,8 +1518,11 @@ public class UserManagementActor extends BaseActor {
 
     try {
       // validate channel and set rootOrgId of user
-      String rootOrgId = Util.getRootOrgIdFromChannel((String) userMap.get(JsonKey.CHANNEL));
-      userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+      if (StringUtils.isEmpty((String) userMap.get(JsonKey.CHANNEL))) {
+        userMap.put(JsonKey.CHANNEL, ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL));
+        String rootOrgId = Util.getRootOrgIdFromChannel((String) userMap.get(JsonKey.CHANNEL));
+        userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+      }
     } catch (Exception ex) {
       sender().tell(ex, self());
       return;

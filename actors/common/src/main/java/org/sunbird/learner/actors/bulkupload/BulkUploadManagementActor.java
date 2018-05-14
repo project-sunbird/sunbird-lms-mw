@@ -382,7 +382,6 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     // convert userMapList to json string
     Map<String, Object> map = new HashMap<>();
 
-    ObjectMapper mapper = new ObjectMapper();
     try {
       map.put(JsonKey.DATA, mapper.writeValueAsString(dataMapList));
     } catch (IOException e) {

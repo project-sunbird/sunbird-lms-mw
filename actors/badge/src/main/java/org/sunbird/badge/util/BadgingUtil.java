@@ -223,13 +223,13 @@ public class BadgingUtil {
             ResponseCode.CLIENT_ERROR.getResponseCode());
       case 401:
         return new ProjectCommonException(
-            ResponseCode.unAuthorised.getErrorCode(),
-            ResponseCode.unAuthorised.getErrorMessage(),
+            ResponseCode.unAuthorized.getErrorCode(),
+            ResponseCode.unAuthorized.getErrorMessage(),
             ResponseCode.UNAUTHORIZED.getResponseCode());
       case 403:
         return new ProjectCommonException(
-            ResponseCode.unAuthorised.getErrorCode(),
-            ResponseCode.unAuthorised.getErrorMessage(),
+            ResponseCode.unAuthorized.getErrorCode(),
+            ResponseCode.unAuthorized.getErrorMessage(),
             ResponseCode.UNAUTHORIZED.getResponseCode());
       case 404:
         return new ProjectCommonException(

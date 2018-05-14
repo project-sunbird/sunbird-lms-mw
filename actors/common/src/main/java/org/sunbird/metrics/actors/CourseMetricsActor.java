@@ -274,7 +274,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
         List<String> userfields = new ArrayList<>();
         userfields.add(JsonKey.USER_ID);
         userfields.add(JsonKey.USERNAME);
-        userfields.add(JsonKey.REGISTERED_ORG_ID);
+        userfields.add(JsonKey.ROOT_ORG_ID);
         Map<String, Object> userresult =
             ElasticSearchUtil.complexSearch(
                 createESRequest(userfilter, null, userfields),
@@ -291,14 +291,14 @@ public class CourseMetricsActor extends BaseMetricsActor {
           map.put("user", userId);
           map.put(
               JsonKey.USERNAME, decryptionService.decryptData((String) map.get(JsonKey.USERNAME)));
-          String registerdOrgId = (String) map.get(JsonKey.REGISTERED_ORG_ID);
+          String registerdOrgId = (String) map.get(JsonKey.ROOT_ORG_ID);
           if (isNotNull(registerdOrgId)) {
             orgSet.add(registerdOrgId);
           }
           userInfoCache.put(userId, new HashMap<String, Object>(map));
           // remove the org info from user content bcoz it is not desired in the user info
           // result
-          map.remove(JsonKey.REGISTERED_ORG_ID);
+          map.remove(JsonKey.ROOT_ORG_ID);
           map.remove(JsonKey.USER_ID);
         }
 
@@ -346,8 +346,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
           map.put("lastAccessTime", map.get(JsonKey.DATE_TIME));
           if (isNotNull(userInfoCache.get(userId))) {
             map.put(JsonKey.USERNAME, userInfoCache.get(userId).get(JsonKey.USERNAME));
-            map.put(
-                "org", orgInfoCache.get(userInfoCache.get(userId).get(JsonKey.REGISTERED_ORG_ID)));
+            map.put("org", orgInfoCache.get(userInfoCache.get(userId).get(JsonKey.ROOT_ORG_ID)));
             if (isNotNull(batchInfoCache.get(map.get(JsonKey.BATCH_ID)))) {
               map.put(
                   "batchEndsOn",
@@ -441,8 +440,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
       if (null == result || result.isEmpty()) {
         ProjectCommonException exception =
             new ProjectCommonException(
-                ResponseCode.unAuthorised.getErrorCode(),
-                ResponseCode.unAuthorised.getErrorMessage(),
+                ResponseCode.unAuthorized.getErrorCode(),
+                ResponseCode.unAuthorized.getErrorMessage(),
                 ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
       }
@@ -472,10 +471,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
       String channel = (String) rootOrgData.get(JsonKey.HASHTAGID);
       ProjectLogger.log("Channel" + channel);
-
-      // String responseFormat = getCourseConsumptionData(periodStr, courseId,
-      // requestObject,
-      // channel);
       String responseFormat =
           (String) cache.getData(JsonKey.CourseConsumption, courseId, periodStr);
       if (StringUtils.isBlank(responseFormat)) {

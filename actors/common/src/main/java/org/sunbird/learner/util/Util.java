@@ -1030,7 +1030,6 @@ public final class Util {
     map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EXTERNAL_ID));
     map.put(JsonKey.PROVIDER, requestMap.get(JsonKey.PROVIDER));
     map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
-    map.put(JsonKey.ID, String.valueOf(System.currentTimeMillis()));
     map.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
     map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
     cassandraOperation.upsertRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);

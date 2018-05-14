@@ -18,7 +18,7 @@ import org.sunbird.location.dao.LocationDao;
 import org.sunbird.location.dao.impl.LocationDaoFactory;
 import org.sunbird.location.util.LocationRequestValidator;
 import org.sunbird.models.location.Location;
-import org.sunbird.models.location.apirequest.LocationRequest;
+import org.sunbird.models.location.apirequest.UpsertLocationRequest;
 
 /**
  * This class will handle all location related request.
@@ -41,10 +41,10 @@ public class LocationActor extends BaseLocationActor {
     String operation = request.getOperation();
     switch (operation) {
       case "createLocation":
-        createLocation(ProjectUtil.convertToRequestPojo(request, LocationRequest.class));
+        createLocation(ProjectUtil.convertToRequestPojo(request, UpsertLocationRequest.class));
         break;
       case "updateLocation":
-        updateLocation(ProjectUtil.convertToRequestPojo(request, LocationRequest.class));
+        updateLocation(ProjectUtil.convertToRequestPojo(request, UpsertLocationRequest.class));
         break;
       case "searchLocation":
         searchLocation(request);
@@ -57,7 +57,7 @@ public class LocationActor extends BaseLocationActor {
     }
   }
 
-  private void createLocation(LocationRequest locationRequest) {
+  private void createLocation(UpsertLocationRequest locationRequest) {
     try {
       validateUpsertLocnReq(locationRequest, JsonKey.CREATE);
       // put unique identifier in request for Id
@@ -75,7 +75,7 @@ public class LocationActor extends BaseLocationActor {
     }
   }
 
-  private void updateLocation(LocationRequest locationRequest) {
+  private void updateLocation(UpsertLocationRequest locationRequest) {
     try {
       validateUpsertLocnReq(locationRequest, JsonKey.UPDATE);
       Location location = mapper.convertValue(locationRequest, Location.class);
@@ -142,7 +142,7 @@ public class LocationActor extends BaseLocationActor {
     }
   }
 
-  private void validateUpsertLocnReq(LocationRequest locationRequest, String operation) {
+  private void validateUpsertLocnReq(UpsertLocationRequest locationRequest, String operation) {
     if (StringUtils.isNotEmpty(locationRequest.getType())) {
       LocationRequestValidator.isValidLocationType(locationRequest.getType());
     }

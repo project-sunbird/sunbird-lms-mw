@@ -23,7 +23,7 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.Util;
 import org.sunbird.location.dao.LocationDao;
 import org.sunbird.location.dao.impl.LocationDaoImpl;
-import org.sunbird.models.location.apirequest.LocationRequest;
+import org.sunbird.models.location.apirequest.UpsertLocationRequest;
 
 /** @author Amit Kumar */
 public class LocationRequestValidator {
@@ -102,7 +102,8 @@ public class LocationRequestValidator {
    * @param opType type of location.
    * @return boolean If parent id and code are valid return true else false.
    */
-  public static boolean isValidParentIdAndCode(LocationRequest locationRequest, String opType) {
+  public static boolean isValidParentIdAndCode(
+      UpsertLocationRequest locationRequest, String opType) {
     String type = locationRequest.getType();
     if (StringUtils.isNotEmpty(type)) {
       List<String> locationTypeList = getLocationSubTypeListForType(type);
@@ -151,7 +152,7 @@ public class LocationRequestValidator {
   }
 
   private static void validateParentIDAndParentCode(
-      LocationRequest locationRequest, String opType) {
+      UpsertLocationRequest locationRequest, String opType) {
     String parentCode = locationRequest.getParentCode();
     String parentId = locationRequest.getParentId();
     if (StringUtils.isNotEmpty(parentCode)) {
@@ -167,7 +168,9 @@ public class LocationRequestValidator {
       }
       Map<String, Object> parentLocation = getLocationById(parentId, operation);
       validateParentLocationType(
-          mapper.convertValue(parentLocation, LocationRequest.class), locationRequest, opType);
+          mapper.convertValue(parentLocation, UpsertLocationRequest.class),
+          locationRequest,
+          opType);
     }
   }
 
@@ -180,7 +183,7 @@ public class LocationRequestValidator {
    * @return boolean If child location has valid hierarchy with parent return true otherwise false.
    */
   private static boolean validateParentLocationType(
-      LocationRequest parentLocation, LocationRequest location, String opType) {
+      UpsertLocationRequest parentLocation, UpsertLocationRequest location, String opType) {
     String parentType = parentLocation.getType();
     String currentLocType = location.getType();
     Map<String, Object> locn = null;
@@ -306,7 +309,7 @@ public class LocationRequestValidator {
     return (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
   }
 
-  public static boolean isValidLocationCode(LocationRequest locationRequest, String opType) {
+  public static boolean isValidLocationCode(UpsertLocationRequest locationRequest, String opType) {
     Map<String, Object> filters = new HashMap<>();
     filters.put(GeoLocationJsonKey.CODE, locationRequest.getCode());
     Map<String, Object> map = new HashMap<>();

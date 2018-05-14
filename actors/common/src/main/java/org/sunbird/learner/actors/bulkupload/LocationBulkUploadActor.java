@@ -33,8 +33,6 @@ public class LocationBulkUploadActor extends BaseBulkUploadActor {
     GeoLocationJsonKey.PARENT_CODE,
     GeoLocationJsonKey.PARENT_ID
   };
-  private Integer DEFAULT_WRITE_BATCH_SIZE = 10;
-  private Integer CASSANDRA_WRITE_BATCH_SIZE = getBatchSize(JsonKey.CASSANDRA_WRITE_BATCH_SIZE);
 
   @Override
   public void onReceive(Request request) throws Throwable {

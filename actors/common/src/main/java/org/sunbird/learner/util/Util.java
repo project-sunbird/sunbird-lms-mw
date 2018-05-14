@@ -61,6 +61,7 @@ public final class Util {
   public static final int RECOMENDED_LIST_SIZE = 10;
   private static PropertiesCache propertiesCache = PropertiesCache.getInstance();
   public static final String KEY_SPACE_NAME = "sunbird";
+  public static final String USER_EXT_IDNT_TABLE = "user_external_identity";
   private static Properties prop = new Properties();
   private static Map<String, String> headers = new HashMap<>();
   private static Map<Integer, List<Integer>> orgStatusTransition = new HashMap<>();
@@ -664,56 +665,55 @@ public final class Util {
     return null;
   }
   /**
-   * This method will validate channel and return the id of organization associated with this channel.
-   * 
+   * This method will validate channel and return the id of organization associated with this
+   * channel.
+   *
    * @param channel value of channel of an organization
    * @return Id of Root organization.
    */
   public static String getRootOrgIdFromChannel(String channel) {
     Map<String, Object> filters = new HashMap<>();
     filters.put(JsonKey.IS_ROOT_ORG, true);
-    if(StringUtils.isNotEmpty(channel)){
+    if (StringUtils.isNotEmpty(channel)) {
       filters.put(JsonKey.CHANNEL, channel);
-    }else{
-      // If channel value is not coming in request then read the default channel value provided from ENV.
-      if(StringUtils.isNotEmpty(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL))){
+    } else {
+      // If channel value is not coming in request then read the default channel value provided from
+      // ENV.
+      if (StringUtils.isNotEmpty(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL))) {
         filters.put(JsonKey.CHANNEL, ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL));
-      }else{
+      } else {
         throw new ProjectCommonException(
             ResponseCode.mandatoryParamsMissing.getErrorCode(),
             ProjectUtil.formatMessage(
-                ResponseCode.mandatoryParamsMissing.getErrorMessage(),
-                JsonKey.CHANNEL),
+                ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.CHANNEL),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
     }
     Map<String, Object> esResult =
         elasticSearchComplexSearch(
             filters, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
-      if(MapUtils.isNotEmpty(esResult) && CollectionUtils.isNotEmpty((List) esResult.get(JsonKey.CONTENT))){
-        Map<String, Object> esContent = 
+    if (MapUtils.isNotEmpty(esResult)
+        && CollectionUtils.isNotEmpty((List) esResult.get(JsonKey.CONTENT))) {
+      Map<String, Object> esContent =
           ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
-        return (String) esContent.get(JsonKey.ID);
-    }else{
-      if(StringUtils.isNotEmpty(channel)){
+      return (String) esContent.get(JsonKey.ID);
+    } else {
+      if (StringUtils.isNotEmpty(channel)) {
         throw new ProjectCommonException(
             ResponseCode.invalidParameterValue.getErrorCode(),
             ProjectUtil.formatMessage(
-                ResponseCode.invalidParameterValue.getErrorMessage(),
-                channel,
-                JsonKey.CHANNEL),
+                ResponseCode.invalidParameterValue.getErrorMessage(), channel, JsonKey.CHANNEL),
             ResponseCode.CLIENT_ERROR.getResponseCode());
-      }else{
+      } else {
         throw new ProjectCommonException(
             ResponseCode.mandatoryParamsMissing.getErrorCode(),
             ProjectUtil.formatMessage(
-                ResponseCode.mandatoryParamsMissing.getErrorMessage(),
-                JsonKey.CHANNEL),
+                ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.CHANNEL),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
     }
   }
-  
+
   private static Map<String, Object> elasticSearchComplexSearch(
       Map<String, Object> filters, String index, String type) {
 
@@ -923,61 +923,64 @@ public final class Util {
     }
     return Collections.emptyMap();
   }
-  
-  //--------------------------------------------------------
-  //user utility methods
+
+  // --------------------------------------------------------
+  // user utility methods
   private static EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
           null);
-  public static String getEncryptedData(String value){
+
+  public static String getEncryptedData(String value) {
     try {
       return encryptionService.encryptData(value);
     } catch (Exception e) {
       throw new ProjectCommonException(
-              ResponseCode.userDataEncryptionError.getErrorCode(),
-              ResponseCode.userDataEncryptionError.getErrorMessage(),
-              ResponseCode.SERVER_ERROR.getResponseCode());
+          ResponseCode.userDataEncryptionError.getErrorCode(),
+          ResponseCode.userDataEncryptionError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
     }
   }
-/**
- * This method will check for user in our application with userName@channel i.e loginId value.
- * 
- * @param user User object.
- */
-  public static void checkUserExistOrNot(User user){
-    Map<String,Object> searchQueryMap = new HashMap<>();
-    //loginId is encrypted in our application
+  /**
+   * This method will check for user in our application with userName@channel i.e loginId value.
+   *
+   * @param user User object.
+   */
+  public static void checkUserExistOrNot(User user) {
+    Map<String, Object> searchQueryMap = new HashMap<>();
+    // loginId is encrypted in our application
     searchQueryMap.put(JsonKey.LOGIN_ID, getEncryptedData(user.getLoginId()));
     if (CollectionUtils.isNotEmpty(searchUser(searchQueryMap))) {
       throw new ProjectCommonException(
-              ResponseCode.userAlreadyExist.getErrorCode(),
-              ResponseCode.userAlreadyExist.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
+          ResponseCode.userAlreadyExist.getErrorCode(),
+          ResponseCode.userAlreadyExist.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
   }
-  
+
   /**
    * This method will check the uniqueness for externalId and provider combination.
-   * 
+   *
    * @param user
    */
-  public static void checkExternalIdAndProviderUniqueness(User user){
-    if (StringUtils.isNotEmpty(user.getExternalId()) && StringUtils.isNotEmpty(user.getProvider()) ){
-      Map<String,Object> searchQueryMap = new HashMap<>();
+  public static void checkExternalIdAndProviderUniqueness(User user) {
+    if (StringUtils.isNotEmpty(user.getExternalId())
+        && StringUtils.isNotEmpty(user.getProvider())) {
+      Map<String, Object> searchQueryMap = new HashMap<>();
       searchQueryMap.put(JsonKey.EXTERNAL_ID, user.getExternalId());
       searchQueryMap.put(JsonKey.PROVIDER, user.getProvider());
       if (CollectionUtils.isNotEmpty(getRecordsFromUserExtIdentityByProperties(searchQueryMap))) {
         throw new ProjectCommonException(
-                ResponseCode.userAlreadyExist.getErrorCode(),
-                ResponseCode.userAlreadyExist.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
+            ResponseCode.userAlreadyExist.getErrorCode(),
+            ResponseCode.userAlreadyExist.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
       }
     }
   }
-  
+
   /**
    * This method will search in ES for user with given search query
-   * @param searchQueryMap
+   *
+   * @param searchQueryMap Query filters as Map.
    * @return List<User> List of User object.
    */
   private static List<User> searchUser(Map<String, Object> searchQueryMap) {
@@ -991,41 +994,48 @@ public final class Util {
         ElasticSearchUtil.complexSearch(
             searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
     if (MapUtils.isNotEmpty(result)) {
-      List<Map<String, Object>> searchResult = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-      if(CollectionUtils.isNotEmpty(searchResult)){
-        userList = searchResult.stream().map(s -> mapper.convertValue(s, User.class)).collect(Collectors.toList());
+      List<Map<String, Object>> searchResult =
+          (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+      if (CollectionUtils.isNotEmpty(searchResult)) {
+        userList =
+            searchResult
+                .stream()
+                .map(s -> mapper.convertValue(s, User.class))
+                .collect(Collectors.toList());
       }
     }
     return userList;
   }
-  
+
   public static List<Map<String, Object>> getRecordsFromUserExtIdentityByProperties(
       Map<String, Object> propertyMap) {
-    Response response = cassandraOperation.getRecordsByProperties("sunbird", "user_external_identity", propertyMap);
+    Response response =
+        cassandraOperation.getRecordsByProperties(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, propertyMap);
     return (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
   }
-  
+
   public static String getLoginId(Map<String, Object> userMap) {
     String loginId;
     if (StringUtils.isNotBlank((String) userMap.get(JsonKey.CHANNEL))) {
-      loginId = (String) userMap.get(JsonKey.USERNAME) + "@" + (String) userMap.get(JsonKey.CHANNEL);
+      loginId =
+          (String) userMap.get(JsonKey.USERNAME) + "@" + (String) userMap.get(JsonKey.CHANNEL);
     } else {
       loginId = (String) userMap.get(JsonKey.USERNAME);
     }
     return loginId;
   }
-  
+
   public static void updateUserExtId(Map<String, Object> requestMap) {
-    Map<String,Object> map = new HashMap<>();
+    Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EXTERNAL_ID));
     map.put(JsonKey.PROVIDER, requestMap.get(JsonKey.PROVIDER));
     map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
     map.put(JsonKey.ID, String.valueOf(System.currentTimeMillis()));
     map.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
     map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
-    cassandraOperation.upsertRecord("sunbird", "user_external_identity", map);
+    cassandraOperation.upsertRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
   }
-  
+
   public static void registerUserToOrg(Map<String, Object> userMap) {
     Map<String, Object> reqMap = new HashMap<>();
     reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
@@ -1035,27 +1045,30 @@ public final class Util {
     reqMap.put(JsonKey.IS_DELETED, false);
     Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
     try {
-        cassandraOperation.insertRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(),
-                reqMap);
+      cassandraOperation.insertRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), reqMap);
     } catch (Exception e) {
-        ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log(e.getMessage(), e);
     }
   }
-  
+
   public static Map<String, Object> getUserFromExternalIdAndProvider(Map<String, Object> userMap) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> user = null;
-    Map<String,Object> map = new HashMap<>();
+    Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.PROVIDER, userMap.get(JsonKey.PROVIDER));
-    map.put(JsonKey.EXTERNAL_ID,  userMap.get(JsonKey.EXTERNAL_ID));
-    List<Map<String,Object>> userRecordList = Util.getRecordsFromUserExtIdentityByProperties(map);
-    if(CollectionUtils.isNotEmpty(userRecordList)){
-     Map<String,Object> userExtIdRecord = userRecordList.get(0);
-     Response res = cassandraOperation.getRecordById(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), (String)userExtIdRecord.get(JsonKey.ID));
-     if(CollectionUtils.isNotEmpty((List<Map<String, Object>>)res.get(JsonKey.RESPONSE))){
-       // user exist
-       user = ((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).get(0);
-     }
+    map.put(JsonKey.EXTERNAL_ID, userMap.get(JsonKey.EXTERNAL_ID));
+    List<Map<String, Object>> userRecordList = Util.getRecordsFromUserExtIdentityByProperties(map);
+    if (CollectionUtils.isNotEmpty(userRecordList)) {
+      Map<String, Object> userExtIdRecord = userRecordList.get(0);
+      Response res =
+          cassandraOperation.getRecordById(
+              usrDbInfo.getKeySpace(),
+              usrDbInfo.getTableName(),
+              (String) userExtIdRecord.get(JsonKey.ID));
+      if (CollectionUtils.isNotEmpty((List<Map<String, Object>>) res.get(JsonKey.RESPONSE))) {
+        // user exist
+        user = ((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).get(0);
+      }
     }
     return user;
   }

@@ -21,17 +21,15 @@ import org.sunbird.user.dao.UserDao;
 
 /**
  * Implementation class of UserDao interface.
- * 
- * @author Amit Kumar
  *
+ * @author Amit Kumar
  */
-public class UserDaoImpl implements UserDao{
-  
+public class UserDaoImpl implements UserDao {
+
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
   private static final String KEYSPACE_NAME = "sunbird";
   private static final String USER_TABLE_NAME = "user";
-  private static final String USER_EXT_ID_TABLE_NAME = "user_external_identity";
 
   @Override
   public String createUser(User user) {
@@ -57,9 +55,14 @@ public class UserDaoImpl implements UserDao{
         ElasticSearchUtil.complexSearch(
             searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
     if (MapUtils.isNotEmpty(result)) {
-      List<Map<String, Object>> searchResult = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-      if(CollectionUtils.isNotEmpty(searchResult)){
-        userList = searchResult.stream().map(s -> mapper.convertValue(s, User.class)).collect(Collectors.toList());
+      List<Map<String, Object>> searchResult =
+          (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+      if (CollectionUtils.isNotEmpty(searchResult)) {
+        userList =
+            searchResult
+                .stream()
+                .map(s -> mapper.convertValue(s, User.class))
+                .collect(Collectors.toList());
       }
     }
     return userList;
@@ -68,9 +71,10 @@ public class UserDaoImpl implements UserDao{
   @Override
   public User getUserById(String userId) {
     Response response = cassandraOperation.getRecordById(KEYSPACE_NAME, USER_TABLE_NAME, userId);
-    List<Map<String, Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    if(CollectionUtils.isNotEmpty(responseList)){
-      Map<String,Object> userMap = responseList.get(0);
+    List<Map<String, Object>> responseList =
+        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if (CollectionUtils.isNotEmpty(responseList)) {
+      Map<String, Object> userMap = responseList.get(0);
       return mapper.convertValue(userMap, User.class);
     }
     return null;
@@ -79,24 +83,17 @@ public class UserDaoImpl implements UserDao{
   @Override
   public List<User> getUsersByProperties(Map<String, Object> propertyMap) {
     List<User> userList = new ArrayList<>();
-    Response response = cassandraOperation.getRecordsByProperties(KEYSPACE_NAME, USER_TABLE_NAME, propertyMap);
-    List<Map<String, Object>> responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    if(CollectionUtils.isNotEmpty(responseList)){
-      userList = responseList.stream().map(s -> mapper.convertValue(s, User.class)).collect(Collectors.toList());
+    Response response =
+        cassandraOperation.getRecordsByProperties(KEYSPACE_NAME, USER_TABLE_NAME, propertyMap);
+    List<Map<String, Object>> responseList =
+        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if (CollectionUtils.isNotEmpty(responseList)) {
+      userList =
+          responseList
+              .stream()
+              .map(s -> mapper.convertValue(s, User.class))
+              .collect(Collectors.toList());
     }
     return userList;
   }
-
-  @Override
-  public List<Map<String, Object>> getRecordsFromUserExtIdentityByProperties(
-      Map<String, Object> propertyMap) {
-    Response response = cassandraOperation.getRecordsByProperties(KEYSPACE_NAME, USER_EXT_ID_TABLE_NAME, propertyMap);
-    return (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-  }
-
-  @Override
-  public void upsertRecordToUserExtIdentityTable(Map<String, Object> propertyMap) {
-    cassandraOperation.upsertRecord(KEYSPACE_NAME, USER_EXT_ID_TABLE_NAME, propertyMap);
-  }
-
 }

@@ -993,7 +993,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           tempMap.remove(JsonKey.EMAIL_VERIFIED);
           tempMap.remove(JsonKey.PHONE_VERIFIED);
           tempMap.remove(JsonKey.POSITION);
-          //remove externalID and Provider as we are not saving these to user table
+          // remove externalID and Provider as we are not saving these to user table
           tempMap.remove(JsonKey.EXTERNAL_ID);
           tempMap.remove(JsonKey.PROVIDER);
           tempMap.put(JsonKey.EMAIL_VERIFIED, false);
@@ -1102,7 +1102,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           tempMap.put(JsonKey.PASSWORD, "*****");
           successUserReq.add(tempMap);
 
-          //update user-org table(role update)
+          // update user-org table(role update)
           userMap.put(JsonKey.UPDATED_BY, updatedBy);
           updateUserOrgData(userMap);
           // update the user external identity data
@@ -1165,31 +1165,30 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           e);
     }
   }
-  
+
   private void updateUserOrgData(Map<String, Object> userMap) {
     Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
     Map<String, Object> map = new HashMap<>();
     Map<String, Object> reqMap = new HashMap<>();
     map.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
     map.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ROOT_ORG_ID));
-    Response response = cassandraOperation.getRecordsByProperties(usrOrgDb.getKeySpace(),
-            usrOrgDb.getTableName(), map);
-    List<Map<String, Object>> resList =
-            (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    Response response =
+        cassandraOperation.getRecordsByProperties(
+            usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), map);
+    List<Map<String, Object>> resList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (!resList.isEmpty()) {
-        Map<String, Object> res = resList.get(0);
-        reqMap.put(JsonKey.ID, res.get(JsonKey.ID));
-        reqMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
-        reqMap.put(JsonKey.UPDATED_BY, userMap.get(JsonKey.UPDATED_BY));
-        reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-        try {
-            cassandraOperation.updateRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(),
-                    reqMap);
-        } catch (Exception e) {
-            ProjectLogger.log(e.getMessage(), e);
-        }
+      Map<String, Object> res = resList.get(0);
+      reqMap.put(JsonKey.ID, res.get(JsonKey.ID));
+      reqMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
+      reqMap.put(JsonKey.UPDATED_BY, userMap.get(JsonKey.UPDATED_BY));
+      reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+      try {
+        cassandraOperation.updateRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), reqMap);
+      } catch (Exception e) {
+        ProjectLogger.log(e.getMessage(), e);
+      }
     }
-}
+  }
 
   private void convertCommaSepStringToList(Map<String, Object> map, String property) {
     String[] props = ((String) map.get(property)).split(",");
@@ -1270,20 +1269,21 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     Map<String, Object> userDbRecord = null;
     String extId = (String) requestedUserMap.get(JsonKey.EXTERNAL_ID);
     String provider = (String) requestedUserMap.get(JsonKey.PROVIDER);
-    if (StringUtils.isNotEmpty(extId) && StringUtils.isNotEmpty(provider)){
+    if (StringUtils.isNotEmpty(extId) && StringUtils.isNotEmpty(provider)) {
       userDbRecord = Util.getUserFromExternalIdAndProvider(requestedUserMap);
     } else {
       userDbRecord = getRecordByLoginId(requestedUserMap);
     }
     requestedUserMap.put(JsonKey.UPDATED_BY, updatedBy);
     if (MapUtils.isNotEmpty(userDbRecord)) {
-      updateUser(requestedUserMap,userDbRecord);
+      updateUser(requestedUserMap, userDbRecord);
     } else {
       createUser(requestedUserMap);
     }
     if (!StringUtils.isBlank((String) requestedUserMap.get(JsonKey.PASSWORD))) {
       requestedUserMap.put(
-          JsonKey.PASSWORD, OneWayHashing.encryptVal((String) requestedUserMap.get(JsonKey.PASSWORD)));
+          JsonKey.PASSWORD,
+          OneWayHashing.encryptVal((String) requestedUserMap.get(JsonKey.PASSWORD)));
     }
     return requestedUserMap;
   }
@@ -1296,7 +1296,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     Response resultFrUserName =
         cassandraOperation.getRecordsByProperty(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), JsonKey.LOGIN_ID, loginId);
-    if(CollectionUtils.isNotEmpty((List<Map<String, Object>>)resultFrUserName.get(JsonKey.RESPONSE))){
+    if (CollectionUtils.isNotEmpty(
+        (List<Map<String, Object>>) resultFrUserName.get(JsonKey.RESPONSE))) {
       user = ((List<Map<String, Object>>) resultFrUserName.get(JsonKey.RESPONSE)).get(0);
     }
     return user;
@@ -1333,26 +1334,23 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           JsonKey.COUNTRY_CODE, propertiesCache.getProperty("sunbird_default_country_code"));
     }
     /**
-     * set role as PUBLIC by default if role is empty in request body. And if roles are coming
-     * in request body, then check for PUBLIC role , if not present then add PUBLIC role to the
-     * list
+     * set role as PUBLIC by default if role is empty in request body. And if roles are coming in
+     * request body, then check for PUBLIC role , if not present then add PUBLIC role to the list
      */
-    if (null != userMap.get(JsonKey.ROLES)) {
-      List<String> roles = (List<String>) userMap.get(JsonKey.ROLES);
-      if (!roles.contains(ProjectUtil.UserRole.PUBLIC.getValue())) {
-        roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
-        userMap.put(JsonKey.ROLES, roles);
-      }
-    } else {
-      List<String> roles = new ArrayList<>();
+    if (null == userMap.get(JsonKey.ROLES)) {
+      userMap.put(JsonKey.ROLES, new ArrayList<String>());
+    }
+    List<String> roles = (List<String>) userMap.get(JsonKey.ROLES);
+    if (!roles.contains(ProjectUtil.UserRole.PUBLIC.getValue())) {
       roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
       userMap.put(JsonKey.ROLES, roles);
     }
   }
 
-  private void updateUser(Map<String, Object> userMap, Map<String, Object> userDbRecord ) {
+  private void updateUser(Map<String, Object> userMap, Map<String, Object> userDbRecord) {
     // user exist
-    if (null != userDbRecord.get(JsonKey.IS_DELETED) && (boolean) userDbRecord.get(JsonKey.IS_DELETED)) {
+    if (null != userDbRecord.get(JsonKey.IS_DELETED)
+        && (boolean) userDbRecord.get(JsonKey.IS_DELETED)) {
       throw new ProjectCommonException(
           ResponseCode.inactiveUser.getErrorCode(),
           ResponseCode.inactiveUser.getErrorMessage(),
@@ -1519,21 +1517,19 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     }
   }
 
-  private String validateUser(Map<String, Object> map) { 
-    
-    if (StringUtils.isNotBlank((String) map.get(JsonKey.PROVIDER)) && 
-        StringUtils.isBlank((String) map.get(JsonKey.EXTERNAL_ID))) {
+  private String validateUser(Map<String, Object> map) {
+
+    if (StringUtils.isNotBlank((String) map.get(JsonKey.PROVIDER))
+        && StringUtils.isBlank((String) map.get(JsonKey.EXTERNAL_ID))) {
       return ProjectUtil.formatMessage(
-              ResponseCode.mandatoryParamsMissing.getErrorMessage(),
-              JsonKey.EXTERNAL_ID);
+          ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.EXTERNAL_ID);
     }
-    if (StringUtils.isBlank((String) map.get(JsonKey.PROVIDER)) && 
-        StringUtils.isNotBlank((String) map.get(JsonKey.EXTERNAL_ID))) {
+    if (StringUtils.isBlank((String) map.get(JsonKey.PROVIDER))
+        && StringUtils.isNotBlank((String) map.get(JsonKey.EXTERNAL_ID))) {
       return ProjectUtil.formatMessage(
-          ResponseCode.mandatoryParamsMissing.getErrorMessage(),
-          JsonKey.PROVIDER);
+          ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.PROVIDER);
     }
-    
+
     if (null != map.get(JsonKey.DOB)) {
       boolean bool =
           ProjectUtil.isDateValidFormat(

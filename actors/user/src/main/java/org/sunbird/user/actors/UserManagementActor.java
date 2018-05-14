@@ -50,8 +50,6 @@ import org.sunbird.notification.utils.SMSFactory;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
-import org.sunbird.user.dao.UserDao;
-import org.sunbird.user.dao.impl.UserDaoFactory;
 
 /**
  * This actor will handle course enrollment operation .
@@ -81,7 +79,6 @@ import org.sunbird.user.dao.impl.UserDaoFactory;
   asyncTasks = {}
 )
 public class UserManagementActor extends BaseActor {
-  private UserDao userDao = UserDaoFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
@@ -991,8 +988,10 @@ public class UserManagementActor extends BaseActor {
     Map<String, Object> userDbRecord = null;
     String extId = (String) userMap.get(JsonKey.EXTERNAL_ID);
     String provider = (String) userMap.get(JsonKey.PROVIDER);
-    if ((StringUtils.isEmpty((String)userMap.get(JsonKey.USER_ID)) && StringUtils.isEmpty((String)userMap.get(JsonKey.ID))) 
-           && StringUtils.isNotEmpty(extId) && StringUtils.isNotEmpty(provider)){
+    if ((StringUtils.isEmpty((String) userMap.get(JsonKey.USER_ID))
+            && StringUtils.isEmpty((String) userMap.get(JsonKey.ID)))
+        && StringUtils.isNotEmpty(extId)
+        && StringUtils.isNotEmpty(provider)) {
       userDbRecord = Util.getUserFromExternalIdAndProvider(userMap);
       userMap.put(JsonKey.USER_ID, userDbRecord.get(JsonKey.USER_ID));
     }
@@ -1118,12 +1117,11 @@ public class UserManagementActor extends BaseActor {
     userMap.remove(JsonKey.ROOT_ORG_ID);
     userMap.remove(JsonKey.LOGIN_ID);
     /**
-     * Ignore all roles coming from req. 
-     * With update user api, we are not allowing to update user
+     * Ignore all roles coming from req. With update user api, we are not allowing to update user
      * roles
      */
     userMap.remove(JsonKey.ROLES);
-    //channel update is not allowed
+    // channel update is not allowed
     userMap.remove(JsonKey.CHANNEL);
   }
 
@@ -1517,19 +1515,19 @@ public class UserManagementActor extends BaseActor {
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
     userMap.remove(JsonKey.EMAIL_VERIFIED);
-    
-    try{
+
+    try {
       // validate channel and set rootOrgId of user
       String rootOrgId = Util.getRootOrgIdFromChannel((String) userMap.get(JsonKey.CHANNEL));
       userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
-    }catch(Exception ex){
+    } catch (Exception ex) {
       sender().tell(ex, self());
       return;
     }
-    
-    // create loginId to ensure uniqueness for combination of userName and channel  
+
+    // create loginId to ensure uniqueness for combination of userName and channel
     String loginId = Util.getLoginId(userMap);
-    userMap.put(JsonKey.LOGIN_ID,loginId);
+    userMap.put(JsonKey.LOGIN_ID, loginId);
     emailTemplateMap.put(JsonKey.USERNAME, loginId);
     try {
       User user = mapper.convertValue(userMap, User.class);
@@ -1539,7 +1537,7 @@ public class UserManagementActor extends BaseActor {
       sender().tell(ex, self());
       return;
     }
-    
+
     /** will ignore roles coming from req, Only public role is applicable for user by default */
     userMap.remove(JsonKey.ROLES);
     List<String> roles = new ArrayList<>();
@@ -1667,9 +1665,9 @@ public class UserManagementActor extends BaseActor {
           }
         }
       }
-      //register user with root org
+      // register user with root org
       Util.registerUserToOrg(userMap);
-      
+
       if (userMap.containsKey(JsonKey.EDUCATION)) {
         insertEducationDetails(userMap);
       }

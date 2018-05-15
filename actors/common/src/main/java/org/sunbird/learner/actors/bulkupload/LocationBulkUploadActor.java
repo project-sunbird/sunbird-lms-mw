@@ -66,7 +66,7 @@ public class LocationBulkUploadActor extends BaseBulkUploadActor {
     if (((String) res.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       sender().tell(response, self());
     } else {
-      ProjectLogger.log("Exception occurred while inserting record in bulkUploadProcess.");
+      ProjectLogger.log("Exception occurred while inserting record in bulk_upload_process.");
       throw new ProjectCommonException(
           ResponseCode.SERVER_ERROR.getErrorCode(),
           ResponseCode.SERVER_ERROR.getErrorMessage(),

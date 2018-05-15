@@ -2937,34 +2937,6 @@ public class UserManagementActor extends BaseActor {
     return responseMap;
   }
 
-  private Map<String, Object> elasticSearchComplexSearch(
-      Map<String, Object> filters, String index, String type) {
-    SearchDTO searchDTO = new SearchDTO();
-    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
-    return ElasticSearchUtil.complexSearch(searchDTO, index, type);
-  }
-
-  private List<Map<String, Object>> checkDataUserExtTable(Map<String, Object> map) {
-    Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
-    Map<String, Object> reqMap = new HashMap<>();
-    reqMap.put(JsonKey.USER_ID, map.get(JsonKey.USER_ID));
-    reqMap.put(JsonKey.EXTERNAL_ID_VALUE, map.get(JsonKey.EXTERNAL_ID_VALUE));
-    Response response = null;
-    List<Map<String, Object>> responseList = new ArrayList<>();
-    try {
-      response =
-          cassandraOperation.getRecordsByProperties(
-              usrExtIdDb.getKeySpace(), usrExtIdDb.getTableName(), reqMap);
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "Exception Occurred while fetching data from user Ext Table in bulk upload", ex);
-    }
-    if (null != response) {
-      responseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    }
-    return responseList;
-  }
-
   private void getMediaTypes() {
     Response response = SocialMediaType.getMediaTypeFromDB();
     sender().tell(response, self());

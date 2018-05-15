@@ -311,7 +311,19 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       if (!StringUtils.isBlank((String) orgMap.get(JsonKey.ROOT_ORG_ID))) {
         rootOrgId = (String) orgMap.get(JsonKey.ROOT_ORG_ID);
       } else {
-        rootOrgId = JsonKey.DEFAULT_ROOT_ORG_ID;
+        String msg = "";
+        if (StringUtils.isEmpty((String) req.get(JsonKey.ORGANISATION_ID))) {
+          msg =
+              ((String) req.get(JsonKey.EXTERNAL_ID))
+                  + " and "
+                  + ((String) req.get(JsonKey.PROVIDER));
+        } else {
+          msg = (String) req.get(JsonKey.ORGANISATION_ID);
+        }
+        throw new ProjectCommonException(
+            ResponseCode.rootOrgAssociationError.getErrorCode(),
+            ProjectUtil.formatMessage(ResponseCode.rootOrgAssociationError.getErrorMessage(), msg),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
       }
     }
     List<String[]> userList = null;

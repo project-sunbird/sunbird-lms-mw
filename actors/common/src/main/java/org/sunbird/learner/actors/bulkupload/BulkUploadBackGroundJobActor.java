@@ -1427,8 +1427,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       userMap.put(JsonKey.EMAIL, email);
     } else {
       throw new ProjectCommonException(
-          ResponseCode.userRootOrgAssociationError.getErrorCode(),
-          ResponseCode.userRootOrgAssociationError.getErrorMessage(),
+          ResponseCode.userOrgAssociationError.getErrorCode(),
+          ResponseCode.userOrgAssociationError.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
   }

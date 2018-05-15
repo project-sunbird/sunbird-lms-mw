@@ -1300,7 +1300,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       List<Map<String, Object>> reponseList =
           (List<Map<String, Object>>) resultFrUserName.get(JsonKey.RESPONSE);
       for (Map<String, Object> userOrg : reponseList) {
-        memberOrgList.add(JsonKey.ORGANISATION_ID);
+        memberOrgList.add((String) userOrg.get(JsonKey.ORGANISATION_ID));
       }
       return memberOrgList;
     }

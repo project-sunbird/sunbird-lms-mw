@@ -1027,6 +1027,7 @@ public final class Util {
 
   public static void updateUserExtId(Map<String, Object> requestMap) {
     Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
     map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EXTERNAL_ID));
     map.put(JsonKey.PROVIDER, requestMap.get(JsonKey.PROVIDER));
     map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
@@ -1039,7 +1040,8 @@ public final class Util {
     Map<String, Object> reqMap = new HashMap<>();
     reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
     reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-    reqMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ROOT_ORG_ID));
+    reqMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
+    reqMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ORGANISATION_ID));
     reqMap.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
     reqMap.put(JsonKey.IS_DELETED, false);
     Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);

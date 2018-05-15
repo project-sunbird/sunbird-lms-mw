@@ -978,6 +978,15 @@ public class UserManagementActor extends BaseActor {
         encryptionService.encryptData(loginId));
   }
 
+  private void validateAuthTokenUserId(String userId, String authTokenUserId) {
+    if ((!StringUtils.isBlank(userId)) && (!userId.equals(authTokenUserId))) {
+      throw new ProjectCommonException(
+          ResponseCode.unAuthorized.getErrorCode(),
+          ResponseCode.unAuthorized.getErrorMessage(),
+          ResponseCode.UNAUTHORIZED.getResponseCode());
+    }
+  }
+
   /** Method to update the user profile. */
   @SuppressWarnings("unchecked")
   private void updateUser(Request actorMessage) {
@@ -1000,6 +1009,8 @@ public class UserManagementActor extends BaseActor {
     } else {
       userMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
     }
+    validateAuthTokenUserId(
+        (String) userMap.get(JsonKey.ID), (String) req.get(JsonKey.REQUESTED_BY));
     if (isUserDeleted(userMap)) {
       ProjectCommonException exception =
           new ProjectCommonException(
@@ -1668,9 +1679,6 @@ public class UserManagementActor extends BaseActor {
           }
         }
       }
-      // register user with root org
-      Util.registerUserToOrg(userMap);
-
       if (userMap.containsKey(JsonKey.EDUCATION)) {
         insertEducationDetails(userMap);
       }
@@ -2119,7 +2127,6 @@ public class UserManagementActor extends BaseActor {
    * @param actionName String
    * @return Map<String,Object>
    */
-  @SuppressWarnings("rawtypes")
   private Map<String, Object> getRoleAction(
       List<Map<String, Object>> urlActionListMap, String actionName) {
     Map<String, Object> response = new HashMap<>();

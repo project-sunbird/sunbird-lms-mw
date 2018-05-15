@@ -996,6 +996,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           // remove externalID and Provider as we are not saving these to user table
           tempMap.remove(JsonKey.EXTERNAL_ID);
           tempMap.remove(JsonKey.PROVIDER);
+          tempMap.remove(JsonKey.ORGANISATION_ID);
           tempMap.put(JsonKey.EMAIL_VERIFIED, false);
           Response response = null;
           if (null == tempMap.get(JsonKey.OPERATION)) {
@@ -1023,6 +1024,10 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               response =
                   cassandraOperation.insertRecord(
                       usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
+              // insert record to the user external identity table
+              Util.updateUserExtId(userMap);
+              // insert details to user_org table
+              Util.registerUserToOrg(userMap);
             } catch (Exception ex) {
               ProjectLogger.log(
                   "Exception occurred while bulk user upload in BulkUploadBackGroundJobActor:", ex);
@@ -1036,8 +1041,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 ssoManager.removeUser(userMap);
               }
             }
-            // insert details to user_org table
-            Util.registerUserToOrg(userMap);
+
             // send the welcome mail to user
             welcomeMailTemplateMap.putAll(userMap);
             // the loginid will become user id for logon purpose .
@@ -1079,6 +1083,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               response =
                   cassandraOperation.updateRecord(
                       usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
+              // update user-org table(role update)
+              userMap.put(JsonKey.UPDATED_BY, updatedBy);
+              updateUserOrgData(userMap);
             } catch (Exception ex) {
               ProjectLogger.log(
                   "Exception occurred while bulk user upload in BulkUploadBackGroundJobActor:", ex);
@@ -1101,12 +1108,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           tempMap.remove(JsonKey.LOGIN_ID);
           tempMap.put(JsonKey.PASSWORD, "*****");
           successUserReq.add(tempMap);
-
-          // update user-org table(role update)
-          userMap.put(JsonKey.UPDATED_BY, updatedBy);
-          updateUserOrgData(userMap);
-          // update the user external identity data
-          Util.updateUserExtId(userMap);
 
           // update elastic search
           ProjectLogger.log(
@@ -1171,7 +1172,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     Map<String, Object> map = new HashMap<>();
     Map<String, Object> reqMap = new HashMap<>();
     map.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-    map.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ROOT_ORG_ID));
+    map.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ORGANISATION_ID));
     Response response =
         cassandraOperation.getRecordsByProperties(
             usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), map);
@@ -1288,9 +1289,29 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     return requestedUserMap;
   }
 
+  private List<String> getMemberOrgList(String userId) {
+    Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+    List<String> memberOrgList = new ArrayList<>();
+    Response resultFrUserName =
+        cassandraOperation.getRecordsByProperty(
+            userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName(), JsonKey.LOGIN_ID, userId);
+    if (CollectionUtils.isNotEmpty(
+        (List<Map<String, Object>>) resultFrUserName.get(JsonKey.RESPONSE))) {
+      List<Map<String, Object>> reponseList =
+          (List<Map<String, Object>>) resultFrUserName.get(JsonKey.RESPONSE);
+      for (Map<String, Object> userOrg : reponseList) {
+        memberOrgList.add(JsonKey.ORGANISATION_ID);
+      }
+      return memberOrgList;
+    }
+    return memberOrgList;
+  }
+
   private Map<String, Object> getRecordByLoginId(Map<String, Object> userMap) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
     Map<String, Object> user = null;
+    userMap.put(JsonKey.CHANNEL, getChannel(userMap, orgDbInfo));
     userMap.put(JsonKey.LOGIN_ID, Util.getLoginId(userMap));
     String loginId = Util.getEncryptedData((String) userMap.get(JsonKey.LOGIN_ID));
     Response resultFrUserName =
@@ -1301,6 +1322,21 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       user = ((List<Map<String, Object>>) resultFrUserName.get(JsonKey.RESPONSE)).get(0);
     }
     return user;
+  }
+
+  private String getChannel(Map<String, Object> userMap, Util.DbInfo orgDbInfo) {
+    String channel = null;
+    String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
+    Response resultFrRootOrg =
+        cassandraOperation.getRecordById(
+            orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), rootOrgId);
+    if (CollectionUtils.isNotEmpty(
+        (List<Map<String, Object>>) resultFrRootOrg.get(JsonKey.RESPONSE))) {
+      Map<String, Object> rootOrg =
+          ((List<Map<String, Object>>) resultFrRootOrg.get(JsonKey.RESPONSE)).get(0);
+      channel = (String) rootOrg.get(JsonKey.CHANNEL);
+    }
+    return channel;
   }
 
   private void createUser(Map<String, Object> userMap) throws Exception {
@@ -1360,7 +1396,10 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     userMap.put(JsonKey.ID, userDbRecord.get(JsonKey.ID));
     userMap.put(JsonKey.USER_ID, userDbRecord.get(JsonKey.ID));
     userMap.put(JsonKey.OPERATION, JsonKey.UPDATE);
-    if (userMap.get(JsonKey.ROOT_ORG_ID).equals(userDbRecord.get(JsonKey.ROOT_ORG_ID))) {
+    List<String> memberOrgList = getMemberOrgList((String) userDbRecord.get(JsonKey.ID));
+    // This organisationId (userMap.get(JsonKey.ORGANISATION_ID)) is where we are going to add this
+    // user as a member
+    if (memberOrgList.contains(userMap.get(JsonKey.ORGANISATION_ID))) {
       checkEmailUniqueness(userMap, JsonKey.UPDATE);
       checkPhoneUniqueness(userMap, JsonKey.UPDATE);
       String email = "";
@@ -1398,7 +1437,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     Util.DbInfo usrOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-    map.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ROOT_ORG_ID));
+    map.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ORGANISATION_ID));
     Response response =
         cassandraOperation.getRecordsByProperties(
             usrOrgDbInfo.getKeySpace(), usrOrgDbInfo.getTableName(), map);

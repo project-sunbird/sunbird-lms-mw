@@ -1,8 +1,6 @@
 package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,6 +27,7 @@ import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessTaskDao;
 import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessTaskDaoImpl;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 import org.sunbird.learner.util.Util;
+import org.sunbird.learner.util.Util.DbInfo;
 
 /**
  * This actor will handle bulk upload operation .
@@ -272,28 +271,47 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
   }
 
   private void processBulkUserUpload(Map<String, Object> req, String processId) {
-    String rootOrgId = "";
-    try {
-      // validate channel and set rootOrgId of user
-      rootOrgId = Util.getRootOrgIdFromChannel((String) req.get(JsonKey.CHANNEL));
-    } catch (Exception ex) {
-      sender().tell(ex, self());
-      return;
+    DbInfo orgDb = Util.dbInfoMap.get(JsonKey.ORG_DB);
+    String orgId = "";
+    Response response = null;
+    if (!StringUtils.isBlank((String) req.get(JsonKey.ORGANISATION_ID))) {
+      response =
+          cassandraOperation.getRecordById(
+              orgDb.getKeySpace(), orgDb.getTableName(), (String) req.get(JsonKey.ORGANISATION_ID));
+    } else {
+      Map<String, Object> map = new HashMap<>();
+      map.put(JsonKey.EXTERNAL_ID, ((String) req.get(JsonKey.EXTERNAL_ID)).toLowerCase());
+      map.put(JsonKey.PROVIDER, ((String) req.get(JsonKey.PROVIDER)).toLowerCase());
+      response =
+          cassandraOperation.getRecordsByProperties(orgDb.getKeySpace(), orgDb.getTableName(), map);
     }
-    // --------------------------------------------------
-    File file = new File("bulk.csv");
-    FileOutputStream fos = null;
-    try {
-      fos = new FileOutputStream(file);
-      fos.write((byte[]) req.get(JsonKey.FILE));
-    } catch (IOException e) {
-      ProjectLogger.log("Exception Occurred while reading file in BulkUploadManagementActor", e);
-    } finally {
-      try {
-        fos.close();
-      } catch (Exception e) {
-        ProjectLogger.log(
-            "Exception Occurred while closing fileInputStream in BulkUploadManagementActor", e);
+    List<Map<String, Object>> responseList =
+        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+
+    if (responseList.isEmpty()) {
+      throw new ProjectCommonException(
+          ResponseCode.invalidOrgData.getErrorCode(),
+          ResponseCode.invalidOrgData.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    } else {
+      orgId = (String) responseList.get(0).get(JsonKey.ID);
+    }
+
+    String rootOrgId = "";
+    Map<String, Object> orgMap = responseList.get(0);
+    boolean isRootOrg = false;
+    if (null != orgMap.get(JsonKey.IS_ROOT_ORG)) {
+      isRootOrg = (boolean) orgMap.get(JsonKey.IS_ROOT_ORG);
+    } else {
+      isRootOrg = false;
+    }
+    if (isRootOrg) {
+      rootOrgId = orgId;
+    } else {
+      if (!StringUtils.isBlank((String) orgMap.get(JsonKey.ROOT_ORG_ID))) {
+        rootOrgId = (String) orgMap.get(JsonKey.ROOT_ORG_ID);
+      } else {
+        rootOrgId = JsonKey.DEFAULT_ROOT_ORG_ID;
       }
     }
     List<String[]> userList = null;
@@ -331,18 +349,13 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     }
     // save csv file to db
     uploadCsvToDB(
-        userList,
-        processId,
-        (String) req.get(JsonKey.CHANNEL),
-        JsonKey.USER,
-        (String) req.get(JsonKey.CREATED_BY),
-        rootOrgId);
+        userList, processId, orgId, JsonKey.USER, (String) req.get(JsonKey.CREATED_BY), rootOrgId);
   }
 
   private void uploadCsvToDB(
       List<String[]> dataList,
       String processId,
-      String channel,
+      String orgId,
       String objectType,
       String requestedBy,
       String rootOrgId) {
@@ -361,7 +374,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
           }
           if (!StringUtils.isBlank(objectType) && objectType.equalsIgnoreCase(JsonKey.USER)) {
             dataMap.put(JsonKey.ROOT_ORG_ID, rootOrgId.trim());
-            dataMap.put(JsonKey.CHANNEL, channel.trim());
+            dataMap.put(JsonKey.ORGANISATION_ID, orgId);
           }
           dataMapList.add(dataMap);
         }

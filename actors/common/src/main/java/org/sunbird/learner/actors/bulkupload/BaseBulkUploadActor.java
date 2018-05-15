@@ -228,7 +228,6 @@ public abstract class BaseBulkUploadActor extends BaseActor {
           continue;
         }
         if (sequence == 0) {
-          sequence++;
           header = trimColumnAttributes(csvLine);
           validateBulkUploadFields(header, bulkUploadAllowedFields, true);
         } else {
@@ -244,18 +243,20 @@ public abstract class BaseBulkUploadActor extends BaseActor {
           tasks.setData(mapper.writeValueAsString(record));
           tasks.setCreatedOn(new Timestamp(System.currentTimeMillis()));
           records.add(tasks);
-          sequence++;
           count++;
           if (count >= CASSANDRA_BATCH_SIZE) {
             performBatchInsert(records);
+            records.clear();
             count = 0;
           }
           record.clear();
         }
+        sequence++;
       }
       if (count != 0) {
         performBatchInsert(records);
         count = 0;
+        records.clear();
       }
     } catch (Exception ex) {
       BulkUploadProcess bulkUploadProcess =

@@ -1073,4 +1073,19 @@ public final class Util {
     }
     return user;
   }
+
+  public static String getChannel(String rootOrgId) {
+    Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+    String channel = null;
+    Response resultFrRootOrg =
+        cassandraOperation.getRecordById(
+            orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), rootOrgId);
+    if (CollectionUtils.isNotEmpty(
+        (List<Map<String, Object>>) resultFrRootOrg.get(JsonKey.RESPONSE))) {
+      Map<String, Object> rootOrg =
+          ((List<Map<String, Object>>) resultFrRootOrg.get(JsonKey.RESPONSE)).get(0);
+      channel = (String) rootOrg.get(JsonKey.CHANNEL);
+    }
+    return channel;
+  }
 }

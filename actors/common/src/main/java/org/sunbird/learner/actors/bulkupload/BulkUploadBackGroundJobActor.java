@@ -987,7 +987,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
           // convert userName,provide,loginId,externalId.. value to lowercase
           updateMapSomeValueTOLowerCase(userMap);
-          userMap.put(JsonKey.CHANNEL, getChannel(userMap));
           userMap = insertRecordToKeyCloak(userMap, updatedBy);
           Map<String, Object> tempMap = new HashMap<>();
           tempMap.putAll(userMap);
@@ -1321,22 +1320,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       user = ((List<Map<String, Object>>) resultFrUserName.get(JsonKey.RESPONSE)).get(0);
     }
     return user;
-  }
-
-  private String getChannel(Map<String, Object> userMap) {
-    Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-    String channel = null;
-    String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
-    Response resultFrRootOrg =
-        cassandraOperation.getRecordById(
-            orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), rootOrgId);
-    if (CollectionUtils.isNotEmpty(
-        (List<Map<String, Object>>) resultFrRootOrg.get(JsonKey.RESPONSE))) {
-      Map<String, Object> rootOrg =
-          ((List<Map<String, Object>>) resultFrRootOrg.get(JsonKey.RESPONSE)).get(0);
-      channel = (String) rootOrg.get(JsonKey.CHANNEL);
-    }
-    return channel;
   }
 
   private void createUser(Map<String, Object> userMap) throws Exception {

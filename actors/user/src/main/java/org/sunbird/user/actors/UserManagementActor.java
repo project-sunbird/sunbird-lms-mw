@@ -36,6 +36,7 @@ import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.models.util.mail.SendMail;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.request.UserRequestValidator;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
@@ -996,6 +997,8 @@ public class UserManagementActor extends BaseActor {
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
+    actorMessage.getRequest().putAll(userMap);
+    UserRequestValidator.validateCreateUser(actorMessage);
     Map<String, Object> userDbRecord = null;
     String extId = (String) userMap.get(JsonKey.EXTERNAL_ID);
     String provider = (String) userMap.get(JsonKey.PROVIDER);
@@ -1517,6 +1520,8 @@ public class UserManagementActor extends BaseActor {
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
+    actorMessage.getRequest().putAll(userMap);
+    UserRequestValidator.validateCreateUser(actorMessage);
     checkPhoneUniqueness(userMap, JsonKey.CREATE);
     checkEmailUniqueness(userMap, JsonKey.CREATE);
     Map<String, Object> emailTemplateMap = new HashMap<>(userMap);

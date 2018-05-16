@@ -287,8 +287,8 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
               orgDb.getKeySpace(), orgDb.getTableName(), (String) req.get(JsonKey.ORGANISATION_ID));
     } else {
       Map<String, Object> map = new HashMap<>();
-      map.put(JsonKey.EXTERNAL_ID, ((String) req.get(JsonKey.EXTERNAL_ID)).toLowerCase());
-      map.put(JsonKey.PROVIDER, ((String) req.get(JsonKey.PROVIDER)).toLowerCase());
+      map.put(JsonKey.EXTERNAL_ID, ((String) req.get(JsonKey.ORG_EXTERNAL_ID)).toLowerCase());
+      map.put(JsonKey.PROVIDER, ((String) req.get(JsonKey.ORG_PROVIDER)).toLowerCase());
       response =
           cassandraOperation.getRecordsByProperties(orgDb.getKeySpace(), orgDb.getTableName(), map);
     }
@@ -321,9 +321,9 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         String msg = "";
         if (StringUtils.isEmpty((String) req.get(JsonKey.ORGANISATION_ID))) {
           msg =
-              ((String) req.get(JsonKey.EXTERNAL_ID))
+              ((String) req.get(JsonKey.ORG_EXTERNAL_ID))
                   + " and "
-                  + ((String) req.get(JsonKey.PROVIDER));
+                  + ((String) req.get(JsonKey.ORG_PROVIDER));
         } else {
           msg = (String) req.get(JsonKey.ORGANISATION_ID);
         }
@@ -392,8 +392,9 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
             dataMap.put(columnArr[j], value);
           }
           if (!StringUtils.isBlank(objectType) && objectType.equalsIgnoreCase(JsonKey.USER)) {
-            dataMap.put(JsonKey.ROOT_ORG_ID, rootOrgId.trim());
+            dataMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
             dataMap.put(JsonKey.ORGANISATION_ID, orgId);
+            dataMap.put(JsonKey.CHANNEL, Util.getChannel(rootOrgId));
           }
           dataMapList.add(dataMap);
         }

@@ -113,7 +113,13 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
             .getDecryptionServiceInstance(null);
     Response response = null;
-    List<String> fields = Arrays.asList(JsonKey.ID, JsonKey.STATUS, JsonKey.OBJECT_TYPE);
+    List<String> fields =
+        Arrays.asList(
+            JsonKey.ID,
+            JsonKey.STATUS,
+            JsonKey.OBJECT_TYPE,
+            JsonKey.SUCCESS_RESULT,
+            JsonKey.FAILURE_RESULT);
     response =
         cassandraOperation.getRecordById(
             bulkDb.getKeySpace(), bulkDb.getTableName(), processId, fields);

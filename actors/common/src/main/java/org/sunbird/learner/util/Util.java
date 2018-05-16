@@ -1056,8 +1056,8 @@ public final class Util {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> user = null;
     Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.PROVIDER, userMap.get(JsonKey.PROVIDER));
-    map.put(JsonKey.EXTERNAL_ID, userMap.get(JsonKey.EXTERNAL_ID));
+    map.put(JsonKey.PROVIDER, ((String) userMap.get(JsonKey.PROVIDER)).toLowerCase());
+    map.put(JsonKey.EXTERNAL_ID, ((String) userMap.get(JsonKey.EXTERNAL_ID)).toLowerCase());
     List<Map<String, Object>> userRecordList = Util.getRecordsFromUserExtIdentityByProperties(map);
     if (CollectionUtils.isNotEmpty(userRecordList)) {
       Map<String, Object> userExtIdRecord = userRecordList.get(0);
@@ -1065,7 +1065,7 @@ public final class Util {
           cassandraOperation.getRecordById(
               usrDbInfo.getKeySpace(),
               usrDbInfo.getTableName(),
-              (String) userExtIdRecord.get(JsonKey.ID));
+              (String) userExtIdRecord.get(JsonKey.USER_ID));
       if (CollectionUtils.isNotEmpty((List<Map<String, Object>>) res.get(JsonKey.RESPONSE))) {
         // user exist
         user = ((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).get(0);

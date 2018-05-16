@@ -987,6 +987,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
           // convert userName,provide,loginId,externalId.. value to lowercase
           updateMapSomeValueTOLowerCase(userMap);
+          userMap.put(JsonKey.CHANNEL, getChannel(userMap));
           userMap = insertRecordToKeyCloak(userMap, updatedBy);
           Map<String, Object> tempMap = new HashMap<>();
           tempMap.putAll(userMap);
@@ -1294,7 +1295,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     List<String> memberOrgList = new ArrayList<>();
     Response resultFrUserName =
         cassandraOperation.getRecordsByProperty(
-            userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName(), JsonKey.LOGIN_ID, userId);
+            userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName(), JsonKey.USER_ID, userId);
     if (CollectionUtils.isNotEmpty(
         (List<Map<String, Object>>) resultFrUserName.get(JsonKey.RESPONSE))) {
       List<Map<String, Object>> reponseList =
@@ -1309,9 +1310,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
   private Map<String, Object> getRecordByLoginId(Map<String, Object> userMap) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
     Map<String, Object> user = null;
-    userMap.put(JsonKey.CHANNEL, getChannel(userMap, orgDbInfo));
     userMap.put(JsonKey.LOGIN_ID, Util.getLoginId(userMap));
     String loginId = Util.getEncryptedData((String) userMap.get(JsonKey.LOGIN_ID));
     Response resultFrUserName =
@@ -1324,7 +1323,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     return user;
   }
 
-  private String getChannel(Map<String, Object> userMap, Util.DbInfo orgDbInfo) {
+  private String getChannel(Map<String, Object> userMap) {
+    Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
     String channel = null;
     String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
     Response resultFrRootOrg =

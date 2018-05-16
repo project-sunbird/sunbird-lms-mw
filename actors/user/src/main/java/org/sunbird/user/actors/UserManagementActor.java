@@ -686,6 +686,8 @@ public class UserManagementActor extends BaseActor {
     }
     Response response = new Response();
     if (null != result) {
+      // loginId is used internally for checking the duplicate user
+      result.remove(JsonKey.LOGIN_ID);
       result.remove(JsonKey.ENC_EMAIL);
       result.remove(JsonKey.ENC_PHONE);
       response.put(JsonKey.RESPONSE, result);
@@ -997,6 +999,7 @@ public class UserManagementActor extends BaseActor {
     Map<String, Object> userDbRecord = null;
     String extId = (String) userMap.get(JsonKey.EXTERNAL_ID);
     String provider = (String) userMap.get(JsonKey.PROVIDER);
+
     if ((StringUtils.isEmpty((String) userMap.get(JsonKey.USER_ID))
             && StringUtils.isEmpty((String) userMap.get(JsonKey.ID)))
         && StringUtils.isNotEmpty(extId)
@@ -2026,6 +2029,8 @@ public class UserManagementActor extends BaseActor {
     reqMap.remove(JsonKey.ORGANISATIONS);
     reqMap.remove(JsonKey.IS_DELETED);
     reqMap.remove(JsonKey.PHONE_VERIFIED);
+    reqMap.remove(JsonKey.EXTERNAL_ID);
+    reqMap.remove(JsonKey.PROVIDER);
   }
 
   /** Utility method to provide the unique authtoken . */

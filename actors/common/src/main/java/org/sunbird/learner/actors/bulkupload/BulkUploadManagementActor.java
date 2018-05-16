@@ -57,7 +57,6 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     JsonKey.EMAIL,
     JsonKey.PASSWORD,
     JsonKey.USERNAME,
-    JsonKey.PROVIDER,
     JsonKey.PHONE_VERIFIED,
     JsonKey.EMAIL_VERIFIED,
     JsonKey.ROLES,
@@ -69,7 +68,9 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     JsonKey.LANGUAGE,
     JsonKey.PROFILE_SUMMARY,
     JsonKey.SUBJECT,
-    JsonKey.WEB_PAGES
+    JsonKey.WEB_PAGES,
+    JsonKey.PROVIDER,
+    JsonKey.EXTERNAL_ID
   };
 
   private String[] bulkBatchAllowedFields = {JsonKey.BATCH_ID, JsonKey.USER_IDs};
@@ -113,7 +114,13 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
             .getDecryptionServiceInstance(null);
     Response response = null;
-    List<String> fields = Arrays.asList(JsonKey.ID, JsonKey.STATUS, JsonKey.OBJECT_TYPE);
+    List<String> fields =
+        Arrays.asList(
+            JsonKey.ID,
+            JsonKey.STATUS,
+            JsonKey.OBJECT_TYPE,
+            JsonKey.SUCCESS_RESULT,
+            JsonKey.FAILURE_RESULT);
     response =
         cassandraOperation.getRecordById(
             bulkDb.getKeySpace(), bulkDb.getTableName(), processId, fields);

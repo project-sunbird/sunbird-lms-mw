@@ -135,7 +135,7 @@
 		<dependency>
 			<groupId>com.opencsv</groupId>
 			<artifactId>opencsv</artifactId>
-			<version>3.8</version>
+			<version>4.1</version>
 		</dependency>
 
 		<!-- adding dependency for quartz scheduler job -->

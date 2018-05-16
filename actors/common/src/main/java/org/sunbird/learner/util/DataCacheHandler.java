@@ -8,6 +8,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.helper.ServiceFactory;
 
@@ -115,8 +116,8 @@ public class DataCacheHandler implements Runnable {
           }
         }
       }
-      ProjectLogger.log("pagemap size" + map.size());
       ProjectLogger.log("pagemap keyset " + map.keySet());
+      ProjectLogger.log(tableName + " cache size: " + map.size(), LoggerEnum.INFO.name());
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }

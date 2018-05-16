@@ -1,5 +1,6 @@
 package org.sunbird.learner.actors;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -191,11 +192,9 @@ public class PageManagementActor extends BaseActor {
       try {
         sectionMap.put(
             JsonKey.SECTION_DISPLAY,
-            mapper.writeValueAsString(
-                "Exception occurred while processing search Query "
-                    + sectionMap.get(JsonKey.SECTION_DISPLAY)));
+            mapper.writeValueAsString(sectionMap.get(JsonKey.SECTION_DISPLAY)));
       } catch (IOException e) {
-        ProjectLogger.log(e.getMessage(), e);
+        ProjectLogger.log("Exception occurred while processing Section display", e);
       }
     }
     sectionMap.put(JsonKey.ID, uniqueId);
@@ -213,6 +212,22 @@ public class PageManagementActor extends BaseActor {
     // update DataCacheHandler section map with new page section data
     ProjectLogger.log("Calling  updateSectionDataCache method", LoggerEnum.INFO);
     updateSectionDataCache(response, sectionMap);
+  }
+
+  public static void main(String[] args) {
+    Map<String, Object> map = new HashMap<>();
+    Map<String, Object> innerMap = new HashMap<>();
+    Map<String, Object> innerMap1 = new HashMap<>();
+    innerMap1.put("en", "popular story");
+    innerMap.put("name", innerMap1);
+    map.put("dispaly", innerMap);
+    ObjectMapper mapper = new ObjectMapper();
+    try {
+      System.out.println(mapper.writeValueAsString(map));
+    } catch (JsonProcessingException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
   }
 
   private void updateSectionDataCache(Response response, Map<String, Object> sectionMap) {
@@ -258,7 +273,6 @@ public class PageManagementActor extends BaseActor {
       ProjectLogger.log("Exception occurred while validating org id " + e.getMessage(), e);
     }
 
-    Map<String, Object> map = null;
     /** if orgId is not then consider default page */
     if (CollectionUtils.isEmpty(result)) {
       orgId = "NA";

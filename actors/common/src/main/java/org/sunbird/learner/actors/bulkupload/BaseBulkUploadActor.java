@@ -2,6 +2,9 @@ package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
+import com.opencsv.RFC4180Parser;
+import com.opencsv.RFC4180ParserBuilder;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -38,8 +41,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   protected BulkUploadProcessTaskDao bulkUploadProcessTaskDao = new BulkUploadProcessTaskDaoImpl();
   protected BulkUploadProcessDao bulkUploadDao = new BulkUploadProcessDaoImpl();
   protected Integer DEFAULT_BATCH_SIZE = 10;
-  protected Integer CASSANDRA_WRITE_BATCH_SIZE = getBatchSize(JsonKey.CASSANDRA_WRITE_BATCH_SIZE);
-  protected Integer CASSANDRA_UPDATE_BATCH_SIZE = getBatchSize(JsonKey.CASSANDRA_UPDATE_BATCH_SIZE);
+  protected Integer CASSANDRA_BATCH_SIZE = getBatchSize(JsonKey.CASSANDRA_WRITE_BATCH_SIZE);
   protected ObjectMapper mapper = new ObjectMapper();
 
   /**
@@ -120,9 +122,13 @@ public abstract class BaseBulkUploadActor extends BaseActor {
    * @return CsvReader.
    */
   public CSVReader getCsvReader(byte[] byteArray, char seperator, char quoteChar, int lineNum) {
+
     InputStreamReader inputStreamReader =
         new InputStreamReader(new ByteArrayInputStream(byteArray));
-    CSVReader csvReader = new CSVReader(inputStreamReader, seperator, quoteChar, lineNum);
+    RFC4180Parser rfc4180Parser = new RFC4180ParserBuilder().build();
+    CSVReaderBuilder csvReaderBuilder =
+        new CSVReaderBuilder(inputStreamReader).withCSVParser(rfc4180Parser);
+    CSVReader csvReader = csvReaderBuilder.build();
     return csvReader;
   }
 
@@ -229,7 +235,6 @@ public abstract class BaseBulkUploadActor extends BaseActor {
           continue;
         }
         if (sequence == 0) {
-          sequence++;
           header = trimColumnAttributes(csvLine);
           validateBulkUploadFields(header, bulkUploadAllowedFields, true);
         } else {
@@ -245,18 +250,20 @@ public abstract class BaseBulkUploadActor extends BaseActor {
           tasks.setData(mapper.writeValueAsString(record));
           tasks.setCreatedOn(new Timestamp(System.currentTimeMillis()));
           records.add(tasks);
-          sequence++;
           count++;
-          if (count >= CASSANDRA_WRITE_BATCH_SIZE) {
+          if (count >= CASSANDRA_BATCH_SIZE) {
             performBatchInsert(records);
+            records.clear();
             count = 0;
           }
           record.clear();
         }
+        sequence++;
       }
       if (count != 0) {
         performBatchInsert(records);
         count = 0;
+        records.clear();
       }
     } catch (Exception ex) {
       BulkUploadProcess bulkUploadProcess =

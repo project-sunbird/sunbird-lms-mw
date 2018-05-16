@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BulkUploadActorOperation;
 import org.sunbird.common.models.util.GeoLocationJsonKey;
@@ -13,6 +14,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.util.Util;
 
@@ -33,8 +35,6 @@ public class LocationBulkUploadActor extends BaseBulkUploadActor {
     GeoLocationJsonKey.PARENT_CODE,
     GeoLocationJsonKey.PARENT_ID
   };
-  private Integer DEFAULT_WRITE_BATCH_SIZE = 10;
-  private Integer CASSANDRA_WRITE_BATCH_SIZE = getBatchSize(JsonKey.CASSANDRA_WRITE_BATCH_SIZE);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -56,14 +56,32 @@ public class LocationBulkUploadActor extends BaseBulkUploadActor {
     String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
     Response response = new Response();
     response.getResult().put(JsonKey.PROCESS_ID, processId);
-    sender().tell(response, self());
     Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
+
+    // Create process ID in DB
+    BulkUploadProcess bulkUploadProcess =
+        getBulkUploadProcess(processId, JsonKey.LOCATION, (String) req.get(JsonKey.CREATED_BY), 0);
+    Response res = bulkUploadDao.create(bulkUploadProcess);
+
+    if (((String) res.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      sender().tell(response, self());
+    } else {
+      ProjectLogger.log("Exception occurred while inserting record in bulk_upload_process.");
+      throw new ProjectCommonException(
+          ResponseCode.SERVER_ERROR.getErrorCode(),
+          ResponseCode.SERVER_ERROR.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
     String locationType = (String) req.get(GeoLocationJsonKey.LOCATION_TYPE);
-    processLocationBulkUpload(req, processId, locationType);
+    processLocationBulkUpload(req, processId, locationType, bulkUploadProcess);
   }
 
   private void processLocationBulkUpload(
-      Map<String, Object> req, String processId, String locationType) throws IOException {
+      Map<String, Object> req,
+      String processId,
+      String locationType,
+      BulkUploadProcess bulkUploadProcess)
+      throws IOException {
     byte[] fileByteArray = null;
     if (null != req.get(JsonKey.FILE)) {
       fileByteArray = (byte[]) req.get(JsonKey.FILE);
@@ -73,20 +91,18 @@ public class LocationBulkUploadActor extends BaseBulkUploadActor {
     Integer recordCount =
         validateAndParseRecords(
             fileByteArray, processId, bulkLocationAllowedFields, additionalRowFields);
-    BulkUploadProcess bulkUploadProcess =
-        getBulkUploadProcess(
-            processId, JsonKey.LOCATION, (String) req.get(JsonKey.CREATED_BY), recordCount);
 
-    Response res = bulkUploadDao.create(bulkUploadProcess);
-    if (((String) res.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      Request request = new Request();
-      request.put(JsonKey.PROCESS_ID, processId);
-      request.setOperation(BulkUploadActorOperation.LOCATION_BULK_UPLOAD_BACKGROUND_JOB.getValue());
-      ProjectLogger.log(
-          "LocationBulkUploadActor : calling action"
-              + BulkUploadActorOperation.LOCATION_BULK_UPLOAD_BACKGROUND_JOB.getValue());
-      tellToAnother(request);
-    }
+    // Update process ID in DB with actual task / record count
+    bulkUploadProcess.setTaskCount(recordCount);
+    Response res = bulkUploadDao.update(bulkUploadProcess);
+
+    Request request = new Request();
+    request.put(JsonKey.PROCESS_ID, processId);
+    request.setOperation(BulkUploadActorOperation.LOCATION_BULK_UPLOAD_BACKGROUND_JOB.getValue());
+    ProjectLogger.log(
+        "LocationBulkUploadActor : calling action"
+            + BulkUploadActorOperation.LOCATION_BULK_UPLOAD_BACKGROUND_JOB.getValue());
+    tellToAnother(request);
   }
 
   private BulkUploadProcess getBulkUploadProcess(

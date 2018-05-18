@@ -77,6 +77,8 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadActor {
   private void bulkLocationUpload(Request request) throws IOException {
 
     String processId = (String) request.get(JsonKey.PROCESS_ID);
+    ProjectLogger.log(
+        "LocationBulkUpload Background job started for Id : " + processId, LoggerEnum.INFO);
     BulkUploadProcess bulkUploadProcess = bulkUploadDao.read(processId);
     if (null == bulkUploadProcess) {
       ProjectLogger.log("Process Id does not exist : " + processId, LoggerEnum.ERROR);

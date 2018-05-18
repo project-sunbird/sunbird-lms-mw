@@ -55,7 +55,7 @@ public class SchedularActor extends BaseActor {
           cassandraOperation.updateRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), bulkMap);
         } catch (Exception e) {
           ProjectLogger.log(
-              "Exception ocurred while encrypting data while running scheduler for bulk upload process : ",
+              "Exception occurred while encrypting data while running scheduler for bulk upload process : ",
               e);
         }
       } else {
@@ -67,9 +67,9 @@ public class SchedularActor extends BaseActor {
         Request req = new Request();
         req.put(JsonKey.PROCESS_ID, map.get(JsonKey.ID));
         ProjectLogger.log(
-            "calling bulkUploadBackGroundJobActor for processId from schedular actor "
+            "SchedularActor: scheduleBulkUpload called with processId "
                 + map.get(JsonKey.ID)
-                + " for object type:"
+                + " and type "
                 + map.get(JsonKey.OBJECT_TYPE),
             LoggerEnum.INFO);
         if (JsonKey.LOCATION.equalsIgnoreCase((String) map.get(JsonKey.OBJECT_TYPE))) {

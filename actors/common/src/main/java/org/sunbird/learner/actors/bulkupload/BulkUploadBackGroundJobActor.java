@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -1297,11 +1298,13 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName(), JsonKey.USER_ID, userId);
     if (CollectionUtils.isNotEmpty(
         (List<Map<String, Object>>) resultFrUserName.get(JsonKey.RESPONSE))) {
-      List<Map<String, Object>> reponseList =
+      List<Map<String, Object>> responseList =
           (List<Map<String, Object>>) resultFrUserName.get(JsonKey.RESPONSE);
-      for (Map<String, Object> userOrg : reponseList) {
-        memberOrgList.add((String) userOrg.get(JsonKey.ORGANISATION_ID));
-      }
+      memberOrgList =
+          responseList
+              .stream()
+              .map(s -> (String) s.get(JsonKey.ORGANISATION_ID))
+              .collect(Collectors.toList());
       return memberOrgList;
     }
     return memberOrgList;
@@ -1380,40 +1383,39 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     userMap.put(JsonKey.USER_ID, userDbRecord.get(JsonKey.ID));
     userMap.put(JsonKey.OPERATION, JsonKey.UPDATE);
     List<String> memberOrgList = getMemberOrgList((String) userDbRecord.get(JsonKey.ID));
-    // This organisationId (userMap.get(JsonKey.ORGANISATION_ID)) is where we are going to add this
-    // user as a member
-    if (memberOrgList.contains(userMap.get(JsonKey.ORGANISATION_ID))) {
-      checkEmailUniqueness(userMap, JsonKey.UPDATE);
-      checkPhoneUniqueness(userMap, JsonKey.UPDATE);
-      String email = "";
-      try {
-        email = encryptionService.encryptData((String) userMap.get(JsonKey.EMAIL));
-      } catch (Exception ex) {
-        ProjectLogger.log(
-            "Exception occurred while bulk user upload in BulkUploadBackGroundJobActor during encryption of loginId:",
-            ex);
-        throw new ProjectCommonException(
-            ResponseCode.userDataEncryptionError.getErrorCode(),
-            ResponseCode.userDataEncryptionError.getErrorMessage(),
-            ResponseCode.SERVER_ERROR.getResponseCode());
-      }
-      if (null != (String) userDbRecord.get(JsonKey.EMAIL)
-          && ((String) userDbRecord.get(JsonKey.EMAIL)).equalsIgnoreCase(email)) {
-        // DB email value and req email value both are same , no need to update
-        email = (String) userMap.get(JsonKey.EMAIL);
-        userMap.remove(JsonKey.EMAIL);
-      }
-      // check user is active for this organization or not
-      isUserDeletedFromOrg(userMap, (String) userMap.get(JsonKey.UPDATED_BY));
-      updateKeyCloakUserBase(userMap);
-      email = decryptionService.decryptData(email);
-      userMap.put(JsonKey.EMAIL, email);
-    } else {
+    if (!memberOrgList.contains(userMap.get(JsonKey.ORGANISATION_ID))) {
       throw new ProjectCommonException(
           ResponseCode.userOrgAssociationError.getErrorCode(),
           ResponseCode.userOrgAssociationError.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
+    // This organisationId (userMap.get(JsonKey.ORGANISATION_ID)) is where we are going to add this
+    // user as a member
+    checkEmailUniqueness(userMap, JsonKey.UPDATE);
+    checkPhoneUniqueness(userMap, JsonKey.UPDATE);
+    String email = "";
+    try {
+      email = encryptionService.encryptData((String) userMap.get(JsonKey.EMAIL));
+    } catch (Exception ex) {
+      ProjectLogger.log(
+          "Exception occurred while bulk user upload in BulkUploadBackGroundJobActor during encryption of loginId:",
+          ex);
+      throw new ProjectCommonException(
+          ResponseCode.userDataEncryptionError.getErrorCode(),
+          ResponseCode.userDataEncryptionError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
+    if (null != (String) userDbRecord.get(JsonKey.EMAIL)
+        && ((String) userDbRecord.get(JsonKey.EMAIL)).equalsIgnoreCase(email)) {
+      // DB email value and req email value both are same , no need to update
+      email = (String) userMap.get(JsonKey.EMAIL);
+      userMap.remove(JsonKey.EMAIL);
+    }
+    // check user is active for this organization or not
+    isUserDeletedFromOrg(userMap, (String) userMap.get(JsonKey.UPDATED_BY));
+    updateKeyCloakUserBase(userMap);
+    email = decryptionService.decryptData(email);
+    userMap.put(JsonKey.EMAIL, email);
   }
 
   private boolean isUserDeletedFromOrg(Map<String, Object> userMap, String updatedBy) {

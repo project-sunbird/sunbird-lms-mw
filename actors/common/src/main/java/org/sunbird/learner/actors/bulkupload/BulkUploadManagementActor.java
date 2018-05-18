@@ -384,6 +384,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         String[] columnArr = dataList.get(0);
         columnArr = trimColumnAttributes(columnArr);
         Map<String, Object> dataMap = null;
+        String channel = Util.getChannel(rootOrgId);
         for (int i = 1; i < dataList.size(); i++) {
           dataMap = new HashMap<>();
           String[] valueArr = dataList.get(i);
@@ -394,7 +395,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
           if (!StringUtils.isBlank(objectType) && objectType.equalsIgnoreCase(JsonKey.USER)) {
             dataMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
             dataMap.put(JsonKey.ORGANISATION_ID, orgId);
-            dataMap.put(JsonKey.CHANNEL, Util.getChannel(rootOrgId));
+            dataMap.put(JsonKey.CHANNEL, channel);
           }
           dataMapList.add(dataMap);
         }

@@ -998,7 +998,7 @@ public class UserManagementActor extends BaseActor {
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
     actorMessage.getRequest().putAll(userMap);
-    UserRequestValidator.validateCreateUser(actorMessage);
+    UserRequestValidator.validateUpdateUser(actorMessage);
     Map<String, Object> userDbRecord = null;
     String extId = (String) userMap.get(JsonKey.EXTERNAL_ID);
     String provider = (String) userMap.get(JsonKey.PROVIDER);

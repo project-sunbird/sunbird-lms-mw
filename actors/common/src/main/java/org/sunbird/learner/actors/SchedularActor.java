@@ -9,6 +9,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.BulkUploadActorOperation;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
@@ -18,8 +19,8 @@ import org.sunbird.learner.util.Util;
 
 /** @author Amit Kumar */
 @ActorConfig(
-  tasks = {"scheduleBulkUpload"},
-  asyncTasks = {}
+  tasks = {},
+  asyncTasks = {"scheduleBulkUpload"}
 )
 public class SchedularActor extends BaseActor {
 
@@ -54,22 +55,23 @@ public class SchedularActor extends BaseActor {
           cassandraOperation.updateRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), bulkMap);
         } catch (Exception e) {
           ProjectLogger.log(
-              "Exception ocurred while encrypting data while running scheduler for bulk upload process : ",
+              "Exception occurred while encrypting data while running scheduler for bulk upload process : ",
               e);
         }
       } else {
         Map<String, Object> bulkMap = new HashMap<>();
         bulkMap.put(JsonKey.RETRY_COUNT, retryCount + 1);
-        bulkMap.put(JsonKey.PROCESS_ID, map.get(JsonKey.ID));
+        bulkMap.put(JsonKey.ID, map.get(JsonKey.ID));
         bulkMap.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.IN_PROGRESS.getValue());
         cassandraOperation.updateRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), bulkMap);
         Request req = new Request();
         req.put(JsonKey.PROCESS_ID, map.get(JsonKey.ID));
         ProjectLogger.log(
-            "calling bulkUploadBackGroundJobActor for processId from schedular actor "
+            "SchedularActor: scheduleBulkUpload called with processId "
                 + map.get(JsonKey.ID)
-                + " for object type:"
-                + map.get(JsonKey.OBJECT_TYPE));
+                + " and type "
+                + map.get(JsonKey.OBJECT_TYPE),
+            LoggerEnum.INFO);
         if (JsonKey.LOCATION.equalsIgnoreCase((String) map.get(JsonKey.OBJECT_TYPE))) {
           req.setOperation(BulkUploadActorOperation.LOCATION_BULK_UPLOAD_BACKGROUND_JOB.getValue());
         } else {

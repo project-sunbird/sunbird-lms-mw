@@ -1088,4 +1088,30 @@ public final class Util {
     }
     return channel;
   }
+
+  public static void upsertUserOrgData(Map<String, Object> userMap) {
+    Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
+    Map<String, Object> map = new HashMap<>();
+    Map<String, Object> reqMap = new HashMap<>();
+    map.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+    map.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ORGANISATION_ID));
+    Response response =
+        cassandraOperation.getRecordsByProperties(
+            usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), map);
+    List<Map<String, Object>> resList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if (!resList.isEmpty()) {
+      Map<String, Object> res = resList.get(0);
+      reqMap.put(JsonKey.ID, res.get(JsonKey.ID));
+      reqMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
+      reqMap.put(JsonKey.UPDATED_BY, userMap.get(JsonKey.UPDATED_BY));
+      reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+      try {
+        cassandraOperation.updateRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), reqMap);
+      } catch (Exception e) {
+        ProjectLogger.log(e.getMessage(), e);
+      }
+    } else {
+      Util.registerUserToOrg(userMap);
+    }
+  }
 }

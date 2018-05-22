@@ -1086,7 +1086,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                       usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
               // update user-org table(role update)
               userMap.put(JsonKey.UPDATED_BY, updatedBy);
-              updateUserOrgData(userMap);
+              Util.upsertUserOrgData(userMap);
             } catch (Exception ex) {
               ProjectLogger.log(
                   "Exception occurred while bulk user upload in BulkUploadBackGroundJobActor:", ex);
@@ -1165,30 +1165,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       ProjectLogger.log(
           "Exception Occurred while updating bulk_upload_process in BulkUploadBackGroundJobActor : ",
           e);
-    }
-  }
-
-  private void updateUserOrgData(Map<String, Object> userMap) {
-    Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
-    Map<String, Object> map = new HashMap<>();
-    Map<String, Object> reqMap = new HashMap<>();
-    map.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-    map.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ORGANISATION_ID));
-    Response response =
-        cassandraOperation.getRecordsByProperties(
-            usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), map);
-    List<Map<String, Object>> resList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    if (!resList.isEmpty()) {
-      Map<String, Object> res = resList.get(0);
-      reqMap.put(JsonKey.ID, res.get(JsonKey.ID));
-      reqMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
-      reqMap.put(JsonKey.UPDATED_BY, userMap.get(JsonKey.UPDATED_BY));
-      reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-      try {
-        cassandraOperation.updateRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), reqMap);
-      } catch (Exception e) {
-        ProjectLogger.log(e.getMessage(), e);
-      }
     }
   }
 
@@ -1382,15 +1358,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     userMap.put(JsonKey.ID, userDbRecord.get(JsonKey.ID));
     userMap.put(JsonKey.USER_ID, userDbRecord.get(JsonKey.ID));
     userMap.put(JsonKey.OPERATION, JsonKey.UPDATE);
-    List<String> memberOrgList = getMemberOrgList((String) userDbRecord.get(JsonKey.ID));
-    if (!memberOrgList.contains(userMap.get(JsonKey.ORGANISATION_ID))) {
-      throw new ProjectCommonException(
-          ResponseCode.userOrgAssociationError.getErrorCode(),
-          ResponseCode.userOrgAssociationError.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
-    // This organisationId (userMap.get(JsonKey.ORGANISATION_ID)) is where we are going to add this
-    // user as a member
+
     checkEmailUniqueness(userMap, JsonKey.UPDATE);
     checkPhoneUniqueness(userMap, JsonKey.UPDATE);
     String email = "";

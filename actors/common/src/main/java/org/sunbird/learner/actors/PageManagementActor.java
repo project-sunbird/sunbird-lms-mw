@@ -1,6 +1,5 @@
 package org.sunbird.learner.actors;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -212,22 +211,6 @@ public class PageManagementActor extends BaseActor {
     // update DataCacheHandler section map with new page section data
     ProjectLogger.log("Calling  updateSectionDataCache method", LoggerEnum.INFO);
     updateSectionDataCache(response, sectionMap);
-  }
-
-  public static void main(String[] args) {
-    Map<String, Object> map = new HashMap<>();
-    Map<String, Object> innerMap = new HashMap<>();
-    Map<String, Object> innerMap1 = new HashMap<>();
-    innerMap1.put("en", "popular story");
-    innerMap.put("name", innerMap1);
-    map.put("dispaly", innerMap);
-    ObjectMapper mapper = new ObjectMapper();
-    try {
-      System.out.println(mapper.writeValueAsString(map));
-    } catch (JsonProcessingException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
   }
 
   private void updateSectionDataCache(Response response, Map<String, Object> sectionMap) {

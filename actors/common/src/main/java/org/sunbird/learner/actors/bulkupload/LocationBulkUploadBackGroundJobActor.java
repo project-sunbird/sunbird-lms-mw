@@ -159,7 +159,6 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadActor {
                 getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
                 (String) row.get(GeoLocationJsonKey.CODE));
       } catch (Exception ex) {
-        row.put(JsonKey.ERROR_MSG, ex.getMessage());
         setTaskStatus(task, BulkProcessStatus.FAILED.getValue(), ex.getMessage(), row, null);
       }
       if (null == location) {
@@ -194,10 +193,24 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadActor {
       Map<String, Object> row, Map<String, Object> response, BulkUploadProcessTask task)
       throws JsonProcessingException {
 
-    // since for update type is not allowed so remove from request body
-    String locationType = (String) row.remove(GeoLocationJsonKey.LOCATION_TYPE);
     String id = (String) response.get(JsonKey.ID);
     row.put(JsonKey.ID, id);
+
+    // since for update type is not allowed so remove from request body
+    String locationType = (String) row.remove(GeoLocationJsonKey.LOCATION_TYPE);
+    // check whether update for same type or different type.
+    if (!(locationTypeAreEqual(
+        locationType, (String) response.get(GeoLocationJsonKey.LOCATION_TYPE)))) {
+      row.put(GeoLocationJsonKey.LOCATION_TYPE, response.get(GeoLocationJsonKey.LOCATION_TYPE));
+      setTaskStatus(
+          task,
+          BulkProcessStatus.FAILED.getValue(),
+          new MessageFormat(ResponseCode.unupdatableField.getErrorMessage())
+              .format(new Object[] {GeoLocationJsonKey.LOCATION_TYPE}),
+          row,
+          GeoLocationJsonKey.UPDATED);
+      return;
+    }
 
     try {
       locationClient.updateLocation(
@@ -222,6 +235,10 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadActor {
     setTaskStatus(task, ProgressStatus.COMPLETED.getValue(), row, GeoLocationJsonKey.UPDATED);
   }
 
+  private Boolean locationTypeAreEqual(String locationType, String responseType) {
+    return (locationType.equalsIgnoreCase(responseType));
+  }
+
   private void callCreateLocation(Map<String, Object> row, BulkUploadProcessTask task)
       throws JsonProcessingException {
 
@@ -239,7 +256,6 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadActor {
           "LocationBulkUploadBackGroundJobActor : callCreateLocation - got exception "
               + ex.getMessage(),
           LoggerEnum.INFO);
-      row.put(JsonKey.ERROR_MSG, ex.getMessage());
       setTaskStatus(
           task,
           BulkProcessStatus.FAILED.getValue(),
@@ -253,9 +269,6 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadActor {
       ProjectLogger.log(
           "LocationBulkUploadBackGroundJobActor : Null receive from interservice communication",
           LoggerEnum.ERROR);
-      row.put(
-          JsonKey.ERROR_MSG,
-          "LocationBulkUploadBackGroundJobActor : Null receive from interservice communication");
       setTaskStatus(
           task,
           BulkProcessStatus.FAILED.getValue(),
@@ -264,7 +277,6 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadActor {
           GeoLocationJsonKey.CREATED);
     } else {
       row.put(JsonKey.ID, locationId);
-      task.setData(mapper.writeValueAsString(row));
       setTaskStatus(task, ProgressStatus.COMPLETED.getValue(), row, GeoLocationJsonKey.CREATED);
     }
   }
@@ -278,12 +290,12 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadActor {
       throws JsonProcessingException {
     row.put(GeoLocationJsonKey.ACTION, action);
     if (BulkProcessStatus.COMPLETED.getValue() == status) {
-      task.setData(mapper.writeValueAsString(row));
+      task.setSuccessResult(mapper.writeValueAsString(row));
       task.setStatus(status);
     } else if (BulkProcessStatus.FAILED.getValue() == status) {
-      task.setFailureResult(failMessage);
+      row.put(JsonKey.ERROR_MSG, failMessage);
       task.setStatus(status);
-      task.setData(mapper.writeValueAsString(row));
+      task.setFailureResult(mapper.writeValueAsString(row));
     }
   }
 
@@ -291,7 +303,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadActor {
       BulkUploadProcessTask task, Integer status, Map<String, Object> row, String action)
       throws JsonProcessingException {
     row.put(GeoLocationJsonKey.ACTION, action);
-    task.setData(mapper.writeValueAsString(row));
+    task.setSuccessResult(mapper.writeValueAsString(row));
     task.setStatus(status);
   }
 

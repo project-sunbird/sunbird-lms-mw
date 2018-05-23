@@ -168,9 +168,9 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
               .forEach(
                   x -> {
                     if (x.getStatus() == ProgressStatus.COMPLETED.getValue()) {
-                      addTaskDataToList(successList, x.getData());
+                      addTaskDataToList(successList, x.getSuccessResult());
                     } else {
-                      addTaskDataToList(failureList, x.getData());
+                      addTaskDataToList(failureList, x.getFailureResult());
                     }
                   });
           resMap.put(JsonKey.SUCCESS_RESULT, successList);

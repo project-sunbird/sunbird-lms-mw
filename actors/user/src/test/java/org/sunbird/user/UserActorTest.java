@@ -1,5 +1,7 @@
 package org.sunbird.user;
 
+import static org.junit.Assert.assertTrue;
+
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
@@ -122,6 +124,7 @@ public class UserActorTest {
     request.put(JsonKey.USER, user);
     reqObj.setRequest(request);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(NullPointerException.class);
+    Exception ex = probe.expectMsgClass(NullPointerException.class);
+    assertTrue(null != ex);
   }
 }

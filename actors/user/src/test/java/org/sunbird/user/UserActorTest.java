@@ -114,6 +114,7 @@ public class UserActorTest {
         .thenReturn(user);
   }
 
+  /** Unit test to create user. */
   @Test
   public void testACreateUser() {
     TestKit probe = new TestKit(system);

@@ -296,7 +296,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadActor {
       throws JsonProcessingException {
     row.put(JsonKey.OPERATION, action);
     task.setSuccessResult(mapper.writeValueAsString(row));
-    task.setStatus(status);
+    task.setStatus(ProgressStatus.COMPLETED.getValue());
   }
 
   private Map<String, Integer> getOrderMap() {

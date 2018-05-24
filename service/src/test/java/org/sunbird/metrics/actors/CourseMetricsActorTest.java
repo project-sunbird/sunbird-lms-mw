@@ -50,7 +50,7 @@ public class CourseMetricsActorTest {
     userMap.put(JsonKey.ID, userId);
     userMap.put(JsonKey.ROOT_ORG_ID, "ORG_001");
     userMap.put(JsonKey.USERNAME, "alpha-beta");
-    userMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
+    userMap.put(JsonKey.ROOT_ORG_ID, orgId);
     userMap.put(JsonKey.EMAIL, "arvind.glaitm108@gmail.com");
     ElasticSearchUtil.createData(
         EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId, userMap);
@@ -68,7 +68,7 @@ public class CourseMetricsActorTest {
     userCoursesMap.put(JsonKey.ID, batchId + JsonKey.PRIMARY_KEY_DELIMETER + userId);
     userCoursesMap.put(JsonKey.BATCH_ID, batchId);
     userCoursesMap.put(JsonKey.USER_ID, userId);
-    userCoursesMap.put(JsonKey.REGISTERED_ORG_ID, orgId);
+    userCoursesMap.put(JsonKey.ROOT_ORG_ID, orgId);
     userCoursesMap.put(JsonKey.PROGRESS, 1);
     ElasticSearchUtil.createData(
         EsIndex.sunbird.getIndexName(),

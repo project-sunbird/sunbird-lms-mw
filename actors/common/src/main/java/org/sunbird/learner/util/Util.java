@@ -4,7 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -14,6 +17,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Collectors;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -33,6 +39,7 @@ import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.quartz.scheduler.SchedulerManager;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -41,6 +48,7 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.CassandraConnectionManager;
 import org.sunbird.helper.CassandraConnectionMngrFactory;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.models.user.User;
 
 /**
  * Utility class for actors
@@ -53,6 +61,7 @@ public final class Util {
   public static final int RECOMENDED_LIST_SIZE = 10;
   private static PropertiesCache propertiesCache = PropertiesCache.getInstance();
   public static final String KEY_SPACE_NAME = "sunbird";
+  public static final String USER_EXT_IDNT_TABLE = "user_external_identity";
   private static Properties prop = new Properties();
   private static Map<String, String> headers = new HashMap<>();
   private static Map<Integer, List<Integer>> orgStatusTransition = new HashMap<>();
@@ -655,25 +664,54 @@ public final class Util {
     }
     return null;
   }
-
+  /**
+   * This method will validate channel and return the id of organization associated with this
+   * channel.
+   *
+   * @param channel value of channel of an organization
+   * @return Id of Root organization.
+   */
   public static String getRootOrgIdFromChannel(String channel) {
-    if (!StringUtils.isBlank(channel)) {
-      Map<String, Object> filters = new HashMap<>();
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(JsonKey.IS_ROOT_ORG, true);
+    if (StringUtils.isNotEmpty(channel)) {
       filters.put(JsonKey.CHANNEL, channel);
-      filters.put(JsonKey.IS_ROOT_ORG, true);
-      Map<String, Object> esResult =
-          elasticSearchComplexSearch(
-              filters, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
-      if (isNotNull(esResult)
-          && esResult.containsKey(JsonKey.CONTENT)
-          && isNotNull(esResult.get(JsonKey.CONTENT))
-          && ((List) esResult.get(JsonKey.CONTENT)).size() > 0) {
-        Map<String, Object> esContent =
-            ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
-        return (String) esContent.getOrDefault(JsonKey.ID, "");
+    } else {
+      // If channel value is not coming in request then read the default channel value provided from
+      // ENV.
+      if (StringUtils.isNotEmpty(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL))) {
+        filters.put(JsonKey.CHANNEL, ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL));
+      } else {
+        throw new ProjectCommonException(
+            ResponseCode.mandatoryParamsMissing.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.CHANNEL),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
       }
     }
-    return "";
+    Map<String, Object> esResult =
+        elasticSearchComplexSearch(
+            filters, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
+    if (MapUtils.isNotEmpty(esResult)
+        && CollectionUtils.isNotEmpty((List) esResult.get(JsonKey.CONTENT))) {
+      Map<String, Object> esContent =
+          ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
+      return (String) esContent.get(JsonKey.ID);
+    } else {
+      if (StringUtils.isNotEmpty(channel)) {
+        throw new ProjectCommonException(
+            ResponseCode.invalidParameterValue.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.invalidParameterValue.getErrorMessage(), channel, JsonKey.CHANNEL),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      } else {
+        throw new ProjectCommonException(
+            ResponseCode.mandatoryParamsMissing.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.CHANNEL),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
   }
 
   private static Map<String, Object> elasticSearchComplexSearch(
@@ -829,15 +867,11 @@ public final class Util {
                 ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), requestedby);
         if (result != null) {
           String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
-          String registeredOrgId = (String) result.get(JsonKey.REGISTERED_ORG_ID);
 
-          if (!(StringUtils.isBlank(rootOrgId) && StringUtils.isBlank(registeredOrgId))) {
+          if (StringUtils.isNotBlank(rootOrgId)) {
             Map<String, String> rollup = new HashMap<>();
 
             rollup.put("l1", rootOrgId);
-            if (!(StringUtils.isBlank(registeredOrgId))) {
-              rollup.put("l2", registeredOrgId);
-            }
             requestContext.put(JsonKey.ROLLUP, rollup);
           }
         }
@@ -888,5 +922,196 @@ public final class Util {
       return res.get(0);
     }
     return Collections.emptyMap();
+  }
+
+  // --------------------------------------------------------
+  // user utility methods
+  private static EncryptionService encryptionService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
+          null);
+
+  public static String getEncryptedData(String value) {
+    try {
+      return encryptionService.encryptData(value);
+    } catch (Exception e) {
+      throw new ProjectCommonException(
+          ResponseCode.userDataEncryptionError.getErrorCode(),
+          ResponseCode.userDataEncryptionError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
+  }
+  /**
+   * This method will check for user in our application with userName@channel i.e loginId value.
+   *
+   * @param user User object.
+   */
+  public static void checkUserExistOrNot(User user) {
+    Map<String, Object> searchQueryMap = new HashMap<>();
+    // loginId is encrypted in our application
+    searchQueryMap.put(JsonKey.LOGIN_ID, getEncryptedData(user.getLoginId()));
+    if (CollectionUtils.isNotEmpty(searchUser(searchQueryMap))) {
+      throw new ProjectCommonException(
+          ResponseCode.userAlreadyExist.getErrorCode(),
+          ResponseCode.userAlreadyExist.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+  }
+
+  /**
+   * This method will check the uniqueness for externalId and provider combination.
+   *
+   * @param user
+   */
+  public static void checkExternalIdAndProviderUniqueness(User user) {
+    if (StringUtils.isNotEmpty(user.getExternalId())
+        && StringUtils.isNotEmpty(user.getProvider())) {
+      Map<String, Object> searchQueryMap = new HashMap<>();
+      searchQueryMap.put(JsonKey.EXTERNAL_ID, user.getExternalId());
+      searchQueryMap.put(JsonKey.PROVIDER, user.getProvider());
+      if (CollectionUtils.isNotEmpty(getRecordsFromUserExtIdentityByProperties(searchQueryMap))) {
+        throw new ProjectCommonException(
+            ResponseCode.userAlreadyExist.getErrorCode(),
+            ResponseCode.userAlreadyExist.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
+  }
+
+  /**
+   * This method will search in ES for user with given search query
+   *
+   * @param searchQueryMap Query filters as Map.
+   * @return List<User> List of User object.
+   */
+  private static List<User> searchUser(Map<String, Object> searchQueryMap) {
+    List<User> userList = new ArrayList<>();
+    ObjectMapper mapper = new ObjectMapper();
+    Map<String, Object> searchRequestMap = new HashMap<>();
+    searchRequestMap.put(JsonKey.FILTERS, searchQueryMap);
+    SearchDTO searchDto = Util.createSearchDto(searchRequestMap);
+    String[] types = {ProjectUtil.EsType.user.getTypeName()};
+    Map<String, Object> result =
+        ElasticSearchUtil.complexSearch(
+            searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
+    if (MapUtils.isNotEmpty(result)) {
+      List<Map<String, Object>> searchResult =
+          (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+      if (CollectionUtils.isNotEmpty(searchResult)) {
+        userList =
+            searchResult
+                .stream()
+                .map(s -> mapper.convertValue(s, User.class))
+                .collect(Collectors.toList());
+      }
+    }
+    return userList;
+  }
+
+  public static List<Map<String, Object>> getRecordsFromUserExtIdentityByProperties(
+      Map<String, Object> propertyMap) {
+    Response response =
+        cassandraOperation.getRecordsByProperties(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, propertyMap);
+    return (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+  }
+
+  public static String getLoginId(Map<String, Object> userMap) {
+    String loginId;
+    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.CHANNEL))) {
+      loginId =
+          (String) userMap.get(JsonKey.USERNAME) + "@" + (String) userMap.get(JsonKey.CHANNEL);
+    } else {
+      loginId = (String) userMap.get(JsonKey.USERNAME);
+    }
+    return loginId;
+  }
+
+  public static void updateUserExtId(Map<String, Object> requestMap) {
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+    map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EXTERNAL_ID));
+    map.put(JsonKey.PROVIDER, requestMap.get(JsonKey.PROVIDER));
+    map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
+    map.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
+    map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
+    cassandraOperation.upsertRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
+  }
+
+  public static void registerUserToOrg(Map<String, Object> userMap) {
+    Map<String, Object> reqMap = new HashMap<>();
+    reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+    reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+    reqMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
+    reqMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ORGANISATION_ID));
+    reqMap.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
+    reqMap.put(JsonKey.IS_DELETED, false);
+    Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
+    try {
+      cassandraOperation.insertRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), reqMap);
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+  }
+
+  public static Map<String, Object> getUserFromExternalIdAndProvider(Map<String, Object> userMap) {
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    Map<String, Object> user = null;
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.PROVIDER, ((String) userMap.get(JsonKey.PROVIDER)).toLowerCase());
+    map.put(JsonKey.EXTERNAL_ID, ((String) userMap.get(JsonKey.EXTERNAL_ID)).toLowerCase());
+    List<Map<String, Object>> userRecordList = Util.getRecordsFromUserExtIdentityByProperties(map);
+    if (CollectionUtils.isNotEmpty(userRecordList)) {
+      Map<String, Object> userExtIdRecord = userRecordList.get(0);
+      Response res =
+          cassandraOperation.getRecordById(
+              usrDbInfo.getKeySpace(),
+              usrDbInfo.getTableName(),
+              (String) userExtIdRecord.get(JsonKey.USER_ID));
+      if (CollectionUtils.isNotEmpty((List<Map<String, Object>>) res.get(JsonKey.RESPONSE))) {
+        // user exist
+        user = ((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).get(0);
+      }
+    }
+    return user;
+  }
+
+  public static String getChannel(String rootOrgId) {
+    Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+    String channel = null;
+    Response resultFrRootOrg =
+        cassandraOperation.getRecordById(
+            orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), rootOrgId);
+    if (CollectionUtils.isNotEmpty(
+        (List<Map<String, Object>>) resultFrRootOrg.get(JsonKey.RESPONSE))) {
+      Map<String, Object> rootOrg =
+          ((List<Map<String, Object>>) resultFrRootOrg.get(JsonKey.RESPONSE)).get(0);
+      channel = (String) rootOrg.get(JsonKey.CHANNEL);
+    }
+    return channel;
+  }
+
+  public static void upsertUserOrgData(Map<String, Object> userMap) {
+    Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
+    Map<String, Object> map = new HashMap<>();
+    Map<String, Object> reqMap = new HashMap<>();
+    map.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+    map.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ORGANISATION_ID));
+    Response response =
+        cassandraOperation.getRecordsByProperties(
+            usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), map);
+    List<Map<String, Object>> resList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if (!resList.isEmpty()) {
+      Map<String, Object> res = resList.get(0);
+      reqMap.put(JsonKey.ID, res.get(JsonKey.ID));
+      reqMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
+      reqMap.put(JsonKey.UPDATED_BY, userMap.get(JsonKey.UPDATED_BY));
+      reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+      try {
+        cassandraOperation.updateRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), reqMap);
+      } catch (Exception e) {
+        ProjectLogger.log(e.getMessage(), e);
+      }
+    } else {
+      Util.registerUserToOrg(userMap);
+    }
   }
 }

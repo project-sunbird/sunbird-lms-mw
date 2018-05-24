@@ -140,8 +140,8 @@ public class NotesManagementActor extends BaseActor {
       String userId = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
       if (!validateUserForNoteUpdation(userId, noteId)) {
         throw new ProjectCommonException(
-            ResponseCode.unAuthorised.getErrorCode(),
-            ResponseCode.unAuthorised.getErrorMessage(),
+            ResponseCode.unAuthorized.getErrorCode(),
+            ResponseCode.unAuthorized.getErrorMessage(),
             ResponseCode.UNAUTHORIZED.getResponseCode());
       }
       Map<String, Object> list = getNoteRecordById(noteId);
@@ -216,8 +216,8 @@ public class NotesManagementActor extends BaseActor {
       String userId = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
       if (!validateUserForNoteUpdation(userId, noteId)) {
         throw new ProjectCommonException(
-            ResponseCode.unAuthorised.getErrorCode(),
-            ResponseCode.unAuthorised.getErrorMessage(),
+            ResponseCode.unAuthorized.getErrorCode(),
+            ResponseCode.unAuthorized.getErrorMessage(),
             ResponseCode.UNAUTHORIZED.getResponseCode());
       }
       Map<String, Object> request = new HashMap<>();
@@ -319,8 +319,8 @@ public class NotesManagementActor extends BaseActor {
       String userId = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
       if (!validateUserForNoteUpdation(userId, noteId)) {
         throw new ProjectCommonException(
-            ResponseCode.unAuthorised.getErrorCode(),
-            ResponseCode.unAuthorised.getErrorMessage(),
+            ResponseCode.unAuthorized.getErrorCode(),
+            ResponseCode.unAuthorized.getErrorMessage(),
             ResponseCode.UNAUTHORIZED.getResponseCode());
       }
       if (!noteIdExists(noteId)) {

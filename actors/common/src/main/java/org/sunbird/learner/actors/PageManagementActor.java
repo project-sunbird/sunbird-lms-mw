@@ -191,11 +191,9 @@ public class PageManagementActor extends BaseActor {
       try {
         sectionMap.put(
             JsonKey.SECTION_DISPLAY,
-            mapper.writeValueAsString(
-                "Exception occurred while processing search Query "
-                    + sectionMap.get(JsonKey.SECTION_DISPLAY)));
+            mapper.writeValueAsString(sectionMap.get(JsonKey.SECTION_DISPLAY)));
       } catch (IOException e) {
-        ProjectLogger.log(e.getMessage(), e);
+        ProjectLogger.log("Exception occurred while processing Section display", e);
       }
     }
     sectionMap.put(JsonKey.ID, uniqueId);
@@ -258,7 +256,6 @@ public class PageManagementActor extends BaseActor {
       ProjectLogger.log("Exception occurred while validating org id " + e.getMessage(), e);
     }
 
-    Map<String, Object> map = null;
     /** if orgId is not then consider default page */
     if (CollectionUtils.isEmpty(result)) {
       orgId = "NA";

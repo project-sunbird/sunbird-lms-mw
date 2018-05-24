@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import java.io.Serializable;
 
-/** Created by arvind on 24/4/18. */
+/** @author arvind. */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(Include.NON_NULL)
 public class BulkUploadProcess implements Serializable {
@@ -24,6 +24,7 @@ public class BulkUploadProcess implements Serializable {
   private String successResult;
   private String uploadedBy;
   private String uploadedDate;
+  private Integer taskCount;
 
   public String getId() {
     return id;
@@ -119,5 +120,13 @@ public class BulkUploadProcess implements Serializable {
 
   public void setProcessStartTime(String processStartTime) {
     this.processStartTime = processStartTime;
+  }
+
+  public Integer getTaskCount() {
+    return taskCount;
+  }
+
+  public void setTaskCount(Integer taskCount) {
+    this.taskCount = taskCount;
   }
 }

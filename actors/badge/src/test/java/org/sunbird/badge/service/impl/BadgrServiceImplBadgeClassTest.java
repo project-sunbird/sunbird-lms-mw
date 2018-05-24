@@ -3,11 +3,8 @@ package org.sunbird.badge.service.impl;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.text.MessageFormat;
+import java.util.*;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,6 +44,8 @@ public class BadgrServiceImplBadgeClassTest {
       "[" + BADGE_CLASS_COMMON_RESPONSE_SUCCESS + "]";
   private static final String BADGE_CLASSS_DELETE_RESPONSE_SUCCESS =
       "Badge java-se-8-programmer has been deleted.";
+  private static final String BADGE_CLASSS_DELETE_RESPONSE_FAILURE =
+      "Badge class could not be deleted. It has already been issued at least once.";
   private static final String BADGE_CLASS_CREATE_RESPONSE_FAILURE_ISSUER_NOT_FOUND =
       "\"Issuer invalid not found or inadequate permissions.\"";
   private static final String BADGE_CLASS_GET_RESPONSE_FAILURE_BADGE_NOT_FOUND =
@@ -404,6 +403,15 @@ public class BadgrServiceImplBadgeClassTest {
   public void testRemoveBadgeClassSuccess() throws IOException {
     PowerMockito.when(HttpUtil.sendDeleteRequest(Mockito.any(), Mockito.any()))
         .thenReturn(new HttpUtilResponse(BADGE_CLASSS_DELETE_RESPONSE_SUCCESS, 200));
+    PowerMockito.when(mockBadgeClassExtensionService.get(VALUE_BADGE_ID))
+        .thenReturn(
+            new BadgeClassExtension(
+                VALUE_BADGE_ID,
+                VALUE_ISSUER_ID,
+                VALUE_ROOT_ORG_ID,
+                VALUE_TYPE,
+                VALUE_SUBTYPE,
+                VALUE_ROLES_LIST));
     PowerMockito.doNothing().when(mockBadgeClassExtensionService).delete(Mockito.any());
 
     request.put(BadgingJsonKey.ISSUER_ID, VALUE_ISSUER_ID);
@@ -416,9 +424,49 @@ public class BadgrServiceImplBadgeClassTest {
   }
 
   @Test
+  public void testRemoveBadgeClassIssuedFailure() throws IOException {
+    PowerMockito.when(HttpUtil.sendDeleteRequest(Mockito.any(), Mockito.any()))
+        .thenReturn(new HttpUtilResponse(BADGE_CLASSS_DELETE_RESPONSE_FAILURE, 400));
+    PowerMockito.when(mockBadgeClassExtensionService.get(VALUE_BADGE_ID))
+        .thenReturn(
+            new BadgeClassExtension(
+                VALUE_BADGE_ID,
+                VALUE_ISSUER_ID,
+                VALUE_ROOT_ORG_ID,
+                VALUE_TYPE,
+                VALUE_SUBTYPE,
+                VALUE_ROLES_LIST));
+    PowerMockito.doNothing().when(mockBadgeClassExtensionService).delete(Mockito.any());
+
+    request.put(BadgingJsonKey.ISSUER_ID, VALUE_ISSUER_ID);
+    request.put(BadgingJsonKey.BADGE_ID, VALUE_BADGE_ID);
+
+    boolean thrown = false;
+
+    try {
+      badgrServiceImpl.removeBadgeClass(request);
+    } catch (ProjectCommonException exception) {
+      thrown = true;
+      assertEquals(
+          MessageFormat.format(
+              ResponseCode.customClientError.getErrorMessage(),
+              BADGE_CLASSS_DELETE_RESPONSE_FAILURE),
+          exception.getMessage());
+    }
+
+    assertEquals(true, thrown);
+  }
+
+  @Test
   public void testRemoveBadgeClassFailureInvalidBadgeId() throws IOException {
     PowerMockito.when(HttpUtil.sendDeleteRequest(Mockito.any(), Mockito.any()))
         .thenReturn(new HttpUtilResponse("", ResponseCode.RESOURCE_NOT_FOUND.getResponseCode()));
+    PowerMockito.when(mockBadgeClassExtensionService.get(INVALID_VALUE))
+        .thenThrow(
+            new ProjectCommonException(
+                ResponseCode.resourceNotFound.getErrorCode(),
+                ResponseCode.resourceNotFound.getErrorMessage(),
+                ResponseCode.RESOURCE_NOT_FOUND.getResponseCode()));
     PowerMockito.doNothing().when(mockBadgeClassExtensionService).delete(Mockito.any());
 
     request.put(BadgingJsonKey.ISSUER_ID, VALUE_ISSUER_ID);
@@ -440,6 +488,15 @@ public class BadgrServiceImplBadgeClassTest {
   public void testRemoveBadgeClassFailureException() throws IOException {
     PowerMockito.when(HttpUtil.sendDeleteRequest(Mockito.any(), Mockito.any()))
         .thenThrow(new IOException());
+    PowerMockito.when(mockBadgeClassExtensionService.get(VALUE_BADGE_ID))
+        .thenReturn(
+            new BadgeClassExtension(
+                VALUE_BADGE_ID,
+                VALUE_ISSUER_ID,
+                VALUE_ROOT_ORG_ID,
+                VALUE_TYPE,
+                VALUE_SUBTYPE,
+                VALUE_ROLES_LIST));
     PowerMockito.doNothing().when(mockBadgeClassExtensionService).delete(Mockito.any());
 
     request.put(BadgingJsonKey.ISSUER_ID, VALUE_ISSUER_ID);

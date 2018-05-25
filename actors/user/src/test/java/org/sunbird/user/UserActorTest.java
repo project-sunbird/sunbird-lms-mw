@@ -163,7 +163,7 @@ public class UserActorTest {
   }
 
   @Test
-  public void TestInvalidParamRootOrgInRequest() {
+  public void testInvalidParamRootOrgInRequest() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -180,7 +180,7 @@ public class UserActorTest {
   }
 
   @Test
-  public void TestInvalidParamRegOrgIdInRequest() {
+  public void testInvalidParamRegOrgIdInRequest() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -197,7 +197,7 @@ public class UserActorTest {
   }
 
   @Test
-  public void TestMissingParamProviderInRequest() {
+  public void testMissingParamProviderInRequest() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -216,7 +216,7 @@ public class UserActorTest {
   }
 
   @Test
-  public void TestMissingParamExternalIdInRequest() {
+  public void testMissingParamExternalIdInRequest() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();

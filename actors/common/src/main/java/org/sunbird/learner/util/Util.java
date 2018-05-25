@@ -44,6 +44,7 @@ import org.sunbird.common.quartz.scheduler.SchedulerManager;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.CassandraConnectionManager;
 import org.sunbird.helper.CassandraConnectionMngrFactory;
@@ -951,8 +952,9 @@ public final class Util {
     searchQueryMap.put(JsonKey.LOGIN_ID, getEncryptedData(user.getLoginId()));
     if (CollectionUtils.isNotEmpty(searchUser(searchQueryMap))) {
       throw new ProjectCommonException(
-          ResponseCode.userAlreadyExist.getErrorCode(),
-          ResponseCode.userAlreadyExist.getErrorMessage(),
+          ResponseCode.userAlreadyExists.getErrorCode(),
+          ProjectUtil.formatMessage(
+              ResponseCode.userAlreadyExists.getErrorMessage(), JsonKey.USERNAME),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
   }
@@ -970,8 +972,11 @@ public final class Util {
       searchQueryMap.put(JsonKey.PROVIDER, user.getProvider());
       if (CollectionUtils.isNotEmpty(getRecordsFromUserExtIdentityByProperties(searchQueryMap))) {
         throw new ProjectCommonException(
-            ResponseCode.userAlreadyExist.getErrorCode(),
-            ResponseCode.userAlreadyExist.getErrorMessage(),
+            ResponseCode.userAlreadyExists.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.userAlreadyExists.getErrorMessage(),
+                (ProjectUtil.formatMessage(
+                    ResponseMessage.Message.AND_FORMAT, JsonKey.EXTERNAL_ID, JsonKey.PROVIDER))),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
     }

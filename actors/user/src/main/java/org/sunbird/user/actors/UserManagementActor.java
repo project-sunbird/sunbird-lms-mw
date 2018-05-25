@@ -2017,7 +2017,6 @@ public class UserManagementActor extends BaseActor {
     reqMap.remove(JsonKey.JOB_PROFILE);
     reqMap.remove(JsonKey.ORGANISATION);
     reqMap.remove(JsonKey.EMAIL_VERIFIED);
-    reqMap.remove(JsonKey.PHONE_NUMBER_VERIFIED);
     reqMap.remove(JsonKey.REGISTERED_ORG);
     reqMap.remove(JsonKey.ROOT_ORG);
     reqMap.remove(JsonKey.IDENTIFIER);

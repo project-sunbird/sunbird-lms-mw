@@ -1031,14 +1031,17 @@ public final class Util {
   }
 
   public static void updateUserExtId(Map<String, Object> requestMap) {
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-    map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EXTERNAL_ID));
-    map.put(JsonKey.PROVIDER, requestMap.get(JsonKey.PROVIDER));
-    map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
-    map.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
-    map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
-    cassandraOperation.upsertRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
+    if (StringUtils.isNotEmpty((String) requestMap.get(JsonKey.EXTERNAL_ID))
+        && StringUtils.isNotEmpty((String) requestMap.get(JsonKey.PROVIDER))) {
+      Map<String, Object> map = new HashMap<>();
+      map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+      map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EXTERNAL_ID));
+      map.put(JsonKey.PROVIDER, requestMap.get(JsonKey.PROVIDER));
+      map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
+      map.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
+      map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
+      cassandraOperation.upsertRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
+    }
   }
 
   public static void registerUserToOrg(Map<String, Object> userMap) {

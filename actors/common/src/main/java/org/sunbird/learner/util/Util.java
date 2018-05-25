@@ -952,9 +952,9 @@ public final class Util {
     searchQueryMap.put(JsonKey.LOGIN_ID, getEncryptedData(user.getLoginId()));
     if (CollectionUtils.isNotEmpty(searchUser(searchQueryMap))) {
       throw new ProjectCommonException(
-          ResponseCode.userAlreadyExist.getErrorCode(),
+          ResponseCode.userAlreadyExists.getErrorCode(),
           ProjectUtil.formatMessage(
-              ResponseCode.userAlreadyExist.getErrorMessage(), JsonKey.USERNAME),
+              ResponseCode.userAlreadyExists.getErrorMessage(), JsonKey.USERNAME),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
   }
@@ -972,9 +972,9 @@ public final class Util {
       searchQueryMap.put(JsonKey.PROVIDER, user.getProvider());
       if (CollectionUtils.isNotEmpty(getRecordsFromUserExtIdentityByProperties(searchQueryMap))) {
         throw new ProjectCommonException(
-            ResponseCode.userAlreadyExist.getErrorCode(),
+            ResponseCode.userAlreadyExists.getErrorCode(),
             ProjectUtil.formatMessage(
-                ResponseCode.userAlreadyExist.getErrorMessage(),
+                ResponseCode.userAlreadyExists.getErrorMessage(),
                 (ProjectUtil.formatMessage(
                     ResponseMessage.Message.AND_FORMAT, JsonKey.EXTERNAL_ID, JsonKey.PROVIDER))),
             ResponseCode.CLIENT_ERROR.getResponseCode());

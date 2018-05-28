@@ -2022,7 +2022,6 @@ public class UserManagementActor extends BaseActor {
     reqMap.remove(JsonKey.IDENTIFIER);
     reqMap.remove(JsonKey.ORGANISATIONS);
     reqMap.remove(JsonKey.IS_DELETED);
-    reqMap.remove(JsonKey.PHONE_VERIFIED);
     reqMap.remove(JsonKey.EXTERNAL_ID);
     reqMap.remove(JsonKey.PROVIDER);
   }

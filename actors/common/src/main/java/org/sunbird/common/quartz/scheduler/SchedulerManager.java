@@ -63,7 +63,7 @@ public final class SchedulerManager {
       scheduleBulkUploadJob(identifier);
       scheduleCoursePublishJob(identifier);
       scheduleMetricsReportJob(identifier);
-      scheduleMetricsJob(identifier);
+      // scheduleMetricsJob(identifier);
       scheduleUpdateUserCountJob(identifier);
       scheduleChannelReg(identifier);
     } catch (Exception e) {

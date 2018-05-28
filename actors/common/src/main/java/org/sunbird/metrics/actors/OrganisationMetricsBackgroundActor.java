@@ -18,6 +18,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
@@ -60,7 +61,9 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
   }
 
   private void orgCreationMetricsData(Request actorMessage) {
-    ProjectLogger.log("In orgCreationMetricsExcel api");
+    ProjectLogger.log(
+        "OrganisationMetricsBackgroundActor:orgCreationMetricsData In orgCreationMetricsExcel api",
+        LoggerEnum.INFO.name());
     try {
       String requestId = (String) actorMessage.getRequest().get(JsonKey.REQUEST_ID);
       Map<String, Object> requestData = getData(requestId);
@@ -126,7 +129,9 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
 
   @SuppressWarnings("unchecked")
   private void orgConsumptionMetricsData(Request actorMessage) {
-    ProjectLogger.log("In orgConsumptionMetricsExcel api");
+    ProjectLogger.log(
+        "OrganisationMetricsBackgroundActor:orgConsumptionMetricsData orgConsumptionMetricsExcel api",
+        LoggerEnum.INFO.name());
     try {
       String requestId = (String) actorMessage.getRequest().get(JsonKey.REQUEST_ID);
       Map<String, Object> requestData = getData(requestId);

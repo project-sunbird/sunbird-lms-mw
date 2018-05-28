@@ -230,10 +230,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   }
 
   protected Integer validateAndParseRecords(
-      byte[] fileByteArray,
-      String processId,
-      String[] bulkUploadAllowedFields,
-      Map<String, Object> additionalRowFields)
+      byte[] fileByteArray, String processId, Map<String, Object> additionalRowFields)
       throws IOException {
 
     Integer sequence = 0;

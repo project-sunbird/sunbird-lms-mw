@@ -90,9 +90,7 @@ public class LocationBulkUploadActor extends BaseBulkUploadActor {
     }
     Map<String, Object> additionalRowFields = new HashMap<>();
     additionalRowFields.put(GeoLocationJsonKey.LOCATION_TYPE, locationType);
-    Integer recordCount =
-        validateAndParseRecords(
-            fileByteArray, processId, bulkLocationAllowedFields, additionalRowFields);
+    Integer recordCount = validateAndParseRecords(fileByteArray, processId, additionalRowFields);
 
     // Update process ID in DB with actual task / record count
     bulkUploadProcess.setTaskCount(recordCount);

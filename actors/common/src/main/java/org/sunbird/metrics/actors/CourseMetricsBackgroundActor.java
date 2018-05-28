@@ -152,9 +152,6 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
         String userId = (String) map.get(JsonKey.USER_ID);
         map.put("user", userId);
         userInfoCache.put(userId, new HashMap<String, Object>(map));
-        // remove the org info from user content bcoz it is not desired in the user info
-        // result
-        map.remove(JsonKey.REGISTERED_ORG_ID);
         map.remove(JsonKey.USER_ID);
       }
 

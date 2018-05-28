@@ -18,7 +18,6 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
-import org.sunbird.metrics.actors.MetricsJobScheduler;
 
 /**
  * This class will manage all the Quartz scheduler. We need to call the schedule method at one time.
@@ -63,7 +62,6 @@ public final class SchedulerManager {
       scheduleBulkUploadJob(identifier);
       scheduleCoursePublishJob(identifier);
       scheduleMetricsReportJob(identifier);
-      // scheduleMetricsJob(identifier);
       scheduleUpdateUserCountJob(identifier);
       scheduleChannelReg(identifier);
     } catch (Exception e) {
@@ -134,37 +132,6 @@ public final class SchedulerManager {
       ProjectLogger.log("UpdateUserCount schedular started", LoggerEnum.INFO.name());
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
-    }
-  }
-
-  private void scheduleMetricsJob(String identifier) {
-    // add another job for verifying the MetricsJobScheduler details
-    // 1- create a job and bind with class which is implementing Job
-    // interface.
-    JobDetail metricsJob =
-        JobBuilder.newJob(MetricsJobScheduler.class)
-            .requestRecovery(true)
-            .withIdentity("metricsJob", identifier)
-            .build();
-
-    // 2- Create a trigger object that will define frequency of run.
-    // This job will run every 4 hours everyday.
-    Trigger metricsTrigger =
-        TriggerBuilder.newTrigger()
-            .withIdentity("metricsTrigger", identifier)
-            .withSchedule(
-                CronScheduleBuilder.cronSchedule(
-                    PropertiesCache.getInstance().getProperty("quartz_metrics_timer")))
-            .build();
-    try {
-      if (scheduler.checkExists(metricsJob.getKey())) {
-        scheduler.deleteJob(metricsJob.getKey());
-      }
-      scheduler.scheduleJob(metricsJob, metricsTrigger);
-      scheduler.start();
-      ProjectLogger.log("MetricsJob schedular started", LoggerEnum.INFO.name());
-    } catch (Exception e) {
-      ProjectLogger.log("Error occurred", e);
     }
   }
 

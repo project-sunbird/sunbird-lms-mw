@@ -53,7 +53,6 @@ public abstract class BaseMetricsActor extends BaseActor {
   protected static final String USER_ID = "user_id";
   protected static final String FOLDERPATH = "/data/";
   protected static final String FILENAMESEPARATOR = "_";
-  protected static final MetricsCache cache = new MetricsCache();
   private static final String CHARSETS_UTF_8 = "UTF-8";
 
   protected Map<String, Object> addSnapshot(

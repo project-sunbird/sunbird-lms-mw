@@ -58,6 +58,8 @@ public class LocationBulkUploadActor extends BaseBulkUploadActor {
     response.getResult().put(JsonKey.PROCESS_ID, processId);
     Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
 
+    // validate the file headers
+    validateFileHeaderFields(req, bulkLocationAllowedFields, true);
     // Create process ID in DB
     BulkUploadProcess bulkUploadProcess =
         getBulkUploadProcess(processId, JsonKey.LOCATION, (String) req.get(JsonKey.CREATED_BY), 0);

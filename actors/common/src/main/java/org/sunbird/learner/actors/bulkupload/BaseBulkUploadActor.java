@@ -55,7 +55,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   public void validateBulkUploadFields(
       String[] csvHeaderLine, String[] allowedFields, Boolean allFieldsMandatory) {
 
-    if (ArrayUtils.isEmpty(csvHeaderLine) || ArrayUtils.isEmpty(allowedFields)) {
+    if (ArrayUtils.isEmpty(csvHeaderLine)) {
       throw new ProjectCommonException(
           ResponseCode.emptyHeaderLine.getErrorCode(),
           ResponseCode.emptyHeaderLine.getErrorMessage(),
@@ -67,20 +67,21 @@ public abstract class BaseBulkUploadActor extends BaseActor {
           .forEach(
               x -> {
                 if (!(ArrayUtils.contains(csvHeaderLine, x))) {
-                  throwInvalidColumnException(
-                      findInvalidColumns(csvHeaderLine, allowedFields),
-                      String.join(",", allowedFields));
-                }
-              });
-    } else {
-      Arrays.stream(csvHeaderLine)
-          .forEach(
-              x -> {
-                if (!(ArrayUtils.contains(allowedFields, x))) {
-                  throwInvalidColumnException(x, String.join(",", allowedFields));
+                  throw new ProjectCommonException(
+                      ResponseCode.mandatoryParamsMissing.getErrorCode(),
+                      ResponseCode.mandatoryParamsMissing.getErrorMessage(),
+                      ResponseCode.CLIENT_ERROR.getResponseCode(),
+                      x);
                 }
               });
     }
+    Arrays.stream(csvHeaderLine)
+        .forEach(
+            x -> {
+              if (!(ArrayUtils.contains(allowedFields, x))) {
+                throwInvalidColumnException(x, String.join(",", allowedFields));
+              }
+            });
   }
 
   private String findInvalidColumns(String[] csvHeaderLine, String[] allowedFields) {
@@ -331,14 +332,11 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   protected void validateFileHeaderFields(
       Map<String, Object> req, String[] bulkLocationAllowedFields, Boolean allFieldsMandatory)
       throws IOException {
-    byte[] fileByteArray = null;
-    if (null != req.get(JsonKey.FILE)) {
-      fileByteArray = (byte[]) req.get(JsonKey.FILE);
-    }
+    byte[] fileByteArray = (byte[]) req.get(JsonKey.FILE);
+
     CSVReader csvReader = null;
     Boolean flag = true;
     String[] csvLine;
-    Integer sequence = 0;
     try {
       csvReader = getCsvReader(fileByteArray, ',', '"', 0);
       while (flag) {
@@ -346,11 +344,9 @@ public abstract class BaseBulkUploadActor extends BaseActor {
         if (ProjectUtil.isNotEmptyStringArray(csvLine)) {
           continue;
         }
-        if (sequence == 0) {
-          csvLine = trimColumnAttributes(csvLine);
-          validateBulkUploadFields(csvLine, bulkLocationAllowedFields, allFieldsMandatory);
-          flag = false;
-        }
+        csvLine = trimColumnAttributes(csvLine);
+        validateBulkUploadFields(csvLine, bulkLocationAllowedFields, allFieldsMandatory);
+        flag = false;
       }
     } catch (Exception ex) {
       ProjectLogger.log(

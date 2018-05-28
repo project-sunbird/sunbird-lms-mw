@@ -79,21 +79,9 @@ public abstract class BaseBulkUploadActor extends BaseActor {
         .forEach(
             x -> {
               if (!(ArrayUtils.contains(allowedFields, x))) {
-                throwInvalidColumnException(x, String.join(",", allowedFields));
+                throwInvalidColumnException(x, String.join(", ", allowedFields));
               }
             });
-  }
-
-  private String findInvalidColumns(String[] csvHeaderLine, String[] allowedFields) {
-    List<String> invalidColumns = new ArrayList<>();
-    Arrays.stream(csvHeaderLine)
-        .forEach(
-            x -> {
-              if (!(ArrayUtils.contains(allowedFields, x))) {
-                invalidColumns.add(x);
-              }
-            });
-    return String.join(",", invalidColumns);
   }
 
   private void throwInvalidColumnException(String invalidColumn, String validColumns) {

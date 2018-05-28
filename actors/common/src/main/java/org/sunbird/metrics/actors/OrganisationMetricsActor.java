@@ -452,12 +452,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         return;
       }
 
-      Map<String, Object> aggregationMap =
-          (Map<String, Object>) cache.getData(JsonKey.OrgCreation, orgId, periodStr);
-      if (null == aggregationMap || aggregationMap.isEmpty()) {
-        aggregationMap = getOrgCreationData(periodStr, orgId);
-        cache.setData(JsonKey.OrgCreation, orgId, periodStr, aggregationMap);
-      }
+      Map<String, Object> aggregationMap = getOrgCreationData(periodStr, orgId);
       String responseFormat = orgCreationResponseGenerator(periodStr, aggregationMap);
       Response response =
           metricsResponseGenerator(responseFormat, periodStr, getViewData(orgId, orgName));

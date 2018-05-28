@@ -19,6 +19,8 @@ public class SchedulerManager {
   /** all scheduler job will be configure here. */
   public static void schedule() {
     service.scheduleWithFixedDelay(new DataCacheHandler(), 0, PAGE_DATA_TTL, TimeUnit.HOURS);
-    ProjectLogger.log("started scheduler job - for page cache reload.", LoggerEnum.INFO.name());
+    ProjectLogger.log(
+        "SchedulerManager:schedule: Started scheduler job for cache refresh.",
+        LoggerEnum.INFO.name());
   }
 }

@@ -335,7 +335,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
       }
     } catch (Exception ex) {
       ProjectLogger.log(
-          "BaseBulkUploadActor :validateFileHeaderFields - error " + ex.getMessage(), ex);
+          "BaseBulkUploadActor:validateFileHeaderFields: Exception = " + ex.getMessage(), ex);
       throw ex;
     } finally {
       IOUtils.closeQuietly(csvReader);

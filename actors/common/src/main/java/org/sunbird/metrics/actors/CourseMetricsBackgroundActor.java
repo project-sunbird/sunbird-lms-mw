@@ -21,6 +21,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
@@ -57,7 +58,9 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
   @SuppressWarnings("unchecked")
   public void courseProgressMetricsData(Request actorMessage) {
 
-    ProjectLogger.log("CourseMetricsActor-courseProgressMetrics called");
+    ProjectLogger.log(
+        "CourseMetricsBackgroundActor:courseProgressMetricsData courseProgressMetrics called",
+        LoggerEnum.INFO.name());
     SimpleDateFormat format = ProjectUtil.getDateFormatter();
     format.setLenient(false);
 
@@ -71,7 +74,9 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
     List<Map<String, Object>> responseList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (responseList.isEmpty()) {
-      ProjectLogger.log("Invalid data");
+      ProjectLogger.log(
+          "CourseMetricsBackgroundActor:courseProgressMetricsData Invalid data",
+          LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.invalidRequestData.getErrorCode(),
           ResponseCode.invalidRequestData.getErrorMessage(),

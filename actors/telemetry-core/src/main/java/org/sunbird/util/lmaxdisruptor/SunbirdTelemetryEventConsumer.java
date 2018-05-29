@@ -26,8 +26,7 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
 
   @Override
   public void onEvent(Request request, long sequence, boolean endOfBatch) throws Exception {
-    ProjectLogger.log(
-        "SunbirdTelemetryEventConsumer:onEvent method call start.", LoggerEnum.INFO.name());
+    ProjectLogger.log("SunbirdTelemetryEventConsumer:onEvent called.", LoggerEnum.INFO.name());
     if (request != null) {
       try {
         Gson gson = new Gson();
@@ -35,14 +34,15 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
             HttpUtil.sendPostRequest(
                 getTelemetryUrl(), gson.toJson(getEkstepTelemetryRequest(request)), getHeaders());
         ProjectLogger.log(
-            "SunbirdTelemetryEventConsumer:onEvent request processed with data ." + response,
+            "SunbirdTelemetryEventConsumer:onEvent request process status = " + response,
             LoggerEnum.INFO.name());
       } catch (Exception e) {
         ProjectLogger.log(
-            "SunbirdTelemetryEventConsumer:onEvent Exception occured during telemetry data processing. "
-                + " Data=="
+            "SunbirdTelemetryEventConsumer:onEvent exception occured = " + e.getMessage(), e);
+        ProjectLogger.log(
+            "SunbirdTelemetryEventConsumer:onEvent exception occured during telemetry data processing.Data = "
                 + new Gson().toJson(getEkstepTelemetryRequest(request)),
-            e);
+            LoggerEnum.INFO.name());
       }
     }
   }
@@ -71,7 +71,7 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
         telemetryBaseUrl
             + PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_LMS_TELEMETRY_API_URL);
     ProjectLogger.log(
-        "SunbirdTelemetryEventConsumer:getTelemetryUrl telemetry url==" + telemetryBaseUrl,
+        "SunbirdTelemetryEventConsumer:getTelemetryUrl url = " + telemetryBaseUrl,
         LoggerEnum.INFO.name());
     return telemetryBaseUrl;
   }
@@ -96,8 +96,7 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
           (List<Map<String, Object>>) request.getRequest().get(JsonKey.EVENTS);
       telemetryV3Request.setEvents(events);
       ProjectLogger.log(
-          "SunbirdTelemetryEventConsumer:getEkstepTelemetryRequest sending events count: "
-              + events.size(),
+          "SunbirdTelemetryEventConsumer:getEkstepTelemetryRequest events count: " + events.size(),
           LoggerEnum.INFO.name());
     }
     return telemetryV3Request;

@@ -62,14 +62,14 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
    * @return complete url for telemetry service.
    */
   private String getTelemetryUrl() {
-    String telemetryBaseUrl = System.getenv(JsonKey.SUNBIRD_LMS_TELEMETRY_BASE_URL);
+    String telemetryBaseUrl = System.getenv(JsonKey.SUNBIRD_TELEMETRY_BASE_URL);
     if (StringUtils.isBlank(telemetryBaseUrl)) {
       telemetryBaseUrl =
-          PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_LMS_TELEMETRY_BASE_URL);
+          PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_TELEMETRY_BASE_URL);
     }
     telemetryBaseUrl =
         telemetryBaseUrl
-            + PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_LMS_TELEMETRY_API_URL);
+            + PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_TELEMETRY_API_PATH);
     ProjectLogger.log(
         "SunbirdTelemetryEventConsumer:getTelemetryUrl url = " + telemetryBaseUrl,
         LoggerEnum.INFO.name());

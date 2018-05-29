@@ -58,10 +58,10 @@ public class LMAXWriter {
     }
 
     // initialize our event handler.
-    EkstepEventConsumer ekstepEvent = new EkstepEventConsumer();
+    EkstepEventConsumer ekstepHandler = new EkstepEventConsumer();
     // initialize the disruptor
     disruptor = new Disruptor<>(factory, ringBufferSize, executor);
-    disruptor.handleEventsWith(ekstepEvent);
+    disruptor.handleEventsWith(ekstepHandler);
 
     // start the disruptor and get the generated ring buffer instance
     disruptor.start();

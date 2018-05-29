@@ -58,10 +58,10 @@ public class LMAXWriter {
     }
 
     // initialize our event handler.
-    SunbirdTelemetryEventConsumer sunbirdTelemetryHandler = new SunbirdTelemetryEventConsumer();
+    EkstepEventConsumer ekstepEvent = new EkstepEventConsumer();
     // initialize the disruptor
     disruptor = new Disruptor<>(factory, ringBufferSize, executor);
-    disruptor.handleEventsWith(sunbirdTelemetryHandler);
+    disruptor.handleEventsWith(ekstepEvent);
 
     // start the disruptor and get the generated ring buffer instance
     disruptor.start();

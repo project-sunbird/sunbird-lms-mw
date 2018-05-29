@@ -76,7 +76,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
   private void courseProgressMetricsReport(Request actorMessage) {
 
     ProjectLogger.log(
-        "CourseMetricsActor:courseProgressMetricsReport called.", LoggerEnum.INFO.name());
+        "CourseMetricsActor: courseProgressMetricsReport called.", LoggerEnum.INFO.name());
     SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
     simpleDateFormat.setLenient(false);
 
@@ -469,7 +469,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
       String channel = (String) rootOrgData.get(JsonKey.HASHTAGID);
       ProjectLogger.log(
-          "CourseMetricsActor:courseConsumptionMetrics: Root organisation hashtag id =" + channel,
+          "CourseMetricsActor:courseConsumptionMetrics: Root organisation hashtag id = " + channel,
           LoggerEnum.INFO.name());
       String responseFormat = getCourseConsumptionData(periodStr, courseId, requestObject, channel);
       Response response =

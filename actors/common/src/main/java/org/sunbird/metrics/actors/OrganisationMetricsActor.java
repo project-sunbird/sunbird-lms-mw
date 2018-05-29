@@ -463,7 +463,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       sender().tell(response, self());
     } catch (ProjectCommonException e) {
       ProjectLogger.log(
-          "OrganisationMetricsActor:orgCreationMetrics: Exception in getting org creation data:"
+          "OrganisationMetricsActor:orgCreationMetrics: Exception in getting org creation data: "
               + e.getMessage(),
           e);
       sender().tell(e, self());

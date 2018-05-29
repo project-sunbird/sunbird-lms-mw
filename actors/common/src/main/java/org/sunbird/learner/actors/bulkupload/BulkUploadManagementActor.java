@@ -442,7 +442,8 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         cassandraOperation.insertRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), map);
     res.put(JsonKey.PROCESS_ID, processId);
     ProjectLogger.log(
-        "BulkUploadManagementActor: uploadCsvToDB returned response.", LoggerEnum.INFO);
+        "BulkUploadManagementActor: uploadCsvToDB returned response for processId: " + processId,
+        LoggerEnum.INFO);
     sender().tell(res, self());
     if (((String) res.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       // send processId for data processing to background job

@@ -58,13 +58,10 @@ public class LMAXWriter {
     }
 
     // initialize our event handler.
-    // ESEventConsumer handler = new ESEventConsumer();
-    // TODO: need to add cassandra consumer in next release (1.6).
-    //        CassandraEventConsumer cassandraConsumer = new CassandraEventConsumer();
-    EkstepEventConsumer ekstepHandler = new EkstepEventConsumer();
+    SunbirdTelemetryEventConsumer sunbirdTelemetryHandler = new SunbirdTelemetryEventConsumer();
     // initialize the disruptor
     disruptor = new Disruptor<>(factory, ringBufferSize, executor);
-    disruptor.handleEventsWith(ekstepHandler);
+    disruptor.handleEventsWith(sunbirdTelemetryHandler);
 
     // start the disruptor and get the generated ring buffer instance
     disruptor.start();

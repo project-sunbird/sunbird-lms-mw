@@ -248,8 +248,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
 
   private void processBulkOrgUpload(Map<String, Object> req, String processId) throws IOException {
 
-    ProjectLogger.log(
-        "BulkUploadManagementActor:processBulkOrgUpload method start.", LoggerEnum.INFO);
+    ProjectLogger.log("BulkUploadManagementActor: processBulkOrgUpload called.", LoggerEnum.INFO);
     List<String[]> orgList = null;
     orgList = parseCsvFile((byte[]) req.get(JsonKey.FILE), processId);
     if (null != orgList) {
@@ -381,7 +380,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       String objectType,
       String requestedBy,
       String rootOrgId) {
-    ProjectLogger.log("BulkUploadManagementActor:uploadCsvToDB method start", LoggerEnum.INFO);
+    ProjectLogger.log("BulkUploadManagementActor: uploadCsvToDB called.", LoggerEnum.INFO);
     List<Map<String, Object>> dataMapList = new ArrayList<>();
     if (dataList.size() > 1) {
       try {
@@ -423,7 +422,14 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     try {
       map.put(JsonKey.DATA, mapper.writeValueAsString(dataMapList));
     } catch (IOException e) {
-      ProjectLogger.log("Exception while converting map to string " + e.getMessage(), e);
+      ProjectLogger.log(
+          "BulkUploadManagementActor:uploadCsvToDB: Exception while converting map to string: "
+              + e.getMessage(),
+          e);
+      throw new ProjectCommonException(
+          ResponseCode.internalError.getErrorCode(),
+          ResponseCode.internalError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
     }
 
     map.put(JsonKey.ID, processId);
@@ -435,7 +441,8 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     Response res =
         cassandraOperation.insertRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), map);
     res.put(JsonKey.PROCESS_ID, processId);
-    ProjectLogger.log("BulkUploadManagementActor:uploadCsvToDB method end", LoggerEnum.INFO);
+    ProjectLogger.log(
+        "BulkUploadManagementActor: uploadCsvToDB returned response.", LoggerEnum.INFO);
     sender().tell(res, self());
     if (((String) res.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       // send processId for data processing to background job
@@ -444,6 +451,8 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       request.setOperation(ActorOperations.PROCESS_BULK_UPLOAD.getValue());
       tellToAnother(request);
     }
-    ProjectLogger.log("BulkUploadManagementActor:uploadCsvToDB method end", LoggerEnum.INFO);
+    ProjectLogger.log(
+        "BulkUploadManagementActor: uploadCsvToDB completed processing for processId: " + processId,
+        LoggerEnum.INFO);
   }
 }

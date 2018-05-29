@@ -991,7 +991,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           Map<String, Object> tempMap = new HashMap<>();
           tempMap.putAll(userMap);
           tempMap.remove(JsonKey.EMAIL_VERIFIED);
-          tempMap.remove(JsonKey.PHONE_VERIFIED);
           tempMap.remove(JsonKey.POSITION);
           // remove externalID and Provider as we are not saving these to user table
           tempMap.remove(JsonKey.EXTERNAL_ID);

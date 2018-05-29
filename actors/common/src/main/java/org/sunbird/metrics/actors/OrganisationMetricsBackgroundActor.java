@@ -62,7 +62,7 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
 
   private void orgCreationMetricsData(Request actorMessage) {
     ProjectLogger.log(
-        "OrganisationMetricsBackgroundActor:orgCreationMetricsData In orgCreationMetricsExcel api",
+        "OrganisationMetricsBackgroundActor: orgCreationMetricsData called.",
         LoggerEnum.INFO.name());
     try {
       String requestId = (String) actorMessage.getRequest().get(JsonKey.REQUEST_ID);
@@ -130,7 +130,7 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
   @SuppressWarnings("unchecked")
   private void orgConsumptionMetricsData(Request actorMessage) {
     ProjectLogger.log(
-        "OrganisationMetricsBackgroundActor:orgConsumptionMetricsData orgConsumptionMetricsExcel api",
+        "OrganisationMetricsBackgroundActor: orgConsumptionMetricsData called.",
         LoggerEnum.INFO.name());
     try {
       String requestId = (String) actorMessage.getRequest().get(JsonKey.REQUEST_ID);

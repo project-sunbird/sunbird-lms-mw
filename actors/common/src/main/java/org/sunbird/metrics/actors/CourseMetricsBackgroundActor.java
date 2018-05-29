@@ -59,8 +59,7 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
   public void courseProgressMetricsData(Request actorMessage) {
 
     ProjectLogger.log(
-        "CourseMetricsBackgroundActor:courseProgressMetricsData courseProgressMetrics called",
-        LoggerEnum.INFO.name());
+        "CourseMetricsBackgroundActor: courseProgressMetricsData called.", LoggerEnum.INFO.name());
     SimpleDateFormat format = ProjectUtil.getDateFormatter();
     format.setLenient(false);
 
@@ -75,7 +74,7 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (responseList.isEmpty()) {
       ProjectLogger.log(
-          "CourseMetricsBackgroundActor:courseProgressMetricsData Invalid data",
+          "CourseMetricsBackgroundActor:courseProgressMetricsData: requestId not found.",
           LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.invalidRequestData.getErrorCode(),

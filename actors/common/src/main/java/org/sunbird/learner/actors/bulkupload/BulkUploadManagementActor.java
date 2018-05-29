@@ -387,7 +387,11 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         String[] columnArr = dataList.get(0);
         columnArr = trimColumnAttributes(columnArr);
         Map<String, Object> dataMap = null;
-        String channel = Util.getChannel(rootOrgId);
+        String channel = null;
+        // channel is required only in case of the user type bulk upload.
+        if (StringUtils.isNotBlank(objectType) && objectType.equalsIgnoreCase(JsonKey.USER)) {
+          channel = Util.getChannel(rootOrgId);
+        }
         for (int i = 1; i < dataList.size(); i++) {
           dataMap = new HashMap<>();
           String[] valueArr = dataList.get(i);

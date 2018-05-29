@@ -53,7 +53,6 @@ public abstract class BaseMetricsActor extends BaseActor {
   protected static final String USER_ID = "user_id";
   protected static final String FOLDERPATH = "/data/";
   protected static final String FILENAMESEPARATOR = "_";
-  protected static final MetricsCache cache = new MetricsCache();
   private static final String CHARSETS_UTF_8 = "UTF-8";
 
   protected Map<String, Object> addSnapshot(
@@ -482,7 +481,8 @@ public abstract class BaseMetricsActor extends BaseActor {
         if (null == leafNodeCont || leafNodeCont == 0) {
           progressPercentage = Integer.valueOf("100");
         } else {
-          progressPercentage = (progress * 100) / leafNodeCont;
+          // making percentage as round of value.
+          progressPercentage = (int) Math.round((progress * 100.0) / leafNodeCont);
         }
       }
       map.put(JsonKey.PROGRESS, progressPercentage);

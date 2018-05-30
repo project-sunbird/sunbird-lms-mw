@@ -40,15 +40,16 @@ import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.request.UserRequestValidator;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.util.DataCacheHandler;
-import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organization.Organization;
+import org.sunbird.models.user.User;
 import org.sunbird.notification.sms.provider.ISmsProvider;
 import org.sunbird.notification.utils.SMSFactory;
 import org.sunbird.services.sso.SSOManager;
@@ -973,29 +974,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       if (errMsg.equalsIgnoreCase(JsonKey.SUCCESS)) {
         try {
 
-          if (null != userMap.get(JsonKey.GRADE)) {
-            convertCommaSepStringToList(userMap, JsonKey.GRADE);
-          }
-
-          if (null != userMap.get(JsonKey.SUBJECT)) {
-            convertCommaSepStringToList(userMap, JsonKey.SUBJECT);
-          }
-
-          if (null != userMap.get(JsonKey.LANGUAGE)) {
-            convertCommaSepStringToList(userMap, JsonKey.LANGUAGE);
-          }
-
-          if (null != userMap.get(JsonKey.EXTERNAL_IDS)) {
-            try {
-              parseExternalIds(userMap);
-            } catch (Exception ex) {
-              ProjectLogger.log(ex.getMessage(), ex);
-              userMap.put(JsonKey.ERROR_MSG, ex.getMessage() + " ,parsing of externalIds failed.");
-              failureUserReq.add(userMap);
-              continue;
-            }
-          }
-
           // convert userName,provide,loginId,externalId.. value to lowercase
           updateMapSomeValueTOLowerCase(userMap);
           userMap = insertRecordToKeyCloak(userMap, updatedBy);
@@ -1048,8 +1026,12 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 ssoManager.removeUser(userMap);
               }
             }
-            // insert record to the user external identity table
-            Util.updateUserExtId(userMap, JsonKey.CREATE);
+            try {
+              // update the user external identity data
+              Util.updateUserExtId(userMap, JsonKey.CREATE);
+            } catch (Exception ex) {
+              ProjectLogger.log("Exception occurred while updating user_ext_table", ex);
+            }
             // insert details to user_org table
             Util.registerUserToOrg(userMap);
             // send the welcome mail to user
@@ -1106,8 +1088,12 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             // update user-org table(role update)
             userMap.put(JsonKey.UPDATED_BY, updatedBy);
             Util.upsertUserOrgData(userMap);
-            // update record to the user external identity table
-            Util.updateUserExtId(userMap, JsonKey.UPDATE);
+            try {
+              // update the user external identity data
+              Util.updateUserExtId(userMap, JsonKey.UPDATE);
+            } catch (Exception ex) {
+              ProjectLogger.log("Exception occurred while updating user_ext_table", ex);
+            }
             // Process Audit Log
             processAuditLog(
                 userMap, ActorOperations.UPDATE_USER.getValue(), updatedBy, JsonKey.USER);
@@ -1307,6 +1293,11 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
   private void createUser(Map<String, Object> userMap) throws Exception {
     // user doesn't exist
     try {
+      validateExternalIds(userMap, JsonKey.UPDATE);
+    } catch (Exception e) {
+      throw e;
+    }
+    try {
       String userId = "";
       userMap.put(JsonKey.BULK_USER_UPLOAD, true);
       checkEmailUniqueness(userMap, JsonKey.CREATE);
@@ -1358,6 +1349,12 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
+    try {
+      validateExternalIds(userMap, JsonKey.UPDATE);
+    } catch (Exception e) {
+      throw e;
+    }
+
     userMap.put(JsonKey.ID, userDbRecord.get(JsonKey.ID));
     userMap.put(JsonKey.USER_ID, userDbRecord.get(JsonKey.ID));
     userMap.put(JsonKey.OPERATION, JsonKey.UPDATE);
@@ -1387,6 +1384,17 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     updateKeyCloakUserBase(userMap);
     email = decryptionService.decryptData(email);
     userMap.put(JsonKey.EMAIL, email);
+  }
+
+  private void validateExternalIds(Map<String, Object> userMap, String operation) {
+    if (CollectionUtils.isNotEmpty((List<Map<String, String>>) userMap.get(JsonKey.EXTERNAL_IDS))) {
+      List<Map<String, String>> list =
+          Util.convertExternalIdsValueToLowerCase(
+              (List<Map<String, String>>) userMap.get(JsonKey.EXTERNAL_IDS));
+      userMap.put(JsonKey.EXTERNAL_IDS, list);
+    }
+    User user = mapper.convertValue(userMap, User.class);
+    Util.checkExternalIdAndProviderUniqueness(user, operation);
   }
 
   private boolean isUserDeletedFromOrg(Map<String, Object> userMap, String updatedBy) {
@@ -1512,121 +1520,50 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     }
   }
 
-  private String validateUser(Map<String, Object> map) {
-
-    if (StringUtils.isNotBlank((String) map.get(JsonKey.PROVIDER))
-        && StringUtils.isBlank((String) map.get(JsonKey.EXTERNAL_ID))) {
-      return ProjectUtil.formatMessage(
-          ResponseCode.dependentParameterMissing.getErrorMessage(),
-          JsonKey.EXTERNAL_ID,
-          JsonKey.PROVIDER);
-    }
-    if (StringUtils.isBlank((String) map.get(JsonKey.PROVIDER))
-        && StringUtils.isNotBlank((String) map.get(JsonKey.EXTERNAL_ID))) {
-      return ProjectUtil.formatMessage(
-          ResponseCode.dependentParameterMissing.getErrorMessage(),
-          JsonKey.PROVIDER,
-          JsonKey.EXTERNAL_ID);
-    }
-
-    if (null != map.get(JsonKey.DOB)) {
-      boolean bool =
-          ProjectUtil.isDateValidFormat(
-              ProjectUtil.YEAR_MONTH_DATE_FORMAT, (String) map.get(JsonKey.DOB));
-      if (!bool) {
-        return "Incorrect DOB date format.";
-      }
-    }
-    if (!StringUtils.isBlank((String) map.get(JsonKey.PHONE))) {
-      if (((String) map.get(JsonKey.PHONE)).contains("+")) {
-        return ResponseCode.invalidPhoneNumber.getErrorMessage();
-      }
-      boolean bool =
-          ProjectUtil.validatePhone(
-              (String) map.get(JsonKey.PHONE), (String) map.get(JsonKey.COUNTRY_CODE));
-      if (!bool) {
-        return ResponseCode.phoneNoFormatError.getErrorMessage();
-      }
-    }
-    if (!StringUtils.isBlank((String) map.get(JsonKey.COUNTRY_CODE))) {
-      boolean bool = ProjectUtil.validateCountryCode((String) map.get(JsonKey.COUNTRY_CODE));
-      if (!bool) {
-        return ResponseCode.invalidCountryCode.getErrorMessage();
-      }
-    }
-    if (StringUtils.isBlank((String) map.get(JsonKey.EMAIL))
-        && StringUtils.isBlank((String) map.get(JsonKey.PHONE))) {
-      return ResponseCode.emailorPhoneRequired.getErrorMessage();
-    }
-    if (map.get(JsonKey.USERNAME) == null
-        || (StringUtils.isBlank((String) map.get(JsonKey.USERNAME)))) {
-      return ResponseCode.userNameRequired.getErrorMessage();
-    }
-    if (map.get(JsonKey.FIRST_NAME) == null
-        || (StringUtils.isBlank((String) map.get(JsonKey.FIRST_NAME)))) {
-      return ResponseCode.firstNameRequired.getErrorMessage();
-    }
-    if (!(StringUtils.isBlank((String) map.get(JsonKey.EMAIL)))
-        && !ProjectUtil.isEmailvalid((String) map.get(JsonKey.EMAIL))) {
-      return ResponseCode.emailFormatError.getErrorMessage();
-    }
-    if (!StringUtils.isBlank((String) map.get(JsonKey.PHONE_VERIFIED))) {
+  private String validateUser(Map<String, Object> userMap) {
+    if (null != userMap.get(JsonKey.EXTERNAL_IDS)) {
       try {
-        map.put(
-            JsonKey.PHONE_VERIFIED, Boolean.parseBoolean((String) map.get(JsonKey.PHONE_VERIFIED)));
+        parseExternalIds(userMap);
       } catch (Exception ex) {
-        return "property phoneVerified should be instanceOf type Boolean.";
+        return "parsing of externalIds failed.";
       }
     }
-    if (!StringUtils.isBlank((String) map.get(JsonKey.EMAIL_VERIFIED))) {
+    if (!StringUtils.isBlank((String) userMap.get(JsonKey.EMAIL_VERIFIED))) {
       try {
-        map.put(
-            JsonKey.EMAIL_VERIFIED, Boolean.parseBoolean((String) map.get(JsonKey.EMAIL_VERIFIED)));
+        userMap.put(
+            JsonKey.EMAIL_VERIFIED,
+            Boolean.parseBoolean((String) userMap.get(JsonKey.EMAIL_VERIFIED)));
       } catch (Exception ex) {
         return "property emailVerified should be instanceOf type Boolean.";
       }
     }
-    if (StringUtils.isNotBlank((String) map.get(JsonKey.PHONE))) {
-      if (null != map.get(JsonKey.PHONE_VERIFIED)) {
-        if (map.get(JsonKey.PHONE_VERIFIED) instanceof Boolean) {
-          if (!((boolean) map.get(JsonKey.PHONE_VERIFIED))) {
-            return ResponseCode.phoneVerifiedError.getErrorMessage();
-          }
-        } else {
-          return "property phoneVerified should be instanceOf type Boolean.";
-        }
-      } else {
-        return ResponseCode.phoneVerifiedError.getErrorMessage();
-      }
-    }
-
-    // this role is part of organization
-    if (null != map.get(JsonKey.ROLES)) {
-      String[] userRole = ((String) map.get(JsonKey.ROLES)).split(",");
-      List<String> list = new ArrayList<>(Arrays.asList(userRole));
-      // validating roles
-      if (!list.isEmpty()) {
-        String msg = Util.validateRoles(list);
-        if (!JsonKey.SUCCESS.equalsIgnoreCase(msg)) {
-          return msg;
-        } else {
-          map.put(JsonKey.ROLES, list);
-        }
-      }
-    }
-
-    if (null != map.get(JsonKey.WEB_PAGES)) {
-      String webPageString = (String) map.get(JsonKey.WEB_PAGES);
-      webPageString = webPageString.replaceAll("'", "\"");
-      List<Map<String, String>> webPages = new ArrayList<>();
+    if (!StringUtils.isBlank((String) userMap.get(JsonKey.PHONE_VERIFIED))) {
       try {
-        ObjectMapper mapper = new ObjectMapper();
-        webPages = mapper.readValue(webPageString, List.class);
+        userMap.put(
+            JsonKey.PHONE_VERIFIED,
+            Boolean.parseBoolean((String) userMap.get(JsonKey.PHONE_VERIFIED)));
       } catch (Exception ex) {
-        return "Unable to parse Web Page Details ";
+        return "property phoneVerified should be instanceOf type Boolean.";
       }
-      SocialMediaType.validateSocialMedia(webPages);
-      map.put(JsonKey.WEB_PAGES, webPages);
+    }
+    userMap.remove(JsonKey.ROLES);
+    if (null != userMap.get(JsonKey.GRADE)) {
+      convertCommaSepStringToList(userMap, JsonKey.GRADE);
+    }
+
+    if (null != userMap.get(JsonKey.SUBJECT)) {
+      convertCommaSepStringToList(userMap, JsonKey.SUBJECT);
+    }
+
+    if (null != userMap.get(JsonKey.LANGUAGE)) {
+      convertCommaSepStringToList(userMap, JsonKey.LANGUAGE);
+    }
+    Request request = new Request();
+    request.getRequest().putAll(userMap);
+    try {
+      UserRequestValidator.validateBulkUserData(request);
+    } catch (ProjectCommonException ex) {
+      return ex.getMessage();
     }
 
     return JsonKey.SUCCESS;

@@ -1706,8 +1706,12 @@ public class UserManagementActor extends BaseActor {
       if (userMap.containsKey(JsonKey.JOB_PROFILE)) {
         insertJobProfileDetails(userMap);
       }
-      // update the user external identity data
-      Util.updateUserExtId(userMap, JsonKey.CREATE);
+      try {
+        // update the user external identity data
+        Util.updateUserExtId(userMap, JsonKey.CREATE);
+      } catch (Exception ex) {
+        ProjectLogger.log("Exception occurred while updating user_ext_table", ex);
+      }
     }
 
     ProjectLogger.log("User created successfully.....");

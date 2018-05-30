@@ -76,7 +76,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
   private void courseProgressMetricsReport(Request actorMessage) {
 
     ProjectLogger.log(
-        "CourseMetricsActor:courseProgressMetricsReport call start", LoggerEnum.INFO.name());
+        "CourseMetricsActor: courseProgressMetricsReport called.", LoggerEnum.INFO.name());
     SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
     simpleDateFormat.setLenient(false);
 
@@ -96,7 +96,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     String batchId = (String) actorMessage.getRequest().get(JsonKey.BATCH_ID);
     if (StringUtils.isBlank(batchId)) {
       ProjectLogger.log(
-          "CourseMetricsActor:courseProgressMetricsReport  batch is not valid.",
+          "CourseMetricsActor:courseProgressMetricsReport: batchId is invalid (blank).",
           LoggerEnum.INFO.name());
       ProjectCommonException exception =
           new ProjectCommonException(
@@ -113,7 +113,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
             EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId);
     if (isNull(courseBatchResult) || courseBatchResult.size() == 0) {
       ProjectLogger.log(
-          "CourseMetricsActor:courseProgressMetricsReport  course is not valid.",
+          "CourseMetricsActor:courseProgressMetricsReport: batchId not found.",
           LoggerEnum.INFO.name());
       ProjectCommonException exception =
           new ProjectCommonException(
@@ -176,9 +176,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
   @SuppressWarnings("unchecked")
   private void courseProgressMetrics(Request actorMessage) {
-    ProjectLogger.log(
-        "CourseMetricsActor:courseProgressMetrics CourseMetricsActor-courseProgressMetrics called",
-        LoggerEnum.INFO.name());
+    ProjectLogger.log("CourseMetricsActor: courseProgressMetrics called.", LoggerEnum.INFO.name());
     Request request = new Request();
     String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
     String batchId = (String) actorMessage.getRequest().get(JsonKey.BATCH_ID);
@@ -198,7 +196,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     if (StringUtils.isBlank(batchId)) {
       ProjectLogger.log(
-          "CourseMetricsActor:courseProgressMetrics CourseMetricsActor-courseProgressMetrics-- batch is not valid .",
+          "CourseMetricsActor:courseProgressMetrics: batchId is invalid (blank).",
           LoggerEnum.INFO.name());
       ProjectCommonException exception =
           new ProjectCommonException(
@@ -215,7 +213,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
             EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId);
     if (isNull(courseBatchResult) || courseBatchResult.size() == 0) {
       ProjectLogger.log(
-          "CourseMetricsActor:courseProgressMetrics  batch is not valid .", LoggerEnum.INFO.name());
+          "CourseMetricsActor:courseProgressMetrics: batchId not found.", LoggerEnum.INFO.name());
       ProjectCommonException exception =
           new ProjectCommonException(
               ResponseCode.invalidCourseBatchId.getErrorCode(),
@@ -390,7 +388,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     } else {
 
       ProjectLogger.log(
-          "CourseMetricsActor:courseProgressMetrics courses for batch is empty.",
+          "CourseMetricsActor:courseProgressMetrics: Course not found for given batchId.",
           LoggerEnum.INFO.name());
 
       Map<String, Object> responseMap = new LinkedHashMap<>();
@@ -422,8 +420,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
   private void courseConsumptionMetrics(Request actorMessage) {
     ProjectLogger.log(
-        "CourseMetricsActor:courseConsumptionMetrics consumption call start.",
-        LoggerEnum.INFO.name());
+        "CourseMetricsActor: courseConsumptionMetrics called.", LoggerEnum.INFO.name());
     try {
       String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
       String courseId = (String) actorMessage.getRequest().get(JsonKey.COURSE_ID);
@@ -432,7 +429,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       Map<String, Object> requestObject = new HashMap<>();
       requestObject.put(JsonKey.PERIOD, getEkstepPeriod(periodStr));
       Map<String, Object> filterMap = new HashMap<>();
-      filterMap.put(JsonKey.TAG, courseId);
+      filterMap.put(CONTENT_ID, courseId);
       requestObject.put(JsonKey.FILTER, filterMap);
 
       Map<String, Object> result =
@@ -472,7 +469,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
       String channel = (String) rootOrgData.get(JsonKey.HASHTAGID);
       ProjectLogger.log(
-          "CourseMetricsActor:courseConsumptionMetrics organisation hashtag id." + channel,
+          "CourseMetricsActor:courseConsumptionMetrics: Root organisation hashtag id = " + channel,
           LoggerEnum.INFO.name());
       String responseFormat = getCourseConsumptionData(periodStr, courseId, requestObject, channel);
       Response response =
@@ -480,12 +477,16 @@ public class CourseMetricsActor extends BaseMetricsActor {
       sender().tell(response, self());
     } catch (ProjectCommonException e) {
       ProjectLogger.log(
-          "CourseMetricsActor:courseConsumptionMetrics exception occurs " + e.getMessage(), e);
+          "CourseMetricsActor:courseConsumptionMetrics: Exception in getting course consumption data: "
+              + e.getMessage(),
+          e);
       sender().tell(e, self());
       return;
     } catch (Exception e) {
       ProjectLogger.log(
-          "CourseMetricsActor:courseConsumptionMetrics exception occurs " + e.getMessage(), e);
+          "CourseMetricsActor:courseConsumptionMetrics: Generic exception in getting course consumption data: "
+              + e.getMessage(),
+          e);
       throw new ProjectCommonException(
           ResponseCode.internalError.getErrorCode(),
           ResponseCode.internalError.getErrorMessage(),

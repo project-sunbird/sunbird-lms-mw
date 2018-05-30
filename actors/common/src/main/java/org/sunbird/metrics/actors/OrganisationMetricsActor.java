@@ -73,8 +73,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
   private void orgConsumptionMetricsReport(Request actorMessage) {
     ProjectLogger.log(
-        "OrganisationMetricsActor:orgConsumptionMetricsReport method call start.",
-        LoggerEnum.INFO.name());
+        "OrganisationMetricsActor: orgConsumptionMetricsReport called.", LoggerEnum.INFO.name());
     String requestId = createReportTrackingEntry(actorMessage);
 
     Response response = new Response();
@@ -95,8 +94,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
   private String createReportTrackingEntry(Request actorMessage) {
     ProjectLogger.log(
-        "OrganisationMetricsActor:createReportTrackingEntry report tracking method call start.",
-        LoggerEnum.INFO.name());
+        "OrganisationMetricsActor: createReportTrackingEntry called.", LoggerEnum.INFO.name());
     SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
     String requestedBy = (String) actorMessage.get(JsonKey.REQUESTED_BY);
     String orgId = (String) actorMessage.get(JsonKey.ORG_ID);
@@ -203,14 +201,11 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     }
     StringBuilder builder = new StringBuilder();
     builder
-        .append("{\"request\":{\"rawQuery\":{\"query\":{\"filtered\":")
-        .append("{\"query\":{\"bool\":{\"must\":[{\"query\":{\"range\":{\"")
+        .append("{\"request\":{\"rawQuery\":{\"query\":{\"bool\":{\"must\":[{\"range\":{\"")
         .append(operationMap.get("dateKey"))
         .append("\":{\"gte\":\"")
-        .append(dateMap.get(STARTDATE) + "\",\"lte\":\"" + dateMap.get(ENDDATE) + "\"}}}}")
-        .append(",{\"bool\":{\"should\":[{\"match\":{\"contentType.raw\":\"Story\"}}")
-        .append(",{\"match\":{\"contentType.raw\":\"Worksheet\"}}")
-        .append(",{\"match\":{\"contentType.raw\":\"Game\"}}")
+        .append(dateMap.get(STARTDATE) + "\",\"lte\":\"" + dateMap.get(ENDDATE) + "\"}}}")
+        .append(",{\"bool\":{\"should\":[{\"match\":{\"contentType.raw\":\"Resource\"}}")
         .append(",{\"match\":{\"contentType.raw\":\"Collection\"}}")
         .append(",{\"match\":{\"contentType.raw\":\"TextBook\"}}")
         .append(",{\"match\":{\"contentType.raw\":\"TextBookUnit\"}}")
@@ -218,7 +213,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         .append(",{\"match\":{\"contentType.raw\":\"CourseUnit\"}}]}},")
         .append("{\"match\":{\"createdFor.raw\":\"" + orgId + "\"}}")
         .append(",{\"match\":{\"status.raw\":\"" + operationMap.get("status"))
-        .append("\"}}]}}}},\"aggs\":{\"");
+        .append("\"}}]}},\"aggs\":{\"");
     if (operationMap.containsValue("createdOn")) {
       builder
           .append(operationMap.get("dateKey") + "\":{\"date_histogram\":{\"field\":\"")
@@ -433,8 +428,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   @SuppressWarnings("unchecked")
   private void orgCreationMetrics(Request actorMessage) {
     ProjectLogger.log(
-        "OrganisationMetricsActor:orgCreationMetrics  orgCreationMetrics method called.",
-        LoggerEnum.INFO.name());
+        "OrganisationMetricsActor: orgCreationMetrics called.", LoggerEnum.INFO.name());
     try {
       String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
       String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
@@ -466,14 +460,16 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       sender().tell(response, self());
     } catch (ProjectCommonException e) {
       ProjectLogger.log(
-          "OrganisationMetricsActor:orgCreationMetrics ProjectCommonException occured "
+          "OrganisationMetricsActor:orgCreationMetrics: Exception in getting org creation data: "
               + e.getMessage(),
           e);
       sender().tell(e, self());
       return;
     } catch (Exception e) {
       ProjectLogger.log(
-          "OrganisationMetricsActor:orgCreationMetrics Exception occured " + e.getMessage(), e);
+          "OrganisationMetricsActor:orgCreationMetrics: Generic exception in getting org creation data: "
+              + e.getMessage(),
+          e);
       throw new ProjectCommonException(
           ResponseCode.internalError.getErrorCode(),
           ResponseCode.internalError.getErrorMessage(),
@@ -510,7 +506,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       String orgName = (String) orgData.get(JsonKey.ORG_NAME);
       String orgHashId = (String) orgData.get(JsonKey.HASHTAGID);
       ProjectLogger.log(
-          "OrganisationMetricsActor:orgConsumptionMetrics orghashtag id " + orgHashId,
+          "OrganisationMetricsActor:orgConsumptionMetrics: org hash tag id = " + orgHashId,
           LoggerEnum.INFO.name());
       if (StringUtils.isBlank(orgName)) {
         ProjectCommonException exception =
@@ -529,7 +525,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         orgRootId = orgId;
       }
       ProjectLogger.log(
-          "OrganisationMetricsActor:orgConsumptionMetrics RootOrgId value is " + orgRootId,
+          "OrganisationMetricsActor:orgConsumptionMetrics: root org id = " + orgRootId,
           LoggerEnum.INFO.name());
       Map<String, Object> rootOrgData = validateOrg(orgRootId);
       if (null == rootOrgData || rootOrgData.isEmpty()) {
@@ -543,7 +539,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       }
       String channel = (String) rootOrgData.get(JsonKey.HASHTAGID);
       ProjectLogger.log(
-          "OrganisationMetricsActor:orgConsumptionMetrics hash tagid value " + channel,
+          "OrganisationMetricsActor:orgConsumptionMetrics: hash tag id = " + channel,
           LoggerEnum.INFO.name());
       String responseFormat = getOrgConsumptionData(actorMessage, periodStr, orgHashId, channel);
       ProjectLogger.log("Response" + responseFormat);
@@ -552,14 +548,16 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       sender().tell(response, self());
     } catch (ProjectCommonException e) {
       ProjectLogger.log(
-          "OrganisationMetricsActor:orgConsumptionMetrics ProjectCommonException occured "
+          "OrganisationMetricsActor:orgConsumptionMetrics: Exception in getting org consumption data: "
               + e.getMessage(),
           e);
       sender().tell(e, self());
       return;
     } catch (Exception e) {
       ProjectLogger.log(
-          "OrganisationMetricsActor:orgConsumptionMetrics Exception occured " + e.getMessage(), e);
+          "OrganisationMetricsActor:orgConsumptionMetrics: Generic exception in getting org consumption data: "
+              + e.getMessage(),
+          e);
       throw new ProjectCommonException(
           ResponseCode.internalError.getErrorCode(),
           ResponseCode.internalError.getErrorMessage(),

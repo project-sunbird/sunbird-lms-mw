@@ -58,6 +58,8 @@ public class LocationBulkUploadActor extends BaseBulkUploadActor {
     response.getResult().put(JsonKey.PROCESS_ID, processId);
     Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
 
+    // validate the file headers
+    validateFileHeaderFields(req, bulkLocationAllowedFields, true);
     // Create process ID in DB
     BulkUploadProcess bulkUploadProcess =
         getBulkUploadProcess(processId, JsonKey.LOCATION, (String) req.get(JsonKey.CREATED_BY), 0);
@@ -88,9 +90,7 @@ public class LocationBulkUploadActor extends BaseBulkUploadActor {
     }
     Map<String, Object> additionalRowFields = new HashMap<>();
     additionalRowFields.put(GeoLocationJsonKey.LOCATION_TYPE, locationType);
-    Integer recordCount =
-        validateAndParseRecords(
-            fileByteArray, processId, bulkLocationAllowedFields, additionalRowFields);
+    Integer recordCount = validateAndParseRecords(fileByteArray, processId, additionalRowFields);
 
     // Update process ID in DB with actual task / record count
     bulkUploadProcess.setTaskCount(recordCount);

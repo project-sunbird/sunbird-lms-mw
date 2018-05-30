@@ -482,7 +482,7 @@ public abstract class BaseMetricsActor extends BaseActor {
           progressPercentage = Integer.valueOf("100");
         } else {
           // making percentage as round of value.
-          progressPercentage = (int) Math.round((progress * 100.0) / leafNodeCont * 1.0);
+          progressPercentage = (int) Math.round((progress * 100.0) / leafNodeCont);
         }
       }
       map.put(JsonKey.PROGRESS, progressPercentage);

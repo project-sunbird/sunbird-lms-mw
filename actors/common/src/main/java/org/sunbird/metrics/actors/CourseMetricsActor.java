@@ -292,7 +292,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
       Map<String, Map<String, Object>> userInfoCache = new HashMap<>();
       Set<String> orgSet = new HashSet<>();
-
+      // this block will set required user attribute and removed
+      // other attribute which is not required.
       for (Map<String, Object> map : useresContent) {
         String userId = (String) map.get(JsonKey.USER_ID);
         map.put("user", userId);
@@ -314,6 +315,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
       List<String> orgfields = new ArrayList<>();
       orgfields.add(JsonKey.ID);
       orgfields.add(JsonKey.ORGANISATION_NAME);
+      // collecting all those organization name and id , which is associated with
+      // provided batchId.
       Map<String, Object> orgresult =
           ElasticSearchUtil.complexSearch(
               createESRequest(orgfilter, null, orgfields),
@@ -332,6 +335,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
       Map<String, Object> batchFilter = new HashMap<>();
       batchFilter.put(JsonKey.ID, batchId);
+      // collect batch details.
       Map<String, Object> batchresult =
           ElasticSearchUtil.complexSearch(
               createESRequest(batchFilter, null, null),
@@ -345,7 +349,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
         String id = (String) map.get(JsonKey.ID);
         batchInfoCache.put(id, map);
       }
-
+      // combining all the response data.
       for (Map<String, Object> map : esContent) {
         String userId = (String) map.get(JsonKey.USER_ID);
         map.put("user", userId);

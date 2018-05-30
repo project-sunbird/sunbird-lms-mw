@@ -213,7 +213,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         .append(",{\"match\":{\"contentType.raw\":\"CourseUnit\"}}]}},")
         .append("{\"match\":{\"createdFor.raw\":\"" + orgId + "\"}}")
         .append(",{\"match\":{\"status.raw\":\"" + operationMap.get("status"))
-        .append("\"}}]}}}},\"aggs\":{\"");
+        .append("\"}}]}},\"aggs\":{\"");
     if (operationMap.containsValue("createdOn")) {
       builder
           .append(operationMap.get("dateKey") + "\":{\"date_histogram\":{\"field\":\"")
@@ -248,7 +248,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
           .append("\"total_content_count\":{\"sum_bucket\":")
           .append("{\"buckets_path\":\"content_count>_count\"}}");
     }
-    builder.append("}}");
+    builder.append("}}}}");
     return builder.toString();
   }
 

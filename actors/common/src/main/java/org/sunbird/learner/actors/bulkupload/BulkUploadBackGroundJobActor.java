@@ -1024,7 +1024,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                   cassandraOperation.insertRecord(
                       usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
               // insert record to the user external identity table
-              Util.updateUserExtId(userMap);
+              Util.updateUserExtId(userMap, JsonKey.CREATE);
               // insert details to user_org table
               Util.registerUserToOrg(userMap);
             } catch (Exception ex) {

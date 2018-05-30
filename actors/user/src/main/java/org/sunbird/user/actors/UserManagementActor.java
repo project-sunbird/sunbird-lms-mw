@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.velocity.VelocityContext;
 import org.sunbird.actor.background.BackgroundOperations;
@@ -1007,6 +1008,19 @@ public class UserManagementActor extends BaseActor {
       userMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
     }
 
+    try {
+      User user = mapper.convertValue(userMap, User.class);
+      if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
+        List<Map<String, String>> list =
+            Util.convertExternalIdsValueToLowerCase(user.getExternalIds());
+        user.setExternalIds(list);
+      }
+      Util.checkExternalIdAndProviderUniqueness(user, JsonKey.UPDATE);
+    } catch (Exception ex) {
+      sender().tell(ex, self());
+      return;
+    }
+
     if (isUserDeleted(userMap)) {
       ProjectCommonException exception =
           new ProjectCommonException(
@@ -1076,6 +1090,9 @@ public class UserManagementActor extends BaseActor {
     if (userMap.containsKey(JsonKey.JOB_PROFILE)) {
       updateUserJobProfile(req, userMap);
     }
+
+    // update the user external identity data
+    Util.updateUserExtId(userMap, JsonKey.UPDATE);
 
     sender().tell(result, self());
 
@@ -1524,6 +1541,9 @@ public class UserManagementActor extends BaseActor {
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
     userMap.remove(JsonKey.EMAIL_VERIFIED);
+    // Will ignore these fields in create api
+    userMap.remove(JsonKey.EXTERNAL_ID);
+    userMap.remove(JsonKey.PROVIDER);
 
     try {
       // validate channel and set rootOrgId of user
@@ -1544,7 +1564,12 @@ public class UserManagementActor extends BaseActor {
     try {
       User user = mapper.convertValue(userMap, User.class);
       Util.checkUserExistOrNot(user);
-      Util.checkExternalIdAndProviderUniqueness(user);
+      if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
+        List<Map<String, String>> list =
+            Util.convertExternalIdsValueToLowerCase(user.getExternalIds());
+        user.setExternalIds(list);
+      }
+      Util.checkExternalIdAndProviderUniqueness(user, JsonKey.CREATE);
     } catch (Exception ex) {
       sender().tell(ex, self());
       return;
@@ -1626,8 +1651,6 @@ public class UserManagementActor extends BaseActor {
           JsonKey.COUNTRY_CODE, propertiesCache.getProperty("sunbird_default_country_code"));
     }
     requestMap.put(JsonKey.IS_DELETED, false);
-    requestMap.remove(JsonKey.EXTERNAL_ID);
-    requestMap.remove(JsonKey.PROVIDER);
     Response response = null;
     try {
       response =
@@ -1684,7 +1707,7 @@ public class UserManagementActor extends BaseActor {
         insertJobProfileDetails(userMap);
       }
       // update the user external identity data
-      Util.updateUserExtId(userMap);
+      Util.updateUserExtId(userMap, JsonKey.CREATE);
     }
 
     ProjectLogger.log("User created successfully.....");
@@ -2024,6 +2047,7 @@ public class UserManagementActor extends BaseActor {
     reqMap.remove(JsonKey.IS_DELETED);
     reqMap.remove(JsonKey.EXTERNAL_ID);
     reqMap.remove(JsonKey.PROVIDER);
+    reqMap.remove(JsonKey.EXTERNAL_IDS);
   }
 
   /** Utility method to provide the unique authtoken . */

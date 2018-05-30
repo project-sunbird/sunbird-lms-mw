@@ -201,14 +201,11 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     }
     StringBuilder builder = new StringBuilder();
     builder
-        .append("{\"request\":{\"rawQuery\":{\"query\":{\"filtered\":")
-        .append("{\"query\":{\"bool\":{\"must\":[{\"query\":{\"range\":{\"")
+        .append("{\"request\":{\"rawQuery\":{\"query\":{\"bool\":{\"must\":[{\"range\":{\"")
         .append(operationMap.get("dateKey"))
         .append("\":{\"gte\":\"")
-        .append(dateMap.get(STARTDATE) + "\",\"lte\":\"" + dateMap.get(ENDDATE) + "\"}}}}")
-        .append(",{\"bool\":{\"should\":[{\"match\":{\"contentType.raw\":\"Story\"}}")
-        .append(",{\"match\":{\"contentType.raw\":\"Worksheet\"}}")
-        .append(",{\"match\":{\"contentType.raw\":\"Game\"}}")
+        .append(dateMap.get(STARTDATE) + "\",\"lte\":\"" + dateMap.get(ENDDATE) + "\"}}}")
+        .append(",{\"bool\":{\"should\":[{\"match\":{\"contentType.raw\":\"Resource\"}}")
         .append(",{\"match\":{\"contentType.raw\":\"Collection\"}}")
         .append(",{\"match\":{\"contentType.raw\":\"TextBook\"}}")
         .append(",{\"match\":{\"contentType.raw\":\"TextBookUnit\"}}")
@@ -251,7 +248,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
           .append("\"total_content_count\":{\"sum_bucket\":")
           .append("{\"buckets_path\":\"content_count>_count\"}}");
     }
-    builder.append("}}}}");
+    builder.append("}}");
     return builder.toString();
   }
 

@@ -429,7 +429,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       Map<String, Object> requestObject = new HashMap<>();
       requestObject.put(JsonKey.PERIOD, getEkstepPeriod(periodStr));
       Map<String, Object> filterMap = new HashMap<>();
-      filterMap.put(JsonKey.TAG, courseId);
+      filterMap.put(CONTENT_ID, courseId);
       requestObject.put(JsonKey.FILTER, filterMap);
 
       Map<String, Object> result =

@@ -985,6 +985,17 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             convertCommaSepStringToList(userMap, JsonKey.LANGUAGE);
           }
 
+          if (null != userMap.get(JsonKey.EXTERNAL_IDS)) {
+            try {
+              parseExternalIds(userMap);
+            } catch (Exception ex) {
+              ProjectLogger.log(ex.getMessage(), ex);
+              userMap.put(JsonKey.ERROR_MSG, ex.getMessage() + " ,parsing of externalIds failed.");
+              failureUserReq.add(userMap);
+              continue;
+            }
+          }
+
           // convert userName,provide,loginId,externalId.. value to lowercase
           updateMapSomeValueTOLowerCase(userMap);
           userMap = insertRecordToKeyCloak(userMap, updatedBy);
@@ -1019,14 +1030,11 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             }
             tempMap.put(JsonKey.CREATED_BY, updatedBy);
             tempMap.put(JsonKey.IS_DELETED, false);
+            tempMap.remove(JsonKey.EXTERNAL_IDS);
             try {
               response =
                   cassandraOperation.insertRecord(
                       usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
-              // insert record to the user external identity table
-              Util.updateUserExtId(userMap, JsonKey.CREATE);
-              // insert details to user_org table
-              Util.registerUserToOrg(userMap);
             } catch (Exception ex) {
               ProjectLogger.log(
                   "Exception occurred while bulk user upload in BulkUploadBackGroundJobActor:", ex);
@@ -1040,7 +1048,10 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 ssoManager.removeUser(userMap);
               }
             }
-
+            // insert record to the user external identity table
+            Util.updateUserExtId(userMap, JsonKey.CREATE);
+            // insert details to user_org table
+            Util.registerUserToOrg(userMap);
             // send the welcome mail to user
             welcomeMailTemplateMap.putAll(userMap);
             // the loginid will become user id for logon purpose .
@@ -1063,6 +1074,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             // update user record
             tempMap.remove(JsonKey.OPERATION);
             tempMap.remove(JsonKey.ROOT_ORG_ID);
+            tempMap.remove(JsonKey.EXTERNAL_IDS);
             // will not allowing to update roles at user level
             tempMap.remove(JsonKey.ROLES);
             tempMap.put(JsonKey.UPDATED_BY, updatedBy);
@@ -1082,9 +1094,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               response =
                   cassandraOperation.updateRecord(
                       usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
-              // update user-org table(role update)
-              userMap.put(JsonKey.UPDATED_BY, updatedBy);
-              Util.upsertUserOrgData(userMap);
             } catch (Exception ex) {
               ProjectLogger.log(
                   "Exception occurred while bulk user upload in BulkUploadBackGroundJobActor:", ex);
@@ -1094,6 +1103,11 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               failureUserReq.add(userMap);
               continue;
             }
+            // update user-org table(role update)
+            userMap.put(JsonKey.UPDATED_BY, updatedBy);
+            Util.upsertUserOrgData(userMap);
+            // update record to the user external identity table
+            Util.updateUserExtId(userMap, JsonKey.UPDATE);
             // Process Audit Log
             processAuditLog(
                 userMap, ActorOperations.UPDATE_USER.getValue(), updatedBy, JsonKey.USER);
@@ -1163,6 +1177,17 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       ProjectLogger.log(
           "Exception Occurred while updating bulk_upload_process in BulkUploadBackGroundJobActor : ",
           e);
+    }
+  }
+
+  private void parseExternalIds(Map<String, Object> userMap) throws IOException {
+    if (userMap.containsKey(JsonKey.EXTERNAL_IDS)
+        && !ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EXTERNAL_IDS))) {
+      String externalIds = (String) userMap.get(JsonKey.EXTERNAL_IDS);
+      externalIds = externalIds.replaceAll("'", "\"");
+      List<Map<String, String>> externalIdList = new ArrayList<>();
+      externalIdList = mapper.readValue(externalIds, List.class);
+      userMap.put(JsonKey.EXTERNAL_IDS, externalIdList);
     }
   }
 

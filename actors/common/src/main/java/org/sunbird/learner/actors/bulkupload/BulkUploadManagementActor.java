@@ -71,7 +71,8 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     JsonKey.SUBJECT,
     JsonKey.WEB_PAGES,
     JsonKey.PROVIDER,
-    JsonKey.EXTERNAL_ID
+    JsonKey.EXTERNAL_ID,
+    JsonKey.EXTERNAL_IDS
   };
 
   private String[] bulkBatchAllowedFields = {JsonKey.BATCH_ID, JsonKey.USER_IDs};

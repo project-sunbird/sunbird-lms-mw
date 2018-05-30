@@ -231,12 +231,16 @@ public class CourseMetricsActor extends BaseMetricsActor {
     requestMap.put(JsonKey.PERIOD, periodStr);
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.BATCH_ID, batchId);
-
+    // if request is coming for fromBegining then no need to
+    // pass any data range. other wise request can have
+    // 7d , 14d or 5W.
     if (!("fromBegining".equalsIgnoreCase(periodStr))) {
       Map<String, Object> dateRange = getStartAndEndDate(periodStr);
       dateRangeFilter.put(GTE, (String) dateRange.get(STARTDATE));
       dateRangeFilter.put(LTE, (String) dateRange.get(ENDDATE));
       if ("5w".equalsIgnoreCase(periodStr)) {
+        // here it will convert 5W to 35 days and then
+        // provide the end date.
         Map<String, Object> dateMap = getStartAndEndDateForDay(periodStr);
         dateRangeFilter.put(LTE, (String) dateMap.get(ENDDATE));
       }
@@ -250,7 +254,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     coursefields.add(JsonKey.BATCH_ID);
     coursefields.add(JsonKey.DATE_TIME);
     coursefields.add(JsonKey.LEAF_NODE_COUNT);
-
+    // Doing es call from usercourses index
     Map<String, Object> result =
         ElasticSearchUtil.complexSearch(
             createESRequest(filter, null, coursefields),
@@ -259,10 +263,12 @@ public class CourseMetricsActor extends BaseMetricsActor {
     List<Map<String, Object>> esContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
 
     if (!(esContent.isEmpty())) {
+      ProjectLogger.log(
+          "CourseMetricsActor:courseProgressMetrics: Data found in es for usercourses index.");
       List<String> userIds = new ArrayList<>();
 
       calculateCourseProgressPercentage(esContent);
-
+      // adding all the collected user to list.
       for (Map<String, Object> entry : esContent) {
         String userId = (String) entry.get(JsonKey.USER_ID);
         userIds.add(userId);
@@ -275,6 +281,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       userfields.add(JsonKey.USER_ID);
       userfields.add(JsonKey.USERNAME);
       userfields.add(JsonKey.ROOT_ORG_ID);
+      // collecting users details associated with particular batchId.
       Map<String, Object> userresult =
           ElasticSearchUtil.complexSearch(
               createESRequest(userfilter, null, userfields),

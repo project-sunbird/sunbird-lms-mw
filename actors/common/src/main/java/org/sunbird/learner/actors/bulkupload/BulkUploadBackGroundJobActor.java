@@ -1170,7 +1170,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     if (userMap.containsKey(JsonKey.EXTERNAL_IDS)
         && !ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EXTERNAL_IDS))) {
       String externalIds = (String) userMap.get(JsonKey.EXTERNAL_IDS);
-      externalIds = externalIds.replaceAll("'", "\"");
       List<Map<String, String>> externalIdList = new ArrayList<>();
       externalIdList = mapper.readValue(externalIds, List.class);
       userMap.put(JsonKey.EXTERNAL_IDS, externalIdList);

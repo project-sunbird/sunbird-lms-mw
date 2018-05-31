@@ -97,8 +97,8 @@ public class UserManagementActor extends BaseActor {
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String SUNBIRD_APP_URL = "sunbird_app_url";
-  private final String KEY_SPACE_NAME = "sunbird";
-  private final String USER_EXT_IDNT_TABLE = "user_external_identity";
+  private static final String KEY_SPACE_NAME = "sunbird";
+  private static final String USER_EXT_IDNT_TABLE = "user_external_identity";
 
   /** Receives the actor message and perform the course enrollment operation . */
   @Override

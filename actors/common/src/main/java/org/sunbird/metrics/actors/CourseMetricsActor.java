@@ -231,7 +231,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
     requestMap.put(JsonKey.PERIOD, periodStr);
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.BATCH_ID, batchId);
-
     if (!("fromBegining".equalsIgnoreCase(periodStr))) {
       Map<String, Object> dateRange = getStartAndEndDate(periodStr);
       dateRangeFilter.put(GTE, (String) dateRange.get(STARTDATE));
@@ -250,7 +249,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
     coursefields.add(JsonKey.BATCH_ID);
     coursefields.add(JsonKey.DATE_TIME);
     coursefields.add(JsonKey.LEAF_NODE_COUNT);
-
     Map<String, Object> result =
         ElasticSearchUtil.complexSearch(
             createESRequest(filter, null, coursefields),
@@ -262,7 +260,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
       List<String> userIds = new ArrayList<>();
 
       calculateCourseProgressPercentage(esContent);
-
       for (Map<String, Object> entry : esContent) {
         String userId = (String) entry.get(JsonKey.USER_ID);
         userIds.add(userId);
@@ -285,7 +282,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
       Map<String, Map<String, Object>> userInfoCache = new HashMap<>();
       Set<String> orgSet = new HashSet<>();
-
       for (Map<String, Object> map : useresContent) {
         String userId = (String) map.get(JsonKey.USER_ID);
         map.put("user", userId);
@@ -338,7 +334,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
         String id = (String) map.get(JsonKey.ID);
         batchInfoCache.put(id, map);
       }
-
       for (Map<String, Object> map : esContent) {
         String userId = (String) map.get(JsonKey.USER_ID);
         map.put("user", userId);

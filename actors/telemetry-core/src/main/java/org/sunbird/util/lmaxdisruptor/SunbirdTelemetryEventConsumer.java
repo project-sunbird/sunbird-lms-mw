@@ -25,14 +25,14 @@ import org.sunbird.common.request.TelemetryV3Request;
 public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
 
   @Override
-  public void onEvent(Request request, long sequence, boolean endOfBatch) throws Exception {
+  public void onEvent(Request request, long sequence, boolean endOfBatch) {
     ProjectLogger.log("SunbirdTelemetryEventConsumer:onEvent called.", LoggerEnum.INFO.name());
     if (request != null) {
       try {
         Gson gson = new Gson();
         String response =
             HttpUtil.sendPostRequest(
-                getTelemetryUrl(), gson.toJson(getEkstepTelemetryRequest(request)), getHeaders());
+                getTelemetryUrl(), gson.toJson(getTelemetryRequest(request)), getHeaders());
         ProjectLogger.log(
             "SunbirdTelemetryEventConsumer:onEvent request process status = " + response,
             LoggerEnum.INFO.name());
@@ -41,15 +41,15 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
             "SunbirdTelemetryEventConsumer:onEvent exception occured = " + e.getMessage(), e);
         ProjectLogger.log(
             "SunbirdTelemetryEventConsumer:onEvent exception occured during telemetry data processing.Data = "
-                + new Gson().toJson(getEkstepTelemetryRequest(request)),
+                + new Gson().toJson(getTelemetryRequest(request)),
             LoggerEnum.INFO.name());
       }
     }
   }
 
   private Map<String, String> getHeaders() {
-    Map<String, String> headers = new HashMap<String, String>();
-    headers.put(HttpHeaders.CONTENT_TYPE, "application/json");
+    Map<String, String> headers = new HashMap<>();
+    headers.put(HttpHeaders.CONTENT_TYPE, JsonKey.APPLICATION_JSON);
     return headers;
   }
 
@@ -83,7 +83,7 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
    * @return Structured telemetry data accepted by Ekstep.
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
-  private TelemetryV3Request getEkstepTelemetryRequest(Request request) {
+  private TelemetryV3Request getTelemetryRequest(Request request) {
     TelemetryV3Request telemetryV3Request = new TelemetryV3Request();
     if (request.getRequest().get(JsonKey.ETS) != null
         && request.getRequest().get(JsonKey.ETS) instanceof BigInteger) {

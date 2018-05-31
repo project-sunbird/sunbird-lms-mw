@@ -56,7 +56,7 @@ public class LMAXWriter {
       power = Math.ceil(power);
       ringBufferSize = (int) Math.pow(2, power);
       ProjectLogger.log(
-          "LMAXWriter:init new ring buffer size = " + ringBufferSize, LoggerEnum.INFO.name());
+          "LMAXWriter:init: New ring buffer size = " + ringBufferSize, LoggerEnum.INFO.name());
     }
 
     // initialize our event handler.

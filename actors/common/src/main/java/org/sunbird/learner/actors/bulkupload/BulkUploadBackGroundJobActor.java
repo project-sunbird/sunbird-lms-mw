@@ -1292,11 +1292,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
   private void createUser(Map<String, Object> userMap) throws Exception {
     // user doesn't exist
-    try {
-      validateExternalIds(userMap, JsonKey.UPDATE);
-    } catch (Exception e) {
-      throw e;
-    }
+    validateExternalIds(userMap, JsonKey.UPDATE);
+
     try {
       String userId = "";
       userMap.put(JsonKey.BULK_USER_UPLOAD, true);

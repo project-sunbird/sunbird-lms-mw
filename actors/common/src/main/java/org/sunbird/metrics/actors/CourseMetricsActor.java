@@ -257,8 +257,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
     List<Map<String, Object>> esContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
 
     if (!(esContent.isEmpty())) {
-      ProjectLogger.log(
-          "CourseMetricsActor:courseProgressMetrics: Data found in es for usercourses index.");
       List<String> userIds = new ArrayList<>();
 
       calculateCourseProgressPercentage(esContent);

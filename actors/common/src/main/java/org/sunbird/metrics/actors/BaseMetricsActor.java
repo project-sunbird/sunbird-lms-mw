@@ -66,14 +66,6 @@ public abstract class BaseMetricsActor extends BaseActor {
     return snapshot;
   }
 
-  /**
-   * This method will provide date day range period. it will take parameter as "xd" where x is an
-   * int value.Based on passed parameter it will provide startDate and endDate range. endDate will
-   * be calculated excluding current date.
-   *
-   * @param period Stirng value in format of "xd" EX: 7d
-   * @return Map having keys ENDDATE,ENDTIMEMILIS,INTERVAL,FORMAT,STARTDATE,STARTTIMEMILIS
-   */
   protected static Map<String, Object> getStartAndEndDateForDay(String period) {
     Map<String, Object> dateMap = new HashMap<>();
     int days = getDaysByPeriod(period);
@@ -116,14 +108,6 @@ public abstract class BaseMetricsActor extends BaseActor {
     }
   }
 
-  /**
-   * This method will provide date week range. it will take request param as "xw" where x is a int.
-   * Example if user pass "5w" ,it means this method will calculate 5 calendar week from now and
-   * provide start date of first week and end data of 5th week.
-   *
-   * @param period number of week in "xw" format , where x is an int value.
-   * @return Map having keys ENDDATE,ENDTIMEMILIS,INTERVAL,FORMAT,STARTDATE,STARTTIMEMILIS
-   */
   protected static Map<String, Object> getStartAndEndDateForWeek(String period) {
     Map<String, Object> dateMap = new HashMap<>();
     Map<String, Integer> periodMap = getDaysByPeriodStr(period);
@@ -252,7 +236,7 @@ public abstract class BaseMetricsActor extends BaseActor {
         cal.add(Calendar.DATE, +1);
         date = new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime());
       } catch (ParseException e) {
-        ProjectLogger.log("Error occurred", e);
+        ProjectLogger.log("Error occured", e);
       }
       bucketData.put(KEY, key);
       bucketData.put(KEYNAME, keyName);
@@ -311,7 +295,7 @@ public abstract class BaseMetricsActor extends BaseActor {
               baseSearchUrl + PropertiesCache.getInstance().getProperty(apiUrl), request, headers);
 
     } catch (Exception e) {
-      ProjectLogger.log("Error occurred", e);
+      ProjectLogger.log("Error occured", e);
       throw new ProjectCommonException(
           ResponseCode.unableToConnect.getErrorCode(),
           ResponseCode.unableToConnect.getErrorMessage(),
@@ -339,7 +323,7 @@ public abstract class BaseMetricsActor extends BaseActor {
       response = HttpUtil.sendGetRequest(baseSearchUrl + apiUrl, headers);
 
     } catch (Exception e) {
-      ProjectLogger.log("Error occurred", e);
+      ProjectLogger.log("Error occured", e);
       throw new ProjectCommonException(
           ResponseCode.unableToConnect.getErrorCode(),
           ResponseCode.unableToConnect.getErrorMessage(),
@@ -439,7 +423,7 @@ public abstract class BaseMetricsActor extends BaseActor {
       try {
         date = new SimpleDateFormat("yyyy-MM-dd").parse((String) keyName);
       } catch (Exception e) {
-        ProjectLogger.log("Error occurred", e);
+        ProjectLogger.log("Error occured", e);
       }
     }
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
@@ -465,7 +449,7 @@ public abstract class BaseMetricsActor extends BaseActor {
       responseData.put(JsonKey.SNAPSHOT, esData.get(JsonKey.SNAPSHOT));
       responseData.put(JsonKey.SERIES, esData.get(JsonKey.SERIES));
     } catch (IOException e) {
-      ProjectLogger.log("Error occurred", e);
+      ProjectLogger.log("Error occured", e);
     }
     response.putAll(responseData);
     return response;
@@ -486,7 +470,6 @@ public abstract class BaseMetricsActor extends BaseActor {
   }
 
   protected void calculateCourseProgressPercentage(List<Map<String, Object>> esContent) {
-
     for (Map<String, Object> map : esContent) {
       Integer progress = (Integer) map.get(JsonKey.PROGRESS);
       Integer leafNodeCont = (Integer) map.get(JsonKey.LEAF_NODE_COUNT);

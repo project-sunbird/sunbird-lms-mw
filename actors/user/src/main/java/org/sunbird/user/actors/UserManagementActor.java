@@ -39,6 +39,8 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.request.UserRequestValidator;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
+import org.sunbird.extension.user.UserExtension;
+import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.SocialMediaType;
@@ -1691,6 +1693,17 @@ public class UserManagementActor extends BaseActor {
     response.put(JsonKey.ACCESSTOKEN, accessToken);
     sender().tell(response, self());
 
+    /*
+     * Create User Entity in Registry
+     */
+    if(ProjectUtil.getConfigValue("sunbird_open_saber_bridge_enable").equalsIgnoreCase("true")){
+		 String firstName = (String) actorMessage.getRequest().get(JsonKey.FIRST_NAME);
+		 Map<String,Object> extensionMap = new HashMap<String,Object>();
+		 extensionMap.put("name", firstName);
+		 UserExtension userExtension = new UserProviderRegistryImpl();
+		 userExtension.create(extensionMap);
+	}
+    
     // object of telemetry event...
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();

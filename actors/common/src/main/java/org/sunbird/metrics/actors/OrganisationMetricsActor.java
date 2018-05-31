@@ -221,8 +221,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
           .append("\",\"interval\":\"" + dateMap.get(INTERVAL) + "\",\"format\":\"")
           .append(dateMap.get(FORMAT) + "\"")
           .append(",\"time_zone\":\"+05:30\",\"extended_bounds\":{\"min\":")
-          .append(dateMap.get(STARTTIMEMILIS) + ",\"max\":")
-          .append(dateMap.get(ENDTIMEMILIS) + "}}},\"");
+          .append(dateMap.get(START_TIME_MILLIS) + ",\"max\":")
+          .append(dateMap.get(END_TIME_MILLIS) + "}}},\"");
     }
     builder
         .append("status\":{\"terms\":{\"field\":\"status.raw\",\"include\":[\"")
@@ -231,8 +231,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         .append(operationMap.get("dateKey") + "\",\"interval\":\"" + dateMap.get(INTERVAL))
         .append("\",\"format\":\"" + dateMap.get(FORMAT))
         .append("\",\"time_zone\":\"+05:30\",\"extended_bounds\":{\"min\":")
-        .append(dateMap.get(STARTTIMEMILIS) + ",\"max\":")
-        .append(dateMap.get(ENDTIMEMILIS))
+        .append(dateMap.get(START_TIME_MILLIS) + ",\"max\":")
+        .append(dateMap.get(END_TIME_MILLIS))
         .append("}}}}}");
     if (operationMap.containsKey("userActionKey")) {
       builder

@@ -38,8 +38,8 @@ public abstract class BaseMetricsActor extends BaseActor {
 
   public static final String STARTDATE = "startDate";
   public static final String ENDDATE = "endDate";
-  public static final String STARTTIMEMILIS = "startTimeMilis";
-  public static final String ENDTIMEMILIS = "endTimeMilis";
+  public static final String START_TIME_MILLIS = "startTimeMillis";
+  public static final String END_TIME_MILLIS = "endTimeMillis";
   public static final String LTE = "<=";
   public static final String LT = "<";
   public static final String GTE = ">=";
@@ -67,12 +67,12 @@ public abstract class BaseMetricsActor extends BaseActor {
   }
 
   /**
-   * This method will provide date day range period. it will take parameter as "xd" where x is an
-   * int value.Based on passed parameter it will provide startDate and endDate range. endDate will
+   * This method will provide date day range period. It will take parameter as "xd" where x is an
+   * int value. Based on passed parameter it will provide startDate and endDate range. EndDate will
    * be calculated excluding current date.
    *
-   * @param period Stirng value in format of "xd" EX: 7d
-   * @return Map having keys ENDDATE,ENDTIMEMILIS,INTERVAL,FORMAT,STARTDATE,STARTTIMEMILIS
+   * @param period Date range in format of "xd" EX: 7d
+   * @return Map having keys ENDDATE,END_TIME_MILLIS,INTERVAL,FORMAT,STARTDATE,START_TIME_MILLIS
    */
   protected static Map<String, Object> getStartAndEndDateForDay(String period) {
     Map<String, Object> dateMap = new HashMap<>();
@@ -103,8 +103,8 @@ public abstract class BaseMetricsActor extends BaseActor {
     dateMap.put(FORMAT, "yyyy-MM-dd");
     dateMap.put(STARTDATE, startDateStr);
     dateMap.put(ENDDATE, endDateStr);
-    dateMap.put(STARTTIMEMILIS, cal.getTimeInMillis());
-    dateMap.put(ENDTIMEMILIS, endDateValue.getTime());
+    dateMap.put(START_TIME_MILLIS, cal.getTimeInMillis());
+    dateMap.put(END_TIME_MILLIS, endDateValue.getTime());
     return dateMap;
   }
 
@@ -122,7 +122,7 @@ public abstract class BaseMetricsActor extends BaseActor {
    * provide start date of first week and end data of 5th week.
    *
    * @param period number of week in "xw" format , where x is an int value.
-   * @return Map having keys ENDDATE,ENDTIMEMILIS,INTERVAL,FORMAT,STARTDATE,STARTTIMEMILIS
+   * @return Map having keys ENDDATE,END_TIME_MILLIS,INTERVAL,FORMAT,STARTDATE,START_TIME_MILLIS
    */
   protected static Map<String, Object> getStartAndEndDateForWeek(String period) {
     Map<String, Object> dateMap = new HashMap<>();
@@ -135,7 +135,7 @@ public abstract class BaseMetricsActor extends BaseActor {
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
     String endDateStr = sdf.format(calendar.getTime());
     dateMap.put(ENDDATE, endDateStr);
-    dateMap.put(ENDTIMEMILIS, calendar.getTimeInMillis());
+    dateMap.put(END_TIME_MILLIS, calendar.getTimeInMillis());
     calendar.add(periodMap.get(KEY), -(periodMap.get(VALUE)));
     calendar.add(Calendar.DATE, 1);
     calendar.set(Calendar.HOUR_OF_DAY, 0);
@@ -146,7 +146,7 @@ public abstract class BaseMetricsActor extends BaseActor {
     dateMap.put(FORMAT, "yyyy-ww");
     String startDateStr = sdf.format(calendar.getTime());
     dateMap.put(STARTDATE, startDateStr);
-    dateMap.put(STARTTIMEMILIS, calendar.getTimeInMillis());
+    dateMap.put(START_TIME_MILLIS, calendar.getTimeInMillis());
     return dateMap;
   }
 

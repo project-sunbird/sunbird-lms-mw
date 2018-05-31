@@ -7,11 +7,13 @@ import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.ws.rs.core.MediaType;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.request.TelemetryV3Request;
@@ -49,7 +51,7 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
 
   private Map<String, String> getHeaders() {
     Map<String, String> headers = new HashMap<>();
-    headers.put(HttpHeaders.CONTENT_TYPE, JsonKey.APPLICATION_JSON);
+    headers.put(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
     return headers;
   }
 
@@ -62,6 +64,7 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
    * @return complete url for telemetry service.
    */
   private String getTelemetryUrl() {
+    ProjectUtil.getConfigValue(JsonKey.SUNBIRD_TELEMETRY_BASE_URL);
     String telemetryBaseUrl = System.getenv(JsonKey.SUNBIRD_TELEMETRY_BASE_URL);
     if (StringUtils.isBlank(telemetryBaseUrl)) {
       telemetryBaseUrl =

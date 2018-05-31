@@ -40,6 +40,7 @@ import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.quartz.scheduler.SchedulerManager;
 import org.sunbird.common.request.ExecutionContext;
@@ -70,6 +71,15 @@ public final class Util {
   public static final Map<String, Object> auditLogUrlMap = new HashMap<>();
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  public static final String ADD = "add";
+  public static final String EDIT = "edit";
+  public static final String REMOVE = "remove";
+  private static EncryptionService encryptionService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
+          null);
+  private static DecryptionService decryptionService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+          null);
 
   static {
     loadPropertiesFile();
@@ -928,9 +938,6 @@ public final class Util {
 
   // --------------------------------------------------------
   // user utility methods
-  private static EncryptionService encryptionService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
-          null);
 
   public static String getEncryptedData(String value) {
     try {
@@ -971,7 +978,7 @@ public final class Util {
         if (StringUtils.isNotEmpty(externalIds.get(JsonKey.ID))
             && StringUtils.isNotEmpty(externalIds.get(JsonKey.PROVIDER))) {
           Map<String, Object> searchQueryMap = new HashMap<>();
-          searchQueryMap.put(JsonKey.EXTERNAL_ID, externalIds.get(JsonKey.ID));
+          searchQueryMap.put(JsonKey.EXTERNAL_ID, encryptData(externalIds.get(JsonKey.ID)));
           searchQueryMap.put(JsonKey.PROVIDER, externalIds.get(JsonKey.PROVIDER));
           List<Map<String, Object>> externalIdsRecord =
               getRecordsFromUserExtIdentityByProperties(searchQueryMap);
@@ -980,19 +987,15 @@ public final class Util {
               throwUserAlreadyExistsException(
                   externalIds.get(JsonKey.ID), externalIds.get(JsonKey.PROVIDER));
             } else if (JsonKey.UPDATE.equalsIgnoreCase(operation)) {
-              if (JsonKey.UPDATE.equalsIgnoreCase(externalIds.get(JsonKey.OPERATION))
-                  || JsonKey.DELETE.equalsIgnoreCase(externalIds.get(JsonKey.OPERATION))) {
-                String userId = (String) externalIdsRecord.get(0).get(JsonKey.USER_ID);
-                if (!(user.getUserId().equalsIgnoreCase(userId))) {
-                  throwExternalIDNotFoundException(
-                      externalIds.get(JsonKey.ID), externalIds.get(JsonKey.PROVIDER));
-                }
-              } else {
-                throwUserAlreadyExistsException(
+              // If end user will try to add,edit or remove other user extIds throw exception
+              String userId = (String) externalIdsRecord.get(0).get(JsonKey.USER_ID);
+              if (!(user.getUserId().equalsIgnoreCase(userId))) {
+                throwExternalIDNotFoundException(
                     externalIds.get(JsonKey.ID), externalIds.get(JsonKey.PROVIDER));
               }
             }
           } else {
+            // if user will try to delete non existing extIds
             if (JsonKey.UPDATE.equalsIgnoreCase(operation)
                 && JsonKey.DELETE.equalsIgnoreCase(externalIds.get(JsonKey.OPERATION))) {
               throwExternalIDNotFoundException(
@@ -1001,6 +1004,17 @@ public final class Util {
           }
         }
       }
+    }
+  }
+
+  private static String encryptData(String value) {
+    try {
+      return encryptionService.encryptData(value);
+    } catch (Exception e) {
+      throw new ProjectCommonException(
+          ResponseCode.userDataEncryptionError.getErrorCode(),
+          ResponseCode.userDataEncryptionError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
     }
   }
 
@@ -1057,7 +1071,8 @@ public final class Util {
   public static List<Map<String, Object>> getRecordsFromUserExtIdentityByProperties(
       Map<String, Object> propertyMap) {
     Response response =
-        cassandraOperation.getRecordsByProperties(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, propertyMap);
+        cassandraOperation.getRecordsByIndexedProperties(
+            KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, propertyMap);
     return (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
   }
 
@@ -1072,104 +1087,92 @@ public final class Util {
     return loginId;
   }
 
-  public static void updateUserExtId(Map<String, Object> requestMap, String operation) {
+  public static void addUserExtId(Map<String, Object> requestMap) {
     List<Map<String, String>> externalIds =
         (List<Map<String, String>>) requestMap.get(JsonKey.EXTERNAL_IDS);
     if (CollectionUtils.isNotEmpty(externalIds)) {
-      if (JsonKey.CREATE.equalsIgnoreCase(operation)) {
-        for (Map<String, String> extIdsMap : externalIds) {
-          Map<String, Object> searchQueryMap = new HashMap<>();
-          searchQueryMap.put(JsonKey.EXTERNAL_ID, extIdsMap.get(JsonKey.ID));
-          searchQueryMap.put(JsonKey.PROVIDER, extIdsMap.get(JsonKey.PROVIDER));
-          List<Map<String, Object>> externalIdsRecord =
-              getRecordsFromUserExtIdentityByProperties(searchQueryMap);
-          if (CollectionUtils.isEmpty(externalIdsRecord)) {
-            Map<String, Object> map = new HashMap<>();
-            map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-            map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
-            map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
-            map.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
-            inserRecordToUserExternalIdentity(map, extIdsMap);
-          }
-        }
-      } else {
-        createUpdateAndDeleteRecordToUserExtIdentity(requestMap, externalIds);
-      }
-    }
-  }
-
-  private static void createUpdateAndDeleteRecordToUserExtIdentity(
-      Map<String, Object> requestMap, List<Map<String, String>> externalIds) {
-    Response response =
-        cassandraOperation.getRecordsByProperty(
-            KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
-    List<Map<String, String>> dbResExternalIds = new ArrayList<>();
-    if (null != response && null != response.getResult()) {
-      dbResExternalIds = (List<Map<String, String>>) response.getResult().get(JsonKey.RESPONSE);
-    }
-
-    for (Map<String, String> extIdsMap : externalIds) {
-      Optional<Map<String, String>> extIdMap =
-          dbResExternalIds
-              .stream()
-              .filter(
-                  s -> {
-                    if ((s.get(JsonKey.PROVIDER))
-                        .equalsIgnoreCase(extIdsMap.get(JsonKey.PROVIDER))) {
-                      return true;
-                    } else {
-                      return false;
-                    }
-                  })
-              .findFirst();
-      Map<String, String> map = null;
-      try {
-        map = extIdMap.get();
-      } catch (Exception ex) {
-        ProjectLogger.log(ex.getMessage(), ex);
-      }
-      if (JsonKey.CREATE.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))
-          || StringUtils.isEmpty(extIdsMap.get(JsonKey.OPERATION))) {
-        if (MapUtils.isEmpty(map)) {
-          Map<String, Object> createMap = new HashMap<>();
-          createMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-          createMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
-          createMap.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
-          createMap.put(
-              JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
-          inserRecordToUserExternalIdentity(createMap, extIdsMap);
-        }
-      } else {
-        if (JsonKey.DELETE.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))) {
-          if (MapUtils.isNotEmpty(map) && StringUtils.isNotEmpty(map.get(JsonKey.PRIMARY_KEY))) {
-            cassandraOperation.deleteRecord(
-                KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map.get(JsonKey.PRIMARY_KEY));
-          }
-        } else if (JsonKey.UPDATE.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))) {
-          if (MapUtils.isNotEmpty(map)) {
-            Map<String, Object> updateMap = new HashMap<>();
-            updateMap.put(JsonKey.ID, map.get(JsonKey.ID));
-            updateMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
-            updateMap.put(JsonKey.LAST_UPDATED_BY, requestMap.get(JsonKey.UPDATED_BY));
-            updateMap.put(
-                JsonKey.LAST_UPDATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
-            inserRecordToUserExternalIdentity(updateMap, extIdsMap);
-          }
+      for (Map<String, String> extIdsMap : externalIds) {
+        if (StringUtils.isBlank(extIdsMap.get(JsonKey.OPERATION))
+            || ADD.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))) {
+          upsertUserExternalIdentityData(extIdsMap, requestMap, JsonKey.CREATE);
         }
       }
     }
   }
 
-  private static void inserRecordToUserExternalIdentity(
-      Map<String, Object> requestMap, Map<String, String> extIdsMap) {
-    if (StringUtils.isNotEmpty(extIdsMap.get(JsonKey.ID))
-        && StringUtils.isNotEmpty(extIdsMap.get(JsonKey.PROVIDER))) {
-      Map<String, Object> map = new HashMap<>();
-      map.put(JsonKey.EXTERNAL_ID, extIdsMap.get(JsonKey.ID));
-      map.put(JsonKey.PROVIDER, extIdsMap.get(JsonKey.PROVIDER));
-      map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
-      map.putAll(requestMap);
-      cassandraOperation.upsertRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
+  private static void upsertUserExternalIdentityData(
+      Map<String, String> extIdsMap, Map<String, Object> requestMap, String operation) {
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.EXTERNAL_ID, encryptData(extIdsMap.get(JsonKey.ID)));
+    map.put(JsonKey.PROVIDER, extIdsMap.get(JsonKey.PROVIDER));
+    map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
+    if (JsonKey.CREATE.equalsIgnoreCase(operation)) {
+      // for create will generate primary key
+      map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+      map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
+      map.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
+    } else {
+      // update user extIds
+      map.put(JsonKey.ID, extIdsMap.get(JsonKey.PRIMARY_KEY));
+      map.put(JsonKey.LAST_UPDATED_BY, requestMap.get(JsonKey.UPDATED_BY));
+      map.put(JsonKey.LAST_UPDATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
+    }
+    cassandraOperation.upsertRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
+  }
+
+  public static void updateUserExtId(Map<String, Object> requestMap) {
+    List<Map<String, String>> externalIds =
+        (List<Map<String, String>>) requestMap.get(JsonKey.EXTERNAL_IDS);
+    if (CollectionUtils.isNotEmpty(externalIds)) {
+      Response response =
+          cassandraOperation.getRecordsByIndexedProperty(
+              KEY_SPACE_NAME,
+              USER_EXT_IDNT_TABLE,
+              JsonKey.USER_ID,
+              requestMap.get(JsonKey.USER_ID));
+      List<Map<String, String>> dbResExternalIds = new ArrayList<>();
+      if (null != response && null != response.getResult()) {
+        dbResExternalIds = (List<Map<String, String>>) response.getResult().get(JsonKey.RESPONSE);
+      }
+      // will not allow user to update provider value, if user will try to update provider will
+      // ignore
+      // user will have only one entry for a provider so get extId based on provider
+      // List of provider values for a user will distinct and unique
+      for (Map<String, String> extIdsMap : externalIds) {
+        Optional<Map<String, String>> extIdMap =
+            dbResExternalIds
+                .stream()
+                .filter(
+                    s -> {
+                      if ((s.get(JsonKey.PROVIDER))
+                          .equalsIgnoreCase(extIdsMap.get(JsonKey.PROVIDER))) {
+                        return true;
+                      } else {
+                        return false;
+                      }
+                    })
+                .findFirst();
+        Map<String, String> map = extIdMap.orElse(null);
+        // Allowed operation type for externalIds ("add", "remove", "edit")
+        if (ADD.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))
+            || StringUtils.isEmpty(extIdsMap.get(JsonKey.OPERATION))) {
+          if (MapUtils.isEmpty(map)) {
+            upsertUserExternalIdentityData(extIdsMap, requestMap, JsonKey.CREATE);
+          }
+        } else {
+          if (REMOVE.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))) {
+            if (MapUtils.isNotEmpty(map) && StringUtils.isNotEmpty(map.get(JsonKey.ID))) {
+              cassandraOperation.deleteRecord(
+                  KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map.get(JsonKey.ID));
+            }
+          } else if (EDIT.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))) {
+            if (MapUtils.isNotEmpty(map)) {
+              extIdsMap.put(JsonKey.PRIMARY_KEY, map.get(JsonKey.ID));
+              upsertUserExternalIdentityData(extIdsMap, requestMap, JsonKey.UPDATE);
+            }
+          }
+        }
+      }
     }
   }
 

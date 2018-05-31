@@ -1028,9 +1028,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             }
             try {
               // update the user external identity data
-              Util.updateUserExtId(userMap, JsonKey.CREATE);
+              Util.addUserExtId(userMap);
             } catch (Exception ex) {
-              ProjectLogger.log("Exception occurred while updating user_ext_table", ex);
+              ProjectLogger.log("Exception occurred while updating user external identity", ex);
             }
             // insert details to user_org table
             Util.registerUserToOrg(userMap);
@@ -1090,9 +1090,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             Util.upsertUserOrgData(userMap);
             try {
               // update the user external identity data
-              Util.updateUserExtId(userMap, JsonKey.UPDATE);
+              Util.updateUserExtId(userMap);
             } catch (Exception ex) {
-              ProjectLogger.log("Exception occurred while updating user_ext_table", ex);
+              ProjectLogger.log("Exception occurred while updating user external Identity", ex);
             }
             // Process Audit Log
             processAuditLog(

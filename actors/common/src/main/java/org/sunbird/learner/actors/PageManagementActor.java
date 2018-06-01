@@ -25,8 +25,8 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.DataCacheHandler;
-import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
 
@@ -225,12 +225,11 @@ public class PageManagementActor extends BaseActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void getPageData(Request actorMessage) {
+  private void getPageData(Request actorMessage) throws Exception {
     ProjectLogger.log("Inside getPageData method", LoggerEnum.INFO);
     String sectionQuery = null;
     List<Map<String, Object>> sectionList = new ArrayList<>();
     Map<String, Object> filterMap = new HashMap<>();
-    Response response = null;
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.PAGE);
     String pageName = (String) req.get(JsonKey.PAGE_NAME);
     String source = (String) req.get(JsonKey.SOURCE);
@@ -244,20 +243,9 @@ public class PageManagementActor extends BaseActor {
     filterMap.remove(JsonKey.FILTERS);
     filterMap.remove(JsonKey.CREATED_BY);
     Map<String, Object> reqFilters = (Map<String, Object>) req.get(JsonKey.FILTERS);
-    List<Map<String, Object>> result = null;
-    try {
-      if (!StringUtils.isBlank(orgId)) {
-        response =
-            cassandraOperation.getRecordById(
-                orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), orgId);
-        result = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
-      }
-    } catch (Exception e) {
-      ProjectLogger.log("Exception occurred while validating org id " + e.getMessage(), e);
-    }
 
     /** if orgId is not then consider default page */
-    if (CollectionUtils.isEmpty(result)) {
+    if (StringUtils.isBlank(orgId)) {
       orgId = "NA";
     }
     ProjectLogger.log("Fetching data from Cache for " + orgId + ":" + pageName, LoggerEnum.INFO);
@@ -489,7 +477,7 @@ public class PageManagementActor extends BaseActor {
       Map<String, Object> section,
       Map<String, Object> reqFilters,
       Map<String, String> headers,
-      Map<String, Object> filterMap) {
+      Map<String, Object> filterMap) throws Exception {
     ObjectMapper mapper = new ObjectMapper();
     Map<String, Object> map = new HashMap<>();
     try {
@@ -523,7 +511,8 @@ public class PageManagementActor extends BaseActor {
     ProjectLogger.log(
         "search query after applying filter for ekstep for page data assemble api : " + query,
         LoggerEnum.INFO);
-    Map<String, Object> result = EkStepRequestUtil.searchContent(query, headers);
+    
+    Map<String, Object> result = ContentSearchUtil.searchContent(query);
     if (null != result && !result.isEmpty()) {
       section.putAll(result);
       section.remove(JsonKey.PARAMS);

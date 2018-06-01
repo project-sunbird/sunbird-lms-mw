@@ -79,7 +79,7 @@ public class SupportMultipleExternalIdsTest {
   }
 
   @Test
-  public void testCheckExternalIdAndProviderUniquenessForCreate() {
+  public void testCheckExternalIdUniquenessForCreate() {
     try {
       Util.checkExternalIdUniqueness(user, JsonKey.CREATE);
     } catch (Exception ex) {
@@ -93,7 +93,7 @@ public class SupportMultipleExternalIdsTest {
 
   // will try to delete other user extIds
   @Test
-  public void testCheckExternalIdAndProviderUniquenessForUpdate() {
+  public void testCheckExternalIdUniquenessForUpdate() {
 
     try {
       user.setUserId("456456");
@@ -110,7 +110,7 @@ public class SupportMultipleExternalIdsTest {
 
   // will try to update other user extIds
   @Test
-  public void testCheckExternalIdAndProviderUniquenessForUpdate2() {
+  public void testCheckExternalIdUniquenessForUpdate2() {
 
     try {
       user.setUserId("456456");
@@ -127,18 +127,29 @@ public class SupportMultipleExternalIdsTest {
 
   // will try to delete non existing extIds
   @Test
-  public void testCheckExternalIdAndProviderUniquenessForUpdate3() {
+  public void testCheckExternalIdUniquenessForUpdate3() {
 
     try {
-      user.setUserId("456456");
-      user.getExternalIds().get(0).put(JsonKey.OPERATION, JsonKey.UPDATE);
-      Util.checkExternalIdUniqueness(user, JsonKey.UPDATE);
+
+      Map<String, String> externalIdReqMap = new HashMap<>();
+      externalIdReqMap.put(JsonKey.ID, "123209-453445934-23128u3423-dsafsa32c43-few43");
+      externalIdReqMap.put(JsonKey.PROVIDER, "AP");
+      externalIdReqMap.put(JsonKey.ID_TYPE, "PAN");
+      externalIdReqMap.put(JsonKey.OPERATION, JsonKey.UPDATE);
+      List<Map<String, String>> extIdList = new ArrayList<>();
+      extIdList.add(externalIdReqMap);
+
+      User user2 = new User();
+      user2.setUserId("456456");
+      user2.setExternalIds(extIdList);
+
+      Util.checkExternalIdUniqueness(user2, JsonKey.UPDATE);
     } catch (Exception ex) {
       System.out.println("4" + ex.getMessage());
       assertTrue(
           ex.getMessage()
               .equalsIgnoreCase(
-                  "External ID (id: 123209-453445934-23128u3423-dsafsa32c43-few43-wesc49cjkf, idType: AAADHAR, provider: AP) not found for given user."));
+                  "External ID (id: 123209-453445934-23128u3423-dsafsa32c43-few43, idType: PAN, provider: AP) not found for given user."));
     }
   }
 }

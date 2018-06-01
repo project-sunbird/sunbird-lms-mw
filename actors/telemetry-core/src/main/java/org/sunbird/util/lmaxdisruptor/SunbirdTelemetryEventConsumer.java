@@ -49,7 +49,7 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
     }
   }
 
-  private Map<String, String> getHeaders() {
+  public Map<String, String> getHeaders() {
     Map<String, String> headers = new HashMap<>();
     headers.put(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
     return headers;
@@ -62,7 +62,7 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
    *
    * @return Complete url for telemetry service.
    */
-  private String getTelemetryUrl() {
+  public String getTelemetryUrl() {
     String telemetryBaseUrl =
         ProjectUtil.getConfigValue(JsonKey.SUNBIRD_TELEMETRY_BASE_URL)
             + PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_TELEMETRY_API_PATH);
@@ -79,7 +79,7 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
    * @return Telemetry request structure.
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
-  private Map<String, Object> getTelemetryRequest(Request request) {
+  public Map<String, Object> getTelemetryRequest(Request request) {
     TelemetryV3Request telemetryV3Request = new TelemetryV3Request();
     if (request.getRequest().get(JsonKey.ETS) != null
         && request.getRequest().get(JsonKey.ETS) instanceof BigInteger) {

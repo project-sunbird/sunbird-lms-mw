@@ -30,10 +30,9 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
     ProjectLogger.log("SunbirdTelemetryEventConsumer: onEvent called.", LoggerEnum.INFO.name());
     if (request != null) {
       try {
-        Gson gson = new Gson();
         String response =
             HttpUtil.sendPostRequest(
-                getTelemetryUrl(), gson.toJson(getTelemetryRequest(request)), getHeaders());
+                getTelemetryUrl(), new Gson().toJson(getTelemetryRequest(request)), getHeaders());
         ProjectLogger.log(
             "SunbirdTelemetryEventConsumer:onEvent: Request process status = " + response,
             LoggerEnum.INFO.name());
@@ -80,7 +79,7 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
    * @return Telemetry request structure.
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
-  private TelemetryV3Request getTelemetryRequest(Request request) {
+  private Map<String, Object> getTelemetryRequest(Request request) {
     TelemetryV3Request telemetryV3Request = new TelemetryV3Request();
     if (request.getRequest().get(JsonKey.ETS) != null
         && request.getRequest().get(JsonKey.ETS) instanceof BigInteger) {
@@ -96,6 +95,8 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
           "SunbirdTelemetryEventConsumer:getTelemetryRequest: Events count = " + events.size(),
           LoggerEnum.INFO.name());
     }
-    return telemetryV3Request;
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.REQUEST, telemetryV3Request);
+    return map;
   }
 }

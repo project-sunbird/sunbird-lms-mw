@@ -682,12 +682,12 @@ public final class Util {
   public static String getRootOrgIdFromChannel(String channel) {
     Map<String, Object> filters = new HashMap<>();
     filters.put(JsonKey.IS_ROOT_ORG, true);
-    if (StringUtils.isNotEmpty(channel)) {
+    if (StringUtils.isNotBlank(channel)) {
       filters.put(JsonKey.CHANNEL, channel);
     } else {
       // If channel value is not coming in request then read the default channel value provided from
       // ENV.
-      if (StringUtils.isNotEmpty(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL))) {
+      if (StringUtils.isNotBlank(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL))) {
         filters.put(JsonKey.CHANNEL, ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL));
       } else {
         throw new ProjectCommonException(
@@ -706,7 +706,7 @@ public final class Util {
           ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
       return (String) esContent.get(JsonKey.ID);
     } else {
-      if (StringUtils.isNotEmpty(channel)) {
+      if (StringUtils.isNotBlank(channel)) {
         throw new ProjectCommonException(
             ResponseCode.invalidParameterValue.getErrorCode(),
             ProjectUtil.formatMessage(
@@ -971,9 +971,9 @@ public final class Util {
   public static void checkExternalIdAndProviderUniqueness(User user, String operation) {
     if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
       for (Map<String, String> externalIds : user.getExternalIds()) {
-        if (StringUtils.isNotEmpty(externalIds.get(JsonKey.ID))
-            && StringUtils.isNotEmpty(externalIds.get(JsonKey.PROVIDER))
-            && StringUtils.isNotEmpty(externalIds.get(JsonKey.ID_TYPE))) {
+        if (StringUtils.isNotBlank(externalIds.get(JsonKey.ID))
+            && StringUtils.isNotBlank(externalIds.get(JsonKey.PROVIDER))
+            && StringUtils.isNotBlank(externalIds.get(JsonKey.ID_TYPE))) {
           Response response =
               cassandraOperation.getRecordsByIndexedProperty(
                   KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, JsonKey.SLUG, externalIds.get(JsonKey.SLUG));
@@ -988,7 +988,9 @@ public final class Util {
               String userId = (String) externalIdsRecord.get(0).get(JsonKey.USER_ID);
               if (!(user.getUserId().equalsIgnoreCase(userId))) {
                 throwExternalIDNotFoundException(
-                    externalIds.get(JsonKey.ID), externalIds.get(JsonKey.PROVIDER));
+                    externalIds.get(JsonKey.ID),
+                    externalIds.get(JsonKey.ID_TYPE),
+                    externalIds.get(JsonKey.PROVIDER));
               }
             }
           } else {
@@ -996,7 +998,9 @@ public final class Util {
             if (JsonKey.UPDATE.equalsIgnoreCase(operation)
                 && JsonKey.DELETE.equalsIgnoreCase(externalIds.get(JsonKey.OPERATION))) {
               throwExternalIDNotFoundException(
-                  externalIds.get(JsonKey.ID), externalIds.get(JsonKey.PROVIDER));
+                  externalIds.get(JsonKey.ID),
+                  externalIds.get(JsonKey.ID_TYPE),
+                  externalIds.get(JsonKey.PROVIDER));
             }
           }
         }
@@ -1015,11 +1019,12 @@ public final class Util {
     }
   }
 
-  private static void throwExternalIDNotFoundException(String externalId, String provider) {
+  private static void throwExternalIDNotFoundException(
+      String externalId, String idType, String provider) {
     throw new ProjectCommonException(
         ResponseCode.externalIdNotFound.getErrorCode(),
         ProjectUtil.formatMessage(
-            ResponseCode.externalIdNotFound.getErrorMessage(), externalId, provider),
+            ResponseCode.externalIdNotFound.getErrorMessage(), externalId, idType, provider),
         ResponseCode.CLIENT_ERROR.getResponseCode());
   }
 
@@ -1064,14 +1069,6 @@ public final class Util {
     }
     return userList;
   }
-
-  /*  public static List<Map<String, Object>> getRecordsFromUserExtIdentityByProperties(
-      Map<String, Object> propertyMap) {
-    Response response =
-        cassandraOperation.getRecordsByProperties(
-            KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, propertyMap);
-    return (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-  }*/
 
   public static String getLoginId(Map<String, Object> userMap) {
     String loginId;

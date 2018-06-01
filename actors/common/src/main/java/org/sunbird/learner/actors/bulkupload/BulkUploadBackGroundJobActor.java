@@ -419,7 +419,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     // validate location code
 
     if (concurrentHashMap.containsKey(JsonKey.LOCATION_CODE)
-        && StringUtils.isNotEmpty((String) concurrentHashMap.get(JsonKey.LOCATION_CODE))) {
+        && StringUtils.isNotBlank((String) concurrentHashMap.get(JsonKey.LOCATION_CODE))) {
       try {
         convertCommaSepStringToList(concurrentHashMap, JsonKey.LOCATION_CODE);
         List<String> locationIdList =
@@ -1255,7 +1255,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     Map<String, Object> userDbRecord = null;
     String extId = (String) requestedUserMap.get(JsonKey.EXTERNAL_ID);
     String provider = (String) requestedUserMap.get(JsonKey.PROVIDER);
-    if (StringUtils.isNotEmpty(extId) && StringUtils.isNotEmpty(provider)) {
+    if (StringUtils.isNotBlank(extId) && StringUtils.isNotBlank(provider)) {
       userDbRecord = Util.getUserFromExternalIdAndProvider(requestedUserMap);
     } else {
       userDbRecord = getRecordByLoginId(requestedUserMap);

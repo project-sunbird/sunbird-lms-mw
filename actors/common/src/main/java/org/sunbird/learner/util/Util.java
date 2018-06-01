@@ -1157,15 +1157,19 @@ public final class Util {
         } else {
           if (REMOVE.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))) {
             if (MapUtils.isNotEmpty(map)) {
-              map.remove(JsonKey.SLUG);
-              map.remove(JsonKey.ID);
-              map.remove(JsonKey.LAST_UPDATED_BY);
-              map.remove(JsonKey.CREATED_BY);
-              map.remove(JsonKey.EXTERNAL_ID);
-              map.remove(JsonKey.LAST_UPDATED_ON);
-              map.remove(JsonKey.CREATED_ON);
-              map.put(JsonKey.USER_ID, (String) requestMap.get(JsonKey.USER_ID));
-              cassandraOperation.deleteRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
+              if (StringUtils.isNotBlank(map.get(JsonKey.ID_TYPE))
+                  && StringUtils.isNotBlank(map.get(JsonKey.USER_ID))
+                  && StringUtils.isNotBlank(map.get(JsonKey.PROVIDER))) {
+                map.remove(JsonKey.SLUG);
+                map.remove(JsonKey.ID);
+                map.remove(JsonKey.LAST_UPDATED_BY);
+                map.remove(JsonKey.CREATED_BY);
+                map.remove(JsonKey.EXTERNAL_ID);
+                map.remove(JsonKey.LAST_UPDATED_ON);
+                map.remove(JsonKey.CREATED_ON);
+                map.put(JsonKey.USER_ID, (String) requestMap.get(JsonKey.USER_ID));
+                cassandraOperation.deleteRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
+              }
             }
           } else if (EDIT.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))) {
             if (MapUtils.isNotEmpty(map)) {

@@ -40,6 +40,8 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectUtil.EsIndex;
+import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 
@@ -73,37 +75,8 @@ public class CourseMetricsActorTest {
 
   @Before
   public void before() {
-    Map<String, Object> esComplexSearchMap = new HashMap<>();
-    esComplexSearchMap.put(JsonKey.USER_ID, "user_id");
-    esComplexSearchMap.put(JsonKey.USERNAME, "userName");
-    esComplexSearchMap.put(JsonKey.USER_NAME, "user_name");
-    esComplexSearchMap.put(JsonKey.ROOT_ORG_ID, "root001");
-    esComplexSearchMap.put(JsonKey.ID, "123");
-    esComplexSearchMap.put(JsonKey.ORG_NAME, "org123");
-    esComplexSearchMap.put(JsonKey.COURSE_ENROLL_DATE, "00-00-0000");
-    esComplexSearchMap.put(JsonKey.DATE_TIME, "00-00-0000");
-
-    Map<String, Object> esMap = new HashMap<>();
-    List<Map<String, Object>> contentList = new ArrayList<>();
-    contentList.add(esComplexSearchMap);
-    esMap.put(JsonKey.CONTENT, contentList);
-
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
-    PowerMockito.mockStatic(HttpClientBuilder.class);
-    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.any(), Mockito.any()))
-        .thenReturn(esMap);
-
-    userOrgMap = new HashMap<>();
-    userOrgMap.put(JsonKey.ID, orgId);
-    userOrgMap.put(JsonKey.IS_ROOT_ORG, true);
-    userOrgMap.put(JsonKey.HASHTAGID, orgId);
-    userOrgMap.put(JsonKey.ORG_NAME, "rootOrg");
-    userOrgMap.put(JsonKey.FIRST_NAME, "user_first_name");
-    userOrgMap.put(JsonKey.ROOT_ORG_ID, "root123");
-    userOrgMap.put(JsonKey.HASHTAGID, "hash123");
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(userOrgMap);
+    mockESComplexSearch();
+    mockESGetDataByIdentifier();
 
     PowerMockito.mockStatic(ServiceFactory.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
@@ -164,8 +137,10 @@ public class CourseMetricsActorTest {
     ActorRef subject = system.actorOf(props);
 
     when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(userOrgMap)
+            EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId))
+        .thenReturn(userOrgMap);
+    when(ElasticSearchUtil.getDataByIdentifier(
+            EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId))
         .thenReturn(null);
 
     Request actorMessage = new Request();
@@ -245,8 +220,10 @@ public class CourseMetricsActorTest {
     ActorRef subject = system.actorOf(props);
 
     when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(userOrgMap)
+            EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId))
+        .thenReturn(userOrgMap);
+    when(ElasticSearchUtil.getDataByIdentifier(
+            EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId))
         .thenReturn(null);
 
     Request actorMessage = new Request();
@@ -410,5 +387,41 @@ public class CourseMetricsActorTest {
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     return response;
+  }
+
+  private void mockESComplexSearch() {
+    Map<String, Object> esComplexSearchMap = new HashMap<>();
+    esComplexSearchMap.put(JsonKey.USER_ID, "user_id");
+    esComplexSearchMap.put(JsonKey.USERNAME, "userName");
+    esComplexSearchMap.put(JsonKey.USER_NAME, "user_name");
+    esComplexSearchMap.put(JsonKey.ROOT_ORG_ID, "root001");
+    esComplexSearchMap.put(JsonKey.ID, "123");
+    esComplexSearchMap.put(JsonKey.ORG_NAME, "org123");
+    esComplexSearchMap.put(JsonKey.COURSE_ENROLL_DATE, "00-00-0000");
+    esComplexSearchMap.put(JsonKey.DATE_TIME, "00-00-0000");
+
+    Map<String, Object> esMap = new HashMap<>();
+    List<Map<String, Object>> contentList = new ArrayList<>();
+    contentList.add(esComplexSearchMap);
+    esMap.put(JsonKey.CONTENT, contentList);
+
+    PowerMockito.mockStatic(ElasticSearchUtil.class);
+    PowerMockito.mockStatic(HttpClientBuilder.class);
+    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.any(), Mockito.any()))
+        .thenReturn(esMap);
+  }
+
+  private void mockESGetDataByIdentifier() {
+    userOrgMap = new HashMap<>();
+    userOrgMap.put(JsonKey.ID, orgId);
+    userOrgMap.put(JsonKey.IS_ROOT_ORG, true);
+    userOrgMap.put(JsonKey.HASHTAGID, orgId);
+    userOrgMap.put(JsonKey.ORG_NAME, "rootOrg");
+    userOrgMap.put(JsonKey.FIRST_NAME, "user_first_name");
+    userOrgMap.put(JsonKey.ROOT_ORG_ID, "root123");
+    userOrgMap.put(JsonKey.HASHTAGID, "hash123");
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(userOrgMap);
   }
 }

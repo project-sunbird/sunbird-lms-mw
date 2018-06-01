@@ -972,12 +972,13 @@ public final class Util {
     if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
       for (Map<String, String> externalIds : user.getExternalIds()) {
         if (StringUtils.isNotEmpty(externalIds.get(JsonKey.ID))
-            && StringUtils.isNotEmpty(externalIds.get(JsonKey.PROVIDER))) {
-          Map<String, Object> searchQueryMap = new HashMap<>();
-          searchQueryMap.put(JsonKey.EXTERNAL_ID, encryptData(externalIds.get(JsonKey.ID)));
-          searchQueryMap.put(JsonKey.PROVIDER, externalIds.get(JsonKey.PROVIDER));
+            && StringUtils.isNotEmpty(externalIds.get(JsonKey.PROVIDER))
+            && StringUtils.isNotEmpty(externalIds.get(JsonKey.ID_TYPE))) {
+          Response response =
+              cassandraOperation.getRecordsByIndexedProperty(
+                  KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, JsonKey.SLUG, externalIds.get(JsonKey.SLUG));
           List<Map<String, Object>> externalIdsRecord =
-              getRecordsFromUserExtIdentityByProperties(searchQueryMap);
+              (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
           if (CollectionUtils.isNotEmpty(externalIdsRecord)) {
             if (JsonKey.CREATE.equalsIgnoreCase(operation)) {
               throwUserAlreadyExistsException(
@@ -1064,13 +1065,13 @@ public final class Util {
     return userList;
   }
 
-  public static List<Map<String, Object>> getRecordsFromUserExtIdentityByProperties(
+  /*  public static List<Map<String, Object>> getRecordsFromUserExtIdentityByProperties(
       Map<String, Object> propertyMap) {
     Response response =
-        cassandraOperation.getRecordsByIndexedProperties(
+        cassandraOperation.getRecordsByProperties(
             KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, propertyMap);
     return (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-  }
+  }*/
 
   public static String getLoginId(Map<String, Object> userMap) {
     String loginId;
@@ -1101,15 +1102,13 @@ public final class Util {
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.EXTERNAL_ID, encryptData(extIdsMap.get(JsonKey.ID)));
     map.put(JsonKey.PROVIDER, extIdsMap.get(JsonKey.PROVIDER));
+    map.put(JsonKey.SLUG, extIdsMap.get(JsonKey.SLUG));
+    map.put(JsonKey.ID_TYPE, extIdsMap.get(JsonKey.ID_TYPE));
     map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
     if (JsonKey.CREATE.equalsIgnoreCase(operation)) {
-      // for create will generate primary key
-      map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
       map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
       map.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
     } else {
-      // update user extIds
-      map.put(JsonKey.ID, extIdsMap.get(JsonKey.PRIMARY_KEY));
       map.put(JsonKey.LAST_UPDATED_BY, requestMap.get(JsonKey.UPDATED_BY));
       map.put(JsonKey.LAST_UPDATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
     }
@@ -1130,18 +1129,18 @@ public final class Util {
       if (null != response && null != response.getResult()) {
         dbResExternalIds = (List<Map<String, String>>) response.getResult().get(JsonKey.RESPONSE);
       }
-      // will not allow user to update provider value, if user will try to update provider will
+      // will not allow user to update idType value, if user will try to update idType will
       // ignore
-      // user will have only one entry for a provider so get extId based on provider
-      // List of provider values for a user will distinct and unique
+      // user will have only one entry for a idType so get extId based on provider
+      // List of idType values for a user will distinct and unique
       for (Map<String, String> extIdsMap : externalIds) {
         Optional<Map<String, String>> extIdMap =
             dbResExternalIds
                 .stream()
                 .filter(
                     s -> {
-                      if ((s.get(JsonKey.PROVIDER))
-                          .equalsIgnoreCase(extIdsMap.get(JsonKey.PROVIDER))) {
+                      if ((s.get(JsonKey.ID_TYPE))
+                          .equalsIgnoreCase(extIdsMap.get(JsonKey.ID_TYPE))) {
                         return true;
                       } else {
                         return false;
@@ -1157,13 +1156,19 @@ public final class Util {
           }
         } else {
           if (REMOVE.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))) {
-            if (MapUtils.isNotEmpty(map) && StringUtils.isNotEmpty(map.get(JsonKey.ID))) {
-              cassandraOperation.deleteRecord(
-                  KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map.get(JsonKey.ID));
+            if (MapUtils.isNotEmpty(map)) {
+              map.remove(JsonKey.SLUG);
+              map.remove(JsonKey.ID);
+              map.remove(JsonKey.LAST_UPDATED_BY);
+              map.remove(JsonKey.CREATED_BY);
+              map.remove(JsonKey.EXTERNAL_ID);
+              map.remove(JsonKey.LAST_UPDATED_ON);
+              map.remove(JsonKey.CREATED_ON);
+              map.put(JsonKey.USER_ID, (String) requestMap.get(JsonKey.USER_ID));
+              cassandraOperation.deleteRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
             }
           } else if (EDIT.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))) {
             if (MapUtils.isNotEmpty(map)) {
-              extIdsMap.put(JsonKey.PRIMARY_KEY, map.get(JsonKey.ID));
               upsertUserExternalIdentityData(extIdsMap, requestMap, JsonKey.UPDATE);
             }
           }
@@ -1191,10 +1196,19 @@ public final class Util {
   public static Map<String, Object> getUserFromExternalIdAndProvider(Map<String, Object> userMap) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> user = null;
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.PROVIDER, ((String) userMap.get(JsonKey.PROVIDER)).toLowerCase());
-    map.put(JsonKey.EXTERNAL_ID, ((String) userMap.get(JsonKey.EXTERNAL_ID)).toLowerCase());
-    List<Map<String, Object>> userRecordList = Util.getRecordsFromUserExtIdentityByProperties(map);
+    StringBuilder sb = new StringBuilder();
+    sb.append(((String) userMap.get(JsonKey.PROVIDER)).toLowerCase());
+    sb.append(":");
+    sb.append(((String) userMap.get(JsonKey.EXTERNAL_ID_TYPE)).toLowerCase());
+    sb.append(":");
+    sb.append(((String) userMap.get(JsonKey.EXTERNAL_ID)).toLowerCase());
+
+    Response response =
+        cassandraOperation.getRecordsByIndexedProperty(
+            KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, JsonKey.SLUG, sb.toString());
+    List<Map<String, Object>> userRecordList =
+        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+
     if (CollectionUtils.isNotEmpty(userRecordList)) {
       Map<String, Object> userExtIdRecord = userRecordList.get(0);
       Response res =
@@ -1251,12 +1265,25 @@ public final class Util {
     }
   }
 
+  private static String getslug(Map<String, String> extIdMap) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(extIdMap.get(JsonKey.PROVIDER));
+    sb.append(":");
+    sb.append(extIdMap.get(JsonKey.ID_TYPE));
+    sb.append(":");
+    // extIdMap.get(JsonKey.ID) is externalId
+    sb.append(extIdMap.get(JsonKey.ID));
+    return sb.toString();
+  }
+
   public static List<Map<String, String>> convertExternalIdsValueToLowerCase(
       List<Map<String, String>> externalIds) {
     ConvertValuesToLowerCase mapper =
         s -> {
           s.put(JsonKey.ID, s.get(JsonKey.ID).toLowerCase());
           s.put(JsonKey.PROVIDER, s.get(JsonKey.PROVIDER).toLowerCase());
+          s.put(JsonKey.ID_TYPE, s.get(JsonKey.ID_TYPE).toLowerCase());
+          s.put(JsonKey.SLUG, getslug(s));
           return s;
         };
     return externalIds.stream().map(s -> mapper.convertToLowerCase(s)).collect(Collectors.toList());

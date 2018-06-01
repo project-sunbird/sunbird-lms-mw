@@ -1027,11 +1027,13 @@ public class UserManagementActor extends BaseActor {
     Map<String, Object> userDbRecord = null;
     String extId = (String) userMap.get(JsonKey.EXTERNAL_ID);
     String provider = (String) userMap.get(JsonKey.PROVIDER);
+    String idType = (String) userMap.get(JsonKey.EXTERNAL_ID_TYPE);
 
     if ((StringUtils.isEmpty((String) userMap.get(JsonKey.USER_ID))
             && StringUtils.isEmpty((String) userMap.get(JsonKey.ID)))
         && StringUtils.isNotEmpty(extId)
-        && StringUtils.isNotEmpty(provider)) {
+        && StringUtils.isNotEmpty(provider)
+        && StringUtils.isNotEmpty(idType)) {
       userDbRecord = Util.getUserFromExternalIdAndProvider(userMap);
       userMap.put(JsonKey.USER_ID, userDbRecord.get(JsonKey.USER_ID));
     }
@@ -1057,6 +1059,7 @@ public class UserManagementActor extends BaseActor {
         List<Map<String, String>> list =
             Util.convertExternalIdsValueToLowerCase(user.getExternalIds());
         user.setExternalIds(list);
+        userMap.put(JsonKey.EXTERNAL_IDS, list);
       }
       Util.checkExternalIdAndProviderUniqueness(user, JsonKey.UPDATE);
     } catch (Exception ex) {
@@ -1577,7 +1580,8 @@ public class UserManagementActor extends BaseActor {
     // Will ignore these fields in create api
     userMap.remove(JsonKey.EXTERNAL_ID);
     userMap.remove(JsonKey.PROVIDER);
-
+    userMap.remove(JsonKey.ID_TYPE);
+    userMap.remove(JsonKey.EXTERNAL_ID_TYPE);
     try {
       // validate channel and set rootOrgId of user
       if (StringUtils.isEmpty((String) userMap.get(JsonKey.CHANNEL))) {
@@ -1601,6 +1605,7 @@ public class UserManagementActor extends BaseActor {
         List<Map<String, String>> list =
             Util.convertExternalIdsValueToLowerCase(user.getExternalIds());
         user.setExternalIds(list);
+        userMap.put(JsonKey.EXTERNAL_IDS, list);
       }
       Util.checkExternalIdAndProviderUniqueness(user, JsonKey.CREATE);
     } catch (Exception ex) {
@@ -2083,6 +2088,8 @@ public class UserManagementActor extends BaseActor {
     reqMap.remove(JsonKey.ORGANISATIONS);
     reqMap.remove(JsonKey.IS_DELETED);
     reqMap.remove(JsonKey.EXTERNAL_ID);
+    reqMap.remove(JsonKey.ID_TYPE);
+    reqMap.remove(JsonKey.EXTERNAL_ID_TYPE);
     reqMap.remove(JsonKey.PROVIDER);
     reqMap.remove(JsonKey.EXTERNAL_IDS);
   }

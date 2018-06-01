@@ -477,7 +477,8 @@ public class PageManagementActor extends BaseActor {
       Map<String, Object> section,
       Map<String, Object> reqFilters,
       Map<String, String> headers,
-      Map<String, Object> filterMap) throws Exception {
+      Map<String, Object> filterMap)
+      throws Exception {
     ObjectMapper mapper = new ObjectMapper();
     Map<String, Object> map = new HashMap<>();
     try {
@@ -511,7 +512,7 @@ public class PageManagementActor extends BaseActor {
     ProjectLogger.log(
         "search query after applying filter for ekstep for page data assemble api : " + query,
         LoggerEnum.INFO);
-    
+
     Map<String, Object> result = ContentSearchUtil.searchContent(query);
     if (null != result && !result.isEmpty()) {
       section.putAll(result);

@@ -977,7 +977,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
           // convert userName,provide,loginId,externalId.. value to lowercase
           updateMapSomeValueTOLowerCase(userMap);
-          userMap = insertRecordToKeyCloak(userMap, updatedBy);
+          Map<String, Object> foundUserMap = findUser(userMap);
+          foundUserMap = insertRecordToKeyCloak(userMap, foundUserMap, updatedBy);
           Map<String, Object> tempMap = new HashMap<>();
           tempMap.putAll(userMap);
           tempMap.remove(JsonKey.EMAIL_VERIFIED);
@@ -1244,22 +1245,27 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     }
   }
 
-  private Map<String, Object> insertRecordToKeyCloak(
-      Map<String, Object> requestedUserMap, String updatedBy) throws Exception {
-    Map<String, Object> userDbRecord = null;
+  private Map<String, Object> findUser(Map<String, Object> requestedUserMap) {
+    Map<String, Object> foundUserMap = null;
     String extId = (String) requestedUserMap.get(JsonKey.EXTERNAL_ID);
     String provider = (String) requestedUserMap.get(JsonKey.PROVIDER);
-    String idType = (String) requestedUserMap.get(JsonKey.PROVIDER);
+    String idType = (String) requestedUserMap.get(JsonKey.ID_TYPE);
     if (StringUtils.isNotBlank(extId)
         && StringUtils.isNotBlank(provider)
         && StringUtils.isNotBlank(idType)) {
-      userDbRecord = Util.getUserFromExternalId(requestedUserMap);
+      foundUserMap = Util.getUserFromExternalId(requestedUserMap);
     } else {
-      userDbRecord = getRecordByLoginId(requestedUserMap);
+      foundUserMap = getRecordByLoginId(requestedUserMap);
     }
+    return foundUserMap;
+  }
+
+  private Map<String, Object> insertRecordToKeyCloak(
+      Map<String, Object> requestedUserMap, Map<String, Object> foundUserMap, String updatedBy)
+      throws Exception {
     requestedUserMap.put(JsonKey.UPDATED_BY, updatedBy);
-    if (MapUtils.isNotEmpty(userDbRecord)) {
-      updateUser(requestedUserMap, userDbRecord);
+    if (MapUtils.isNotEmpty(foundUserMap)) {
+      updateUser(requestedUserMap, foundUserMap);
     } else {
       createUser(requestedUserMap);
     }

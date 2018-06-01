@@ -1035,7 +1035,7 @@ public class UserManagementActor extends BaseActor {
         && StringUtils.isNotEmpty(extId)
         && StringUtils.isNotEmpty(provider)
         && StringUtils.isNotEmpty(idType)) {
-      userDbRecord = Util.getUserFromExternalIdAndProvider(userMap);
+      userDbRecord = Util.getUserFromExternalId(userMap);
       userMap.put(JsonKey.USER_ID, userDbRecord.get(JsonKey.USER_ID));
     }
     if (null != userMap.get(JsonKey.USER_ID)) {
@@ -1062,7 +1062,7 @@ public class UserManagementActor extends BaseActor {
         user.setExternalIds(list);
         userMap.put(JsonKey.EXTERNAL_IDS, list);
       }
-      Util.checkExternalIdAndProviderUniqueness(user, JsonKey.UPDATE);
+      Util.checkExternalIdUniqueness(user, JsonKey.UPDATE);
     } catch (Exception ex) {
       sender().tell(ex, self());
       return;
@@ -1608,7 +1608,7 @@ public class UserManagementActor extends BaseActor {
         user.setExternalIds(list);
         userMap.put(JsonKey.EXTERNAL_IDS, list);
       }
-      Util.checkExternalIdAndProviderUniqueness(user, JsonKey.CREATE);
+      Util.checkExternalIdUniqueness(user, JsonKey.CREATE);
     } catch (Exception ex) {
       sender().tell(ex, self());
       return;
@@ -1747,7 +1747,7 @@ public class UserManagementActor extends BaseActor {
       }
       try {
         // update the user external identity data
-        Util.addUserExtId(userMap);
+        Util.addUserExtIds(userMap);
       } catch (Exception ex) {
         ProjectLogger.log("Exception occurred while updating user_ext_table", ex);
       }

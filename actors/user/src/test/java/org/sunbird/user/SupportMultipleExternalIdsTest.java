@@ -39,7 +39,6 @@ public class SupportMultipleExternalIdsTest {
   private static List<Map<String, String>> externalIds = new ArrayList<>();
   private static CassandraOperation cassandraOperation = null;
   private static User user = null;
-  private static Map<String, String> externalIdResMap3 = null;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -59,46 +58,19 @@ public class SupportMultipleExternalIdsTest {
     user = new User();
     user.setExternalIds(externalIds);
 
-    Map<String, String> externalIdResMap1 = new HashMap<>();
-    externalIdResMap1.put(JsonKey.PROVIDER, "AP");
-    externalIdResMap1.put(JsonKey.ID_TYPE, "AAADHAR");
-    externalIdResMap1.put(JsonKey.USER_ID, "12365824-79812023-asd7899-121xasdd5");
-    externalIdResMap1.put(
+    Map<String, String> externalIdResMap = new HashMap<>();
+    externalIdResMap.put(JsonKey.PROVIDER, "AP");
+    externalIdResMap.put(JsonKey.ID_TYPE, "AAADHAR");
+    externalIdResMap.put(JsonKey.USER_ID, "12365824-79812023-asd7899-121xasdd5");
+    externalIdResMap.put(
         JsonKey.EXTERNAL_ID, "123209-453445934-23128u3423-dsafsa32c43-few43-wesc49cjkf");
-
-    Map<String, String> externalIdResMap2 = new HashMap<>();
-    externalIdResMap2.put(JsonKey.ID_TYPE, "PAN");
-    externalIdResMap2.put(JsonKey.PROVIDER, "AP");
-    externalIdResMap1.put(JsonKey.USER_ID, "12365824-79812023-asd7899-121xasdd5");
-    externalIdResMap2.put(
-        JsonKey.EXTERNAL_ID, "123209-453445934-23128u3423-dsafsa32c43-few43-qwe34sf34");
-
-    externalIds.add(externalIdResMap1);
-    externalIds.add(externalIdResMap2);
-
-    externalIdResMap3 = new HashMap<>();
-    externalIdResMap3.put(JsonKey.ID_TYPE, "AADHAR");
-    externalIdResMap3.put(JsonKey.PROVIDER, "AP");
-    externalIdResMap3.put(JsonKey.USER_ID, "12365824-79812023-asd7899-121xasdd512");
-    externalIdResMap3.put(
-        JsonKey.EXTERNAL_ID, "123209-453445934-23128u3423-dsafsa32c43-few43-wesc49cjkf456");
-
-    Map<String, String> externalIdResMap4 = new HashMap<>();
-    externalIdResMap3.put(JsonKey.ID_TYPE, "PAN");
-    externalIdResMap4.put(JsonKey.PROVIDER, "AP");
-    externalIdResMap4.put(JsonKey.USER_ID, "12365824-79812023-asd7899-121xasdd512");
-    externalIdResMap4.put(
-        JsonKey.EXTERNAL_ID, "123209-453445934-23128u3423-dsafsa32c43-few43-qwe34sf34456");
-
-    externalIds.add(externalIdResMap3);
-    externalIds.add(externalIdResMap4);
 
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = PowerMockito.mock(CassandraOperationImpl.class);
     PowerMockito.when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     Response response1 = new Response();
     List<Map<String, String>> resMapList = new ArrayList<>();
-    resMapList.add(externalIdResMap1);
+    resMapList.add(externalIdResMap);
     response1.getResult().put(JsonKey.RESPONSE, resMapList);
     PowerMockito.when(
             cassandraOperation.getRecordsByIndexedProperty(
@@ -109,31 +81,24 @@ public class SupportMultipleExternalIdsTest {
   @Test
   public void testCheckExternalIdAndProviderUniquenessForCreate() {
     try {
-      Util.checkExternalIdAndProviderUniqueness(user, JsonKey.CREATE);
+      Util.checkExternalIdUniqueness(user, JsonKey.CREATE);
     } catch (Exception ex) {
       System.out.println("1" + ex.getMessage());
       assertTrue(
           ex.getMessage()
               .equalsIgnoreCase(
-                  "User already exists for given externalId : 123209-453445934-23128u3423-dsafsa32c43-few43-wesc49cjkf and provider : AP."));
+                  "User already exists for given externalId (id: 123209-453445934-23128u3423-dsafsa32c43-few43-wesc49cjkf, idType: AAADHAR, provider: AP)."));
     }
   }
 
   // will try to delete other user extIds
   @Test
   public void testCheckExternalIdAndProviderUniquenessForUpdate() {
-    Response response = new Response();
-    List<Map<String, String>> resMapList = new ArrayList<>();
-    resMapList.add(externalIdResMap3);
-    response.getResult().put(JsonKey.RESPONSE, resMapList);
-    PowerMockito.when(
-            cassandraOperation.getRecordsByProperties(
-                Mockito.any(), Mockito.any(), Mockito.anyMap()))
-        .thenReturn(response);
+
     try {
       user.setUserId("456456");
       user.getExternalIds().get(0).put(JsonKey.OPERATION, JsonKey.DELETE);
-      Util.checkExternalIdAndProviderUniqueness(user, JsonKey.UPDATE);
+      Util.checkExternalIdUniqueness(user, JsonKey.UPDATE);
     } catch (Exception ex) {
       System.out.println("2" + ex.getMessage());
       assertTrue(
@@ -146,18 +111,11 @@ public class SupportMultipleExternalIdsTest {
   // will try to update other user extIds
   @Test
   public void testCheckExternalIdAndProviderUniquenessForUpdate2() {
-    Response response = new Response();
-    List<Map<String, String>> resMapList = new ArrayList<>();
-    resMapList.add(externalIdResMap3);
-    response.getResult().put(JsonKey.RESPONSE, resMapList);
-    PowerMockito.when(
-            cassandraOperation.getRecordsByProperties(
-                Mockito.any(), Mockito.any(), Mockito.anyMap()))
-        .thenReturn(response);
+
     try {
       user.setUserId("456456");
       user.getExternalIds().get(0).put(JsonKey.OPERATION, JsonKey.UPDATE);
-      Util.checkExternalIdAndProviderUniqueness(user, JsonKey.UPDATE);
+      Util.checkExternalIdUniqueness(user, JsonKey.UPDATE);
     } catch (Exception ex) {
       System.out.println("3" + ex.getMessage());
       assertTrue(
@@ -170,17 +128,11 @@ public class SupportMultipleExternalIdsTest {
   // will try to delete non existing extIds
   @Test
   public void testCheckExternalIdAndProviderUniquenessForUpdate3() {
-    Response response = new Response();
-    List<Map<String, String>> resMapList = new ArrayList<>();
-    response.getResult().put(JsonKey.RESPONSE, resMapList);
-    PowerMockito.when(
-            cassandraOperation.getRecordsByProperties(
-                Mockito.any(), Mockito.any(), Mockito.anyMap()))
-        .thenReturn(response);
+
     try {
       user.setUserId("456456");
       user.getExternalIds().get(0).put(JsonKey.OPERATION, JsonKey.UPDATE);
-      Util.checkExternalIdAndProviderUniqueness(user, JsonKey.UPDATE);
+      Util.checkExternalIdUniqueness(user, JsonKey.UPDATE);
     } catch (Exception ex) {
       System.out.println("4" + ex.getMessage());
       assertTrue(

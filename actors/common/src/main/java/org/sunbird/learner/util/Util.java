@@ -968,39 +968,41 @@ public final class Util {
    *
    * @param user
    */
-  public static void checkExternalIdAndProviderUniqueness(User user, String operation) {
+  public static void checkExternalIdUniqueness(User user, String operation) {
     if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
-      for (Map<String, String> externalIds : user.getExternalIds()) {
-        if (StringUtils.isNotBlank(externalIds.get(JsonKey.ID))
-            && StringUtils.isNotBlank(externalIds.get(JsonKey.PROVIDER))
-            && StringUtils.isNotBlank(externalIds.get(JsonKey.ID_TYPE))) {
+      for (Map<String, String> externalId : user.getExternalIds()) {
+        if (StringUtils.isNotBlank(externalId.get(JsonKey.ID))
+            && StringUtils.isNotBlank(externalId.get(JsonKey.PROVIDER))
+            && StringUtils.isNotBlank(externalId.get(JsonKey.ID_TYPE))) {
           Response response =
               cassandraOperation.getRecordsByIndexedProperty(
-                  KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, JsonKey.SLUG, externalIds.get(JsonKey.SLUG));
+                  KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, JsonKey.SLUG, externalId.get(JsonKey.SLUG));
           List<Map<String, Object>> externalIdsRecord =
               (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
           if (CollectionUtils.isNotEmpty(externalIdsRecord)) {
             if (JsonKey.CREATE.equalsIgnoreCase(operation)) {
               throwUserAlreadyExistsException(
-                  externalIds.get(JsonKey.ID), externalIds.get(JsonKey.PROVIDER));
+                  externalId.get(JsonKey.ID),
+                  externalId.get(JsonKey.ID_TYPE),
+                  externalId.get(JsonKey.PROVIDER));
             } else if (JsonKey.UPDATE.equalsIgnoreCase(operation)) {
               // If end user will try to add,edit or remove other user extIds throw exception
               String userId = (String) externalIdsRecord.get(0).get(JsonKey.USER_ID);
               if (!(user.getUserId().equalsIgnoreCase(userId))) {
                 throwExternalIDNotFoundException(
-                    externalIds.get(JsonKey.ID),
-                    externalIds.get(JsonKey.ID_TYPE),
-                    externalIds.get(JsonKey.PROVIDER));
+                    externalId.get(JsonKey.ID),
+                    externalId.get(JsonKey.ID_TYPE),
+                    externalId.get(JsonKey.PROVIDER));
               }
             }
           } else {
             // if user will try to delete non existing extIds
             if (JsonKey.UPDATE.equalsIgnoreCase(operation)
-                && JsonKey.DELETE.equalsIgnoreCase(externalIds.get(JsonKey.OPERATION))) {
+                && REMOVE.equalsIgnoreCase(externalId.get(JsonKey.OPERATION))) {
               throwExternalIDNotFoundException(
-                  externalIds.get(JsonKey.ID),
-                  externalIds.get(JsonKey.ID_TYPE),
-                  externalIds.get(JsonKey.PROVIDER));
+                  externalId.get(JsonKey.ID),
+                  externalId.get(JsonKey.ID_TYPE),
+                  externalId.get(JsonKey.PROVIDER));
             }
           }
         }
@@ -1028,15 +1030,14 @@ public final class Util {
         ResponseCode.CLIENT_ERROR.getResponseCode());
   }
 
-  private static void throwUserAlreadyExistsException(String externalId, String provider) {
+  private static void throwUserAlreadyExistsException(
+      String externalId, String idType, String provider) {
     throw new ProjectCommonException(
         ResponseCode.userAlreadyExists.getErrorCode(),
         ProjectUtil.formatMessage(
             ResponseCode.userAlreadyExists.getErrorMessage(),
-            (ProjectUtil.formatMessage(
-                ResponseMessage.Message.AND_FORMAT,
-                JsonKey.EXTERNAL_ID + " : " + externalId,
-                JsonKey.PROVIDER + " : " + provider))),
+            ProjectUtil.formatMessage(
+                ResponseMessage.Message.EXTERNAL_ID_FORMAT, externalId, idType, provider)),
         ResponseCode.CLIENT_ERROR.getResponseCode());
   }
 
@@ -1081,7 +1082,7 @@ public final class Util {
     return loginId;
   }
 
-  public static void addUserExtId(Map<String, Object> requestMap) {
+  public static void addUserExtIds(Map<String, Object> requestMap) {
     List<Map<String, String>> externalIds =
         (List<Map<String, String>>) requestMap.get(JsonKey.EXTERNAL_IDS);
     if (CollectionUtils.isNotEmpty(externalIds)) {
@@ -1128,34 +1129,34 @@ public final class Util {
       }
       // will not allow user to update idType value, if user will try to update idType will
       // ignore
-      // user will have only one entry for a idType so get extId based on provider
+      // user will have only one entry for a idType so get extId based on idType
       // List of idType values for a user will distinct and unique
-      for (Map<String, String> extIdsMap : externalIds) {
-        Optional<Map<String, String>> extIdMap =
+      for (Map<String, String> extIdMap : externalIds) {
+        Optional<Map<String, String>> extMap =
             dbResExternalIds
                 .stream()
                 .filter(
                     s -> {
                       if ((s.get(JsonKey.ID_TYPE))
-                          .equalsIgnoreCase(extIdsMap.get(JsonKey.ID_TYPE))) {
+                          .equalsIgnoreCase(extIdMap.get(JsonKey.ID_TYPE))) {
                         return true;
                       } else {
                         return false;
                       }
                     })
                 .findFirst();
-        Map<String, String> map = extIdMap.orElse(null);
+        Map<String, String> map = extMap.orElse(null);
         // Allowed operation type for externalIds ("add", "remove", "edit")
-        if (ADD.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))
-            || StringUtils.isBlank(extIdsMap.get(JsonKey.OPERATION))) {
+        if (ADD.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))
+            || StringUtils.isBlank(extIdMap.get(JsonKey.OPERATION))) {
           if (MapUtils.isEmpty(map)) {
-            upsertUserExternalIdentityData(extIdsMap, requestMap, JsonKey.CREATE);
+            upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.CREATE);
           }
         } else {
-          if (REMOVE.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))) {
+          if (REMOVE.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))) {
             if (MapUtils.isNotEmpty(map)) {
               if (StringUtils.isNotBlank(map.get(JsonKey.ID_TYPE))
-                  && StringUtils.isNotBlank(map.get(JsonKey.USER_ID))
+                  && StringUtils.isNotBlank((String) requestMap.get(JsonKey.USER_ID))
                   && StringUtils.isNotBlank(map.get(JsonKey.PROVIDER))) {
                 map.remove(JsonKey.SLUG);
                 map.remove(JsonKey.ID);
@@ -1168,9 +1169,9 @@ public final class Util {
                 cassandraOperation.deleteRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
               }
             }
-          } else if (EDIT.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))) {
+          } else if (EDIT.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))) {
             if (MapUtils.isNotEmpty(map)) {
-              upsertUserExternalIdentityData(extIdsMap, requestMap, JsonKey.UPDATE);
+              upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.UPDATE);
             }
           }
         }
@@ -1194,7 +1195,7 @@ public final class Util {
     }
   }
 
-  public static Map<String, Object> getUserFromExternalIdAndProvider(Map<String, Object> userMap) {
+  public static Map<String, Object> getUserFromExternalId(Map<String, Object> userMap) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> user = null;
     StringBuilder sb = new StringBuilder();
@@ -1266,7 +1267,7 @@ public final class Util {
     }
   }
 
-  private static String getslug(Map<String, String> extIdMap) {
+  private static String getSlug(Map<String, String> extIdMap) {
     StringBuilder sb = new StringBuilder();
     sb.append(extIdMap.get(JsonKey.PROVIDER));
     sb.append(":");
@@ -1284,7 +1285,7 @@ public final class Util {
           s.put(JsonKey.ID, s.get(JsonKey.ID).toLowerCase());
           s.put(JsonKey.PROVIDER, s.get(JsonKey.PROVIDER).toLowerCase());
           s.put(JsonKey.ID_TYPE, s.get(JsonKey.ID_TYPE).toLowerCase());
-          s.put(JsonKey.SLUG, getslug(s));
+          s.put(JsonKey.SLUG, getSlug(s));
           return s;
         };
     return externalIds.stream().map(s -> mapper.convertToLowerCase(s)).collect(Collectors.toList());

@@ -42,6 +42,7 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.request.UserRequestValidator;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.AuditOperation;
@@ -1026,12 +1027,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 ssoManager.removeUser(userMap);
               }
             }
-            try {
-              // update the user external identity data
-              Util.addUserExtId(userMap);
-            } catch (Exception ex) {
-              ProjectLogger.log("Exception occurred while updating user external identity", ex);
-            }
+
+            // update the user external identity data
+            Util.addUserExtIds(userMap);
             // insert details to user_org table
             Util.registerUserToOrg(userMap);
             // send the welcome mail to user
@@ -1088,12 +1086,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             // update user-org table(role update)
             userMap.put(JsonKey.UPDATED_BY, updatedBy);
             Util.upsertUserOrgData(userMap);
-            try {
-              // update the user external identity data
-              Util.updateUserExtId(userMap);
-            } catch (Exception ex) {
-              ProjectLogger.log("Exception occurred while updating user external Identity", ex);
-            }
+            // update the user external identity data
+            Util.updateUserExtId(userMap);
             // Process Audit Log
             processAuditLog(
                 userMap, ActorOperations.UPDATE_USER.getValue(), updatedBy, JsonKey.USER);
@@ -1168,7 +1162,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
   private void parseExternalIds(Map<String, Object> userMap) throws IOException {
     if (userMap.containsKey(JsonKey.EXTERNAL_IDS)
-        && !ProjectUtil.isStringNullOREmpty((String) userMap.get(JsonKey.EXTERNAL_IDS))) {
+        && StringUtils.isNotBlank((String) userMap.get(JsonKey.EXTERNAL_IDS))) {
       String externalIds = (String) userMap.get(JsonKey.EXTERNAL_IDS);
       List<Map<String, String>> externalIdList = new ArrayList<>();
       externalIdList = mapper.readValue(externalIds, List.class);
@@ -1255,8 +1249,11 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     Map<String, Object> userDbRecord = null;
     String extId = (String) requestedUserMap.get(JsonKey.EXTERNAL_ID);
     String provider = (String) requestedUserMap.get(JsonKey.PROVIDER);
-    if (StringUtils.isNotBlank(extId) && StringUtils.isNotBlank(provider)) {
-      userDbRecord = Util.getUserFromExternalIdAndProvider(requestedUserMap);
+    String idType = (String) requestedUserMap.get(JsonKey.PROVIDER);
+    if (StringUtils.isNotBlank(extId)
+        && StringUtils.isNotBlank(provider)
+        && StringUtils.isNotBlank(idType)) {
+      userDbRecord = Util.getUserFromExternalId(requestedUserMap);
     } else {
       userDbRecord = getRecordByLoginId(requestedUserMap);
     }
@@ -1291,7 +1288,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
   private void createUser(Map<String, Object> userMap) throws Exception {
     // user doesn't exist
-    validateExternalIds(userMap, JsonKey.UPDATE);
+    validateExternalIds(userMap, JsonKey.CREATE);
 
     try {
       String userId = "";
@@ -1345,11 +1342,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
-    try {
-      validateExternalIds(userMap, JsonKey.UPDATE);
-    } catch (Exception e) {
-      throw e;
-    }
+    validateExternalIds(userMap, JsonKey.UPDATE);
 
     userMap.put(JsonKey.ID, userDbRecord.get(JsonKey.ID));
     userMap.put(JsonKey.USER_ID, userDbRecord.get(JsonKey.ID));
@@ -1390,7 +1383,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       userMap.put(JsonKey.EXTERNAL_IDS, list);
     }
     User user = mapper.convertValue(userMap, User.class);
-    Util.checkExternalIdAndProviderUniqueness(user, operation);
+    Util.checkExternalIdUniqueness(user, operation);
   }
 
   private boolean isUserDeletedFromOrg(Map<String, Object> userMap, String updatedBy) {
@@ -1521,7 +1514,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       try {
         parseExternalIds(userMap);
       } catch (Exception ex) {
-        return "parsing of externalIds failed.";
+        return ProjectUtil.formatMessage(
+            ResponseMessage.Message.PARSING_FAILED, JsonKey.EXTERNAL_IDS);
       }
     }
     if (!StringUtils.isBlank((String) userMap.get(JsonKey.EMAIL_VERIFIED))) {
@@ -1530,7 +1524,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             JsonKey.EMAIL_VERIFIED,
             Boolean.parseBoolean((String) userMap.get(JsonKey.EMAIL_VERIFIED)));
       } catch (Exception ex) {
-        return "property emailVerified should be instanceOf type Boolean.";
+        return ProjectUtil.formatMessage(
+            ResponseMessage.Message.DATA_TYPE_ERROR, JsonKey.EMAIL_VERIFIED, "Boolean");
       }
     }
     if (!StringUtils.isBlank((String) userMap.get(JsonKey.PHONE_VERIFIED))) {
@@ -1539,7 +1534,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             JsonKey.PHONE_VERIFIED,
             Boolean.parseBoolean((String) userMap.get(JsonKey.PHONE_VERIFIED)));
       } catch (Exception ex) {
-        return "property phoneVerified should be instanceOf type Boolean.";
+        return ProjectUtil.formatMessage(
+            ResponseMessage.Message.DATA_TYPE_ERROR, JsonKey.PHONE_VERIFIED, "Boolean");
       }
     }
     userMap.remove(JsonKey.ROLES);

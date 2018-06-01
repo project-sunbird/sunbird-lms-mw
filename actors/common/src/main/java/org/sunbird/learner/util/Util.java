@@ -1147,7 +1147,7 @@ public final class Util {
         Map<String, String> map = extIdMap.orElse(null);
         // Allowed operation type for externalIds ("add", "remove", "edit")
         if (ADD.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))
-            || StringUtils.isEmpty(extIdsMap.get(JsonKey.OPERATION))) {
+            || StringUtils.isBlank(extIdsMap.get(JsonKey.OPERATION))) {
           if (MapUtils.isEmpty(map)) {
             upsertUserExternalIdentityData(extIdsMap, requestMap, JsonKey.CREATE);
           }

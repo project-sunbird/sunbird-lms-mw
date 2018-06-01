@@ -322,7 +322,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         rootOrgId = (String) orgMap.get(JsonKey.ROOT_ORG_ID);
       } else {
         String msg = "";
-        if (StringUtils.isEmpty((String) req.get(JsonKey.ORGANISATION_ID))) {
+        if (StringUtils.isBlank((String) req.get(JsonKey.ORGANISATION_ID))) {
           msg =
               ((String) req.get(JsonKey.ORG_EXTERNAL_ID))
                   + " and "

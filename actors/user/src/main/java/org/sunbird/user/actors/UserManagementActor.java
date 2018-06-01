@@ -1030,8 +1030,8 @@ public class UserManagementActor extends BaseActor {
     String provider = (String) userMap.get(JsonKey.PROVIDER);
     String idType = (String) userMap.get(JsonKey.EXTERNAL_ID_TYPE);
 
-    if ((StringUtils.isEmpty((String) userMap.get(JsonKey.USER_ID))
-            && StringUtils.isEmpty((String) userMap.get(JsonKey.ID)))
+    if ((StringUtils.isBlank((String) userMap.get(JsonKey.USER_ID))
+            && StringUtils.isBlank((String) userMap.get(JsonKey.ID)))
         && StringUtils.isNotEmpty(extId)
         && StringUtils.isNotEmpty(provider)
         && StringUtils.isNotEmpty(idType)) {
@@ -1585,7 +1585,7 @@ public class UserManagementActor extends BaseActor {
     userMap.remove(JsonKey.EXTERNAL_ID_TYPE);
     try {
       // validate channel and set rootOrgId of user
-      if (StringUtils.isEmpty((String) userMap.get(JsonKey.CHANNEL))) {
+      if (StringUtils.isBlank((String) userMap.get(JsonKey.CHANNEL))) {
         userMap.put(JsonKey.CHANNEL, ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL));
       }
       String rootOrgId = Util.getRootOrgIdFromChannel((String) userMap.get(JsonKey.CHANNEL));

@@ -27,7 +27,9 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
@@ -35,7 +37,7 @@ import org.sunbird.dto.SearchDTO;
 public abstract class BaseMetricsActor extends BaseActor {
 
   private static ObjectMapper mapper = new ObjectMapper();
-
+  private static String YYY_MM_DD_FORMATTER = "yyyy-MM-dd";
   public static final String STARTDATE = "startDate";
   public static final String ENDDATE = "endDate";
   public static final String START_TIME_MILLIS = "startTimeMillis";
@@ -505,10 +507,25 @@ public abstract class BaseMetricsActor extends BaseActor {
     }
   }
 
-  protected Map<String, String> getDateRange(int date) {
-    Map<String, String> map = new HashMap<>();
-    Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
-
-    return map;
+  /**
+   * This method will convert incoming time period to start and end date. Possible values for period
+   * is {"7d","14d","5w"} ,This method will return a map with key as STARTDATE and ENDDATE.
+   * STARTDATE will always be currentDate-1, Date format will be YYY_MM_DD_FORMATTER
+   *
+   * @param periord Date range in format of {"7d","14d","5w"} EX: 7d
+   * @return map having key as STARTDATE and ENDDATE.
+   */
+  protected Map<String, String> getDateRange(String periord) {
+    if (StringUtils.isBlank(periord)) {
+      throw new ProjectCommonException(
+          ResponseCode.invalidPeriod.getErrorCode(),
+          ResponseCode.invalidPeriod.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    periord = periord.toLowerCase();
+    int noOfDays = getDaysByPeriod(periord);
+    ProjectLogger.log(
+        "BaseMetricsActor:getDateRange number of days = " + noOfDays, LoggerEnum.INFO.name());
+    return ProjectUtil.getDateRange(noOfDays);
   }
 }

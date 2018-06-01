@@ -232,13 +232,9 @@ public class CourseMetricsActor extends BaseMetricsActor {
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.BATCH_ID, batchId);
     if (!("fromBegining".equalsIgnoreCase(periodStr))) {
-      Map<String, Object> dateRange = getStartAndEndDate(periodStr);
+      Map<String, String> dateRange = getDateRange(periodStr);
       dateRangeFilter.put(GTE, (String) dateRange.get(STARTDATE));
       dateRangeFilter.put(LTE, (String) dateRange.get(ENDDATE));
-      if ("5w".equalsIgnoreCase(periodStr)) {
-        Map<String, Object> dateMap = getStartAndEndDateForDay(periodStr);
-        dateRangeFilter.put(LTE, (String) dateMap.get(ENDDATE));
-      }
       filter.put(JsonKey.DATE_TIME, dateRangeFilter);
     }
 

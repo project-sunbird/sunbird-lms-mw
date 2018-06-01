@@ -16,15 +16,7 @@ cqlsh -e "COPY sunbird.page_section(id, alt,createdby ,createddate ,description 
     
 ### Setup Elasticsearch
 1. Install ElasticSearch database and start the server
-2. Run the below curl command.
-```sh
-curl -X PUT \
-  http://localhost:9200/searchindex/org/ORG_001 \
-  -H 'cache-control: no-cache' \
-  -H 'content-type: application/json' \
-  -H 'postman-token: caa7eaa7-2a08-d1f3-1eb2-bf7c73bef663' \
-  -d '{}'
-```
+
 
 ### Set Configurations
 

@@ -486,7 +486,6 @@ public abstract class BaseMetricsActor extends BaseActor {
   }
 
   protected void calculateCourseProgressPercentage(List<Map<String, Object>> esContent) {
-
     for (Map<String, Object> map : esContent) {
       Integer progress = (Integer) map.get(JsonKey.PROGRESS);
       Integer leafNodeCont = (Integer) map.get(JsonKey.LEAF_NODE_COUNT);
@@ -504,5 +503,12 @@ public abstract class BaseMetricsActor extends BaseActor {
       map.put(JsonKey.PROGRESS, progressPercentage);
       map.remove(JsonKey.LEAF_NODE_COUNT);
     }
+  }
+
+  protected Map<String, String> getDateRange(int date) {
+    Map<String, String> map = new HashMap<>();
+    Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+
+    return map;
   }
 }

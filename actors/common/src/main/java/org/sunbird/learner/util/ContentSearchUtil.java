@@ -32,7 +32,7 @@ public class ContentSearchUtil {
 	private static HashMap<String, String> headers = new HashMap<String, String>();
 
 	static {
-		String baseUrl = System.getenv(JsonKey.SUNBIRD_API_BASE_URL);
+		String baseUrl = System.getenv(JsonKey.SUNBIRD_API_MGR_BASE_URL);
 		String compositeSearch = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_COMPOSITE_SEARCH_URL);
 		contentSearchURL = baseUrl + compositeSearch;
 		headers.put("Content-Type", "application/json");

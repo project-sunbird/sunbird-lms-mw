@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -324,7 +325,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         if (data.containsKey("Create")) {
           statusMap = (Map<String, Object>) data.get("Create");
           valueList = (List<Map<String, Object>>) statusMap.get("buckets");
-          if (!valueList.isEmpty()) {
+          if (CollectionUtils.isNotEmpty(valueList)) {
             statusMap = valueList.get(0);
             statusValueMap.put("draft", statusMap.get("doc_count"));
             statusValueMap.put("draftBucket", statusMap.get("createdOn"));
@@ -332,7 +333,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         } else if (data.containsKey("Publish")) {
           statusMap = (Map<String, Object>) data.get("Publish");
           valueList = (List<Map<String, Object>>) statusMap.get("buckets");
-          if (!valueList.isEmpty()) {
+          if (CollectionUtils.isNotEmpty(valueList)) {
             statusMap = valueList.get(0);
             statusValueMap.put("live", statusMap.get("doc_count"));
             statusValueMap.put("liveBucket", statusMap.get("lastPublishedOn"));
@@ -340,7 +341,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         } else if (data.containsKey("Review")) {
           statusMap = (Map<String, Object>) data.get("Review");
           valueList = (List<Map<String, Object>>) statusMap.get("buckets");
-          if (!valueList.isEmpty()) {
+          if (CollectionUtils.isNotEmpty(valueList)) {
             statusMap = valueList.get(0);
             statusValueMap.put("review", statusMap.get("doc_count"));
             statusValueMap.put("reviewBucket", statusMap.get("lastSubmittedOn"));

@@ -1211,7 +1211,7 @@ public final class Util {
     sb.append(":");
     sb.append(((String) userMap.get(JsonKey.EXTERNAL_ID_TYPE)).toLowerCase());
     sb.append(":");
-    sb.append(((String) userMap.get(JsonKey.EXTERNAL_ID)).toLowerCase());
+    sb.append(getEncryptedData(((String) userMap.get(JsonKey.EXTERNAL_ID)).toLowerCase()));
 
     Response response =
         cassandraOperation.getRecordsByIndexedProperty(
@@ -1282,7 +1282,7 @@ public final class Util {
     sb.append(extIdMap.get(JsonKey.ID_TYPE));
     sb.append(":");
     // extIdMap.get(JsonKey.ID) is externalId
-    sb.append(extIdMap.get(JsonKey.ID));
+    sb.append(getEncryptedData(extIdMap.get(JsonKey.ID).toLowerCase()));
     return sb.toString();
   }
 

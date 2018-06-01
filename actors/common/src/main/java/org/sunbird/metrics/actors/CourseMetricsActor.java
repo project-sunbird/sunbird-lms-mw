@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -258,7 +259,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
             EsType.usercourses.getTypeName());
     List<Map<String, Object>> esContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
 
-    if (!(esContent.isEmpty())) {
+    if (CollectionUtils.isNotEmpty(esContent)) {
       List<String> userIds = new ArrayList<>();
 
       calculateCourseProgressPercentage(esContent);
@@ -695,7 +696,9 @@ public class CourseMetricsActor extends BaseMetricsActor {
       int avgTime =
           courseCompletedData.get("avg_time_course_completed") == null
               ? 0
-              : (Integer) courseCompletedData.get("avg_time_course_completed");
+              : (courseCompletedData.get("avg_time_course_completed") instanceof Double)
+                  ? ((Double) courseCompletedData.get("avg_time_course_completed")).intValue()
+                  : (Integer) courseCompletedData.get("avg_time_course_completed");
       dataMap.put(VALUE, avgTime);
       dataMap.put(JsonKey.TIME_UNIT, "seconds");
       snapshot.put("course.consumption.time_spent_completion_count", dataMap);

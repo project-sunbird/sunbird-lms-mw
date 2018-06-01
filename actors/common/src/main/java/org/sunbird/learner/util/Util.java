@@ -70,9 +70,6 @@ public final class Util {
   public static final Map<String, Object> auditLogUrlMap = new HashMap<>();
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  public static final String ADD = "add";
-  public static final String EDIT = "edit";
-  public static final String REMOVE = "remove";
   private static EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
           null);
@@ -998,7 +995,7 @@ public final class Util {
           } else {
             // if user will try to delete non existing extIds
             if (JsonKey.UPDATE.equalsIgnoreCase(operation)
-                && REMOVE.equalsIgnoreCase(externalId.get(JsonKey.OPERATION))) {
+                && JsonKey.REMOVE.equalsIgnoreCase(externalId.get(JsonKey.OPERATION))) {
               throwExternalIDNotFoundException(
                   externalId.get(JsonKey.ID),
                   externalId.get(JsonKey.ID_TYPE),
@@ -1088,7 +1085,7 @@ public final class Util {
     if (CollectionUtils.isNotEmpty(externalIds)) {
       for (Map<String, String> extIdsMap : externalIds) {
         if (StringUtils.isBlank(extIdsMap.get(JsonKey.OPERATION))
-            || ADD.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))) {
+            || JsonKey.ADD.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))) {
           upsertUserExternalIdentityData(extIdsMap, requestMap, JsonKey.CREATE);
         }
       }
@@ -1147,13 +1144,13 @@ public final class Util {
                 .findFirst();
         Map<String, String> map = extMap.orElse(null);
         // Allowed operation type for externalIds ("add", "remove", "edit")
-        if (ADD.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))
+        if (JsonKey.ADD.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))
             || StringUtils.isBlank(extIdMap.get(JsonKey.OPERATION))) {
           if (MapUtils.isEmpty(map)) {
             upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.CREATE);
           }
         } else {
-          if (REMOVE.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))) {
+          if (JsonKey.REMOVE.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))) {
             if (MapUtils.isNotEmpty(map)) {
               if (StringUtils.isNotBlank(map.get(JsonKey.ID_TYPE))
                   && StringUtils.isNotBlank((String) requestMap.get(JsonKey.USER_ID))
@@ -1169,7 +1166,7 @@ public final class Util {
                 cassandraOperation.deleteRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
               }
             }
-          } else if (EDIT.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))) {
+          } else if (JsonKey.EDIT.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))) {
             if (MapUtils.isNotEmpty(map)) {
               upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.UPDATE);
             }

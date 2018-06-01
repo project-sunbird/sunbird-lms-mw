@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -32,9 +33,11 @@ public class ContentSearchUtil {
 	private static HashMap<String, String> headers = new HashMap<String, String>();
 
 	static {
-		String baseUrl = System.getenv(JsonKey.SUNBIRD_API_MGR_BASE_URL);
-		String compositeSearch = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_COMPOSITE_SEARCH_URL);
-		contentSearchURL = baseUrl + compositeSearch;
+		String baseUrl = System.getenv(JsonKey.SUNBIRD_CS_BASE_URL);
+		String searchPath = System.getenv(JsonKey.SUNBIRD_CS_SEARCH_PATH);
+		if (StringUtils.isBlank(searchPath))
+			searchPath = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_CS_SEARCH_PATH);
+		contentSearchURL = baseUrl + searchPath;
 		headers.put("Content-Type", "application/json");
 		headers.put(JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.SUNBIRD_AUTHORIZATION));
 	}

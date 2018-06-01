@@ -59,7 +59,6 @@ public class OrganisationMetricsActorTest {
   private static ActorSystem system;
   private static final Props prop = Props.create(OrganisationMetricsActor.class);
   private static String userId = "456-123";
-  private static Util.DbInfo orgDB = null;
   private static final String EXTERNAL_ID = "ex00001lvervk";
   private static final String PROVIDER = "pr00001kfej";
   private static final String CHANNEL = "hjryr9349";

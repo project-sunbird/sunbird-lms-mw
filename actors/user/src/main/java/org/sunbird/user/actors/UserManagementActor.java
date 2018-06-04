@@ -1129,7 +1129,11 @@ public class UserManagementActor extends BaseActor {
     }
 
     // update the user external identity data
-    Util.updateUserExtId(userMap);
+    try {
+      Util.updateUserExtId(userMap);
+    } catch (Exception ex) {
+      result.getResult().put(JsonKey.ERROR_MSG, ex.getMessage());
+    }
 
     sender().tell(result, self());
 

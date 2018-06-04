@@ -72,6 +72,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     JsonKey.WEB_PAGES,
     JsonKey.PROVIDER,
     JsonKey.EXTERNAL_ID,
+    JsonKey.EXTERNAL_ID_TYPE,
     JsonKey.EXTERNAL_IDS
   };
 

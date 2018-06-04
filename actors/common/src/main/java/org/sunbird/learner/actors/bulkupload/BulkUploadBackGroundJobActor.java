@@ -1088,7 +1088,12 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             userMap.put(JsonKey.UPDATED_BY, updatedBy);
             Util.upsertUserOrgData(userMap);
             // update the user external identity data
-            Util.updateUserExtId(userMap);
+            try {
+              Util.updateUserExtId(userMap);
+            } catch (Exception ex) {
+              userMap.put(
+                  JsonKey.ERROR_MSG, ex.getMessage() + " ,user external identity updation failed.");
+            }
             // Process Audit Log
             processAuditLog(
                 userMap, ActorOperations.UPDATE_USER.getValue(), updatedBy, JsonKey.USER);

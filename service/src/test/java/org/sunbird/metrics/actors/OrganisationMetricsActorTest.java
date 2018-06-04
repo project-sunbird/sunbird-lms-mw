@@ -1,74 +1,126 @@
 package org.sunbird.metrics.actors;
 
 import static akka.testkit.JavaTestKit.duration;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mashape.unirest.http.HttpMethod;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.AfterClass;
+import org.apache.http.HttpEntity;
+import org.apache.http.StatusLine;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.actor.service.SunbirdMWService;
-import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.ProjectUtil.EsIndex;
-import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-import org.sunbird.learner.util.Util.DbInfo;
 
+/**
+ * Junit test cases for Org creation and consumption metrics.
+ *
+ * @author arvind.
+ */
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({ElasticSearchUtil.class, HttpClientBuilder.class, ServiceFactory.class})
+@PowerMockIgnore("javax.management.*")
 public class OrganisationMetricsActorTest {
 
   private static ActorSystem system;
   private static final Props prop = Props.create(OrganisationMetricsActor.class);
-  private static CassandraOperation operation = ServiceFactory.getInstance();
   private static String userId = "456-123";
-  private static Util.DbInfo orgDB = null;
   private static final String EXTERNAL_ID = "ex00001lvervk";
   private static final String PROVIDER = "pr00001kfej";
   private static final String CHANNEL = "hjryr9349";
   private static final String orgId = "ofure8ofp9yfpf9ego";
+  private static ObjectMapper mapper = new ObjectMapper();
+  private static Map<String, Object> userOrgMap = new HashMap<>();
+  private static CassandraOperationImpl cassandraOperation;
+  private static final String HTTP_POST = "POST";
 
   @BeforeClass
   public static void setUp() {
+
+    userOrgMap = new HashMap<>();
+    userOrgMap.put(JsonKey.ID, orgId);
+    userOrgMap.put(JsonKey.IS_ROOT_ORG, true);
+    userOrgMap.put(JsonKey.CHANNEL, CHANNEL);
+    userOrgMap.put(JsonKey.PROVIDER, PROVIDER);
+    userOrgMap.put(JsonKey.EXTERNAL_ID, EXTERNAL_ID);
+    userOrgMap.put(JsonKey.HASHTAGID, orgId);
+    userOrgMap.put(JsonKey.ORG_NAME, "rootOrg");
+    userOrgMap.put(JsonKey.FIRST_NAME, "user_first_name");
+
+    PowerMockito.mockStatic(ServiceFactory.class);
+    cassandraOperation = mock(CassandraOperationImpl.class);
+    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+
+    PowerMockito.mockStatic(ElasticSearchUtil.class);
+    PowerMockito.mockStatic(HttpClientBuilder.class);
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(userOrgMap);
+
     SunbirdMWService.init();
     system = ActorSystem.create("system");
     Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-    insertUserDataToES();
-    orgDB = Util.dbInfoMap.get(JsonKey.ORG_DB);
+  }
 
-    Map<String, Object> rootOrg = new HashMap<>();
-    rootOrg.put(JsonKey.ID, orgId);
-    rootOrg.put(JsonKey.IS_ROOT_ORG, true);
-    rootOrg.put(JsonKey.CHANNEL, CHANNEL);
-    rootOrg.put(JsonKey.PROVIDER, PROVIDER);
-    rootOrg.put(JsonKey.EXTERNAL_ID, EXTERNAL_ID);
-    rootOrg.put(JsonKey.HASHTAGID, orgId);
-    rootOrg.put(JsonKey.ORG_NAME, "rootOrg");
-
-    operation.upsertRecord(orgDB.getKeySpace(), orgDB.getTableName(), rootOrg);
-    ElasticSearchUtil.createData(
-        EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), orgId, rootOrg);
+  @Before
+  public void before() {
+    PowerMockito.mockStatic(ElasticSearchUtil.class);
+    PowerMockito.mockStatic(HttpClientBuilder.class);
+    PowerMockito.mockStatic(ServiceFactory.class);
+    cassandraOperation = mock(CassandraOperationImpl.class);
+    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+    Response response = createCassandraInsertSuccessResponse();
+    when(cassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(response);
   }
 
   @SuppressWarnings({"deprecation", "unchecked"})
   @Test
-  public void testOrgCreation() {
+  public void testOrgCreationMetricsSuccess() throws JsonProcessingException {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(prop);
+
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(userOrgMap);
+    mockHttpPostSuccess(
+        HTTP_POST,
+        new ByteArrayInputStream((mapper.writeValueAsString(orgCreationSuccessMap())).getBytes()));
 
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.ORG_ID, orgId);
@@ -100,9 +152,17 @@ public class OrganisationMetricsActorTest {
 
   @SuppressWarnings({"unchecked", "deprecation"})
   @Test
-  public void testOrgConsumption() {
+  public void testOrgConsumptionMetricsSuccess() throws JsonProcessingException {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(prop);
+
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(userOrgMap);
+    mockHttpPostSuccess(
+        HTTP_POST,
+        new ByteArrayInputStream(
+            (mapper.writeValueAsString(orgConsumptionSuccessMap())).getBytes()));
 
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.ORG_ID, orgId);
@@ -110,7 +170,7 @@ public class OrganisationMetricsActorTest {
     actorMessage.setOperation(ActorOperations.ORG_CONSUMPTION_METRICS.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     Map<String, Object> data = res.getResult();
     Assert.assertEquals("7d", data.get(JsonKey.PERIOD));
     Assert.assertEquals(orgId, ((Map<String, Object>) data.get("org")).get(JsonKey.ORG_ID));
@@ -130,9 +190,12 @@ public class OrganisationMetricsActorTest {
 
   @SuppressWarnings("deprecation")
   @Test
-  public void testOrgCreationInvalidOrgId() {
+  public void testOrgCreationMetricsWithInvalidOrgId() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(prop);
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(null);
 
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.ORG_ID, "ORG_001_INVALID");
@@ -147,9 +210,12 @@ public class OrganisationMetricsActorTest {
 
   @SuppressWarnings("deprecation")
   @Test
-  public void testOrgConsumptionInvalidOrgId() {
+  public void testOrgConsumptionMetricsWithInvalidOrgId() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(prop);
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(null);
 
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.ORG_ID, "ORG_001_INVALID");
@@ -164,9 +230,12 @@ public class OrganisationMetricsActorTest {
 
   @SuppressWarnings("deprecation")
   @Test
-  public void testOrgCreationInvalidPeriod() {
+  public void testOrgCreationMetricsInvalidPeriod() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(prop);
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(userOrgMap);
 
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.ORG_ID, orgId);
@@ -181,9 +250,12 @@ public class OrganisationMetricsActorTest {
 
   @SuppressWarnings("deprecation")
   @Test
-  public void testOrgConsumptionInvalidPeriod() {
+  public void testOrgConsumptionMetricsWithInvalidPeriod() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(prop);
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(userOrgMap);
 
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.ORG_ID, orgId);
@@ -194,25 +266,17 @@ public class OrganisationMetricsActorTest {
     ProjectCommonException e =
         probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
     Assert.assertEquals("INVALID_PERIOD", e.getCode());
-  }
-
-  private static void insertUserDataToES() {
-    Map<String, Object> userMap = new HashMap<>();
-    userMap.put(JsonKey.USER_ID, userId);
-    userMap.put(JsonKey.FIRST_NAME, "alpha");
-    userMap.put(JsonKey.ID, userId);
-    userMap.put(JsonKey.ROOT_ORG_ID, "ORG_001");
-    userMap.put(JsonKey.USERNAME, "alpha-beta");
-    userMap.put(JsonKey.EMAIL, "alpha123invalid@gmail.com");
-    ElasticSearchUtil.createData(
-        EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId, userMap);
   }
 
   @SuppressWarnings({"deprecation", "unchecked"})
   @Test
-  public void testOrgCreationReportData() {
+  public void testOrgCreationMetricsReportDataSuccess() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(prop);
+
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(userOrgMap);
 
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.ORG_ID, orgId);
@@ -222,28 +286,21 @@ public class OrganisationMetricsActorTest {
     actorMessage.setOperation(ActorOperations.ORG_CREATION_METRICS_REPORT.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     Map<String, Object> data = res.getResult();
     String id = (String) data.get(JsonKey.REQUEST_ID);
-    DbInfo dbinfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
-    try {
-      Thread.sleep(2200);
-    } catch (InterruptedException e) {
-      ProjectLogger.log("Error", e);
-    }
-    Response resp = operation.getRecordById(dbinfo.getKeySpace(), dbinfo.getTableName(), id);
-    List<Map<String, Object>> dataMap = (List<Map<String, Object>>) resp.get(JsonKey.RESPONSE);
-    Integer status = (Integer) dataMap.get(0).get(JsonKey.STATUS);
-    Assert.assertTrue(status > 0);
-    Assert.assertEquals("Creation Report", dataMap.get(0).get(JsonKey.TYPE));
-    operation.deleteRecord(dbinfo.getKeySpace(), dbinfo.getTableName(), id);
+    Assert.assertNotNull(id);
   }
 
   @SuppressWarnings({"deprecation", "unchecked"})
   @Test
-  public void testOrgConsumptionReportData() {
+  public void testOrgConsumptionMetricsReportDataSuccess() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(prop);
+
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(userOrgMap);
 
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.ORG_ID, orgId);
@@ -253,38 +310,75 @@ public class OrganisationMetricsActorTest {
     actorMessage.setOperation(ActorOperations.ORG_CONSUMPTION_METRICS_REPORT.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("50 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     Map<String, Object> data = res.getResult();
     String id = (String) data.get(JsonKey.REQUEST_ID);
-    DbInfo dbinfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
-    try {
-      Thread.sleep(2000);
-    } catch (InterruptedException e) {
-      ProjectLogger.log("Error", e);
-    }
-    Response resp = operation.getRecordById(dbinfo.getKeySpace(), dbinfo.getTableName(), id);
-    List<Map<String, Object>> dataMap = (List<Map<String, Object>>) resp.get(JsonKey.RESPONSE);
-    Integer status = (Integer) dataMap.get(0).get(JsonKey.STATUS);
-    Assert.assertTrue(status > 0);
-    Assert.assertEquals("Consumption Report", dataMap.get(0).get(JsonKey.TYPE));
-    operation.deleteRecord(dbinfo.getKeySpace(), dbinfo.getTableName(), id);
+    Assert.assertNotNull(id);
   }
 
-  @AfterClass
-  public static void destroy() {
-    ElasticSearchUtil.removeData(EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId);
+  private static void mockHttpPostSuccess(String methodType, InputStream inputStream) {
 
-    Response result = operation.getRecordById(orgDB.getKeySpace(), orgDB.getTableName(), orgId);
-    List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-    if (!(list.isEmpty())) {
-      for (Map<String, Object> res : list) {
-        String id = (String) res.get(JsonKey.ID);
-        operation.deleteRecord(orgDB.getKeySpace(), orgDB.getTableName(), id);
-        ElasticSearchUtil.removeData(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName(),
-            id);
+    if (HttpMethod.POST.name().equalsIgnoreCase(methodType)) {
+      HttpClientBuilder httpClientBuilder = PowerMockito.mock(HttpClientBuilder.class);
+      CloseableHttpClient client = PowerMockito.mock(CloseableHttpClient.class);
+      CloseableHttpResponse httpResponse = Mockito.mock(CloseableHttpResponse.class);
+      when(HttpClientBuilder.create()).thenReturn(httpClientBuilder);
+      when(httpClientBuilder.build()).thenReturn(client);
+
+      try {
+        when(client.execute(Mockito.any(HttpPost.class))).thenReturn(httpResponse);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      HttpEntity httpEntity = Mockito.mock(HttpEntity.class);
+      when(httpResponse.getEntity()).thenReturn(httpEntity);
+      StatusLine statusLine = Mockito.mock(StatusLine.class);
+      when(httpResponse.getStatusLine()).thenReturn(statusLine);
+      when(statusLine.getStatusCode()).thenReturn(200);
+      Map<String, Object> responseMap = new HashMap<>();
+      Map<String, Object> resultMap = new HashMap<>();
+      Map<String, Object> aggregateMap = new HashMap<>();
+      Map<String, Object> statusMap = new HashMap<>();
+      aggregateMap.put(JsonKey.STATUS, statusMap);
+      resultMap.put(JsonKey.AGGREGATIONS, aggregateMap);
+      responseMap.put(JsonKey.RESULT, resultMap);
+      try {
+        when(httpEntity.getContent()).thenReturn(inputStream);
+      } catch (IOException e) {
+        e.printStackTrace();
       }
     }
+  }
+
+  private Map<String, Object> orgCreationSuccessMap() {
+
+    Map<String, Object> responseMap = new HashMap<>();
+    Map<String, Object> resultMap = new HashMap<>();
+    Map<String, Object> aggregateMap = new HashMap<>();
+    Map<String, Object> statusMap = new HashMap<>();
+    aggregateMap.put(JsonKey.STATUS, statusMap);
+    resultMap.put(JsonKey.AGGREGATIONS, aggregateMap);
+    responseMap.put(JsonKey.RESULT, resultMap);
+    return responseMap;
+  }
+
+  private Map<String, Object> orgConsumptionSuccessMap() {
+    Map<String, Object> responseMap = new HashMap<>();
+    Map<String, Object> resultMap = new HashMap<>();
+    Map<String, Object> aggregateMap = new HashMap<>();
+    List<Map<String, Object>> metricsList = new ArrayList<>();
+    Map<String, Object> statusMap = new HashMap<>();
+    aggregateMap.put(JsonKey.STATUS, statusMap);
+    resultMap.put(JsonKey.METRICS, metricsList);
+    Map<String, Object> summaryMap = new HashMap<>();
+    resultMap.put(JsonKey.SUMMARY, summaryMap);
+    responseMap.put(JsonKey.RESULT, resultMap);
+    return responseMap;
+  }
+
+  private Response createCassandraInsertSuccessResponse() {
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    return response;
   }
 }

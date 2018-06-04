@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -231,15 +232,10 @@ public class CourseMetricsActor extends BaseMetricsActor {
     requestMap.put(JsonKey.PERIOD, periodStr);
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.BATCH_ID, batchId);
-
     if (!("fromBegining".equalsIgnoreCase(periodStr))) {
-      Map<String, Object> dateRange = getStartAndEndDate(periodStr);
+      Map<String, String> dateRange = getDateRange(periodStr);
       dateRangeFilter.put(GTE, (String) dateRange.get(STARTDATE));
       dateRangeFilter.put(LTE, (String) dateRange.get(ENDDATE));
-      if ("5w".equalsIgnoreCase(periodStr)) {
-        Map<String, Object> dateMap = getStartAndEndDateForDay(periodStr);
-        dateRangeFilter.put(LTE, (String) dateMap.get(ENDDATE));
-      }
       filter.put(JsonKey.DATE_TIME, dateRangeFilter);
     }
 
@@ -250,7 +246,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
     coursefields.add(JsonKey.BATCH_ID);
     coursefields.add(JsonKey.DATE_TIME);
     coursefields.add(JsonKey.LEAF_NODE_COUNT);
-
     Map<String, Object> result =
         ElasticSearchUtil.complexSearch(
             createESRequest(filter, null, coursefields),
@@ -258,11 +253,10 @@ public class CourseMetricsActor extends BaseMetricsActor {
             EsType.usercourses.getTypeName());
     List<Map<String, Object>> esContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
 
-    if (!(esContent.isEmpty())) {
+    if (CollectionUtils.isNotEmpty(esContent)) {
       List<String> userIds = new ArrayList<>();
 
       calculateCourseProgressPercentage(esContent);
-
       for (Map<String, Object> entry : esContent) {
         String userId = (String) entry.get(JsonKey.USER_ID);
         userIds.add(userId);
@@ -285,7 +279,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
       Map<String, Map<String, Object>> userInfoCache = new HashMap<>();
       Set<String> orgSet = new HashSet<>();
-
       for (Map<String, Object> map : useresContent) {
         String userId = (String) map.get(JsonKey.USER_ID);
         map.put("user", userId);
@@ -338,7 +331,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
         String id = (String) map.get(JsonKey.ID);
         batchInfoCache.put(id, map);
       }
-
       for (Map<String, Object> map : esContent) {
         String userId = (String) map.get(JsonKey.USER_ID);
         map.put("user", userId);
@@ -429,7 +421,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       Map<String, Object> requestObject = new HashMap<>();
       requestObject.put(JsonKey.PERIOD, getEkstepPeriod(periodStr));
       Map<String, Object> filterMap = new HashMap<>();
-      filterMap.put(JsonKey.TAG, courseId);
+      filterMap.put(CONTENT_ID, courseId);
       requestObject.put(JsonKey.FILTER, filterMap);
 
       Map<String, Object> result =
@@ -695,7 +687,9 @@ public class CourseMetricsActor extends BaseMetricsActor {
       int avgTime =
           courseCompletedData.get("avg_time_course_completed") == null
               ? 0
-              : (Integer) courseCompletedData.get("avg_time_course_completed");
+              : (courseCompletedData.get("avg_time_course_completed") instanceof Double)
+                  ? ((Double) courseCompletedData.get("avg_time_course_completed")).intValue()
+                  : (Integer) courseCompletedData.get("avg_time_course_completed");
       dataMap.put(VALUE, avgTime);
       dataMap.put(JsonKey.TIME_UNIT, "seconds");
       snapshot.put("course.consumption.time_spent_completion_count", dataMap);

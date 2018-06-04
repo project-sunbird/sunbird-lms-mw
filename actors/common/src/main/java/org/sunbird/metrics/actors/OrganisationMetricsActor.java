@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -201,14 +202,11 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     }
     StringBuilder builder = new StringBuilder();
     builder
-        .append("{\"request\":{\"rawQuery\":{\"query\":{\"filtered\":")
-        .append("{\"query\":{\"bool\":{\"must\":[{\"query\":{\"range\":{\"")
+        .append("{\"request\":{\"rawQuery\":{\"query\":{\"bool\":{\"must\":[{\"range\":{\"")
         .append(operationMap.get("dateKey"))
         .append("\":{\"gte\":\"")
-        .append(dateMap.get(STARTDATE) + "\",\"lte\":\"" + dateMap.get(ENDDATE) + "\"}}}}")
-        .append(",{\"bool\":{\"should\":[{\"match\":{\"contentType.raw\":\"Story\"}}")
-        .append(",{\"match\":{\"contentType.raw\":\"Worksheet\"}}")
-        .append(",{\"match\":{\"contentType.raw\":\"Game\"}}")
+        .append(dateMap.get(STARTDATE) + "\",\"lte\":\"" + dateMap.get(ENDDATE) + "\"}}}")
+        .append(",{\"bool\":{\"should\":[{\"match\":{\"contentType.raw\":\"Resource\"}}")
         .append(",{\"match\":{\"contentType.raw\":\"Collection\"}}")
         .append(",{\"match\":{\"contentType.raw\":\"TextBook\"}}")
         .append(",{\"match\":{\"contentType.raw\":\"TextBookUnit\"}}")
@@ -216,7 +214,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         .append(",{\"match\":{\"contentType.raw\":\"CourseUnit\"}}]}},")
         .append("{\"match\":{\"createdFor.raw\":\"" + orgId + "\"}}")
         .append(",{\"match\":{\"status.raw\":\"" + operationMap.get("status"))
-        .append("\"}}]}}}},\"aggs\":{\"");
+        .append("\"}}]}},\"aggs\":{\"");
     if (operationMap.containsValue("createdOn")) {
       builder
           .append(operationMap.get("dateKey") + "\":{\"date_histogram\":{\"field\":\"")
@@ -224,8 +222,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
           .append("\",\"interval\":\"" + dateMap.get(INTERVAL) + "\",\"format\":\"")
           .append(dateMap.get(FORMAT) + "\"")
           .append(",\"time_zone\":\"+05:30\",\"extended_bounds\":{\"min\":")
-          .append(dateMap.get(STARTTIMEMILIS) + ",\"max\":")
-          .append(dateMap.get(ENDTIMEMILIS) + "}}},\"");
+          .append(dateMap.get(START_TIME_MILLIS) + ",\"max\":")
+          .append(dateMap.get(END_TIME_MILLIS) + "}}},\"");
     }
     builder
         .append("status\":{\"terms\":{\"field\":\"status.raw\",\"include\":[\"")
@@ -234,8 +232,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         .append(operationMap.get("dateKey") + "\",\"interval\":\"" + dateMap.get(INTERVAL))
         .append("\",\"format\":\"" + dateMap.get(FORMAT))
         .append("\",\"time_zone\":\"+05:30\",\"extended_bounds\":{\"min\":")
-        .append(dateMap.get(STARTTIMEMILIS) + ",\"max\":")
-        .append(dateMap.get(ENDTIMEMILIS))
+        .append(dateMap.get(START_TIME_MILLIS) + ",\"max\":")
+        .append(dateMap.get(END_TIME_MILLIS))
         .append("}}}}}");
     if (operationMap.containsKey("userActionKey")) {
       builder
@@ -327,7 +325,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         if (data.containsKey("Create")) {
           statusMap = (Map<String, Object>) data.get("Create");
           valueList = (List<Map<String, Object>>) statusMap.get("buckets");
-          if (!valueList.isEmpty()) {
+          if (CollectionUtils.isNotEmpty(valueList)) {
             statusMap = valueList.get(0);
             statusValueMap.put("draft", statusMap.get("doc_count"));
             statusValueMap.put("draftBucket", statusMap.get("createdOn"));
@@ -335,7 +333,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         } else if (data.containsKey("Publish")) {
           statusMap = (Map<String, Object>) data.get("Publish");
           valueList = (List<Map<String, Object>>) statusMap.get("buckets");
-          if (!valueList.isEmpty()) {
+          if (CollectionUtils.isNotEmpty(valueList)) {
             statusMap = valueList.get(0);
             statusValueMap.put("live", statusMap.get("doc_count"));
             statusValueMap.put("liveBucket", statusMap.get("lastPublishedOn"));
@@ -343,7 +341,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         } else if (data.containsKey("Review")) {
           statusMap = (Map<String, Object>) data.get("Review");
           valueList = (List<Map<String, Object>>) statusMap.get("buckets");
-          if (!valueList.isEmpty()) {
+          if (CollectionUtils.isNotEmpty(valueList)) {
             statusMap = valueList.get(0);
             statusValueMap.put("review", statusMap.get("doc_count"));
             statusValueMap.put("reviewBucket", statusMap.get("lastSubmittedOn"));

@@ -82,6 +82,7 @@ public final class SchedulerManager {
     JobDetail channelRegistrationJob =
         JobBuilder.newJob(ChannelRegistrationScheduler.class)
             .requestRecovery(true)
+            .withDescription("Scheduler for channel registration")
             .withIdentity("channelRegistrationScheduler", identifier)
             .build();
 
@@ -111,6 +112,7 @@ public final class SchedulerManager {
     JobDetail updateUserCountJob =
         JobBuilder.newJob(UpdateUserCountScheduler.class)
             .requestRecovery(true)
+            .withDescription("Scheduler for updating user count for each geo location")
             .withIdentity("updateUserCountScheduler", identifier)
             .build();
 
@@ -142,6 +144,7 @@ public final class SchedulerManager {
     JobDetail metricsReportJob =
         JobBuilder.newJob(MetricsReportJob.class)
             .requestRecovery(true)
+            .withDescription("Scheduler for retry of metrics report generation and upload to azure")
             .withIdentity("metricsReportJob", identifier)
             .build();
 
@@ -173,6 +176,8 @@ public final class SchedulerManager {
     JobDetail coursePublishedJob =
         JobBuilder.newJob(CoursePublishedUpdate.class)
             .requestRecovery(true)
+            .withDescription(
+                "Scheduler for batch participants enrolment on course status change to published")
             .withIdentity("coursePublishedScheduler", identifier)
             .build();
 
@@ -204,6 +209,7 @@ public final class SchedulerManager {
     JobDetail uploadVerifyJob =
         JobBuilder.newJob(UploadLookUpScheduler.class)
             .requestRecovery(true)
+            .withDescription("Scheduler for bulk upload retry")
             .withIdentity("uploadVerifyScheduler", identifier)
             .build();
 
@@ -234,6 +240,7 @@ public final class SchedulerManager {
     JobDetail job =
         JobBuilder.newJob(ManageCourseBatchCount.class)
             .requestRecovery(true)
+            .withDescription("Scheduler for computing active count of batches for each course")
             .withIdentity("schedulerJob", identifier)
             .build();
 

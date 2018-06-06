@@ -82,6 +82,7 @@ public final class SchedulerManager {
     JobDetail channelRegistrationJob =
         JobBuilder.newJob(ChannelRegistrationScheduler.class)
             .requestRecovery(true)
+            .withDescription("Scheduler to do the channel registration")
             .withIdentity("channelRegistrationScheduler", identifier)
             .build();
 
@@ -111,6 +112,7 @@ public final class SchedulerManager {
     JobDetail updateUserCountJob =
         JobBuilder.newJob(UpdateUserCountScheduler.class)
             .requestRecovery(true)
+            .withDescription("Scheduler to update user count inside geo_location table")
             .withIdentity("updateUserCountScheduler", identifier)
             .build();
 
@@ -142,6 +144,7 @@ public final class SchedulerManager {
     JobDetail metricsReportJob =
         JobBuilder.newJob(MetricsReportJob.class)
             .requestRecovery(true)
+            .withDescription("Scheduler to report downlaod retry.")
             .withIdentity("metricsReportJob", identifier)
             .build();
 
@@ -173,6 +176,7 @@ public final class SchedulerManager {
     JobDetail coursePublishedJob =
         JobBuilder.newJob(CoursePublishedUpdate.class)
             .requestRecovery(true)
+            .withDescription("Scheduler to check course status is published or not.")
             .withIdentity("coursePublishedScheduler", identifier)
             .build();
 
@@ -204,6 +208,7 @@ public final class SchedulerManager {
     JobDetail uploadVerifyJob =
         JobBuilder.newJob(UploadLookUpScheduler.class)
             .requestRecovery(true)
+            .withDescription("Scheduler to retry bulkupload failure.")
             .withIdentity("uploadVerifyScheduler", identifier)
             .build();
 
@@ -234,6 +239,7 @@ public final class SchedulerManager {
     JobDetail job =
         JobBuilder.newJob(ManageCourseBatchCount.class)
             .requestRecovery(true)
+            .withDescription("Scheduler to increase or decrease batch count inside a course.")
             .withIdentity("schedulerJob", identifier)
             .build();
 

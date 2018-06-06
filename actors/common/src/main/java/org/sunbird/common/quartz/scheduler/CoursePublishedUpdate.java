@@ -306,7 +306,7 @@ public class CoursePublishedUpdate extends BaseJob {
     Map<String, Object> info = new HashMap<>();
     info.put(JsonKey.LOG_TYPE, logType);
     long startTime = System.currentTimeMillis();
-    info.put("start-time", startTime);
+    info.put(JsonKey.START_TIME, startTime);
     info.put(JsonKey.MESSAGE, message);
     info.put(JsonKey.LOG_LEVEL, JsonKey.INFO);
     return info;

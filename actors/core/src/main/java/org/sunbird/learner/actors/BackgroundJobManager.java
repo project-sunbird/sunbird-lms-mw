@@ -782,8 +782,7 @@ public class BackgroundJobManager extends BaseActor {
      * ProfileCompletenessFactory.getInstance(); Map<String, Object> responsemap =
      * service.computeProfile(data); data.putAll(responsemap); }
      */
-//    String response = ElasticSearchUtil.createData(index, type, identifier, data);
-    String response = "success";
+    String response = ElasticSearchUtil.createData(index, type, identifier, data);
     ProjectLogger.log(
         "Getting ES save response for type , identiofier=="
             + type

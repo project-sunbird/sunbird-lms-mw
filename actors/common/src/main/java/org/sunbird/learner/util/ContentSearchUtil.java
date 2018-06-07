@@ -10,7 +10,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import javax.ws.rs.core.MediaType;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpHeaders;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -26,7 +28,6 @@ public class ContentSearchUtil {
 
   private static ObjectMapper mapper = new ObjectMapper();
   private static String contentSearchURL = null;
-  private static HashMap<String, String> headers = new HashMap<String, String>();
 
   static {
     String baseUrl = System.getenv(JsonKey.SUNBIRD_API_MGR_BASE_URL);
@@ -34,13 +35,22 @@ public class ContentSearchUtil {
     if (StringUtils.isBlank(searchPath))
       searchPath = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_CS_SEARCH_PATH);
     contentSearchURL = baseUrl + searchPath;
-    headers.put("Content-Type", "application/json");
-    headers.put(
-        JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.SUNBIRD_AUTHORIZATION));
   }
 
-  public static Map<String, Object> searchContent(String body) throws Exception {
-    String httpResponse = HttpUtil.sendPostRequest(contentSearchURL, body, headers);
+  private static Map<String, String> getUpdatedHeaders(Map<String, String> headers) {
+    if (headers == null) {
+      headers = new HashMap<>();
+    }
+    headers.put(
+        HttpHeaders.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.SUNBIRD_AUTHORIZATION));
+    headers.put(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+    return headers;
+  }
+
+  public static Map<String, Object> searchContent(String body, Map<String, String> headerMap)
+      throws Exception {
+    String httpResponse =
+        HttpUtil.sendPostRequest(contentSearchURL, body, getUpdatedHeaders(headerMap));
     JSONObject jObject = new JSONObject(httpResponse);
     String resmsgId = (String) jObject.getJSONObject("params").get("resmsgid");
     String apiId = jObject.getString("id");
@@ -65,7 +75,8 @@ public class ContentSearchUtil {
 
   public static Map<String, Object> searchContentUsingUnirest(String body) throws Exception {
     Unirest.clearDefaultHeaders();
-    BaseRequest request = Unirest.post(contentSearchURL).headers(headers).body(body);
+    BaseRequest request =
+        Unirest.post(contentSearchURL).headers(getUpdatedHeaders(null)).body(body);
     HttpResponse<JsonNode> response = RestUtil.execute(request);
     if (RestUtil.isSuccessful(response)) {
       JSONObject result = response.getBody().getObject().getJSONObject("result");

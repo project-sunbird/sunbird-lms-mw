@@ -513,7 +513,7 @@ public class PageManagementActor extends BaseActor {
         "search query after applying filter for ekstep for page data assemble api : " + query,
         LoggerEnum.INFO);
 
-    Map<String, Object> result = ContentSearchUtil.searchContent(query);
+    Map<String, Object> result = ContentSearchUtil.searchContent(query, headers);
     if (null != result && !result.isEmpty()) {
       section.putAll(result);
       section.remove(JsonKey.PARAMS);

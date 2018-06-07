@@ -41,7 +41,7 @@ public abstract class BaseRouter extends BaseActor {
     }
   }
 
-  protected void initActors(ActorContext context, String name) {
+  protected void initActors(ActorContext context, String name, String dispatcher) {
     Set<Class<? extends BaseActor>> actors = getActors();
     for (Class<? extends BaseActor> actor : actors) {
       ActorConfig routerDetails = actor.getAnnotation(ActorConfig.class);
@@ -49,11 +49,11 @@ public abstract class BaseRouter extends BaseActor {
         switch (name) {
           case "BackgroundRequestRouter":
             String[] bgOperations = routerDetails.asyncTasks();
-            createActor(context, actor, bgOperations);
+            createActor(context, actor, bgOperations, dispatcher);
             break;
           case "RequestRouter":
             String[] operations = routerDetails.tasks();
-            createActor(context, actor, operations);
+            createActor(context, actor, operations, dispatcher);
             break;
           default:
             System.out.println("Router with name '" + name + "' not supported.");
@@ -66,12 +66,12 @@ public abstract class BaseRouter extends BaseActor {
   }
 
   private void createActor(
-      ActorContext context, Class<? extends BaseActor> actor, String[] operations) {
+      ActorContext context, Class<? extends BaseActor> actor, String[] operations, String dispatcher) {
     if (null != operations && operations.length > 0) {
 
       ActorRef actorRef =
           context.actorOf(
-              FromConfig.getInstance().props(Props.create(actor)), actor.getSimpleName());
+              FromConfig.getInstance().props(Props.create(actor).withDispatcher(dispatcher)), actor.getSimpleName());
       for (String operation : operations) {
         String parentName = self().path().name();
         cacheActor(getKey(parentName, operation), actorRef);

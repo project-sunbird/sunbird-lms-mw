@@ -23,7 +23,7 @@ public class BackgroundRequestRouter extends BaseRouter {
   public void preStart() throws Exception {
     super.preStart();
     name = self().path().name();
-    initActors(getContext(), BackgroundRequestRouter.class.getSimpleName());
+    initActors(getContext(), BackgroundRequestRouter.class.getSimpleName(), "brr-usr-dispatcher");
   }
 
   @Override

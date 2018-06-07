@@ -40,7 +40,7 @@ public class RequestRouter extends BaseRouter {
   public void preStart() throws Exception {
     super.preStart();
     name = self().path().name();
-    initActors(getContext(), RequestRouter.class.getSimpleName());
+    initActors(getContext(), RequestRouter.class.getSimpleName(), "rr-usr-dispatcher");
   }
 
   @Override

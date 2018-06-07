@@ -98,7 +98,8 @@ public class BackgroundJobManager extends BaseActor {
     if (operation.equalsIgnoreCase(ActorOperations.PUBLISH_COURSE.getValue())) {
       manageBackgroundJob(request);
     } else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue())) {
-      updateUserInfoToEs(request);
+    		ProjectLogger.log("Update user info to ES called.", LoggerEnum.INFO.name());
+//      updateUserInfoToEs(request);
     } else if (operation.equalsIgnoreCase(
         ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue())) {
       insertUserCourseInfoToEs(request);

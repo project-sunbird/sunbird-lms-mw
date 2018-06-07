@@ -89,7 +89,8 @@ public class BackgroundJobManager extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    ProjectLogger.log("BackgroundJobManager  onReceive called");
+	  ProjectLogger.log("BackgroundJobManager received action: " + request.getOperation(), LoggerEnum.INFO.name());
+/*    ProjectLogger.log("BackgroundJobManager  onReceive called");
     if (dbInfo == null) {
       dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_MANAGEMENT_DB);
     }
@@ -136,7 +137,7 @@ public class BackgroundJobManager extends BaseActor {
               ResponseCode.invalidOperationName.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
       ProjectLogger.log("UnSupported operation in Background Job Manager", exception);
-    }
+    }*/
   }
 
   /** @param actorMessage */

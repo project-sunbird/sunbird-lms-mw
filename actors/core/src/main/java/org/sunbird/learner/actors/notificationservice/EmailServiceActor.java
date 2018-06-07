@@ -14,6 +14,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
@@ -43,8 +44,9 @@ public class EmailServiceActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
+	  ProjectLogger.log("EmailServiceActor received action: " + request.getOperation(), LoggerEnum.INFO.name());
     if (request.getOperation().equalsIgnoreCase(BackgroundOperations.emailService.name())) {
-      sendMail(request);
+//      sendMail(request);
     } else {
       onReceiveUnsupportedOperation(request.getOperation());
     }

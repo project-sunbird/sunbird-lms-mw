@@ -16,7 +16,7 @@ import org.sunbird.helper.ServiceFactory;
  *
  * @author Amit Kumar
  */
-public class DataCacheHandler implements Runnable {
+public class DataCacheHandler {
   /**
    * pageMap is the map of (orgId:pageName) and page Object (i.e map of string , object) sectionMap
    * is the map of section Id and section Object (i.e map of string , object)
@@ -27,16 +27,14 @@ public class DataCacheHandler implements Runnable {
   private static Map<String, Object> roleMap = new ConcurrentHashMap<>();
   private static Map<String, String> orgTypeMap = new ConcurrentHashMap<>();
   private static Map<String, String> configSettings = new ConcurrentHashMap<>();
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final String KEY_SPACE_NAME = "sunbird";
   
   static {
-	  DataCacheHandler ch = new DataCacheHandler();
-	  ch.run();
+	  load();
   }
 
-  @Override
-  public void run() {
+  public static void load() {
     ProjectLogger.log("Data cache started..");
     cache(pageMap, "page_management");
     cache(sectionMap, "page_section");
@@ -45,7 +43,7 @@ public class DataCacheHandler implements Runnable {
     cacheSystemConfig(configSettings);
   }
 
-  private void cacheSystemConfig(Map<String, String> configSettings) {
+  private static void cacheSystemConfig(Map<String, String> configSettings) {
     Response response =
         cassandraOperation.getAllRecords(KEY_SPACE_NAME, JsonKey.SYSTEM_SETTINGS_DB);
     List<Map<String, Object>> responseList =
@@ -69,7 +67,7 @@ public class DataCacheHandler implements Runnable {
     }
   }
 
-  private void orgTypeCache(Map<String, String> orgTypeMap) {
+  private static void orgTypeCache(Map<String, String> orgTypeMap) {
     Response response = cassandraOperation.getAllRecords(KEY_SPACE_NAME, JsonKey.ORG_TYPE_DB);
     List<Map<String, Object>> responseList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
@@ -82,7 +80,7 @@ public class DataCacheHandler implements Runnable {
     }
   }
 
-  private void roleCache(Map<String, Object> roleMap) {
+  private static void roleCache(Map<String, Object> roleMap) {
     Response response = cassandraOperation.getAllRecords(KEY_SPACE_NAME, JsonKey.ROLE_GROUP);
     List<Map<String, Object>> responseList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
@@ -102,7 +100,7 @@ public class DataCacheHandler implements Runnable {
   }
 
   @SuppressWarnings("unchecked")
-  private void cache(Map<String, Map<String, Object>> map, String tableName) {
+  private static void cache(Map<String, Map<String, Object>> map, String tableName) {
     try {
       Response response = cassandraOperation.getAllRecords(KEY_SPACE_NAME, tableName);
       List<Map<String, Object>> responseList =

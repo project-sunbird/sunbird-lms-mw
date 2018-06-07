@@ -3164,13 +3164,6 @@ public class UserManagementActor extends BaseActor {
     return responseMap;
   }
 
-  private Map<String, Object> elasticSearchComplexSearch(
-      Map<String, Object> filters, String index, String type) {
-    SearchDTO searchDTO = new SearchDTO();
-    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
-    return ElasticSearchUtil.complexSearch(searchDTO, index, type);
-  }
-
   private List<Map<String, Object>> checkDataUserExtTable(Map<String, Object> map) {
     Util.DbInfo usrExtIdDb = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
     Map<String, Object> reqMap = new HashMap<>();

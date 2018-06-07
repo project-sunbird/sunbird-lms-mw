@@ -27,11 +27,13 @@ public class ThreadDumpActor extends BaseActor {
 	    sender().tell(response, self());
 	}
 
-	
 	private void takeThreadDump() {
 		final StringBuilder dump = new StringBuilder();
+		final StringBuilder details = new StringBuilder();
+		final StringBuilder info = new StringBuilder();
         final ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
         final ThreadInfo[] threadInfos = threadMXBean.getThreadInfo(threadMXBean.getAllThreadIds(), 100);
+        details.append("Thread id | Thread name | CPU time | Usertime\n\n");
         for (ThreadInfo threadInfo : threadInfos) {
             dump.append('"');
             dump.append(threadInfo.getThreadName());
@@ -45,10 +47,26 @@ public class ThreadDumpActor extends BaseActor {
                 dump.append(stackTraceElement);
             }
             dump.append("\n\n");
+            
+            long cputime = threadMXBean.getThreadCpuTime(threadInfo.getThreadId());
+            long usertime = threadMXBean.getThreadUserTime(threadInfo.getThreadId());
+            details.append(threadInfo.getThreadId() + " | " + threadInfo.getThreadName() + " | " + cputime + " | " + usertime + "\n\n");
+            
+            info.append(threadInfo.toString() + "\n\n");
         }
+        
+        
         System.out.println("=== thread-dump start ===");
         System.out.println(dump.toString());
-        System.out.println("=== thread-dump end ===");
+        System.out.println("=== thread-dump end ===\n\n");
+        
+        System.out.println("=== thread-cpu start ===");
+        System.out.println(details.toString());
+        System.out.println("=== thread-cpu end ===\n\n");
+        
+        System.out.println("=== thread-info start ===");
+        System.out.println(info.toString());
+        System.out.println("=== thread-info end ===\n\n");
 	}
 	
 }

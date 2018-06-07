@@ -3,6 +3,8 @@ package org.sunbird.actor.core;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.routing.FromConfig;
+
+import java.util.Arrays;
 import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.reflections.Reflections;
@@ -68,10 +70,15 @@ public abstract class BaseRouter extends BaseActor {
   private void createActor(
       ActorContext context, Class<? extends BaseActor> actor, String[] operations, String dispatcher) {
     if (null != operations && operations.length > 0) {
-
+    	  Props props = null;
+    	  if (Arrays.asList(operations).contains("emailService"))
+    		  props =Props.create(actor).withDispatcher("mail-dispatcher");
+    	  else 
+    		  props =Props.create(actor).withDispatcher(dispatcher);
+    	
       ActorRef actorRef =
           context.actorOf(
-              FromConfig.getInstance().props(Props.create(actor).withDispatcher(dispatcher)), actor.getSimpleName());
+              FromConfig.getInstance().props(props), actor.getSimpleName());
       for (String operation : operations) {
         String parentName = self().path().name();
         cacheActor(getKey(parentName, operation), actorRef);

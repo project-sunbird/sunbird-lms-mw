@@ -33,7 +33,7 @@ public class ThreadDumpActor extends BaseActor {
 		final StringBuilder info = new StringBuilder();
         final ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
         final ThreadInfo[] threadInfos = threadMXBean.getThreadInfo(threadMXBean.getAllThreadIds(), 100);
-        details.append("Thread id | Thread name | CPU time | Usertime\n\n");
+        details.append("Thread id | Thread name | CPU time | User time | Blocked time\n\n");
         for (ThreadInfo threadInfo : threadInfos) {
             dump.append('"');
             dump.append(threadInfo.getThreadName());
@@ -50,7 +50,8 @@ public class ThreadDumpActor extends BaseActor {
             
             long cputime = threadMXBean.getThreadCpuTime(threadInfo.getThreadId());
             long usertime = threadMXBean.getThreadUserTime(threadInfo.getThreadId());
-            details.append(threadInfo.getThreadId() + " | " + threadInfo.getThreadName() + " | " + cputime + " | " + usertime + "\n\n");
+            long blockedtime = threadInfo.getBlockedTime();
+            details.append(threadInfo.getThreadId() + " | " + threadInfo.getThreadName() + " | " + cputime + " | " + usertime + " | " + blockedtime + "\n\n");
             
             info.append(threadInfo.toString() + "\n\n");
         }

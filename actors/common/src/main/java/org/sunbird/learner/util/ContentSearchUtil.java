@@ -37,19 +37,20 @@ public class ContentSearchUtil {
     contentSearchURL = baseUrl + searchPath;
   }
 
-  private static Map<String, String> addHeader(Map<String, String> header) {
-    if (header == null) {
-      header = new HashMap<>();
+  private static Map<String, String> getUpdatedHeaders(Map<String, String> headers) {
+    if (headers == null) {
+      headers = new HashMap<>();
     }
-    header.put(
+    headers.put(
         JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.SUNBIRD_AUTHORIZATION));
-    header.put(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-    return header;
+    headers.put(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+    return headers;
   }
 
   public static Map<String, Object> searchContent(String body, Map<String, String> headerMap)
       throws Exception {
-    String httpResponse = HttpUtil.sendPostRequest(contentSearchURL, body, addHeader(headerMap));
+    String httpResponse =
+        HttpUtil.sendPostRequest(contentSearchURL, body, getUpdatedHeaders(headerMap));
     JSONObject jObject = new JSONObject(httpResponse);
     String resmsgId = (String) jObject.getJSONObject("params").get("resmsgid");
     String apiId = jObject.getString("id");
@@ -74,7 +75,8 @@ public class ContentSearchUtil {
 
   public static Map<String, Object> searchContentUsingUnirest(String body) throws Exception {
     Unirest.clearDefaultHeaders();
-    BaseRequest request = Unirest.post(contentSearchURL).headers(addHeader(null)).body(body);
+    BaseRequest request =
+        Unirest.post(contentSearchURL).headers(getUpdatedHeaders(null)).body(body);
     HttpResponse<JsonNode> response = RestUtil.execute(request);
     if (RestUtil.isSuccessful(response)) {
       JSONObject result = response.getBody().getObject().getJSONObject("result");

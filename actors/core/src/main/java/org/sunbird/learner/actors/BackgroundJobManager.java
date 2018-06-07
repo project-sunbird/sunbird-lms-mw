@@ -90,18 +90,20 @@ public class BackgroundJobManager extends BaseActor {
   @Override
   public void onReceive(Request request) throws Throwable {
 	  ProjectLogger.log("BackgroundJobManager received action: " + request.getOperation(), LoggerEnum.INFO.name());
-/*    ProjectLogger.log("BackgroundJobManager  onReceive called");
+    ProjectLogger.log("BackgroundJobManager  onReceive called");
     if (dbInfo == null) {
       dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_MANAGEMENT_DB);
     }
     String operation = request.getOperation();
     ProjectLogger.log("Operation name is ==" + operation);
     if (operation.equalsIgnoreCase(ActorOperations.PUBLISH_COURSE.getValue())) {
-      manageBackgroundJob(request);
+      //manageBackgroundJob(request);
     } else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue())) {
     		ProjectLogger.log("Update user info to ES called.", LoggerEnum.INFO.name());
-//      updateUserInfoToEs(request);
-    } else if (operation.equalsIgnoreCase(
+      updateUserInfoToEs(request);
+    } 
+    
+    /*else if (operation.equalsIgnoreCase(
         ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue())) {
       insertUserCourseInfoToEs(request);
     } else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_COUNT.getValue())) {
@@ -780,7 +782,8 @@ public class BackgroundJobManager extends BaseActor {
      * ProfileCompletenessFactory.getInstance(); Map<String, Object> responsemap =
      * service.computeProfile(data); data.putAll(responsemap); }
      */
-    String response = ElasticSearchUtil.createData(index, type, identifier, data);
+//    String response = ElasticSearchUtil.createData(index, type, identifier, data);
+    String response = "success";
     ProjectLogger.log(
         "Getting ES save response for type , identiofier=="
             + type

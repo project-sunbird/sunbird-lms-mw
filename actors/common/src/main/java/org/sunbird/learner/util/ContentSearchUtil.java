@@ -10,7 +10,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import javax.ws.rs.core.MediaType;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpHeaders;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -26,7 +28,6 @@ public class ContentSearchUtil {
 
   private static ObjectMapper mapper = new ObjectMapper();
   private static String contentSearchURL = null;
-  private static HashMap<String, String> headers = new HashMap<String, String>();
 
   static {
     String baseUrl = System.getenv(JsonKey.SUNBIRD_API_MGR_BASE_URL);
@@ -34,16 +35,21 @@ public class ContentSearchUtil {
     if (StringUtils.isBlank(searchPath))
       searchPath = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_CS_SEARCH_PATH);
     contentSearchURL = baseUrl + searchPath;
-    headers.put("Content-Type", "application/json");
-    headers.put(
+  }
+
+  private static Map<String, String> addHeader(Map<String, String> header) {
+    if (header == null) {
+      header = new HashMap<>();
+    }
+    header.put(
         JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.SUNBIRD_AUTHORIZATION));
+    header.put(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+    return header;
   }
 
   public static Map<String, Object> searchContent(String body, Map<String, String> headerMap)
       throws Exception {
-    // adding all incoming header with predefine static header map.
-    headers.putAll(headerMap);
-    String httpResponse = HttpUtil.sendPostRequest(contentSearchURL, body, headers);
+    String httpResponse = HttpUtil.sendPostRequest(contentSearchURL, body, addHeader(headerMap));
     JSONObject jObject = new JSONObject(httpResponse);
     String resmsgId = (String) jObject.getJSONObject("params").get("resmsgid");
     String apiId = jObject.getString("id");
@@ -68,7 +74,7 @@ public class ContentSearchUtil {
 
   public static Map<String, Object> searchContentUsingUnirest(String body) throws Exception {
     Unirest.clearDefaultHeaders();
-    BaseRequest request = Unirest.post(contentSearchURL).headers(headers).body(body);
+    BaseRequest request = Unirest.post(contentSearchURL).headers(addHeader(null)).body(body);
     HttpResponse<JsonNode> response = RestUtil.execute(request);
     if (RestUtil.isSuccessful(response)) {
       JSONObject result = response.getBody().getObject().getJSONObject("result");

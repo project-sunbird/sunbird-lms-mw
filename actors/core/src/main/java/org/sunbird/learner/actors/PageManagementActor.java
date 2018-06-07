@@ -56,6 +56,7 @@ public class PageManagementActor extends BaseActor {
   private Util.DbInfo pageSectionDbInfo = Util.dbInfoMap.get(JsonKey.PAGE_SECTION_DB);
   private Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private ObjectMapper mapper = new ObjectMapper();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -134,7 +135,6 @@ public class PageManagementActor extends BaseActor {
     @SuppressWarnings("unchecked")
     Map<String, Object> sectionMap = (Map<String, Object>) req.get(JsonKey.SECTION);
     if (null != sectionMap.get(JsonKey.SEARCH_QUERY)) {
-      ObjectMapper mapper = new ObjectMapper();
       try {
         sectionMap.put(
             JsonKey.SEARCH_QUERY, mapper.writeValueAsString(sectionMap.get(JsonKey.SEARCH_QUERY)));
@@ -143,7 +143,6 @@ public class PageManagementActor extends BaseActor {
       }
     }
     if (null != sectionMap.get(JsonKey.SECTION_DISPLAY)) {
-      ObjectMapper mapper = new ObjectMapper();
       try {
         sectionMap.put(
             JsonKey.SECTION_DISPLAY,
@@ -178,7 +177,6 @@ public class PageManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
     if (null != sectionMap.get(JsonKey.SEARCH_QUERY)) {
-      ObjectMapper mapper = new ObjectMapper();
       try {
         sectionMap.put(
             JsonKey.SEARCH_QUERY, mapper.writeValueAsString(sectionMap.get(JsonKey.SEARCH_QUERY)));
@@ -187,7 +185,6 @@ public class PageManagementActor extends BaseActor {
       }
     }
     if (null != sectionMap.get(JsonKey.SECTION_DISPLAY)) {
-      ObjectMapper mapper = new ObjectMapper();
       try {
         sectionMap.put(
             JsonKey.SECTION_DISPLAY,
@@ -232,7 +229,6 @@ public class PageManagementActor extends BaseActor {
     String sectionQuery = null;
     List<Map<String, Object>> sectionList = new ArrayList<>();
     Map<String, Object> filterMap = new HashMap<>();
-    Response response = null;
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.PAGE);
     String pageName = (String) req.get(JsonKey.PAGE_NAME);
     String source = (String) req.get(JsonKey.SOURCE);
@@ -246,21 +242,9 @@ public class PageManagementActor extends BaseActor {
     filterMap.remove(JsonKey.FILTERS);
     filterMap.remove(JsonKey.CREATED_BY);
     Map<String, Object> reqFilters = (Map<String, Object>) req.get(JsonKey.FILTERS);
-    List<Map<String, Object>> result = null;
-    try {
-      if (!StringUtils.isBlank(orgId)) {
-        response =
-            cassandraOperation.getRecordById(
-                orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), orgId);
-        result = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
-      }
-    } catch (Exception e) {
-      ProjectLogger.log("Exception occured while validating org id " + e.getMessage(), e);
-    }
 
-    Map<String, Object> map = null;
     /** if orgId is not then consider default page */
-    if (CollectionUtils.isEmpty(result)) {
+    if (StringUtils.isBlank(orgId)) {
       orgId = "NA";
     }
     ProjectLogger.log("Fetching data from Cache for " + orgId + ":" + pageName, LoggerEnum.INFO);
@@ -280,7 +264,6 @@ public class PageManagementActor extends BaseActor {
         sectionQuery = (String) pageMap.get(JsonKey.APP_MAP);
       }
     }
-    ObjectMapper mapper = new ObjectMapper();
     Map<String, Object> responseMap = new HashMap<>();
 
     try {
@@ -377,7 +360,6 @@ public class PageManagementActor extends BaseActor {
     }
     pageMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     if (null != pageMap.get(JsonKey.PORTAL_MAP)) {
-      ObjectMapper mapper = new ObjectMapper();
       try {
         pageMap.put(JsonKey.PORTAL_MAP, mapper.writeValueAsString(pageMap.get(JsonKey.PORTAL_MAP)));
       } catch (IOException e) {
@@ -385,7 +367,6 @@ public class PageManagementActor extends BaseActor {
       }
     }
     if (null != pageMap.get(JsonKey.APP_MAP)) {
-      ObjectMapper mapper = new ObjectMapper();
       try {
         pageMap.put(JsonKey.APP_MAP, mapper.writeValueAsString(pageMap.get(JsonKey.APP_MAP)));
       } catch (IOException e) {
@@ -444,7 +425,6 @@ public class PageManagementActor extends BaseActor {
     pageMap.put(JsonKey.ID, uniqueId);
     pageMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     if (null != pageMap.get(JsonKey.PORTAL_MAP)) {
-      ObjectMapper mapper = new ObjectMapper();
       try {
         pageMap.put(JsonKey.PORTAL_MAP, mapper.writeValueAsString(pageMap.get(JsonKey.PORTAL_MAP)));
       } catch (IOException e) {
@@ -452,7 +432,6 @@ public class PageManagementActor extends BaseActor {
       }
     }
     if (null != pageMap.get(JsonKey.APP_MAP)) {
-      ObjectMapper mapper = new ObjectMapper();
       try {
         pageMap.put(JsonKey.APP_MAP, mapper.writeValueAsString(pageMap.get(JsonKey.APP_MAP)));
       } catch (IOException e) {
@@ -493,7 +472,6 @@ public class PageManagementActor extends BaseActor {
       Map<String, Object> reqFilters,
       Map<String, String> headers,
       Map<String, Object> filterMap) {
-    ObjectMapper mapper = new ObjectMapper();
     Map<String, Object> map = new HashMap<>();
     try {
       map = mapper.readValue((String) section.get(JsonKey.SEARCH_QUERY), HashMap.class);
@@ -619,7 +597,6 @@ public class PageManagementActor extends BaseActor {
   private List<Map<String, Object>> parsePage(Map<String, Object> pageDO, String mapType) {
     List<Map<String, Object>> sections = new ArrayList<>();
     String sectionQuery = (String) pageDO.get(mapType);
-    ObjectMapper mapper = new ObjectMapper();
     try {
       Object[] arr = mapper.readValue(sectionQuery, Object[].class);
       for (Object obj : arr) {

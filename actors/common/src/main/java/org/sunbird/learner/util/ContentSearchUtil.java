@@ -42,7 +42,7 @@ public class ContentSearchUtil {
       headers = new HashMap<>();
     }
     headers.put(
-        JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.SUNBIRD_AUTHORIZATION));
+        HttpHeaders.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.SUNBIRD_AUTHORIZATION));
     headers.put(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
     return headers;
   }

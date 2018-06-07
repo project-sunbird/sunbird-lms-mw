@@ -61,7 +61,7 @@ public final class SchedulerManager {
       String identifier = "NetOps-PC1502295457753";
       scheduleCourseBatchCount(identifier);
       scheduleBulkUploadJob(identifier);
-      scheduleCoursePublishJob(identifier);
+      //scheduleCoursePublishJob(identifier);
       scheduleMetricsReportJob(identifier);
       scheduleMetricsJob(identifier);
       scheduleUpdateUserCountJob(identifier);

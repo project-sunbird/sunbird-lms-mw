@@ -29,6 +29,11 @@ public class DataCacheHandler implements Runnable {
   private static Map<String, String> configSettings = new ConcurrentHashMap<>();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final String KEY_SPACE_NAME = "sunbird";
+  
+  static {
+	  DataCacheHandler ch = new DataCacheHandler();
+	  ch.run();
+  }
 
   @Override
   public void run() {

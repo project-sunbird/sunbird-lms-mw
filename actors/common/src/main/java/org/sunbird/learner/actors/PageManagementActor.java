@@ -1,5 +1,6 @@
 package org.sunbird.learner.actors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -8,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
@@ -29,8 +29,6 @@ import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * This actor will handle page management operation .
@@ -515,7 +513,7 @@ public class PageManagementActor extends BaseActor {
         "search query after applying filter for ekstep for page data assemble api : " + query,
         LoggerEnum.INFO);
 
-    Map<String, Object> result = ContentSearchUtil.searchContent(query,headers);
+    Map<String, Object> result = ContentSearchUtil.searchContent(query, headers);
     if (null != result && !result.isEmpty()) {
       section.putAll(result);
       section.remove(JsonKey.PARAMS);

@@ -1,15 +1,11 @@
 package org.sunbird.learner.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.JsonNode;
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.request.BaseRequest;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -20,6 +16,12 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.RestUtil;
 import org.sunbird.common.responsecode.ResponseCode;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.JsonNode;
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.request.BaseRequest;
 
 /** @author Mahesh Kumar Gangula */
 public class ContentSearchUtil {
@@ -39,7 +41,9 @@ public class ContentSearchUtil {
         JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.SUNBIRD_AUTHORIZATION));
   }
 
-  public static Map<String, Object> searchContent(String body) throws Exception {
+  public static Map<String, Object> searchContent(String body,Map<String,String> headerMap) throws Exception {
+	 //adding all incoming header with predefine static header map. 
+	headers.putAll(headerMap);
     String httpResponse = HttpUtil.sendPostRequest(contentSearchURL, body, headers);
     JSONObject jObject = new JSONObject(httpResponse);
     String resmsgId = (String) jObject.getJSONObject("params").get("resmsgid");

@@ -29,7 +29,7 @@ public abstract class BaseActor extends UntypedAbstractActor {
         onReceiveException(callerName, e);
       }
     } else if (message instanceof Response) {
-      sender().tell(message, self());
+      // do nothing
     } else {
       unSupportedMessage();
     }

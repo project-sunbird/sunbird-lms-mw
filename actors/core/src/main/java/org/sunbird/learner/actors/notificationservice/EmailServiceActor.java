@@ -41,7 +41,7 @@ public class EmailServiceActor extends BaseActor {
   public void onReceive(Request request) throws Throwable {
 	  ProjectLogger.log("EmailServiceActor received action: " + request.getOperation(), LoggerEnum.INFO.name());
     if (request.getOperation().equalsIgnoreCase(BackgroundOperations.emailService.name())) {
-      //sendMail(request);
+      sendMail(request);
     } else {
       onReceiveUnsupportedOperation(request.getOperation());
     }

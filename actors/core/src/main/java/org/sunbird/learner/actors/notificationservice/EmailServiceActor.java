@@ -128,10 +128,10 @@ public class EmailServiceActor extends BaseActor {
     
     String[] recipients = emailIds.toArray(new String[emailIds.size()]);
     ProjectLogger.log("Sending email to " + name + " | org: " + orgName + " | recipients: " + recipients, LoggerEnum.INFO.name());
-    SendMail.sendMail(recipients,
-        (String) request.get(JsonKey.SUBJECT),
-        null,
-        ProjectUtil.getTemplate(request));
+//    SendMail.sendMail(recipients,
+//        (String) request.get(JsonKey.SUBJECT),
+//        null,
+//        ProjectUtil.getTemplate(request));
     Response res = new Response();
     res.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(res, self());

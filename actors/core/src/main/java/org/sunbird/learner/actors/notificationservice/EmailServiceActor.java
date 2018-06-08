@@ -130,7 +130,7 @@ public class EmailServiceActor extends BaseActor {
     ProjectLogger.log("Sending email to " + name + " | org: " + orgName + " | recipients: " + recipients, LoggerEnum.INFO.name());
     SendMail.sendMail(recipients,
         (String) request.get(JsonKey.SUBJECT),
-        ProjectUtil.getContext(request),
+        null,
         ProjectUtil.getTemplate(request));
     Response res = new Response();
     res.put(JsonKey.RESPONSE, JsonKey.SUCCESS);

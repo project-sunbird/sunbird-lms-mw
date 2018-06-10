@@ -48,7 +48,7 @@ public class EmailServiceActor extends BaseActor {
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})
-  private void sendMail(Request actorMessage) {
+  private void sendMail(Request actorMessage) throws Exception {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     String name = "";
     Map<String, Object> request =
@@ -99,20 +99,20 @@ public class EmailServiceActor extends BaseActor {
       }
     }
 
-    // fetch user id om basis of email provided
-//    if (!emails.isEmpty()) {
-//      // fetch usr info on basis of email ids
-//      Map<String, Object> esResult = getUserInfo(emails);
-//      if (esResult.get(JsonKey.CONTENT) != null
-//          && !((List) esResult.get(JsonKey.CONTENT)).isEmpty()) {
-//        List<Map<String, Object>> esSource =
-//            (List<Map<String, Object>>) esResult.get(JsonKey.CONTENT);
-//        for (Map<String, Object> m : esSource) {
-//          tempUserIdList.add((String) m.get(JsonKey.ID));
-//          name = (String) m.get(JsonKey.FIRST_NAME);
-//        }
-//      }
-//    }
+    fetch user id om basis of email provided
+   if (!emails.isEmpty()) {
+     // fetch usr info on basis of email ids
+     Map<String, Object> esResult = getUserInfo(emails);
+     if (esResult.get(JsonKey.CONTENT) != null
+         && !((List) esResult.get(JsonKey.CONTENT)).isEmpty()) {
+       List<Map<String, Object>> esSource =
+           (List<Map<String, Object>>) esResult.get(JsonKey.CONTENT);
+       for (Map<String, Object> m : esSource) {
+         tempUserIdList.add((String) m.get(JsonKey.ID));
+         name = (String) m.get(JsonKey.FIRST_NAME);
+       }
+     }
+   }
 
     name = (String) request.get(JsonKey.FIRST_NAME);
     if (emailIds.size() > 1) {
@@ -128,59 +128,59 @@ public class EmailServiceActor extends BaseActor {
     
     String[] recipients = emailIds.toArray(new String[emailIds.size()]);
     ProjectLogger.log("Sending email to " + name + " | org: " + orgName + " | recipients: " + recipients, LoggerEnum.INFO.name());
-//    SendMail.sendMail(recipients,
-//        (String) request.get(JsonKey.SUBJECT),
-//        null,
-//        ProjectUtil.getTemplate(request));
+    SendMail.sendMail(recipients,
+       (String) request.get(JsonKey.SUBJECT),
+       null,
+       ProjectUtil.getTemplate(request));
     Response res = new Response();
     res.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(res, self());
   }
 
-//  private String getOrgName(String usrId) {
-//    String orgName = "";
-//    Map<String, Object> esUserResult =
-//        ElasticSearchUtil.getDataByIdentifier(
-//            EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), usrId);
-//    if (null != esUserResult) {
-//      String rootOrgId = (String) esUserResult.get(JsonKey.ROOT_ORG_ID);
-//      if (!(StringUtils.isBlank(rootOrgId))) {
-//        Map<String, Object> esOrgResult =
-//            ElasticSearchUtil.getDataByIdentifier(
-//                EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), rootOrgId);
-//        if (null != esOrgResult) {
-//          orgName =
-//              (esOrgResult.get(JsonKey.ORG_NAME) != null
-//                  ? (String) esOrgResult.get(JsonKey.ORGANISATION_NAME)
-//                  : "");
-//        }
-//      }
-//    }
-//    return orgName;
-//  }
+ private String getOrgName(String usrId) {
+   String orgName = "";
+   Map<String, Object> esUserResult =
+       ElasticSearchUtil.getDataByIdentifier(
+           EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), usrId);
+   if (null != esUserResult) {
+     String rootOrgId = (String) esUserResult.get(JsonKey.ROOT_ORG_ID);
+     if (!(StringUtils.isBlank(rootOrgId))) {
+       Map<String, Object> esOrgResult =
+           ElasticSearchUtil.getDataByIdentifier(
+               EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), rootOrgId);
+       if (null != esOrgResult) {
+         orgName =
+             (esOrgResult.get(JsonKey.ORG_NAME) != null
+                 ? (String) esOrgResult.get(JsonKey.ORGANISATION_NAME)
+                 : "");
+       }
+     }
+   }
+   return orgName;
+ }
 
-//  private Map<String, Object> getUserInfo(List<String> emails) {
-//    SearchDTO searchDTO = new SearchDTO();
-//    Map<String, Object> additionalProperties = new HashMap<>();
-//    additionalProperties.put(
-//        JsonKey.ENC_EMAIL,
-//        emails
-//            .stream()
-//            .map(
-//                i -> {
-//                  String encryptedMail = null;
-//                  try {
-//                    encryptedMail = encryptionService.encryptData(i);
-//                  } catch (Exception e) {
-//                    ProjectLogger.log(e.getMessage(), e);
-//                  }
-//                  return encryptedMail;
-//                })
-//            .collect(Collectors.toList()));
-//    searchDTO.addAdditionalProperty(JsonKey.FILTERS, additionalProperties);
-//    return ElasticSearchUtil.complexSearch(
-//        searchDTO, EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
-//  }
+ private Map<String, Object> getUserInfo(List<String> emails) {
+   SearchDTO searchDTO = new SearchDTO();
+   Map<String, Object> additionalProperties = new HashMap<>();
+   additionalProperties.put(
+       JsonKey.ENC_EMAIL,
+       emails
+           .stream()
+           .map(
+               i -> {
+                 String encryptedMail = null;
+                 try {
+                   encryptedMail = encryptionService.encryptData(i);
+                 } catch (Exception e) {
+                   ProjectLogger.log(e.getMessage(), e);
+                 }
+                 return encryptedMail;
+               })
+           .collect(Collectors.toList()));
+   searchDTO.addAdditionalProperty(JsonKey.FILTERS, additionalProperties);
+   return ElasticSearchUtil.complexSearch(
+       searchDTO, EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+ }
 
   private void checkEmailValidity(String[] emails) {
     for (String email : emails) {

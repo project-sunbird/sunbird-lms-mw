@@ -101,9 +101,7 @@ public class BackgroundJobManager extends BaseActor {
     } else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue())) {
     		ProjectLogger.log("Update user info to ES called.", LoggerEnum.INFO.name());
       updateUserInfoToEs(request);
-    } 
-    
-    /*else if (operation.equalsIgnoreCase(
+    } else if (operation.equalsIgnoreCase(
         ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue())) {
       insertUserCourseInfoToEs(request);
     } else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_COUNT.getValue())) {
@@ -139,7 +137,7 @@ public class BackgroundJobManager extends BaseActor {
               ResponseCode.invalidOperationName.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
       ProjectLogger.log("UnSupported operation in Background Job Manager", exception);
-    }*/
+    }
   }
 
   /** @param actorMessage */

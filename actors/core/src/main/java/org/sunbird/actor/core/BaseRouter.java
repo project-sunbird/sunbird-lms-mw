@@ -70,15 +70,9 @@ public abstract class BaseRouter extends BaseActor {
   private void createActor(
       ActorContext context, Class<? extends BaseActor> actor, String[] operations, String dispatcher) {
     if (null != operations && operations.length > 0) {
-    	  Props props = null;
-    	  if (Arrays.asList(operations).contains("emailService"))
-    		  props =Props.create(actor).withDispatcher("mail-dispatcher");
-    	  else 
-    		  props =Props.create(actor).withDispatcher(dispatcher);
-    	
       ActorRef actorRef =
           context.actorOf(
-              FromConfig.getInstance().props(props), actor.getSimpleName());
+              FromConfig.getInstance().props(Props.create(actor).withDispatcher(dispatcher)), actor.getSimpleName());
       for (String operation : operations) {
         String parentName = self().path().name();
         cacheActor(getKey(parentName, operation), actorRef);

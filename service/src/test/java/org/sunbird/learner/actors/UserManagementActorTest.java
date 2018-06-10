@@ -92,7 +92,7 @@ public class UserManagementActorTest {
     eduDB = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
     orgDB = Util.dbInfoMap.get(JsonKey.ORG_DB);
     userOrgDB = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
-    DataCacheHandler.load();
+    new DataCacheHandler().run();
   }
 
   @Test

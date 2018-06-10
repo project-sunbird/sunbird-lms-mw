@@ -7,24 +7,24 @@ package org.sunbird.learner.util;
  */
 public final class ExecutorManager {
 
-//  private static final int MAX_EXECUTOR_THREAD = 10;
-//  /*
-//   * service ScheduledExecutorService object
-//   */
-//  private static ScheduledExecutorService service = null;
-//
-//  private ExecutorManager() {}
-//
-//  static {
-//    service = Executors.newScheduledThreadPool(MAX_EXECUTOR_THREAD);
-//  }
-//
-//  /**
-//   * This method will send executor service object.
-//   *
-//   * @return
-//   */
-//  public static ScheduledExecutorService getExecutorService() {
-//    return service;
-//  }
+ private static final int MAX_EXECUTOR_THREAD = 2;
+ /*
+  * service ScheduledExecutorService object
+  */
+ private static ScheduledExecutorService service = null;
+
+ private ExecutorManager() {}
+
+ static {
+   service = Executors.newScheduledThreadPool(MAX_EXECUTOR_THREAD);
+ }
+
+ /**
+  * This method will send executor service object.
+  *
+  * @return
+  */
+ public static ScheduledExecutorService getExecutorService() {
+   return service;
+ }
 }

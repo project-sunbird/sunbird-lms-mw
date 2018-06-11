@@ -350,6 +350,7 @@ public class BadgrServiceImpl implements BadgingService {
       String badgeId = (String) requestData.get(BadgingJsonKey.BADGE_ID);
 
       Map<String, String> headers = BadgingUtil.getBadgrHeaders();
+      // Using dummy issuer ID (rather than getting it from DB) as badgr ignores it anyway.
       String badgrUrl = BadgingUtil.getBadgeClassUrl(BadgingJsonKey.ISSUER_ID, badgeId);
 
       HttpUtilResponse httpUtilResponse = HttpUtil.sendDeleteRequest(headers, badgrUrl);

@@ -6,7 +6,6 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LocationActorOperation;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -17,8 +16,9 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.Util;
 import org.sunbird.location.dao.LocationDao;
 import org.sunbird.location.dao.impl.LocationDaoFactory;
-import org.sunbird.location.model.Location;
 import org.sunbird.location.util.LocationRequestValidator;
+import org.sunbird.models.location.Location;
+import org.sunbird.models.location.apirequest.UpsertLocationRequest;
 
 /**
  * This class will handle all location related request.
@@ -41,10 +41,10 @@ public class LocationActor extends BaseLocationActor {
     String operation = request.getOperation();
     switch (operation) {
       case "createLocation":
-        createLocation(request);
+        createLocation(ProjectUtil.convertToRequestPojo(request, UpsertLocationRequest.class));
         break;
       case "updateLocation":
-        updateLocation(request);
+        updateLocation(ProjectUtil.convertToRequestPojo(request, UpsertLocationRequest.class));
         break;
       case "searchLocation":
         searchLocation(request);
@@ -57,34 +57,34 @@ public class LocationActor extends BaseLocationActor {
     }
   }
 
-  private void createLocation(Request request) {
+  private void createLocation(UpsertLocationRequest locationRequest) {
     try {
-      Map<String, Object> data = request.getRequest();
-      validateUpsertLocnReq(data, JsonKey.CREATE);
+      validateUpsertLocnReq(locationRequest, JsonKey.CREATE);
       // put unique identifier in request for Id
       String id = ProjectUtil.generateUniqueId();
-      data.put(JsonKey.ID, id);
-      Location location = mapper.convertValue(data, Location.class);
+      locationRequest.setId(id);
+      Location location = mapper.convertValue(locationRequest, Location.class);
       Response response = locationDao.create(location);
       sender().tell(response, self());
       ProjectLogger.log("Insert location data to ES");
-      saveDataToES(data, JsonKey.INSERT);
-      generateTelemetryForLocation(id, data, JsonKey.CREATE);
+      saveDataToES(mapper.convertValue(location, Map.class), JsonKey.INSERT);
+      generateTelemetryForLocation(id, mapper.convertValue(location, Map.class), JsonKey.CREATE);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       sender().tell(ex, self());
     }
   }
 
-  private void updateLocation(Request request) {
+  private void updateLocation(UpsertLocationRequest locationRequest) {
     try {
-      Map<String, Object> data = request.getRequest();
-      validateUpsertLocnReq(data, JsonKey.UPDATE);
-      Response response = locationDao.update(mapper.convertValue(data, Location.class));
+      validateUpsertLocnReq(locationRequest, JsonKey.UPDATE);
+      Location location = mapper.convertValue(locationRequest, Location.class);
+      Response response = locationDao.update(location);
       sender().tell(response, self());
       ProjectLogger.log("Update location data to ES");
-      saveDataToES(data, JsonKey.UPDATE);
-      generateTelemetryForLocation((String) data.get(JsonKey.ID), data, JsonKey.UPDATE);
+      saveDataToES(mapper.convertValue(location, Map.class), JsonKey.UPDATE);
+      generateTelemetryForLocation(
+          location.getId(), mapper.convertValue(location, Map.class), JsonKey.UPDATE);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       sender().tell(ex, self());
@@ -142,13 +142,10 @@ public class LocationActor extends BaseLocationActor {
     }
   }
 
-  private void validateUpsertLocnReq(Map<String, Object> data, String operation) {
-    if (StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.LOCATION_TYPE))) {
-      LocationRequestValidator.isValidLocationType(
-          (String) data.get(GeoLocationJsonKey.LOCATION_TYPE));
+  private void validateUpsertLocnReq(UpsertLocationRequest locationRequest, String operation) {
+    if (StringUtils.isNotEmpty(locationRequest.getType())) {
+      LocationRequestValidator.isValidLocationType(locationRequest.getType());
     }
-    LocationRequestValidator.isValidParentIdAndCode(data, operation);
-    // once parentCode validated remove from req as we are not saving this to our db
-    data.remove(GeoLocationJsonKey.PARENT_CODE);
+    LocationRequestValidator.isValidParentIdAndCode(locationRequest, operation);
   }
 }

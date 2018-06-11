@@ -774,7 +774,8 @@ public final class Util {
 
       reqString = mapper.writeValueAsString(map);
       ProjectLogger.log(
-          "Channel registration request data = " + reqString, LoggerEnum.DEBUG.name());
+          "Util:registerChannel: Channel registration request data = " + reqString,
+          LoggerEnum.DEBUG.name());
       regStatus =
           HttpUtil.sendPostRequest(
               (ekStepBaseUrl

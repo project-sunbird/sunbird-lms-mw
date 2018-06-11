@@ -768,12 +768,14 @@ public final class Util {
       channelMap.put(JsonKey.CODE, req.get(JsonKey.HASHTAGID));
       String defaultFramework = (String) req.get(JsonKey.DEFAULT_FRAMEWORK);
       if (StringUtils.isNotBlank(defaultFramework))
-    	  	channelMap.put(JsonKey.DEFAULT_FRAMEWORK, defaultFramework);
+        channelMap.put(JsonKey.DEFAULT_FRAMEWORK, defaultFramework);
       reqMap.put(JsonKey.CHANNEL, channelMap);
       map.put(JsonKey.REQUEST, reqMap);
 
       reqString = mapper.writeValueAsString(map);
-      System.out.println("Register channel: " + reqString);
+      ProjectLogger.log(
+          "Util:registerChannel: Channel registration request data = " + reqString,
+          LoggerEnum.DEBUG.name());
       regStatus =
           HttpUtil.sendPostRequest(
               (ekStepBaseUrl

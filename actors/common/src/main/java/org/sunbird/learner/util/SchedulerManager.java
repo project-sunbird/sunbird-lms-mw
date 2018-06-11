@@ -11,10 +11,10 @@ public class SchedulerManager {
 
   private static final int PAGE_DATA_TTL = 4;
 
-  /*
-   * service ScheduledExecutorService object
-   */
-  public static ScheduledExecutorService service = ExecutorManager.getExecutorService();
+ /*
+  * service ScheduledExecutorService object
+  */
+ public static ScheduledExecutorService service = ExecutorManager.getExecutorService();
 
   /** all scheduler job will be configure here. */
   public static void schedule() {

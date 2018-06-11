@@ -67,6 +67,17 @@ public class BackgroundJobManager extends BaseActor {
 
   private static Map<String, String> headerMap = new HashMap<>();
   private static Util.DbInfo dbInfo = null;
+  private EncryptionService service =
+	        org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
+	            .getEncryptionServiceInstance(null);
+  private DecryptionService decService =
+	        org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
+	            .getDecryptionServiceInstance(null);
+  private DataMaskingService maskingService =
+          org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(
+              null);
+  
+  private ObjectMapper mapper = new ObjectMapper();
 
   static {
     headerMap.put("content-type", "application/json");
@@ -78,6 +89,7 @@ public class BackgroundJobManager extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
+	  ProjectLogger.log("BackgroundJobManager received action: " + request.getOperation(), LoggerEnum.INFO.name());
     ProjectLogger.log("BackgroundJobManager  onReceive called");
     if (dbInfo == null) {
       dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_MANAGEMENT_DB);
@@ -85,8 +97,9 @@ public class BackgroundJobManager extends BaseActor {
     String operation = request.getOperation();
     ProjectLogger.log("Operation name is ==" + operation);
     if (operation.equalsIgnoreCase(ActorOperations.PUBLISH_COURSE.getValue())) {
-      manageBackgroundJob(request);
+      //manageBackgroundJob(request);
     } else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue())) {
+    		ProjectLogger.log("Update user info to ES called.", LoggerEnum.INFO.name());
       updateUserInfoToEs(request);
     } else if (operation.equalsIgnoreCase(
         ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue())) {
@@ -321,7 +334,6 @@ public class BackgroundJobManager extends BaseActor {
         esMap = orgList.get(0);
         String contactDetails = (String) esMap.get(JsonKey.CONTACT_DETAILS);
         if (!StringUtils.isBlank(contactDetails)) {
-          ObjectMapper mapper = new ObjectMapper();
           Object[] arr;
           try {
             arr = mapper.readValue(contactDetails, Object[].class);
@@ -386,12 +398,6 @@ public class BackgroundJobManager extends BaseActor {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
     Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
-    EncryptionService service =
-        org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
-            .getEncryptionServiceInstance(null);
-    DecryptionService decService =
-        org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
-            .getDecryptionServiceInstance(null);
     Response response = null;
     List<Map<String, Object>> list = null;
     try {
@@ -548,9 +554,6 @@ public class BackgroundJobManager extends BaseActor {
           ((List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE)).get(0);
 
       // save masked email and phone number
-      DataMaskingService maskingService =
-          org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(
-              null);
       String phone = (String) map.get(JsonKey.PHONE);
       String email = (String) map.get(JsonKey.EMAIL);
 
@@ -712,7 +715,6 @@ public class BackgroundJobManager extends BaseActor {
   @SuppressWarnings("unchecked")
   private Map<String, Object> getContentDetails(String content) {
     Map<String, Object> map = new HashMap<>();
-    ObjectMapper mapper = new ObjectMapper();
     try {
       JSONObject object = new JSONObject(content);
       JSONObject resultObj = object.getJSONObject(JsonKey.RESULT);

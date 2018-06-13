@@ -55,7 +55,7 @@ public class ContentSearchUtil {
         HttpUtil.sendPostRequest(contentSearchURL, body, getUpdatedHeaders(headerMap));
     ProjectLogger.log(
         "ContentSearchUtil:searchContent section complete response data " + httpResponse,
-        LoggerEnum.INFO.name());
+        LoggerEnum.DEBUG.name());
     JSONObject jObject = new JSONObject(httpResponse);
     String resmsgId = (String) jObject.getJSONObject("params").get("resmsgid");
     String apiId = jObject.getString("id");

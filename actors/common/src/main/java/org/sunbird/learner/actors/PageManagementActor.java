@@ -507,7 +507,7 @@ public class PageManagementActor extends BaseActor {
     Map<String, Object> result = ContentSearchUtil.searchContent(query, headers);
     ProjectLogger.log(
         "PageManagementActor:getContentData data received for page api section " + result,
-        LoggerEnum.INFO.name());
+        LoggerEnum.DEBUG.name());
     if (null != result && !result.isEmpty()) {
       section.putAll(result);
       section.remove(JsonKey.PARAMS);

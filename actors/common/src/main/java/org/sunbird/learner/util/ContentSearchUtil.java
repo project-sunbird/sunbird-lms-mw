@@ -19,6 +19,8 @@ import org.json.JSONObject;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.RestUtil;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -51,6 +53,9 @@ public class ContentSearchUtil {
       throws Exception {
     String httpResponse =
         HttpUtil.sendPostRequest(contentSearchURL, body, getUpdatedHeaders(headerMap));
+    ProjectLogger.log(
+        "ContentSearchUtil:searchContent section complete response data " + httpResponse,
+        LoggerEnum.INFO.name());
     JSONObject jObject = new JSONObject(httpResponse);
     String resmsgId = (String) jObject.getJSONObject("params").get("resmsgid");
     String apiId = jObject.getString("id");
@@ -70,6 +75,9 @@ public class ContentSearchUtil {
         response.put(entry.getKey(), entry.getValue());
       }
     }
+    ProjectLogger.log(
+        "ContentSearchUtil:searchContent section data size in response " + response.size(),
+        LoggerEnum.INFO.name());
     return response;
   }
 

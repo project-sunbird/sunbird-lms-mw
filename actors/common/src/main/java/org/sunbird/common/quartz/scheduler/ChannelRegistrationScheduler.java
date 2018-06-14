@@ -24,7 +24,7 @@ public class ChannelRegistrationScheduler extends BaseJob {
   @Override
   public void execute(JobExecutionContext ctx) throws JobExecutionException {
     ProjectLogger.log(
-        "Running channel registration Scheduler Job at: "
+        "ChannelRegistrationScheduler:execute: Running channel registration Scheduler Job at: "
             + Calendar.getInstance().getTime()
             + " triggered by: "
             + ctx.getJobDetail().toString(),

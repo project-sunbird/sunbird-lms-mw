@@ -23,8 +23,8 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.TelemetryEvents;
 import org.sunbird.telemetry.util.TelemetryUtil;
-import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 
 /**
  * This class will call the EKstep get content api to know the status of course published. once

@@ -52,6 +52,8 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
   public Map<String, String> getHeaders() {
     Map<String, String> headers = new HashMap<>();
     headers.put(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+    headers.put(
+        HttpHeaders.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
     return headers;
   }
 
@@ -64,7 +66,7 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
    */
   public String getTelemetryUrl() {
     String telemetryBaseUrl =
-        ProjectUtil.getConfigValue(JsonKey.SUNBIRD_TELEMETRY_BASE_URL)
+        ProjectUtil.getConfigValue(JsonKey.EKSTEP_BASE_URL)
             + PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_TELEMETRY_API_PATH);
     ProjectLogger.log(
         "SunbirdTelemetryEventConsumer:getTelemetryUrl: url = " + telemetryBaseUrl,
@@ -79,7 +81,7 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
    * @return Telemetry request structure.
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
-  public Map<String, Object> getTelemetryRequest(Request request) {
+  public TelemetryV3Request getTelemetryRequest(Request request) {
     TelemetryV3Request telemetryV3Request = new TelemetryV3Request();
     if (request.getRequest().get(JsonKey.ETS) != null
         && request.getRequest().get(JsonKey.ETS) instanceof BigInteger) {
@@ -95,8 +97,8 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
           "SunbirdTelemetryEventConsumer:getTelemetryRequest: Events count = " + events.size(),
           LoggerEnum.INFO.name());
     }
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.REQUEST, telemetryV3Request);
-    return map;
+    // Map<String, Object> map = new HashMap<>();
+    // map.put(JsonKey.REQUEST, telemetryV3Request);
+    return telemetryV3Request;
   }
 }

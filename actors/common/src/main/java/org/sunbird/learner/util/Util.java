@@ -69,6 +69,7 @@ public final class Util {
   public static final Map<String, Object> auditLogUrlMap = new HashMap<>();
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static ObjectMapper mapper = new ObjectMapper();
 
   static {
     loadPropertiesFile();
@@ -598,7 +599,6 @@ public final class Util {
     String response = "";
     JSONObject data;
     JSONObject jObject;
-    ObjectMapper mapper = new ObjectMapper();
     try {
       String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
       if (StringUtils.isBlank(baseSearchUrl)) {
@@ -766,12 +766,16 @@ public final class Util {
       channelMap.put(JsonKey.NAME, req.get(JsonKey.CHANNEL));
       channelMap.put(JsonKey.DESCRIPTION, req.get(JsonKey.DESCRIPTION));
       channelMap.put(JsonKey.CODE, req.get(JsonKey.HASHTAGID));
+      String defaultFramework = (String) req.get(JsonKey.DEFAULT_FRAMEWORK);
+      if (StringUtils.isNotBlank(defaultFramework))
+        channelMap.put(JsonKey.DEFAULT_FRAMEWORK, defaultFramework);
       reqMap.put(JsonKey.CHANNEL, channelMap);
       map.put(JsonKey.REQUEST, reqMap);
 
-      ObjectMapper mapper = new ObjectMapper();
       reqString = mapper.writeValueAsString(map);
-
+      ProjectLogger.log(
+          "Util:registerChannel: Channel registration request data = " + reqString,
+          LoggerEnum.DEBUG.name());
       regStatus =
           HttpUtil.sendPostRequest(
               (ekStepBaseUrl
@@ -818,7 +822,6 @@ public final class Util {
       reqMap.put(JsonKey.CHANNEL, channelMap);
       map.put(JsonKey.REQUEST, reqMap);
 
-      ObjectMapper mapper = new ObjectMapper();
       reqString = mapper.writeValueAsString(map);
 
       regStatus =
@@ -990,7 +993,6 @@ public final class Util {
    */
   private static List<User> searchUser(Map<String, Object> searchQueryMap) {
     List<User> userList = new ArrayList<>();
-    ObjectMapper mapper = new ObjectMapper();
     Map<String, Object> searchRequestMap = new HashMap<>();
     searchRequestMap.put(JsonKey.FILTERS, searchQueryMap);
     SearchDTO searchDto = Util.createSearchDto(searchRequestMap);

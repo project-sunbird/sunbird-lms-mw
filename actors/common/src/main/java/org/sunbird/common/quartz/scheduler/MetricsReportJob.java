@@ -22,8 +22,8 @@ import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.TelemetryEvents;
 import org.sunbird.telemetry.util.TelemetryUtil;
-import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 
 /** Created by arvind on 30/8/17. */
 public class MetricsReportJob extends BaseJob {
@@ -34,7 +34,7 @@ public class MetricsReportJob extends BaseJob {
 
   @Override
   public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
-    ProjectLogger.log("METRICS JOB TRIGGERED #############-----------");
+    ProjectLogger.log("MetricsReportJob:execute: Metrics report job trigerred.");
     Util.initializeContextForSchedulerJob(
         JsonKey.SYSTEM, jobExecutionContext.getFireInstanceId(), JsonKey.SCHEDULER_JOB);
     Map<String, Object> logInfo =

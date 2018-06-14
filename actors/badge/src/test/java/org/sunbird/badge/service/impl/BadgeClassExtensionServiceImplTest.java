@@ -188,7 +188,9 @@ public class BadgeClassExtensionServiceImplTest {
 
   @Test
   public void testDeleteSuccess() {
-    PowerMockito.when(mockDBService.deleteRecord(Mockito.any(), Mockito.any(), Mockito.any()))
+    PowerMockito.when(
+            mockDBService.deleteRecord(
+                Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(new Response());
 
     boolean thrown = false;

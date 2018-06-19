@@ -53,7 +53,7 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
     Map<String, String> headers = new HashMap<>();
     headers.put(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
     headers.put(
-        HttpHeaders.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
+        HttpHeaders.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.SUNBIRD_AUTHORIZATION));
     return headers;
   }
 
@@ -66,7 +66,7 @@ public class SunbirdTelemetryEventConsumer implements EventHandler<Request> {
    */
   public String getTelemetryUrl() {
     String telemetryBaseUrl =
-        ProjectUtil.getConfigValue(JsonKey.EKSTEP_BASE_URL)
+        ProjectUtil.getConfigValue(JsonKey.SUNBIRD_TELEMETRY_BASE_URL)
             + PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_TELEMETRY_API_PATH);
     ProjectLogger.log(
         "SunbirdTelemetryEventConsumer:getTelemetryUrl: url = " + telemetryBaseUrl,

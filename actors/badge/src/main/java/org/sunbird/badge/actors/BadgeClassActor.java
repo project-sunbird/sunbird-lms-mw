@@ -33,7 +33,7 @@ public class BadgeClassActor extends BaseActor {
   }
 
   @Override
-  public void onReceive(Request request) {
+  public void onReceive(Request request) throws Throwable {
     ProjectLogger.log("BadgeClassActor onReceive called");
     String operation = request.getOperation();
 

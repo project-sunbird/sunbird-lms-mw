@@ -14,7 +14,7 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.location.dao.LocationDao;
-import org.sunbird.location.model.Location;
+import org.sunbird.models.location.Location;
 
 /** @author Amit Kumar */
 public class LocationDaoImpl implements LocationDao {

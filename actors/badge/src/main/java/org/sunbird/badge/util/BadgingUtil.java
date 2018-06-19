@@ -223,13 +223,13 @@ public class BadgingUtil {
             ResponseCode.CLIENT_ERROR.getResponseCode());
       case 401:
         return new ProjectCommonException(
-            ResponseCode.unAuthorised.getErrorCode(),
-            ResponseCode.unAuthorised.getErrorMessage(),
+            ResponseCode.unAuthorized.getErrorCode(),
+            ResponseCode.unAuthorized.getErrorMessage(),
             ResponseCode.UNAUTHORIZED.getResponseCode());
       case 403:
         return new ProjectCommonException(
-            ResponseCode.unAuthorised.getErrorCode(),
-            ResponseCode.unAuthorised.getErrorMessage(),
+            ResponseCode.unAuthorized.getErrorCode(),
+            ResponseCode.unAuthorized.getErrorMessage(),
             ResponseCode.UNAUTHORIZED.getResponseCode());
       case 404:
         return new ProjectCommonException(
@@ -255,9 +255,9 @@ public class BadgingUtil {
       String specificErrorMsg;
       switch (statusCode) {
         case 400:
-          customError = ResponseCode.invalidData;
+          customError = ResponseCode.customClientError;
           specificErrorMsg =
-              errorMsg != null ? errorMsg : ResponseCode.invalidData.getErrorMessage();
+              errorMsg != null ? errorMsg : ResponseCode.customClientError.getErrorMessage();
           break;
         case 404:
           customError = ResponseCode.customResourceNotFound;
@@ -270,6 +270,12 @@ public class BadgingUtil {
               errorMsg != null ? errorMsg : ResponseCode.internalError.getErrorMessage();
           break;
       }
+
+      if (StringUtils.isNotBlank(specificErrorMsg)) {
+        // Remove start and end double quotes (if any) from error message
+        specificErrorMsg = specificErrorMsg.replaceAll("^\"|\"$", "");
+      }
+
       throw new ProjectCommonException(
           customError.getErrorCode(), customError.getErrorMessage(), statusCode, specificErrorMsg);
     }

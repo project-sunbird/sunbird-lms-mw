@@ -25,7 +25,7 @@ import static org.junit.Assert.assertNotEquals;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({HttpUtil.class, TelemetryUtil.class, BadgrServiceImpl.class})
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
-public class BadgrServiceImplBadgeAssertion {
+public class BadgrServiceImplBadgeAssertionTest {
     private BadgrServiceImpl badgrServiceImpl;
 
     private Request request;
@@ -44,7 +44,6 @@ public class BadgrServiceImplBadgeAssertion {
         PowerMockito.mockStatic(HttpUtil.class);
 
         PowerMockito.mockStatic(TelemetryUtil.class);
-        PowerMockito.mockStatic(BadgrServiceImpl.class);
         PowerMockito.doNothing()
                 .when(
                         TelemetryUtil.class,
@@ -52,6 +51,8 @@ public class BadgrServiceImplBadgeAssertion {
                         Mockito.anyMap(),
                         Mockito.anyMap(),
                         Mockito.anyList());
+
+        PowerMockito.mockStatic(BadgrServiceImpl.class);
 
         badgrServiceImpl = new BadgrServiceImpl();
         request = new Request();

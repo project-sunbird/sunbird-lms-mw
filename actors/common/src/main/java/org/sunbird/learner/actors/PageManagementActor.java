@@ -1,6 +1,5 @@
 package org.sunbird.learner.actors;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -9,7 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -29,6 +30,14 @@ import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
+
+import akka.dispatch.Futures;
+import akka.dispatch.Mapper;
+import akka.pattern.Patterns;
+import scala.concurrent.Future;
 
 /**
  * This actor will handle page management operation .
@@ -61,7 +70,7 @@ public class PageManagementActor extends BaseActor {
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.PAGE);
-    // set request id fto thread loacl...
+
     ExecutionContext.setRequestId(request.getRequestId());
     if (request.getOperation().equalsIgnoreCase(ActorOperations.CREATE_PAGE.getValue())) {
       createPage(request);
@@ -225,7 +234,7 @@ public class PageManagementActor extends BaseActor {
   private void getPageData(Request actorMessage) throws Exception {
     ProjectLogger.log("Inside getPageData method", LoggerEnum.INFO);
     String sectionQuery = null;
-    List<Map<String, Object>> sectionList = new ArrayList<>();
+//    List<Map<String, Object>> sectionList = new ArrayList<>();
     Map<String, Object> filterMap = new HashMap<>();
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.PAGE);
     String pageName = (String) req.get(JsonKey.PAGE_NAME);
@@ -262,31 +271,33 @@ public class PageManagementActor extends BaseActor {
         sectionQuery = (String) pageMap.get(JsonKey.APP_MAP);
       }
     }
-    Map<String, Object> responseMap = new HashMap<>();
-
-    try {
-      Object[] arr = mapper.readValue(sectionQuery, Object[].class);
-
-      for (Object obj : arr) {
-        Map<String, Object> sectionMap = (Map<String, Object>) obj;
-        Map<String, Object> sectionData =
-            new HashMap<>(DataCacheHandler.getSectionMap().get(sectionMap.get(JsonKey.ID)));
-        getContentData(sectionData, reqFilters, headers, filterMap);
-        sectionData.put(JsonKey.GROUP, sectionMap.get(JsonKey.GROUP));
-        sectionData.put(JsonKey.INDEX, sectionMap.get(JsonKey.INDEX));
-        removeUnwantedData(sectionData, "getPageData");
-        sectionList.add(sectionData);
-      }
-
-      responseMap.put(JsonKey.NAME, pageMap.get(JsonKey.NAME));
-      responseMap.put(JsonKey.ID, pageMap.get(JsonKey.ID));
-      responseMap.put(JsonKey.SECTIONS, sectionList);
-    } catch (IOException e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-    Response pageResponse = new Response();
-    pageResponse.put(JsonKey.RESPONSE, responseMap);
-    sender().tell(pageResponse, self());
+    
+	Object[] arr = mapper.readValue(sectionQuery, Object[].class);
+	List<Future<Map<String, Object>>> sectionList = new ArrayList<>();
+	for (Object obj : arr) {
+		Map<String, Object> sectionMap = (Map<String, Object>) obj;
+		Map<String, Object> sectionData = new HashMap<>(
+				DataCacheHandler.getSectionMap().get(sectionMap.get(JsonKey.ID)));
+		Future<Map<String, Object>> contentFuture = getContentData(sectionData, reqFilters, headers, filterMap,
+				sectionMap.get(JsonKey.GROUP), sectionMap.get(JsonKey.INDEX));
+		sectionList.add(contentFuture);
+	}
+	
+	Future<Iterable<Map<String, Object>>> sctionsFuture = Futures.sequence(sectionList, getContext().dispatcher());
+	Future<Response> response = sctionsFuture.map(new Mapper<Iterable<Map<String, Object>>, Response>() {
+		@Override
+		public Response apply(Iterable<Map<String, Object>> sections) {
+			ArrayList<Map<String, Object>> sectionList = Lists.newArrayList(sections);
+			Map<String, Object> result = new HashMap<>();
+			result.put(JsonKey.NAME, pageMap.get(JsonKey.NAME));
+			result.put(JsonKey.ID, pageMap.get(JsonKey.ID));
+			result.put(JsonKey.SECTIONS, sectionList);
+			Response response = new Response();
+			response.put(JsonKey.RESPONSE, result);
+			return response;
+		}
+	}, getContext().dispatcher());
+	Patterns.pipe(response, getContext().dispatcher()).to(sender());
   }
 
   @SuppressWarnings("unchecked")
@@ -465,18 +476,14 @@ public class PageManagementActor extends BaseActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void getContentData(
+  private Future<Map<String, Object>> getContentData(
       Map<String, Object> section,
       Map<String, Object> reqFilters,
       Map<String, String> headers,
-      Map<String, Object> filterMap)
+      Map<String, Object> filterMap, Object group, Object index)
       throws Exception {
     Map<String, Object> map = new HashMap<>();
-    try {
-      map = mapper.readValue((String) section.get(JsonKey.SEARCH_QUERY), HashMap.class);
-    } catch (IOException e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
+    map = mapper.readValue((String) section.get(JsonKey.SEARCH_QUERY), HashMap.class);
     Set<Entry<String, Object>> filterEntrySet = filterMap.entrySet();
     for (Entry<String, Object> entry : filterEntrySet) {
       if (!entry.getKey().equalsIgnoreCase(JsonKey.FILTERS)) {
@@ -492,11 +499,7 @@ public class PageManagementActor extends BaseActor {
     applyFilters(filters, reqFilters);
     String query = "";
 
-    try {
-      query = mapper.writeValueAsString(map);
-    } catch (Exception e) {
-      ProjectLogger.log("Exception occurred while parsing filters for Ekstep search query", e);
-    }
+    query = mapper.writeValueAsString(map);
     if (StringUtils.isBlank(query)) {
       query = (String) section.get(JsonKey.SEARCH_QUERY);
     }
@@ -504,20 +507,24 @@ public class PageManagementActor extends BaseActor {
         "search query after applying filter for ekstep for page data assemble api : " + query,
         LoggerEnum.INFO);
 
-    Map<String, Object> result = ContentSearchUtil.searchContent(query, headers);
-    ProjectLogger.log(
-        "PageManagementActor:getContentData data received for page api section " + result,
-        LoggerEnum.DEBUG.name());
-    if (null != result && !result.isEmpty()) {
-      section.putAll(result);
-      section.remove(JsonKey.PARAMS);
-      Map<String, Object> tempMap = (Map<String, Object>) result.get(JsonKey.PARAMS);
-      section.put(JsonKey.RES_MSG_ID, tempMap.get(JsonKey.RES_MSG_ID));
-      section.put(JsonKey.API_ID, tempMap.get(JsonKey.API_ID));
-    } else {
-      ProjectLogger.log(
-          "Search query result from ekstep is null or empty for query " + query, LoggerEnum.INFO);
-    }
+    Future<Map<String, Object>> result = ContentSearchUtil.searchContent(query, headers);
+    
+    return result.map(new Mapper<Map<String,Object>, Map<String, Object>>() {
+    		@Override
+    		public Map<String, Object> apply(Map<String, Object> result) {
+    			if (MapUtils.isNotEmpty(result)) {
+    				section.putAll(result);
+    				section.remove(JsonKey.PARAMS);
+    				Map<String, Object> tempMap = (Map<String, Object>) result.get(JsonKey.PARAMS);
+    				section.put(JsonKey.RES_MSG_ID, tempMap.get(JsonKey.RES_MSG_ID));
+    				section.put(JsonKey.API_ID, tempMap.get(JsonKey.API_ID));
+    				section.put(JsonKey.GROUP, group);
+    				section.put(JsonKey.INDEX, index);
+    				removeUnwantedData(section, "getPageData");
+    			}
+    			return section;
+    		}
+	}, getContext().dispatcher());
   }
 
   @SuppressWarnings("unchecked")

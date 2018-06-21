@@ -1728,8 +1728,8 @@ public class UserManagementActor extends BaseActor {
 
   private void sendSMS(Map<String, Object> userMap) {
     ProjectLogger.log("Inside Send SMS method:", LoggerEnum.INFO);
-    if (StringUtils.isBlank((String) userMap.get(JsonKey.EMAIL))
-        && !StringUtils.isBlank((String) userMap.get(JsonKey.PHONE))) {
+    // removing email check SB-4009
+    if (!StringUtils.isBlank((String) userMap.get(JsonKey.PHONE))) {
 
       UserUtility.decryptUserData(userMap);
       String name =

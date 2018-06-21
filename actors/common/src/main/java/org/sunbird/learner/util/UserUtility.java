@@ -143,7 +143,7 @@ public final class UserUtility {
           filterMap.put(JsonKey.ENC_EMAIL, service.encryptData((String) filterMap.get(key)));
           filterMap.remove(JsonKey.EMAIL);
         } else if (key.equalsIgnoreCase(JsonKey.PHONE)) {
-          filterMap.put(JsonKey.PHONE, service.encryptData((String) filterMap.get(key)));
+          filterMap.put(JsonKey.ENC_PHONE, service.encryptData((String) filterMap.get(key)));
           filterMap.remove(JsonKey.PHONE);
         } else {
           filterMap.put(key, service.encryptData((String) filterMap.get(key)));
@@ -170,7 +170,7 @@ public final class UserUtility {
   public static Map<String, Object> updateProfileVisibilityFields(
       Map<String, Object> profileVisibility, Map<String, Object> mapToBeUpdated) {
     for (String field : profileVisibility.keySet()) {
-      if ("dob".equalsIgnoreCase((String) field)) {
+      if ("dob".equalsIgnoreCase(field)) {
         mapToBeUpdated.put(field, null);
       } else if (profileVisibility.get(field) instanceof List) {
         mapToBeUpdated.put(field, new ArrayList<>());

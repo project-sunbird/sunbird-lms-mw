@@ -27,6 +27,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LocationActorOperation;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
@@ -112,7 +113,15 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             e);
       }
       if (((String) dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.USER)) {
+        long startTime = System.currentTimeMillis();
+        ProjectLogger.log("processUserInfo start at : " + startTime, LoggerEnum.INFO.name());
         processUserInfo(jsonList, processId, (String) dataMap.get(JsonKey.UPLOADED_BY));
+        ProjectLogger.log(
+            "total time taken to processUserInfo for processId  : "
+                + processId
+                + " : "
+                + (System.currentTimeMillis() - startTime),
+            LoggerEnum.INFO.name());
       } else if (((String) dataMap.get(JsonKey.OBJECT_TYPE))
           .equalsIgnoreCase(JsonKey.ORGANISATION)) {
         CopyOnWriteArrayList<Map<String, Object>> orgList = new CopyOnWriteArrayList<>(jsonList);

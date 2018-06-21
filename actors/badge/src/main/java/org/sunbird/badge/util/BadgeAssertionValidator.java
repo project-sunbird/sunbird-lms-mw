@@ -43,7 +43,7 @@ public class BadgeAssertionValidator {
         throw new ProjectCommonException(
             ResponseCode.commonAttributeMismatch.getErrorCode(),
             ResponseCode.commonAttributeMismatch.getErrorMessage(),
-            ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(),
+            ResponseCode.CLIENT_ERROR.getResponseCode(),
             JsonKey.ROOT_ORG,
             BadgingJsonKey.BADGE_TYPE_USER,
             BadgingJsonKey.BADGE);

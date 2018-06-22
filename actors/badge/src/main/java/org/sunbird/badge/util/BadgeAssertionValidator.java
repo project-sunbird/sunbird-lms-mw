@@ -11,11 +11,12 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingJsonKey;
+import org.sunbird.common.models.util.DbConstant;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.responsecode.ResponseCode;
 
 /**
- * Class to provide validation for Assertion of badge
+ * Class to provide badge assertion validation
  *
  * @author arvind
  */
@@ -24,8 +25,6 @@ public class BadgeAssertionValidator {
   private static BadgeClassExtensionService badgeClassExtensionService =
       new BadgeClassExtensionServiceImpl();
   private static CassandraOperation cassandraOperation;
-  private static final String USER_TABLE_NAME = "user";
-  private static final String KEYSPACE_NAME = "sunbird";
 
   /**
    * Method to check if recipient type is user then root org of user and badge should be same
@@ -34,25 +33,32 @@ public class BadgeAssertionValidator {
    * @param recipientType represents the type of recipient .Possible values are - user, content
    * @param badgeId represents the id of the badge
    */
-  public static void checkBadgeAndRecipientFromSameRootOrg(
-      String recipientId, String recipientType, String badgeId) {
+  public static void validateRootOrg(String recipientId, String recipientType, String badgeId) {
     if (JsonKey.USER.equalsIgnoreCase(recipientType)) {
-      String userRootOrg = getUserRootOrgId(recipientId);
-      String badgeRootOrg = getBadgeRootOrgId(badgeId);
-      if (!(StringUtils.equals(userRootOrg, badgeRootOrg))) {
-        throw new ProjectCommonException(
-            ResponseCode.commonAttributeMismatch.getErrorCode(),
-            ResponseCode.commonAttributeMismatch.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode(),
-            JsonKey.ROOT_ORG,
-            BadgingJsonKey.BADGE_TYPE_USER,
-            BadgingJsonKey.BADGE);
-      }
+      validateUserRootOrg(recipientId, badgeId);
+    }
+  }
+
+  private static void validateUserRootOrg(String userId, String badgeId) {
+    String userRootOrg = getUserRootOrgId(userId);
+    String badgeRootOrg = getBadgeRootOrgId(badgeId);
+    if (!(StringUtils.equals(userRootOrg, badgeRootOrg))) {
+      throw new ProjectCommonException(
+          ResponseCode.commonAttributeMismatch.getErrorCode(),
+          ResponseCode.commonAttributeMismatch.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode(),
+          JsonKey.ROOT_ORG,
+          BadgingJsonKey.BADGE_TYPE_USER,
+          BadgingJsonKey.BADGE);
     }
   }
 
   private static String getUserRootOrgId(String userId) {
-    Response response = cassandraOperation.getRecordById(KEYSPACE_NAME, USER_TABLE_NAME, userId);
+    Response response =
+        cassandraOperation.getRecordById(
+            DbConstant.SUNBIRD_KEYSPACE_NAME.getValue(),
+            DbConstant.USER_TABLE_NAME.getValue(),
+            userId);
     List<Map<String, Object>> userResponse =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
 

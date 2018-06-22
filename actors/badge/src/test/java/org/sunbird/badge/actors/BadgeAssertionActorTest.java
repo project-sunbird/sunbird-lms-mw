@@ -9,6 +9,7 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import java.util.HashMap;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -37,7 +38,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 public class BadgeAssertionActorTest {
 
   private static BadgrServiceImpl mockBadgingService;
-  private static ProjectCommonException resourceNotFoundException;
   private static BadgingService badgingService;
 
   private static String ASSERTION_ID = "badge_assertion_01";
@@ -86,6 +86,7 @@ public class BadgeAssertionActorTest {
 
     subject.tell(getBadgeAssertionRequest(), probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertNotNull(res);
   }
 
   @Test
@@ -115,8 +116,9 @@ public class BadgeAssertionActorTest {
             Mockito.anyString());
 
     subject.tell(getBadgeAssertionRequest(), probe.getRef());
-    ProjectCommonException res =
+    ProjectCommonException exception =
         probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    Assert.assertNotNull(exception);
   }
 
   private Request getBadgeAssertionRequest() {

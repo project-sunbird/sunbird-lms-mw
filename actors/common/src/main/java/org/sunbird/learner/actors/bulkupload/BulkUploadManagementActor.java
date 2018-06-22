@@ -345,12 +345,15 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     if (null != userList) {
-      if (null != PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_USER_DATA_SIZE)) {
+      if (StringUtils.isNotBlank(ProjectUtil.getConfigValue(JsonKey.BULK_UPLOAD_USER_DATA_SIZE))) {
         userDataSize =
             (Integer.parseInt(
-                PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_USER_DATA_SIZE)));
+                ProjectUtil.getConfigValue(JsonKey.BULK_UPLOAD_USER_DATA_SIZE).trim()));
 
-        ProjectLogger.log("bulk upload user data size read from config file " + userDataSize);
+        ProjectLogger.log(
+            "BulkUploadManagementActor:processBulkUserUpload : bulk upload user data size"
+                + userDataSize,
+            LoggerEnum.INFO.name());
       }
       validateFileSizeAgainstLineNumbers(userDataSize, userList.size());
       if (!userList.isEmpty()) {

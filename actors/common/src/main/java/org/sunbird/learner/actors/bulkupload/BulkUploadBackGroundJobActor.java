@@ -114,10 +114,12 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       }
       if (((String) dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.USER)) {
         long startTime = System.currentTimeMillis();
-        ProjectLogger.log("processUserInfo start at : " + startTime, LoggerEnum.INFO.name());
+        ProjectLogger.log(
+            "BulkUploadBackGroundJobActor:processUserInfo start at : " + startTime,
+            LoggerEnum.INFO.name());
         processUserInfo(jsonList, processId, (String) dataMap.get(JsonKey.UPLOADED_BY));
         ProjectLogger.log(
-            "total time taken to processUserInfo for processId  : "
+            "BulkUploadBackGroundJobActor:processUserInfo Total time taken : for processId  : "
                 + processId
                 + " : "
                 + (System.currentTimeMillis() - startTime),

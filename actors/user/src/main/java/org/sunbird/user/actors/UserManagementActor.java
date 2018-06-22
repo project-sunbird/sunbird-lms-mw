@@ -1708,7 +1708,9 @@ public class UserManagementActor extends BaseActor {
     emailTemplateMap.put(JsonKey.ROOT_ORG_ID, userMap.get(JsonKey.ROOT_ORG_ID));
     sendOnboardingMail(emailTemplateMap);
     ProjectLogger.log("calling Send SMS method:", LoggerEnum.INFO);
-    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PHONE))) sendSMS(userMap);
+    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PHONE))) {
+      sendSMS(userMap);
+    }
 
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       ProjectLogger.log("method call going to start for ES--.....");

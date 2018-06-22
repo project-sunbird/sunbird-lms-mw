@@ -79,7 +79,7 @@ public class BadgeAssertionActorTest {
     PowerMockito.doNothing()
         .when(
             BadgeAssertionValidator.class,
-            "checkBadgeAndRecipientFromSameRootOrg",
+            "validateRootOrg",
             Mockito.anyString(),
             Mockito.anyString(),
             Mockito.anyString());
@@ -103,14 +103,14 @@ public class BadgeAssertionActorTest {
         new ProjectCommonException(
             ResponseCode.commonAttributeMismatch.getErrorCode(),
             ResponseCode.commonAttributeMismatch.getErrorMessage(),
-            ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(),
+            ResponseCode.CLIENT_ERROR.getResponseCode(),
             JsonKey.ROOT_ORG,
             BadgingJsonKey.BADGE_TYPE_USER,
             BadgingJsonKey.BADGE);
     PowerMockito.doThrow(projectCommonException)
         .when(
             BadgeAssertionValidator.class,
-            "checkBadgeAndRecipientFromSameRootOrg",
+            "validateRootOrg",
             Mockito.anyString(),
             Mockito.anyString(),
             Mockito.anyString());
@@ -118,6 +118,8 @@ public class BadgeAssertionActorTest {
     subject.tell(getBadgeAssertionRequest(), probe.getRef());
     ProjectCommonException exception =
         probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    Assert.assertEquals(exception.getResponseCode(), ResponseCode.CLIENT_ERROR.getResponseCode());
+    Assert.assertEquals(exception.getCode(), ResponseCode.commonAttributeMismatch.getErrorCode());
     Assert.assertNotNull(exception);
   }
 

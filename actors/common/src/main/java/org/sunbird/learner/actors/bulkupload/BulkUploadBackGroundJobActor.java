@@ -119,7 +119,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             LoggerEnum.INFO.name());
         processUserInfo(jsonList, processId, (String) dataMap.get(JsonKey.UPLOADED_BY));
         ProjectLogger.log(
-            "total time taken by BulkUploadBackGroundJobActor:processUserInfo for processId  : "
+            "BulkUploadBackGroundJobActor:processUserInfo Total time taken : for processId  : "
                 + processId
                 + " : "
                 + (System.currentTimeMillis() - startTime),

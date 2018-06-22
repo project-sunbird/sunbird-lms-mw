@@ -1,5 +1,6 @@
 package org.sunbird.badge.util;
 
+import java.text.MessageFormat;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
@@ -13,6 +14,8 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.DbConstant;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.responsecode.ResponseCode;
 
 /**
@@ -35,6 +38,7 @@ public class BadgeAssertionValidator {
    * @param badgeId represents the id of the badge
    */
   public static void validateRootOrg(String recipientId, String recipientType, String badgeId) {
+    ProjectLogger.log("BadgeAssertionValidator:validateRootOrg: called", LoggerEnum.INFO);
     if (JsonKey.USER.equalsIgnoreCase(recipientType)) {
       validateUserRootOrg(recipientId, badgeId);
     }
@@ -43,7 +47,15 @@ public class BadgeAssertionValidator {
   private static void validateUserRootOrg(String userId, String badgeId) {
     String userRootOrg = getUserRootOrgId(userId);
     String badgeRootOrg = getBadgeRootOrgId(badgeId);
+    ProjectLogger.log(
+        MessageFormat.format(
+            "BadgeAssertionValidator:validateUserRootOrg: user root org : {0} and org root org : {1}",
+            userRootOrg, badgeRootOrg),
+        LoggerEnum.INFO);
     if (!(StringUtils.equals(userRootOrg, badgeRootOrg))) {
+      ProjectLogger.log(
+          "BadgeAssertionValidator:validateUserRootOrg: root org mismatch " + userId,
+          LoggerEnum.ERROR);
       throw new ProjectCommonException(
           ResponseCode.commonAttributeMismatch.getErrorCode(),
           ResponseCode.commonAttributeMismatch.getErrorMessage(),
@@ -62,6 +74,8 @@ public class BadgeAssertionValidator {
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
 
     if (CollectionUtils.isEmpty(userResponse)) {
+      ProjectLogger.log(
+          "BadgeAssertionValidator:getUserRootOrgId: user not found " + userId, LoggerEnum.ERROR);
       throw new ProjectCommonException(
           ResponseCode.userNotFound.getErrorCode(),
           ResponseCode.userNotFound.getErrorMessage(),

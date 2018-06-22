@@ -13,6 +13,8 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
@@ -99,6 +101,8 @@ public class BadgeClassExtensionServiceImpl implements BadgeClassExtensionServic
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
 
     if ((badgeList == null) || badgeList.isEmpty()) {
+      ProjectLogger.log(
+          "BadgeClassExtensionServiceImpl:get: Badge not found " + badgeId, LoggerEnum.ERROR);
       throw new ProjectCommonException(
           ResponseCode.resourceNotFound.getErrorCode(),
           ResponseCode.resourceNotFound.getErrorMessage(),

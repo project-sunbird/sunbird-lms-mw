@@ -27,7 +27,8 @@ public class BadgeAssertionValidator {
   private static CassandraOperation cassandraOperation;
 
   /**
-   * Method to check if recipient type is user then root org of user and badge should be same
+   * Method to check whether root org of recipient and badge are same or not , if not same then
+   * throw exception. Current implementation validate root org if the recipient type is user
    *
    * @param recipientId represents the id of recipient to whom badge is going to assign
    * @param recipientType represents the type of recipient .Possible values are - user, content
@@ -56,9 +57,7 @@ public class BadgeAssertionValidator {
   private static String getUserRootOrgId(String userId) {
     Response response =
         cassandraOperation.getRecordById(
-            DbConstant.SUNBIRD_KEYSPACE_NAME.getValue(),
-            DbConstant.USER_TABLE_NAME.getValue(),
-            userId);
+            DbConstant.sunbirdKeyspaceName.getValue(), DbConstant.userTableName.getValue(), userId);
     List<Map<String, Object>> userResponse =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
 

@@ -38,7 +38,7 @@ public class BadgeAssertionValidator {
    * @param badgeId represents the id of the badge
    */
   public static void validateRootOrg(String recipientId, String recipientType, String badgeId) {
-    ProjectLogger.log("BadgeAssertionValidator:validateRootOrg: called", LoggerEnum.INFO);
+    ProjectLogger.log("BadgeAssertionValidator:validateRootOrg: called", LoggerEnum.INFO.name());
     if (JsonKey.USER.equalsIgnoreCase(recipientType)) {
       validateUserRootOrg(recipientId, badgeId);
     }
@@ -51,11 +51,11 @@ public class BadgeAssertionValidator {
         MessageFormat.format(
             "BadgeAssertionValidator:validateUserRootOrg: user root org : {0} and org root org : {1}",
             userRootOrg, badgeRootOrg),
-        LoggerEnum.INFO);
+        LoggerEnum.INFO.name());
     if (!(StringUtils.equals(userRootOrg, badgeRootOrg))) {
       ProjectLogger.log(
           "BadgeAssertionValidator:validateUserRootOrg: root org mismatch " + userId,
-          LoggerEnum.ERROR);
+          LoggerEnum.ERROR.name());
       throw new ProjectCommonException(
           ResponseCode.commonAttributeMismatch.getErrorCode(),
           ResponseCode.commonAttributeMismatch.getErrorMessage(),
@@ -75,7 +75,8 @@ public class BadgeAssertionValidator {
 
     if (CollectionUtils.isEmpty(userResponse)) {
       ProjectLogger.log(
-          "BadgeAssertionValidator:getUserRootOrgId: user not found " + userId, LoggerEnum.ERROR);
+          "BadgeAssertionValidator:getUserRootOrgId: user not found " + userId,
+          LoggerEnum.ERROR.name());
       throw new ProjectCommonException(
           ResponseCode.userNotFound.getErrorCode(),
           ResponseCode.userNotFound.getErrorMessage(),

@@ -71,7 +71,8 @@ public class BadgeAssertionActor extends BaseActor {
     BadgeAssertionValidator.validateRootOrg(recipientId, objectType, badgeId);
     Response result = service.badgeAssertion(actorMessage);
     ProjectLogger.log(
-        "BadgeAssertionActor:createAssertion: Assertion Response : " + result.getResult());
+        "BadgeAssertionActor:createAssertion: Assertion Response : " + result.getResult(),
+        LoggerEnum.INFO.name());
     sender().tell(result, self());
     Map<String, Object> map = BadgingUtil.createBadgeNotifierMap(result.getResult());
     Request request = new Request();

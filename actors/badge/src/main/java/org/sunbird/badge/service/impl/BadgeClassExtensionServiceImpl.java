@@ -102,7 +102,8 @@ public class BadgeClassExtensionServiceImpl implements BadgeClassExtensionServic
 
     if ((badgeList == null) || badgeList.isEmpty()) {
       ProjectLogger.log(
-          "BadgeClassExtensionServiceImpl:get: Badge not found " + badgeId, LoggerEnum.ERROR);
+          "BadgeClassExtensionServiceImpl:get: Badge not found " + badgeId,
+          LoggerEnum.ERROR.name());
       throw new ProjectCommonException(
           ResponseCode.resourceNotFound.getErrorCode(),
           ResponseCode.resourceNotFound.getErrorMessage(),

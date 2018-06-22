@@ -1728,7 +1728,7 @@ public class UserManagementActor extends BaseActor {
 
   private void sendSMS(Map<String, Object> userMap) {
     ProjectLogger.log("Inside Send SMS method:", LoggerEnum.INFO);
-    // removing email check SB-4009
+    // removing email check now we need to send welcome mail as well as welcome sms Ref:SB-4009
     if (!StringUtils.isBlank((String) userMap.get(JsonKey.PHONE))) {
 
       UserUtility.decryptUserData(userMap);

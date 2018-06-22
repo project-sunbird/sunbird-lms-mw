@@ -17,6 +17,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.helper.ServiceFactory;
 
 /**
  * Class to provide badge assertion validation
@@ -27,7 +28,7 @@ public class BadgeAssertionValidator {
 
   private static BadgeClassExtensionService badgeClassExtensionService =
       new BadgeClassExtensionServiceImpl();
-  private static CassandraOperation cassandraOperation;
+  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   /**
    * Method to check whether root org of recipient and badge are same or not , if not same then

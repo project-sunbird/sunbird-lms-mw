@@ -118,9 +118,9 @@ public class BadgeAssertionActorTest {
     subject.tell(getBadgeAssertionRequest(), probe.getRef());
     ProjectCommonException exception =
         probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    Assert.assertNotNull(exception);
     Assert.assertEquals(exception.getResponseCode(), ResponseCode.CLIENT_ERROR.getResponseCode());
     Assert.assertEquals(exception.getCode(), ResponseCode.commonAttributeMismatch.getErrorCode());
-    Assert.assertNotNull(exception);
   }
 
   private Request getBadgeAssertionRequest() {

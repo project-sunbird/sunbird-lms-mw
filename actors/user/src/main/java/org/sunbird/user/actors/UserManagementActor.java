@@ -621,7 +621,6 @@ public class UserManagementActor extends BaseActor {
           ResponseCode.userAccountlocked.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-
     fetchRootAndRegisterOrganisation(result);
     // Decrypt user data
     UserUtility.decryptUserDataFrmES(result);
@@ -687,6 +686,15 @@ public class UserManagementActor extends BaseActor {
       result.remove(JsonKey.MISSING_FIELDS);
       result.remove(JsonKey.COMPLETENESS);
     }
+    /*
+     * Read User Entity from Registry
+     */
+    if ("true"
+        .equalsIgnoreCase(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
+      UserExtension userExtension = new UserProviderRegistryImpl();
+      userExtension.read(result);
+    }
+
     Response response = new Response();
     if (null != result) {
       // loginId is used internally for checking the duplicate user
@@ -1038,6 +1046,15 @@ public class UserManagementActor extends BaseActor {
       if (flag) {
         userMap.remove(JsonKey.EMAIL);
       }
+    }
+
+    /*
+     * Update User Entity in Registry
+     */
+    if ("true"
+        .equalsIgnoreCase(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
+      UserExtension userExtension = new UserProviderRegistryImpl();
+      userExtension.update(userMap);
     }
 
     if (isSSOEnabled) {
@@ -1558,6 +1575,15 @@ public class UserManagementActor extends BaseActor {
     roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
     userMap.put(JsonKey.ROLES, roles);
 
+    /*
+     * Create User Entity in Registry
+     */
+    if ("true"
+        .equalsIgnoreCase(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
+      UserExtension userExtension = new UserProviderRegistryImpl();
+      userExtension.create(userMap);
+    }
+
     String accessToken = "";
     if (isSSOEnabled) {
       try {
@@ -1693,17 +1719,6 @@ public class UserManagementActor extends BaseActor {
     response.put(JsonKey.ACCESSTOKEN, accessToken);
     sender().tell(response, self());
 
-    /*
-     * Create User Entity in Registry
-     */
-    if(ProjectUtil.getConfigValue("sunbird_open_saber_bridge_enable").equalsIgnoreCase("true")){
-		 String firstName = (String) actorMessage.getRequest().get(JsonKey.FIRST_NAME);
-		 Map<String,Object> extensionMap = new HashMap<String,Object>();
-		 extensionMap.put("name", firstName);
-		 UserExtension userExtension = new UserProviderRegistryImpl();
-		 userExtension.create(extensionMap);
-	}
-    
     // object of telemetry event...
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();

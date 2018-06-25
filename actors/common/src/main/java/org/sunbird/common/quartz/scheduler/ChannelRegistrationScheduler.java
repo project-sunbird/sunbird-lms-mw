@@ -16,15 +16,15 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.TelemetryEvents;
 import org.sunbird.telemetry.util.TelemetryUtil;
-import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 
 public class ChannelRegistrationScheduler extends BaseJob {
 
   @Override
   public void execute(JobExecutionContext ctx) throws JobExecutionException {
     ProjectLogger.log(
-        "Running channel registration Scheduler Job at: "
+        "ChannelRegistrationScheduler:execute: Running channel registration Scheduler Job at: "
             + Calendar.getInstance().getTime()
             + " triggered by: "
             + ctx.getJobDetail().toString(),

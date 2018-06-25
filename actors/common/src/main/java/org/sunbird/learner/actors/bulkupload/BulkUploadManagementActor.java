@@ -14,6 +14,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
@@ -247,6 +248,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
 
   private void processBulkOrgUpload(Map<String, Object> req, String processId) throws IOException {
 
+    ProjectLogger.log("BulkUploadManagementActor: processBulkOrgUpload called.", LoggerEnum.INFO);
     List<String[]> orgList = null;
     orgList = parseCsvFile((byte[]) req.get(JsonKey.FILE), processId);
     if (null != orgList) {
@@ -343,12 +345,15 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     if (null != userList) {
-      if (null != PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_USER_DATA_SIZE)) {
+      if (StringUtils.isNotBlank(ProjectUtil.getConfigValue(JsonKey.BULK_UPLOAD_USER_DATA_SIZE))) {
         userDataSize =
             (Integer.parseInt(
-                PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_USER_DATA_SIZE)));
+                ProjectUtil.getConfigValue(JsonKey.BULK_UPLOAD_USER_DATA_SIZE).trim()));
 
-        ProjectLogger.log("bulk upload user data size read from config file " + userDataSize);
+        ProjectLogger.log(
+            "BulkUploadManagementActor:processBulkUserUpload : bulk upload user data size"
+                + userDataSize,
+            LoggerEnum.INFO.name());
       }
       validateFileSizeAgainstLineNumbers(userDataSize, userList.size());
       if (!userList.isEmpty()) {
@@ -378,13 +383,18 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       String objectType,
       String requestedBy,
       String rootOrgId) {
+    ProjectLogger.log("BulkUploadManagementActor: uploadCsvToDB called.", LoggerEnum.INFO);
     List<Map<String, Object>> dataMapList = new ArrayList<>();
     if (dataList.size() > 1) {
       try {
         String[] columnArr = dataList.get(0);
         columnArr = trimColumnAttributes(columnArr);
         Map<String, Object> dataMap = null;
-        String channel = Util.getChannel(rootOrgId);
+        String channel = null;
+        // channel is required only in case of the user type bulk upload.
+        if (StringUtils.isNotBlank(objectType) && objectType.equalsIgnoreCase(JsonKey.USER)) {
+          channel = Util.getChannel(rootOrgId);
+        }
         for (int i = 1; i < dataList.size(); i++) {
           dataMap = new HashMap<>();
           String[] valueArr = dataList.get(i);
@@ -419,7 +429,14 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     try {
       map.put(JsonKey.DATA, mapper.writeValueAsString(dataMapList));
     } catch (IOException e) {
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log(
+          "BulkUploadManagementActor:uploadCsvToDB: Exception while converting map to string: "
+              + e.getMessage(),
+          e);
+      throw new ProjectCommonException(
+          ResponseCode.internalError.getErrorCode(),
+          ResponseCode.internalError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
     }
 
     map.put(JsonKey.ID, processId);
@@ -431,6 +448,9 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     Response res =
         cassandraOperation.insertRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), map);
     res.put(JsonKey.PROCESS_ID, processId);
+    ProjectLogger.log(
+        "BulkUploadManagementActor: uploadCsvToDB returned response for processId: " + processId,
+        LoggerEnum.INFO);
     sender().tell(res, self());
     if (((String) res.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       // send processId for data processing to background job
@@ -439,5 +459,8 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       request.setOperation(ActorOperations.PROCESS_BULK_UPLOAD.getValue());
       tellToAnother(request);
     }
+    ProjectLogger.log(
+        "BulkUploadManagementActor: uploadCsvToDB completed processing for processId: " + processId,
+        LoggerEnum.INFO);
   }
 }

@@ -27,7 +27,9 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
@@ -35,11 +37,10 @@ import org.sunbird.dto.SearchDTO;
 public abstract class BaseMetricsActor extends BaseActor {
 
   private static ObjectMapper mapper = new ObjectMapper();
-
   public static final String STARTDATE = "startDate";
   public static final String ENDDATE = "endDate";
-  public static final String STARTTIMEMILIS = "startTimeMilis";
-  public static final String ENDTIMEMILIS = "endTimeMilis";
+  public static final String START_TIME_MILLIS = "startTimeMillis";
+  public static final String END_TIME_MILLIS = "endTimeMillis";
   public static final String LTE = "<=";
   public static final String LT = "<";
   public static final String GTE = ">=";
@@ -53,7 +54,6 @@ public abstract class BaseMetricsActor extends BaseActor {
   protected static final String USER_ID = "user_id";
   protected static final String FOLDERPATH = "/data/";
   protected static final String FILENAMESEPARATOR = "_";
-  protected static final MetricsCache cache = new MetricsCache();
   private static final String CHARSETS_UTF_8 = "UTF-8";
 
   protected Map<String, Object> addSnapshot(
@@ -67,6 +67,14 @@ public abstract class BaseMetricsActor extends BaseActor {
     return snapshot;
   }
 
+  /**
+   * This method will provide date day range period. It will take parameter as "xd" where x is an
+   * int value. Based on passed parameter it will provide startDate and endDate range. EndDate will
+   * be calculated excluding current date.
+   *
+   * @param period Date range in format of "xd" EX: 7d
+   * @return Map having keys ENDDATE,END_TIME_MILLIS,INTERVAL,FORMAT,STARTDATE,START_TIME_MILLIS
+   */
   protected static Map<String, Object> getStartAndEndDateForDay(String period) {
     Map<String, Object> dateMap = new HashMap<>();
     int days = getDaysByPeriod(period);
@@ -96,8 +104,8 @@ public abstract class BaseMetricsActor extends BaseActor {
     dateMap.put(FORMAT, "yyyy-MM-dd");
     dateMap.put(STARTDATE, startDateStr);
     dateMap.put(ENDDATE, endDateStr);
-    dateMap.put(STARTTIMEMILIS, cal.getTimeInMillis());
-    dateMap.put(ENDTIMEMILIS, endDateValue.getTime());
+    dateMap.put(START_TIME_MILLIS, cal.getTimeInMillis());
+    dateMap.put(END_TIME_MILLIS, endDateValue.getTime());
     return dateMap;
   }
 
@@ -109,6 +117,14 @@ public abstract class BaseMetricsActor extends BaseActor {
     }
   }
 
+  /**
+   * This method will provide date week range. it will take request param as "xw" where x is a int.
+   * Example if user pass "5w" ,it means this method will calculate 5 calendar week from now and
+   * provide start date of first week and end data of 5th week.
+   *
+   * @param period number of week in "xw" format , where x is an int value.
+   * @return Map having keys ENDDATE,END_TIME_MILLIS,INTERVAL,FORMAT,STARTDATE,START_TIME_MILLIS
+   */
   protected static Map<String, Object> getStartAndEndDateForWeek(String period) {
     Map<String, Object> dateMap = new HashMap<>();
     Map<String, Integer> periodMap = getDaysByPeriodStr(period);
@@ -120,7 +136,7 @@ public abstract class BaseMetricsActor extends BaseActor {
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
     String endDateStr = sdf.format(calendar.getTime());
     dateMap.put(ENDDATE, endDateStr);
-    dateMap.put(ENDTIMEMILIS, calendar.getTimeInMillis());
+    dateMap.put(END_TIME_MILLIS, calendar.getTimeInMillis());
     calendar.add(periodMap.get(KEY), -(periodMap.get(VALUE)));
     calendar.add(Calendar.DATE, 1);
     calendar.set(Calendar.HOUR_OF_DAY, 0);
@@ -131,7 +147,7 @@ public abstract class BaseMetricsActor extends BaseActor {
     dateMap.put(FORMAT, "yyyy-ww");
     String startDateStr = sdf.format(calendar.getTime());
     dateMap.put(STARTDATE, startDateStr);
-    dateMap.put(STARTTIMEMILIS, calendar.getTimeInMillis());
+    dateMap.put(START_TIME_MILLIS, calendar.getTimeInMillis());
     return dateMap;
   }
 
@@ -471,7 +487,6 @@ public abstract class BaseMetricsActor extends BaseActor {
   }
 
   protected void calculateCourseProgressPercentage(List<Map<String, Object>> esContent) {
-
     for (Map<String, Object> map : esContent) {
       Integer progress = (Integer) map.get(JsonKey.PROGRESS);
       Integer leafNodeCont = (Integer) map.get(JsonKey.LEAF_NODE_COUNT);
@@ -482,11 +497,34 @@ public abstract class BaseMetricsActor extends BaseActor {
         if (null == leafNodeCont || leafNodeCont == 0) {
           progressPercentage = Integer.valueOf("100");
         } else {
-          progressPercentage = (progress * 100) / leafNodeCont;
+          // making percentage as round of value.
+          progressPercentage = (int) Math.round((progress * 100.0) / leafNodeCont);
         }
       }
       map.put(JsonKey.PROGRESS, progressPercentage);
       map.remove(JsonKey.LEAF_NODE_COUNT);
     }
+  }
+
+  /**
+   * This method will convert incoming time period to start and end date. Possible values for period
+   * is {"7d","14d","5w"} ,This method will return a map with key as STARTDATE and ENDDATE.
+   * STARTDATE will always be currentDate-1, Date format will be YYY_MM_DD_FORMATTER
+   *
+   * @param period Date range in format of {"7d","14d","5w"} EX: 7d
+   * @return map having key as STARTDATE and ENDDATE.
+   */
+  protected Map<String, String> getDateRange(String period) {
+    if (StringUtils.isBlank(period)) {
+      throw new ProjectCommonException(
+          ResponseCode.invalidPeriod.getErrorCode(),
+          ResponseCode.invalidPeriod.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    period = period.toLowerCase();
+    int noOfDays = getDaysByPeriod(period);
+    ProjectLogger.log(
+        "BaseMetricsActor:getDateRange Number of days = " + noOfDays, LoggerEnum.INFO.name());
+    return ProjectUtil.getDateRange(noOfDays);
   }
 }

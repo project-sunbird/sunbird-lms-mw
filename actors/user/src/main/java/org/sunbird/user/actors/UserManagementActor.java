@@ -1736,7 +1736,9 @@ public class UserManagementActor extends BaseActor {
     emailTemplateMap.put(JsonKey.ROOT_ORG_ID, userMap.get(JsonKey.ROOT_ORG_ID));
     sendOnboardingMail(emailTemplateMap);
     ProjectLogger.log("calling Send SMS method:", LoggerEnum.INFO);
-    sendSMS(userMap);
+    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PHONE))) {
+      sendSMS(userMap);
+    }
 
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       ProjectLogger.log("method call going to start for ES--.....");
@@ -1756,9 +1758,8 @@ public class UserManagementActor extends BaseActor {
 
   private void sendSMS(Map<String, Object> userMap) {
     ProjectLogger.log("Inside Send SMS method:", LoggerEnum.INFO);
-    if (StringUtils.isBlank((String) userMap.get(JsonKey.EMAIL))
-        && !StringUtils.isBlank((String) userMap.get(JsonKey.PHONE))) {
-
+    // removing email check now we need to send welcome mail as well as welcome sms Ref:SB-4009
+    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PHONE))) {
       UserUtility.decryptUserData(userMap);
       String name =
           (String) userMap.get(JsonKey.FIRST_NAME) + " " + (String) userMap.get(JsonKey.LAST_NAME);
@@ -2045,13 +2046,11 @@ public class UserManagementActor extends BaseActor {
     reqMap.remove(JsonKey.JOB_PROFILE);
     reqMap.remove(JsonKey.ORGANISATION);
     reqMap.remove(JsonKey.EMAIL_VERIFIED);
-    reqMap.remove(JsonKey.PHONE_NUMBER_VERIFIED);
     reqMap.remove(JsonKey.REGISTERED_ORG);
     reqMap.remove(JsonKey.ROOT_ORG);
     reqMap.remove(JsonKey.IDENTIFIER);
     reqMap.remove(JsonKey.ORGANISATIONS);
     reqMap.remove(JsonKey.IS_DELETED);
-    reqMap.remove(JsonKey.PHONE_VERIFIED);
     reqMap.remove(JsonKey.EXTERNAL_ID);
     reqMap.remove(JsonKey.PROVIDER);
   }

@@ -33,12 +33,13 @@ public class DataCacheHandler implements Runnable {
 
   @Override
   public void run() {
-    ProjectLogger.log("Data cache started..");
+    ProjectLogger.log("DataCacheHandler:run: Cache refresh started.", LoggerEnum.INFO.name());
     cache(pageMap, "page_management");
     cache(sectionMap, "page_section");
     roleCache(roleMap);
     orgTypeCache(orgTypeMap);
     cacheSystemConfig(configSettings);
+    ProjectLogger.log("DataCacheHandler:run: Cache refresh completed.", LoggerEnum.INFO.name());
   }
 
   private void cacheSystemConfig(Map<String, String> configSettings) {
@@ -119,7 +120,8 @@ public class DataCacheHandler implements Runnable {
       ProjectLogger.log("pagemap keyset " + map.keySet());
       ProjectLogger.log(tableName + " cache size: " + map.size(), LoggerEnum.INFO.name());
     } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log(
+          "DataCacheHandler:cache: Exception in retrieving page section " + e.getMessage(), e);
     }
   }
 

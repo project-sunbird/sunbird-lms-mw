@@ -43,6 +43,7 @@ public final class EkStepRequestUtil {
       headers.put(
           JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
       headers.put("Content-Type", "application/json");
+      headers.put("Accept-Encoding", "UTF-8");
       if (StringUtils.isBlank(headers.get(JsonKey.AUTHORIZATION))) {
         headers.put(
             JsonKey.AUTHORIZATION,

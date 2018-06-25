@@ -18,7 +18,6 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
-import org.sunbird.metrics.actors.MetricsJobScheduler;
 
 /**
  * This class will manage all the Quartz scheduler. We need to call the schedule method at one time.
@@ -61,9 +60,8 @@ public final class SchedulerManager {
       String identifier = "NetOps-PC1502295457753";
       scheduleCourseBatchCount(identifier);
       scheduleBulkUploadJob(identifier);
-      scheduleCoursePublishJob(identifier);
+      // scheduleCoursePublishJob(identifier);
       scheduleMetricsReportJob(identifier);
-      scheduleMetricsJob(identifier);
       scheduleUpdateUserCountJob(identifier);
       scheduleChannelReg(identifier);
     } catch (Exception e) {
@@ -84,6 +82,7 @@ public final class SchedulerManager {
     JobDetail channelRegistrationJob =
         JobBuilder.newJob(ChannelRegistrationScheduler.class)
             .requestRecovery(true)
+            .withDescription("Scheduler for channel registration")
             .withIdentity("channelRegistrationScheduler", identifier)
             .build();
 
@@ -113,6 +112,7 @@ public final class SchedulerManager {
     JobDetail updateUserCountJob =
         JobBuilder.newJob(UpdateUserCountScheduler.class)
             .requestRecovery(true)
+            .withDescription("Scheduler for updating user count for each geo location")
             .withIdentity("updateUserCountScheduler", identifier)
             .build();
 
@@ -137,37 +137,6 @@ public final class SchedulerManager {
     }
   }
 
-  private void scheduleMetricsJob(String identifier) {
-    // add another job for verifying the MetricsJobScheduler details
-    // 1- create a job and bind with class which is implementing Job
-    // interface.
-    JobDetail metricsJob =
-        JobBuilder.newJob(MetricsJobScheduler.class)
-            .requestRecovery(true)
-            .withIdentity("metricsJob", identifier)
-            .build();
-
-    // 2- Create a trigger object that will define frequency of run.
-    // This job will run every 4 hours everyday.
-    Trigger metricsTrigger =
-        TriggerBuilder.newTrigger()
-            .withIdentity("metricsTrigger", identifier)
-            .withSchedule(
-                CronScheduleBuilder.cronSchedule(
-                    PropertiesCache.getInstance().getProperty("quartz_metrics_timer")))
-            .build();
-    try {
-      if (scheduler.checkExists(metricsJob.getKey())) {
-        scheduler.deleteJob(metricsJob.getKey());
-      }
-      scheduler.scheduleJob(metricsJob, metricsTrigger);
-      scheduler.start();
-      ProjectLogger.log("MetricsJob schedular started", LoggerEnum.INFO.name());
-    } catch (Exception e) {
-      ProjectLogger.log("Error occurred", e);
-    }
-  }
-
   private void scheduleMetricsReportJob(String identifier) {
     // add another job for verifying the MetricsReportJob details from EKStep.
     // 1- create a job and bind with class which is implementing Job
@@ -175,6 +144,7 @@ public final class SchedulerManager {
     JobDetail metricsReportJob =
         JobBuilder.newJob(MetricsReportJob.class)
             .requestRecovery(true)
+            .withDescription("Scheduler for retry of metrics report generation and upload to azure")
             .withIdentity("metricsReportJob", identifier)
             .build();
 
@@ -206,6 +176,8 @@ public final class SchedulerManager {
     JobDetail coursePublishedJob =
         JobBuilder.newJob(CoursePublishedUpdate.class)
             .requestRecovery(true)
+            .withDescription(
+                "Scheduler for batch participants enrolment on course status change to published")
             .withIdentity("coursePublishedScheduler", identifier)
             .build();
 
@@ -237,6 +209,7 @@ public final class SchedulerManager {
     JobDetail uploadVerifyJob =
         JobBuilder.newJob(UploadLookUpScheduler.class)
             .requestRecovery(true)
+            .withDescription("Scheduler for bulk upload retry")
             .withIdentity("uploadVerifyScheduler", identifier)
             .build();
 
@@ -267,6 +240,7 @@ public final class SchedulerManager {
     JobDetail job =
         JobBuilder.newJob(ManageCourseBatchCount.class)
             .requestRecovery(true)
+            .withDescription("Scheduler for computing active count of batches for each course")
             .withIdentity("schedulerJob", identifier)
             .build();
 

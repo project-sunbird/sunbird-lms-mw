@@ -10,7 +10,7 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public final class ExecutorManager {
 
-  private static final int MAX_EXECUTOR_THREAD = 10;
+  private static final int MAX_EXECUTOR_THREAD = 2;
   /*
    * service ScheduledExecutorService object
    */

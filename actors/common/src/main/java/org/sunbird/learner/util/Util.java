@@ -44,6 +44,7 @@ import org.sunbird.common.quartz.scheduler.SchedulerManager;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.CassandraConnectionManager;
 import org.sunbird.helper.CassandraConnectionMngrFactory;
@@ -68,6 +69,7 @@ public final class Util {
   public static final Map<String, Object> auditLogUrlMap = new HashMap<>();
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static ObjectMapper mapper = new ObjectMapper();
 
   static {
     loadPropertiesFile();
@@ -597,7 +599,6 @@ public final class Util {
     String response = "";
     JSONObject data;
     JSONObject jObject;
-    ObjectMapper mapper = new ObjectMapper();
     try {
       String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
       if (StringUtils.isBlank(baseSearchUrl)) {
@@ -765,12 +766,16 @@ public final class Util {
       channelMap.put(JsonKey.NAME, req.get(JsonKey.CHANNEL));
       channelMap.put(JsonKey.DESCRIPTION, req.get(JsonKey.DESCRIPTION));
       channelMap.put(JsonKey.CODE, req.get(JsonKey.HASHTAGID));
+      String defaultFramework = (String) req.get(JsonKey.DEFAULT_FRAMEWORK);
+      if (StringUtils.isNotBlank(defaultFramework))
+        channelMap.put(JsonKey.DEFAULT_FRAMEWORK, defaultFramework);
       reqMap.put(JsonKey.CHANNEL, channelMap);
       map.put(JsonKey.REQUEST, reqMap);
 
-      ObjectMapper mapper = new ObjectMapper();
       reqString = mapper.writeValueAsString(map);
-
+      ProjectLogger.log(
+          "Util:registerChannel: Channel registration request data = " + reqString,
+          LoggerEnum.DEBUG.name());
       regStatus =
           HttpUtil.sendPostRequest(
               (ekStepBaseUrl
@@ -817,7 +822,6 @@ public final class Util {
       reqMap.put(JsonKey.CHANNEL, channelMap);
       map.put(JsonKey.REQUEST, reqMap);
 
-      ObjectMapper mapper = new ObjectMapper();
       reqString = mapper.writeValueAsString(map);
 
       regStatus =
@@ -951,8 +955,9 @@ public final class Util {
     searchQueryMap.put(JsonKey.LOGIN_ID, getEncryptedData(user.getLoginId()));
     if (CollectionUtils.isNotEmpty(searchUser(searchQueryMap))) {
       throw new ProjectCommonException(
-          ResponseCode.userAlreadyExist.getErrorCode(),
-          ResponseCode.userAlreadyExist.getErrorMessage(),
+          ResponseCode.userAlreadyExists.getErrorCode(),
+          ProjectUtil.formatMessage(
+              ResponseCode.userAlreadyExists.getErrorMessage(), JsonKey.USERNAME),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
   }
@@ -970,8 +975,11 @@ public final class Util {
       searchQueryMap.put(JsonKey.PROVIDER, user.getProvider());
       if (CollectionUtils.isNotEmpty(getRecordsFromUserExtIdentityByProperties(searchQueryMap))) {
         throw new ProjectCommonException(
-            ResponseCode.userAlreadyExist.getErrorCode(),
-            ResponseCode.userAlreadyExist.getErrorMessage(),
+            ResponseCode.userAlreadyExists.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.userAlreadyExists.getErrorMessage(),
+                (ProjectUtil.formatMessage(
+                    ResponseMessage.Message.AND_FORMAT, JsonKey.EXTERNAL_ID, JsonKey.PROVIDER))),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
     }
@@ -985,7 +993,6 @@ public final class Util {
    */
   private static List<User> searchUser(Map<String, Object> searchQueryMap) {
     List<User> userList = new ArrayList<>();
-    ObjectMapper mapper = new ObjectMapper();
     Map<String, Object> searchRequestMap = new HashMap<>();
     searchRequestMap.put(JsonKey.FILTERS, searchQueryMap);
     SearchDTO searchDto = Util.createSearchDto(searchRequestMap);
@@ -1026,14 +1033,17 @@ public final class Util {
   }
 
   public static void updateUserExtId(Map<String, Object> requestMap) {
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-    map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EXTERNAL_ID));
-    map.put(JsonKey.PROVIDER, requestMap.get(JsonKey.PROVIDER));
-    map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
-    map.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
-    map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
-    cassandraOperation.upsertRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
+    if (StringUtils.isNotEmpty((String) requestMap.get(JsonKey.EXTERNAL_ID))
+        && StringUtils.isNotEmpty((String) requestMap.get(JsonKey.PROVIDER))) {
+      Map<String, Object> map = new HashMap<>();
+      map.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+      map.put(JsonKey.EXTERNAL_ID, requestMap.get(JsonKey.EXTERNAL_ID));
+      map.put(JsonKey.PROVIDER, requestMap.get(JsonKey.PROVIDER));
+      map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
+      map.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
+      map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
+      cassandraOperation.upsertRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
+    }
   }
 
   public static void registerUserToOrg(Map<String, Object> userMap) {

@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -28,6 +27,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LocationActorOperation;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
@@ -113,7 +113,17 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             e);
       }
       if (((String) dataMap.get(JsonKey.OBJECT_TYPE)).equalsIgnoreCase(JsonKey.USER)) {
+        long startTime = System.currentTimeMillis();
+        ProjectLogger.log(
+            "BulkUploadBackGroundJobActor:processUserInfo start at : " + startTime,
+            LoggerEnum.INFO.name());
         processUserInfo(jsonList, processId, (String) dataMap.get(JsonKey.UPLOADED_BY));
+        ProjectLogger.log(
+            "BulkUploadBackGroundJobActor:processUserInfo Total time taken : for processId  : "
+                + processId
+                + " : "
+                + (System.currentTimeMillis() - startTime),
+            LoggerEnum.INFO.name());
       } else if (((String) dataMap.get(JsonKey.OBJECT_TYPE))
           .equalsIgnoreCase(JsonKey.ORGANISATION)) {
         CopyOnWriteArrayList<Map<String, Object>> orgList = new CopyOnWriteArrayList<>(jsonList);
@@ -992,7 +1002,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           Map<String, Object> tempMap = new HashMap<>();
           tempMap.putAll(userMap);
           tempMap.remove(JsonKey.EMAIL_VERIFIED);
-          tempMap.remove(JsonKey.PHONE_VERIFIED);
           tempMap.remove(JsonKey.POSITION);
           // remove externalID and Provider as we are not saving these to user table
           tempMap.remove(JsonKey.EXTERNAL_ID);
@@ -1266,26 +1275,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     return requestedUserMap;
   }
 
-  private List<String> getMemberOrgList(String userId) {
-    Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
-    List<String> memberOrgList = new ArrayList<>();
-    Response resultFrUserName =
-        cassandraOperation.getRecordsByProperty(
-            userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName(), JsonKey.USER_ID, userId);
-    if (CollectionUtils.isNotEmpty(
-        (List<Map<String, Object>>) resultFrUserName.get(JsonKey.RESPONSE))) {
-      List<Map<String, Object>> responseList =
-          (List<Map<String, Object>>) resultFrUserName.get(JsonKey.RESPONSE);
-      memberOrgList =
-          responseList
-              .stream()
-              .map(s -> (String) s.get(JsonKey.ORGANISATION_ID))
-              .collect(Collectors.toList());
-      return memberOrgList;
-    }
-    return memberOrgList;
-  }
-
   private Map<String, Object> getRecordByLoginId(Map<String, Object> userMap) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> user = null;
@@ -1514,12 +1503,16 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     if (StringUtils.isNotBlank((String) map.get(JsonKey.PROVIDER))
         && StringUtils.isBlank((String) map.get(JsonKey.EXTERNAL_ID))) {
       return ProjectUtil.formatMessage(
-          ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.EXTERNAL_ID);
+          ResponseCode.dependentParameterMissing.getErrorMessage(),
+          JsonKey.EXTERNAL_ID,
+          JsonKey.PROVIDER);
     }
     if (StringUtils.isBlank((String) map.get(JsonKey.PROVIDER))
         && StringUtils.isNotBlank((String) map.get(JsonKey.EXTERNAL_ID))) {
       return ProjectUtil.formatMessage(
-          ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.PROVIDER);
+          ResponseCode.dependentParameterMissing.getErrorMessage(),
+          JsonKey.PROVIDER,
+          JsonKey.EXTERNAL_ID);
     }
 
     if (null != map.get(JsonKey.DOB)) {
@@ -1579,8 +1572,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         return "property emailVerified should be instanceOf type Boolean.";
       }
     }
-    if (!StringUtils.isBlank((String) map.get(JsonKey.PROVIDER))
-        && !StringUtils.isBlank((String) map.get(JsonKey.PHONE))) {
+    if (StringUtils.isNotBlank((String) map.get(JsonKey.PHONE))) {
       if (null != map.get(JsonKey.PHONE_VERIFIED)) {
         if (map.get(JsonKey.PHONE_VERIFIED) instanceof Boolean) {
           if (!((boolean) map.get(JsonKey.PHONE_VERIFIED))) {

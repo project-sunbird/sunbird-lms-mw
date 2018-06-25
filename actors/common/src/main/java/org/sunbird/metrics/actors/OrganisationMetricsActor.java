@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -19,6 +20,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
@@ -71,7 +73,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   }
 
   private void orgConsumptionMetricsReport(Request actorMessage) {
-    ProjectLogger.log("OrganisationMetricsActor-orgConsumptionMetricsReport called");
+    ProjectLogger.log(
+        "OrganisationMetricsActor: orgConsumptionMetricsReport called.", LoggerEnum.INFO.name());
     String requestId = createReportTrackingEntry(actorMessage);
 
     Response response = new Response();
@@ -91,7 +94,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   }
 
   private String createReportTrackingEntry(Request actorMessage) {
-    ProjectLogger.log("Create Report Tracking Entry");
+    ProjectLogger.log(
+        "OrganisationMetricsActor: createReportTrackingEntry called.", LoggerEnum.INFO.name());
     SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
     String requestedBy = (String) actorMessage.get(JsonKey.REQUESTED_BY);
     String orgId = (String) actorMessage.get(JsonKey.ORG_ID);
@@ -198,14 +202,11 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     }
     StringBuilder builder = new StringBuilder();
     builder
-        .append("{\"request\":{\"rawQuery\":{\"query\":{\"filtered\":")
-        .append("{\"query\":{\"bool\":{\"must\":[{\"query\":{\"range\":{\"")
+        .append("{\"request\":{\"rawQuery\":{\"query\":{\"bool\":{\"must\":[{\"range\":{\"")
         .append(operationMap.get("dateKey"))
         .append("\":{\"gte\":\"")
-        .append(dateMap.get(STARTDATE) + "\",\"lte\":\"" + dateMap.get(ENDDATE) + "\"}}}}")
-        .append(",{\"bool\":{\"should\":[{\"match\":{\"contentType.raw\":\"Story\"}}")
-        .append(",{\"match\":{\"contentType.raw\":\"Worksheet\"}}")
-        .append(",{\"match\":{\"contentType.raw\":\"Game\"}}")
+        .append(dateMap.get(STARTDATE) + "\",\"lte\":\"" + dateMap.get(ENDDATE) + "\"}}}")
+        .append(",{\"bool\":{\"should\":[{\"match\":{\"contentType.raw\":\"Resource\"}}")
         .append(",{\"match\":{\"contentType.raw\":\"Collection\"}}")
         .append(",{\"match\":{\"contentType.raw\":\"TextBook\"}}")
         .append(",{\"match\":{\"contentType.raw\":\"TextBookUnit\"}}")
@@ -213,7 +214,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         .append(",{\"match\":{\"contentType.raw\":\"CourseUnit\"}}]}},")
         .append("{\"match\":{\"createdFor.raw\":\"" + orgId + "\"}}")
         .append(",{\"match\":{\"status.raw\":\"" + operationMap.get("status"))
-        .append("\"}}]}}}},\"aggs\":{\"");
+        .append("\"}}]}},\"aggs\":{\"");
     if (operationMap.containsValue("createdOn")) {
       builder
           .append(operationMap.get("dateKey") + "\":{\"date_histogram\":{\"field\":\"")
@@ -221,8 +222,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
           .append("\",\"interval\":\"" + dateMap.get(INTERVAL) + "\",\"format\":\"")
           .append(dateMap.get(FORMAT) + "\"")
           .append(",\"time_zone\":\"+05:30\",\"extended_bounds\":{\"min\":")
-          .append(dateMap.get(STARTTIMEMILIS) + ",\"max\":")
-          .append(dateMap.get(ENDTIMEMILIS) + "}}},\"");
+          .append(dateMap.get(START_TIME_MILLIS) + ",\"max\":")
+          .append(dateMap.get(END_TIME_MILLIS) + "}}},\"");
     }
     builder
         .append("status\":{\"terms\":{\"field\":\"status.raw\",\"include\":[\"")
@@ -231,8 +232,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         .append(operationMap.get("dateKey") + "\",\"interval\":\"" + dateMap.get(INTERVAL))
         .append("\",\"format\":\"" + dateMap.get(FORMAT))
         .append("\",\"time_zone\":\"+05:30\",\"extended_bounds\":{\"min\":")
-        .append(dateMap.get(STARTTIMEMILIS) + ",\"max\":")
-        .append(dateMap.get(ENDTIMEMILIS))
+        .append(dateMap.get(START_TIME_MILLIS) + ",\"max\":")
+        .append(dateMap.get(END_TIME_MILLIS))
         .append("}}}}}");
     if (operationMap.containsKey("userActionKey")) {
       builder
@@ -324,7 +325,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         if (data.containsKey("Create")) {
           statusMap = (Map<String, Object>) data.get("Create");
           valueList = (List<Map<String, Object>>) statusMap.get("buckets");
-          if (!valueList.isEmpty()) {
+          if (CollectionUtils.isNotEmpty(valueList)) {
             statusMap = valueList.get(0);
             statusValueMap.put("draft", statusMap.get("doc_count"));
             statusValueMap.put("draftBucket", statusMap.get("createdOn"));
@@ -332,7 +333,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         } else if (data.containsKey("Publish")) {
           statusMap = (Map<String, Object>) data.get("Publish");
           valueList = (List<Map<String, Object>>) statusMap.get("buckets");
-          if (!valueList.isEmpty()) {
+          if (CollectionUtils.isNotEmpty(valueList)) {
             statusMap = valueList.get(0);
             statusValueMap.put("live", statusMap.get("doc_count"));
             statusValueMap.put("liveBucket", statusMap.get("lastPublishedOn"));
@@ -340,7 +341,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         } else if (data.containsKey("Review")) {
           statusMap = (Map<String, Object>) data.get("Review");
           valueList = (List<Map<String, Object>>) statusMap.get("buckets");
-          if (!valueList.isEmpty()) {
+          if (CollectionUtils.isNotEmpty(valueList)) {
             statusMap = valueList.get(0);
             statusValueMap.put("review", statusMap.get("doc_count"));
             statusValueMap.put("reviewBucket", statusMap.get("lastSubmittedOn"));
@@ -427,7 +428,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
   @SuppressWarnings("unchecked")
   private void orgCreationMetrics(Request actorMessage) {
-    ProjectLogger.log("In orgCreationMetrics api");
+    ProjectLogger.log(
+        "OrganisationMetricsActor: orgCreationMetrics called.", LoggerEnum.INFO.name());
     try {
       String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
       String orgId = (String) actorMessage.getRequest().get(JsonKey.ORG_ID);
@@ -452,22 +454,23 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         return;
       }
 
-      Map<String, Object> aggregationMap =
-          (Map<String, Object>) cache.getData(JsonKey.OrgCreation, orgId, periodStr);
-      if (null == aggregationMap || aggregationMap.isEmpty()) {
-        aggregationMap = getOrgCreationData(periodStr, orgId);
-        cache.setData(JsonKey.OrgCreation, orgId, periodStr, aggregationMap);
-      }
+      Map<String, Object> aggregationMap = getOrgCreationData(periodStr, orgId);
       String responseFormat = orgCreationResponseGenerator(periodStr, aggregationMap);
       Response response =
           metricsResponseGenerator(responseFormat, periodStr, getViewData(orgId, orgName));
       sender().tell(response, self());
     } catch (ProjectCommonException e) {
-      ProjectLogger.log("Some error occurs", e);
+      ProjectLogger.log(
+          "OrganisationMetricsActor:orgCreationMetrics: Exception in getting org creation data: "
+              + e.getMessage(),
+          e);
       sender().tell(e, self());
       return;
     } catch (Exception e) {
-      ProjectLogger.log("Some error occurs", e);
+      ProjectLogger.log(
+          "OrganisationMetricsActor:orgCreationMetrics: Generic exception in getting org creation data: "
+              + e.getMessage(),
+          e);
       throw new ProjectCommonException(
           ResponseCode.internalError.getErrorCode(),
           ResponseCode.internalError.getErrorMessage(),
@@ -503,7 +506,9 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       }
       String orgName = (String) orgData.get(JsonKey.ORG_NAME);
       String orgHashId = (String) orgData.get(JsonKey.HASHTAGID);
-      ProjectLogger.log("orgId" + orgHashId);
+      ProjectLogger.log(
+          "OrganisationMetricsActor:orgConsumptionMetrics: org hash tag id = " + orgHashId,
+          LoggerEnum.INFO.name());
       if (StringUtils.isBlank(orgName)) {
         ProjectCommonException exception =
             new ProjectCommonException(
@@ -520,7 +525,9 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       if (StringUtils.isBlank(orgRootId)) {
         orgRootId = orgId;
       }
-      ProjectLogger.log("RootOrgId " + orgRootId);
+      ProjectLogger.log(
+          "OrganisationMetricsActor:orgConsumptionMetrics: root org id = " + orgRootId,
+          LoggerEnum.INFO.name());
       Map<String, Object> rootOrgData = validateOrg(orgRootId);
       if (null == rootOrgData || rootOrgData.isEmpty()) {
         ProjectCommonException exception =
@@ -532,22 +539,26 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         return;
       }
       String channel = (String) rootOrgData.get(JsonKey.HASHTAGID);
-      ProjectLogger.log("channel" + channel);
-      String responseFormat = (String) cache.getData(JsonKey.OrgConsumption, orgId, periodStr);
-      if (StringUtils.isBlank(responseFormat)) {
-        responseFormat = getOrgConsumptionData(actorMessage, periodStr, orgHashId, channel);
-        ProjectLogger.log("Response" + responseFormat);
-        cache.setData(JsonKey.OrgConsumption, orgId, periodStr, responseFormat);
-      }
+      ProjectLogger.log(
+          "OrganisationMetricsActor:orgConsumptionMetrics: hash tag id = " + channel,
+          LoggerEnum.INFO.name());
+      String responseFormat = getOrgConsumptionData(actorMessage, periodStr, orgHashId, channel);
+      ProjectLogger.log("Response" + responseFormat);
       Response response =
           metricsResponseGenerator(responseFormat, periodStr, getViewData(orgId, orgName));
       sender().tell(response, self());
     } catch (ProjectCommonException e) {
-      ProjectLogger.log("Some error occurs", e);
+      ProjectLogger.log(
+          "OrganisationMetricsActor:orgConsumptionMetrics: Exception in getting org consumption data: "
+              + e.getMessage(),
+          e);
       sender().tell(e, self());
       return;
     } catch (Exception e) {
-      ProjectLogger.log("Some error occurs", e);
+      ProjectLogger.log(
+          "OrganisationMetricsActor:orgConsumptionMetrics: Generic exception in getting org consumption data: "
+              + e.getMessage(),
+          e);
       throw new ProjectCommonException(
           ResponseCode.internalError.getErrorCode(),
           ResponseCode.internalError.getErrorMessage(),

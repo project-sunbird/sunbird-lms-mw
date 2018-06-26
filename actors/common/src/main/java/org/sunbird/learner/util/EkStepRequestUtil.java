@@ -6,7 +6,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import javax.ws.rs.core.MediaType;
+
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpHeaders;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.common.models.util.HttpUtil;
@@ -44,18 +47,15 @@ public final class EkStepRequestUtil {
       }
       headers.put(
           JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
-      headers.put("Content-Type", "application/json");
-      headers.remove("accept-encoding");
-      headers.put("accept-encoding", "UTF-8");
+      headers.put(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+      headers.remove(HttpHeaders.ACCEPT_ENCODING.toLowerCase());
+      headers.put(HttpHeaders.ACCEPT_ENCODING.toLowerCase(), "UTF-8");
       if (StringUtils.isBlank(headers.get(JsonKey.AUTHORIZATION))) {
         headers.put(
             JsonKey.AUTHORIZATION,
             PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
       }
       ProjectLogger.log("making call for content search ==" + params, LoggerEnum.INFO.name());
-      ProjectLogger.log("making call for content search URL ==" +  baseSearchUrl
-              + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_URL), LoggerEnum.INFO.name());
-      ProjectLogger.log("making call for content search header ==" + headers ,LoggerEnum.INFO.name());
       response =
           HttpUtil.sendPostRequest(
               baseSearchUrl

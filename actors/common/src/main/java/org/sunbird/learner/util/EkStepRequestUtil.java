@@ -1,11 +1,11 @@
 /** */
 package org.sunbird.learner.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -14,6 +14,8 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * This class will make the call to EkStep content search
@@ -50,6 +52,9 @@ public final class EkStepRequestUtil {
             PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
       }
       ProjectLogger.log("making call for content search ==" + params, LoggerEnum.INFO.name());
+      ProjectLogger.log("making call for content search URL ==" +  baseSearchUrl
+              + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_URL), LoggerEnum.INFO.name());
+      ProjectLogger.log("making call for content search header ==" + headers ,LoggerEnum.INFO.name());
       response =
           HttpUtil.sendPostRequest(
               baseSearchUrl

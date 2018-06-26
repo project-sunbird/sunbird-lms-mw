@@ -1406,6 +1406,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     }
     User user = mapper.convertValue(userMap, User.class);
     Util.checkExternalIdUniqueness(user, operation);
+    if (JsonKey.UPDATE.equalsIgnoreCase(operation)) {
+      Util.validateUserExternalIds(userMap);
+    }
   }
 
   private boolean isUserDeletedFromOrg(Map<String, Object> userMap, String updatedBy) {

@@ -1063,6 +1063,7 @@ public class UserManagementActor extends BaseActor {
         userMap.put(JsonKey.EXTERNAL_IDS, list);
       }
       Util.checkExternalIdUniqueness(user, JsonKey.UPDATE);
+      Util.validateUserExternalIds(userMap);
     } catch (Exception ex) {
       sender().tell(ex, self());
       return;

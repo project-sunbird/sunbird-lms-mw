@@ -1008,33 +1008,6 @@ public final class Util {
                       externalId.get(JsonKey.ID_TYPE),
                       externalId.get(JsonKey.PROVIDER));
                 }
-              } else {
-                // externalIds belongs to same user then validate
-                Optional<Map<String, Object>> extMap =
-                    externalIdsRecord
-                        .stream()
-                        .filter(
-                            s -> {
-                              if ((((String) s.get(JsonKey.ID_TYPE))
-                                      .equalsIgnoreCase(externalId.get(JsonKey.ID_TYPE)))
-                                  && (((String) s.get(JsonKey.PROVIDER))
-                                      .equalsIgnoreCase(externalId.get(JsonKey.PROVIDER)))) {
-                                return true;
-                              } else {
-                                return false;
-                              }
-                            })
-                        .findFirst();
-                Map<String, Object> map = extMap.orElse(null);
-                if (JsonKey.ADD.equalsIgnoreCase(externalId.get(JsonKey.OPERATION))
-                    || StringUtils.isBlank(externalId.get(JsonKey.OPERATION))) {
-                  if (MapUtils.isNotEmpty(map)) {
-                    throw new ProjectCommonException(
-                        ResponseCode.duplicateExternalId.getErrorCode(),
-                        ResponseCode.duplicateExternalId.getErrorMessage(),
-                        ResponseCode.CLIENT_ERROR.getResponseCode());
-                  }
-                }
               }
             }
           } else {
@@ -1157,39 +1130,28 @@ public final class Util {
     }
   }
 
+  private static List<Map<String, String>> getUserExternalIds(Map<String, Object> requestMap) {
+    List<Map<String, String>> dbResExternalIds = new ArrayList<>();
+    Response response =
+        cassandraOperation.getRecordsByIndexedProperty(
+            KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
+    if (null != response && null != response.getResult()) {
+      dbResExternalIds = (List<Map<String, String>>) response.getResult().get(JsonKey.RESPONSE);
+    }
+    return dbResExternalIds;
+  }
+
   public static void updateUserExtId(Map<String, Object> requestMap) {
+    List<Map<String, String>> dbResExternalIds = getUserExternalIds(requestMap);
     List<Map<String, String>> externalIds =
         (List<Map<String, String>>) requestMap.get(JsonKey.EXTERNAL_IDS);
     if (CollectionUtils.isNotEmpty(externalIds)) {
-      Response response =
-          cassandraOperation.getRecordsByIndexedProperty(
-              KEY_SPACE_NAME,
-              USER_EXT_IDNT_TABLE,
-              JsonKey.USER_ID,
-              requestMap.get(JsonKey.USER_ID));
-      List<Map<String, String>> dbResExternalIds = new ArrayList<>();
-      if (null != response && null != response.getResult()) {
-        dbResExternalIds = (List<Map<String, String>>) response.getResult().get(JsonKey.RESPONSE);
-      }
       // will not allow user to update idType value, if user will try to update idType will
       // ignore
       // user will have only one entry for a idType for given provider so get extId based on idType
       // List of idType values for a user will distinct and unique
       for (Map<String, String> extIdMap : externalIds) {
-        Optional<Map<String, String>> extMap =
-            dbResExternalIds
-                .stream()
-                .filter(
-                    s -> {
-                      if (((s.get(JsonKey.ID_TYPE)).equalsIgnoreCase(extIdMap.get(JsonKey.ID_TYPE)))
-                          && ((s.get(JsonKey.PROVIDER))
-                              .equalsIgnoreCase(extIdMap.get(JsonKey.PROVIDER)))) {
-                        return true;
-                      } else {
-                        return false;
-                      }
-                    })
-                .findFirst();
+        Optional<Map<String, String>> extMap = checkExternalID(dbResExternalIds, extIdMap);
         Map<String, String> map = extMap.orElse(null);
         // Allowed operation type for externalIds ("add", "remove", "edit")
         if (JsonKey.ADD.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))
@@ -1313,6 +1275,55 @@ public final class Util {
     } else {
       Util.registerUserToOrg(userMap);
     }
+  }
+
+  public static void validateUserExternalIds(Map<String, Object> requestMap) {
+    List<Map<String, String>> dbResExternalIds = getUserExternalIds(requestMap);
+    List<Map<String, String>> externalIds =
+        (List<Map<String, String>>) requestMap.get(JsonKey.EXTERNAL_IDS);
+    if (CollectionUtils.isNotEmpty(externalIds)) {
+      for (Map<String, String> extIdMap : externalIds) {
+        Optional<Map<String, String>> extMap = checkExternalID(dbResExternalIds, extIdMap);
+        Map<String, String> map = extMap.orElse(null);
+        // Allowed operation type for externalIds ("add", "remove", "edit")
+        if (JsonKey.ADD.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))
+            || StringUtils.isBlank(extIdMap.get(JsonKey.OPERATION))) {
+          if (MapUtils.isNotEmpty(map)) {
+            throw new ProjectCommonException(
+                ResponseCode.duplicateExternalId.getErrorCode(),
+                ResponseCode.duplicateExternalId.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+          }
+        } else {
+          // operation is either edit or remove
+          if (MapUtils.isEmpty(map)) {
+            throwExternalIDNotFoundException(
+                extIdMap.get(JsonKey.ID),
+                extIdMap.get(JsonKey.ID_TYPE),
+                extIdMap.get(JsonKey.PROVIDER));
+          }
+        }
+      }
+    }
+  }
+
+  private static Optional<Map<String, String>> checkExternalID(
+      List<Map<String, String>> dbResExternalIds, Map<String, String> extIdMap) {
+    Optional<Map<String, String>> extMap =
+        dbResExternalIds
+            .stream()
+            .filter(
+                s -> {
+                  if (((s.get(JsonKey.ID_TYPE)).equalsIgnoreCase(extIdMap.get(JsonKey.ID_TYPE)))
+                      && ((s.get(JsonKey.PROVIDER))
+                          .equalsIgnoreCase(extIdMap.get(JsonKey.PROVIDER)))) {
+                    return true;
+                  } else {
+                    return false;
+                  }
+                })
+            .findFirst();
+    return extMap;
   }
 
   public static List<Map<String, String>> convertExternalIdsValueToLowerCase(

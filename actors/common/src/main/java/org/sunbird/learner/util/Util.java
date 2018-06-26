@@ -1008,6 +1008,33 @@ public final class Util {
                       externalId.get(JsonKey.ID_TYPE),
                       externalId.get(JsonKey.PROVIDER));
                 }
+              } else {
+                // externalIds belongs to same user then validate
+                Optional<Map<String, Object>> extMap =
+                    externalIdsRecord
+                        .stream()
+                        .filter(
+                            s -> {
+                              if ((((String) s.get(JsonKey.ID_TYPE))
+                                      .equalsIgnoreCase(externalId.get(JsonKey.ID_TYPE)))
+                                  && (((String) s.get(JsonKey.PROVIDER))
+                                      .equalsIgnoreCase(externalId.get(JsonKey.PROVIDER)))) {
+                                return true;
+                              } else {
+                                return false;
+                              }
+                            })
+                        .findFirst();
+                Map<String, Object> map = extMap.orElse(null);
+                if (JsonKey.ADD.equalsIgnoreCase(externalId.get(JsonKey.OPERATION))
+                    || StringUtils.isBlank(externalId.get(JsonKey.OPERATION))) {
+                  if (MapUtils.isNotEmpty(map)) {
+                    throw new ProjectCommonException(
+                        ResponseCode.duplicateExternalId.getErrorCode(),
+                        ResponseCode.duplicateExternalId.getErrorMessage(),
+                        ResponseCode.CLIENT_ERROR.getResponseCode());
+                  }
+                }
               }
             }
           } else {
@@ -1146,7 +1173,7 @@ public final class Util {
       }
       // will not allow user to update idType value, if user will try to update idType will
       // ignore
-      // user will have only one entry for a idType so get extId based on idType
+      // user will have only one entry for a idType for given provider so get extId based on idType
       // List of idType values for a user will distinct and unique
       for (Map<String, String> extIdMap : externalIds) {
         Optional<Map<String, String>> extMap =
@@ -1154,8 +1181,9 @@ public final class Util {
                 .stream()
                 .filter(
                     s -> {
-                      if ((s.get(JsonKey.ID_TYPE))
-                          .equalsIgnoreCase(extIdMap.get(JsonKey.ID_TYPE))) {
+                      if (((s.get(JsonKey.ID_TYPE)).equalsIgnoreCase(extIdMap.get(JsonKey.ID_TYPE)))
+                          && ((s.get(JsonKey.PROVIDER))
+                              .equalsIgnoreCase(extIdMap.get(JsonKey.PROVIDER)))) {
                         return true;
                       } else {
                         return false;

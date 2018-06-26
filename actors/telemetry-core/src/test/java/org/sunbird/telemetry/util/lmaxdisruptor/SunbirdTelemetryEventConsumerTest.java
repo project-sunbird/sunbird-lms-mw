@@ -5,7 +5,6 @@ import java.util.Map;
 import javax.ws.rs.core.MediaType;
 import org.junit.Assert;
 import org.junit.Test;
-import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.request.TelemetryV3Request;
@@ -32,9 +31,7 @@ public class SunbirdTelemetryEventConsumerTest {
   @Test
   public void testRequestDataStructure() {
     Request request = new Request();
-    Map<String, Object> map = writeEventConsumer.getTelemetryRequest(request);
-    Assert.assertNotNull(map);
-    Assert.assertNotNull(map.get(JsonKey.REQUEST));
-    Assert.assertNotNull(((TelemetryV3Request) map.get(JsonKey.REQUEST)).getEvents());
+    TelemetryV3Request telemetryData = writeEventConsumer.getTelemetryRequest(request);
+    Assert.assertNotNull(telemetryData);
   }
 }

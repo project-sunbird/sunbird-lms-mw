@@ -73,6 +73,7 @@ public final class Util {
   private static EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
           null);
+  private static ObjectMapper mapper = new ObjectMapper();
 
   static {
     loadPropertiesFile();
@@ -602,7 +603,6 @@ public final class Util {
     String response = "";
     JSONObject data;
     JSONObject jObject;
-    ObjectMapper mapper = new ObjectMapper();
     try {
       String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
       if (StringUtils.isBlank(baseSearchUrl)) {
@@ -770,12 +770,16 @@ public final class Util {
       channelMap.put(JsonKey.NAME, req.get(JsonKey.CHANNEL));
       channelMap.put(JsonKey.DESCRIPTION, req.get(JsonKey.DESCRIPTION));
       channelMap.put(JsonKey.CODE, req.get(JsonKey.HASHTAGID));
+      String defaultFramework = (String) req.get(JsonKey.DEFAULT_FRAMEWORK);
+      if (StringUtils.isNotBlank(defaultFramework))
+        channelMap.put(JsonKey.DEFAULT_FRAMEWORK, defaultFramework);
       reqMap.put(JsonKey.CHANNEL, channelMap);
       map.put(JsonKey.REQUEST, reqMap);
 
-      ObjectMapper mapper = new ObjectMapper();
       reqString = mapper.writeValueAsString(map);
-
+      ProjectLogger.log(
+          "Util:registerChannel: Channel registration request data = " + reqString,
+          LoggerEnum.DEBUG.name());
       regStatus =
           HttpUtil.sendPostRequest(
               (ekStepBaseUrl
@@ -822,7 +826,6 @@ public final class Util {
       reqMap.put(JsonKey.CHANNEL, channelMap);
       map.put(JsonKey.REQUEST, reqMap);
 
-      ObjectMapper mapper = new ObjectMapper();
       reqString = mapper.writeValueAsString(map);
 
       regStatus =
@@ -971,9 +974,13 @@ public final class Util {
         if (StringUtils.isNotBlank(externalId.get(JsonKey.ID))
             && StringUtils.isNotBlank(externalId.get(JsonKey.PROVIDER))
             && StringUtils.isNotBlank(externalId.get(JsonKey.ID_TYPE))) {
+          Map<String, Object> externalIdReq = new HashMap<>();
+          externalIdReq.put(JsonKey.PROVIDER, externalId.get(JsonKey.PROVIDER));
+          externalIdReq.put(JsonKey.ID_TYPE, externalId.get(JsonKey.ID_TYPE));
+          externalIdReq.put(JsonKey.EXTERNAL_ID, encryptData(externalId.get(JsonKey.ID)));
           Response response =
-              cassandraOperation.getRecordsByIndexedProperty(
-                  KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, JsonKey.SLUG, externalId.get(JsonKey.SLUG));
+              cassandraOperation.getRecordsByCompositeKey(
+                  KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, externalIdReq);
           List<Map<String, Object>> externalIdsRecord =
               (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
           if (CollectionUtils.isNotEmpty(externalIdsRecord)) {
@@ -1057,7 +1064,6 @@ public final class Util {
    */
   private static List<User> searchUser(Map<String, Object> searchQueryMap) {
     List<User> userList = new ArrayList<>();
-    ObjectMapper mapper = new ObjectMapper();
     Map<String, Object> searchRequestMap = new HashMap<>();
     searchRequestMap.put(JsonKey.FILTERS, searchQueryMap);
     SearchDTO searchDto = Util.createSearchDto(searchRequestMap);
@@ -1105,20 +1111,23 @@ public final class Util {
 
   private static void upsertUserExternalIdentityData(
       Map<String, String> extIdsMap, Map<String, Object> requestMap, String operation) {
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.EXTERNAL_ID, encryptData(extIdsMap.get(JsonKey.ID)));
-    map.put(JsonKey.PROVIDER, extIdsMap.get(JsonKey.PROVIDER));
-    map.put(JsonKey.SLUG, extIdsMap.get(JsonKey.SLUG));
-    map.put(JsonKey.ID_TYPE, extIdsMap.get(JsonKey.ID_TYPE));
-    map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
-    if (JsonKey.CREATE.equalsIgnoreCase(operation)) {
-      map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
-      map.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
-    } else {
-      map.put(JsonKey.LAST_UPDATED_BY, requestMap.get(JsonKey.UPDATED_BY));
-      map.put(JsonKey.LAST_UPDATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
+    try {
+      Map<String, Object> map = new HashMap<>();
+      map.put(JsonKey.EXTERNAL_ID, encryptData(extIdsMap.get(JsonKey.ID)));
+      map.put(JsonKey.PROVIDER, extIdsMap.get(JsonKey.PROVIDER));
+      map.put(JsonKey.ID_TYPE, extIdsMap.get(JsonKey.ID_TYPE));
+      map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
+      if (JsonKey.CREATE.equalsIgnoreCase(operation)) {
+        map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
+        map.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
+      } else {
+        map.put(JsonKey.LAST_UPDATED_BY, requestMap.get(JsonKey.UPDATED_BY));
+        map.put(JsonKey.LAST_UPDATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
+      }
+      cassandraOperation.upsertRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
+    } catch (Exception ex) {
+      ProjectLogger.log("Util:upsertUserExternalIdentityData : Exception occurred", ex);
     }
-    cassandraOperation.upsertRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
   }
 
   public static void updateUserExtId(Map<String, Object> requestMap) {
@@ -1167,7 +1176,6 @@ public final class Util {
               if (StringUtils.isNotBlank(map.get(JsonKey.ID_TYPE))
                   && StringUtils.isNotBlank((String) requestMap.get(JsonKey.USER_ID))
                   && StringUtils.isNotBlank(map.get(JsonKey.PROVIDER))) {
-                map.remove(JsonKey.SLUG);
                 map.remove(JsonKey.ID);
                 map.remove(JsonKey.LAST_UPDATED_BY);
                 map.remove(JsonKey.CREATED_BY);
@@ -1210,16 +1218,16 @@ public final class Util {
   public static Map<String, Object> getUserFromExternalId(Map<String, Object> userMap) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> user = null;
-    StringBuilder sb = new StringBuilder();
-    sb.append(((String) userMap.get(JsonKey.PROVIDER)).toLowerCase());
-    sb.append(":");
-    sb.append(((String) userMap.get(JsonKey.EXTERNAL_ID_TYPE)).toLowerCase());
-    sb.append(":");
-    sb.append(getEncryptedData(((String) userMap.get(JsonKey.EXTERNAL_ID)).toLowerCase()));
-
+    Map<String, Object> externalIdReq = new HashMap<>();
+    externalIdReq.put(JsonKey.PROVIDER, ((String) userMap.get(JsonKey.PROVIDER)).toLowerCase());
+    externalIdReq.put(
+        JsonKey.ID_TYPE, ((String) userMap.get(JsonKey.EXTERNAL_ID_TYPE)).toLowerCase());
+    externalIdReq.put(
+        JsonKey.EXTERNAL_ID,
+        encryptData(((String) userMap.get(JsonKey.EXTERNAL_ID)).toLowerCase()));
     Response response =
-        cassandraOperation.getRecordsByIndexedProperty(
-            KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, JsonKey.SLUG, sb.toString());
+        cassandraOperation.getRecordsByCompositeKey(
+            KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, externalIdReq);
     List<Map<String, Object>> userRecordList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
 
@@ -1279,17 +1287,6 @@ public final class Util {
     }
   }
 
-  private static String getSlug(Map<String, String> extIdMap) {
-    StringBuilder sb = new StringBuilder();
-    sb.append(extIdMap.get(JsonKey.PROVIDER));
-    sb.append(":");
-    sb.append(extIdMap.get(JsonKey.ID_TYPE));
-    sb.append(":");
-    // extIdMap.get(JsonKey.ID) is externalId
-    sb.append(getEncryptedData(extIdMap.get(JsonKey.ID).toLowerCase()));
-    return sb.toString();
-  }
-
   public static List<Map<String, String>> convertExternalIdsValueToLowerCase(
       List<Map<String, String>> externalIds) {
     ConvertValuesToLowerCase mapper =
@@ -1297,7 +1294,6 @@ public final class Util {
           s.put(JsonKey.ID, s.get(JsonKey.ID).toLowerCase());
           s.put(JsonKey.PROVIDER, s.get(JsonKey.PROVIDER).toLowerCase());
           s.put(JsonKey.ID_TYPE, s.get(JsonKey.ID_TYPE).toLowerCase());
-          s.put(JsonKey.SLUG, getSlug(s));
           return s;
         };
     return externalIds.stream().map(s -> mapper.convertToLowerCase(s)).collect(Collectors.toList());

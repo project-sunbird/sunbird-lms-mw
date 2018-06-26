@@ -8,6 +8,7 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.badge.BadgeOperations;
 import org.sunbird.badge.service.BadgingService;
 import org.sunbird.badge.service.impl.BadgingFactory;
+import org.sunbird.badge.util.BadgeAssertionValidator;
 import org.sunbird.badge.util.BadgingUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingJsonKey;
@@ -61,21 +62,29 @@ public class BadgeAssertionActor extends BaseActor {
    */
   private void createAssertion(Request actorMessage) throws IOException {
     ProjectLogger.log(
-        "Got request to create badge assertion", actorMessage.getRequest(), LoggerEnum.INFO.name());
+        "BadgeAssertionActor:createAssertion: Call started ",
+        actorMessage.getRequest(),
+        LoggerEnum.INFO.name());
+    String recipientId = (String) actorMessage.getRequest().get(BadgingJsonKey.RECIPIENT_ID);
+    String objectType = (String) actorMessage.getRequest().get(BadgingJsonKey.RECIPIENT_TYPE);
+    String badgeId = (String) actorMessage.getRequest().get(BadgingJsonKey.BADGE_ID);
+    BadgeAssertionValidator.validateRootOrg(recipientId, objectType, badgeId);
     Response result = service.badgeAssertion(actorMessage);
-    ProjectLogger.log("resultMap==" + result.getResult());
+    ProjectLogger.log(
+        "BadgeAssertionActor:createAssertion: Assertion Response : " + result.getResult(),
+        LoggerEnum.INFO.name());
     sender().tell(result, self());
-    ProjectLogger.log("resultMapSent==" + result.getResult());
     Map<String, Object> map = BadgingUtil.createBadgeNotifierMap(result.getResult());
     Request request = new Request();
-    String id = (String) actorMessage.getRequest().get(BadgingJsonKey.RECIPIENT_ID);
-    String objectType = (String) actorMessage.getRequest().get(BadgingJsonKey.RECIPIENT_TYPE);
     ProjectLogger.log(
-        "Notifying badge assertion for " + objectType + " with id: " + id,
+        "BadgeAssertionActor:createAssertion: Notifying badge assertion for "
+            + objectType
+            + " with id: "
+            + recipientId,
         actorMessage.getRequest(),
         LoggerEnum.INFO.name());
     map.put(JsonKey.OBJECT_TYPE, objectType);
-    map.put(JsonKey.ID, id);
+    map.put(JsonKey.ID, recipientId);
     request.getRequest().putAll(map);
     request.setOperation(BadgeOperations.assignBadgeMessage.name());
     tellToAnother(request);

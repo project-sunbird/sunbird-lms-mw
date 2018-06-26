@@ -16,8 +16,8 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.TelemetryEvents;
 import org.sunbird.telemetry.util.TelemetryUtil;
-import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 
 /** @author Amit Kumar */
 public class UpdateUserCountScheduler extends BaseJob {
@@ -25,7 +25,7 @@ public class UpdateUserCountScheduler extends BaseJob {
   @Override
   public void execute(JobExecutionContext ctx) throws JobExecutionException {
     ProjectLogger.log(
-        "Running Update user count Scheduler Job at: "
+        "UpdateUserCountScheduler:execute: Triggered Update user count Scheduler Job at: "
             + Calendar.getInstance().getTime()
             + " triggered by: "
             + ctx.getJobDetail().toString(),
@@ -46,12 +46,14 @@ public class UpdateUserCountScheduler extends BaseJob {
         locIdList.add(map.get(JsonKey.ID));
       }
     }
-    ProjectLogger.log("size of total locId to processed = " + locIdList.size());
+    ProjectLogger.log(
+        "UpdateUserCountScheduler:execute: size of total locId to processed = " + locIdList.size());
     Request request = new Request();
     request.setOperation(BackgroundOperations.updateUserCountToLocationID.name());
     request.getRequest().put(JsonKey.LOCATION_IDS, locIdList);
     request.getRequest().put(JsonKey.OPERATION, "UpdateUserCountScheduler");
-    ProjectLogger.log("calling BackgroundService actor from scheduler");
+    ProjectLogger.log(
+        "UpdateUserCountScheduler:execute: calling BackgroundService actor from scheduler");
     tellToBGRouter(request);
     TelemetryUtil.telemetryProcessingCall(logInfo, null, null, TelemetryEvents.LOG.getName());
   }

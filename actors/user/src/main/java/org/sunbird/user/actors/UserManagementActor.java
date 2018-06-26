@@ -686,14 +686,6 @@ public class UserManagementActor extends BaseActor {
       result.remove(JsonKey.MISSING_FIELDS);
       result.remove(JsonKey.COMPLETENESS);
     }
-    /*
-     * Read User Entity from Registry
-     */
-    if ("true"
-        .equalsIgnoreCase(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
-      UserExtension userExtension = new UserProviderRegistryImpl();
-      userExtension.read(result);
-    }
 
     Response response = new Response();
     if (null != result) {

@@ -53,9 +53,6 @@ public final class EkStepRequestUtil {
             PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
       }
       ProjectLogger.log("making call for content search ==" + params, LoggerEnum.INFO.name());
-      ProjectLogger.log("making call for content search URL ==" +  baseSearchUrl
-              + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_URL), LoggerEnum.INFO.name());
-      ProjectLogger.log("making call for content search header ==" + headers ,LoggerEnum.INFO.name());
       response =
           HttpUtil.sendPostRequest(
               baseSearchUrl

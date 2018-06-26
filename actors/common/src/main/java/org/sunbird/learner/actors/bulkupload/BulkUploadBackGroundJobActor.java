@@ -3,8 +3,6 @@ package org.sunbird.learner.actors.bulkupload;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -14,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -56,6 +55,9 @@ import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.validator.location.LocationRequestValidator;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * This actor will handle bulk upload operation .
@@ -1722,9 +1724,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
     if (!(StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
 
-      String envName = System.getenv(JsonKey.SUNBIRD_INSTALLATION);
+      String envName = System.getenv(JsonKey.SUNBIRD_EMAIL_ENV);
       if (StringUtils.isBlank(envName)) {
-        envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
+        envName = propertiesCache.getProperty(JsonKey.SUNBIRD_EMAIL_ENV);
       }
 
       String welcomeSubject = propertiesCache.getProperty("onboarding_mail_subject");
@@ -1787,9 +1789,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       UserUtility.decryptUserData(userMap);
       String name =
           (String) userMap.get(JsonKey.FIRST_NAME) + " " + (String) userMap.get(JsonKey.LAST_NAME);
-      String envName = System.getenv(JsonKey.SUNBIRD_INSTALLATION);
+      String envName = System.getenv(JsonKey.SUNBIRD_EMAIL_ENV);
       if (StringUtils.isBlank(envName)) {
-        envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
+        envName = propertiesCache.getProperty(JsonKey.SUNBIRD_EMAIL_ENV);
       }
 
       String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);

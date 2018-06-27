@@ -569,6 +569,9 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   private String getOrgConsumptionData(
       Request actorMessage, String periodStr, String orgHashId, String channel) throws IOException {
     String requestStr = getOrgMetricsRequest(actorMessage, periodStr, orgHashId, null, channel);
+    ProjectLogger.log(
+        "OrganisationMetricsActor:getOrgConsumptionData Requested data : " + requestStr,
+        LoggerEnum.INFO.name());
     String ekStepResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, requestStr);
     return orgConsumptionResponseGenerator(periodStr, ekStepResponse);
   }

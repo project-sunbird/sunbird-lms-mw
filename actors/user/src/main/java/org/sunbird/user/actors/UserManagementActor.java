@@ -1810,10 +1810,7 @@ public class UserManagementActor extends BaseActor {
       String name =
           (String) userMap.get(JsonKey.FIRST_NAME) + " " + (String) userMap.get(JsonKey.LAST_NAME);
 
-      String envName = System.getenv(JsonKey.SUNBIRD_INSTALLATION);
-      if (StringUtils.isBlank(envName)) {
-        envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
-      }
+      String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
       String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
 
       ProjectLogger.log("shortened url :: " + webUrl, LoggerEnum.INFO);
@@ -3023,10 +3020,7 @@ public class UserManagementActor extends BaseActor {
 
     if (!(StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
 
-      String envName = System.getenv(JsonKey.SUNBIRD_INSTALLATION);
-      if (StringUtils.isBlank(envName)) {
-        envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION);
-      }
+      String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
 
       String welcomeSubject = propertiesCache.getProperty("onboarding_mail_subject");
       emailTemplateMap.put(JsonKey.SUBJECT, ProjectUtil.formatMessage(welcomeSubject, envName));

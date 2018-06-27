@@ -172,14 +172,16 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   /**
    * Method to check whether number of lines in the file is permissible or not.
    *
-   * @param maxLines Number represents the max allowed lines in the file.
-   * @param actualLines Number represents the number of lines in the file.
+   * @param maxLines Number represents the max allowed lines in the file including the header line
+   *     as well.
+   * @param actualLines Number represents the number of lines in the file including the header line
+   *     as well.
    */
   public void validateFileSizeAgainstLineNumbers(int maxLines, int actualLines) {
     if (actualLines > 0 && actualLines > maxLines) {
       throw new ProjectCommonException(
           ResponseCode.dataSizeError.getErrorCode(),
-          ProjectUtil.formatMessage(ResponseCode.dataSizeError.getErrorMessage(), maxLines),
+          ProjectUtil.formatMessage(ResponseCode.dataSizeError.getErrorMessage(), (maxLines - 1)),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
   }

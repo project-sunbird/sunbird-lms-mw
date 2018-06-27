@@ -181,7 +181,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     if (actualLines > 0 && actualLines > maxLines) {
       throw new ProjectCommonException(
           ResponseCode.dataSizeError.getErrorCode(),
-          ProjectUtil.formatMessage(ResponseCode.dataSizeError.getErrorMessage(), maxLines - 1),
+          ProjectUtil.formatMessage(ResponseCode.dataSizeError.getErrorMessage(), (maxLines - 1)),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
   }

@@ -165,31 +165,6 @@ public class LearnerStateActor extends BaseActor {
   private List<Map<String, Object>> getContentByBatch(String userId, String batchId) {
 
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
-    /*String batchId = (String) requestMap.get(JsonKey.BATCH_ID);
-
-    List<String> courseIds = new ArrayList<>();
-    List<String> contentIds = new ArrayList<>();
-    if(null != requestMap.get(JsonKey.COURSE_IDS)){
-      courseIds = (List<String>) requestMap.get(JsonKey.COURSE_IDS);
-      if(courseIds.size()>1){
-        ProjectLogger.log("LearnerStateActor:getContentByBatch: multiple course ids not allowed for batch" , LoggerEnum.ERROR.name());
-        throw new ProjectCommonException(ResponseCode.multipleCoursesNotAllowedForBatch.getErrorCode(), ResponseCode.multipleCoursesNotAllowedForBatch.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
-      }
-    }
-
-    if(null != requestMap.get(JsonKey.CONTENT_IDS)) {
-      contentIds = (List<String>) requestMap.get(JsonKey.CONTENT_IDS);
-    }
-
-    List<String> primaryKeyList = new ArrayList<>();
-    if(contentIds.size()>0 && courseIds.size()==1){
-      String courseId = courseIds.get(0);
-      for(String contentId : contentIds){
-        String key = generatePrimaryKeyForContent(userId, batchId , courseId, contentId);
-        primaryKeyList.add(key);
-      }
-      return getContentByPrimaryKeys(primaryKeyList);
-    }*/
 
     List<Map<String, Object>> contentList = new ArrayList<Map<String, Object>>();
     Map<String, Object> queryMap = new HashMap<String, Object>();

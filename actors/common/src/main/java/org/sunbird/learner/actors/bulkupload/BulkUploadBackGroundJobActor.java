@@ -996,7 +996,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           tempMap.remove(JsonKey.POSITION);
           // remove externalID and Provider as we are not saving these to user table
           tempMap.remove(JsonKey.EXTERNAL_ID);
-          tempMap.remove(JsonKey.PROVIDER);
+          tempMap.remove(JsonKey.EXTERNAL_ID_PROVIDER);
+          tempMap.remove(JsonKey.EXTERNAL_ID_TYPE);
           tempMap.remove(JsonKey.ORGANISATION_ID);
           tempMap.put(JsonKey.EMAIL_VERIFIED, false);
           Response response = null;
@@ -1264,8 +1265,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
   private Map<String, Object> findUser(Map<String, Object> requestedUserMap) {
     Map<String, Object> foundUserMap = null;
     String extId = (String) requestedUserMap.get(JsonKey.EXTERNAL_ID);
-    String provider = (String) requestedUserMap.get(JsonKey.PROVIDER);
-    String idType = (String) requestedUserMap.get(JsonKey.ID_TYPE);
+    String provider = (String) requestedUserMap.get(JsonKey.EXTERNAL_ID_PROVIDER);
+    String idType = (String) requestedUserMap.get(JsonKey.EXTERNAL_ID_TYPE);
     if (StringUtils.isNotBlank(extId)
         && StringUtils.isNotBlank(provider)
         && StringUtils.isNotBlank(idType)) {

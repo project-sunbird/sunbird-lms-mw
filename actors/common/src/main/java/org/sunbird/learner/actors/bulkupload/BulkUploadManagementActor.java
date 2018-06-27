@@ -70,7 +70,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     JsonKey.PROFILE_SUMMARY,
     JsonKey.SUBJECT,
     JsonKey.WEB_PAGES,
-    JsonKey.PROVIDER,
+    JsonKey.EXTERNAL_ID_PROVIDER,
     JsonKey.EXTERNAL_ID,
     JsonKey.EXTERNAL_ID_TYPE,
     JsonKey.EXTERNAL_IDS

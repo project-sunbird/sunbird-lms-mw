@@ -2,7 +2,6 @@ package org.sunbird.metrics.actors;
 
 import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -16,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -33,6 +33,8 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public abstract class BaseMetricsActor extends BaseActor {
 
@@ -366,6 +368,8 @@ public abstract class BaseMetricsActor extends BaseActor {
     post.addHeader("Content-Type", "application/json; charset=utf-8");
     post.addHeader(JsonKey.AUTHORIZATION, authKey);
     post.setEntity(new StringEntity(body, CHARSETS_UTF_8));
+    ProjectLogger.log("BaseMetricsActor:makePostRequest completed requested data : " + body,LoggerEnum.INFO.name() );
+    ProjectLogger.log("BaseMetricsActor:makePostRequest completed Url : " + baseSearchUrl + PropertiesCache.getInstance().getProperty(url),LoggerEnum.INFO.name() );
     HttpResponse response = client.execute(post);
     ProjectLogger.log("##ResponseCode" + response.getStatusLine().getStatusCode());
     if (response.getStatusLine().getStatusCode() != 200) {

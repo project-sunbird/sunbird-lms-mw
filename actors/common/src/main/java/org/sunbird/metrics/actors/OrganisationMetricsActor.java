@@ -1,7 +1,5 @@
 package org.sunbird.metrics.actors;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -11,6 +9,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
@@ -31,6 +30,9 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ActorConfig(
   tasks = {
@@ -569,6 +571,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   private String getOrgConsumptionData(
       Request actorMessage, String periodStr, String orgHashId, String channel) throws IOException {
     String requestStr = getOrgMetricsRequest(actorMessage, periodStr, orgHashId, null, channel);
+    ProjectLogger.log("OrganisationMetricsActor:getOrgConsumptionData Requested data : " + requestStr ,LoggerEnum.INFO.name());
     String ekStepResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, requestStr);
     return orgConsumptionResponseGenerator(periodStr, ekStepResponse);
   }

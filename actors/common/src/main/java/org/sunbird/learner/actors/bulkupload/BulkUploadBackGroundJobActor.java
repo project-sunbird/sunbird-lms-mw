@@ -1365,11 +1365,11 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
-    validateExternalIds(userMap, JsonKey.UPDATE);
-
     userMap.put(JsonKey.ID, userDbRecord.get(JsonKey.ID));
     userMap.put(JsonKey.USER_ID, userDbRecord.get(JsonKey.ID));
     userMap.put(JsonKey.OPERATION, JsonKey.UPDATE);
+
+    validateExternalIds(userMap, JsonKey.UPDATE);
 
     checkEmailUniqueness(userMap, JsonKey.UPDATE);
     checkPhoneUniqueness(userMap, JsonKey.UPDATE);

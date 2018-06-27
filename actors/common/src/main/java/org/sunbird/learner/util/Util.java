@@ -1158,6 +1158,8 @@ public final class Util {
             || StringUtils.isBlank(extIdMap.get(JsonKey.OPERATION))) {
           if (MapUtils.isEmpty(map)) {
             upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.CREATE);
+          } else {
+            upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.UPDATE);
           }
         } else {
           // operation is either edit or remove

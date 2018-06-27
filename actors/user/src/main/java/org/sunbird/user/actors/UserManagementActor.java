@@ -1027,7 +1027,7 @@ public class UserManagementActor extends BaseActor {
     UserRequestValidator.validateUpdateUser(actorMessage);
     Map<String, Object> userDbRecord = null;
     String extId = (String) userMap.get(JsonKey.EXTERNAL_ID);
-    String provider = (String) userMap.get(JsonKey.PROVIDER);
+    String provider = (String) userMap.get(JsonKey.EXTERNAL_ID_PROVIDER);
     String idType = (String) userMap.get(JsonKey.EXTERNAL_ID_TYPE);
 
     if ((StringUtils.isBlank((String) userMap.get(JsonKey.USER_ID))
@@ -1586,6 +1586,7 @@ public class UserManagementActor extends BaseActor {
     // Will ignore these fields in create api
     userMap.remove(JsonKey.EXTERNAL_ID);
     userMap.remove(JsonKey.PROVIDER);
+    userMap.remove(JsonKey.EXTERNAL_ID_PROVIDER);
     userMap.remove(JsonKey.ID_TYPE);
     userMap.remove(JsonKey.EXTERNAL_ID_TYPE);
     try {
@@ -1754,7 +1755,9 @@ public class UserManagementActor extends BaseActor {
         // update the user external identity data
         Util.addUserExtIds(userMap);
       } catch (Exception ex) {
-        ProjectLogger.log("Exception occurred while updating user_ext_table", ex);
+        ProjectLogger.log(
+            "UserManagementActor:createUser: Exception occurred while updating user external identity table.",
+            ex);
       }
     }
 
@@ -2098,6 +2101,7 @@ public class UserManagementActor extends BaseActor {
     reqMap.remove(JsonKey.ID_TYPE);
     reqMap.remove(JsonKey.EXTERNAL_ID_TYPE);
     reqMap.remove(JsonKey.PROVIDER);
+    reqMap.remove(JsonKey.EXTERNAL_ID_PROVIDER);
     reqMap.remove(JsonKey.EXTERNAL_IDS);
   }
 

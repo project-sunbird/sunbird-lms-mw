@@ -1103,7 +1103,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               Util.updateUserExtId(userMap);
             } catch (Exception ex) {
               userMap.put(
-                  JsonKey.ERROR_MSG, ex.getMessage() + " ,user external identity updation failed.");
+                  JsonKey.ERROR_MSG, "Update of user external IDs failed. " + ex.getMessage());
             }
             // Process Audit Log
             processAuditLog(
@@ -1543,16 +1543,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             ResponseMessage.Message.PARSING_FAILED, JsonKey.EXTERNAL_IDS);
       }
     }
-    if (!StringUtils.isBlank((String) userMap.get(JsonKey.EMAIL_VERIFIED))) {
-      try {
-        userMap.put(
-            JsonKey.EMAIL_VERIFIED,
-            Boolean.parseBoolean((String) userMap.get(JsonKey.EMAIL_VERIFIED)));
-      } catch (Exception ex) {
-        return ProjectUtil.formatMessage(
-            ResponseMessage.Message.DATA_TYPE_ERROR, JsonKey.EMAIL_VERIFIED, "Boolean");
-      }
-    }
+    userMap.put(JsonKey.EMAIL_VERIFIED, false);
     if (!StringUtils.isBlank((String) userMap.get(JsonKey.PHONE_VERIFIED))) {
       try {
         userMap.put(

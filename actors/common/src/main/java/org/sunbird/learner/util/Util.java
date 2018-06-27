@@ -1209,7 +1209,8 @@ public final class Util {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> user = null;
     Map<String, Object> externalIdReq = new HashMap<>();
-    externalIdReq.put(JsonKey.PROVIDER, ((String) userMap.get(JsonKey.PROVIDER)).toLowerCase());
+    externalIdReq.put(
+        JsonKey.PROVIDER, ((String) userMap.get(JsonKey.EXTERNAL_ID_PROVIDER)).toLowerCase());
     externalIdReq.put(
         JsonKey.ID_TYPE, ((String) userMap.get(JsonKey.EXTERNAL_ID_TYPE)).toLowerCase());
     externalIdReq.put(
@@ -1286,15 +1287,8 @@ public final class Util {
         Optional<Map<String, String>> extMap = checkExternalID(dbResExternalIds, extIdMap);
         Map<String, String> map = extMap.orElse(null);
         // Allowed operation type for externalIds ("add", "remove", "edit")
-        if (JsonKey.ADD.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))
-            || StringUtils.isBlank(extIdMap.get(JsonKey.OPERATION))) {
-          if (MapUtils.isNotEmpty(map)) {
-            throw new ProjectCommonException(
-                ResponseCode.duplicateExternalId.getErrorCode(),
-                ResponseCode.duplicateExternalId.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-          }
-        } else {
+        if (!JsonKey.ADD.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))
+            || StringUtils.isNotBlank(extIdMap.get(JsonKey.OPERATION))) {
           // operation is either edit or remove
           if (MapUtils.isEmpty(map)) {
             throwExternalIDNotFoundException(

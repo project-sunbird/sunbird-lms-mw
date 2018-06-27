@@ -1159,6 +1159,10 @@ public final class Util {
           if (MapUtils.isEmpty(map)) {
             upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.CREATE);
           } else {
+            // if external Id with same provider and idType exist then delete first then update
+            // to update user externalId first we need to delete the record as externalId is the
+            // part of composite key
+            deleteUserExternalId(requestMap, map);
             upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.UPDATE);
           }
         } else {
@@ -1168,16 +1172,12 @@ public final class Util {
               if (StringUtils.isNotBlank(map.get(JsonKey.ID_TYPE))
                   && StringUtils.isNotBlank((String) requestMap.get(JsonKey.USER_ID))
                   && StringUtils.isNotBlank(map.get(JsonKey.PROVIDER))) {
-                map.remove(JsonKey.ID);
-                map.remove(JsonKey.LAST_UPDATED_BY);
-                map.remove(JsonKey.CREATED_BY);
-                map.remove(JsonKey.EXTERNAL_ID);
-                map.remove(JsonKey.LAST_UPDATED_ON);
-                map.remove(JsonKey.CREATED_ON);
-                map.put(JsonKey.USER_ID, (String) requestMap.get(JsonKey.USER_ID));
-                cassandraOperation.deleteRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
+                deleteUserExternalId(requestMap, map);
               }
             } else if (JsonKey.EDIT.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))) {
+              // to update user externalId first we need to delete the record as externalId is the
+              // part of composite key
+              deleteUserExternalId(requestMap, map);
               upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.UPDATE);
             }
           } else {
@@ -1189,6 +1189,16 @@ public final class Util {
         }
       }
     }
+  }
+
+  private static void deleteUserExternalId(
+      Map<String, Object> requestMap, Map<String, String> map) {
+    map.remove(JsonKey.LAST_UPDATED_BY);
+    map.remove(JsonKey.CREATED_BY);
+    map.remove(JsonKey.LAST_UPDATED_ON);
+    map.remove(JsonKey.CREATED_ON);
+    map.remove(JsonKey.USER_ID);
+    cassandraOperation.deleteRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
   }
 
   public static void registerUserToOrg(Map<String, Object> userMap) {

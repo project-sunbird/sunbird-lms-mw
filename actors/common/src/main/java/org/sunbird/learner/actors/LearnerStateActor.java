@@ -126,14 +126,14 @@ public class LearnerStateActor extends BaseActor {
       if (null != requestMap.get(JsonKey.CONTENT_IDS)) {
         contentList = filterForMatchingContentIds(contentList, requestMap);
       }
-    } else if (null != courseIds) {
+    } else if (CollectionUtils.isNotEmpty(courseIds)) {
       contentList = getContentByCourses(userId, requestMap);
       if (courseIds.size() == 1) {
         if (null != requestMap.get(JsonKey.CONTENT_IDS)) {
           contentList = filterForMatchingContentIds(contentList, requestMap);
         }
       }
-    } else if (null != contentIds) {
+    } else if (CollectionUtils.isNotEmpty(contentIds)) {
       contentList = getContentByContentIds(userId, requestMap);
     }
     response.getResult().put(JsonKey.RESPONSE, contentList);

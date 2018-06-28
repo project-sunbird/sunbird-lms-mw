@@ -3,7 +3,6 @@ package org.sunbird.learner.actors;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -11,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -40,6 +40,8 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.organization.Organization;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.validator.location.LocationRequestValidator;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * This actor will handle organisation related operation .
@@ -1958,6 +1960,7 @@ public class OrganisationManagementActor extends BaseActor {
       return false;
     }
     req.put(JsonKey.ORGANISATION_ID, list.get(0).get(JsonKey.ID));
+    req.put(JsonKey.HASHTAGID, list.get(0).get(JsonKey.HASHTAGID));
     if (req.containsKey(JsonKey.PROVIDER) || req.containsKey(JsonKey.SOURCE)) {
       req.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
     } else {

@@ -721,9 +721,8 @@ public class UserManagementActor extends BaseActor {
             .stream()
             .forEach(
                 s -> {
-                  s.put(
-                      JsonKey.EXTERNAL_ID,
-                      decryptionService.decryptData(s.get(JsonKey.EXTERNAL_ID)));
+                  s.put(JsonKey.ID, decryptionService.decryptData(s.get(JsonKey.EXTERNAL_ID)));
+                  s.remove(JsonKey.EXTERNAL_ID);
                   s.remove(JsonKey.CREATED_BY);
                   s.remove(JsonKey.LAST_UPDATED_BY);
                   s.remove(JsonKey.LAST_UPDATED_ON);

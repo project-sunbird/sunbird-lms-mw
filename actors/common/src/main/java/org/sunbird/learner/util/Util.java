@@ -1,6 +1,5 @@
 package org.sunbird.learner.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
@@ -17,7 +16,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.stream.Collectors;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -50,6 +51,8 @@ import org.sunbird.helper.CassandraConnectionManager;
 import org.sunbird.helper.CassandraConnectionMngrFactory;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.models.user.User;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Utility class for actors
@@ -1047,13 +1050,17 @@ public final class Util {
   }
 
   public static void registerUserToOrg(Map<String, Object> userMap) {
-    Map<String, Object> reqMap = new HashMap<>();
+	// converting HashMap to weakHashMap and reducing default capacity from 16 to 10.
+    Map<String, Object> reqMap = new WeakHashMap<>(10);
     reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
     reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
     reqMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
     reqMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ORGANISATION_ID));
     reqMap.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
     reqMap.put(JsonKey.IS_DELETED, false);
+    if(StringUtils.isNotEmpty((String)userMap.get(JsonKey.HASHTAGID))) {
+    	reqMap.put(JsonKey.HASHTAGID, (String)userMap.get(JsonKey.HASHTAGID));
+    }
     Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
     try {
       cassandraOperation.insertRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), reqMap);
@@ -1102,7 +1109,6 @@ public final class Util {
   public static void upsertUserOrgData(Map<String, Object> userMap) {
     Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
     Map<String, Object> map = new HashMap<>();
-    Map<String, Object> reqMap = new HashMap<>();
     map.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
     map.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ORGANISATION_ID));
     Response response =
@@ -1111,14 +1117,18 @@ public final class Util {
     List<Map<String, Object>> resList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (!resList.isEmpty()) {
       Map<String, Object> res = resList.get(0);
+      Map<String, Object> reqMap = new WeakHashMap<>(10);
       reqMap.put(JsonKey.ID, res.get(JsonKey.ID));
       reqMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
       reqMap.put(JsonKey.UPDATED_BY, userMap.get(JsonKey.UPDATED_BY));
       reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+      if(StringUtils.isNotEmpty((String)userMap.get(JsonKey.HASHTAGID))) {
+      	reqMap.put(JsonKey.HASHTAGID, (String)userMap.get(JsonKey.HASHTAGID));
+      }
       try {
         cassandraOperation.updateRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), reqMap);
       } catch (Exception e) {
-        ProjectLogger.log(e.getMessage(), e);
+        ProjectLogger.log("Util:upsertUserOrgData exception : " + e.getMessage(), e);
       }
     } else {
       Util.registerUserToOrg(userMap);

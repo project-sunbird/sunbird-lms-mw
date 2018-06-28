@@ -2684,6 +2684,8 @@ public class UserManagementActor extends BaseActor {
         return;
       }
       requestMap.put(JsonKey.ORGANISATION_ID, list.get(0).get(JsonKey.ID));
+      //get org hashTagId and keep inside request map.
+      requestMap.put(JsonKey.HASHTAGID, list.get(0).get(JsonKey.HASHTAGID));
     }
 
     // now we have valid userid , roles and need to check organisation id is also
@@ -2697,6 +2699,7 @@ public class UserManagementActor extends BaseActor {
       tempMap.remove(JsonKey.SOURCE);
       tempMap.put(JsonKey.ORGANISATION_ID, requestMap.get(JsonKey.ORGANISATION_ID));
       tempMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
+      tempMap.put(JsonKey.HASHTAGID, requestMap.get(JsonKey.HASHTAGID));
       Util.DbInfo userOrgDb = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
       Response response =
           cassandraOperation.getRecordsByProperties(

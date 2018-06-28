@@ -90,7 +90,7 @@ public class LearnerStateActor extends BaseActor {
   private Response getCourseContentState(String userId, Map<String, Object> requestMap) {
 
     Response response = new Response();
-    List<Map<String, Object>> contentList = null;
+    List<Map<String, Object>> contentList = new ArrayList<>();
 
     String batchId = (String) requestMap.get(JsonKey.BATCH_ID);
     List<String> courseIds = new ArrayList<>();
@@ -165,12 +165,10 @@ public class LearnerStateActor extends BaseActor {
   private List<Map<String, Object>> getContentByBatch(String userId, String batchId) {
 
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
-
     List<Map<String, Object>> contentList = new ArrayList<Map<String, Object>>();
     Map<String, Object> queryMap = new HashMap<String, Object>();
     queryMap.put(JsonKey.USER_ID, userId);
     queryMap.put(JsonKey.BATCH_ID, batchId);
-
     Response response =
         cassandraOperation.getRecordsByProperties(
             dbInfo.getKeySpace(), dbInfo.getTableName(), queryMap);
@@ -190,13 +188,6 @@ public class LearnerStateActor extends BaseActor {
     return contentList;
   }
 
-  /**
-   * Method to get content on basis of course ids.
-   *
-   * @param userId String
-   * @param request Map<String, Object>
-   * @return Response
-   */
   @SuppressWarnings("unchecked")
   private List<Map<String, Object>> getContentByCourses(
       String userId, Map<String, Object> request) {
@@ -205,7 +196,6 @@ public class LearnerStateActor extends BaseActor {
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
     List<String> courseIds = new ArrayList<String>((List<String>) request.get(JsonKey.COURSE_IDS));
     List<Map<String, Object>> contentList = new ArrayList<Map<String, Object>>();
-
     Map<String, Object> queryMap = new HashMap<String, Object>();
     queryMap.put(JsonKey.USER_ID, userId);
 
@@ -219,7 +209,6 @@ public class LearnerStateActor extends BaseActor {
     return contentList;
   }
 
-  /** Method to get content on basis of content ids. */
   @SuppressWarnings("unchecked")
   private List<Map<String, Object>> getContentByContentIds(
       String userId, Map<String, Object> request) {
@@ -248,10 +237,8 @@ public class LearnerStateActor extends BaseActor {
     List<Map<String, Object>> list =
         (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
     for (Map<String, Object> map : list) {
-      map.remove(JsonKey.DATE_TIME);
-      map.remove(JsonKey.USER_ID);
-      map.remove(JsonKey.ADDED_BY);
-      map.remove(JsonKey.LAST_UPDATED_TIME);
+      ProjectUtil.removeUnwantedFields(
+          map, JsonKey.DATE_TIME, JsonKey.USER_ID, JsonKey.ADDED_BY, JsonKey.LAST_UPDATED_TIME);
     }
   }
 

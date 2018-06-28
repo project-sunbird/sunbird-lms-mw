@@ -507,6 +507,9 @@ public class UserManagementActor extends BaseActor {
                   ProjectUtil.EsType.userprofilevisibility.getTypeName(),
                   (String) userMap.get(JsonKey.USER_ID));
           UserUtility.decryptUserDataFrmES(privateResult);
+          // fetch user external identity
+          List<Map<String, String>> dbResExternalIds = fetchUserExternalIdentity(requestedById);
+          result.put(JsonKey.EXTERNAL_IDS, dbResExternalIds);
           result.putAll(privateResult);
         }
       } catch (Exception e) {

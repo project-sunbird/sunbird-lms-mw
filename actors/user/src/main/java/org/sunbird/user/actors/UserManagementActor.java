@@ -3,6 +3,7 @@ package org.sunbird.user.actors;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,7 +12,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.velocity.VelocityContext;
 import org.sunbird.actor.background.BackgroundOperations;
@@ -51,8 +51,6 @@ import org.sunbird.notification.utils.SMSFactory;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * This actor will handle course enrollment operation .
@@ -2684,7 +2682,7 @@ public class UserManagementActor extends BaseActor {
         return;
       }
       requestMap.put(JsonKey.ORGANISATION_ID, list.get(0).get(JsonKey.ID));
-      //get org hashTagId and keep inside request map.
+      // get org hashTagId and keep inside request map.
       requestMap.put(JsonKey.HASHTAGID, list.get(0).get(JsonKey.HASHTAGID));
     }
 
@@ -2947,7 +2945,7 @@ public class UserManagementActor extends BaseActor {
 
     if (!(StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
 
-       String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
+      String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
 
       String welcomeSubject = propertiesCache.getProperty("onboarding_mail_subject");
       emailTemplateMap.put(JsonKey.SUBJECT, ProjectUtil.formatMessage(welcomeSubject, envName));

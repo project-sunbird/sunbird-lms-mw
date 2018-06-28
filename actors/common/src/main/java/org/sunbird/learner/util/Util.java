@@ -1299,8 +1299,8 @@ public final class Util {
         Optional<Map<String, String>> extMap = checkExternalID(dbResExternalIds, extIdMap);
         Map<String, String> map = extMap.orElse(null);
         // Allowed operation type for externalIds ("add", "remove", "edit")
-        if (!JsonKey.ADD.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))
-            || StringUtils.isNotBlank(extIdMap.get(JsonKey.OPERATION))) {
+        if (!(JsonKey.ADD.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))
+            || StringUtils.isNotBlank(extIdMap.get(JsonKey.OPERATION)))) {
           // operation is either edit or remove
           if (MapUtils.isEmpty(map)) {
             throwExternalIDNotFoundException(

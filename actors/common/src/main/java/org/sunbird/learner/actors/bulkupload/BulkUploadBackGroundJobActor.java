@@ -3,6 +3,8 @@ package org.sunbird.learner.actors.bulkupload;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -12,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -55,9 +56,6 @@ import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.validator.location.LocationRequestValidator;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * This actor will handle bulk upload operation .
@@ -972,24 +970,28 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     List<Map<String, Object>> failureUserReq = new ArrayList<>();
     List<Map<String, Object>> successUserReq = new ArrayList<>();
     Map<String, Object> userMap = null;
-    // To store hashTagId inside user-org table , first we need to get
-    // hashTag id from provided organisation id. Currently in bulk user 
-    //uplaod we are passing only one orgId , so we can get the details before
-    //for loop and reuse it.
+    /*
+     * To store hashTagId inside user_org table, first we need to get hashTagId from
+     * provided organisation ID. Currently in bulk user upload, we are passing only
+     * one organisation, so we can get the details before for loop and reuse it.
+     */
     String hashTagId = null;
-		if (dataMapList != null && dataMapList.size() > 0) {
-			String orgId = (String) dataMapList.get(0).get(JsonKey.ORGANISATION_ID);
-			if (StringUtils.isNotBlank(orgId)) {
-				Map<String, Object> map = ElasticSearchUtil.getDataByIdentifier(
-						ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName(),
-						orgId);
-				if (MapUtils.isNotEmpty(map)) {
-					hashTagId = (String) map.get(JsonKey.HASHTAGID);
-					ProjectLogger.log("BulkUploadBackGroundJobActor:processUserInfo org hashTagId value : " + hashTagId,
-							LoggerEnum.INFO.name());
-				}
-			}
-		}
+    if (dataMapList != null && dataMapList.size() > 0) {
+      String orgId = (String) dataMapList.get(0).get(JsonKey.ORGANISATION_ID);
+      if (StringUtils.isNotBlank(orgId)) {
+        Map<String, Object> map =
+            ElasticSearchUtil.getDataByIdentifier(
+                ProjectUtil.EsIndex.sunbird.getIndexName(),
+                ProjectUtil.EsType.organisation.getTypeName(),
+                orgId);
+        if (MapUtils.isNotEmpty(map)) {
+          hashTagId = (String) map.get(JsonKey.HASHTAGID);
+          ProjectLogger.log(
+              "BulkUploadBackGroundJobActor:processUserInfo org hashTagId value : " + hashTagId,
+              LoggerEnum.INFO.name());
+        }
+      }
+    }
     for (int i = 0; i < dataMapList.size(); i++) {
       userMap = dataMapList.get(i);
       Map<String, Object> welcomeMailTemplateMap = new HashMap<>();
@@ -1059,11 +1061,11 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               // insert details to user_org table
               userMap.put(JsonKey.HASHTAGID, hashTagId);
               Util.registerUserToOrg(userMap);
-              // removing added hashTagId 
+              // removing added hashTagId
               userMap.remove(JsonKey.HASHTAGID);
             } catch (Exception ex) {
-            	 // incase of exception also removing added hashTagId 
-               userMap.remove(JsonKey.HASHTAGID);	
+              // incase of exception also removing added hashTagId
+              userMap.remove(JsonKey.HASHTAGID);
               ProjectLogger.log(
                   "Exception occurred while bulk user upload in BulkUploadBackGroundJobActor:", ex);
               userMap.remove(JsonKey.ID);
@@ -1124,7 +1126,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               Util.upsertUserOrgData(userMap);
               userMap.remove(JsonKey.HASHTAGID);
             } catch (Exception ex) {
-            	userMap.remove(JsonKey.HASHTAGID);
+              userMap.remove(JsonKey.HASHTAGID);
               ProjectLogger.log(
                   "Exception occurred while bulk user upload in BulkUploadBackGroundJobActor:", ex);
               userMap.remove(JsonKey.ID);
@@ -1812,7 +1814,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       UserUtility.decryptUserData(userMap);
       String name =
           (String) userMap.get(JsonKey.FIRST_NAME) + " " + (String) userMap.get(JsonKey.LAST_NAME);
-        String  envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
+      String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
 
       String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
 

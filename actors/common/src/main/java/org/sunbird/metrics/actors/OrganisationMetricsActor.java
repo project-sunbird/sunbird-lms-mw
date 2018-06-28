@@ -626,7 +626,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         }
         if (metricsDate.equalsIgnoreCase(bucketDate)) {
           Double totalTimeSpent = (Double) res.get("m_total_ts");
-          // reading  m_total_sessions instead of m_total_users_count
+          // reading m_total_sessions which represents total number of user visits
           Integer totalSessions = (Integer) res.get("m_total_sessions");
           resData.put(VALUE, totalTimeSpent);
           userData.put(VALUE, totalSessions);
@@ -664,7 +664,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       Map<String, Object> snapshot = new LinkedHashMap<>();
       Map<String, Object> dataMap = new HashMap<>();
       dataMap.put(JsonKey.NAME, "Number of visits by users");
-      // reading m_total_sessions instead of m_total_users_count
+      // reading m_total_sessions which represents total number of user visits
       dataMap.put(VALUE, resultData.get("m_total_sessions"));
       snapshot.put("org.consumption.content.session.count", dataMap);
       dataMap = new LinkedHashMap<>();

@@ -726,7 +726,6 @@ public class UserManagementActor extends BaseActor {
                   s.remove(JsonKey.CREATED_BY);
                   s.remove(JsonKey.LAST_UPDATED_BY);
                   s.remove(JsonKey.LAST_UPDATED_ON);
-                  s.remove(JsonKey.ID);
                   s.remove(JsonKey.CREATED_ON);
                   s.remove(JsonKey.USER_ID);
                   s.remove(JsonKey.SLUG);

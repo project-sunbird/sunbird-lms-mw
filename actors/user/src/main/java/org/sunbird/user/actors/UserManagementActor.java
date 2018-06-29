@@ -2743,7 +2743,17 @@ public class UserManagementActor extends BaseActor {
       esUsrRes = esUsrList.get(0);
       requestMap.put(JsonKey.USER_ID, esUsrRes.get(JsonKey.ID));
     }
-
+    // have a check if organisation id is coming then need to get hashtagId
+    if (StringUtils.isNotBlank((String) requestMap.get(JsonKey.ORGANISATION_ID))) {
+      Map<String, Object> map =
+          ElasticSearchUtil.getDataByIdentifier(
+              ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.organisation.getTypeName(),
+              (String) requestMap.get(JsonKey.ORGANISATION_ID));
+      if (MapUtils.isNotEmpty(map)) {
+        requestMap.put(JsonKey.HASHTAGID, map.get(JsonKey.HASHTAGID));
+      }
+    }
     if (StringUtils.isBlank((String) requestMap.get(JsonKey.ORGANISATION_ID))
         && !StringUtils.isBlank(externalId)
         && !StringUtils.isBlank(provider)) {
@@ -2769,6 +2779,8 @@ public class UserManagementActor extends BaseActor {
         return;
       }
       requestMap.put(JsonKey.ORGANISATION_ID, list.get(0).get(JsonKey.ID));
+      // get org hashTagId and keep inside request map.
+      requestMap.put(JsonKey.HASHTAGID, list.get(0).get(JsonKey.HASHTAGID));
     }
 
     // now we have valid userid , roles and need to check organisation id is also
@@ -2820,7 +2832,9 @@ public class UserManagementActor extends BaseActor {
         tempMap.put(JsonKey.ROLES, requestMap.get(JsonKey.ROLES));
       }
       tempMap.put(JsonKey.ID, list.get(0).get(JsonKey.ID));
-
+      if (StringUtils.isNotBlank((String) requestMap.get(JsonKey.HASHTAGID))) {
+        tempMap.put(JsonKey.HASHTAGID, requestMap.get(JsonKey.HASHTAGID));
+      }
       response =
           cassandraOperation.updateRecord(
               userOrgDb.getKeySpace(), userOrgDb.getTableName(), tempMap);

@@ -236,6 +236,9 @@ public class CourseMetricsActor extends BaseMetricsActor {
       Map<String, String> dateRange = getDateRange(periodStr);
       dateRangeFilter.put(GTE, (String) dateRange.get(STARTDATE));
       dateRangeFilter.put(LTE, (String) dateRange.get(ENDDATE));
+      ProjectLogger.log(
+          "CourseMetricsActor:courseProgressMetrics Date range is : " + dateRangeFilter,
+          LoggerEnum.INFO.name());
       filter.put(JsonKey.DATE_TIME, dateRangeFilter);
     }
 

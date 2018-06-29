@@ -64,7 +64,6 @@ public final class Util {
   public static final int RECOMENDED_LIST_SIZE = 10;
   private static PropertiesCache propertiesCache = PropertiesCache.getInstance();
   public static final String KEY_SPACE_NAME = "sunbird";
-  public static final String USER_EXT_IDNT_TABLE = "user_external_identity";
   private static Properties prop = new Properties();
   private static Map<String, String> headers = new HashMap<>();
   private static Map<Integer, List<Integer>> orgStatusTransition = new HashMap<>();
@@ -981,7 +980,7 @@ public final class Util {
           externalIdReq.put(JsonKey.EXTERNAL_ID, encryptData(externalId.get(JsonKey.ID)));
           Response response =
               cassandraOperation.getRecordsByCompositeKey(
-                  KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, externalIdReq);
+                  KEY_SPACE_NAME, JsonKey.USR_EXT_IDNT_TABLE, externalIdReq);
           List<Map<String, Object>> externalIdsRecord =
               (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
           if (CollectionUtils.isNotEmpty(externalIdsRecord)) {
@@ -1126,7 +1125,7 @@ public final class Util {
         map.put(JsonKey.LAST_UPDATED_BY, requestMap.get(JsonKey.UPDATED_BY));
         map.put(JsonKey.LAST_UPDATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
       }
-      cassandraOperation.upsertRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
+      cassandraOperation.upsertRecord(KEY_SPACE_NAME, JsonKey.USR_EXT_IDNT_TABLE, map);
     } catch (Exception ex) {
       ProjectLogger.log("Util:upsertUserExternalIdentityData : Exception occurred", ex);
     }
@@ -1136,7 +1135,10 @@ public final class Util {
     List<Map<String, String>> dbResExternalIds = new ArrayList<>();
     Response response =
         cassandraOperation.getRecordsByIndexedProperty(
-            KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
+            KEY_SPACE_NAME,
+            JsonKey.USR_EXT_IDNT_TABLE,
+            JsonKey.USER_ID,
+            requestMap.get(JsonKey.USER_ID));
     if (null != response && null != response.getResult()) {
       dbResExternalIds = (List<Map<String, String>>) response.getResult().get(JsonKey.RESPONSE);
     }
@@ -1200,7 +1202,7 @@ public final class Util {
     map.remove(JsonKey.LAST_UPDATED_ON);
     map.remove(JsonKey.CREATED_ON);
     map.remove(JsonKey.USER_ID);
-    cassandraOperation.deleteRecord(KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, map);
+    cassandraOperation.deleteRecord(KEY_SPACE_NAME, JsonKey.USR_EXT_IDNT_TABLE, map);
   }
 
   public static void registerUserToOrg(Map<String, Object> userMap) {
@@ -1214,7 +1216,7 @@ public final class Util {
     reqMap.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
     reqMap.put(JsonKey.IS_DELETED, false);
     if (StringUtils.isNotEmpty((String) userMap.get(JsonKey.HASHTAGID))) {
-      reqMap.put(JsonKey.HASHTAGID, (String) userMap.get(JsonKey.HASHTAGID));
+      reqMap.put(JsonKey.HASHTAGID, userMap.get(JsonKey.HASHTAGID));
     }
     Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
     try {
@@ -1237,7 +1239,7 @@ public final class Util {
         encryptData(((String) userMap.get(JsonKey.EXTERNAL_ID)).toLowerCase()));
     Response response =
         cassandraOperation.getRecordsByCompositeKey(
-            KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, externalIdReq);
+            KEY_SPACE_NAME, JsonKey.USR_EXT_IDNT_TABLE, externalIdReq);
     List<Map<String, Object>> userRecordList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
 
@@ -1288,7 +1290,7 @@ public final class Util {
       reqMap.put(JsonKey.UPDATED_BY, userMap.get(JsonKey.UPDATED_BY));
       reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
       if (StringUtils.isNotEmpty((String) userMap.get(JsonKey.HASHTAGID))) {
-        reqMap.put(JsonKey.HASHTAGID, (String) userMap.get(JsonKey.HASHTAGID));
+        reqMap.put(JsonKey.HASHTAGID, userMap.get(JsonKey.HASHTAGID));
       }
       try {
         cassandraOperation.updateRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), reqMap);

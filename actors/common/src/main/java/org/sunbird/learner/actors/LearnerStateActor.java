@@ -71,14 +71,6 @@ public class LearnerStateActor extends BaseActor {
       Map<String, Object> requestMap = request.getRequest();
       String userId = (String) request.getRequest().get(JsonKey.USER_ID);
 
-      if (StringUtils.isBlank(userId)) {
-        throw new ProjectCommonException(
-            ResponseCode.mandatoryParamsMissing.getErrorCode(),
-            ResponseCode.mandatoryParamsMissing.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode(),
-            JsonKey.USER_ID);
-      }
-
       res = getCourseContentState(userId, requestMap);
       removeUnwantedProperties(res);
       sender().tell(res, self());
@@ -93,8 +85,8 @@ public class LearnerStateActor extends BaseActor {
     List<Map<String, Object>> contentList = new ArrayList<>();
 
     String batchId = (String) requestMap.get(JsonKey.BATCH_ID);
-    List<String> courseIds = new ArrayList<>();
-    List<String> contentIds = new ArrayList<>();
+    List<String> courseIds = null;
+    List<String> contentIds = null;
 
     if (null != requestMap.get(JsonKey.COURSE_IDS)) {
       courseIds = (List<String>) requestMap.get(JsonKey.COURSE_IDS);
@@ -113,7 +105,11 @@ public class LearnerStateActor extends BaseActor {
       contentIds = (List<String>) requestMap.get(JsonKey.CONTENT_IDS);
     }
 
-    if (contentIds.size() > 0 && courseIds.size() == 1 && StringUtils.isNotBlank(batchId)) {
+    if (CollectionUtils.isNotEmpty(contentIds)
+        && contentIds.size() > 0
+        && CollectionUtils.isNotEmpty(courseIds)
+        && courseIds.size() == 1
+        && StringUtils.isNotBlank(batchId)) {
       List<Object> primaryKeyList = new ArrayList<>();
       String courseId = courseIds.get(0);
       for (String contentId : contentIds) {
@@ -148,13 +144,12 @@ public class LearnerStateActor extends BaseActor {
     List<Map<String, Object>> matchedContentList = new ArrayList<>();
 
     if (CollectionUtils.isNotEmpty(contentIds)) {
-      for (Map<String, Object> map : contentList) {
-        boolean flag = true;
-        for (int i = 0; i < contentIds.size() && flag; i++) {
+      for (Map<String, Object> content : contentList) {
+        for (int i = 0; i < contentIds.size(); i++) {
           String contentId = contentIds.get(i);
-          if (contentId.equals((String) map.get(JsonKey.CONTENT_ID))) {
-            matchedContentList.add(map);
-            flag = false;
+          if (contentId.equals((String) content.get(JsonKey.CONTENT_ID))) {
+            matchedContentList.add(content);
+            break;
           }
         }
       }

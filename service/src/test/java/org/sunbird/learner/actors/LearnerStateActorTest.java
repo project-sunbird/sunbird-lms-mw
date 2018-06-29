@@ -109,25 +109,6 @@ public class LearnerStateActorTest {
   }
 
   @Test
-  public void testForGetContentWithoutUserId() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    HashMap<String, Object> innerMap = new HashMap<>();
-    Request request = new Request();
-    innerMap.put(JsonKey.USER_ID, null);
-    List<String> contentList = Arrays.asList(contentId);
-    innerMap.put(JsonKey.CONTENT_IDS, contentList);
-    request.setRequest(innerMap);
-    request.setOperation(ActorOperations.GET_CONTENT.getValue());
-    subject.tell(request, probe.getRef());
-    ProjectCommonException exception =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertNotNull(exception);
-    Assert.assertEquals(exception.getResponseCode(), ResponseCode.CLIENT_ERROR.getResponseCode());
-  }
-
-  @Test
   public void testContentStateByAllFields() {
 
     TestKit probe = new TestKit(system);

@@ -993,7 +993,8 @@ public final class Util {
               // If end user will try to add,edit or remove other user extIds throw exception
               String userId = (String) externalIdsRecord.get(0).get(JsonKey.USER_ID);
               if (!(user.getUserId().equalsIgnoreCase(userId))) {
-                if (JsonKey.ADD.equalsIgnoreCase(externalId.get(JsonKey.OPERATION))) {
+                if (JsonKey.ADD.equalsIgnoreCase(externalId.get(JsonKey.OPERATION))
+                    || StringUtils.isBlank(externalId.get(JsonKey.OPERATION))) {
                   throw new ProjectCommonException(
                       ResponseCode.externalIdAssignedToOtherUser.getErrorCode(),
                       ProjectUtil.formatMessage(

@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.velocity.VelocityContext;
 import org.sunbird.actor.background.BackgroundOperations;
@@ -1037,6 +1038,13 @@ public class UserManagementActor extends BaseActor {
         && StringUtils.isNotEmpty(provider)
         && StringUtils.isNotEmpty(idType)) {
       userDbRecord = Util.getUserFromExternalId(userMap);
+      if (MapUtils.isEmpty(userDbRecord)) {
+        throw new ProjectCommonException(
+            ResponseCode.externalIdNotFound.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.externalIdNotFound.getErrorMessage(), extId, idType, provider),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
       userMap.put(JsonKey.USER_ID, userDbRecord.get(JsonKey.USER_ID));
     }
     if (null != userMap.get(JsonKey.USER_ID)) {

@@ -1267,10 +1267,19 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     String extId = (String) requestedUserMap.get(JsonKey.EXTERNAL_ID);
     String provider = (String) requestedUserMap.get(JsonKey.EXTERNAL_ID_PROVIDER);
     String idType = (String) requestedUserMap.get(JsonKey.EXTERNAL_ID_TYPE);
+    String userName = (String) requestedUserMap.get(JsonKey.USERNAME);
     if (StringUtils.isNotBlank(extId)
         && StringUtils.isNotBlank(provider)
-        && StringUtils.isNotBlank(idType)) {
+        && StringUtils.isNotBlank(idType)
+        && StringUtils.isBlank(userName)) {
       foundUserMap = Util.getUserFromExternalId(requestedUserMap);
+      if (MapUtils.isEmpty(foundUserMap)) {
+        throw new ProjectCommonException(
+            ResponseCode.externalIdNotFound.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.externalIdNotFound.getErrorMessage(), extId, idType, provider),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
     } else {
       foundUserMap = getRecordByLoginId(requestedUserMap);
     }

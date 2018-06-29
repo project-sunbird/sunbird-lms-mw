@@ -85,11 +85,12 @@ public class LearnerStateActor extends BaseActor {
     List<Map<String, Object>> contentList = new ArrayList<>();
 
     String batchId = (String) requestMap.get(JsonKey.BATCH_ID);
-    List<String> courseIds = null;
-    List<String> contentIds = null;
+    List<String> courseIds = (List<String>) requestMap.get(JsonKey.COURSE_IDS);
+    ;
+    List<String> contentIds = (List<String>) requestMap.get(JsonKey.CONTENT_IDS);
+    ;
 
-    if (null != requestMap.get(JsonKey.COURSE_IDS)) {
-      courseIds = (List<String>) requestMap.get(JsonKey.COURSE_IDS);
+    if (null != courseIds) {
       if (courseIds.size() > 1 && StringUtils.isNotBlank(batchId)) {
         ProjectLogger.log(
             "LearnerStateActor:getContentByBatch: multiple course ids not allowed for batch",
@@ -99,10 +100,6 @@ public class LearnerStateActor extends BaseActor {
             ResponseCode.multipleCoursesNotAllowedForBatch.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
-    }
-
-    if (null != requestMap.get(JsonKey.CONTENT_IDS)) {
-      contentIds = (List<String>) requestMap.get(JsonKey.CONTENT_IDS);
     }
 
     if (CollectionUtils.isNotEmpty(contentIds)

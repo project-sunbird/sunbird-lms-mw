@@ -492,7 +492,8 @@ public class BadgrServiceImpl implements BadgingService {
     HttpUtilResponse httpResponse =
         HttpUtil.sendDeleteRequest(requestBody, BadgingUtil.getBadgrHeaders(), url);
     String badgrResponseStr = httpResponse.getBody();
-    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(), badgrResponseStr);
+    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
+        httpResponse.getStatusCode(), badgrResponseStr);
     Response response = new Response();
     response.getResult().put(JsonKey.STATUS, JsonKey.SUCCESS);
     targetObject =

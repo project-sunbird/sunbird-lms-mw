@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.velocity.VelocityContext;
@@ -97,6 +98,8 @@ public class UserManagementActor extends BaseActor {
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String SUNBIRD_APP_URL = "sunbird_app_url";
+  private static final String KEY_SPACE_NAME = "sunbird";
+  private static final String USER_EXT_IDNT_TABLE = "user_external_identity";
 
   /** Receives the actor message and perform the course enrollment operation . */
   @Override
@@ -505,6 +508,9 @@ public class UserManagementActor extends BaseActor {
                   ProjectUtil.EsType.userprofilevisibility.getTypeName(),
                   (String) userMap.get(JsonKey.USER_ID));
           UserUtility.decryptUserDataFrmES(privateResult);
+          // fetch user external identity
+          List<Map<String, String>> dbResExternalIds = fetchUserExternalIdentity(requestedById);
+          result.put(JsonKey.EXTERNAL_IDS, dbResExternalIds);
           result.putAll(privateResult);
         }
       } catch (Exception e) {
@@ -646,6 +652,10 @@ public class UserManagementActor extends BaseActor {
                 ProjectUtil.EsType.userprofilevisibility.getTypeName(),
                 (String) userMap.get(JsonKey.USER_ID));
         UserUtility.decryptUserDataFrmES(privateResult);
+        // fetch user external identity
+        List<Map<String, String>> dbResExternalIds =
+            fetchUserExternalIdentity((String) userMap.get(JsonKey.USER_ID));
+        result.put(JsonKey.EXTERNAL_IDS, dbResExternalIds);
         result.putAll(privateResult);
       }
     } catch (Exception e) {
@@ -698,6 +708,32 @@ public class UserManagementActor extends BaseActor {
       response.put(JsonKey.RESPONSE, result);
     }
     sender().tell(response, self());
+  }
+
+  private List<Map<String, String>> fetchUserExternalIdentity(String userId) {
+    Response response =
+        cassandraOperation.getRecordsByIndexedProperty(
+            KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, JsonKey.USER_ID, userId);
+    List<Map<String, String>> dbResExternalIds = new ArrayList<>();
+    if (null != response && null != response.getResult()) {
+      dbResExternalIds = (List<Map<String, String>>) response.getResult().get(JsonKey.RESPONSE);
+      if (null != dbResExternalIds) {
+        dbResExternalIds
+            .stream()
+            .forEach(
+                s -> {
+                  s.put(JsonKey.ID, decryptionService.decryptData(s.get(JsonKey.EXTERNAL_ID)));
+                  s.remove(JsonKey.EXTERNAL_ID);
+                  s.remove(JsonKey.CREATED_BY);
+                  s.remove(JsonKey.LAST_UPDATED_BY);
+                  s.remove(JsonKey.LAST_UPDATED_ON);
+                  s.remove(JsonKey.CREATED_ON);
+                  s.remove(JsonKey.USER_ID);
+                  s.remove(JsonKey.SLUG);
+                });
+      }
+    }
+    return dbResExternalIds;
   }
 
   private void fetchTopicOfAssociatedOrgs(Map<String, Object> result) {
@@ -993,13 +1029,22 @@ public class UserManagementActor extends BaseActor {
     UserRequestValidator.validateUpdateUser(actorMessage);
     Map<String, Object> userDbRecord = null;
     String extId = (String) userMap.get(JsonKey.EXTERNAL_ID);
-    String provider = (String) userMap.get(JsonKey.PROVIDER);
+    String provider = (String) userMap.get(JsonKey.EXTERNAL_ID_PROVIDER);
+    String idType = (String) userMap.get(JsonKey.EXTERNAL_ID_TYPE);
 
-    if ((StringUtils.isEmpty((String) userMap.get(JsonKey.USER_ID))
-            && StringUtils.isEmpty((String) userMap.get(JsonKey.ID)))
+    if ((StringUtils.isBlank((String) userMap.get(JsonKey.USER_ID))
+            && StringUtils.isBlank((String) userMap.get(JsonKey.ID)))
         && StringUtils.isNotEmpty(extId)
-        && StringUtils.isNotEmpty(provider)) {
-      userDbRecord = Util.getUserFromExternalIdAndProvider(userMap);
+        && StringUtils.isNotEmpty(provider)
+        && StringUtils.isNotEmpty(idType)) {
+      userDbRecord = Util.getUserFromExternalId(userMap);
+      if (MapUtils.isEmpty(userDbRecord)) {
+        throw new ProjectCommonException(
+            ResponseCode.externalIdNotFound.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.externalIdNotFound.getErrorMessage(), extId, idType, provider),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
       userMap.put(JsonKey.USER_ID, userDbRecord.get(JsonKey.USER_ID));
     }
     if (null != userMap.get(JsonKey.USER_ID)) {
@@ -1015,6 +1060,21 @@ public class UserManagementActor extends BaseActor {
               ResponseCode.inactiveUser.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
+      return;
+    }
+
+    try {
+      User user = mapper.convertValue(userMap, User.class);
+      if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
+        List<Map<String, String>> list =
+            Util.convertExternalIdsValueToLowerCase(user.getExternalIds());
+        user.setExternalIds(list);
+        userMap.put(JsonKey.EXTERNAL_IDS, list);
+      }
+      Util.checkExternalIdUniqueness(user, JsonKey.UPDATE);
+      Util.validateUserExternalIds(userMap);
+    } catch (Exception ex) {
+      sender().tell(ex, self());
       return;
     }
     // object of telemetry event...
@@ -1076,6 +1136,13 @@ public class UserManagementActor extends BaseActor {
     }
     if (userMap.containsKey(JsonKey.JOB_PROFILE)) {
       updateUserJobProfile(req, userMap);
+    }
+
+    // update the user external identity data
+    try {
+      Util.updateUserExtId(userMap);
+    } catch (Exception ex) {
+      result.getResult().put(JsonKey.ERROR_MSG, ex.getMessage());
     }
 
     sender().tell(result, self());
@@ -1525,10 +1592,15 @@ public class UserManagementActor extends BaseActor {
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
     userMap.remove(JsonKey.EMAIL_VERIFIED);
-
+    // Will ignore these fields in create api
+    userMap.remove(JsonKey.EXTERNAL_ID);
+    userMap.remove(JsonKey.PROVIDER);
+    userMap.remove(JsonKey.EXTERNAL_ID_PROVIDER);
+    userMap.remove(JsonKey.ID_TYPE);
+    userMap.remove(JsonKey.EXTERNAL_ID_TYPE);
     try {
       // validate channel and set rootOrgId of user
-      if (StringUtils.isEmpty((String) userMap.get(JsonKey.CHANNEL))) {
+      if (StringUtils.isBlank((String) userMap.get(JsonKey.CHANNEL))) {
         userMap.put(JsonKey.CHANNEL, ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL));
       }
       String rootOrgId = Util.getRootOrgIdFromChannel((String) userMap.get(JsonKey.CHANNEL));
@@ -1545,7 +1617,13 @@ public class UserManagementActor extends BaseActor {
     try {
       User user = mapper.convertValue(userMap, User.class);
       Util.checkUserExistOrNot(user);
-      Util.checkExternalIdAndProviderUniqueness(user);
+      if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
+        List<Map<String, String>> list =
+            Util.convertExternalIdsValueToLowerCase(user.getExternalIds());
+        user.setExternalIds(list);
+        userMap.put(JsonKey.EXTERNAL_IDS, list);
+      }
+      Util.checkExternalIdUniqueness(user, JsonKey.CREATE);
     } catch (Exception ex) {
       sender().tell(ex, self());
       return;
@@ -1627,8 +1705,6 @@ public class UserManagementActor extends BaseActor {
           JsonKey.COUNTRY_CODE, propertiesCache.getProperty("sunbird_default_country_code"));
     }
     requestMap.put(JsonKey.IS_DELETED, false);
-    requestMap.remove(JsonKey.EXTERNAL_ID);
-    requestMap.remove(JsonKey.PROVIDER);
     Response response = null;
     try {
       response =
@@ -1684,8 +1760,14 @@ public class UserManagementActor extends BaseActor {
       if (userMap.containsKey(JsonKey.JOB_PROFILE)) {
         insertJobProfileDetails(userMap);
       }
-      // update the user external identity data
-      Util.updateUserExtId(userMap);
+      try {
+        // update the user external identity data
+        Util.addUserExtIds(userMap);
+      } catch (Exception ex) {
+        ProjectLogger.log(
+            "UserManagementActor:createUser: Exception occurred while updating user external identity table.",
+            ex);
+      }
     }
 
     ProjectLogger.log("User created successfully.....");
@@ -2022,7 +2104,11 @@ public class UserManagementActor extends BaseActor {
     reqMap.remove(JsonKey.ORGANISATIONS);
     reqMap.remove(JsonKey.IS_DELETED);
     reqMap.remove(JsonKey.EXTERNAL_ID);
+    reqMap.remove(JsonKey.ID_TYPE);
+    reqMap.remove(JsonKey.EXTERNAL_ID_TYPE);
     reqMap.remove(JsonKey.PROVIDER);
+    reqMap.remove(JsonKey.EXTERNAL_ID_PROVIDER);
+    reqMap.remove(JsonKey.EXTERNAL_IDS);
   }
 
   /** Utility method to provide the unique authtoken . */

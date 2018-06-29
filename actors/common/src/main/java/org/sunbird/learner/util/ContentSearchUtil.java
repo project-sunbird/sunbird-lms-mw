@@ -1,13 +1,17 @@
 package org.sunbird.learner.util;
 
+import akka.dispatch.ExecutionContexts;
+import akka.dispatch.Mapper;
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.JsonNode;
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.request.BaseRequest;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
 import javax.ws.rs.core.MediaType;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHeaders;
 import org.json.JSONArray;
@@ -16,20 +20,11 @@ import org.json.JSONObject;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.RestUtil;
-
-import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.JsonNode;
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.request.BaseRequest;
-
-import akka.dispatch.ExecutionContexts;
-import akka.dispatch.Mapper;
 import scala.concurrent.Future;
-
 
 /** @author Mahesh Kumar Gangula */
 public class ContentSearchUtil {
-	
+
   private static String contentSearchURL = null;
 
   static {
@@ -50,41 +45,44 @@ public class ContentSearchUtil {
     return headers;
   }
 
-  public static Future<Map<String, Object>> searchContent(String body, Map<String, String> headers) throws Exception {
+  public static Future<Map<String, Object>> searchContent(String body, Map<String, String> headers)
+      throws Exception {
     Unirest.clearDefaultHeaders();
     BaseRequest request =
         Unirest.post(contentSearchURL).headers(getUpdatedHeaders(headers)).body(body);
     Future<HttpResponse<JsonNode>> response = RestUtil.executeAsync(request);
-    
-    return response.map(new Mapper<HttpResponse<JsonNode>, Map<String, Object>>() {
-    		@Override
-		public Map<String, Object> apply(HttpResponse<JsonNode> response) {
-    			try {
-    				if (RestUtil.isSuccessful(response)) {
-    					JSONObject result =response.getBody().getObject().getJSONObject("result");
-    					Map<String, Object> resultMap = jsonToMap(result);
-    					Object contents = resultMap.get(JsonKey.CONTENT);
-    					resultMap.remove(JsonKey.CONTENT);
-    					resultMap.put(JsonKey.CONTENTS, contents);
-    					String resmsgId = RestUtil.getFromResponse(response, "params.resmsgid");
-    					String apiId = RestUtil.getFromResponse(response, "id");
-    					Map<String, Object> param = new HashMap<>();
-    					param.put(JsonKey.RES_MSG_ID, resmsgId);
-    					param.put(JsonKey.API_ID, apiId);
-    					resultMap.put(JsonKey.PARAMS, param);
-    					return resultMap;
-    	    			} else {
-    	    				String err = RestUtil.getFromResponse(response, "params.err");
-    	    				String message = RestUtil.getFromResponse(response, "params.errmsg");
-//    	    				throw new ProjectCommonException(err, message, ResponseCode.SERVER_ERROR.getResponseCode());
-    	    				return null;
-    	    			}
-    			} catch (Exception e) {
-    				return null;
-			}
-		}
-    }, ExecutionContexts.global());
-    
+
+    return response.map(
+        new Mapper<HttpResponse<JsonNode>, Map<String, Object>>() {
+          @Override
+          public Map<String, Object> apply(HttpResponse<JsonNode> response) {
+            try {
+              if (RestUtil.isSuccessful(response)) {
+                JSONObject result = response.getBody().getObject().getJSONObject("result");
+                Map<String, Object> resultMap = jsonToMap(result);
+                Object contents = resultMap.get(JsonKey.CONTENT);
+                resultMap.remove(JsonKey.CONTENT);
+                resultMap.put(JsonKey.CONTENTS, contents);
+                String resmsgId = RestUtil.getFromResponse(response, "params.resmsgid");
+                String apiId = RestUtil.getFromResponse(response, "id");
+                Map<String, Object> param = new HashMap<>();
+                param.put(JsonKey.RES_MSG_ID, resmsgId);
+                param.put(JsonKey.API_ID, apiId);
+                resultMap.put(JsonKey.PARAMS, param);
+                return resultMap;
+              } else {
+                String err = RestUtil.getFromResponse(response, "params.err");
+                String message = RestUtil.getFromResponse(response, "params.errmsg");
+                //    	    				throw new ProjectCommonException(err, message,
+                // ResponseCode.SERVER_ERROR.getResponseCode());
+                return null;
+              }
+            } catch (Exception e) {
+              return null;
+            }
+          }
+        },
+        ExecutionContexts.global());
   }
 
   public static Map<String, Object> jsonToMap(JSONObject object) throws JSONException {

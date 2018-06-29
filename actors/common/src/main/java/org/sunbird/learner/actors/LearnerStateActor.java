@@ -86,9 +86,7 @@ public class LearnerStateActor extends BaseActor {
 
     String batchId = (String) requestMap.get(JsonKey.BATCH_ID);
     List<String> courseIds = (List<String>) requestMap.get(JsonKey.COURSE_IDS);
-    ;
     List<String> contentIds = (List<String>) requestMap.get(JsonKey.CONTENT_IDS);
-    ;
 
     if (null != courseIds) {
       if (courseIds.size() > 1 && StringUtils.isNotBlank(batchId)) {

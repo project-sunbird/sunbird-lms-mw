@@ -1,92 +1,83 @@
 package org.sunbird.learner.actors;
 
 import static akka.testkit.JavaTestKit.duration;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.Util;
 
 /** @author arvind */
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class})
+@PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
 public class LearnerStateActorTest {
 
   private static ActorSystem system;
   private static final Props props = Props.create(LearnerStateActor.class);
-  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static Util.DbInfo contentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
-  private static Util.DbInfo coursedbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
+  private static CassandraOperation cassandraOperation;
   private static String userId = "user121gama";
   private static String courseId = "alpha01crs12";
+  private static String courseId2 = "alpha01crs15";
   private static String batchId = "115";
   private static final String contentId = "cont3544TeBuk";
 
   @BeforeClass
   public static void setUp() {
     system = ActorSystem.create("system");
-    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-    insertCourse();
-    insertContent();
   }
 
-  private static void insertContent() {
+  @Before
+  public void beforeTest() {
+    cassandraOperation = mock(CassandraOperation.class);
+    PowerMockito.mockStatic(ServiceFactory.class);
+    PowerMockito.mockStatic(ElasticSearchUtil.class);
+    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
 
-    Map<String, Object> contentMap = new HashMap<String, Object>();
-    String key =
-        userId
-            + JsonKey.PRIMARY_KEY_DELIMETER
-            + contentId
-            + JsonKey.PRIMARY_KEY_DELIMETER
-            + courseId
-            + JsonKey.PRIMARY_KEY_DELIMETER
-            + batchId;
-    String id = OneWayHashing.encryptVal(key);
-    contentMap.put(JsonKey.ID, id);
-    contentMap.put(JsonKey.COURSE_ID, courseId);
-    contentMap.put(JsonKey.USER_ID, userId);
-    contentMap.put(JsonKey.CONTENT_ID, contentId);
-    contentMap.put(JsonKey.BATCH_ID, batchId);
-    System.out.println("CONTENT ID " + id);
-    cassandraOperation.insertRecord(
-        contentdbInfo.getKeySpace(), contentdbInfo.getTableName(), contentMap);
+    Map<String, Object> esResult = new HashMap<>();
+    when(ElasticSearchUtil.complexSearch(
+            Mockito.anyObject(), Mockito.anyObject(), Mockito.anyObject()))
+        .thenReturn(esResult);
+
+    Response dbResponse = new Response();
+    List<Map<String, Object>> dbResponseList = new ArrayList<>();
+    dbResponse.put(JsonKey.RESPONSE, dbResponseList);
+    when(cassandraOperation.getRecordsByProperty(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyObject()))
+        .thenReturn(dbResponse);
+    when(cassandraOperation.getRecordsByProperties(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(dbResponse);
   }
 
-  private static void insertCourse() {
-    Map<String, Object> courseMap = new HashMap<String, Object>();
-    courseMap.put(
-        JsonKey.ID,
-        OneWayHashing.encryptVal(
-            userId
-                + JsonKey.PRIMARY_KEY_DELIMETER
-                + courseId
-                + JsonKey.PRIMARY_KEY_DELIMETER
-                + batchId));
-    courseMap.put(JsonKey.COURSE_ID, courseId);
-    courseMap.put(JsonKey.USER_ID, userId);
-    courseMap.put(JsonKey.CONTENT_ID, courseId);
-    courseMap.put(JsonKey.BATCH_ID, batchId);
-    cassandraOperation.insertRecord(
-        coursedbInfo.getKeySpace(), coursedbInfo.getTableName(), courseMap);
-  }
-
-  // @Test
-  public void onReceiveTestForGetCourse() {
+  @Test
+  public void testGetCourseByUserId() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -98,12 +89,11 @@ public class LearnerStateActorTest {
     request.setOperation(ActorOperations.GET_COURSE.getValue());
     subject.tell(request, probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    List list = (List) res.getResult().get(JsonKey.RESPONSE);
-    Assert.assertEquals(1, list.size());
+    Assert.assertNotNull(res);
   }
 
   @Test
-  public void onReceiveTestForGetCourseWithInvalidOperation() {
+  public void testGetCourseWithInvalidOperation() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -113,99 +103,97 @@ public class LearnerStateActorTest {
     request.setRequest(map);
     request.setOperation("INVALID_OPERATION");
     subject.tell(request, probe.getRef());
-    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
-    Assert.assertTrue(null != exc);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    Assert.assertNotNull(exc);
   }
 
   @Test
-  public void onReceiveTestForGetCourseWithInvalidRequestType() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    subject.tell("INVALID REQUEST", probe.getRef());
-    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
-    Assert.assertTrue(null != exc);
-  }
-
-  @Test
-  public void onReceiveTestForGetContent() {
+  public void testContentStateByAllFields() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     HashMap<String, Object> innerMap = new HashMap<>();
     Request request = new Request();
     innerMap.put(JsonKey.USER_ID, userId);
+    innerMap.put(JsonKey.BATCH_ID, batchId);
     List<String> contentList = Arrays.asList(contentId);
+    List<String> courseIds = Arrays.asList(courseId);
     innerMap.put(JsonKey.CONTENT_IDS, contentList);
+    innerMap.put(JsonKey.COURSE_IDS, courseIds);
     request.setRequest(innerMap);
     request.setOperation(ActorOperations.GET_CONTENT.getValue());
     subject.tell(request, probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    List list = (List) res.getResult().get(JsonKey.RESPONSE);
-    Assert.assertEquals(1, list.size());
+    Assert.assertNotNull(res);
   }
 
   @Test
-  public void onReceiveTestForGetContentByCourse() {
+  public void testContentStateByBatchId() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     HashMap<String, Object> innerMap = new HashMap<>();
     Request request = new Request();
     innerMap.put(JsonKey.USER_ID, userId);
-    innerMap.put(JsonKey.COURSE_ID, courseId);
-    List<String> contentList = Arrays.asList(contentId);
-    innerMap.put(JsonKey.CONTENT_IDS, contentList);
-    innerMap.put(JsonKey.COURSE, innerMap);
+    innerMap.put(JsonKey.BATCH_ID, batchId);
     request.setRequest(innerMap);
     request.setOperation(ActorOperations.GET_CONTENT.getValue());
     subject.tell(request, probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    List list = (List) res.getResult().get(JsonKey.RESPONSE);
-    Assert.assertEquals(1, list.size());
+    Assert.assertNotNull(res);
   }
 
   @Test
-  public void onReceiveTestForGetContentByCourseIds() {
+  public void testContentStateByOneBatchAndMultipleCourseIds() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    HashMap<String, Object> innerMap = new HashMap<>();
+    Request request = new Request();
+    innerMap.put(JsonKey.USER_ID, userId);
+    innerMap.put(JsonKey.BATCH_ID, batchId);
+    List<String> courseIds = Arrays.asList(courseId, courseId2);
+    innerMap.put(JsonKey.COURSE_IDS, courseIds);
+    request.setRequest(innerMap);
+    request.setOperation(ActorOperations.GET_CONTENT.getValue());
+    subject.tell(request, probe.getRef());
+    ProjectCommonException exception =
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    Assert.assertNotNull(exception);
+    Assert.assertEquals(ResponseCode.CLIENT_ERROR.getResponseCode(), exception.getResponseCode());
+  }
+
+  @Test
+  public void testForGetContentByCourseIds() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     HashMap<String, Object> innerMap = new HashMap<>();
     Request request = new Request();
     innerMap.put(JsonKey.USER_ID, userId);
-    List<String> courseList = Arrays.asList(courseId);
+    List<String> courseList = Arrays.asList(courseId, courseId2);
     innerMap.put(JsonKey.COURSE_IDS, courseList);
     request.setRequest(innerMap);
     request.setOperation(ActorOperations.GET_CONTENT.getValue());
     subject.tell(request, probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    List list = (List) res.getResult().get(JsonKey.RESPONSE);
-    Assert.assertEquals(1, list.size());
+    Assert.assertNotNull(res);
   }
 
-  @AfterClass
-  public static void destroy() {
-    cassandraOperation.deleteRecord(
-        coursedbInfo.getKeySpace(),
-        coursedbInfo.getTableName(),
-        OneWayHashing.encryptVal(
-            userId
-                + JsonKey.PRIMARY_KEY_DELIMETER
-                + courseId
-                + JsonKey.PRIMARY_KEY_DELIMETER
-                + batchId));
-    String key =
-        userId
-            + JsonKey.PRIMARY_KEY_DELIMETER
-            + contentId
-            + JsonKey.PRIMARY_KEY_DELIMETER
-            + courseId
-            + JsonKey.PRIMARY_KEY_DELIMETER
-            + batchId;
-    String contentid = OneWayHashing.encryptVal(key);
-    System.out.println("CONTENT ID " + contentid);
-    cassandraOperation.deleteRecord(
-        contentdbInfo.getKeySpace(), contentdbInfo.getTableName(), contentid);
+  @Test
+  public void testForGetContentByContentIds() {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    HashMap<String, Object> innerMap = new HashMap<>();
+    Request request = new Request();
+    innerMap.put(JsonKey.USER_ID, userId);
+    List<String> contentList = Arrays.asList(courseId, courseId2);
+    innerMap.put(JsonKey.CONTENT_IDS, contentList);
+    request.setRequest(innerMap);
+    request.setOperation(ActorOperations.GET_CONTENT.getValue());
+    subject.tell(request, probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertNotNull(res);
   }
 }

@@ -12,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.velocity.VelocityContext;
 import org.sunbird.actor.background.BackgroundOperations;
@@ -2656,7 +2657,17 @@ public class UserManagementActor extends BaseActor {
       esUsrRes = esUsrList.get(0);
       requestMap.put(JsonKey.USER_ID, esUsrRes.get(JsonKey.ID));
     }
-
+    // have a check if organisation id is coming then need to get hashtagId
+    if (StringUtils.isNotBlank((String) requestMap.get(JsonKey.ORGANISATION_ID))) {
+      Map<String, Object> map =
+          ElasticSearchUtil.getDataByIdentifier(
+              ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.organisation.getTypeName(),
+              (String) requestMap.get(JsonKey.ORGANISATION_ID));
+      if (MapUtils.isNotEmpty(map)) {
+        requestMap.put(JsonKey.HASHTAGID, map.get(JsonKey.HASHTAGID));
+      }
+    }
     if (StringUtils.isBlank((String) requestMap.get(JsonKey.ORGANISATION_ID))
         && !StringUtils.isBlank(externalId)
         && !StringUtils.isBlank(provider)) {
@@ -2697,7 +2708,6 @@ public class UserManagementActor extends BaseActor {
       tempMap.remove(JsonKey.SOURCE);
       tempMap.put(JsonKey.ORGANISATION_ID, requestMap.get(JsonKey.ORGANISATION_ID));
       tempMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
-      tempMap.put(JsonKey.HASHTAGID, requestMap.get(JsonKey.HASHTAGID));
       Util.DbInfo userOrgDb = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
       Response response =
           cassandraOperation.getRecordsByProperties(
@@ -2736,7 +2746,9 @@ public class UserManagementActor extends BaseActor {
         tempMap.put(JsonKey.ROLES, requestMap.get(JsonKey.ROLES));
       }
       tempMap.put(JsonKey.ID, list.get(0).get(JsonKey.ID));
-
+      if (StringUtils.isNotBlank((String) requestMap.get(JsonKey.HASHTAGID))) {
+        tempMap.put(JsonKey.HASHTAGID, requestMap.get(JsonKey.HASHTAGID));
+      }
       response =
           cassandraOperation.updateRecord(
               userOrgDb.getKeySpace(), userOrgDb.getTableName(), tempMap);

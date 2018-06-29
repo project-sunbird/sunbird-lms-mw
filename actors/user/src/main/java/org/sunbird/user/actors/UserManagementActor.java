@@ -99,7 +99,6 @@ public class UserManagementActor extends BaseActor {
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String SUNBIRD_APP_URL = "sunbird_app_url";
   private static final String KEY_SPACE_NAME = "sunbird";
-  private static final String USER_EXT_IDNT_TABLE = JsonKey.USR_EXT_IDNT_TABLE;
 
   /** Receives the actor message and perform the course enrollment operation . */
   @Override
@@ -713,7 +712,7 @@ public class UserManagementActor extends BaseActor {
   private List<Map<String, String>> fetchUserExternalIdentity(String userId) {
     Response response =
         cassandraOperation.getRecordsByIndexedProperty(
-            KEY_SPACE_NAME, USER_EXT_IDNT_TABLE, JsonKey.USER_ID, userId);
+            KEY_SPACE_NAME, JsonKey.USR_EXT_IDNT_TABLE, JsonKey.USER_ID, userId);
     List<Map<String, String>> dbResExternalIds = new ArrayList<>();
     if (null != response && null != response.getResult()) {
       dbResExternalIds = (List<Map<String, String>>) response.getResult().get(JsonKey.RESPONSE);

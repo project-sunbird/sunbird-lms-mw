@@ -64,7 +64,7 @@ public final class Util {
   public static final int RECOMENDED_LIST_SIZE = 10;
   private static PropertiesCache propertiesCache = PropertiesCache.getInstance();
   public static final String KEY_SPACE_NAME = "sunbird";
-  public static final String USER_EXT_IDNT_TABLE = "user_external_identity";
+  public static final String USER_EXT_IDNT_TABLE = "user_external_identity2";
   private static Properties prop = new Properties();
   private static Map<String, String> headers = new HashMap<>();
   private static Map<Integer, List<Integer>> orgStatusTransition = new HashMap<>();
@@ -1214,7 +1214,7 @@ public final class Util {
     reqMap.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
     reqMap.put(JsonKey.IS_DELETED, false);
     if (StringUtils.isNotEmpty((String) userMap.get(JsonKey.HASHTAGID))) {
-      reqMap.put(JsonKey.HASHTAGID, (String) userMap.get(JsonKey.HASHTAGID));
+      reqMap.put(JsonKey.HASHTAGID, userMap.get(JsonKey.HASHTAGID));
     }
     Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
     try {
@@ -1288,7 +1288,7 @@ public final class Util {
       reqMap.put(JsonKey.UPDATED_BY, userMap.get(JsonKey.UPDATED_BY));
       reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
       if (StringUtils.isNotEmpty((String) userMap.get(JsonKey.HASHTAGID))) {
-        reqMap.put(JsonKey.HASHTAGID, (String) userMap.get(JsonKey.HASHTAGID));
+        reqMap.put(JsonKey.HASHTAGID, userMap.get(JsonKey.HASHTAGID));
       }
       try {
         cassandraOperation.updateRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), reqMap);

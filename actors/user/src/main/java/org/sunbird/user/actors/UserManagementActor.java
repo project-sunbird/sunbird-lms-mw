@@ -99,7 +99,7 @@ public class UserManagementActor extends BaseActor {
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String SUNBIRD_APP_URL = "sunbird_app_url";
   private static final String KEY_SPACE_NAME = "sunbird";
-  private static final String USER_EXT_IDNT_TABLE = "usr_external_identity";
+  private static final String USER_EXT_IDNT_TABLE = JsonKey.USR_EXT_IDNT_TABLE;
 
   /** Receives the actor message and perform the course enrollment operation . */
   @Override

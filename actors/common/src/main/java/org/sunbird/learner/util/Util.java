@@ -64,7 +64,7 @@ public final class Util {
   public static final int RECOMENDED_LIST_SIZE = 10;
   private static PropertiesCache propertiesCache = PropertiesCache.getInstance();
   public static final String KEY_SPACE_NAME = "sunbird";
-  public static final String USER_EXT_IDNT_TABLE = "usr_external_identity";
+  public static final String USER_EXT_IDNT_TABLE = JsonKey.USR_EXT_IDNT_TABLE;
   private static Properties prop = new Properties();
   private static Map<String, String> headers = new HashMap<>();
   private static Map<Integer, List<Integer>> orgStatusTransition = new HashMap<>();

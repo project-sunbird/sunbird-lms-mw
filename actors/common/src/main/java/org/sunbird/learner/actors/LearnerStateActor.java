@@ -114,13 +114,13 @@ public class LearnerStateActor extends BaseActor {
       contentList = getContentByPrimaryKeys(primaryKeyList);
     } else if (StringUtils.isNotBlank(batchId)) {
       contentList = getContentByBatch(userId, batchId);
-      if (null != requestMap.get(JsonKey.CONTENT_IDS)) {
+      if (CollectionUtils.isNotEmpty(contentIds)) {
         contentList = filterForMatchingContentIds(contentList, requestMap);
       }
     } else if (CollectionUtils.isNotEmpty(courseIds)) {
       contentList = getContentByCourses(userId, requestMap);
       if (courseIds.size() == 1) {
-        if (null != requestMap.get(JsonKey.CONTENT_IDS)) {
+        if (CollectionUtils.isNotEmpty(contentIds)) {
           contentList = filterForMatchingContentIds(contentList, requestMap);
         }
       }

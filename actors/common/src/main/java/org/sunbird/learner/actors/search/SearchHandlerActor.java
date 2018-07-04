@@ -3,6 +3,7 @@ package org.sunbird.learner.actors.search;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import org.sunbird.actor.core.BaseActor;
@@ -70,10 +71,17 @@ public class SearchHandlerActor extends BaseActor {
       if (EsType.user.getTypeName().equalsIgnoreCase(filterObjectType)) {
         List<Map<String, Object>> userMapList =
             (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-        for (Map<String, Object> userMap : userMapList) {
-          UserUtility.decryptUserDataFrmES(userMap);
-          userMap.remove(JsonKey.ENC_EMAIL);
-          userMap.remove(JsonKey.ENC_PHONE);
+        Iterator<Map<String, Object>> itr = userMapList.iterator();
+        while (itr.hasNext()) {
+          Map<String, Object> userMap = itr.next();
+          if ((userMap.get(JsonKey.IS_DELETED) instanceof Boolean)
+              && ((Boolean) userMap.get(JsonKey.IS_DELETED))) {
+            itr.remove();
+          } else {
+            UserUtility.decryptUserDataFrmES(userMap);
+            userMap.remove(JsonKey.ENC_EMAIL);
+            userMap.remove(JsonKey.ENC_PHONE);
+          }
         }
       }
       Response response = new Response();

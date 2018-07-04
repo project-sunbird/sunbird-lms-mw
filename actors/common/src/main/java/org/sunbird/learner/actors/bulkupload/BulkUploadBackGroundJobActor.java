@@ -1601,7 +1601,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             ResponseMessage.Message.DATA_TYPE_ERROR, JsonKey.PHONE_VERIFIED, "Boolean");
       }
     }
-    userMap.remove(JsonKey.ROLES);
+    if (null != userMap.get(JsonKey.ROLES)) {
+      convertCommaSepStringToList(userMap, JsonKey.ROLES);
+    }
     if (null != userMap.get(JsonKey.GRADE)) {
       convertCommaSepStringToList(userMap, JsonKey.GRADE);
     }

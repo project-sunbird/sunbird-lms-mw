@@ -493,7 +493,7 @@ public class UserManagementActor extends BaseActor {
               + "  "
               + (String) result.get(JsonKey.USER_ID));
       // Decrypt user data
-      UserUtility.decryptUserDataFrmES(result);
+      // UserUtility.decryptUserDataFrmES(result);
       try {
         if (!(((String) result.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById))) {
           result = removeUserPrivateField(result);
@@ -506,7 +506,6 @@ public class UserManagementActor extends BaseActor {
                   ProjectUtil.EsIndex.sunbird.getIndexName(),
                   ProjectUtil.EsType.userprofilevisibility.getTypeName(),
                   (String) userMap.get(JsonKey.USER_ID));
-          UserUtility.decryptUserDataFrmES(privateResult);
           // fetch user external identity
           List<Map<String, String>> dbResExternalIds = fetchUserExternalIdentity(requestedById);
           result.put(JsonKey.EXTERNAL_IDS, dbResExternalIds);
@@ -561,6 +560,7 @@ public class UserManagementActor extends BaseActor {
           result.remove(JsonKey.COMPLETENESS);
         }
         response.put(JsonKey.RESPONSE, result);
+        UserUtility.decryptUserDataFrmES(result);
       } else {
         result = new HashMap<>();
         response.put(JsonKey.RESPONSE, result);
@@ -628,7 +628,7 @@ public class UserManagementActor extends BaseActor {
 
     fetchRootAndRegisterOrganisation(result);
     // Decrypt user data
-    UserUtility.decryptUserDataFrmES(result);
+    // UserUtility.decryptUserDataFrmES(result);
     // having check for removing private filed from user , if call user and response
     // user data id is not same.
     String requestedById =
@@ -650,7 +650,6 @@ public class UserManagementActor extends BaseActor {
                 ProjectUtil.EsIndex.sunbird.getIndexName(),
                 ProjectUtil.EsType.userprofilevisibility.getTypeName(),
                 (String) userMap.get(JsonKey.USER_ID));
-        UserUtility.decryptUserDataFrmES(privateResult);
         // fetch user external identity
         List<Map<String, String>> dbResExternalIds =
             fetchUserExternalIdentity((String) userMap.get(JsonKey.USER_ID));
@@ -696,7 +695,9 @@ public class UserManagementActor extends BaseActor {
       result.remove(JsonKey.COMPLETENESS);
     }
     Response response = new Response();
+
     if (null != result) {
+      UserUtility.decryptUserDataFrmES(result);
       // loginId is used internally for checking the duplicate user
       result.remove(JsonKey.LOGIN_ID);
       result.remove(JsonKey.ENC_EMAIL);
@@ -2652,10 +2653,13 @@ public class UserManagementActor extends BaseActor {
     sender().tell(response, self());
 
     // update record in elasticsearch ......
-    Request request = new Request();
-    request.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-    request.getRequest().put(JsonKey.ID, userId);
-    tellToAnother(request);
+    dbMap.remove(JsonKey.ID);
+    dbMap.remove(JsonKey.USER_ID);
+    ElasticSearchUtil.updateData(
+        ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.user.getTypeName(),
+        userId,
+        dbMap);
     generateTeleEventForUser(null, userId, "blockUser");
   }
 
@@ -3011,11 +3015,14 @@ public class UserManagementActor extends BaseActor {
     ProjectLogger.log("USER UNLOCKED " + userId);
     sender().tell(response, self());
 
-    // make user active in elasticsearch ......
-    Request request = new Request();
-    request.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-    request.getRequest().put(JsonKey.ID, userId);
-    tellToAnother(request);
+    // update record in elasticsearch ......
+    dbMap.remove(JsonKey.ID);
+    dbMap.remove(JsonKey.USER_ID);
+    ElasticSearchUtil.updateData(
+        ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.user.getTypeName(),
+        userId,
+        dbMap);
     generateTeleEventForUser(null, userId, "unBlockUser");
   }
 

@@ -1049,8 +1049,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               response =
                   cassandraOperation.insertRecord(
                       usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
-              // insert record to the user external identity table
-              Util.updateUserExtId(userMap);
               // insert details to user_org table
               userMap.put(JsonKey.HASHTAGID, hashTagId);
               Util.registerUserToOrg(userMap);
@@ -1071,11 +1069,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 ssoManager.removeUser(userMap);
               }
             }
-
-            // update the user external identity data
-            Util.addUserExtIds(userMap);
-            // insert details to user_org table
-            Util.registerUserToOrg(userMap);
             // send the welcome mail to user
             welcomeMailTemplateMap.putAll(userMap);
             // the loginid will become user id for logon purpose .
@@ -1120,9 +1113,11 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                       usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
               // update user-org table(role update)
               userMap.put(JsonKey.UPDATED_BY, updatedBy);
-              userMap.put(JsonKey.HASHTAGID, hashTagId);
-              Util.upsertUserOrgData(userMap);
-              userMap.remove(JsonKey.HASHTAGID);
+              if (null != userMap.get(JsonKey.ROLES)) {
+                userMap.put(JsonKey.HASHTAGID, hashTagId);
+                Util.upsertUserOrgData(userMap);
+                userMap.remove(JsonKey.HASHTAGID);
+              }
             } catch (Exception ex) {
               userMap.remove(JsonKey.HASHTAGID);
               ProjectLogger.log(
@@ -1133,19 +1128,19 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               failureUserReq.add(userMap);
               continue;
             }
-            // update user-org table(role update)
-            userMap.put(JsonKey.UPDATED_BY, updatedBy);
-            Util.upsertUserOrgData(userMap);
-            // update the user external identity data
-            try {
-              Util.updateUserExtId(userMap);
-            } catch (Exception ex) {
-              userMap.put(
-                  JsonKey.ERROR_MSG, "Update of user external IDs failed. " + ex.getMessage());
-            }
             // Process Audit Log
             processAuditLog(
                 userMap, ActorOperations.UPDATE_USER.getValue(), updatedBy, JsonKey.USER);
+          }
+
+          // update the user external identity data
+          try {
+            if (null != userMap.get(JsonKey.EXTERNAL_IDS)) {
+              Util.updateUserExtId(userMap);
+            }
+          } catch (Exception ex) {
+            userMap.put(
+                JsonKey.ERROR_MSG, "Update of user external IDs failed. " + ex.getMessage());
           }
           // save successfully created user data
           tempMap.putAll(userMap);
@@ -1601,7 +1596,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             ResponseMessage.Message.DATA_TYPE_ERROR, JsonKey.PHONE_VERIFIED, "Boolean");
       }
     }
-    userMap.remove(JsonKey.ROLES);
+    if (null != userMap.get(JsonKey.ROLES)) {
+      convertCommaSepStringToList(userMap, JsonKey.ROLES);
+    }
     if (null != userMap.get(JsonKey.GRADE)) {
       convertCommaSepStringToList(userMap, JsonKey.GRADE);
     }

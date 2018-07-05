@@ -394,32 +394,6 @@ public class UserManagementActor extends BaseActor {
     if (Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED))) {
       boolean addedResponse = ssoManager.addUserLoginTime(userId);
       ProjectLogger.log("user login time added response is ==" + addedResponse);
-
-      // read value for emailVerified
-      boolean emailVerified = ssoManager.isEmailVerified(userId);
-      ProjectLogger.log("user emailVerified response ==" + emailVerified);
-      String emailVerifiedUpdatedFlag = ssoManager.getEmailVerifiedUpdatedFlag(userId);
-      ProjectLogger.log("user emailVerifiedUpdatedFlag response ==" + emailVerifiedUpdatedFlag);
-      if (emailVerified && "false".equalsIgnoreCase(emailVerifiedUpdatedFlag)) {
-        Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-        Map<String, Object> map = new HashMap<>();
-        map.put(JsonKey.ID, userId);
-        map.put(JsonKey.EMAIL_VERIFIED, true);
-        cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), map);
-        ssoManager.setEmailVerifiedUpdatedFlag(userId, "true");
-        boolean flag =
-            ElasticSearchUtil.updateData(
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName(),
-                userId,
-                map);
-        if (flag) {
-          ProjectLogger.log("User data updated to ES for EMAIL_VERIFIED for userId :: " + userId);
-        } else {
-          ProjectLogger.log(
-              "User data update failed to ES for EMAIL_VERIFIED for userId :: " + userId);
-        }
-      }
     }
   }
 

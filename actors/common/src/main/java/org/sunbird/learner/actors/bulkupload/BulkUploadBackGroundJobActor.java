@@ -1090,11 +1090,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
           } else {
             // update user record
-            tempMap.remove(JsonKey.OPERATION);
-            tempMap.remove(JsonKey.ROOT_ORG_ID);
-            tempMap.remove(JsonKey.EXTERNAL_IDS);
-            // will not allowing to update roles at user level
-            tempMap.remove(JsonKey.ROLES);
             tempMap.put(JsonKey.UPDATED_BY, updatedBy);
             tempMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
             try {
@@ -1109,6 +1104,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                   ResponseCode.SERVER_ERROR.getResponseCode());
             }
             try {
+              removeFieldsFrmUpdateReq(tempMap);
               response =
                   cassandraOperation.updateRecord(
                       usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
@@ -1577,13 +1573,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
             ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
             ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
             ResponseCode.SERVER_ERROR.getResponseCode());
-      } else if (!StringUtils.isBlank((String) userMap.get(JsonKey.EMAIL))) {
-        // if Email is Null or Empty , it means we are not updating email
-        Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-        Map<String, Object> map = new HashMap<>();
-        map.put(JsonKey.ID, userId);
-        map.put(JsonKey.EMAIL_VERIFIED, false);
-        cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), map);
       }
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
@@ -1629,6 +1618,26 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     request.setOperation(ActorOperations.PROCESS_AUDIT_LOG.getValue());
     request.setRequest(map);
     tellToAnother(request);
+  }
+
+  /**
+   * Fields which are not allowed to update while updating user info.
+   *
+   * @param userMap
+   */
+  private void removeFieldsFrmUpdateReq(Map<String, Object> userMap) {
+    userMap.remove(JsonKey.OPERATION);
+    userMap.remove(JsonKey.EXTERNAL_IDS);
+    userMap.remove(JsonKey.ENC_EMAIL);
+    userMap.remove(JsonKey.ENC_PHONE);
+    userMap.remove(JsonKey.EMAIL_VERIFIED);
+    userMap.remove(JsonKey.STATUS);
+    userMap.remove(JsonKey.PROVIDER);
+    userMap.remove(JsonKey.USERNAME);
+    userMap.remove(JsonKey.ROOT_ORG_ID);
+    userMap.remove(JsonKey.LOGIN_ID);
+    userMap.remove(JsonKey.ROLES);
+    userMap.remove(JsonKey.CHANNEL);
   }
 
   private boolean isSlugUnique(String slug) {

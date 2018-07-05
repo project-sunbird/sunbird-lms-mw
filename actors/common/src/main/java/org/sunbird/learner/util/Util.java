@@ -1215,7 +1215,9 @@ public final class Util {
     Map<String, Object> reqMap = new WeakHashMap<>(10);
     reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
     reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-    reqMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
+    if (null != userMap.get(JsonKey.ROLES)) {
+      reqMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
+    }
     reqMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ORGANISATION_ID));
     reqMap.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
     reqMap.put(JsonKey.IS_DELETED, false);
@@ -1290,7 +1292,9 @@ public final class Util {
       Map<String, Object> res = resList.get(0);
       Map<String, Object> reqMap = new WeakHashMap<>(10);
       reqMap.put(JsonKey.ID, res.get(JsonKey.ID));
-      reqMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
+      if (null != userMap.get(JsonKey.ROLES)) {
+        reqMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
+      }
       reqMap.put(JsonKey.UPDATED_BY, userMap.get(JsonKey.UPDATED_BY));
       reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
       if (StringUtils.isNotEmpty((String) userMap.get(JsonKey.HASHTAGID))) {

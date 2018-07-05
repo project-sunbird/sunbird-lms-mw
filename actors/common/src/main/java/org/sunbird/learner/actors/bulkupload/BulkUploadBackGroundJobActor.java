@@ -1110,11 +1110,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                       usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
               // update user-org table(role update)
               userMap.put(JsonKey.UPDATED_BY, updatedBy);
-              if (null != userMap.get(JsonKey.ROLES)) {
-                userMap.put(JsonKey.HASHTAGID, hashTagId);
-                Util.upsertUserOrgData(userMap);
-                userMap.remove(JsonKey.HASHTAGID);
-              }
+              userMap.put(JsonKey.HASHTAGID, hashTagId);
+              Util.upsertUserOrgData(userMap);
+              userMap.remove(JsonKey.HASHTAGID);
             } catch (Exception ex) {
               userMap.remove(JsonKey.HASHTAGID);
               ProjectLogger.log(
@@ -1632,7 +1630,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     userMap.remove(JsonKey.ENC_PHONE);
     userMap.remove(JsonKey.EMAIL_VERIFIED);
     userMap.remove(JsonKey.STATUS);
-    userMap.remove(JsonKey.PROVIDER);
     userMap.remove(JsonKey.USERNAME);
     userMap.remove(JsonKey.ROOT_ORG_ID);
     userMap.remove(JsonKey.LOGIN_ID);

@@ -1631,7 +1631,8 @@ public class UserManagementActor extends BaseActor {
       return;
     }
     requestMap = new HashMap<>();
-    requestMap.putAll(userMap);
+    User cassandraUser = mapper.convertValue(userMap, User.class);
+    requestMap.putAll(mapper.convertValue(cassandraUser, Map.class));
     removeUnwanted(requestMap);
     // update db with emailVerified as false (default)
     requestMap.put(JsonKey.EMAIL_VERIFIED, false);

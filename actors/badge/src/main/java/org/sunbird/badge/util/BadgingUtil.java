@@ -256,8 +256,7 @@ public class BadgingUtil {
       switch (statusCode) {
         case 400:
           customError = ResponseCode.customClientError;
-          specificErrorMsg =
-              errorMsg != null ? errorMsg : ResponseCode.customClientError.getErrorMessage();
+          specificErrorMsg = errorMsg != null ? errorMsg : "";
           break;
         case 404:
           customError = ResponseCode.customResourceNotFound;

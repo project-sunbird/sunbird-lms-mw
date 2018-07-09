@@ -6,7 +6,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import javax.ws.rs.core.MediaType;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpHeaders;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.common.models.util.HttpUtil;
@@ -42,7 +44,9 @@ public final class EkStepRequestUtil {
       }
       headers.put(
           JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
-      headers.put("Content-Type", "application/json");
+      headers.put(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+      headers.remove(HttpHeaders.ACCEPT_ENCODING.toLowerCase());
+      headers.put(HttpHeaders.ACCEPT_ENCODING.toLowerCase(), "UTF-8");
       if (StringUtils.isBlank(headers.get(JsonKey.AUTHORIZATION))) {
         headers.put(
             JsonKey.AUTHORIZATION,

@@ -21,8 +21,8 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.TelemetryEvents;
 import org.sunbird.telemetry.util.TelemetryUtil;
-import org.sunbird.telemetry.util.lmaxdisruptor.TelemetryEvents;
 
 /**
  * This class will lookup into bulk process table. if process type is new or in progress (more than

@@ -68,15 +68,15 @@ public class BackgroundJobManager extends BaseActor {
   private static Map<String, String> headerMap = new HashMap<>();
   private static Util.DbInfo dbInfo = null;
   private EncryptionService service =
-	        org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
-	            .getEncryptionServiceInstance(null);
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
+          null);
   private DecryptionService decService =
-	        org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
-	            .getDecryptionServiceInstance(null);
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+          null);
   private DataMaskingService maskingService =
-          org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(
-              null);
-  
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(
+          null);
+
   private ObjectMapper mapper = new ObjectMapper();
 
   static {
@@ -89,7 +89,8 @@ public class BackgroundJobManager extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-	  ProjectLogger.log("BackgroundJobManager received action: " + request.getOperation(), LoggerEnum.INFO.name());
+    ProjectLogger.log(
+        "BackgroundJobManager received action: " + request.getOperation(), LoggerEnum.INFO.name());
     ProjectLogger.log("BackgroundJobManager  onReceive called");
     if (dbInfo == null) {
       dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_MANAGEMENT_DB);
@@ -97,9 +98,9 @@ public class BackgroundJobManager extends BaseActor {
     String operation = request.getOperation();
     ProjectLogger.log("Operation name is ==" + operation);
     if (operation.equalsIgnoreCase(ActorOperations.PUBLISH_COURSE.getValue())) {
-      //manageBackgroundJob(request);
+      // manageBackgroundJob(request);
     } else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue())) {
-    		ProjectLogger.log("Update user info to ES called.", LoggerEnum.INFO.name());
+      ProjectLogger.log("Update user info to ES called.", LoggerEnum.INFO.name());
       updateUserInfoToEs(request);
     } else if (operation.equalsIgnoreCase(
         ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue())) {

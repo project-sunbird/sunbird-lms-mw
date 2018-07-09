@@ -366,8 +366,15 @@ public abstract class BaseMetricsActor extends BaseActor {
     post.addHeader("Content-Type", "application/json; charset=utf-8");
     post.addHeader(JsonKey.AUTHORIZATION, authKey);
     post.setEntity(new StringEntity(body, CHARSETS_UTF_8));
+    ProjectLogger.log(
+        "BaseMetricsActor:makePostRequest completed requested data : " + body,
+        LoggerEnum.DEBUG.name());
+    ProjectLogger.log(
+        "BaseMetricsActor:makePostRequest completed Url : "
+            + baseSearchUrl
+            + PropertiesCache.getInstance().getProperty(url),
+        LoggerEnum.DEBUG.name());
     HttpResponse response = client.execute(post);
-    ProjectLogger.log("##ResponseCode" + response.getStatusLine().getStatusCode());
     if (response.getStatusLine().getStatusCode() != 200) {
       throw new ProjectCommonException(
           ResponseCode.unableToConnect.getErrorCode(),

@@ -401,6 +401,7 @@ public class BadgrServiceImpl implements BadgingService {
         LoggerEnum.INFO.name());
     HttpUtilResponse httpResponse =
         HttpUtil.doPostRequest(url, requestBody, BadgingUtil.getBadgrHeaders());
+
     ProjectLogger.log(
         "AssertionDataResponse==" + httpResponse.getStatusCode(), LoggerEnum.INFO.name());
     BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(), null);
@@ -490,7 +491,9 @@ public class BadgrServiceImpl implements BadgingService {
     String requestBody = BadgingUtil.createAssertionRevokeData(request.getRequest());
     HttpUtilResponse httpResponse =
         HttpUtil.sendDeleteRequest(requestBody, BadgingUtil.getBadgrHeaders(), url);
-    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(), null);
+    String badgrResponseStr = httpResponse.getBody();
+    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
+        httpResponse.getStatusCode(), badgrResponseStr);
     Response response = new Response();
     response.getResult().put(JsonKey.STATUS, JsonKey.SUCCESS);
     targetObject =

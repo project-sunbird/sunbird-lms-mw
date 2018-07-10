@@ -569,6 +569,9 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   private String getOrgConsumptionData(
       Request actorMessage, String periodStr, String orgHashId, String channel) throws IOException {
     String requestStr = getOrgMetricsRequest(actorMessage, periodStr, orgHashId, null, channel);
+    ProjectLogger.log(
+        "OrganisationMetricsActor:getOrgConsumptionData Requested data : " + requestStr,
+        LoggerEnum.INFO.name());
     String ekStepResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, requestStr);
     return orgConsumptionResponseGenerator(periodStr, ekStepResponse);
   }
@@ -623,9 +626,10 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         }
         if (metricsDate.equalsIgnoreCase(bucketDate)) {
           Double totalTimeSpent = (Double) res.get("m_total_ts");
-          Integer totalUsers = (Integer) res.get("m_total_users_count");
+          // reading m_total_sessions which represents total number of user visits
+          Integer totalSessions = (Integer) res.get("m_total_sessions");
           resData.put(VALUE, totalTimeSpent);
-          userData.put(VALUE, totalUsers);
+          userData.put(VALUE, totalSessions);
         }
         if (index < consumptionBucket.size() && index < userBucket.size()) {
           index++;
@@ -660,7 +664,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
       Map<String, Object> snapshot = new LinkedHashMap<>();
       Map<String, Object> dataMap = new HashMap<>();
       dataMap.put(JsonKey.NAME, "Number of visits by users");
-      dataMap.put(VALUE, resultData.get("m_total_users_count"));
+      // reading m_total_sessions which represents total number of user visits
+      dataMap.put(VALUE, resultData.get("m_total_sessions"));
       snapshot.put("org.consumption.content.session.count", dataMap);
       dataMap = new LinkedHashMap<>();
       dataMap.put(JsonKey.NAME, "Content consumption time");

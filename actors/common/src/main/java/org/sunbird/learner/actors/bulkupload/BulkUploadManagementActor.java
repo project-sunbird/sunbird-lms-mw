@@ -70,8 +70,10 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     JsonKey.PROFILE_SUMMARY,
     JsonKey.SUBJECT,
     JsonKey.WEB_PAGES,
-    JsonKey.PROVIDER,
-    JsonKey.EXTERNAL_ID
+    JsonKey.EXTERNAL_ID_PROVIDER,
+    JsonKey.EXTERNAL_ID,
+    JsonKey.EXTERNAL_ID_TYPE,
+    JsonKey.EXTERNAL_IDS
   };
 
   private String[] bulkBatchAllowedFields = {JsonKey.BATCH_ID, JsonKey.USER_IDs};
@@ -321,7 +323,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         rootOrgId = (String) orgMap.get(JsonKey.ROOT_ORG_ID);
       } else {
         String msg = "";
-        if (StringUtils.isEmpty((String) req.get(JsonKey.ORGANISATION_ID))) {
+        if (StringUtils.isBlank((String) req.get(JsonKey.ORGANISATION_ID))) {
           msg =
               ((String) req.get(JsonKey.ORG_EXTERNAL_ID))
                   + " and "

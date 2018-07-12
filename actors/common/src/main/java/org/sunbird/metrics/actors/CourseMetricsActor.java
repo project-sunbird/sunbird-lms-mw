@@ -235,7 +235,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
     if (!("fromBegining".equalsIgnoreCase(periodStr))) {
       Map<String, String> dateRange = getDateRange(periodStr);
       dateRangeFilter.put(GTE, (String) dateRange.get(STARTDATE));
-      dateRangeFilter.put(LTE, (String) dateRange.get(ENDDATE));
+      dateRangeFilter.put(
+          LTE, ((String) dateRange.get(ENDDATE)) + JsonKey.END_TIME_IN_HOUR_MINUTE_SECOND);
       ProjectLogger.log(
           "CourseMetricsActor:courseProgressMetrics Date range is : " + dateRangeFilter,
           LoggerEnum.INFO.name());

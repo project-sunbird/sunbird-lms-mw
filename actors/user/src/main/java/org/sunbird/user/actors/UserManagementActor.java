@@ -16,7 +16,6 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.velocity.VelocityContext;
-import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -42,14 +41,11 @@ import org.sunbird.common.request.UserRequestValidator;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.models.user.User;
-import org.sunbird.notification.sms.provider.ISmsProvider;
-import org.sunbird.notification.utils.SMSFactory;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
@@ -97,7 +93,6 @@ public class UserManagementActor extends BaseActor {
   private Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
-  private static final String SUNBIRD_APP_URL = "sunbird_app_url";
   private static final String KEY_SPACE_NAME = "sunbird";
 
   /** Receives the actor message and perform the course enrollment operation . */
@@ -399,32 +394,6 @@ public class UserManagementActor extends BaseActor {
     if (Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED))) {
       boolean addedResponse = ssoManager.addUserLoginTime(userId);
       ProjectLogger.log("user login time added response is ==" + addedResponse);
-
-      // read value for emailVerified
-      boolean emailVerified = ssoManager.isEmailVerified(userId);
-      ProjectLogger.log("user emailVerified response ==" + emailVerified);
-      String emailVerifiedUpdatedFlag = ssoManager.getEmailVerifiedUpdatedFlag(userId);
-      ProjectLogger.log("user emailVerifiedUpdatedFlag response ==" + emailVerifiedUpdatedFlag);
-      if (emailVerified && "false".equalsIgnoreCase(emailVerifiedUpdatedFlag)) {
-        Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-        Map<String, Object> map = new HashMap<>();
-        map.put(JsonKey.ID, userId);
-        map.put(JsonKey.EMAIL_VERIFIED, true);
-        cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), map);
-        ssoManager.setEmailVerifiedUpdatedFlag(userId, "true");
-        boolean flag =
-            ElasticSearchUtil.updateData(
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName(),
-                userId,
-                map);
-        if (flag) {
-          ProjectLogger.log("User data updated to ES for EMAIL_VERIFIED for userId :: " + userId);
-        } else {
-          ProjectLogger.log(
-              "User data update failed to ES for EMAIL_VERIFIED for userId :: " + userId);
-        }
-      }
     }
   }
 
@@ -1086,8 +1055,8 @@ public class UserManagementActor extends BaseActor {
           (List<Map<String, String>>) userMap.get(JsonKey.WEB_PAGES));
     }
 
-    checkPhoneUniqueness(userMap, JsonKey.UPDATE);
-    checkEmailUniqueness(userMap, JsonKey.UPDATE);
+    Util.checkPhoneUniqueness(userMap, JsonKey.UPDATE);
+    Util.checkEmailUniqueness(userMap, JsonKey.UPDATE);
 
     // not allowing user to update the status,provider,userName
     removeFieldsFrmReq(userMap);
@@ -1580,8 +1549,8 @@ public class UserManagementActor extends BaseActor {
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
     actorMessage.getRequest().putAll(userMap);
     UserRequestValidator.validateCreateUser(actorMessage);
-    checkPhoneUniqueness(userMap, JsonKey.CREATE);
-    checkEmailUniqueness(userMap, JsonKey.CREATE);
+    Util.checkPhoneUniqueness(userMap, JsonKey.CREATE);
+    Util.checkEmailUniqueness(userMap, JsonKey.CREATE);
     Map<String, Object> emailTemplateMap = new HashMap<>(userMap);
     if (userMap.containsKey(JsonKey.WEB_PAGES)) {
       SocialMediaType.validateSocialMedia(
@@ -1789,10 +1758,13 @@ public class UserManagementActor extends BaseActor {
     // user created successfully send the onboarding mail
     // putting rootOrgId to get web url per tenant while sending mail
     emailTemplateMap.put(JsonKey.ROOT_ORG_ID, userMap.get(JsonKey.ROOT_ORG_ID));
-    sendOnboardingMail(emailTemplateMap);
+    Request welcomeMailReqObj = Util.sendOnboardingMail(emailTemplateMap);
+    if (null != welcomeMailReqObj) {
+      tellToAnother(welcomeMailReqObj);
+    }
     ProjectLogger.log("calling Send SMS method:", LoggerEnum.INFO);
     if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PHONE))) {
-      sendSMS(userMap);
+      Util.sendSMS(userMap);
     }
 
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
@@ -1808,137 +1780,6 @@ public class UserManagementActor extends BaseActor {
       }
     } else {
       ProjectLogger.log("no call for ES to save user");
-    }
-  }
-
-  private void sendSMS(Map<String, Object> userMap) {
-    ProjectLogger.log("Inside Send SMS method:", LoggerEnum.INFO);
-    // removing email check now we need to send welcome mail as well as welcome sms Ref:SB-4009
-    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PHONE))) {
-      UserUtility.decryptUserData(userMap);
-      String name =
-          (String) userMap.get(JsonKey.FIRST_NAME) + " " + (String) userMap.get(JsonKey.LAST_NAME);
-
-      String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
-      String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
-
-      ProjectLogger.log("shortened url :: " + webUrl, LoggerEnum.INFO);
-      String sms = ProjectUtil.getSMSBody(name, webUrl, envName);
-      if (StringUtils.isBlank(sms)) {
-        sms = PropertiesCache.getInstance().getProperty("sunbird_default_welcome_sms");
-      }
-      ProjectLogger.log("SMS text : " + sms, LoggerEnum.INFO);
-      String countryCode = "";
-      if (StringUtils.isBlank((String) userMap.get(JsonKey.COUNTRY_CODE))) {
-        countryCode = PropertiesCache.getInstance().getProperty("sunbird_default_country_code");
-      } else {
-        countryCode = (String) userMap.get(JsonKey.COUNTRY_CODE);
-      }
-      ISmsProvider smsProvider = SMSFactory.getInstance("91SMS");
-      ProjectLogger.log(
-          "SMS text : " + sms + " with phone " + (String) userMap.get(JsonKey.PHONE),
-          LoggerEnum.INFO);
-      boolean response = smsProvider.send((String) userMap.get(JsonKey.PHONE), countryCode, sms);
-      ProjectLogger.log("Response from smsProvider : " + response, LoggerEnum.INFO);
-      if (response) {
-        ProjectLogger.log(
-            "Welcome Message sent successfully to ." + (String) userMap.get(JsonKey.PHONE),
-            LoggerEnum.INFO);
-      } else {
-        ProjectLogger.log(
-            "Welcome Message failed for ." + (String) userMap.get(JsonKey.PHONE), LoggerEnum.INFO);
-      }
-    }
-  }
-
-  private void checkEmailUniqueness(Map<String, Object> userMap, String opType) {
-    // Get Email configuration if not found , by default Email can be duplicate
-    // across the
-    // application
-    String emailSetting = DataCacheHandler.getConfigSettings().get(JsonKey.EMAIL_UNIQUE);
-    if (null != emailSetting && Boolean.parseBoolean(emailSetting)) {
-      String email = (String) userMap.get(JsonKey.EMAIL);
-      if (!StringUtils.isBlank(email)) {
-        try {
-          email = encryptionService.encryptData(email);
-        } catch (Exception e) {
-          ProjectLogger.log("Exception occurred while encrypting Email ", e);
-        }
-        Map<String, Object> filters = new HashMap<>();
-        filters.put(JsonKey.ENC_EMAIL, email);
-        Map<String, Object> map = new HashMap<>();
-        map.put(JsonKey.FILTERS, filters);
-        SearchDTO searchDto = Util.createSearchDto(map);
-        Map<String, Object> result =
-            ElasticSearchUtil.complexSearch(
-                searchDto,
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName());
-        List<Map<String, Object>> userMapList =
-            (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-        if (!userMapList.isEmpty()) {
-          if (opType.equalsIgnoreCase(JsonKey.CREATE)) {
-            throw new ProjectCommonException(
-                ResponseCode.emailInUse.getErrorCode(),
-                ResponseCode.emailInUse.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-          } else {
-            Map<String, Object> user = userMapList.get(0);
-            if (!(((String) user.get(JsonKey.ID))
-                .equalsIgnoreCase((String) userMap.get(JsonKey.ID)))) {
-              throw new ProjectCommonException(
-                  ResponseCode.emailInUse.getErrorCode(),
-                  ResponseCode.emailInUse.getErrorMessage(),
-                  ResponseCode.CLIENT_ERROR.getResponseCode());
-            }
-          }
-        }
-      }
-    }
-  }
-
-  private void checkPhoneUniqueness(Map<String, Object> userMap, String opType) {
-    // Get Phone configuration if not found , by default phone will be unique across
-    // the application
-    String phoneSetting = DataCacheHandler.getConfigSettings().get(JsonKey.PHONE_UNIQUE);
-    if (null != phoneSetting && Boolean.parseBoolean(phoneSetting)) {
-      String phone = (String) userMap.get(JsonKey.PHONE);
-      if (!StringUtils.isBlank(phone)) {
-        try {
-          phone = encryptionService.encryptData(phone);
-        } catch (Exception e) {
-          ProjectLogger.log("Exception occurred while encrypting phone number ", e);
-        }
-        Map<String, Object> filters = new HashMap<>();
-        filters.put(JsonKey.ENC_PHONE, phone);
-        Map<String, Object> map = new HashMap<>();
-        map.put(JsonKey.FILTERS, filters);
-        SearchDTO searchDto = Util.createSearchDto(map);
-        Map<String, Object> result =
-            ElasticSearchUtil.complexSearch(
-                searchDto,
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName());
-        List<Map<String, Object>> userMapList =
-            (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-        if (!userMapList.isEmpty()) {
-          if (opType.equalsIgnoreCase(JsonKey.CREATE)) {
-            throw new ProjectCommonException(
-                ResponseCode.PhoneNumberInUse.getErrorCode(),
-                ResponseCode.PhoneNumberInUse.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-          } else {
-            Map<String, Object> user = userMapList.get(0);
-            if (!(((String) user.get(JsonKey.ID))
-                .equalsIgnoreCase((String) userMap.get(JsonKey.ID)))) {
-              throw new ProjectCommonException(
-                  ResponseCode.PhoneNumberInUse.getErrorCode(),
-                  ResponseCode.PhoneNumberInUse.getErrorMessage(),
-                  ResponseCode.CLIENT_ERROR.getResponseCode());
-            }
-          }
-        }
-      }
     }
   }
 
@@ -3043,49 +2884,6 @@ public class UserManagementActor extends BaseActor {
   private void getMediaTypes() {
     Response response = SocialMediaType.getMediaTypeFromDB();
     sender().tell(response, self());
-  }
-
-  private void sendOnboardingMail(Map<String, Object> emailTemplateMap) {
-
-    if (!(StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
-
-      String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
-
-      String welcomeSubject = propertiesCache.getProperty("onboarding_mail_subject");
-      emailTemplateMap.put(JsonKey.SUBJECT, ProjectUtil.formatMessage(welcomeSubject, envName));
-      List<String> reciptientsMail = new ArrayList<>();
-      reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
-      emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
-
-      String webUrl = Util.getSunbirdWebUrlPerTenent(emailTemplateMap);
-      if ((!StringUtils.isBlank(webUrl)) && (!SUNBIRD_WEB_URL.equalsIgnoreCase(webUrl))) {
-        emailTemplateMap.put(JsonKey.WEB_URL, webUrl);
-      }
-
-      String appUrl = System.getenv(SUNBIRD_APP_URL);
-      if (StringUtils.isBlank(appUrl)) {
-        appUrl = propertiesCache.getProperty(SUNBIRD_APP_URL);
-      }
-
-      if ((!StringUtils.isBlank(appUrl)) && (!SUNBIRD_APP_URL.equalsIgnoreCase(appUrl))) {
-        emailTemplateMap.put(JsonKey.APP_URL, appUrl);
-      }
-
-      emailTemplateMap.put(
-          JsonKey.BODY, propertiesCache.getProperty(JsonKey.ONBOARDING_WELCOME_MAIL_BODY));
-      emailTemplateMap.put(JsonKey.NOTE, propertiesCache.getProperty(JsonKey.MAIL_NOTE));
-      emailTemplateMap.put(JsonKey.ORG_NAME, envName);
-      String welcomeMessage = propertiesCache.getProperty("onboarding_welcome_message");
-      emailTemplateMap.put(
-          JsonKey.WELCOME_MESSAGE, ProjectUtil.formatMessage(welcomeMessage, envName));
-
-      emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
-
-      Request request = new Request();
-      request.setOperation(BackgroundOperations.emailService.name());
-      request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);
-      tellToAnother(request);
-    }
   }
 
   /**

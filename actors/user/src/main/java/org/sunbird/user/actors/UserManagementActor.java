@@ -2523,6 +2523,7 @@ public class UserManagementActor extends BaseActor {
     String externalId = (String) requestMap.get(JsonKey.EXTERNAL_ID);
     String provider = (String) requestMap.get(JsonKey.PROVIDER);
     String userName = (String) requestMap.get(JsonKey.USERNAME);
+    String organisationId = (String) requestMap.get(JsonKey.ORGANISATION_ID);
     String loginId = "";
     if (StringUtils.isBlank(userId) && StringUtils.isBlank(userName)) {
       ProjectCommonException exception =
@@ -2533,6 +2534,7 @@ public class UserManagementActor extends BaseActor {
       sender().tell(exception, self());
       return;
     }
+    //Fetch userId if it is not provided
     if (StringUtils.isBlank(userId)) {
       Map<String, Object> esUsrRes = null;
       if (!StringUtils.isBlank(userName) && !StringUtils.isBlank(provider)) {
@@ -2574,20 +2576,20 @@ public class UserManagementActor extends BaseActor {
         return;
       }
       esUsrRes = esUsrList.get(0);
-      requestMap.put(JsonKey.USER_ID, esUsrRes.get(JsonKey.ID));
+      userId = (String)esUsrRes.get(JsonKey.ID);
     }
     // have a check if organisation id is provided then need to get hashtagId
-    if (StringUtils.isNotBlank((String) requestMap.get(JsonKey.ORGANISATION_ID))) {
+    if (StringUtils.isNotBlank(organisationId)) {
       Map<String, Object> map =
           ElasticSearchUtil.getDataByIdentifier(
               ProjectUtil.EsIndex.sunbird.getIndexName(),
               ProjectUtil.EsType.organisation.getTypeName(),
-              (String) requestMap.get(JsonKey.ORGANISATION_ID));
+              organisationId);
       if (MapUtils.isNotEmpty(map)) {
         requestMap.put(JsonKey.HASHTAGID, map.get(JsonKey.HASHTAGID));
       }
     }
-    if (StringUtils.isBlank((String) requestMap.get(JsonKey.ORGANISATION_ID))
+    if (StringUtils.isBlank(organisationId)
         && !StringUtils.isBlank(externalId)
         && !StringUtils.isBlank(provider)) {
       SearchDTO searchDto = new SearchDTO();
@@ -2611,7 +2613,7 @@ public class UserManagementActor extends BaseActor {
         sender().tell(exception, self());
         return;
       }
-      requestMap.put(JsonKey.ORGANISATION_ID, list.get(0).get(JsonKey.ID));
+      organisationId = (String)list.get(0).get(JsonKey.ID);      
       // get org hashTagId and keep inside request map.
       requestMap.put(JsonKey.HASHTAGID, list.get(0).get(JsonKey.HASHTAGID));
     }
@@ -2619,11 +2621,10 @@ public class UserManagementActor extends BaseActor {
     // now we have valid userid , roles and need to check organisation id is provided/fetched
     // if organisationid is provided/fetched, update userOrg role with requested roles.
     // else throw exception saying organisationId or externalId/provider is mandatory.
-    if (requestMap.containsKey(JsonKey.ORGANISATION_ID)
-        && !ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.ORGANISATION_ID))) {
+    if (!ProjectUtil.isStringNullOREmpty(organisationId)) {
       Map<String, Object> dbUpdateMap = new HashMap<>();    	
-      dbUpdateMap.put(JsonKey.ORGANISATION_ID, requestMap.get(JsonKey.ORGANISATION_ID));
-      dbUpdateMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
+      dbUpdateMap.put(JsonKey.ORGANISATION_ID, organisationId);
+      dbUpdateMap.put(JsonKey.USER_ID, userId);
       Util.DbInfo userOrgDb = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
       Response response =
           cassandraOperation.getRecordsByProperties(

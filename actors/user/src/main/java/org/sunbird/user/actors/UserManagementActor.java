@@ -2518,9 +2518,7 @@ public class UserManagementActor extends BaseActor {
       sender().tell(exception, self());
       return;
     }
-    Map<String, Object> esUsrRes = null;
-    Map<String, Object> tempMap = new HashMap<>();
-    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+
     String userId = (String) requestMap.get(JsonKey.USER_ID);
     String externalId = (String) requestMap.get(JsonKey.EXTERNAL_ID);
     String provider = (String) requestMap.get(JsonKey.PROVIDER);
@@ -2535,13 +2533,8 @@ public class UserManagementActor extends BaseActor {
       sender().tell(exception, self());
       return;
     }
-    if (!StringUtils.isBlank(userId)) {
-      esUsrRes =
-          ElasticSearchUtil.getDataByIdentifier(
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.user.getTypeName(),
-              userId);
-    } else {
+    if (StringUtils.isBlank(userId)) {
+      Map<String, Object> esUsrRes = null;
       if (!StringUtils.isBlank(userName) && !StringUtils.isBlank(provider)) {
         loginId = userName + JsonKey.LOGIN_ID_DELIMETER + provider;
       } else {
@@ -2583,7 +2576,7 @@ public class UserManagementActor extends BaseActor {
       esUsrRes = esUsrList.get(0);
       requestMap.put(JsonKey.USER_ID, esUsrRes.get(JsonKey.ID));
     }
-    // have a check if organisation id is coming then need to get hashtagId
+    // have a check if organisation id is provided then need to get hashtagId
     if (StringUtils.isNotBlank((String) requestMap.get(JsonKey.ORGANISATION_ID))) {
       Map<String, Object> map =
           ElasticSearchUtil.getDataByIdentifier(
@@ -2623,21 +2616,18 @@ public class UserManagementActor extends BaseActor {
       requestMap.put(JsonKey.HASHTAGID, list.get(0).get(JsonKey.HASHTAGID));
     }
 
-    // now we have valid userid , roles and need to check organisation id is also
-    // coming.
-    // if organisationid is coming it means need to update userOrg role.
-    // if organisationId is not coming then need to update only userRole.
+    // now we have valid userid , roles and need to check organisation id is provided/fetched
+    // if organisationid is provided/fetched, update userOrg role with requested roles.
+    // else throw exception saying organisationId or externalId/provider is mandatory.
     if (requestMap.containsKey(JsonKey.ORGANISATION_ID)
         && !ProjectUtil.isStringNullOREmpty((String) requestMap.get(JsonKey.ORGANISATION_ID))) {
-      tempMap.remove(JsonKey.PROVIDER);
-      tempMap.remove(JsonKey.EXTERNAL_ID);
-      tempMap.remove(JsonKey.SOURCE);
-      tempMap.put(JsonKey.ORGANISATION_ID, requestMap.get(JsonKey.ORGANISATION_ID));
-      tempMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
+      Map<String, Object> dbUpdateMap = new HashMap<>();    	
+      dbUpdateMap.put(JsonKey.ORGANISATION_ID, requestMap.get(JsonKey.ORGANISATION_ID));
+      dbUpdateMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
       Util.DbInfo userOrgDb = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
       Response response =
           cassandraOperation.getRecordsByProperties(
-              userOrgDb.getKeySpace(), userOrgDb.getTableName(), tempMap);
+              userOrgDb.getKeySpace(), userOrgDb.getTableName(), dbUpdateMap);
       List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
       if (list.isEmpty()) {
         ProjectCommonException exception =
@@ -2658,30 +2648,19 @@ public class UserManagementActor extends BaseActor {
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
       }
-
-      List<String> roles = (List<String>) list.get(0).get(JsonKey.ROLES);
-      if (null != roles && !roles.isEmpty()) {
-        List<String> requestedRoles = (List<String>) requestMap.get(JsonKey.ROLES);
-        for (String role : requestedRoles) {
-          if (!roles.contains(role)) {
-            roles.add(role);
-          }
-        }
-        tempMap.put(JsonKey.ROLES, roles);
-      } else {
-        tempMap.put(JsonKey.ROLES, requestMap.get(JsonKey.ROLES));
-      }
-      tempMap.put(JsonKey.ID, list.get(0).get(JsonKey.ID));
+      //Add Requested Roles to dbUpdateMap to replace with existing one
+      dbUpdateMap.put(JsonKey.ROLES, requestMap.get(JsonKey.ROLES));
+      dbUpdateMap.put(JsonKey.ID, list.get(0).get(JsonKey.ID));
       if (StringUtils.isNotBlank((String) requestMap.get(JsonKey.HASHTAGID))) {
-        tempMap.put(JsonKey.HASHTAGID, requestMap.get(JsonKey.HASHTAGID));
+        dbUpdateMap.put(JsonKey.HASHTAGID, requestMap.get(JsonKey.HASHTAGID));
       }
       response =
           cassandraOperation.updateRecord(
-              userOrgDb.getKeySpace(), userOrgDb.getTableName(), tempMap);
+              userOrgDb.getKeySpace(), userOrgDb.getTableName(), dbUpdateMap);
       sender().tell(response, self());
       if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
         updateRoleToEs(
-            tempMap,
+            dbUpdateMap,
             JsonKey.ORGANISATION,
             (String) requestMap.get(JsonKey.USER_ID),
             (String) requestMap.get(JsonKey.ORGANISATION_ID));
@@ -2692,50 +2671,10 @@ public class UserManagementActor extends BaseActor {
       return;
 
     } else {
-      tempMap.remove(JsonKey.EXTERNAL_ID);
-      tempMap.remove(JsonKey.SOURCE);
-      tempMap.remove(JsonKey.PROVIDER);
-      tempMap.remove(JsonKey.ORGANISATION_ID);
-      if (null != requestMap.get(JsonKey.ROLES)
-          && !((List<String>) requestMap.get(JsonKey.ROLES)).isEmpty()) {
-        String msg = Util.validateRoles((List<String>) requestMap.get(JsonKey.ROLES));
-        if (!msg.equalsIgnoreCase(JsonKey.SUCCESS)) {
-          throw new ProjectCommonException(
-              ResponseCode.invalidRole.getErrorCode(),
-              ResponseCode.invalidRole.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-        }
-      }
-      tempMap.put(JsonKey.ID, requestMap.get(JsonKey.USER_ID));
-      List<String> roles = (List<String>) esUsrRes.get(JsonKey.ROLES);
-      if (null != roles && !roles.isEmpty()) {
-        List<String> requestedRoles = (List<String>) requestMap.get(JsonKey.ROLES);
-        for (String role : requestedRoles) {
-          if (!roles.contains(role)) {
-            roles.add(role);
-          }
-        }
-        tempMap.put(JsonKey.ROLES, roles);
-      } else {
-        tempMap.put(JsonKey.ROLES, requestMap.get(JsonKey.ROLES));
-      }
-      Response response =
-          cassandraOperation.updateRecord(
-              usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
-      ElasticSearchUtil.updateData(
-          ProjectUtil.EsIndex.sunbird.getIndexName(),
-          ProjectUtil.EsType.user.getTypeName(),
-          (String) requestMap.get(JsonKey.USER_ID),
-          tempMap);
-      sender().tell(response, self());
-      if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-        updateRoleToEs(tempMap, JsonKey.USER, (String) requestMap.get(JsonKey.USER_ID), null);
-      } else {
-        ProjectLogger.log("no call for ES to save user");
-      }
-
-      generateTeleEventForUser(requestMap, userId, "orgLevel");
-      return;
+    	throw new ProjectCommonException(
+                ResponseCode.sourceAndExternalIdValidationError.getErrorCode(),
+                ResponseCode.sourceAndExternalIdValidationError.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
     }
   }
 

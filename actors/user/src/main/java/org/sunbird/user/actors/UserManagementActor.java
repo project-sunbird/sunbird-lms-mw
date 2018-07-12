@@ -94,6 +94,7 @@ public class UserManagementActor extends BaseActor {
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String KEY_SPACE_NAME = "sunbird";
+  private static final String DEFAULT_USER_ROLE = "PUBLIC";
 
   /** Receives the actor message and perform the course enrollment operation . */
   @Override
@@ -2649,7 +2650,10 @@ public class UserManagementActor extends BaseActor {
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
       }
-      //Add Requested Roles to dbUpdateMap to replace with existing one
+      //Add default role into Requested Roles if it is not provided and then update into DB
+      List<String> roles = (List<String>) requestMap.get(JsonKey.ROLES);
+      if(!roles.contains(DEFAULT_USER_ROLE))
+    	  roles.add(DEFAULT_USER_ROLE);
       dbUpdateMap.put(JsonKey.ROLES, requestMap.get(JsonKey.ROLES));
       dbUpdateMap.put(JsonKey.ID, list.get(0).get(JsonKey.ID));
       if (StringUtils.isNotBlank((String) requestMap.get(JsonKey.HASHTAGID))) {

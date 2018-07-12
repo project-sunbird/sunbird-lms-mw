@@ -1016,16 +1016,11 @@ public class UserManagementActor extends BaseActor {
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
       userMap.put(JsonKey.USER_ID, userDbRecord.get(JsonKey.USER_ID));
-      userMap.put(JsonKey.REGISTRY_ID, userDbRecord.get(JsonKey.REGISTRY_ID));
     }
     if (null != userMap.get(JsonKey.USER_ID)) {
       userMap.put(JsonKey.ID, userMap.get(JsonKey.USER_ID));
     } else {
       userMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-    }
-    if (StringUtils.isBlank((String) userMap.get(JsonKey.REGISTRY_ID))) {
-      userDbRecord = Util.getUserbyUserId((String) userMap.get(JsonKey.USER_ID));
-      userMap.put(JsonKey.REGISTRY_ID, userDbRecord.get(JsonKey.REGISTRY_ID));
     }
 
     if (isUserDeleted(userMap)) {
@@ -1079,6 +1074,10 @@ public class UserManagementActor extends BaseActor {
      */
     if ("true"
         .equalsIgnoreCase(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
+      if (null == userDbRecord) {
+        userDbRecord = Util.getUserbyUserId((String) userMap.get(JsonKey.USER_ID));
+      }
+      userMap.put(JsonKey.REGISTRY_ID, userDbRecord.get(JsonKey.REGISTRY_ID));
       UserExtension userExtension = new UserProviderRegistryImpl();
       userExtension.update(userMap);
     }

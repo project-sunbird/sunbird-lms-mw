@@ -1427,7 +1427,7 @@ public final class Util {
       addMaskEmailAndPhone(userDetails);
       checkProfileCompleteness(userDetails);
       userDetails.remove(JsonKey.PASSWORD);
-      String registryId = (String) userDetails.get("registryId");
+      String registryId = (String) userDetails.get(JsonKey.REGISTRY_ID);
       if (StringUtils.isNotBlank(registryId)) {
         Map<String, Object> registryUserDetails = null;
         try {

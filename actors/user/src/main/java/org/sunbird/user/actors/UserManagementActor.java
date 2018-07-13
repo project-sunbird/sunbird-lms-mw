@@ -31,6 +31,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.Status;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
@@ -39,6 +40,7 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.request.UserRequestValidator;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.SocialMediaType;
@@ -2528,10 +2530,10 @@ public class UserManagementActor extends BaseActor {
     String provider = (String) requestMap.get(JsonKey.PROVIDER);
     String organisationId = (String) requestMap.get(JsonKey.ORGANISATION_ID);
     String hashTagId = null;
-
+    Map<String, Object> map = null;
     // have a check if organisation id is provided then need to get hashtagId
     if (StringUtils.isNotBlank(organisationId)) {
-      Map<String, Object> map =
+      map =
           ElasticSearchUtil.getDataByIdentifier(
               ProjectUtil.EsIndex.sunbird.getIndexName(),
               ProjectUtil.EsType.organisation.getTypeName(),
@@ -2553,23 +2555,38 @@ public class UserManagementActor extends BaseActor {
               ProjectUtil.EsType.organisation.getTypeName());
       List<Map<String, Object>> list = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
 
-      if (list.isEmpty()) {
-        ProjectCommonException exception =
-            new ProjectCommonException(
-                ResponseCode.invalidOrgData.getErrorCode(),
-                ResponseCode.invalidOrgData.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-        sender().tell(exception, self());
-        return;
+      if (!list.isEmpty()) {
+        map = list.get(0);
+        organisationId = (String) map.get(JsonKey.ID);
+        requestMap.put(JsonKey.ORGANISATION_ID, organisationId);
+        // get org hashTagId and keep inside request map.
+        hashTagId = (String) map.get(JsonKey.HASHTAGID);
+        requestMap.put(JsonKey.HASHTAGID, hashTagId);
       }
-      organisationId = (String) list.get(0).get(JsonKey.ID);
-      requestMap.put(JsonKey.ORGANISATION_ID, organisationId);
-      // get org hashTagId and keep inside request map.
-      hashTagId = (String) list.get(0).get(JsonKey.HASHTAGID);
-      requestMap.put(JsonKey.HASHTAGID, hashTagId);
     }
 
-    // if organisationid is provided/fetched, update userOrg role with requested roles.
+    // throw error if provided orgId or ExtenralId with Provider is not valid
+    if (MapUtils.isEmpty(map)) {
+      String errorMsg =
+          StringUtils.isNotEmpty(organisationId)
+              ? ProjectUtil.formatMessage(
+                  ResponseMessage.Message.INVALID_PARAMETER_VALUE,
+                  organisationId,
+                  JsonKey.ORGANISATION_ID)
+              : ProjectUtil.formatMessage(
+                  ResponseMessage.Message.INVALID_PARAMETER_VALUE,
+                  StringFormatter.joinByComma(externalId, provider),
+                  StringFormatter.joinByAnd(JsonKey.EXTERNAL_ID, JsonKey.PROVIDER));
+      ProjectCommonException exception =
+          new ProjectCommonException(
+              ResponseCode.invalidParameterValue.getErrorCode(),
+              errorMsg,
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
+
+    // update userOrg role with requested roles.
     Map<String, Object> userOrgDBMap = new HashMap<>();
     userOrgDBMap.put(JsonKey.ORGANISATION_ID, organisationId);
     userOrgDBMap.put(JsonKey.USER_ID, userId);

@@ -2538,6 +2538,7 @@ public class UserManagementActor extends BaseActor {
               organisationId);
       if (MapUtils.isNotEmpty(map)) {
         hashTagId = (String) map.get(JsonKey.HASHTAGID);
+        requestMap.put(JsonKey.HASHTAGID, hashTagId);
       }
     } else {
       SearchDTO searchDto = new SearchDTO();
@@ -2562,8 +2563,10 @@ public class UserManagementActor extends BaseActor {
         return;
       }
       organisationId = (String) list.get(0).get(JsonKey.ID);
+      requestMap.put(JsonKey.ORGANISATION_ID, organisationId);
       // get org hashTagId and keep inside request map.
       hashTagId = (String) list.get(0).get(JsonKey.HASHTAGID);
+      requestMap.put(JsonKey.HASHTAGID, hashTagId);
     }
 
     // if organisationid is provided/fetched, update userOrg role with requested roles.

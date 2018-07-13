@@ -2600,11 +2600,7 @@ public class UserManagementActor extends BaseActor {
             userOrgDb.getKeySpace(), userOrgDb.getTableName(), userOrgDBMap);
     sender().tell(response, self());
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      updateRoleToEs(
-          userOrgDBMap,
-          JsonKey.ORGANISATION,
-          (String) requestMap.get(JsonKey.USER_ID),
-          (String) requestMap.get(JsonKey.ORGANISATION_ID));
+      updateRoleToEs(userOrgDBMap, JsonKey.ORGANISATION, userId, organisationId);
     } else {
       ProjectLogger.log("no call for ES to save user");
     }

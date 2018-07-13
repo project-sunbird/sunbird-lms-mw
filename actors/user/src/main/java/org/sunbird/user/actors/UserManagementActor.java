@@ -2508,77 +2508,27 @@ public class UserManagementActor extends BaseActor {
    */
   @SuppressWarnings("unchecked")
   private void assignRoles(Request actorMessage) {
-    // object of telemetry event...
+    UserRequestValidator.validateAssignRole(actorMessage);
     Map<String, Object> requestMap = actorMessage.getRequest();
-    if (requestMap == null || requestMap.size() == 0) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
+
+    if (null != requestMap.get(JsonKey.ROLES)
+        && !((List<String>) requestMap.get(JsonKey.ROLES)).isEmpty()) {
+      String msg = Util.validateRoles((List<String>) requestMap.get(JsonKey.ROLES));
+      if (!msg.equalsIgnoreCase(JsonKey.SUCCESS)) {
+        throw new ProjectCommonException(
+            ResponseCode.invalidRole.getErrorCode(),
+            ResponseCode.invalidRole.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
     }
 
+    // object of telemetry event...
     String userId = (String) requestMap.get(JsonKey.USER_ID);
     String externalId = (String) requestMap.get(JsonKey.EXTERNAL_ID);
     String provider = (String) requestMap.get(JsonKey.PROVIDER);
-    String userName = (String) requestMap.get(JsonKey.USERNAME);
     String organisationId = (String) requestMap.get(JsonKey.ORGANISATION_ID);
-    String loginId = "";
-    if (StringUtils.isBlank(userId) && StringUtils.isBlank(userName)) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.userNameOrUserIdRequired.getErrorCode(),
-              ResponseCode.userNameOrUserIdRequired.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-    //Fetch userId if it is not provided
-    if (StringUtils.isBlank(userId)) {
-      Map<String, Object> esUsrRes = null;
-      if (!StringUtils.isBlank(userName) && !StringUtils.isBlank(provider)) {
-        loginId = userName + JsonKey.LOGIN_ID_DELIMETER + provider;
-      } else {
-        loginId = userName;
-      }
-      try {
-        loginId = encryptionService.encryptData(loginId);
-      } catch (Exception e) {
-        ProjectCommonException exception =
-            new ProjectCommonException(
-                ResponseCode.userDataEncryptionError.getErrorCode(),
-                ResponseCode.userDataEncryptionError.getErrorMessage(),
-                ResponseCode.SERVER_ERROR.getResponseCode());
-        sender().tell(exception, self());
-        return;
-      }
+    String hashTagId = null;
 
-      SearchDTO searchDto = new SearchDTO();
-      Map<String, Object> filter = new HashMap<>();
-      filter.put(JsonKey.LOGIN_ID, loginId);
-      searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
-      Map<String, Object> esResponse =
-          ElasticSearchUtil.complexSearch(
-              searchDto,
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.user.getTypeName());
-      List<Map<String, Object>> esUsrList =
-          (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
-
-      if (esUsrList.isEmpty()) {
-        ProjectCommonException exception =
-            new ProjectCommonException(
-                ResponseCode.invalidUsrData.getErrorCode(),
-                ResponseCode.invalidUsrData.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-        sender().tell(exception, self());
-        return;
-      }
-      esUsrRes = esUsrList.get(0);
-      userId = (String)esUsrRes.get(JsonKey.ID);
-    }
     // have a check if organisation id is provided then need to get hashtagId
     if (StringUtils.isNotBlank(organisationId)) {
       Map<String, Object> map =
@@ -2587,12 +2537,9 @@ public class UserManagementActor extends BaseActor {
               ProjectUtil.EsType.organisation.getTypeName(),
               organisationId);
       if (MapUtils.isNotEmpty(map)) {
-        requestMap.put(JsonKey.HASHTAGID, map.get(JsonKey.HASHTAGID));
+        hashTagId = (String) map.get(JsonKey.HASHTAGID);
       }
-    }
-    if (StringUtils.isBlank(organisationId)
-        && !StringUtils.isBlank(externalId)
-        && !StringUtils.isBlank(provider)) {
+    } else {
       SearchDTO searchDto = new SearchDTO();
       Map<String, Object> filter = new HashMap<>();
       filter.put(JsonKey.EXTERNAL_ID, externalId);
@@ -2614,73 +2561,54 @@ public class UserManagementActor extends BaseActor {
         sender().tell(exception, self());
         return;
       }
-      organisationId = (String)list.get(0).get(JsonKey.ID);      
+      organisationId = (String) list.get(0).get(JsonKey.ID);
       // get org hashTagId and keep inside request map.
-      requestMap.put(JsonKey.HASHTAGID, list.get(0).get(JsonKey.HASHTAGID));
+      hashTagId = (String) list.get(0).get(JsonKey.HASHTAGID);
     }
 
-    // now we have valid userid , roles and need to check organisation id is provided/fetched
     // if organisationid is provided/fetched, update userOrg role with requested roles.
-    // else throw exception saying organisationId or externalId/provider is mandatory.
-    if (!ProjectUtil.isStringNullOREmpty(organisationId)) {
-      Map<String, Object> dbUpdateMap = new HashMap<>();    	
-      dbUpdateMap.put(JsonKey.ORGANISATION_ID, organisationId);
-      dbUpdateMap.put(JsonKey.USER_ID, userId);
-      Util.DbInfo userOrgDb = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
-      Response response =
-          cassandraOperation.getRecordsByProperties(
-              userOrgDb.getKeySpace(), userOrgDb.getTableName(), dbUpdateMap);
-      List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-      if (list.isEmpty()) {
-        ProjectCommonException exception =
-            new ProjectCommonException(
-                ResponseCode.invalidUsrOrgData.getErrorCode(),
-                ResponseCode.invalidUsrOrgData.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-        sender().tell(exception, self());
-        return;
-      }
-      if (null != requestMap.get(JsonKey.ROLES)
-          && !((List<String>) requestMap.get(JsonKey.ROLES)).isEmpty()) {
-        String msg = Util.validateRoles((List<String>) requestMap.get(JsonKey.ROLES));
-        if (!msg.equalsIgnoreCase(JsonKey.SUCCESS)) {
-          throw new ProjectCommonException(
-              ResponseCode.invalidRole.getErrorCode(),
-              ResponseCode.invalidRole.getErrorMessage(),
+    Map<String, Object> userOrgDBMap = new HashMap<>();
+    userOrgDBMap.put(JsonKey.ORGANISATION_ID, organisationId);
+    userOrgDBMap.put(JsonKey.USER_ID, userId);
+    Util.DbInfo userOrgDb = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+    Response response =
+        cassandraOperation.getRecordsByProperties(
+            userOrgDb.getKeySpace(), userOrgDb.getTableName(), userOrgDBMap);
+    List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if (list.isEmpty()) {
+      ProjectCommonException exception =
+          new ProjectCommonException(
+              ResponseCode.invalidUsrOrgData.getErrorCode(),
+              ResponseCode.invalidUsrOrgData.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
-        }
-      }
-      //Add default role into Requested Roles if it is not provided and then update into DB
-      List<String> roles = (List<String>) requestMap.get(JsonKey.ROLES);
-      if(!roles.contains(DEFAULT_USER_ROLE))
-    	  roles.add(DEFAULT_USER_ROLE);
-      dbUpdateMap.put(JsonKey.ROLES, roles);
-      dbUpdateMap.put(JsonKey.ID, list.get(0).get(JsonKey.ID));
-      if (StringUtils.isNotBlank((String) requestMap.get(JsonKey.HASHTAGID))) {
-        dbUpdateMap.put(JsonKey.HASHTAGID, requestMap.get(JsonKey.HASHTAGID));
-      }
-      response =
-          cassandraOperation.updateRecord(
-              userOrgDb.getKeySpace(), userOrgDb.getTableName(), dbUpdateMap);
-      sender().tell(response, self());
-      if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-        updateRoleToEs(
-            dbUpdateMap,
-            JsonKey.ORGANISATION,
-            (String) requestMap.get(JsonKey.USER_ID),
-            (String) requestMap.get(JsonKey.ORGANISATION_ID));
-      } else {
-        ProjectLogger.log("no call for ES to save user");
-      }
-      generateTeleEventForUser(requestMap, userId, "userLevel");
+      sender().tell(exception, self());
       return;
-
-    } else {
-    	throw new ProjectCommonException(
-                ResponseCode.sourceAndExternalIdValidationError.getErrorCode(),
-                ResponseCode.sourceAndExternalIdValidationError.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
     }
+    // Add default role into Requested Roles if it is not provided and then update into DB
+    List<String> roles = (List<String>) requestMap.get(JsonKey.ROLES);
+    if (!roles.contains(DEFAULT_USER_ROLE)) roles.add(DEFAULT_USER_ROLE);
+    userOrgDBMap.put(JsonKey.ROLES, roles);
+    userOrgDBMap.put(JsonKey.ID, list.get(0).get(JsonKey.ID));
+    if (StringUtils.isNotBlank(hashTagId)) {
+      userOrgDBMap.put(JsonKey.HASHTAGID, hashTagId);
+    }
+    userOrgDBMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+    userOrgDBMap.put(JsonKey.UPDATED_BY, requestMap.get(JsonKey.REQUESTED_BY));
+    userOrgDBMap.put(JsonKey.ROLES, roles);
+    response =
+        cassandraOperation.updateRecord(
+            userOrgDb.getKeySpace(), userOrgDb.getTableName(), userOrgDBMap);
+    sender().tell(response, self());
+    if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      updateRoleToEs(
+          userOrgDBMap,
+          JsonKey.ORGANISATION,
+          (String) requestMap.get(JsonKey.USER_ID),
+          (String) requestMap.get(JsonKey.ORGANISATION_ID));
+    } else {
+      ProjectLogger.log("no call for ES to save user");
+    }
+    generateTeleEventForUser(requestMap, userId, "userLevel");
   }
 
   private void generateTeleEventForUser(

@@ -1505,7 +1505,7 @@ public final class Util {
 
       String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
       String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
-      String appName = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION_APP_NAME);
+      String appName = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_APP_NAME);
 
       ProjectLogger.log("shortened url :: " + webUrl, LoggerEnum.INFO);
       String sms = ProjectUtil.getSMSBody(name, webUrl, envName, appName);

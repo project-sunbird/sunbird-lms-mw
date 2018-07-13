@@ -55,7 +55,6 @@ import org.sunbird.common.services.impl.ProfileCompletenessFactory;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.extension.user.UserExtension;
 import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
-import org.sunbird.extension.util.SunbirdExtensionConstants;
 import org.sunbird.helper.CassandraConnectionManager;
 import org.sunbird.helper.CassandraConnectionMngrFactory;
 import org.sunbird.helper.ServiceFactory;
@@ -1649,9 +1648,7 @@ public final class Util {
     Map<String, Object> userMap = new HashMap<>();
     userMap.put("registryId", registryId);
     userMap = userExtension.read(userMap);
-    return MapUtils.isNotEmpty((Map) userMap.get(SunbirdExtensionConstants.REGISTRY))
-        ? (HashMap<String, Object>) userMap.get(SunbirdExtensionConstants.REGISTRY)
-        : new HashMap<>();
+    return MapUtils.isNotEmpty(userMap) ? userMap : new HashMap<>();
   }
 
   public static void checkPhoneUniqueness(Map<String, Object> userMap, String opType) {

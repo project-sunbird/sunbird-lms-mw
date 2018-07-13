@@ -1648,8 +1648,7 @@ public final class Util {
     UserExtension userExtension = new UserProviderRegistryImpl();
     Map<String, Object> userMap = new HashMap<>();
     userMap.put("registryId", registryId);
-    userMap.put("userType", "");
-    userExtension.read(userMap);
+    userMap = userExtension.read(userMap);
     return MapUtils.isNotEmpty((Map) userMap.get(SunbirdExtensionConstants.REGISTRY))
         ? (HashMap<String, Object>) userMap.get(SunbirdExtensionConstants.REGISTRY)
         : new HashMap<>();

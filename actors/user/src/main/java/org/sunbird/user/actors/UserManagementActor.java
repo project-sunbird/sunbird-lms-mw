@@ -2654,7 +2654,7 @@ public class UserManagementActor extends BaseActor {
       List<String> roles = (List<String>) requestMap.get(JsonKey.ROLES);
       if(!roles.contains(DEFAULT_USER_ROLE))
     	  roles.add(DEFAULT_USER_ROLE);
-      dbUpdateMap.put(JsonKey.ROLES, requestMap.get(JsonKey.ROLES));
+      dbUpdateMap.put(JsonKey.ROLES, roles);
       dbUpdateMap.put(JsonKey.ID, list.get(0).get(JsonKey.ID));
       if (StringUtils.isNotBlank((String) requestMap.get(JsonKey.HASHTAGID))) {
         dbUpdateMap.put(JsonKey.HASHTAGID, requestMap.get(JsonKey.HASHTAGID));

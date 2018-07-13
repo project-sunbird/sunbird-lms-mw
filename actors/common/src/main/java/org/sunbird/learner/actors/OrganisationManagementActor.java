@@ -1959,11 +1959,6 @@ public class OrganisationManagementActor extends BaseActor {
     }
     req.put(JsonKey.ORGANISATION_ID, list.get(0).get(JsonKey.ID));
     req.put(JsonKey.HASHTAGID, list.get(0).get(JsonKey.HASHTAGID));
-    if (req.containsKey(JsonKey.PROVIDER) || req.containsKey(JsonKey.SOURCE)) {
-      req.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
-    } else {
-      req.put(JsonKey.PROVIDER, list.get(0).get(JsonKey.PROVIDER));
-    }
     return true;
   }
 

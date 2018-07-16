@@ -42,6 +42,8 @@ import org.sunbird.common.request.UserRequestValidator;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.dto.SearchDTO;
+import org.sunbird.extension.user.UserExtension;
+import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
@@ -597,7 +599,6 @@ public class UserManagementActor extends BaseActor {
           ResponseCode.userAccountlocked.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-
     fetchRootAndRegisterOrganisation(result);
     // Decrypt user data
     UserUtility.decryptUserDataFrmES(result);
@@ -667,6 +668,7 @@ public class UserManagementActor extends BaseActor {
       result.remove(JsonKey.MISSING_FIELDS);
       result.remove(JsonKey.COMPLETENESS);
     }
+
     Response response = new Response();
     if (null != result) {
       // loginId is used internally for checking the duplicate user
@@ -1068,6 +1070,19 @@ public class UserManagementActor extends BaseActor {
       if (flag) {
         userMap.remove(JsonKey.EMAIL);
       }
+    }
+
+    /*
+     * Update User Entity in Registry
+     */
+    if ("true"
+        .equalsIgnoreCase(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
+      if (null == userDbRecord) {
+        userDbRecord = Util.getUserbyUserId((String) userMap.get(JsonKey.USER_ID));
+      }
+      userMap.put(JsonKey.REGISTRY_ID, userDbRecord.get(JsonKey.REGISTRY_ID));
+      UserExtension userExtension = new UserProviderRegistryImpl();
+      userExtension.update(userMap);
     }
 
     if (isSSOEnabled) {
@@ -1606,6 +1621,15 @@ public class UserManagementActor extends BaseActor {
     roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
     userMap.put(JsonKey.ROLES, roles);
 
+    /*
+     * Create User Entity in Registry
+     */
+    if ("true"
+        .equalsIgnoreCase(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
+      UserExtension userExtension = new UserProviderRegistryImpl();
+      userExtension.create(userMap);
+    }
+
     String accessToken = "";
     if (isSSOEnabled) {
       try {
@@ -1661,7 +1685,8 @@ public class UserManagementActor extends BaseActor {
       return;
     }
     requestMap = new HashMap<>();
-    requestMap.putAll(userMap);
+    User cassandraUser = mapper.convertValue(userMap, User.class);
+    requestMap.putAll(mapper.convertValue(cassandraUser, Map.class));
     removeUnwanted(requestMap);
     // update db with emailVerified as false (default)
     requestMap.put(JsonKey.EMAIL_VERIFIED, false);

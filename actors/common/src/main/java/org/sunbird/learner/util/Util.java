@@ -673,6 +673,28 @@ public final class Util {
     }
     return null;
   }
+
+  /**
+   * This method will provide user details map based on user id if user not found then it will
+   * return null.
+   *
+   * @param userId String
+   * @return Map<String, Object> user details map
+   */
+  @SuppressWarnings("unchecked")
+  public static Map<String, Object> getUserbyUserId(String userId) {
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    Response result =
+        cassandraOperation.getRecordById(
+            userdbInfo.getKeySpace(), userdbInfo.getTableName(), userId);
+    List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+    if (!(list.isEmpty())) {
+      return list.get(0);
+    }
+    return null;
+  }
+
   /**
    * This method will validate channel and return the id of organization associated with this
    * channel.

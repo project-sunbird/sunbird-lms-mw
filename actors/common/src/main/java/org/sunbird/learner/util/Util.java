@@ -1801,7 +1801,8 @@ public final class Util {
       ProjectLogger.log("SMS text : " + sms, LoggerEnum.INFO);
       String countryCode = "";
       if (StringUtils.isBlank((String) userMap.get(JsonKey.COUNTRY_CODE))) {
-        countryCode = PropertiesCache.getInstance().getProperty("sunbird_default_country_code");
+        countryCode =
+            PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_DEFAULT_COUNTRY_CODE);
       } else {
         countryCode = (String) userMap.get(JsonKey.COUNTRY_CODE);
       }

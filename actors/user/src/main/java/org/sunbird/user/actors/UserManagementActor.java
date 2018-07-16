@@ -1699,7 +1699,7 @@ public class UserManagementActor extends BaseActor {
     requestMap.put(JsonKey.PROFILE_VISIBILITY, profileVisbility);
     if (!StringUtils.isBlank((String) requestMap.get(JsonKey.COUNTRY_CODE))) {
       requestMap.put(
-          JsonKey.COUNTRY_CODE, propertiesCache.getProperty("sunbird_default_country_code"));
+          JsonKey.COUNTRY_CODE, propertiesCache.getProperty(JsonKey.SUNBIRD_DEFAULT_COUNTRY_CODE));
     }
     requestMap.put(JsonKey.IS_DELETED, false);
     Response response = null;

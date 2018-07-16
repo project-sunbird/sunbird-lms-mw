@@ -1646,7 +1646,7 @@ public final class Util {
   public static Map<String, Object> getUserDetailsFromRegistry(String registryId) {
     UserExtension userExtension = new UserProviderRegistryImpl();
     Map<String, Object> userMap = new HashMap<>();
-    userMap.put("registryId", registryId);
+    userMap.put(JsonKey.REGISTRY_ID, registryId);
     userMap = userExtension.read(userMap);
     return MapUtils.isNotEmpty(userMap) ? userMap : new HashMap<>();
   }
@@ -1746,7 +1746,7 @@ public final class Util {
     Request request = null;
     if ((StringUtils.isNotBlank((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
       String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
-      String welcomeSubject = propertiesCache.getProperty("onboarding_mail_subject");
+      String welcomeSubject = propertiesCache.getProperty(JsonKey.ONBOARDING_MAIL_SUBJECT);
       emailTemplateMap.put(JsonKey.SUBJECT, ProjectUtil.formatMessage(welcomeSubject, envName));
       List<String> reciptientsMail = new ArrayList<>();
       reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
@@ -1770,7 +1770,7 @@ public final class Util {
           JsonKey.BODY, propertiesCache.getProperty(JsonKey.ONBOARDING_WELCOME_MAIL_BODY));
       emailTemplateMap.put(JsonKey.NOTE, propertiesCache.getProperty(JsonKey.MAIL_NOTE));
       emailTemplateMap.put(JsonKey.ORG_NAME, envName);
-      String welcomeMessage = propertiesCache.getProperty("onboarding_welcome_message");
+      String welcomeMessage = propertiesCache.getProperty(JsonKey.ONBOARDING_MAIL_MESSAGE);
       emailTemplateMap.put(
           JsonKey.WELCOME_MESSAGE, ProjectUtil.formatMessage(welcomeMessage, envName));
 
@@ -1797,7 +1797,7 @@ public final class Util {
       ProjectLogger.log("shortened url :: " + webUrl, LoggerEnum.INFO);
       String sms = ProjectUtil.getSMSBody(name, webUrl, envName, appName);
       if (StringUtils.isBlank(sms)) {
-        sms = PropertiesCache.getInstance().getProperty("sunbird_default_welcome_sms");
+        sms = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_DEFAULT_WELCOME_MSG);
       }
       ProjectLogger.log("SMS text : " + sms, LoggerEnum.INFO);
       String countryCode = "";

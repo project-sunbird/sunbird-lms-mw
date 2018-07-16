@@ -466,8 +466,7 @@ public class UserManagementActor extends BaseActor {
               + requestedById
               + "  "
               + (String) result.get(JsonKey.USER_ID));
-      // Decrypt user data
-      // UserUtility.decryptUserDataFrmES(result);
+
       try {
         if (!(((String) result.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById))) {
           result = removeUserPrivateField(result);
@@ -600,8 +599,6 @@ public class UserManagementActor extends BaseActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     fetchRootAndRegisterOrganisation(result);
-    // Decrypt user data
-    // UserUtility.decryptUserDataFrmES(result);
     // having check for removing private filed from user , if call user and response
     // user data id is not same.
     String requestedById =

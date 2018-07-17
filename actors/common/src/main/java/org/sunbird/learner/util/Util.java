@@ -1244,9 +1244,7 @@ public final class Util {
   }
 
   public static void registerUserToOrg(Map<String, Object> userMap) {
-    // converting HashMap to weakHashMap and reducing default capacity from 16 to
-    // 10.
-    Map<String, Object> reqMap = new WeakHashMap<>(10);
+    Map<String, Object> reqMap = new WeakHashMap<>();
     reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
     reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
     if (null != userMap.get(JsonKey.ROLES)) {
@@ -1269,7 +1267,7 @@ public final class Util {
   public static Map<String, Object> getUserFromExternalId(Map<String, Object> userMap) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> user = null;
-    Map<String, Object> externalIdReq = new WeakHashMap<>(10);
+    Map<String, Object> externalIdReq = new WeakHashMap<>();
     externalIdReq.put(
         JsonKey.PROVIDER, ((String) userMap.get(JsonKey.EXTERNAL_ID_PROVIDER)).toLowerCase());
     externalIdReq.put(
@@ -1315,7 +1313,7 @@ public final class Util {
 
   public static void upsertUserOrgData(Map<String, Object> userMap) {
     Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
-    Map<String, Object> map = new WeakHashMap<>(5);
+    Map<String, Object> map = new WeakHashMap<>();
     map.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
     map.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ORGANISATION_ID));
     Response response =
@@ -1324,7 +1322,7 @@ public final class Util {
     List<Map<String, Object>> resList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (!resList.isEmpty()) {
       Map<String, Object> res = resList.get(0);
-      Map<String, Object> reqMap = new WeakHashMap<>(10);
+      Map<String, Object> reqMap = new WeakHashMap<>();
       reqMap.put(JsonKey.ID, res.get(JsonKey.ID));
       if (null != userMap.get(JsonKey.ROLES)) {
         reqMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
@@ -1410,7 +1408,9 @@ public final class Util {
           cassandraOperation.getRecordById(
               userDbInfo.getKeySpace(), userDbInfo.getTableName(), userId);
       userList = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
-      ProjectLogger.log("collecting user data to save user id : " + userId, LoggerEnum.INFO.name());
+      ProjectLogger.log(
+          "Util:getUserProfile: collecting user data to save for userId : " + userId,
+          LoggerEnum.INFO.name());
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
@@ -1436,14 +1436,15 @@ public final class Util {
           userDetails = registryUserDetails;
         } catch (Exception ex) {
           ProjectLogger.log(
-              "BackgroundJobManager:getUserProfile : Failed to fetch registry details for registryId: "
+              "Util:getUserProfile: Failed to fetch registry details for registryId : "
                   + registryId,
               LoggerEnum.INFO.name());
         }
       }
     } else {
       ProjectLogger.log(
-          "User data not found to save to ES user Id : " + userId, LoggerEnum.INFO.name());
+          "Util:getUserProfile: User data not available to save in ES for userId : " + userId,
+          LoggerEnum.INFO.name());
     }
     return userDetails;
   }
@@ -1511,7 +1512,7 @@ public final class Util {
     List<Map<String, Object>> userOrgList = null;
     List<Map<String, Object>> organisations = new ArrayList<>();
     try {
-      Map<String, Object> reqMap = new WeakHashMap<>(5);
+      Map<String, Object> reqMap = new WeakHashMap<>();
       reqMap.put(JsonKey.USER_ID, userId);
       reqMap.put(JsonKey.IS_DELETED, false);
       Util.DbInfo orgUsrDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
@@ -1610,24 +1611,15 @@ public final class Util {
             userData);
     if (flag) {
       ProjectLogger.log(
-          "BackgroundJobManager:getUserProfile : ES save operation is successful for userId : "
+          "Util:saveUserDataToES : ES save operation is successful for userId : "
               + (String) userData.get(JsonKey.USER_ID));
     } else {
       ProjectLogger.log(
-          "BackgroundJobManager:getUserProfile : ES save operation is unsuccessful for userId : "
+          "Util:saveUserDataToES : ES save operation is unsuccessful for userId : "
               + (String) userData.get(JsonKey.USER_ID));
     }
   }
 
-  /**
-   * Method to cache the course data .
-   *
-   * @param index String
-   * @param type String
-   * @param identifier String
-   * @param data Map<String,Object>
-   * @return boolean
-   */
   private static boolean insertDataToElastic(
       String index, String type, String identifier, Map<String, Object> data) {
     String response = ElasticSearchUtil.createData(index, type, identifier, data);
@@ -1639,15 +1631,15 @@ public final class Util {
         "unbale to save the data inside ES with identifier " + identifier, LoggerEnum.INFO.name());
     return false;
   }
-  /**
-   * @param registryId
-   * @return user Details
-   */
+
   public static Map<String, Object> getUserDetailsFromRegistry(String registryId) {
-    UserExtension userExtension = new UserProviderRegistryImpl();
     Map<String, Object> userMap = new HashMap<>();
-    userMap.put(JsonKey.REGISTRY_ID, registryId);
-    userMap = userExtension.read(userMap);
+    if ("true"
+        .equalsIgnoreCase(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
+      UserExtension userExtension = new UserProviderRegistryImpl();
+      userMap.put(JsonKey.REGISTRY_ID, registryId);
+      userMap = userExtension.read(userMap);
+    }
     return MapUtils.isNotEmpty(userMap) ? userMap : new HashMap<>();
   }
 

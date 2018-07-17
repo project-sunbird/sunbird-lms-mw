@@ -2521,11 +2521,8 @@ public class UserManagementActor extends BaseActor {
     // update record in elasticsearch ......
     dbMap.remove(JsonKey.ID);
     dbMap.remove(JsonKey.USER_ID);
-    ElasticSearchUtil.updateData(
-        ProjectUtil.EsIndex.sunbird.getIndexName(),
-        ProjectUtil.EsType.user.getTypeName(),
-        userId,
-        dbMap);
+    ElasticSearchUtil.removeData(
+        ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(), userId);
     generateTeleEventForUser(null, userId, "blockUser");
   }
 
@@ -2767,13 +2764,20 @@ public class UserManagementActor extends BaseActor {
     sender().tell(response, self());
 
     // update record in elasticsearch ......
-    dbMap.remove(JsonKey.ID);
-    dbMap.remove(JsonKey.USER_ID);
-    ElasticSearchUtil.updateData(
-        ProjectUtil.EsIndex.sunbird.getIndexName(),
-        ProjectUtil.EsType.user.getTypeName(),
-        userId,
-        dbMap);
+    if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      ProjectLogger.log("UserManagementActor:unBlockUser : updating user data to ES.");
+      Request userRequest = new Request();
+      userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+      userRequest.getRequest().put(JsonKey.ID, userId);
+      try {
+        tellToAnother(userRequest);
+      } catch (Exception ex) {
+        ProjectLogger.log(
+            "Exception Occurred during saving user to Es while unblocking user : ", ex);
+      }
+    } else {
+      ProjectLogger.log("UserManagementActor:unBlockUser : no call for ES to save user");
+    }
     generateTeleEventForUser(null, userId, "unBlockUser");
   }
 

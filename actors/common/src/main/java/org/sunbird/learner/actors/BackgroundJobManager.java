@@ -3,7 +3,6 @@ package org.sunbird.learner.actors;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -29,11 +28,8 @@ import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.common.services.ProfileCompletenessService;
-import org.sunbird.common.services.impl.ProfileCompletenessFactory;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
-import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
@@ -85,7 +81,6 @@ public class BackgroundJobManager extends BaseActor {
   }
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -308,12 +303,12 @@ public class BackgroundJobManager extends BaseActor {
     Map<String, Object> batch = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
     // making call to register tag
     registertag(
-        (String) batch.getOrDefault(JsonKey.HASH_TAG_ID, (String) batch.get(JsonKey.ID)),
+        (String) batch.getOrDefault(JsonKey.HASH_TAG_ID, batch.get(JsonKey.ID)),
         "{}",
         CourseBatchSchedulerUtil.headerMap);
     // register tag for course
     registertag(
-        (String) batch.getOrDefault(JsonKey.COURSE_ID, (String) batch.get(JsonKey.COURSE_ID)),
+        (String) batch.getOrDefault(JsonKey.COURSE_ID, batch.get(JsonKey.COURSE_ID)),
         "{}",
         CourseBatchSchedulerUtil.headerMap);
   }
@@ -388,224 +383,12 @@ public class BackgroundJobManager extends BaseActor {
 
   private void updateUserInfoToEs(Request actorMessage) {
     String userId = (String) actorMessage.getRequest().get(JsonKey.ID);
-    getUserProfile(userId);
-  }
-
-  @SuppressWarnings("unchecked")
-  private void getUserProfile(String userId) {
-    ProjectLogger.log("get user profile method call started user Id : " + userId);
-    DbInfo badgeDbInfo = Util.dbInfoMap.get(JsonKey.USER_BADGE_ASSERTION_DB);
-    Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-    Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
-    Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
-    Response response = null;
-    List<Map<String, Object>> list = null;
-    try {
-      response =
-          cassandraOperation.getRecordById(
-              userDbInfo.getKeySpace(), userDbInfo.getTableName(), userId);
-      list = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
-      ProjectLogger.log("collecting user data to save user id : " + userId, LoggerEnum.INFO.name());
-    } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-
-    if (!(list.isEmpty())) {
-      Map<String, Object> map = list.get(0);
-      Response addrResponse;
-      list = null;
-      try {
-        ProjectLogger.log("collecting user address operation user Id : " + userId);
-        String encUserId = service.encryptData(userId);
-        addrResponse =
-            cassandraOperation.getRecordsByProperty(
-                addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), JsonKey.USER_ID, encUserId);
-        list = (List<Map<String, Object>>) addrResponse.getResult().get(JsonKey.RESPONSE);
-        ProjectLogger.log("collecting user address operation completed user Id : " + userId);
-      } catch (Exception e) {
-        ProjectLogger.log(e.getMessage(), e);
-      } finally {
-        if (null == list) {
-          list = new ArrayList<>();
-        }
-      }
-      map.put(JsonKey.ADDRESS, list);
-      list = null;
-      Response eduResponse = null;
-      try {
-        eduResponse =
-            cassandraOperation.getRecordsByProperty(
-                eduDbInfo.getKeySpace(), eduDbInfo.getTableName(), JsonKey.USER_ID, userId);
-        list = (List<Map<String, Object>>) eduResponse.getResult().get(JsonKey.RESPONSE);
-      } catch (Exception e) {
-        ProjectLogger.log(e.getMessage(), e);
-      } finally {
-        if (null == list) {
-          list = new ArrayList<>();
-        }
-      }
-      for (Map<String, Object> eduMap : list) {
-        String addressId = (String) eduMap.get(JsonKey.ADDRESS_ID);
-        if (!StringUtils.isBlank(addressId)) {
-
-          Response addrResponseMap;
-          List<Map<String, Object>> addrList = null;
-          try {
-            addrResponseMap =
-                cassandraOperation.getRecordById(
-                    addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addressId);
-            addrList =
-                (List<Map<String, Object>>) addrResponseMap.getResult().get(JsonKey.RESPONSE);
-          } catch (Exception e) {
-            ProjectLogger.log(e.getMessage(), e);
-          } finally {
-            if (null == addrList) {
-              addrList = new ArrayList<>();
-            }
-          }
-          eduMap.put(JsonKey.ADDRESS, addrList.get(0));
-        }
-      }
-      map.put(JsonKey.EDUCATION, list);
-
-      Response jobProfileResponse;
-      list = null;
-      try {
-        ProjectLogger.log("collecting user jobprofile user Id : " + userId);
-        jobProfileResponse =
-            cassandraOperation.getRecordsByProperty(
-                jobProDbInfo.getKeySpace(), jobProDbInfo.getTableName(), JsonKey.USER_ID, userId);
-        list = (List<Map<String, Object>>) jobProfileResponse.getResult().get(JsonKey.RESPONSE);
-        ProjectLogger.log("collecting user jobprofile collection completed userId : " + userId);
-      } catch (Exception e) {
-        ProjectLogger.log(e.getMessage(), e);
-      } finally {
-        if (null == list) {
-          list = new ArrayList<>();
-        }
-      }
-      for (Map<String, Object> eduMap : list) {
-        String addressId = (String) eduMap.get(JsonKey.ADDRESS_ID);
-        if (!StringUtils.isBlank(addressId)) {
-          Response addrResponseMap;
-          List<Map<String, Object>> addrList = null;
-          try {
-            addrResponseMap =
-                cassandraOperation.getRecordById(
-                    addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addressId);
-            addrList =
-                (List<Map<String, Object>>) addrResponseMap.getResult().get(JsonKey.RESPONSE);
-          } catch (Exception e) {
-            ProjectLogger.log(e.getMessage(), e);
-          } finally {
-            if (null == addrList) {
-              addrList = new ArrayList<>();
-            }
-          }
-          eduMap.put(JsonKey.ADDRESS, addrList.get(0));
-        }
-      }
-      map.put(JsonKey.JOB_PROFILE, list);
-      list = null;
-      List<Map<String, Object>> organisations = new ArrayList<>();
-      try {
-        Map<String, Object> reqMap = new HashMap<>();
-        reqMap.put(JsonKey.USER_ID, userId);
-        reqMap.put(JsonKey.IS_DELETED, false);
-        Util.DbInfo orgUsrDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
-        Response result =
-            cassandraOperation.getRecordsByProperties(
-                orgUsrDbInfo.getKeySpace(), orgUsrDbInfo.getTableName(), reqMap);
-        list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-        if (!(list.isEmpty())) {
-          for (Map<String, Object> tempMap : list) {
-            organisations.add(tempMap);
-          }
-        }
-      } catch (Exception e) {
-        ProjectLogger.log(e.getMessage(), e);
-      }
-      map.put(JsonKey.ORGANISATIONS, organisations);
-      Util.removeAttributes(map, Arrays.asList(JsonKey.PASSWORD));
-
-      // sync badges
-      try {
-        Map<String, Object> reqMap = new HashMap<>();
-        reqMap.put(JsonKey.USER_ID, userId);
-        Response result =
-            cassandraOperation.getRecordsByProperties(
-                badgeDbInfo.getKeySpace(), badgeDbInfo.getTableName(), reqMap);
-        List<Map<String, Object>> badges = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-        if (null != badges) {
-          map.put(JsonKey.BADGE_ASSERTIONS, badges);
-          ProjectLogger.log("Syncing user badge for  user Id : " + userId, LoggerEnum.INFO.name());
-        }
-      } catch (Exception e) {
-        ProjectLogger.log(e.getMessage(), e);
-      }
-
-    } else {
-      ProjectLogger.log(
-          "User data not found to save to ES user Id : " + userId, LoggerEnum.INFO.name());
-    }
-    if (!(((List<Map<String, String>>) response.getResult().get(JsonKey.RESPONSE)).isEmpty())) {
-      ProjectLogger.log("saving started user to es userId : " + userId, LoggerEnum.INFO.name());
-      Map<String, Object> map =
-          ((List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE)).get(0);
-
-      // save masked email and phone number
-      String phone = (String) map.get(JsonKey.PHONE);
-      String email = (String) map.get(JsonKey.EMAIL);
-
-      if (!StringUtils.isBlank(phone)) {
-        map.put(JsonKey.ENC_PHONE, phone);
-        map.put(JsonKey.PHONE, maskingService.maskPhone(decService.decryptData(phone)));
-      }
-      if (!StringUtils.isBlank(email)) {
-        map.put(JsonKey.ENC_EMAIL, email);
-        map.put(JsonKey.EMAIL, maskingService.maskEmail(decService.decryptData(email)));
-      }
-
-      // add the skills column into ES
-      Response skillresponse =
-          cassandraOperation.getRecordsByProperty(
-              userSkillDbInfo.getKeySpace(),
-              userSkillDbInfo.getTableName(),
-              JsonKey.USER_ID,
-              userId);
-      List<Map<String, Object>> responseList =
-          (List<Map<String, Object>>) skillresponse.get(JsonKey.RESPONSE);
-      map.put(JsonKey.SKILLS, responseList);
-      ProfileCompletenessService profileService = ProfileCompletenessFactory.getInstance();
-      Map<String, Object> responsemap = profileService.computeProfile(map);
-      map.putAll(responsemap);
-      // TODO:Refactor the code for better understanding and based on modules
-      // Update private fields data to userProfileVisbility index and others to user
-      // index
-      Map<String, Object> profileVisibility =
-          (Map<String, Object>) map.get(JsonKey.PROFILE_VISIBILITY);
-      if (null != profileVisibility && !profileVisibility.isEmpty()) {
-        Map<String, Object> profileVisibilityMap = new HashMap<>();
-        for (String field : profileVisibility.keySet()) {
-          profileVisibilityMap.put(field, map.get(field));
-        }
-        insertDataToElastic(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.userprofilevisibility.getTypeName(),
-            userId,
-            profileVisibilityMap);
-        UserUtility.updateProfileVisibilityFields(profileVisibilityMap, map);
-      }
-      insertDataToElastic(
-          ProjectUtil.EsIndex.sunbird.getIndexName(),
-          ProjectUtil.EsType.user.getTypeName(),
-          userId,
-          map);
-      ProjectLogger.log("saving completed user to es userId : " + userId);
-    } else {
-      ProjectLogger.log("user data not found to save to ES userId : " + userId);
-    }
+    Map<String, Object> userDetails = Util.getUserDetails(userId);
+    insertDataToElastic(
+        ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.user.getTypeName(),
+        userId,
+        userDetails);
   }
 
   /** Method to update the user count . */
@@ -659,7 +442,7 @@ public class BackgroundJobManager extends BaseActor {
       String contentData = getCourseData(contentId);
       if (!StringUtils.isBlank(contentData)) {
         Map<String, Object> map = getContentDetails(contentData);
-        map.put(JsonKey.ID, (String) content.get(JsonKey.COURSE_ID));
+        map.put(JsonKey.ID, content.get(JsonKey.COURSE_ID));
         updateCourseManagement(map);
         List<String> createdForValue = null;
         Object obj = content.get(JsonKey.COURSE_CREATED_FOR);

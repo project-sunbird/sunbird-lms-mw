@@ -1427,17 +1427,7 @@ public final class Util {
       addMaskEmailAndPhone(userDetails);
       checkProfileCompleteness(userDetails);
       userDetails.remove(JsonKey.PASSWORD);
-      String registryId = (String) userDetails.get(JsonKey.REGISTRY_ID);
-      if (StringUtils.isNotBlank(registryId)) {
-        try {
-          userDetails = getUserDetailsFromRegistry(userDetails);
-        } catch (Exception ex) {
-          ProjectLogger.log(
-              "Util:getUserProfile: Failed to fetch registry details for registryId : "
-                  + registryId,
-              LoggerEnum.INFO.name());
-        }
-      }
+      userDetails = getUserDetailsFromRegistry(userDetails);
     } else {
       ProjectLogger.log(
           "Util:getUserProfile: User data not available to save in ES for userId : " + userId,
@@ -1630,16 +1620,27 @@ public final class Util {
   }
 
   public static Map<String, Object> getUserDetailsFromRegistry(Map<String, Object> userMap) {
-    Map<String, Object> reqMap = new HashMap<>();
     String registryId = (String) userMap.get(JsonKey.REGISTRY_ID);
-    if ("true"
-        .equalsIgnoreCase(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
-      UserExtension userExtension = new UserProviderRegistryImpl();
-      reqMap.put(JsonKey.REGISTRY_ID, registryId);
-      reqMap = userExtension.read(reqMap);
-      reqMap.putAll(userMap);
+    if (StringUtils.isNotBlank(registryId)
+        && "true"
+            .equalsIgnoreCase(
+                ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
+      Map<String, Object> reqMap = new HashMap<>();
+      try {
+        UserExtension userExtension = new UserProviderRegistryImpl();
+        reqMap.put(JsonKey.REGISTRY_ID, registryId);
+        reqMap = userExtension.read(reqMap);
+        reqMap.putAll(userMap);
+      } catch (Exception ex) {
+        ProjectLogger.log(
+            "getUserDetailsFromRegistry: Failed to fetch registry details for registryId : "
+                + registryId,
+            LoggerEnum.INFO.name());
+      }
+      return MapUtils.isNotEmpty(reqMap) ? reqMap : userMap;
+    } else {
+      return userMap;
     }
-    return MapUtils.isNotEmpty(reqMap) ? reqMap : new HashMap<>();
   }
 
   public static void checkPhoneUniqueness(Map<String, Object> userMap, String opType) {

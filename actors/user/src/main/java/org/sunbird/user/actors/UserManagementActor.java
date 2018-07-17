@@ -2773,7 +2773,7 @@ public class UserManagementActor extends BaseActor {
         tellToAnother(userRequest);
       } catch (Exception ex) {
         ProjectLogger.log(
-            "Exception Occurred during saving user to Es while unblocking user : ", ex);
+            "UserManagementActor:unBlockUser : Exception occurred while unblocking user : ", ex);
       }
     } else {
       ProjectLogger.log("UserManagementActor:unBlockUser : no call for ES to save user");

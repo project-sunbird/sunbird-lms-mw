@@ -1429,11 +1429,8 @@ public final class Util {
       userDetails.remove(JsonKey.PASSWORD);
       String registryId = (String) userDetails.get(JsonKey.REGISTRY_ID);
       if (StringUtils.isNotBlank(registryId)) {
-        Map<String, Object> registryUserDetails = null;
         try {
-          registryUserDetails = getUserDetailsFromRegistry(registryId);
-          registryUserDetails.putAll(userDetails);
-          userDetails = registryUserDetails;
+          userDetails = getUserDetailsFromRegistry(userDetails);
         } catch (Exception ex) {
           ProjectLogger.log(
               "Util:getUserProfile: Failed to fetch registry details for registryId : "
@@ -1632,15 +1629,17 @@ public final class Util {
     return false;
   }
 
-  public static Map<String, Object> getUserDetailsFromRegistry(String registryId) {
-    Map<String, Object> userMap = new HashMap<>();
+  public static Map<String, Object> getUserDetailsFromRegistry(Map<String, Object> userMap) {
+    Map<String, Object> reqMap = new HashMap<>();
+    String registryId = (String) userMap.get(JsonKey.REGISTRY_ID);
     if ("true"
         .equalsIgnoreCase(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
       UserExtension userExtension = new UserProviderRegistryImpl();
-      userMap.put(JsonKey.REGISTRY_ID, registryId);
-      userMap = userExtension.read(userMap);
+      reqMap.put(JsonKey.REGISTRY_ID, registryId);
+      reqMap = userExtension.read(reqMap);
+      reqMap.putAll(userMap);
     }
-    return MapUtils.isNotEmpty(userMap) ? userMap : new HashMap<>();
+    return MapUtils.isNotEmpty(reqMap) ? reqMap : new HashMap<>();
   }
 
   public static void checkPhoneUniqueness(Map<String, Object> userMap, String opType) {

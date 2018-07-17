@@ -81,7 +81,6 @@ public class BackgroundJobManager extends BaseActor {
   }
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
 
   @Override
   public void onReceive(Request request) throws Throwable {

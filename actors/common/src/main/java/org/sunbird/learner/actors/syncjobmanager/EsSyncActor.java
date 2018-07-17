@@ -202,13 +202,10 @@ public class EsSyncActor extends BaseActor {
     // compute profile completeness and error field.
     Util.checkProfileCompleteness(userMap);
 
-    String registryId = (String) userMap.get("registryId");
+    String registryId = (String) userMap.get(JsonKey.REGISTRY_ID);
     if (StringUtils.isNotBlank(registryId)) {
-      Map<String, Object> registryUserDetails = null;
       try {
-        registryUserDetails = Util.getUserDetailsFromRegistry(registryId);
-        registryUserDetails.putAll(userMap);
-        userMap = registryUserDetails;
+        userMap = Util.getUserDetailsFromRegistry(userMap);
       } catch (Exception ex) {
         ProjectLogger.log(
             "EsSyncActor:getUserDetails : Failed to fetch registry details for registryId: "

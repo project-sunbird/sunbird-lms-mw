@@ -13,7 +13,11 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.init.dao.SystemSettingDao;
 import org.sunbird.init.model.SystemSetting;
 
-/** */
+/**
+ * This class implements the cassandra db operation DAO methods (insert,read) for system settings
+ *
+ * @author Loganathan
+ */
 public class SystemSettingDaoImpl implements SystemSettingDao {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -21,6 +25,13 @@ public class SystemSettingDaoImpl implements SystemSettingDao {
   private static final String KEYSPACE_NAME = JsonKey.SUNBIRD;
   private static final String TABLE_NAME = JsonKey.SYSTEM_SETTINGS_DB;
 
+  /**
+   * This methods inserts the given settings record into cassandra table through CassandraOperation
+   * methods
+   *
+   * @param systemSetting instance of SystemSetting class conatins elements like id,field,value
+   * @return response instance of Response class returned by CassandraOperation insert method
+   */
   @Override
   public Response write(SystemSetting systemSetting) {
     Map<String, Object> map = mapper.convertValue(systemSetting, Map.class);
@@ -29,6 +40,14 @@ public class SystemSettingDaoImpl implements SystemSettingDao {
     return response;
   }
 
+  /**
+   * This methods fetch the settings record using given id from cassandra table through
+   * CassandraOperation methods
+   *
+   * @param id id of the settings record to be fetched
+   * @return instance of SystemSetting class with mapped field values(id,field,value) from cassandra
+   *     table
+   */
   @Override
   public SystemSetting readById(String id) {
     Response response = cassandraOperation.getRecordById(KEYSPACE_NAME, TABLE_NAME, id);

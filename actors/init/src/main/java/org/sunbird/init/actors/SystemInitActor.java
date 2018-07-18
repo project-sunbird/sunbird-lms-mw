@@ -34,7 +34,7 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.organization.Organization;
 
 /**
- * This actor class contains methods for System initialisation
+ * This actor class contains actor methods for System initialisation
  *
  * @author Loganathan
  */
@@ -58,7 +58,11 @@ public class SystemInitActor extends BaseActor {
       onReceiveUnsupportedOperation(request.getOperation());
     }
   }
-  /** Method to create an first root organization. */
+  /**
+   * This Method to creates the first root organization after validating the data
+   *
+   * @param actorMessage Instance of Request class contains the organisation data to be created
+   */
   @SuppressWarnings("unchecked")
   private void systemInitRootOrg(Request actorMessage) {
     ProjectLogger.log("systemInitRootOrg method call started");
@@ -92,12 +96,10 @@ public class SystemInitActor extends BaseActor {
           ResponseCode.channelRegFailed, ResponseCode.channelRegFailed.getErrorMessage());
     }
 
-    // This will remove all extra unnecessary parameter from request
     Organization org = mapper.convertValue(req, Organization.class);
     req = mapper.convertValue(org, Map.class);
     Response result =
         cassandraOperation.insertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), req);
-    // save initialisation status to system settings file
     addInitialisationFlagToSystemSettings();
     ProjectLogger.log("Org data saved into cassandra.");
     ProjectLogger.log("Created org id is ----." + uniqueId);
@@ -110,6 +112,12 @@ public class SystemInitActor extends BaseActor {
     tellToAnother(orgReq);
   }
 
+  /**
+   * This method checks if the given channel slug value is unique
+   *
+   * @param slug input slug value need to checked.
+   * @return returns true if slug unique or return false
+   */
   private boolean isSlugUnique(String slug) {
     if (StringUtils.isNotBlank(slug)) {
       Map<String, Object> filters = new HashMap<>();
@@ -127,6 +135,7 @@ public class SystemInitActor extends BaseActor {
     return false;
   }
 
+  /** This method writes the rootOrgInitialised status(true) to system settings */
   private void addInitialisationFlagToSystemSettings() {
     try {
       this.systemSetting =
@@ -144,8 +153,11 @@ public class SystemInitActor extends BaseActor {
     }
   }
 
+  /**
+   * If system is already initalised i.e if isRootOrgInitialised of system-settings is true then
+   * throws exception
+   */
   private void throwExceptionIfRootOrgAlreadyInitialised() {
-
     ProjectLogger.log(
         "SystemInitActor: checkIfRootOrgAlreadyInitialised called", LoggerEnum.DEBUG.name());
     try {
@@ -169,7 +181,7 @@ public class SystemInitActor extends BaseActor {
   /**
    * This method will do the channel uniqueness validation
    *
-   * @param req
+   * @param req request map conatins the request data of organisation
    */
   private void validateChannel(Map<String, Object> req) {
     if (!validateChannelForUniqueness((String) req.get(JsonKey.CHANNEL))) {
@@ -183,8 +195,8 @@ public class SystemInitActor extends BaseActor {
   /**
    * validates if channel is already present in the organisation
    *
-   * @param channel
-   * @return boolean
+   * @param channel channel value of the organisation
+   * @return boolean returns true if channel is unique ,else false
    */
   @SuppressWarnings("unchecked")
   private boolean validateChannelForUniqueness(String channel) {

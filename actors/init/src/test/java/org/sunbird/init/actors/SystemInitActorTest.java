@@ -1,20 +1,13 @@
-package org.sunbird.learner.actors;
+package org.sunbird.init.actors;
 
 import static akka.testkit.JavaTestKit.duration;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
-import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import org.apache.commons.lang3.StringUtils;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
@@ -22,50 +15,45 @@ import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.ProjectUtil.EsIndex;
-import org.sunbird.common.models.util.ProjectUtil.EsType;
-import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.init.service.SystemSettingService;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 
-/** @author loganathan. */
 // @Ignore
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class InitialisationActorTest {
+public class SystemInitActorTest {
 
   private static ActorSystem system;
   private static CassandraOperation operation = ServiceFactory.getInstance();
-  private static final Props props = Props.create(InitialisationActor.class);
+  private static final Props props = Props.create(SystemInitActor.class);
   private static Util.DbInfo orgDB = null;
   private String orgId = "";
+  private static BadgrServiceImpl mockBadgingService;
+  private static SystemSettingService systemSettingService;
+
   @BeforeClass
   public static void setUp() {
     SunbirdMWService.init();
     system = ActorSystem.create("system");
-    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);   
+    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
     orgDB = Util.dbInfoMap.get(JsonKey.ORG_DB);
     new DataCacheHandler().run();
   }
 
   @Test
-  public void testcreateFirstRootOrg() {
+  public void testSystemInitRootOrg() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     String testStr = "test";
     Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.CREATE_FIRST_ROOTORG.getValue());
+    reqObj.setOperation(ActorOperations.SYSTEM_INIT_ROOT_ORG.getValue());
     HashMap<String, Object> innerMap = new HashMap<>();
-    Map<String, Object> orgMap = new HashMap<String, Object>(); 
+    Map<String, Object> orgMap = new HashMap<String, Object>();
     orgMap.put(JsonKey.ORGANISATION_NAME, "testactorOrg");
     orgMap.put(JsonKey.CHANNEL, "1234fmdmdmde");
     innerMap.put(JsonKey.ORGANISATION, orgMap);
@@ -75,10 +63,5 @@ public class InitialisationActorTest {
     orgId = (String) res.getResult().get(JsonKey.ORGANISATION_ID);
     System.out.println("orgId : " + orgId);
     Assert.assertTrue(null != orgId);
-    try {
-      Thread.sleep(3000);
-    } catch (InterruptedException e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-  }  
+  }
 }

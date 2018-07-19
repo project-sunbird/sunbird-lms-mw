@@ -1102,8 +1102,10 @@ public class UserManagementActor extends BaseActor {
       return;
     }
     requestMap = new HashMap<>();
-    requestMap.putAll(userMap);
+    User cassandraUser = mapper.convertValue(userMap, User.class);
+    requestMap.putAll(mapper.convertValue(cassandraUser, Map.class));
     removeUnwanted(requestMap);
+
     Response result = null;
     try {
       result =
@@ -1628,6 +1630,8 @@ public class UserManagementActor extends BaseActor {
         .equalsIgnoreCase(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
       UserExtension userExtension = new UserProviderRegistryImpl();
       userExtension.create(userMap);
+      System.out.println("read after create");
+      System.out.println(userExtension.read(userMap));
     }
 
     String accessToken = "";

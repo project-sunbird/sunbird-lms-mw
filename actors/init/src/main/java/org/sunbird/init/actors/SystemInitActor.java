@@ -106,7 +106,7 @@ public class SystemInitActor extends BaseActor {
     result.getResult().put(JsonKey.ORGANISATION_ID, uniqueId);
     sender().tell(result, self());
     Request orgReq = new Request();
-    orgReq.getRequest().put(TelemetryEnvKey.ORGANISATION, req);
+    orgReq.getRequest().put(JsonKey.ORGANISATION, req);
     orgReq.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
     ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
     tellToAnother(orgReq);

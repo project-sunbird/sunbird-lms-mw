@@ -2521,8 +2521,11 @@ public class UserManagementActor extends BaseActor {
     // update record in elasticsearch ......
     dbMap.remove(JsonKey.ID);
     dbMap.remove(JsonKey.USER_ID);
-    ElasticSearchUtil.removeData(
-        ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(), userId);
+    ElasticSearchUtil.updateData(
+        ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.user.getTypeName(),
+        userId,
+        dbMap);
     generateTeleEventForUser(null, userId, "blockUser");
   }
 

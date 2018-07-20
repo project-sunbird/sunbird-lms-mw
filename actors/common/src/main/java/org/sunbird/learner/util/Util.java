@@ -690,8 +690,8 @@ public final class Util {
    * This method will provide user details map based on user id if user not found then it will
    * return null.
    *
-   * @param userId String
-   * @return Map<String, Object> user details map
+   * @param userId userId of the user
+   * @return userDbRecord of the user from cassandra
    */
   @SuppressWarnings("unchecked")
   public static Map<String, Object> getUserbyUserId(String userId) {

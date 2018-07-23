@@ -1,6 +1,9 @@
 [submodule "actors/sunbird-utils"]
-    path = actors/sunbird-utils
-    url = https://github.com/project-sunbird/sunbird-utils
+	path = actors/sunbird-utils
+	url = https://github.com/project-sunbird/sunbird-utils
 [submodule "actors/sunbird-open-saber-bridge"]
-    path = actors/sunbird-open-saber-bridge
-    url = https://github.com/project-sunbird/sunbird-open-saber-bridge
+	path = actors/sunbird-open-saber-bridge
+	url = https://github.com/project-sunbird/sunbird-open-saber-bridge
+[submodule "actors/open-saber"]
+	path = actors/open-saber
+	url = https://github.com/project-sunbird/open-saber

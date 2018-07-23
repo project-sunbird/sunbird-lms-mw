@@ -61,8 +61,7 @@ import org.sunbird.validator.location.LocationRequestValidator;
     "updateOrgType",
     "approveUserOrganisation",
     "joinUserOrganisation",
-    "rejectUserOrganisation",
-    "downlaodOrg"
+    "rejectUserOrganisation"
   },
   asyncTasks = {}
 )

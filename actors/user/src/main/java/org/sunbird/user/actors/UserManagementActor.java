@@ -1073,8 +1073,7 @@ public class UserManagementActor extends BaseActor {
     /*
      * Update User Entity in Registry
      */
-    if ("true"
-        .equalsIgnoreCase(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
+    if ("true".equalsIgnoreCase(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
       if (null == userDbRecord) {
         userDbRecord = Util.getUserbyUserId((String) userMap.get(JsonKey.USER_ID));
       }
@@ -1624,8 +1623,7 @@ public class UserManagementActor extends BaseActor {
     /*
      * Create User Entity in Registry
      */
-    if ("true"
-        .equalsIgnoreCase(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
+    if ("true".equalsIgnoreCase(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
       UserExtension userExtension = new UserProviderRegistryImpl();
       userExtension.create(userMap);
     }

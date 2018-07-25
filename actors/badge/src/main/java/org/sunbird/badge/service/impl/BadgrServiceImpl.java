@@ -3,6 +3,7 @@ package org.sunbird.badge.service.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,6 +42,9 @@ public class BadgrServiceImpl implements BadgingService {
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final String ASSERTION_DUMMY_DOMAIN = "@gmail.com";
   public static Map<String, String> headerMap = new HashMap<>();
+  private static final String ISSUER_NOT_FOUND = "Issuer not found.";
+  private static final String ASSERTION_NOT_FOUND = "Assertion not found.";
+  private static final String BADGE_CLASS_NOT_FOUND = "Badge class not found.";
 
   static {
     String header = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
@@ -111,7 +115,10 @@ public class BadgrServiceImpl implements BadgingService {
     String slug = (String) req.get(JsonKey.SLUG);
     HttpUtilResponse httpResponse =
         HttpUtil.doGetRequest(BadgingUtil.getBadgeIssuerUrl(slug), BadgingUtil.getBadgrHeaders());
-    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(), null);
+    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
+        httpResponse.getStatusCode(),
+        MessageFormat.format(
+            ResponseCode.customResourceNotFound.getErrorMessage(), ISSUER_NOT_FOUND));
     Response response = new Response();
     BadgingUtil.prepareBadgeIssuerResponse(httpResponse.getBody(), response.getResult());
     return response;
@@ -242,7 +249,8 @@ public class BadgrServiceImpl implements BadgingService {
       String badgrResponseStr = httpUtilResponse.getBody();
 
       BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
-          httpUtilResponse.getStatusCode(), badgrResponseStr);
+          httpUtilResponse.getStatusCode(),
+          StringUtils.isNotBlank(badgrResponseStr) ? badgrResponseStr : BADGE_CLASS_NOT_FOUND);
 
       BadgeClassExtension badgeClassExtension = badgeClassExtensionService.get(badgeId);
 
@@ -357,7 +365,8 @@ public class BadgrServiceImpl implements BadgingService {
       String badgrResponseStr = httpUtilResponse.getBody();
 
       BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
-          httpUtilResponse.getStatusCode(), badgrResponseStr);
+          httpUtilResponse.getStatusCode(),
+          StringUtils.isNotBlank(badgrResponseStr) ? badgrResponseStr : BADGE_CLASS_NOT_FOUND);
 
       badgeClassExtensionService.delete(badgeId);
       response.put(JsonKey.MESSAGE, badgrResponseStr.replaceAll("^\"|\"$", ""));
@@ -442,7 +451,10 @@ public class BadgrServiceImpl implements BadgingService {
         BadgingUtil.createBadgerUrl(
             request.getRequest(), BadgingUtil.SUNBIRD_BADGER_GETASSERTION_URL, 3);
     HttpUtilResponse httpResponse = HttpUtil.doGetRequest(url, BadgingUtil.getBadgrHeaders());
-    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(), null);
+    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
+        httpResponse.getStatusCode(),
+        MessageFormat.format(
+            ResponseCode.customResourceNotFound.getErrorMessage(), ASSERTION_NOT_FOUND));
     Map<String, Object> res = mapper.readValue(httpResponse.getBody(), HashMap.class);
     // calling to create response as per sunbird
     res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String, Object>());
@@ -521,7 +533,10 @@ public class BadgrServiceImpl implements BadgingService {
     HttpUtilResponse httpResponse =
         HttpUtil.sendDeleteRequest(
             BadgingUtil.getBadgrHeaders(), BadgingUtil.getBadgeIssuerUrl(slug));
-    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(), null);
+    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
+        httpResponse.getStatusCode(),
+        MessageFormat.format(
+            ResponseCode.customResourceNotFound.getErrorMessage(), ISSUER_NOT_FOUND));
     Response response = new Response();
     // since the response from badger service contains " at beging and end so remove that from
     // response string

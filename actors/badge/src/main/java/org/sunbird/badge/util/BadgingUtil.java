@@ -249,7 +249,6 @@ public class BadgingUtil {
     ProjectLogger.log(
         "throwBadgeClassExceptionOnErrorStatus called with statusCode = " + statusCode,
         LoggerEnum.INFO.name());
-
     if (statusCode < 200 || statusCode > 300) {
       ResponseCode customError;
       String specificErrorMsg;

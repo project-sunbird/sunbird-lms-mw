@@ -57,7 +57,7 @@ public class DbOperationActor extends BaseActor {
   private static final String RAW_QUERY = "rawQuery";
 
   static {
-    createtableList();
+    //createtableList();
   }
 
   public static void createtableList() {
@@ -74,7 +74,7 @@ public class DbOperationActor extends BaseActor {
     Util.initializeContext(actorMessage, JsonKey.OBJECT_STORE);
     // set request id to thread local...
     ExecutionContext.setRequestId(actorMessage.getRequestId());
-    if (null == tableList) {
+/*    if (null == tableList) {
       createtableList();
     }
 
@@ -104,7 +104,8 @@ public class DbOperationActor extends BaseActor {
       getMetrics(actorMessage);
     } else {
       onReceiveUnsupportedOperation(actorMessage.getOperation());
-    }
+    }*/
+    onReceiveUnsupportedOperation(actorMessage.getOperation());
   }
 
   private void getMetrics(Request actorMessage) {

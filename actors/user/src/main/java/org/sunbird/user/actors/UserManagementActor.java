@@ -89,6 +89,8 @@ public class UserManagementActor extends BaseActor {
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String KEY_SPACE_NAME = "sunbird";
   private static final String DEFAULT_USER_ROLE = "PUBLIC";
+  private static final boolean IS_REGISTRY_ENABLED =
+      Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE));
 
   /** Receives the actor message and perform the course enrollment operation . */
   @Override
@@ -787,8 +789,7 @@ public class UserManagementActor extends BaseActor {
     /*
      * Update User Entity in Registry
      */
-    if ("true"
-        .equalsIgnoreCase(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
+    if (IS_REGISTRY_ENABLED) {
       if (null == userDbRecord) {
         userDbRecord = Util.getUserbyUserId((String) userMap.get(JsonKey.USER_ID));
       }
@@ -1338,8 +1339,7 @@ public class UserManagementActor extends BaseActor {
     /*
      * Create User Entity in Registry
      */
-    if ("true"
-        .equalsIgnoreCase(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
+    if (IS_REGISTRY_ENABLED) {
       UserExtension userExtension = new UserProviderRegistryImpl();
       userExtension.create(userMap);
     }
@@ -1426,6 +1426,13 @@ public class UserManagementActor extends BaseActor {
     } finally {
       if (null == response && isSSOEnabled) {
         ssoManager.removeUser(userMap);
+      }
+      /*
+       * Delete User Entity in Registry if cassandra insert fails
+       */
+      if (null == response && IS_REGISTRY_ENABLED) {
+        UserExtension userExtension = new UserProviderRegistryImpl();
+        userExtension.delete(userMap);
       }
     }
     response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
@@ -1827,9 +1834,8 @@ public class UserManagementActor extends BaseActor {
       return;
     }
     String userId = (String) userMap.get(JsonKey.USER_ID);
-    Response resultFrUserId =
-        cassandraOperation.getRecordById(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userId);
-    if (((List<Map<String, Object>>) resultFrUserId.get(JsonKey.RESPONSE)).isEmpty()) {
+    Map<String, Object> userDbRecord = Util.getUserbyUserId(userId);
+    if (null == userDbRecord) {
       ProjectCommonException exception =
           new ProjectCommonException(
               ResponseCode.userNotFound.getErrorCode(),
@@ -1850,6 +1856,13 @@ public class UserManagementActor extends BaseActor {
     // deactivate from keycloak -- softdelete
     if (isSSOEnabled) {
       ssoManager.deactivateUser(dbMap);
+    }
+    // delete from registry
+    if (IS_REGISTRY_ENABLED) {
+      Map<String, Object> regMap = new HashMap<>();
+      regMap.put(JsonKey.REGISTRY_ID, userDbRecord.get(JsonKey.REGISTRY_ID));
+      UserExtension userExtension = new UserProviderRegistryImpl();
+      userExtension.delete(regMap);
     }
     // soft delete from cassandra--
     Response response =

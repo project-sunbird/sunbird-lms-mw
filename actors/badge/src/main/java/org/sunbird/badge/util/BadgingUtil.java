@@ -244,8 +244,8 @@ public class BadgingUtil {
     }
   }
 
-  public static void throwBadgeClassExceptionOnErrorStatus(int statusCode, String errorMsg)
-      throws ProjectCommonException {
+  public static void throwBadgeClassExceptionOnErrorStatus(
+      int statusCode, String errorMsg, String objectType) throws ProjectCommonException {
     ProjectLogger.log(
         "throwBadgeClassExceptionOnErrorStatus called with statusCode = " + statusCode,
         LoggerEnum.INFO.name());
@@ -259,8 +259,11 @@ public class BadgingUtil {
           break;
         case 404:
           customError = ResponseCode.customResourceNotFound;
+          errorMsg = createCustomMessageBaseOnObjectType(objectType);
           specificErrorMsg =
-              errorMsg != null ? errorMsg : ResponseCode.resourceNotFound.getErrorMessage();
+              StringUtils.isNotEmpty(errorMsg)
+                  ? errorMsg
+                  : ResponseCode.resourceNotFound.getErrorMessage();
           break;
         default:
           customError = ResponseCode.customServerError;
@@ -277,6 +280,31 @@ public class BadgingUtil {
       throw new ProjectCommonException(
           customError.getErrorCode(), customError.getErrorMessage(), statusCode, specificErrorMsg);
     }
+  }
+
+  private static String createCustomMessageBaseOnObjectType(String objectType) {
+    String message = "";
+    if (StringUtils.isBlank(objectType)) {
+      return message;
+    }
+    switch (objectType) {
+      case BadgingJsonKey.ISSUER:
+        message = BadgingMessage.ISSUER_NOT_FOUND_ERROR;
+        break;
+      case BadgingJsonKey.BADGE_CLASS:
+        message = BadgingMessage.BADGE_CLASS_NOT_FOUND_ERROR;
+        break;
+      case BadgingJsonKey.BADGE_ASSERTION:
+        message = BadgingMessage.ASSERTION_NOT_FOUND_ERROR;
+        break;
+      case BadgingJsonKey.USER:
+        message = BadgingMessage.USER_NOT_FOUND_ERROR;
+        break;
+      case BadgingJsonKey.CONTENT:
+        message = BadgingMessage.CONTENT_NOT_FOUND_ERROR;
+        break;
+    }
+    return message;
   }
 
   /**

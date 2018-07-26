@@ -12,6 +12,9 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.init.dao.SystemSettingDao;
 import org.sunbird.init.model.SystemSetting;
+import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.responsecode.ResponseCode;
 
 /**
  * This class implements the cassandra db operation DAO methods (insert,read) for system settings
@@ -33,9 +36,9 @@ public class SystemSettingDaoImpl implements SystemSettingDao {
    * @return response instance of Response class returned by CassandraOperation insert method
    */
   @Override
-  public Response write(SystemSetting systemSetting) {
+  public Response upsert(SystemSetting systemSetting) {
     Map<String, Object> map = mapper.convertValue(systemSetting, Map.class);
-    Response response = cassandraOperation.insertRecord(KEYSPACE_NAME, TABLE_NAME, map);
+    Response response = cassandraOperation.upsertRecord(KEYSPACE_NAME, TABLE_NAME, map);
     response.put(JsonKey.ID, map.get(JsonKey.ID));
     return response;
   }
@@ -59,8 +62,26 @@ public class SystemSettingDaoImpl implements SystemSettingDao {
       String jsonString = mapper.writeValueAsString((Map<String, Object>) list.get(0));
       return mapper.readValue(jsonString, SystemSetting.class);
     } catch (IOException e) {
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log(
+        "Exception at SystemSettingDaoImpl:readById "
+            + e.getMessage(),LoggerEnum.DEBUG.name());
+      ProjectCommonException.throwServerErrorException(
+        ResponseCode.SERVER_ERROR, ResponseCode.SERVER_ERROR.getErrorMessage());
     }
     return null;
   }
+
+/**
+  * This methods fetches all the system settings records from cassandra table through
+  * CassandraOperation methods
+  *
+  * @return instance of Response class with system settings from cassandra
+  *     table
+  */
+  @Override
+  public Response readAll(){
+    Response response = cassandraOperation.getAllRecords(KEYSPACE_NAME, TABLE_NAME);
+    return response;
+ }
+
 }

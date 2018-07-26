@@ -28,8 +28,8 @@ public class SystemSettingServiceImpl implements SystemSettingService {
    * @return returns the instance of Reponse class with 'id' of created record
    */
   @Override
-  public Response writeSetting(SystemSetting systemSetting) throws IOException {
-    Response response = this.systemSettingDao.write(systemSetting);
+  public Response setSetting(SystemSetting systemSetting) throws IOException {
+    Response response = this.systemSettingDao.upsert(systemSetting);
     return response;
   }
 
@@ -43,5 +43,16 @@ public class SystemSettingServiceImpl implements SystemSettingService {
   public SystemSetting readSetting(String id) throws IOException {
     SystemSetting systemSetting = this.systemSettingDao.readById(id);
     return systemSetting;
+  }
+
+  /**
+   * This methods reads all the settings from System settings
+   *
+   * @return returns the instance of Response class with settings elements list
+   */
+  @Override
+  public Response readAllSettings(){
+    Response response = this.systemSettingDao.readAll();
+    return response;
   }
 }

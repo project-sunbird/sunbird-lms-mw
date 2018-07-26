@@ -18,7 +18,7 @@ public interface SystemSettingService {
    *     (id,field,value)
    * @return returns the instance of Reponse class with 'id' of created record
    */
-  public Response writeSetting(SystemSetting systemSetting) throws IOException;
+  public Response setSetting(SystemSetting systemSetting) throws IOException;
 
   /**
    * This methods reads the setting from System settings by its id
@@ -27,4 +27,11 @@ public interface SystemSettingService {
    * @return returns the instance of SystemSetting class with elements id,field,value
    */
   public SystemSetting readSetting(String id) throws IOException;
+
+ /**
+   * This methods reads all the settings from System settings
+   *
+   * @return returns the instance of Response class with list of setting elements
+   */
+  public Response readAllSettings();
 }

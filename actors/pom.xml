@@ -20,5 +20,6 @@
     	<module>dashboard</module>
 		<module>location</module>
 		<module>init</module>
+		<module>systemsettings</module>
   </modules>
 </project>

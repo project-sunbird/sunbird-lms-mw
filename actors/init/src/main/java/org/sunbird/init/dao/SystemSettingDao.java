@@ -18,7 +18,7 @@ public interface SystemSettingDao {
    * @return response instance of Response class contains the response of cassandra Dao insert
    *     operation
    */
-  Response write(SystemSetting systemSetting);
+  Response upsert(SystemSetting systemSetting);
 
   /**
    * This methods fetch the settings record using given id from cassandra table through
@@ -29,4 +29,12 @@ public interface SystemSettingDao {
    *     table
    */
   SystemSetting readById(String id);
+
+/**
+  * This methods fetches all the system settings records from cassandra table through
+  * CassandraOperation methods
+  *
+  * @return instance of Response class with system settings from cassandra table.
+  **/
+  Response readAll();
 }

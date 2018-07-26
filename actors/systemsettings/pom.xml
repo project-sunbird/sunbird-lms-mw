@@ -9,12 +9,17 @@
 		<version>1.0-SNAPSHOT</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
-	<artifactId>init</artifactId>
-	<name>Init Infra</name>
+	<artifactId>systemsettings</artifactId>
+	<name>System Settings Infra</name>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 	<dependencies>
+	      <dependency>
+			<groupId>org.sunbird</groupId>
+			<artifactId>init</artifactId>
+			<version>1.0-SNAPSHOT</version>
+		</dependency>
 		<dependency>
 			<groupId>org.sunbird</groupId>
 			<artifactId>actor-common</artifactId>

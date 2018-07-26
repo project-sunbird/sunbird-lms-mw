@@ -1,4 +1,4 @@
-package org.sunbird.init.actors;
+package org.sunbird.systemsettings.actors;
 
 import static akka.testkit.JavaTestKit.duration;
 
@@ -45,7 +45,7 @@ import scala.concurrent.duration.FiniteDuration;
   ServiceFactory.class
 })
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
-public class SystemInitActorTest {
+public class SystemSettingsActorTest {
 
   private static final FiniteDuration ACTOR_MAX_WAIT_DURATION = duration("100 second");
   private ObjectMapper mapper = new ObjectMapper();
@@ -70,61 +70,21 @@ public class SystemInitActorTest {
     PowerMockito.mockStatic(SunbirdMWService.class);
     systemSettingServiceImpl = PowerMockito.mock(SystemSettingServiceImpl.class);
     cassandraImpl = PowerMockito.mock(CassandraOperationImpl.class);
-    props = Props.create(SystemInitActor.class);
+    props = Props.create(SystemSettingsActor.class);
     subject = system.actorOf(props);
     actorMessage = new Request();
   }
 
   @Test
-  public void testSystemInitRootOrg() {
+  public void testGetSystemSettingById() {   
   }
 
   @Test
-  public void testSystemInitRootOrgWithoutData() {
+  public void testGetSystemSettingByIdInvalidParam() {   
   }
 
   @Test
-  public void testSystemInitRootOrgwithSettingsInitStarted() {
+  public void testGetAllSystemSettings() {
+   
   }
-
-  @Test
-  public void testSystemInitRootOrgwithSettingsInitCompleted() {
-  }
-
-  @Test
-  public void testIsRootOrgExists() {
-  }
-
-  @Test
-  public void testIsRootOrgExistsFalse() {
-  }
-
-  @Test
-  public void testCheckAndCreateRootOrgWithOrgNotExists() {
-  }
-
-  @Test
-  public void testCheckAndCreateRootOrgWithOrgExists() {
-  }
-
-  @Test
-  public void testsetInitialisationStatus() {
-  }
-
-  @Test
-  public void testsetInitialisationStatusWithRetry() {
-  }
-
-  @Test
-  public void testsetInitialisationStatusWithRetryFail() {
-  }
-
-  @Test
-  public void testgetInitialisationStatus() {
-  }
-
-  @Test
-  public void testgetInitialisationStatusError() {
-  }
-
 }

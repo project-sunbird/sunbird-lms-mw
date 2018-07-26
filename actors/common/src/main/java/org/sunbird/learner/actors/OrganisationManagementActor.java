@@ -1369,8 +1369,8 @@ public class OrganisationManagementActor extends BaseActor {
     if (null != request.get(JsonKey.IS_ROOT_ORG) && (Boolean) request.get(JsonKey.IS_ROOT_ORG)) {
       if (StringUtils.isBlank((String) request.get(JsonKey.CHANNEL))) {
         throw new ProjectCommonException(
-            ResponseCode.channelIdRequiredForRootOrg.getErrorCode(),
-            ResponseCode.channelIdRequiredForRootOrg.getErrorMessage(),
+            ResponseCode.channelRequiredForRootOrg.getErrorCode(),
+            ResponseCode.channelRequiredForRootOrg.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       } else if (null != request.get(JsonKey.CHANNEL)
           || !StringUtils.isBlank((String) request.get(JsonKey.CHANNEL))) {

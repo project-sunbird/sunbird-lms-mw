@@ -259,7 +259,7 @@ public class BadgingUtil {
           break;
         case 404:
           customError = ResponseCode.customResourceNotFound;
-          errorMsg = createCustomMessageBaseOnObjectType(objectType);
+          errorMsg = createCustomMessageBasedOnObjectType(objectType);
           specificErrorMsg =
               StringUtils.isNotEmpty(errorMsg)
                   ? errorMsg
@@ -282,26 +282,26 @@ public class BadgingUtil {
     }
   }
 
-  private static String createCustomMessageBaseOnObjectType(String objectType) {
+  private static String createCustomMessageBasedOnObjectType(String objectType) {
     String message = "";
     if (StringUtils.isBlank(objectType)) {
       return message;
     }
     switch (objectType) {
       case BadgingJsonKey.ISSUER:
-        message = BadgingMessage.ISSUER_NOT_FOUND_ERROR;
+        message = BadgingMessage.ERROR_ISSUER_NOT_FOUND;
         break;
       case BadgingJsonKey.BADGE_CLASS:
-        message = BadgingMessage.BADGE_CLASS_NOT_FOUND_ERROR;
+        message = BadgingMessage.ERROR_BADGE_CLASS_NOT_FOUND;
         break;
       case BadgingJsonKey.BADGE_ASSERTION:
-        message = BadgingMessage.ASSERTION_NOT_FOUND_ERROR;
+        message = BadgingMessage.ERROR_ASSERTION_NOT_FOUND;
         break;
       case BadgingJsonKey.USER:
-        message = BadgingMessage.USER_NOT_FOUND_ERROR;
+        message = BadgingMessage.ERROR_USER_NOT_FOUND;
         break;
       case BadgingJsonKey.CONTENT:
-        message = BadgingMessage.CONTENT_NOT_FOUND_ERROR;
+        message = BadgingMessage.ERROR_CONTENT_NOT_FOUND;
         break;
     }
     return message;

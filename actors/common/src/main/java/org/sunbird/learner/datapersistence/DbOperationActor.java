@@ -105,6 +105,7 @@ public class DbOperationActor extends BaseActor {
     } else {
       onReceiveUnsupportedOperation(actorMessage.getOperation());
     }
+    onReceiveUnsupportedOperation(actorMessage.getOperation());
   }
 
   private void getMetrics(Request actorMessage) {

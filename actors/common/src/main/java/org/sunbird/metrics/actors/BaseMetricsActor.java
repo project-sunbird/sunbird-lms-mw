@@ -349,12 +349,8 @@ public abstract class BaseMetricsActor extends BaseActor {
     return response;
   }
 
-  public static String makePostRequest(String url, String body) throws IOException {
+  public static String makePostRequest(String, baseURL, String apiURL, String body) throws IOException {
     ProjectLogger.log("Request to Ekstep for Metrics" + body);
-    String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-    if (StringUtils.isBlank(baseSearchUrl)) {
-      baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
-    }
     String authKey = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
     if (StringUtils.isBlank(authKey)) {
       authKey = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION);
@@ -362,7 +358,7 @@ public abstract class BaseMetricsActor extends BaseActor {
       authKey = JsonKey.BEARER + authKey;
     }
     HttpClient client = HttpClientBuilder.create().build();
-    HttpPost post = new HttpPost(baseSearchUrl + PropertiesCache.getInstance().getProperty(url));
+    HttpPost post = new HttpPost(baseURL + PropertiesCache.getInstance().getProperty(apiURL));
     post.addHeader("Content-Type", "application/json; charset=utf-8");
     post.addHeader(JsonKey.AUTHORIZATION, authKey);
     post.setEntity(new StringEntity(body, CHARSETS_UTF_8));
@@ -371,7 +367,7 @@ public abstract class BaseMetricsActor extends BaseActor {
         LoggerEnum.DEBUG.name());
     ProjectLogger.log(
         "BaseMetricsActor:makePostRequest completed Url : "
-            + baseSearchUrl
+            + baseURL
             + PropertiesCache.getInstance().getProperty(url),
         LoggerEnum.DEBUG.name());
     HttpResponse response = client.execute(post);
@@ -392,6 +388,14 @@ public abstract class BaseMetricsActor extends BaseActor {
     }
     ProjectLogger.log("Response from Ekstep for metrics" + response.toString());
     return result.toString();
+  }
+
+  public static String makePostRequest(String apiURL, String body) throws IOException {
+    String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
+    if (StringUtils.isBlank(baseSearchUrl)) {
+      baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
+    }
+    return makePostRequest(baseSearchUrl, apiURL, body);
   }
 
   @SuppressWarnings({"rawtypes"})

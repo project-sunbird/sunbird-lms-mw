@@ -38,9 +38,9 @@ public final class EkStepRequestUtil {
     String response = "";
     JSONObject jObject;
     try {
-      String baseSearchUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
+      String baseSearchUrl = System.getenv(JsonKey.SEARCH_SERVICE_API_BASE_URL);
       if (StringUtils.isBlank(baseSearchUrl)) {
-        baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
+        baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_SERVICE_API_BASE_URL);
       }
       headers.put(
           JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));

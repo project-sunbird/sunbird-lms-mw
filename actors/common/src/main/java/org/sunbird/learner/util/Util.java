@@ -1624,6 +1624,7 @@ public final class Util {
             "getUserDetailsFromRegistry: Failed to fetch registry details for registryId : "
                 + registryId,
             LoggerEnum.INFO.name());
+        reqMap.clear();
       }
       return MapUtils.isNotEmpty(reqMap) ? reqMap : userMap;
     } else {

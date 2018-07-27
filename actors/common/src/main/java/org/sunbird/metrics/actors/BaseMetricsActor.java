@@ -349,7 +349,7 @@ public abstract class BaseMetricsActor extends BaseActor {
     return response;
   }
 
-  public static String makePostRequest(String, baseURL, String apiURL, String body) throws IOException {
+  public static String makePostRequest(String baseURL, String apiURL, String body) throws IOException {
     ProjectLogger.log("Request to Ekstep for Metrics" + body);
     String authKey = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
     if (StringUtils.isBlank(authKey)) {
@@ -368,7 +368,7 @@ public abstract class BaseMetricsActor extends BaseActor {
     ProjectLogger.log(
         "BaseMetricsActor:makePostRequest completed Url : "
             + baseURL
-            + PropertiesCache.getInstance().getProperty(url),
+            + PropertiesCache.getInstance().getProperty(apiURL),
         LoggerEnum.DEBUG.name());
     HttpResponse response = client.execute(post);
     if (response.getStatusLine().getStatusCode() != 200) {

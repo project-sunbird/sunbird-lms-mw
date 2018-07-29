@@ -68,56 +68,41 @@ public class SystemInitActorTest {
   }
 
   @Test
-  public void testSystemInitRootOrg() {
+  public void testSystemInitRootOrg() {}
 
-  }
+  @Test
+  public void testSystemInitRootOrgWithoutData() {}
 
-  // @Test
-  // public void testSystemInitRootOrgWithoutData() {
-  // }
+  @Test
+  public void testSystemInitRootOrgwithSettingsInitStarted() {}
 
-  // @Test
-  // public void testSystemInitRootOrgwithSettingsInitStarted() {
-  // }
+  @Test
+  public void testSystemInitRootOrgwithSettingsInitCompleted() {}
 
-  // @Test
-  // public void testSystemInitRootOrgwithSettingsInitCompleted() {
-  // }
+  @Test
+  public void testIsRootOrgExists() {}
 
-  // @Test
-  // public void testIsRootOrgExists() {
-  // }
+  @Test
+  public void testIsRootOrgExistsFalse() {}
 
-  // @Test
-  // public void testIsRootOrgExistsFalse() {
-  // }
+  @Test
+  public void testCheckAndCreateRootOrgWithOrgNotExists() {}
 
-  // @Test
-  // public void testCheckAndCreateRootOrgWithOrgNotExists() {
-  // }
+  @Test
+  public void testCheckAndCreateRootOrgWithOrgExists() {}
 
-  // @Test
-  // public void testCheckAndCreateRootOrgWithOrgExists() {
-  // }
+  @Test
+  public void testsetInitialisationStatus() {}
 
-  // @Test
-  // public void testsetInitialisationStatus() {
-  // }
+  @Test
+  public void testsetInitialisationStatusWithRetry() {}
 
-  // @Test
-  // public void testsetInitialisationStatusWithRetry() {
-  // }
+  @Test
+  public void testsetInitialisationStatusWithRetryFail() {}
 
-  // @Test
-  // public void testsetInitialisationStatusWithRetryFail() {
-  // }
+  @Test
+  public void testgetInitialisationStatus() {}
 
-  // @Test
-  // public void testgetInitialisationStatus() {
-  // }
-
-  // @Test
-  // public void testgetInitialisationStatusError() {
-  // }
-
+  @Test
+  public void testgetInitialisationStatusError() {}
 }

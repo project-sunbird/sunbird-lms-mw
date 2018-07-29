@@ -7,10 +7,6 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -23,16 +19,12 @@ import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
-import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.init.service.SystemSettingService;
 import org.sunbird.init.service.impl.SystemSettingServiceImpl;
 import org.sunbird.learner.util.Util;
-import org.sunbird.models.organization.Organization;
 import scala.concurrent.duration.FiniteDuration;
 
 @Ignore
@@ -77,54 +69,55 @@ public class SystemInitActorTest {
 
   @Test
   public void testSystemInitRootOrg() {
+
   }
 
-  @Test
-  public void testSystemInitRootOrgWithoutData() {
-  }
+  // @Test
+  // public void testSystemInitRootOrgWithoutData() {
+  // }
 
-  @Test
-  public void testSystemInitRootOrgwithSettingsInitStarted() {
-  }
+  // @Test
+  // public void testSystemInitRootOrgwithSettingsInitStarted() {
+  // }
 
-  @Test
-  public void testSystemInitRootOrgwithSettingsInitCompleted() {
-  }
+  // @Test
+  // public void testSystemInitRootOrgwithSettingsInitCompleted() {
+  // }
 
-  @Test
-  public void testIsRootOrgExists() {
-  }
+  // @Test
+  // public void testIsRootOrgExists() {
+  // }
 
-  @Test
-  public void testIsRootOrgExistsFalse() {
-  }
+  // @Test
+  // public void testIsRootOrgExistsFalse() {
+  // }
 
-  @Test
-  public void testCheckAndCreateRootOrgWithOrgNotExists() {
-  }
+  // @Test
+  // public void testCheckAndCreateRootOrgWithOrgNotExists() {
+  // }
 
-  @Test
-  public void testCheckAndCreateRootOrgWithOrgExists() {
-  }
+  // @Test
+  // public void testCheckAndCreateRootOrgWithOrgExists() {
+  // }
 
-  @Test
-  public void testsetInitialisationStatus() {
-  }
+  // @Test
+  // public void testsetInitialisationStatus() {
+  // }
 
-  @Test
-  public void testsetInitialisationStatusWithRetry() {
-  }
+  // @Test
+  // public void testsetInitialisationStatusWithRetry() {
+  // }
 
-  @Test
-  public void testsetInitialisationStatusWithRetryFail() {
-  }
+  // @Test
+  // public void testsetInitialisationStatusWithRetryFail() {
+  // }
 
-  @Test
-  public void testgetInitialisationStatus() {
-  }
+  // @Test
+  // public void testgetInitialisationStatus() {
+  // }
 
-  @Test
-  public void testgetInitialisationStatusError() {
-  }
+  // @Test
+  // public void testgetInitialisationStatusError() {
+  // }
 
 }

@@ -181,10 +181,7 @@ public class HealthActor extends BaseActor {
             PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
         headers.put("Content_Type", "application/json; charset=utf-8");
       }
-      String searchBaseUrl = System.getenv(JsonKey.SEARCH_SERVICE_API_BASE_URL);
-      if (StringUtils.isBlank(searchBaseUrl)) {
-        searchBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_SERVICE_API_BASE_URL);
-      }
+      String searchBaseUrl = ProjectUtil.getConfigValue(JsonKey.SEARCH_SERVICE_API_BASE_URL);
       String response =
           HttpUtil.sendPostRequest(
               searchBaseUrl

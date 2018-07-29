@@ -15,6 +15,7 @@ import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 
 /**
@@ -38,10 +39,7 @@ public final class EkStepRequestUtil {
     String response = "";
     JSONObject jObject;
     try {
-      String baseSearchUrl = System.getenv(JsonKey.SEARCH_SERVICE_API_BASE_URL);
-      if (StringUtils.isBlank(baseSearchUrl)) {
-        baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_SERVICE_API_BASE_URL);
-      }
+    	  String baseSearchUrl = ProjectUtil.getConfigValue(JsonKey.SEARCH_SERVICE_API_BASE_URL);
       headers.put(
           JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
       headers.put(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);

@@ -93,10 +93,8 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
       csvRecords.add(headers);
       for (String operation : OrganisationMetricsUtil.operationList) {
         String requestStr = getRequestObject(operation, requestId);
-        String baseSearchUrl = System.getenv(JsonKey.SEARCH_SERVICE_API_BASE_URL);
-        if (StringUtils.isBlank(baseSearchUrl)) {
-          baseSearchUrl = PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_SERVICE_API_BASE_URL);
-        }
+        
+        String baseSearchUrl = ProjectUtil.getConfigValue(JsonKey.SEARCH_SERVICE_API_BASE_URL);
         String ekStepResponse = makePostRequest(baseSearchUrl, JsonKey.EKSTEP_CONTENT_SEARCH_URL, requestStr);
         List<Map<String, Object>> ekstepData = getDataFromResponse(ekStepResponse, headers, orgId);
         List<Map<String, Object>> userData = getUserDetailsFromES(ekstepData);

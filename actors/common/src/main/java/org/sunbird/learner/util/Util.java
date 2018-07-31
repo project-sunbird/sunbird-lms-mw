@@ -1625,6 +1625,7 @@ public final class Util {
         ProjectLogger.log(
             "StackTrace from registry read failure = " + ex.getStackTrace(),
             LoggerEnum.INFO.name());
+        ex.printStackTrace();
         ProjectLogger.log(
             "getUserDetailsFromRegistry: Failed to fetch registry details for registryId : "
                 + registryId,

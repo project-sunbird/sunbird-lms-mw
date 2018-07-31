@@ -1618,6 +1618,11 @@ public final class Util {
         reqMap.putAll(userMap);
       } catch (Exception ex) {
         ProjectLogger.log(
+            "ErrorMessage from registry read failure = " + ex.getMessage(), LoggerEnum.INFO.name());
+        ProjectLogger.log(
+            "StackTrace from registry read failure = " + ex.getStackTrace(),
+            LoggerEnum.INFO.name());
+        ProjectLogger.log(
             "getUserDetailsFromRegistry: Failed to fetch registry details for registryId : "
                 + registryId,
             LoggerEnum.INFO.name());

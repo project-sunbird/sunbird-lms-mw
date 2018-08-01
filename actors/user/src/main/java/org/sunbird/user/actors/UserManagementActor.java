@@ -1858,12 +1858,12 @@ public class UserManagementActor extends BaseActor {
       ssoManager.deactivateUser(dbMap);
     }
     // delete from registry
-    if (IS_REGISTRY_ENABLED) {
+    /*if (IS_REGISTRY_ENABLED) {
       Map<String, Object> regMap = new HashMap<>();
       regMap.put(JsonKey.REGISTRY_ID, userDbRecord.get(JsonKey.REGISTRY_ID));
       UserExtension userExtension = new UserProviderRegistryImpl();
       userExtension.delete(regMap);
-    }
+    }*/
     // soft delete from cassandra--
     Response response =
         cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), dbMap);

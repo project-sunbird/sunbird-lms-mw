@@ -7,4 +7,3 @@
 [submodule "actors/open-saber-client"]
 	path = actors/open-saber-client
 	url = https://github.com/project-sunbird/open-saber-client.git
-	branch = sunbird-opensaber-integration

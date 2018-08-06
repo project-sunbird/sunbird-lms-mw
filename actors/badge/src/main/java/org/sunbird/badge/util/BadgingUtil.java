@@ -244,12 +244,11 @@ public class BadgingUtil {
     }
   }
 
-  public static void throwBadgeClassExceptionOnErrorStatus(int statusCode, String errorMsg)
-      throws ProjectCommonException {
+  public static void throwBadgeClassExceptionOnErrorStatus(
+      int statusCode, String errorMsg, String objectType) throws ProjectCommonException {
     ProjectLogger.log(
         "throwBadgeClassExceptionOnErrorStatus called with statusCode = " + statusCode,
         LoggerEnum.INFO.name());
-
     if (statusCode < 200 || statusCode > 300) {
       ResponseCode customError;
       String specificErrorMsg;
@@ -260,8 +259,11 @@ public class BadgingUtil {
           break;
         case 404:
           customError = ResponseCode.customResourceNotFound;
+          errorMsg = createCustomMessageBasedOnObjectType(objectType);
           specificErrorMsg =
-              errorMsg != null ? errorMsg : ResponseCode.resourceNotFound.getErrorMessage();
+              StringUtils.isNotEmpty(errorMsg)
+                  ? errorMsg
+                  : ResponseCode.resourceNotFound.getErrorMessage();
           break;
         default:
           customError = ResponseCode.customServerError;
@@ -278,6 +280,31 @@ public class BadgingUtil {
       throw new ProjectCommonException(
           customError.getErrorCode(), customError.getErrorMessage(), statusCode, specificErrorMsg);
     }
+  }
+
+  private static String createCustomMessageBasedOnObjectType(String objectType) {
+    String message = "";
+    if (StringUtils.isBlank(objectType)) {
+      return message;
+    }
+    switch (objectType) {
+      case BadgingJsonKey.ISSUER:
+        message = BadgingMessage.ERROR_ISSUER_NOT_FOUND;
+        break;
+      case BadgingJsonKey.BADGE_CLASS:
+        message = BadgingMessage.ERROR_BADGE_CLASS_NOT_FOUND;
+        break;
+      case BadgingJsonKey.BADGE_ASSERTION:
+        message = BadgingMessage.ERROR_ASSERTION_NOT_FOUND;
+        break;
+      case BadgingJsonKey.USER:
+        message = BadgingMessage.ERROR_USER_NOT_FOUND;
+        break;
+      case BadgingJsonKey.CONTENT:
+        message = BadgingMessage.ERROR_CONTENT_NOT_FOUND;
+        break;
+    }
+    return message;
   }
 
   /**

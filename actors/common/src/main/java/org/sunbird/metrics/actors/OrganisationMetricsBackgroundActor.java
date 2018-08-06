@@ -93,7 +93,9 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
       csvRecords.add(headers);
       for (String operation : OrganisationMetricsUtil.operationList) {
         String requestStr = getRequestObject(operation, requestId);
-        String ekStepResponse = makePostRequest(JsonKey.EKSTEP_CONTENT_SEARCH_URL, requestStr);
+        
+        String baseSearchUrl = ProjectUtil.getConfigValue(JsonKey.SEARCH_SERVICE_API_BASE_URL);
+        String ekStepResponse = makePostRequest(baseSearchUrl, JsonKey.EKSTEP_CONTENT_SEARCH_URL, requestStr);
         List<Map<String, Object>> ekstepData = getDataFromResponse(ekStepResponse, headers, orgId);
         List<Map<String, Object>> userData = getUserDetailsFromES(ekstepData);
         csvRecords.addAll(generateDataList(userData, headers));
@@ -162,7 +164,8 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
         String request =
             OrganisationMetricsUtil.getOrgMetricsRequest(
                 actorMessage, periodStr, orgHashId, (String) userData.get(JsonKey.ID), channel);
-        String esResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, request);
+        String analyticsBaseUrl = ProjectUtil.getConfigValue(JsonKey.ANALYTICS_API_BASE_URL);
+        String esResponse = makePostRequest(analyticsBaseUrl, JsonKey.EKSTEP_METRICS_API_URL, request);
         Map<String, Object> ekstepData =
             getConsumptionDataFromResponse(esResponse, userData, (List<String>) (Object) headers);
         consumptionData.add(ekstepData);

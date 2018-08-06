@@ -1,8 +1,6 @@
 package org.sunbird.learner.actors.tenantpreference;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,14 +8,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -29,7 +25,6 @@ import org.sunbird.learner.util.Util;
     "createTanentPreference",
     "updateTenantPreference",
     "getTenantPreference",
-    "updateTCStatusOfUser"
   },
   asyncTasks = {}
 )
@@ -37,8 +32,6 @@ public class TenantPreferenceManagementActor extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo tenantPreferenceDbInfo = Util.dbInfoMap.get(JsonKey.TENANT_PREFERENCE_DB);
-  private Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-  private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
   private static final String DEFAULT_WILDCARD_ORG_ID = "*";
 
   @Override
@@ -55,10 +48,6 @@ public class TenantPreferenceManagementActor extends BaseActor {
         .getOperation()
         .equalsIgnoreCase(ActorOperations.GET_TENANT_PREFERENCE.getValue())) {
       getTenantPreference(request);
-    } else if (request
-        .getOperation()
-        .equalsIgnoreCase(ActorOperations.UPDATE_TC_STATUS_OF_USER.getValue())) {
-      updateTcStatusOfUser(request);
     } else {
       onReceiveUnsupportedOperation(request.getOperation());
     }
@@ -281,42 +270,5 @@ public class TenantPreferenceManagementActor extends BaseActor {
       }
     }
     return keyMap;
-  }
-
-  /**
-   * Methos to update the Terms and condition status of user , the status may be ACCEPTED or
-   * REJECTED .
-   *
-   * @param actorMessage
-   */
-  private void updateTcStatusOfUser(Request actorMessage) {
-
-    ProjectLogger.log("TenantPreferenceManagementActor-updateTcStatusOfUser called");
-    Map<String, Object> reqBody =
-        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.TENANT_PREFERENCE);
-    String requestedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
-
-    Response response1 =
-        cassandraOperation.getRecordById(
-            userDbInfo.getKeySpace(), userDbInfo.getTableName(), requestedBy);
-
-    String tcStatus = (String) reqBody.get(JsonKey.TERM_AND_CONDITION_STATUS);
-    Map<String, Object> userMap =
-        ((List<Map<String, Object>>) response1.get(JsonKey.RESPONSE)).get(0);
-
-    Map<String, Object> dbMap = new HashMap<>();
-    dbMap.put(JsonKey.TERM_AND_CONDITION_STATUS, tcStatus);
-    dbMap.put(JsonKey.TC_UPDATED_DATE, format.format(new Date()));
-    dbMap.put(JsonKey.ID, userMap.get(JsonKey.ID));
-
-    // update cassandra
-    cassandraOperation.updateRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(), dbMap);
-    // update elastic search
-    dbMap.remove(JsonKey.ID);
-    ElasticSearchUtil.updateData(
-        ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), requestedBy, dbMap);
-    Response finalResponse = new Response();
-    finalResponse.getResult().put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    sender().tell(finalResponse, self());
   }
 }

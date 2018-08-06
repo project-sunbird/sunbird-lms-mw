@@ -281,26 +281,6 @@ public class TenantPreferenceManagementActorTest {
   }
 
   @Test
-  public void testUpdateUserTcStatus() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    Request actorMessage = new Request();
-
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.TERM_AND_CONDITION_STATUS, "ACCEPTED");
-
-    actorMessage.getRequest().put(JsonKey.TENANT_PREFERENCE, map);
-    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, orgId);
-    actorMessage.getRequest().put(JsonKey.REQUESTED_BY, USER_ID);
-    actorMessage.setOperation(ActorOperations.UPDATE_TC_STATUS_OF_USER.getValue());
-
-    subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
-  }
-
-  @Test
   public void testWithInvalidOperationType() {
 
     TestKit probe = new TestKit(system);

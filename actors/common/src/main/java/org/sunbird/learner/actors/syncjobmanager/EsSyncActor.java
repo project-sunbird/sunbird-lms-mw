@@ -2,7 +2,6 @@ package org.sunbird.learner.actors.syncjobmanager;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -22,15 +21,9 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
-import org.sunbird.common.models.util.datasecurity.DataMaskingService;
-import org.sunbird.common.models.util.datasecurity.DecryptionService;
-import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.common.services.ProfileCompletenessService;
-import org.sunbird.common.services.impl.ProfileCompletenessFactory;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
@@ -46,16 +39,6 @@ import org.sunbird.learner.util.Util.DbInfo;
 public class EsSyncActor extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
-  private EncryptionService service =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
-          null);
-  private DataMaskingService maskingService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(
-          null);
-  private DecryptionService decService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
-          null);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -200,136 +183,27 @@ public class EsSyncActor extends BaseActor {
     if (StringUtils.isBlank((String) userMap.get(JsonKey.COUNTRY_CODE))) {
       userMap.put(
           JsonKey.COUNTRY_CODE,
-          PropertiesCache.getInstance().getProperty("sunbird_default_country_code"));
+          PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_DEFAULT_COUNTRY_CODE));
     }
     ProjectLogger.log("fetching user address data started", LoggerEnum.INFO);
-    String encryption = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_ENCRYPTION);
-    String uid = userId;
-    uid = encryptUserData(encryption, uid);
-    userMap.put(
-        JsonKey.ADDRESS, getDetails(Util.dbInfoMap.get(JsonKey.ADDRESS_DB), uid, JsonKey.USER_ID));
+    userMap.put(JsonKey.ADDRESS, Util.getAddressDetails(userId, null));
     ProjectLogger.log("fetching user education data started", LoggerEnum.INFO);
-    fetchEducationDetails(userId, userMap);
+    userMap.put(JsonKey.EDUCATION, Util.getUserEducationDetails(userId));
     ProjectLogger.log("fetching user job profile data started", LoggerEnum.INFO);
-    fetchJobDetails(userId, userMap);
+    userMap.put(JsonKey.JOB_PROFILE, Util.getJobProfileDetails(userId));
     ProjectLogger.log("fetching user org data started", LoggerEnum.INFO);
-    fetchUserOrgDetails(userId, userMap);
+    userMap.put(JsonKey.ORGANISATIONS, Util.getUserOrgDetails(userId));
     ProjectLogger.log("fetching user Badge data  started", LoggerEnum.INFO);
-    fetchUserBadgeDetails(userId, userMap);
-
+    userMap.put(BadgingJsonKey.BADGE_ASSERTIONS, Util.getUserBadge(userId));
     // save masked email and phone number
-    addMaskEmailAndPhone(userMap);
+    Util.addMaskEmailAndPhone(userMap);
     // add the skills column into ES
-    fetchUserSkills(userId, userMap);
+    Util.getUserSkills(userId);
     // compute profile completeness and error field.
-    checkProfileCompleteness(userId, userMap);
+    Util.checkProfileCompleteness(userMap);
+    userMap = Util.getUserDetailsFromRegistry(userMap);
     ProjectLogger.log("fetching user data completed", LoggerEnum.INFO);
     return userMap;
-  }
-
-  private String encryptUserData(String encryption, String uid) {
-    String userId = "";
-    if ("ON".equalsIgnoreCase(encryption)) {
-      try {
-        userId = service.encryptData(uid);
-      } catch (Exception e) {
-        ProjectLogger.log("Exception Occurred while encrypting userId in user search api ", e);
-      }
-    }
-    return userId;
-  }
-
-  private void checkProfileCompleteness(String userId, Map<String, Object> userMap) {
-    ProfileCompletenessService profileService = ProfileCompletenessFactory.getInstance();
-    Map<String, Object> profileResponse = profileService.computeProfile(userMap);
-    userMap.putAll(profileResponse);
-    Map<String, String> profileVisibility =
-        (Map<String, String>) userMap.get(JsonKey.PROFILE_VISIBILITY);
-    if (null != profileVisibility && !profileVisibility.isEmpty()) {
-      Map<String, Object> profileVisibilityMap = new HashMap<>();
-      for (String field : profileVisibility.keySet()) {
-        profileVisibilityMap.put(field, userMap.get(field));
-      }
-      ElasticSearchUtil.upsertData(
-          ProjectUtil.EsIndex.sunbird.getIndexName(),
-          ProjectUtil.EsType.userprofilevisibility.getTypeName(),
-          userId,
-          profileVisibilityMap);
-      UserUtility.updateProfileVisibilityFields(profileVisibilityMap, userMap);
-    } else {
-      userMap.put(JsonKey.PROFILE_VISIBILITY, new HashMap<String, String>());
-    }
-  }
-
-  private void fetchUserSkills(String userId, Map<String, Object> userMap) {
-    Response skillresponse =
-        cassandraOperation.getRecordsByProperty(
-            userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), JsonKey.USER_ID, userId);
-    List<Map<String, Object>> responseList =
-        (List<Map<String, Object>>) skillresponse.get(JsonKey.RESPONSE);
-    userMap.put(JsonKey.SKILLS, responseList);
-  }
-
-  private void addMaskEmailAndPhone(Map<String, Object> userMap) {
-    String phone = (String) userMap.get(JsonKey.PHONE);
-    String email = (String) userMap.get(JsonKey.EMAIL);
-    if (!StringUtils.isBlank(phone)) {
-      userMap.put(JsonKey.ENC_PHONE, phone);
-      userMap.put(JsonKey.PHONE, maskingService.maskPhone(decService.decryptData(phone)));
-    }
-    if (!StringUtils.isBlank(email)) {
-      userMap.put(JsonKey.ENC_EMAIL, email);
-      userMap.put(JsonKey.EMAIL, maskingService.maskEmail(decService.decryptData(email)));
-    }
-  }
-
-  private void fetchUserBadgeDetails(String userId, Map<String, Object> userMap) {
-    List<Map<String, Object>> badgesMap =
-        getDetails(
-            Util.dbInfoMap.get(BadgingJsonKey.USER_BADGE_ASSERTION_DB), userId, JsonKey.USER_ID);
-    userMap.put(BadgingJsonKey.BADGE_ASSERTIONS, badgesMap);
-  }
-
-  private void fetchUserOrgDetails(String userId, Map<String, Object> userMap) {
-    List<Map<String, Object>> orgMapList =
-        getDetails(Util.dbInfoMap.get(JsonKey.USER_ORG_DB), userId, JsonKey.USER_ID);
-    List<Map<String, Object>> mapList = new ArrayList<>();
-    for (Map<String, Object> temp : orgMapList) {
-      if (null != temp.get(JsonKey.IS_DELETED) && !(boolean) temp.get(JsonKey.IS_DELETED)) {
-        mapList.add(temp);
-      }
-    }
-    userMap.put(JsonKey.ORGANISATIONS, mapList);
-  }
-
-  private void fetchJobDetails(String userId, Map<String, Object> userMap) {
-    List<Map<String, Object>> jobMap =
-        getDetails(Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB), userId, JsonKey.USER_ID);
-    for (Map<String, Object> map : jobMap) {
-      if (map.containsKey(JsonKey.ADDRESS_ID)
-          && !StringUtils.isBlank((String) map.get(JsonKey.ADDRESS_ID))) {
-        map.put(
-            JsonKey.ADDRESS,
-            getDetailsById(
-                Util.dbInfoMap.get(JsonKey.ADDRESS_DB), (String) map.get(JsonKey.ADDRESS_ID)));
-      }
-    }
-    userMap.put(JsonKey.JOB_PROFILE, jobMap);
-  }
-
-  private void fetchEducationDetails(String userId, Map<String, Object> userMap) {
-    List<Map<String, Object>> eduMap =
-        getDetails(Util.dbInfoMap.get(JsonKey.EDUCATION_DB), userId, JsonKey.USER_ID);
-    for (Map<String, Object> map : eduMap) {
-      if (map.containsKey(JsonKey.ADDRESS_ID)
-          && !StringUtils.isBlank((String) map.get(JsonKey.ADDRESS_ID))) {
-        map.put(
-            JsonKey.ADDRESS,
-            getDetailsById(
-                Util.dbInfoMap.get(JsonKey.ADDRESS_DB), (String) map.get(JsonKey.ADDRESS_ID)));
-      }
-    }
-    userMap.put(JsonKey.EDUCATION, eduMap);
   }
 
   private Map<String, Object> getDetailsById(DbInfo dbInfo, String userId) {
@@ -343,18 +217,6 @@ public class EsSyncActor extends BaseActor {
       ProjectLogger.log(ex.getMessage(), ex);
     }
     return null;
-  }
-
-  private List<Map<String, Object>> getDetails(DbInfo dbInfo, String id, String property) {
-    try {
-      Response response =
-          cassandraOperation.getRecordsByProperty(
-              dbInfo.getKeySpace(), dbInfo.getTableName(), property, id);
-      return (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    } catch (Exception ex) {
-      ProjectLogger.log(ex.getMessage(), ex);
-    }
-    return Collections.emptyList();
   }
 
   private DbInfo getDbInfoObj(String objectType) {

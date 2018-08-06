@@ -498,7 +498,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
     String responseFormat = "";
     try {
       String requestStr = mapper.writeValueAsString(request);
-      String ekStepResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, requestStr);
+      String analyticsBaseUrl = ProjectUtil.getConfigValue(JsonKey.ANALYTICS_API_BASE_URL);
+      String ekStepResponse = makePostRequest(analyticsBaseUrl, JsonKey.EKSTEP_METRICS_API_URL, requestStr);
       responseFormat =
           courseConsumptionResponseGenerator(periodStr, ekStepResponse, courseId, channel);
     } catch (Exception e) {
@@ -589,7 +590,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
     request.setRequest(requestObject);
     try {
       String requestStr = mapper.writeValueAsString(request);
-      String ekStepResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, requestStr);
+      String analyticsBaseUrl = ProjectUtil.getConfigValue(JsonKey.ANALYTICS_API_BASE_URL);
+      String ekStepResponse = makePostRequest(analyticsBaseUrl, JsonKey.EKSTEP_METRICS_API_URL, requestStr);
       Map<String, Object> resultData = mapper.readValue(ekStepResponse, Map.class);
       resultData = (Map<String, Object>) resultData.get(JsonKey.RESULT);
       userTimeConsumed = (Double) resultData.get("m_total_ts");

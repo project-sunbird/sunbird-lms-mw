@@ -115,13 +115,9 @@ public class ActorAuditLogServiceImpl extends BaseActor implements AuditLogServi
       }
     } else if (message.getOperation().equals(ActorOperations.UPDATE_ORG.getValue())
         || message.getOperation().equals(ActorOperations.UPDATE_ORG_STATUS.getValue())
-        || message.getOperation().equals(ActorOperations.APPROVE_ORG.getValue())
         || message.getOperation().equals(ActorOperations.APPROVE_ORGANISATION.getValue())
-        || message.getOperation().equals(ActorOperations.JOIN_USER_ORGANISATION.getValue())
         || message.getOperation().equals(ActorOperations.ADD_MEMBER_ORGANISATION.getValue())
-        || message.getOperation().equals(ActorOperations.REMOVE_MEMBER_ORGANISATION.getValue())
-        || message.getOperation().equals(ActorOperations.APPROVE_USER_ORGANISATION.getValue())
-        || message.getOperation().equals(ActorOperations.REJECT_USER_ORGANISATION.getValue())) {
+        || message.getOperation().equals(ActorOperations.REMOVE_MEMBER_ORGANISATION.getValue())) {
       if (!ProjectUtil.isStringNullOREmpty(
           (String)
               ((Map<String, Object>) message.getRequest().get(JsonKey.ORGANISATION))

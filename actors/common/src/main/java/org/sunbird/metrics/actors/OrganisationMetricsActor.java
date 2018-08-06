@@ -483,7 +483,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     Map<String, Object> aggregationMap = new HashMap<>();
     for (String operation : OrganisationMetricsUtil.operationList) {
       String request = getQueryRequest(periodStr, orgId, operation);
-      String esResponse = makePostRequest(JsonKey.EKSTEP_ES_METRICS_API_URL, request);
+      String analyticsBaseUrl = ProjectUtil.getConfigValue(JsonKey.ANALYTICS_API_BASE_URL);
+      String esResponse = makePostRequest(analyticsBaseUrl, JsonKey.EKSTEP_ES_METRICS_API_URL, request);
       aggregationMap = putAggregationMap(esResponse, aggregationMap, operation);
     }
     return aggregationMap;
@@ -572,7 +573,8 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     ProjectLogger.log(
         "OrganisationMetricsActor:getOrgConsumptionData Requested data : " + requestStr,
         LoggerEnum.INFO.name());
-    String ekStepResponse = makePostRequest(JsonKey.EKSTEP_METRICS_API_URL, requestStr);
+    String analyticsBaseUrl = ProjectUtil.getConfigValue(JsonKey.ANALYTICS_API_BASE_URL);
+    String ekStepResponse = makePostRequest(analyticsBaseUrl, JsonKey.EKSTEP_METRICS_API_URL, requestStr);
     return orgConsumptionResponseGenerator(periodStr, ekStepResponse);
   }
 

@@ -17,7 +17,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.learner.actors.health.HealthActor;
 import org.sunbird.learner.util.Util;
 
-public class BadgeActorTest {
+public class HealthActorTest {
 
   private static ActorSystem system;
   private static final Props props = Props.create(HealthActor.class);
@@ -27,18 +27,6 @@ public class BadgeActorTest {
     SunbirdMWService.init();
     system = ActorSystem.create("system");
     Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-  }
-
-  @Test
-  public void getAllBadges() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.GET_ALL_BADGE.getValue());
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
-    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test

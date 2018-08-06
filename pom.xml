@@ -8,7 +8,9 @@
 	<packaging>pom</packaging>
 	<name>Sunbird LMS MW</name>
 	<modules>
-		<module>actors/libs</module>
+		<module>actors/sunbird-utils</module>
+		<module>actors/open-saber-client</module>
+		<module>actors/sunbird-open-saber-bridge</module>
 		<module>actors</module>
 		<module>service</module>
 	</modules>

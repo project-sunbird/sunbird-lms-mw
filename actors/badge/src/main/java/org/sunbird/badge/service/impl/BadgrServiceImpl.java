@@ -39,7 +39,6 @@ public class BadgrServiceImpl implements BadgingService {
   private BadgeClassExtensionService badgeClassExtensionService;
   private ObjectMapper mapper = new ObjectMapper();
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static final String ASSERTION_DUMMY_DOMAIN = "@gmail.com";
   public static Map<String, String> headerMap = new HashMap<>();
 
   static {
@@ -90,7 +89,8 @@ public class BadgrServiceImpl implements BadgingService {
             BadgingUtil.getBadgrHeaders(false),
             BadgingUtil.getBadgeIssuerUrl());
 
-    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(), null);
+    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
+        httpResponse.getStatusCode(), null, BadgingJsonKey.ISSUER);
     Response response = new Response();
     BadgingUtil.prepareBadgeIssuerResponse(httpResponse.getBody(), response.getResult());
 
@@ -111,7 +111,8 @@ public class BadgrServiceImpl implements BadgingService {
     String slug = (String) req.get(JsonKey.SLUG);
     HttpUtilResponse httpResponse =
         HttpUtil.doGetRequest(BadgingUtil.getBadgeIssuerUrl(slug), BadgingUtil.getBadgrHeaders());
-    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(), null);
+    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
+        httpResponse.getStatusCode(), null, BadgingJsonKey.ISSUER);
     Response response = new Response();
     BadgingUtil.prepareBadgeIssuerResponse(httpResponse.getBody(), response.getResult());
     return response;
@@ -121,7 +122,8 @@ public class BadgrServiceImpl implements BadgingService {
   public Response getIssuerList(Request request) throws IOException {
     HttpUtilResponse httpResponse =
         HttpUtil.doGetRequest(BadgingUtil.getBadgeIssuerUrl(), BadgingUtil.getBadgrHeaders());
-    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(), null);
+    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
+        httpResponse.getStatusCode(), null, BadgingJsonKey.ISSUER);
     Response response = new Response();
 
     List<Map<String, Object>> issuers = new ArrayList<>();
@@ -196,7 +198,7 @@ public class BadgrServiceImpl implements BadgingService {
       String badgrResponseStr = httpUtilResponse.getBody();
 
       BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
-          httpUtilResponse.getStatusCode(), badgrResponseStr);
+          httpUtilResponse.getStatusCode(), badgrResponseStr, BadgingJsonKey.BADGE_CLASS);
 
       Map<String, Object> badgrResponseMap = mapper.readValue(badgrResponseStr, HashMap.class);
       String badgeId = (String) badgrResponseMap.get(BadgingJsonKey.SLUG);
@@ -220,7 +222,7 @@ public class BadgrServiceImpl implements BadgingService {
 
     } catch (IOException e) {
       BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
-          ResponseCode.SERVER_ERROR.getResponseCode(), e.getMessage());
+          ResponseCode.SERVER_ERROR.getResponseCode(), e.getMessage(), BadgingJsonKey.BADGE_CLASS);
     }
 
     return response;
@@ -242,7 +244,7 @@ public class BadgrServiceImpl implements BadgingService {
       String badgrResponseStr = httpUtilResponse.getBody();
 
       BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
-          httpUtilResponse.getStatusCode(), badgrResponseStr);
+          httpUtilResponse.getStatusCode(), badgrResponseStr, BadgingJsonKey.BADGE_CLASS);
 
       BadgeClassExtension badgeClassExtension = badgeClassExtensionService.get(badgeId);
 
@@ -250,7 +252,7 @@ public class BadgrServiceImpl implements BadgingService {
           badgrResponseStr, badgeClassExtension, response.getResult());
     } catch (IOException e) {
       BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
-          ResponseCode.SERVER_ERROR.getResponseCode(), e.getMessage());
+          ResponseCode.SERVER_ERROR.getResponseCode(), e.getMessage(), BadgingJsonKey.BADGE_CLASS);
     }
 
     return response;
@@ -312,7 +314,7 @@ public class BadgrServiceImpl implements BadgingService {
       String badgrResponseStr = httpUtilResponse.getBody();
 
       BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
-          httpUtilResponse.getStatusCode(), badgrResponseStr);
+          httpUtilResponse.getStatusCode(), badgrResponseStr, BadgingJsonKey.BADGE_CLASS);
 
       List<Map<String, Object>> badges = mapper.readValue(badgrResponseStr, ArrayList.class);
 
@@ -332,7 +334,7 @@ public class BadgrServiceImpl implements BadgingService {
       }
     } catch (IOException e) {
       BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
-          ResponseCode.SERVER_ERROR.getResponseCode(), e.getMessage());
+          ResponseCode.SERVER_ERROR.getResponseCode(), e.getMessage(), BadgingJsonKey.BADGE_CLASS);
     }
 
     return filteredBadges;
@@ -357,7 +359,7 @@ public class BadgrServiceImpl implements BadgingService {
       String badgrResponseStr = httpUtilResponse.getBody();
 
       BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
-          httpUtilResponse.getStatusCode(), badgrResponseStr);
+          httpUtilResponse.getStatusCode(), badgrResponseStr, BadgingJsonKey.BADGE_CLASS);
 
       badgeClassExtensionService.delete(badgeId);
       response.put(JsonKey.MESSAGE, badgrResponseStr.replaceAll("^\"|\"$", ""));
@@ -368,7 +370,7 @@ public class BadgrServiceImpl implements BadgingService {
 
     } catch (IOException e) {
       BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
-          ResponseCode.SERVER_ERROR.getResponseCode(), e.getMessage());
+          ResponseCode.SERVER_ERROR.getResponseCode(), e.getMessage(), BadgingJsonKey.BADGE_CLASS);
     }
 
     return response;
@@ -389,7 +391,7 @@ public class BadgrServiceImpl implements BadgingService {
     if (StringUtils.isBlank(email) && !ProjectUtil.isEmailvalid(email)) {
       ProjectLogger.log("Recipient email is not valid ==" + email);
       BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
-          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), null);
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), null, BadgingJsonKey.BADGE_ASSERTION);
     }
     requestedData.put(BadgingJsonKey.RECIPIENT_EMAIL, email);
     String requestBody = BadgingUtil.createAssertionReqData(requestedData);
@@ -404,7 +406,8 @@ public class BadgrServiceImpl implements BadgingService {
 
     ProjectLogger.log(
         "AssertionDataResponse==" + httpResponse.getStatusCode(), LoggerEnum.INFO.name());
-    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(), null);
+    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
+        httpResponse.getStatusCode(), null, BadgingJsonKey.BADGE_ASSERTION);
     Map<String, Object> res = mapper.readValue(httpResponse.getBody(), HashMap.class);
     // calling to create response as per sunbird
     res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String, Object>());
@@ -442,7 +445,8 @@ public class BadgrServiceImpl implements BadgingService {
         BadgingUtil.createBadgerUrl(
             request.getRequest(), BadgingUtil.SUNBIRD_BADGER_GETASSERTION_URL, 3);
     HttpUtilResponse httpResponse = HttpUtil.doGetRequest(url, BadgingUtil.getBadgrHeaders());
-    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(), null);
+    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
+        httpResponse.getStatusCode(), null, BadgingJsonKey.BADGE_ASSERTION);
     Map<String, Object> res = mapper.readValue(httpResponse.getBody(), HashMap.class);
     // calling to create response as per sunbird
     res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String, Object>());
@@ -493,7 +497,7 @@ public class BadgrServiceImpl implements BadgingService {
         HttpUtil.sendDeleteRequest(requestBody, BadgingUtil.getBadgrHeaders(), url);
     String badgrResponseStr = httpResponse.getBody();
     BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
-        httpResponse.getStatusCode(), badgrResponseStr);
+        httpResponse.getStatusCode(), badgrResponseStr, BadgingJsonKey.BADGE_ASSERTION);
     Response response = new Response();
     response.getResult().put(JsonKey.STATUS, JsonKey.SUCCESS);
     targetObject =
@@ -521,7 +525,8 @@ public class BadgrServiceImpl implements BadgingService {
     HttpUtilResponse httpResponse =
         HttpUtil.sendDeleteRequest(
             BadgingUtil.getBadgrHeaders(), BadgingUtil.getBadgeIssuerUrl(slug));
-    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(httpResponse.getStatusCode(), null);
+    BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
+        httpResponse.getStatusCode(), null, BadgingJsonKey.ISSUER);
     Response response = new Response();
     // since the response from badger service contains " at beging and end so remove that from
     // response string
@@ -561,7 +566,7 @@ public class BadgrServiceImpl implements BadgingService {
     List<Map<String, Object>> user = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if ((user == null) || user.isEmpty()) {
       BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
-          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), "User not found.");
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), null, BadgingJsonKey.USER);
     }
     String email =
         org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
@@ -594,7 +599,7 @@ public class BadgrServiceImpl implements BadgingService {
       HttpUtilResponse response = HttpUtil.doGetRequest(url, CourseBatchSchedulerUtil.headerMap);
       if (response == null || response.getStatusCode() >= 300) {
         BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
-            ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), "Content not found.");
+            ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), null, BadgingJsonKey.CONTENT);
       }
       String userId = getUserIdFromContent(response.getBody());
       // some of the content won't have createdBy , so in that case
@@ -611,7 +616,7 @@ public class BadgrServiceImpl implements BadgingService {
     } catch (IOException e) {
       ProjectLogger.log(e.getMessage(), e);
       BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
-          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), "Content not found.");
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), null, BadgingJsonKey.CONTENT);
     }
     return getDefaultEmail();
   }

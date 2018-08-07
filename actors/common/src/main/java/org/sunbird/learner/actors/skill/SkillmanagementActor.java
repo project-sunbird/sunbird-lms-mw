@@ -3,6 +3,8 @@ package org.sunbird.learner.actors.skill;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -17,12 +19,8 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
-import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -30,6 +28,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+import org.sunbird.models.user.skill.Skill;
 import org.sunbird.telemetry.util.TelemetryUtil;
 
 /**
@@ -37,7 +36,7 @@ import org.sunbird.telemetry.util.TelemetryUtil;
  * 18/10/17.
  */
 @ActorConfig(
-  tasks = {"addSkill", "getSkill", "getSkillsList"},
+  tasks = {"addSkill", "getSkill", "getSkillsList", "updateSkill"},
   asyncTasks = {}
 )
 public class SkillmanagementActor extends BaseActor {
@@ -62,8 +61,63 @@ public class SkillmanagementActor extends BaseActor {
         .getOperation()
         .equalsIgnoreCase(ActorOperations.GET_SKILLS_LIST.getValue())) {
       getSkillsList();
+    } else if (request.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_SKILL.getValue())) {
+      updateSkill(request);
     } else {
       onReceiveUnsupportedOperation(request.getOperation());
+    }
+  }
+  /** Method will Update the skills from user ... */
+  private void updateSkill(Request actorMessage) {
+    ProjectLogger.log(
+        "SkillmanagementActor-updateSkill called",
+        actorMessage.getRequest(),
+        LoggerEnum.INFO.name());
+
+    String userId = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
+    List<String> list = (List<String>) actorMessage.getRequest().get(JsonKey.SKILL_NAME);
+    CopyOnWriteArraySet<String> skillset = new CopyOnWriteArraySet<>(list);
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+    if (StringUtils.isBlank(userId)) {
+      throw new ProjectCommonException(
+          ResponseCode.endorsedUserIdRequired.getErrorCode(),
+          ResponseCode.endorsedUserIdRequired.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    Map<String, Object> filter = new HashMap<>();
+    filter.put(JsonKey.USER_ID, userId);
+    List<String> fields = new ArrayList<>();
+    fields.add(JsonKey.SKILLS);
+    Map<String, Object> result =
+        ElasticSearchUtil.complexSearch(
+            createESRequest(filter, null, fields),
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            EsType.user.getTypeName());
+    if (result.isEmpty() || ((List<Map<String, Object>>) result.get(JsonKey.CONTENT)).isEmpty()) {
+      throw new ProjectCommonException(
+          ResponseCode.invalidUserId.getErrorCode(),
+          ResponseCode.invalidUserId.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    List<Map<String, Object>> skillList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+
+    Map<String, Object> skillMap = new HashMap();
+    if (!skillList.isEmpty()) {
+      skillMap = skillList.get(0);
+    }
+    ObjectMapper objectMapper = new ObjectMapper();
+    List<Skill> userDbSkillList =
+        objectMapper.convertValue(
+            skillMap.get(JsonKey.SKILLS), new TypeReference<List<Skill>>() {});
+
+    for (String skillName : skillset) {
+      if (!StringUtils.isBlank(skillName)) {
+
+        // check whether user have already this skill or not -
+        String id =
+            OneWayHashing.encryptVal(
+                userId + JsonKey.PRIMARY_KEY_DELIMETER + skillName.toLowerCase());
+      }
     }
   }
 

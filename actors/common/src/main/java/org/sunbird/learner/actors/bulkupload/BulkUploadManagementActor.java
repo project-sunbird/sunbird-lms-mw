@@ -2,6 +2,7 @@ package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -48,12 +49,10 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
   private int batchDataSize = 0;
   BulkUploadProcessTaskDao bulkUploadProcessTaskDao = new BulkUploadProcessTaskDaoImpl();
   private ObjectMapper mapper = new ObjectMapper();
-  private static final String INPROGRESS_RESPONSE_MSG =
-      "Operation is in progress. Please check the status after some time.";
-  private static final String NOT_STARTED_RESPONSE_MSG =
-      "Operation is not started. Please check the status after some time.";
+  private String OPERATION_PROGRESS_MSG = "Operation is {0}.";
   private static final String NOT_STARTED = "NOT STARTED";
   private static final String IN_PROGRESS = "IN PROGRESS";
+  private static final String COMPLETED = "COMPLETED";
 
   private String[] bulkUserAllowedFields = {
     JsonKey.FIRST_NAME,
@@ -141,6 +140,8 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       if ((int) resMap.get(JsonKey.STATUS) == ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
         resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
         resMap.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.COMPLETED);
+        resMap.put(
+            JsonKey.MESSAGE, MessageFormat.format(OPERATION_PROGRESS_MSG, COMPLETED.toLowerCase()));
         ProjectUtil.removeUnwantedFields(resMap, JsonKey.ID);
         if (!(JsonKey.LOCATION.equalsIgnoreCase(objectType))) {
           Object[] successMap = null;
@@ -189,10 +190,14 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         if ((int) resMap.get(JsonKey.STATUS)
             == ProjectUtil.BulkProcessStatus.IN_PROGRESS.getValue()) {
           resMap.put(JsonKey.STATUS, IN_PROGRESS);
-          resMap.put(JsonKey.MESSAGE, INPROGRESS_RESPONSE_MSG);
+          resMap.put(
+              JsonKey.MESSAGE,
+              MessageFormat.format(OPERATION_PROGRESS_MSG, IN_PROGRESS.toLowerCase()));
         } else {
           resMap.put(JsonKey.STATUS, NOT_STARTED);
-          resMap.put(JsonKey.MESSAGE, NOT_STARTED_RESPONSE_MSG);
+          resMap.put(
+              JsonKey.MESSAGE,
+              MessageFormat.format(OPERATION_PROGRESS_MSG, NOT_STARTED.toLowerCase()));
         }
         ProjectUtil.removeUnwantedFields(
             resMap, JsonKey.ID, JsonKey.SUCCESS_RESULT, JsonKey.FAILURE_RESULT);

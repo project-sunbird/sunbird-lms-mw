@@ -140,7 +140,6 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       String objectType = (String) resMap.get(JsonKey.OBJECT_TYPE);
       if ((int) resMap.get(JsonKey.STATUS) == ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
         resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
-        resMap.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.COMPLETED);
         ProjectUtil.removeUnwantedFields(resMap, JsonKey.STATUS, JsonKey.ID);
         if (!(JsonKey.LOCATION.equalsIgnoreCase(objectType))) {
           Object[] successMap = null;

@@ -135,7 +135,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       String objectType = (String) resMap.get(JsonKey.OBJECT_TYPE);
       if ((int) resMap.get(JsonKey.STATUS) == ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
         resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
-        updateResponseStatus(resMap, BulkUploadJsonKey.COMPLETED);
+        updateResponseStatus(resMap);
         ProjectUtil.removeUnwantedFields(resMap, JsonKey.ID);
         if (!(JsonKey.LOCATION.equalsIgnoreCase(objectType))) {
           Object[] successMap = null;
@@ -181,14 +181,13 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         sender().tell(response, self());
       } else {
         resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
-        if ((int) resMap.get(JsonKey.STATUS)
-            == ProjectUtil.BulkProcessStatus.IN_PROGRESS.getValue()) {
-          updateResponseStatus(resMap, BulkUploadJsonKey.IN_PROGRESS);
-        } else {
-          updateResponseStatus(resMap, BulkUploadJsonKey.NOT_STARTED);
-        }
+        updateResponseStatus(resMap);
         ProjectUtil.removeUnwantedFields(
-            resMap, JsonKey.ID, JsonKey.SUCCESS_RESULT, JsonKey.FAILURE_RESULT);
+            resMap,
+            JsonKey.ID,
+            JsonKey.OBJECT_TYPE,
+            JsonKey.SUCCESS_RESULT,
+            JsonKey.FAILURE_RESULT);
         sender().tell(response, self());
       }
     } else {
@@ -199,7 +198,17 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     }
   }
 
-  private void updateResponseStatus(Map<String, Object> response, String status) {
+  private void updateResponseStatus(Map<String, Object> response) {
+    String status = "";
+    if ((int) response.get(JsonKey.STATUS) == ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
+      status = BulkUploadJsonKey.COMPLETED;
+    }
+    if ((int) response.get(JsonKey.STATUS)
+        == ProjectUtil.BulkProcessStatus.IN_PROGRESS.getValue()) {
+      status = BulkUploadJsonKey.IN_PROGRESS;
+    } else {
+      status = BulkUploadJsonKey.NOT_STARTED;
+    }
     response.put(JsonKey.STATUS, status);
     response.put(
         JsonKey.MESSAGE,

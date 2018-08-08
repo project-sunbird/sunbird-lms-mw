@@ -14,6 +14,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.BulkUploadJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -49,11 +50,6 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
   private int batchDataSize = 0;
   BulkUploadProcessTaskDao bulkUploadProcessTaskDao = new BulkUploadProcessTaskDaoImpl();
   private ObjectMapper mapper = new ObjectMapper();
-  private String OPERATION_PROGRESS_MSG = "Operation is {0}.";
-  private static final String NOT_STARTED = "NOT STARTED";
-  private static final String IN_PROGRESS = "IN PROGRESS";
-  private static final String COMPLETED = "COMPLETED";
-
   private String[] bulkUserAllowedFields = {
     JsonKey.FIRST_NAME,
     JsonKey.LAST_NAME,
@@ -139,9 +135,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       String objectType = (String) resMap.get(JsonKey.OBJECT_TYPE);
       if ((int) resMap.get(JsonKey.STATUS) == ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
         resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
-        resMap.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.COMPLETED);
-        resMap.put(
-            JsonKey.MESSAGE, MessageFormat.format(OPERATION_PROGRESS_MSG, COMPLETED.toLowerCase()));
+        updateResponseStatus(resMap, BulkUploadJsonKey.COMPLETED);
         ProjectUtil.removeUnwantedFields(resMap, JsonKey.ID);
         if (!(JsonKey.LOCATION.equalsIgnoreCase(objectType))) {
           Object[] successMap = null;
@@ -189,15 +183,9 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
         if ((int) resMap.get(JsonKey.STATUS)
             == ProjectUtil.BulkProcessStatus.IN_PROGRESS.getValue()) {
-          resMap.put(JsonKey.STATUS, IN_PROGRESS);
-          resMap.put(
-              JsonKey.MESSAGE,
-              MessageFormat.format(OPERATION_PROGRESS_MSG, IN_PROGRESS.toLowerCase()));
+          updateResponseStatus(resMap, BulkUploadJsonKey.IN_PROGRESS);
         } else {
-          resMap.put(JsonKey.STATUS, NOT_STARTED);
-          resMap.put(
-              JsonKey.MESSAGE,
-              MessageFormat.format(OPERATION_PROGRESS_MSG, NOT_STARTED.toLowerCase()));
+          updateResponseStatus(resMap, BulkUploadJsonKey.NOT_STARTED);
         }
         ProjectUtil.removeUnwantedFields(
             resMap, JsonKey.ID, JsonKey.SUCCESS_RESULT, JsonKey.FAILURE_RESULT);
@@ -209,6 +197,13 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
           ResponseCode.invalidProcessId.getErrorMessage(),
           ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
+  }
+
+  private void updateResponseStatus(Map<String, Object> response, String status) {
+    response.put(JsonKey.STATUS, status);
+    response.put(
+        JsonKey.MESSAGE,
+        MessageFormat.format(BulkUploadJsonKey.OPERATION_STATUS_MSG, status.toLowerCase()));
   }
 
   private void addTaskDataToList(List<Map> list, String data) {

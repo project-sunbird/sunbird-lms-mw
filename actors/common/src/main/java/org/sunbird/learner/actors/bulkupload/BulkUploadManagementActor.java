@@ -48,10 +48,10 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
   private int batchDataSize = 0;
   BulkUploadProcessTaskDao bulkUploadProcessTaskDao = new BulkUploadProcessTaskDaoImpl();
   private ObjectMapper mapper = new ObjectMapper();
+  private static final String IS_COMPLETED = "isCompleted";
 
   private String[] bulkUserAllowedFields = {
     JsonKey.FIRST_NAME,
-    JsonKey.COUNTRY_CODE,
     JsonKey.LAST_NAME,
     JsonKey.PHONE,
     JsonKey.COUNTRY_CODE,
@@ -134,9 +134,10 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       Map<String, Object> resMap = resList.get(0);
       String objectType = (String) resMap.get(JsonKey.OBJECT_TYPE);
       if ((int) resMap.get(JsonKey.STATUS) == ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
+        resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
+        resMap.put(IS_COMPLETED, true);
+        ProjectUtil.removeUnwantedFields(resMap, JsonKey.STATUS, JsonKey.ID);
         if (!(JsonKey.LOCATION.equalsIgnoreCase(objectType))) {
-          resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
-          ProjectUtil.removeUnwantedFields(resMap, JsonKey.STATUS, JsonKey.ID);
           Object[] successMap = null;
           Object[] failureMap = null;
           try {
@@ -158,8 +159,6 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
             ProjectLogger.log(e.getMessage(), e);
           }
         } else {
-          resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
-          ProjectUtil.removeUnwantedFields(resMap, JsonKey.STATUS, JsonKey.ID);
           Map<String, Object> queryMap = new HashMap<>();
           queryMap.put(JsonKey.PROCESS_ID, processId);
           List<BulkUploadProcessTask> tasks = bulkUploadProcessTaskDao.readByPrimaryKeys(queryMap);
@@ -181,9 +180,10 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         }
         sender().tell(response, self());
       } else {
-        response = new Response();
-        response.put(
-            JsonKey.RESPONSE, "Operation is still in progress, Please try after some time.");
+        resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
+        resMap.put(IS_COMPLETED, false);
+        ProjectUtil.removeUnwantedFields(
+            resMap, JsonKey.STATUS, JsonKey.ID, JsonKey.SUCCESS_RESULT, JsonKey.FAILURE_RESULT);
         sender().tell(response, self());
       }
     } else {

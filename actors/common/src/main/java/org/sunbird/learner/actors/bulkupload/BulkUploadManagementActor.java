@@ -2,6 +2,7 @@ package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -13,6 +14,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.BulkUploadJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -48,10 +50,8 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
   private int batchDataSize = 0;
   BulkUploadProcessTaskDao bulkUploadProcessTaskDao = new BulkUploadProcessTaskDaoImpl();
   private ObjectMapper mapper = new ObjectMapper();
-
   private String[] bulkUserAllowedFields = {
     JsonKey.FIRST_NAME,
-    JsonKey.COUNTRY_CODE,
     JsonKey.LAST_NAME,
     JsonKey.PHONE,
     JsonKey.COUNTRY_CODE,
@@ -134,9 +134,10 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       Map<String, Object> resMap = resList.get(0);
       String objectType = (String) resMap.get(JsonKey.OBJECT_TYPE);
       if ((int) resMap.get(JsonKey.STATUS) == ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
+        resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
+        updateResponseStatus(resMap);
+        ProjectUtil.removeUnwantedFields(resMap, JsonKey.ID);
         if (!(JsonKey.LOCATION.equalsIgnoreCase(objectType))) {
-          resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
-          ProjectUtil.removeUnwantedFields(resMap, JsonKey.STATUS, JsonKey.ID);
           Object[] successMap = null;
           Object[] failureMap = null;
           try {
@@ -158,8 +159,6 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
             ProjectLogger.log(e.getMessage(), e);
           }
         } else {
-          resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
-          ProjectUtil.removeUnwantedFields(resMap, JsonKey.STATUS, JsonKey.ID);
           Map<String, Object> queryMap = new HashMap<>();
           queryMap.put(JsonKey.PROCESS_ID, processId);
           List<BulkUploadProcessTask> tasks = bulkUploadProcessTaskDao.readByPrimaryKeys(queryMap);
@@ -181,9 +180,14 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         }
         sender().tell(response, self());
       } else {
-        response = new Response();
-        response.put(
-            JsonKey.RESPONSE, "Operation is still in progress, Please try after some time.");
+        resMap.put(JsonKey.PROCESS_ID, resMap.get(JsonKey.ID));
+        updateResponseStatus(resMap);
+        ProjectUtil.removeUnwantedFields(
+            resMap,
+            JsonKey.ID,
+            JsonKey.OBJECT_TYPE,
+            JsonKey.SUCCESS_RESULT,
+            JsonKey.FAILURE_RESULT);
         sender().tell(response, self());
       }
     } else {
@@ -192,6 +196,22 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
           ResponseCode.invalidProcessId.getErrorMessage(),
           ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
+  }
+
+  private void updateResponseStatus(Map<String, Object> response) {
+    String status = "";
+    int progressStatus = (int) response.get(JsonKey.STATUS);
+    if (progressStatus == ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
+      status = BulkUploadJsonKey.COMPLETED;
+    } else if (progressStatus == ProjectUtil.BulkProcessStatus.IN_PROGRESS.getValue()) {
+      status = BulkUploadJsonKey.IN_PROGRESS;
+    } else {
+      status = BulkUploadJsonKey.NOT_STARTED;
+    }
+    response.put(JsonKey.STATUS, status);
+    response.put(
+        JsonKey.MESSAGE,
+        MessageFormat.format(BulkUploadJsonKey.OPERATION_STATUS_MSG, status.toLowerCase()));
   }
 
   private void addTaskDataToList(List<Map> list, String data) {

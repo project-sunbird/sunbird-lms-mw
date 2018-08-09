@@ -200,11 +200,10 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
 
   private void updateResponseStatus(Map<String, Object> response) {
     String status = "";
-    if ((int) response.get(JsonKey.STATUS) == ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
+    int progressStatus = (int) response.get(JsonKey.STATUS);
+    if (progressStatus == ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
       status = BulkUploadJsonKey.COMPLETED;
-    }
-    if ((int) response.get(JsonKey.STATUS)
-        == ProjectUtil.BulkProcessStatus.IN_PROGRESS.getValue()) {
+    } else if (progressStatus == ProjectUtil.BulkProcessStatus.IN_PROGRESS.getValue()) {
       status = BulkUploadJsonKey.IN_PROGRESS;
     } else {
       status = BulkUploadJsonKey.NOT_STARTED;

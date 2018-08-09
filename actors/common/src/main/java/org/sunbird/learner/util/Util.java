@@ -608,7 +608,7 @@ public final class Util {
     JSONObject data;
     JSONObject jObject;
     try {
-    	  String baseSearchUrl = ProjectUtil.getConfigValue(JsonKey.SEARCH_SERVICE_API_BASE_URL);
+      String baseSearchUrl = ProjectUtil.getConfigValue(JsonKey.SEARCH_SERVICE_API_BASE_URL);
       headers.put(
           JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
       if (StringUtils.isBlank(headers.get(JsonKey.AUTHORIZATION))) {
@@ -1618,15 +1618,9 @@ public final class Util {
         reqMap.putAll(userMap);
       } catch (Exception ex) {
         ProjectLogger.log(
-            "ErrorMessage from registry read failure = " + ex.getMessage(), LoggerEnum.INFO.name());
-        ProjectLogger.log(
-            "StackTrace from registry read failure = " + ex.getStackTrace(),
-            LoggerEnum.INFO.name());
-        ex.printStackTrace();
-        ProjectLogger.log(
             "getUserDetailsFromRegistry: Failed to fetch registry details for registryId : "
                 + registryId,
-            LoggerEnum.INFO.name());
+            ex);
         reqMap.clear();
       }
       return MapUtils.isNotEmpty(reqMap) ? reqMap : userMap;

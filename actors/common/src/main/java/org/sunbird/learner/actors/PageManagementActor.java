@@ -504,7 +504,7 @@ public class PageManagementActor extends BaseActor {
     ProjectLogger.log(
         "default search query for ekstep for page data assemble api : "
             + (String) section.get(JsonKey.SEARCH_QUERY),
-        LoggerEnum.INFO);
+        LoggerEnum.INFO.name());
     applyFilters(filters, reqFilters);
     String query = "";
 
@@ -513,8 +513,8 @@ public class PageManagementActor extends BaseActor {
       query = (String) section.get(JsonKey.SEARCH_QUERY);
     }
     ProjectLogger.log(
-        "search query after applying filter for ekstep for page data assemble api : " + query,
-        LoggerEnum.INFO);
+        "PageManagementActor:getContentData: Page assemble final search query: " + query,
+        LoggerEnum.INFO.name());
 
     Future<Map<String, Object>> result = ContentSearchUtil.searchContent(query, headers);
 

@@ -34,7 +34,7 @@ import org.sunbird.learner.util.Util;
 public class SkillmanagementActorTest {
 
   private static ActorSystem system;
-  private static final Props props = Props.create(SkillmanagementActor.class);
+  private static final Props props = Props.create(UserSkillManagementActor.class);
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
   private static Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);

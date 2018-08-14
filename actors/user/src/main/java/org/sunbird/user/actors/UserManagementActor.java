@@ -794,10 +794,12 @@ public class UserManagementActor extends BaseActor {
         userDbRecord = Util.getUserbyUserId((String) userMap.get(JsonKey.USER_ID));
       }
       String registryId = (String) userDbRecord.get(JsonKey.REGISTRY_ID);
+      UserExtension userExtension = new UserProviderRegistryImpl();
       if (StringUtils.isNotBlank(registryId)) {
         userMap.put(JsonKey.REGISTRY_ID, registryId);
-        UserExtension userExtension = new UserProviderRegistryImpl();
         userExtension.update(userMap);
+      } else {
+        userExtension.create(userMap);
       }
     }
 

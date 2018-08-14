@@ -2,6 +2,7 @@ package org.sunbird.learner.actors.skill.dao;
 
 import java.util.List;
 import java.util.Map;
+import org.sunbird.models.user.skill.Skill;
 
 public interface UserSkillDao {
 
@@ -19,4 +20,20 @@ public interface UserSkillDao {
    * @return boolean
    */
   boolean delete(List<String> identifierList);
+
+  /**
+   * This method will read skill for user ProjectCommonException.
+   *
+   * @param id skill id
+   * @return skill
+   */
+  Skill read(String id);
+
+  /**
+   * This method will update skill for user ProjectCommonException.
+   *
+   * @param skill skill which need to be updated
+   * @return
+   */
+  void update(Skill skill);
 }

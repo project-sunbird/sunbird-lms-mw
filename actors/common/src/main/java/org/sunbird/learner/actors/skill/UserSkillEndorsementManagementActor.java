@@ -53,7 +53,7 @@ public class UserSkillEndorsementManagementActor extends BaseActor {
       endoresers.put(JsonKey.USER_ID, endorsersId);
       endoresers.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
       endorsersList.add(endoresers);
-      skill.setEndorsementcount(0);
+      skill.setEndorsementCount(0);
     } else {
       boolean flag = false;
       for (Map<String, String> map : endorsersList) {
@@ -66,11 +66,11 @@ public class UserSkillEndorsementManagementActor extends BaseActor {
         // donot do anything..
         ProjectLogger.log(endorsersId + " has already endorsed the " + endorsedId);
       } else {
-        Integer endoresementCount = skill.getEndorsementcount() + 1;
+        Integer endoresementCount = skill.getEndorsementCount() + 1;
         endoresers.put(JsonKey.USER_ID, endorsersId);
         endoresers.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
         endorsersList.add(endoresers);
-        skill.setEndorsementcount(endoresementCount);
+        skill.setEndorsementCount(endoresementCount);
       }
     }
     skill.setEndorsersList(endorsersList);

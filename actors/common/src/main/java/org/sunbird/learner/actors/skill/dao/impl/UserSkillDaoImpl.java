@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.skill.dao.UserSkillDao;
@@ -40,17 +41,19 @@ public class UserSkillDaoImpl implements UserSkillDao {
   @Override
   public Skill read(String id) {
     ObjectMapper objectMapper = new ObjectMapper();
-    return objectMapper.convertValue(
+    Response response =
         cassandraOperation.getRecordById(
-            userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), id),
-        Skill.class);
+            userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), id);
+    List<HashMap<String, Object>> responseList =
+        (List<HashMap<String, Object>>) response.get(JsonKey.RESPONSE);
+    return objectMapper.convertValue(responseList.get(0), Skill.class);
   }
 
   @Override
   public void update(Skill skill) {
     ObjectMapper objectMapper = new ObjectMapper();
-    TypeReference<HashMap<String, String>> typeRef =
-        new TypeReference<HashMap<String, String>>() {};
+    TypeReference<HashMap<String, Object>> typeRef =
+        new TypeReference<HashMap<String, Object>>() {};
     HashMap<String, Object> map = objectMapper.convertValue(skill, typeRef);
     cassandraOperation.updateRecord(
         userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), map);

@@ -5,6 +5,7 @@ import static org.sunbird.learner.util.Util.isNull;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -157,9 +158,11 @@ public class UserSkillManagementActor extends BaseActor {
       userSkillMap.put(JsonKey.SKILL_NAME, skillName);
       userSkillMap.put(JsonKey.SKILL_NAME_TO_LOWERCASE, skillName.toLowerCase());
       userSkillMap.put(JsonKey.CREATED_BY, userId);
-      userSkillMap.put(JsonKey.CREATED_ON, format.format(new Date()));
+      userSkillMap.put(
+          JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
       userSkillMap.put(JsonKey.LAST_UPDATED_BY, userId);
-      userSkillMap.put(JsonKey.LAST_UPDATED_ON, format.format(new Date()));
+      userSkillMap.put(
+          JsonKey.LAST_UPDATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
       userSkillMap.put(JsonKey.ENDORSEMENT_COUNT, 0);
       userSkillDao.add(userSkillMap);
       updateEs(userId);
@@ -173,7 +176,7 @@ public class UserSkillManagementActor extends BaseActor {
     fields.add(JsonKey.SKILLS);
     esDtoMap.put(JsonKey.FIELDS, fields);
     return ElasticSearchUtil.complexSearch(
-        ElasticSearchUtil.createSearchDto(esDtoMap),
+        ElasticSearchUtil.createSearchDTO(esDtoMap),
         ProjectUtil.EsIndex.sunbird.getIndexName(),
         EsType.user.getTypeName());
   }

@@ -76,9 +76,9 @@ public class UserSkillEndorsementManagementActor extends BaseActor {
     skill.setEndorsersList(endorsersList);
 
     userSkillDao.update(skill);
-    Response response3 = new Response();
-    response3.getResult().put(JsonKey.RESULT, "SUCCESS");
-    sender().tell(response3, self());
+    Response response = new Response();
+    response.getResult().put(JsonKey.RESULT, "SUCCESS");
+    sender().tell(response, self());
 
     targetObject =
         TelemetryUtil.generateTargetObject(endorsersId, JsonKey.USER, JsonKey.UPDATE, null);

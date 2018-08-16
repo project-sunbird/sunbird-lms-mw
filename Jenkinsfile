@@ -14,7 +14,6 @@ node('build-slave') {
         env.NODE_ENV = "build"
         print "Environment will be : ${env.NODE_ENV}"
         sh('git branch')
-        sh('git submodule update --init')
         sh('git submodule update --init --recursive --remote')
         sh('sudo mvn clean install -DskipTests=true')
         sh('chmod 777 ./build.sh')

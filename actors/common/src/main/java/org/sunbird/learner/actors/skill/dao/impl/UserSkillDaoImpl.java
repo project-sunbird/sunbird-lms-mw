@@ -47,7 +47,7 @@ public class UserSkillDaoImpl implements UserSkillDao {
     List<HashMap<String, Object>> responseList =
         (List<HashMap<String, Object>>) response.get(JsonKey.RESPONSE);
     if (responseList != null) return objectMapper.convertValue(responseList.get(0), Skill.class);
-    else return null;
+    return null;
   }
 
   @Override

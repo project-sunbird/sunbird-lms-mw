@@ -58,7 +58,7 @@ public class UserSkillManagementActor extends BaseActor {
 
     switch (operation) {
       case "addSkill":
-        endorseSkill(request);
+        addOrEndorseSkill(request);
         break;
       case "getSkill":
         getSkill(request);
@@ -70,7 +70,7 @@ public class UserSkillManagementActor extends BaseActor {
         updateSkill(request);
         break;
       case "addUserSkillEndorsement":
-        endorseUserSkill(request);
+        addUserSkillEndorsement(request);
         break;
       default:
         onReceiveUnsupportedOperation("UserSkillManagementActor");
@@ -82,34 +82,31 @@ public class UserSkillManagementActor extends BaseActor {
         "UserSkillManagementActor: updateSkill called",
         actorMessage.getRequest(),
         LoggerEnum.DEBUG.name());
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    Map<String, Object> targetObject;
-
     String userId = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
-    List<String> skillList = (List<String>) actorMessage.getRequest().get(JsonKey.SKILL_NAME);
+    List<String> newUserSkillsSet =
+        (List<String>) actorMessage.getRequest().get(JsonKey.SKILL_NAME);
 
     Map<String, Object> result = findUserSkills(userId);
     if (result.isEmpty() || ((List<Map<String, Object>>) result.get(JsonKey.CONTENT)).isEmpty()) {
-      saveUserSkill(skillList, userId);
+      saveUserSkill(newUserSkillsSet, userId);
     } else {
       List<Map<String, Object>> searchedUserList =
           (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
 
       Map<String, Object> userMap = new HashMap();
-      if (!searchedUserList.isEmpty()) {
-        userMap = searchedUserList.get(0);
-      }
+      userMap = searchedUserList.get(0);
+
       ObjectMapper objectMapper = new ObjectMapper();
       List<Skill> userSkills =
           objectMapper.convertValue(
               userMap.get(JsonKey.SKILLS), new TypeReference<List<Skill>>() {});
-      HashSet<Skill> userSkillsSet = new HashSet<>(userSkills);
-      List<Skill> commonList =
-          userSkillsSet
+      HashSet<Skill> currentUserSkillsSet = new HashSet<>(userSkills);
+      List<Skill> commonSkills =
+          currentUserSkillsSet
               .stream()
               .flatMap(
                   skill ->
-                      skillList
+                      newUserSkillsSet
                           .stream()
                           .filter(
                               skillName -> {
@@ -122,42 +119,43 @@ public class UserSkillManagementActor extends BaseActor {
                               })
                           .map(skillName -> skill))
               .collect(Collectors.toList());
+      List<String> addedSkillsList = newUserSkillsSet;
+      HashSet<Skill> removedSkillsList = currentUserSkillsSet;
 
-      commonList.forEach(
+      commonSkills.forEach(
           skill -> {
-            if (skillList.contains(skill.getSkillName())) {
-              skillList.remove(skill.getSkillName());
-              userSkillsSet.remove(skill);
+            if (addedSkillsList.contains(skill.getSkillName())) {
+              addedSkillsList.remove(skill.getSkillName());
+              removedSkillsList.remove(skill);
             }
           });
 
-      if (CollectionUtils.isNotEmpty(skillList)) {
-        saveUserSkill(skillList, userId);
+      if (CollectionUtils.isNotEmpty(addedSkillsList)) {
+        saveUserSkill(addedSkillsList, userId);
       }
-      if (CollectionUtils.isNotEmpty(userSkillsSet)) {
+      if (CollectionUtils.isNotEmpty(removedSkillsList)) {
         List<String> idList =
-            userSkillsSet.stream().map(skill -> skill.getId()).collect(Collectors.toList());
+            removedSkillsList.stream().map(skill -> skill.getId()).collect(Collectors.toList());
         Boolean deleted = userSkillDao.delete(idList);
         if (!deleted) {
-          ProjectLogger.log("Delete Failed for " + userId, idList, LoggerEnum.ERROR.name());
+          ProjectLogger.log(
+              "UserSkillManagementActor:updateSkill: Delete skills failed for " + userId,
+              idList,
+              LoggerEnum.ERROR.name());
         }
 
-        updateEs(userId);
+        updateES(userId);
       }
     }
     Response response = new Response();
     response.getResult().put(JsonKey.RESULT, "SUCCESS");
     sender().tell(response, self());
 
-    targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-    TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(
-        actorMessage.getRequest(), targetObject, correlatedObject);
-    updateSkillsList(skillList);
+    addTelemetry(userId, actorMessage);
+    updateMasterSkillsList(newUserSkillsSet);
   }
 
   private void saveUserSkill(List<String> skillSet, String userId) {
-    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     for (String skillName : skillSet) {
       String id =
           OneWayHashing.encryptVal(
@@ -175,7 +173,7 @@ public class UserSkillManagementActor extends BaseActor {
           JsonKey.LAST_UPDATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
       userSkillMap.put(JsonKey.ENDORSEMENT_COUNT, 0);
       userSkillDao.add(userSkillMap);
-      updateEs(userId);
+      updateES(userId);
     }
   }
 
@@ -197,7 +195,7 @@ public class UserSkillManagementActor extends BaseActor {
   /** Method will return all the list of skills , it is type of reference data ... */
   private void getSkillsList() {
 
-    ProjectLogger.log("UserSkillManagementActor-getSkillsList called");
+    ProjectLogger.log("UserSkillManagementActor:getSkillsList called");
     Map<String, Object> skills = new HashMap<>();
     Response skilldbresponse =
         cassandraOperation.getRecordById(
@@ -220,7 +218,7 @@ public class UserSkillManagementActor extends BaseActor {
    */
   private void getSkill(Request actorMessage) {
 
-    ProjectLogger.log("UserSkillManagementActor-getSkill called");
+    ProjectLogger.log("UserSkillManagementActor:getSkill called");
     String endorsedUserId = (String) actorMessage.getRequest().get(JsonKey.ENDORSED_USER_ID);
     if (StringUtils.isBlank(endorsedUserId)) {
       throw new ProjectCommonException(
@@ -252,9 +250,9 @@ public class UserSkillManagementActor extends BaseActor {
    *
    * @param actorMessage
    */
-  private void endorseSkill(Request actorMessage) {
+  private void addOrEndorseSkill(Request actorMessage) {
 
-    ProjectLogger.log("UserSkillManagementActor-endorseSkill called");
+    ProjectLogger.log("UserSkillManagementActor:endorseSkill called");
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     // object of telemetry event...
     Map<String, Object> targetObject = null;
@@ -340,7 +338,7 @@ public class UserSkillManagementActor extends BaseActor {
           cassandraOperation.insertRecord(
               userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), skillMap);
 
-          updateEs(endoresedUserId);
+          updateES(endoresedUserId);
         } else {
           // skill already exist for user simply update the then check if it is already
           // added by
@@ -372,7 +370,7 @@ public class UserSkillManagementActor extends BaseActor {
             responseMap.put(JsonKey.ENDORSEMENT_COUNT, endoresementCount);
             cassandraOperation.updateRecord(
                 userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), responseMap);
-            updateEs(endoresedUserId);
+            updateES(endoresedUserId);
           }
         }
       } else {
@@ -384,66 +382,61 @@ public class UserSkillManagementActor extends BaseActor {
     response3.getResult().put(JsonKey.RESULT, "SUCCESS");
     sender().tell(response3, self());
 
-    targetObject =
-        TelemetryUtil.generateTargetObject(endoresedUserId, JsonKey.USER, JsonKey.UPDATE, null);
-    TelemetryUtil.generateCorrelatedObject(endoresedUserId, JsonKey.USER, null, correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(
-        actorMessage.getRequest(), targetObject, correlatedObject);
+    addTelemetry(endoresedUserId, actorMessage);
 
-    updateSkillsList(new ArrayList<>(skillset));
+    updateMasterSkillsList(new ArrayList<>(skillset));
   }
 
-  private void endorseUserSkill(Request request) {
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    Map<String, Object> targetObject;
+  private void addUserSkillEndorsement(Request request) {
+
     Skill skill = userSkillDao.read((String) request.getRequest().get("skillId"));
+    if (null == skill) {
+      return;
+    }
     String endorsersId = (String) request.getRequest().get(JsonKey.USER_ID);
     String endorsedId = (String) request.getRequest().get(JsonKey.ENDORSED_USER_ID);
     addEndorsement(skill, endorsedId, endorsersId);
-    targetObject =
-        TelemetryUtil.generateTargetObject(endorsersId, JsonKey.USER, JsonKey.UPDATE, null);
-    TelemetryUtil.generateCorrelatedObject(endorsersId, JsonKey.USER, null, correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(request.getRequest(), targetObject, correlatedObject);
+    addTelemetry(endorsersId, request);
   }
 
   private void addEndorsement(Skill skill, String endorsedId, String endorsersId) {
 
     List<HashMap<String, String>> endorsersList = skill.getEndorsersList();
     if (isNotNull(endorsersList)) {
-      skill.setEndorsementCount(1);
+      skill.setEndorsementCount(skill.getEndorsementCount() + 1);
     } else {
-      Integer endoresementCount = skill.getEndorsementCount() + 1;
-      skill.setEndorsementCount(endoresementCount);
+      skill.setEndorsementCount(1);
     }
-    addEndorsers(endorsersList, endorsersId, endorsedId);
+    updateEndorsersList(endorsersList, endorsersId, endorsedId);
 
     skill.setEndorsersList(endorsersList);
 
     userSkillDao.update(skill);
-    updateEs(endorsedId);
+    updateES(endorsedId);
     Response response = new Response();
     response.getResult().put(JsonKey.RESULT, "SUCCESS");
     sender().tell(response, self());
   }
 
-  private void addEndorsers(
+  private void updateEndorsersList(
       List<HashMap<String, String>> endorsersList, String endorsersId, String endorsedId) {
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     HashMap<String, String> endoresers = new HashMap<>();
-    if (endorsersList.isEmpty()) {
+    if (CollectionUtils.isEmpty(endorsersList)) {
+      endorsersList = new ArrayList<>();
       endoresers.put(JsonKey.USER_ID, endorsersId);
       endoresers.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
       endorsersList.add(endoresers);
-      //
+
     } else {
-      boolean flag = false;
+      boolean foundEndorser = false;
       for (Map<String, String> map : endorsersList) {
         if ((map.get(JsonKey.USER_ID)).equalsIgnoreCase(endorsersId)) {
-          flag = true;
+          foundEndorser = true;
           break;
         }
       }
-      if (flag) {
+      if (foundEndorser) {
         // donot do anything..
         ProjectLogger.log(endorsersId + " has already endorsed the " + endorsedId);
       } else {
@@ -455,7 +448,7 @@ public class UserSkillManagementActor extends BaseActor {
     }
   }
 
-  private void updateSkillsList(List<String> skillset) {
+  private void updateMasterSkillsList(List<String> skillset) {
 
     Map<String, Object> skills = new HashMap<>();
     List<String> skillsList = null;
@@ -487,7 +480,7 @@ public class UserSkillManagementActor extends BaseActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void updateEs(String userId) {
+  private void updateES(String userId) {
 
     // get all records from cassandra as list and add that list to user in
     // ElasticSearch ...
@@ -549,5 +542,13 @@ public class UserSkillManagementActor extends BaseActor {
       searchDTO.setFields(fields);
     }
     return searchDTO;
+  }
+
+  private void addTelemetry(String userId, Request request) {
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+    Map<String, Object> targetObject;
+    targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+    TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(request.getRequest(), targetObject, correlatedObject);
   }
 }

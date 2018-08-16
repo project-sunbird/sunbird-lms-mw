@@ -46,7 +46,8 @@ public class UserSkillDaoImpl implements UserSkillDao {
             userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), id);
     List<HashMap<String, Object>> responseList =
         (List<HashMap<String, Object>>) response.get(JsonKey.RESPONSE);
-    return objectMapper.convertValue(responseList.get(0), Skill.class);
+    if (responseList != null) return objectMapper.convertValue(responseList.get(0), Skill.class);
+    else return null;
   }
 
   @Override

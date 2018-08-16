@@ -7,14 +7,14 @@ import org.sunbird.models.user.skill.Skill;
 public interface UserSkillDao {
 
   /**
-   * This method will add skills for user ProjectCommonException.
+   * Add skills for user.
    *
    * @param userSkill map containing information about user skill
    */
   void add(Map<String, Object> userSkill);
 
   /**
-   * This method will delete skill for user ProjectCommonException.
+   * Delete skill for user.
    *
    * @param identifierList list of id which needs to be deleted
    * @return boolean
@@ -22,7 +22,7 @@ public interface UserSkillDao {
   boolean delete(List<String> identifierList);
 
   /**
-   * This method will read skill for user ProjectCommonException.
+   * Read skill for user.
    *
    * @param id skill id
    * @return skill
@@ -30,7 +30,7 @@ public interface UserSkillDao {
   Skill read(String id);
 
   /**
-   * This method will update skill for user ProjectCommonException.
+   * Update skill for user.
    *
    * @param skill skill which need to be updated
    * @return

@@ -37,7 +37,7 @@ import org.sunbird.telemetry.util.TelemetryUtil;
  * 18/10/17.
  */
 @ActorConfig(
-  tasks = {"addSkill", "getSkill", "getSkillsList", "updateSkill"},
+  tasks = {"addSkill", "getSkill", "getSkillsList", "updateSkill", "addUserSkillEndorsement"},
   asyncTasks = {}
 )
 public class UserSkillManagementActor extends BaseActor {
@@ -68,6 +68,9 @@ public class UserSkillManagementActor extends BaseActor {
         break;
       case "updateSkill":
         updateSkill(request);
+        break;
+      case "addUserSkillEndorsement":
+        endorseUserSkill(request);
         break;
       default:
         onReceiveUnsupportedOperation("UserSkillManagementActor");
@@ -101,25 +104,32 @@ public class UserSkillManagementActor extends BaseActor {
           objectMapper.convertValue(
               userMap.get(JsonKey.SKILLS), new TypeReference<List<Skill>>() {});
       HashSet<Skill> userSkillsSet = new HashSet<>(userSkills);
-      Iterator<String> skillListItr = skillList.iterator();
-      while (skillListItr.hasNext()) {
-        String skillName = skillListItr.next();
-        if (!StringUtils.isBlank(skillName)) {
+      List<Skill> commonList =
+          userSkillsSet
+              .stream()
+              .flatMap(
+                  skill ->
+                      skillList
+                          .stream()
+                          .filter(
+                              skillName -> {
+                                String id =
+                                    OneWayHashing.encryptVal(
+                                        userId
+                                            + JsonKey.PRIMARY_KEY_DELIMETER
+                                            + skillName.toLowerCase());
+                                return skill.getId().equals(id);
+                              })
+                          .map(skillName -> skill))
+              .collect(Collectors.toList());
 
-          // check whether user have already this skill or not -
-          String id =
-              OneWayHashing.encryptVal(
-                  userId + JsonKey.PRIMARY_KEY_DELIMETER + skillName.toLowerCase());
-          Iterator<Skill> itr = userSkillsSet.iterator();
-          while (itr.hasNext()) {
-            Skill skill = itr.next();
-            if (skill.getId().equalsIgnoreCase(id)) {
-              skillListItr.remove();
-              itr.remove();
+      commonList.forEach(
+          skill -> {
+            if (skillList.contains(skill.getSkillName())) {
+              skillList.remove(skill.getSkillName());
+              userSkillsSet.remove(skill);
             }
-          }
-        }
-      }
+          });
 
       if (CollectionUtils.isNotEmpty(skillList)) {
         saveUserSkill(skillList, userId);
@@ -170,8 +180,11 @@ public class UserSkillManagementActor extends BaseActor {
   }
 
   private Map<String, Object> findUserSkills(String userId) {
-    Map<String, Object> esDtoMap = new HashMap<>();
-    esDtoMap.put(JsonKey.USER_ID, userId);
+    HashMap<String, Object> esDtoMap = new HashMap<>();
+
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(JsonKey.USER_ID, userId);
+    esDtoMap.put(JsonKey.FILTERS, filters);
     List<String> fields = new ArrayList<>();
     fields.add(JsonKey.SKILLS);
     esDtoMap.put(JsonKey.FIELDS, fields);
@@ -378,6 +391,68 @@ public class UserSkillManagementActor extends BaseActor {
         actorMessage.getRequest(), targetObject, correlatedObject);
 
     updateSkillsList(new ArrayList<>(skillset));
+  }
+
+  private void endorseUserSkill(Request request) {
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+    Map<String, Object> targetObject;
+    Skill skill = userSkillDao.read((String) request.getRequest().get("skillId"));
+    String endorsersId = (String) request.getRequest().get(JsonKey.USER_ID);
+    String endorsedId = (String) request.getRequest().get(JsonKey.ENDORSED_USER_ID);
+    addEndorsement(skill, endorsedId, endorsersId);
+    targetObject =
+        TelemetryUtil.generateTargetObject(endorsersId, JsonKey.USER, JsonKey.UPDATE, null);
+    TelemetryUtil.generateCorrelatedObject(endorsersId, JsonKey.USER, null, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(request.getRequest(), targetObject, correlatedObject);
+  }
+
+  private void addEndorsement(Skill skill, String endorsedId, String endorsersId) {
+
+    List<HashMap<String, String>> endorsersList = skill.getEndorsersList();
+    if (isNotNull(endorsersList)) {
+      skill.setEndorsementCount(1);
+    } else {
+      Integer endoresementCount = skill.getEndorsementCount() + 1;
+      skill.setEndorsementCount(endoresementCount);
+    }
+    addEndorsers(endorsersList, endorsersId, endorsedId);
+
+    skill.setEndorsersList(endorsersList);
+
+    userSkillDao.update(skill);
+    updateEs(endorsedId);
+    Response response = new Response();
+    response.getResult().put(JsonKey.RESULT, "SUCCESS");
+    sender().tell(response, self());
+  }
+
+  private void addEndorsers(
+      List<HashMap<String, String>> endorsersList, String endorsersId, String endorsedId) {
+    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+    HashMap<String, String> endoresers = new HashMap<>();
+    if (endorsersList.isEmpty()) {
+      endoresers.put(JsonKey.USER_ID, endorsersId);
+      endoresers.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
+      endorsersList.add(endoresers);
+      //
+    } else {
+      boolean flag = false;
+      for (Map<String, String> map : endorsersList) {
+        if ((map.get(JsonKey.USER_ID)).equalsIgnoreCase(endorsersId)) {
+          flag = true;
+          break;
+        }
+      }
+      if (flag) {
+        // donot do anything..
+        ProjectLogger.log(endorsersId + " has already endorsed the " + endorsedId);
+      } else {
+
+        endoresers.put(JsonKey.USER_ID, endorsersId);
+        endoresers.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
+        endorsersList.add(endoresers);
+      }
+    }
   }
 
   private void updateSkillsList(List<String> skillset) {

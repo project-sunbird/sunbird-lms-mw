@@ -34,7 +34,7 @@ public class UserSkillDaoImpl implements UserSkillDao {
 
   @Override
   public boolean delete(List<String> idList) {
-    return cassandraOperation.deleteRecord(
+    return cassandraOperation.deleteRecords(
         userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), idList);
   }
 

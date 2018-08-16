@@ -426,12 +426,12 @@ public class UserSkillManagementActor extends BaseActor {
   private void updateEndorsersList(
       List<HashMap<String, String>> endorsersList, String endorsersId, String endorsedId) {
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-    HashMap<String, String> endoresers = new HashMap<>();
+    HashMap<String, String> endorsers = new HashMap<>();
     if (CollectionUtils.isEmpty(endorsersList)) {
       endorsersList = new ArrayList<>();
-      endoresers.put(JsonKey.USER_ID, endorsersId);
-      endoresers.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
-      endorsersList.add(endoresers);
+      endorsers.put(JsonKey.USER_ID, endorsersId);
+      endorsers.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
+      endorsersList.add(endorsers);
 
     } else {
       boolean foundEndorser = false;
@@ -446,9 +446,9 @@ public class UserSkillManagementActor extends BaseActor {
         ProjectLogger.log(endorsersId + " has already endorsed the " + endorsedId);
       } else {
 
-        endoresers.put(JsonKey.USER_ID, endorsersId);
-        endoresers.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
-        endorsersList.add(endoresers);
+        endorsers.put(JsonKey.USER_ID, endorsersId);
+        endorsers.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
+        endorsersList.add(endorsers);
       }
     }
   }

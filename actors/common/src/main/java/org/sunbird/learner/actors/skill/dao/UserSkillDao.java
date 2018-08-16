@@ -7,33 +7,32 @@ import org.sunbird.models.user.skill.Skill;
 public interface UserSkillDao {
 
   /**
-   * Add skills for user.
+   * Add user skills.
    *
-   * @param userSkill map containing information about user skill
+   * @param userSkill User skills information
    */
   void add(Map<String, Object> userSkill);
 
   /**
-   * Delete skill for user.
+   * Delete user skills.
    *
-   * @param identifierList list of id which needs to be deleted
-   * @return boolean
+   * @param identifierList List of identifiers for user skills to be deleted
+   * @return Status of delete skills operation
    */
   boolean delete(List<String> identifierList);
 
   /**
-   * Read skill for user.
+   * Get skill information.
    *
-   * @param id skill id
-   * @return skill
+   * @param id Skill identifier
+   * @return Skill information
    */
   Skill read(String id);
 
   /**
-   * Update skill for user.
+   * Update user skills.
    *
-   * @param skill skill which need to be updated
-   * @return
+   * @param skill Skill which needs to be updated
    */
   void update(Skill skill);
 }

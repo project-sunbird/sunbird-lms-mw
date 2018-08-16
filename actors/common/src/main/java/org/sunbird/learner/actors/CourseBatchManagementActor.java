@@ -474,11 +474,12 @@ public class CourseBatchManagementActor extends BaseActor {
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
 
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      ProjectLogger.log("method call going to satrt for ES--.....");
       Request request = new Request();
       request.setOperation(ActorOperations.INSERT_COURSE_BATCH_ES.getValue());
       request.getRequest().put(JsonKey.BATCH, req);
-      ProjectLogger.log("making a call to save Course Batch data to ES");
+      ProjectLogger.log(
+          "CourseBatchManagementActor:createCourseBatch making a call to save Course Batch data to ES.",
+          LoggerEnum.INFO.name());
       try {
         tellToAnother(request);
       } catch (Exception ex) {

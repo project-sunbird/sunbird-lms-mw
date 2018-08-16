@@ -388,10 +388,15 @@ public class UserSkillManagementActor extends BaseActor {
   }
 
   private void addUserSkillEndorsement(Request request) {
-
-    Skill skill = userSkillDao.read((String) request.getRequest().get("skillId"));
+    String skillId = (String) request.getRequest().get("skillId");
+    Skill skill = userSkillDao.read(skillId);
     if (null == skill) {
-      return;
+      throw new ProjectCommonException(
+          ResponseCode.invalidParameterValue.getErrorCode(),
+          ResponseCode.invalidParameterValue.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode(),
+          skillId,
+          "skillId");
     }
     String endorsersId = (String) request.getRequest().get(JsonKey.USER_ID);
     String endorsedId = (String) request.getRequest().get(JsonKey.ENDORSED_USER_ID);

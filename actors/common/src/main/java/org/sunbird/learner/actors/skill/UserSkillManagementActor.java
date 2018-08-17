@@ -422,7 +422,7 @@ public class UserSkillManagementActor extends BaseActor {
     updateEndorsersList(endorsersList, endorsersId, endorsedId);
 
     skill.setEndorsersList(endorsersList);
-
+    skill.setLastUpdatedOn(new Timestamp(Calendar.getInstance().getTime().getTime()));
     userSkillDao.update(skill);
     updateES(endorsedId);
     Response response = new Response();
@@ -450,7 +450,6 @@ public class UserSkillManagementActor extends BaseActor {
         // donot do anything..
         ProjectLogger.log(endorsersId + " has already endorsed the " + endorsedId);
       } else {
-
         endorsers.put(JsonKey.USER_ID, endorsersId);
         endorsers.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
         endorsersList.add(endorsers);

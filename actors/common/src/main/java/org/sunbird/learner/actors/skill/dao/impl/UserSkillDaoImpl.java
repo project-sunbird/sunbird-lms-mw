@@ -57,7 +57,8 @@ public class UserSkillDaoImpl implements UserSkillDao {
     ObjectMapper objectMapper = new ObjectMapper();
     TypeReference<HashMap<String, Object>> typeRef =
         new TypeReference<HashMap<String, Object>>() {};
-    HashMap<String, Object> map = objectMapper.convertValue(skill, typeRef);
+    HashMap<String, Object> map =
+        (HashMap<String, Object>) objectMapper.convertValue(skill, Map.class);
     cassandraOperation.updateRecord(
         userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), map);
   }

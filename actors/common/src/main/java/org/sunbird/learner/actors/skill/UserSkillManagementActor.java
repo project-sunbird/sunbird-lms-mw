@@ -83,8 +83,7 @@ public class UserSkillManagementActor extends BaseActor {
         actorMessage.getRequest(),
         LoggerEnum.DEBUG.name());
     String userId = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
-    List<String> newUserSkillsSet =
-        (List<String>) actorMessage.getRequest().get(JsonKey.SKILL_NAME);
+    List<String> newUserSkillsSet = (List<String>) actorMessage.getRequest().get(JsonKey.SKILLS);
 
     Map<String, Object> result = findUserSkills(userId);
     if (result.isEmpty() || ((List<Map<String, Object>>) result.get(JsonKey.CONTENT)).isEmpty()) {

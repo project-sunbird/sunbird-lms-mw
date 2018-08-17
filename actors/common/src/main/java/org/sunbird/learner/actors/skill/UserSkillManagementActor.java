@@ -401,8 +401,8 @@ public class UserSkillManagementActor extends BaseActor {
           ResponseCode.invalidParameterValue.getErrorCode(),
           ResponseCode.invalidParameterValue.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode(),
-          skillId,
-          "skillId");
+          skillName,
+          JsonKey.SKILL_NAME);
     }
     String endorsersId = (String) request.getRequest().get(JsonKey.USER_ID);
     String endorsedId = (String) request.getRequest().get(JsonKey.ENDORSED_USER_ID);

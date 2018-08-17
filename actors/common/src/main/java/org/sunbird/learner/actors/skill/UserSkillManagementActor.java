@@ -3,8 +3,8 @@ package org.sunbird.learner.actors.skill;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -96,10 +96,19 @@ public class UserSkillManagementActor extends BaseActor {
       userMap = searchedUserList.get(0);
 
       ObjectMapper objectMapper = new ObjectMapper();
-      List<Skill> userSkills =
-          objectMapper.convertValue(
-              userMap.get(JsonKey.SKILLS), new TypeReference<List<Skill>>() {});
-      HashSet<Skill> currentUserSkillsSet = new HashSet<>(userSkills);
+      objectMapper.configure(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS, false);
+      objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, true);
+      List<Map<String, Object>> userSkills =
+          objectMapper.convertValue(userMap.get(JsonKey.SKILLS), List.class);
+      List<Skill> skills =
+          userSkills
+              .stream()
+              .map(
+                  map -> {
+                    return objectMapper.convertValue(map, Skill.class);
+                  })
+              .collect(Collectors.toList());
+      HashSet<Skill> currentUserSkillsSet = new HashSet<>(skills);
       List<Skill> commonSkills =
           currentUserSkillsSet
               .stream()
@@ -323,8 +332,8 @@ public class UserSkillManagementActor extends BaseActor {
           skillMap.put(JsonKey.USER_ID, endoresedUserId);
           skillMap.put(JsonKey.SKILL_NAME, skillName);
           skillMap.put(JsonKey.SKILL_NAME_TO_LOWERCASE, skillName.toLowerCase());
-          skillMap.put(JsonKey.ADDED_BY, requestedByUserId);
-          skillMap.put(JsonKey.ADDED_AT, format.format(new Date()));
+          //          skillMap.put(JsonKey.ADDED_BY, requestedByUserId);
+          //          skillMap.put(JsonKey.ADDED_AT, format.format(new Date()));
           Map<String, String> endoresers = new HashMap<>();
 
           List<Map<String, String>> endorsersList = new ArrayList<>();
@@ -422,7 +431,7 @@ public class UserSkillManagementActor extends BaseActor {
     updateEndorsersList(endorsersList, endorsersId, endorsedId);
 
     skill.setEndorsersList(endorsersList);
-
+    skill.setLastUpdatedOn(new Timestamp(Calendar.getInstance().getTime().getTime()));
     userSkillDao.update(skill);
     updateES(endorsedId);
     Response response = new Response();
@@ -450,7 +459,6 @@ public class UserSkillManagementActor extends BaseActor {
         // donot do anything..
         ProjectLogger.log(endorsersId + " has already endorsed the " + endorsedId);
       } else {
-
         endorsers.put(JsonKey.USER_ID, endorsersId);
         endorsers.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
         endorsersList.add(endorsers);

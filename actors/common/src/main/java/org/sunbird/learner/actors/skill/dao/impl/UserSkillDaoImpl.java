@@ -1,7 +1,7 @@
 package org.sunbird.learner.actors.skill.dao.impl;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,9 +55,16 @@ public class UserSkillDaoImpl implements UserSkillDao {
   @Override
   public void update(Skill skill) {
     ObjectMapper objectMapper = new ObjectMapper();
-    TypeReference<HashMap<String, Object>> typeRef =
-        new TypeReference<HashMap<String, Object>>() {};
-    HashMap<String, Object> map = objectMapper.convertValue(skill, typeRef);
+    objectMapper.configure(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS, false);
+    objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, true);
+    HashMap<String, Object> map =
+        (HashMap<String, Object>) objectMapper.convertValue(skill, Map.class);
+    if (map.containsKey("createdOn")) {
+      map.remove("createdOn");
+    }
+    if (map.containsKey("lastUpdatedOn")) {
+      map.remove("lastUpdatedOn");
+    }
     cassandraOperation.updateRecord(
         userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), map);
   }

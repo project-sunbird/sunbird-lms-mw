@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
@@ -46,7 +47,8 @@ public class UserSkillDaoImpl implements UserSkillDao {
             userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), id);
     List<HashMap<String, Object>> responseList =
         (List<HashMap<String, Object>>) response.get(JsonKey.RESPONSE);
-    if (responseList != null) return objectMapper.convertValue(responseList.get(0), Skill.class);
+    if (CollectionUtils.isNotEmpty(responseList))
+      return objectMapper.convertValue(responseList.get(0), Skill.class);
     return null;
   }
 

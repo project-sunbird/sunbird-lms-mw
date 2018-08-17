@@ -413,9 +413,10 @@ public class UserSkillManagementActor extends BaseActor {
   private void addEndorsement(Skill skill, String endorsedId, String endorsersId) {
 
     List<HashMap<String, String>> endorsersList = skill.getEndorsersList();
-    if (isNotNull(endorsersList)) {
+    if (CollectionUtils.isNotEmpty(endorsersList)) {
       skill.setEndorsementCount(skill.getEndorsementCount() + 1);
     } else {
+      if (endorsersList == null) endorsersList = new ArrayList<>();
       skill.setEndorsementCount(1);
     }
     updateEndorsersList(endorsersList, endorsersId, endorsedId);
@@ -434,11 +435,9 @@ public class UserSkillManagementActor extends BaseActor {
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     HashMap<String, String> endorsers = new HashMap<>();
     if (CollectionUtils.isEmpty(endorsersList)) {
-      endorsersList = new ArrayList<>();
       endorsers.put(JsonKey.USER_ID, endorsersId);
       endorsers.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
       endorsersList.add(endorsers);
-
     } else {
       boolean foundEndorser = false;
       for (Map<String, String> map : endorsersList) {

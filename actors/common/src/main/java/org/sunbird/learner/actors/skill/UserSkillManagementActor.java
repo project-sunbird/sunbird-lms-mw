@@ -564,40 +564,33 @@ public class UserSkillManagementActor extends BaseActor {
   }
 
   private void validateUserRootOrg(String requestedUserId, String endorsedUserId) {
-    Response endorsedUserResponse =
-        cassandraOperation.getRecordById(
-            userDbInfo.getKeySpace(), userDbInfo.getTableName(), endorsedUserId);
-    Response requestedUserResponse =
-        cassandraOperation.getRecordById(
-            userDbInfo.getKeySpace(), userDbInfo.getTableName(), requestedUserId);
-    List<Map<String, Object>> endoresedList =
-        (List<Map<String, Object>>) endorsedUserResponse.get(JsonKey.RESPONSE);
-    List<Map<String, Object>> requestedUserList =
-        (List<Map<String, Object>>) requestedUserResponse.get(JsonKey.RESPONSE);
+    Map<String, Object> endorsedMap = getUser(endorsedUserId, JsonKey.ENDORSED_USER_ID);
+    Map<String, Object> requestedUserMap = getUser(requestedUserId, JsonKey.USER_ID);
 
-    // check whether both userid exist or not if not throw exception
-    if (endoresedList.isEmpty() || requestedUserList.isEmpty()) {
-      // generate context and params here ...
-      throw new ProjectCommonException(
-          ResponseCode.invalidUserId.getErrorCode(),
-          ResponseCode.invalidUserId.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
-
-    Map<String, Object> endoresedMap = endoresedList.get(0);
-    Map<String, Object> requestedUserMap = requestedUserList.get(0);
-
-    // check whether both belongs to same org or not(check root or id of both users)
-    // , if not then
-    // throw exception ---
     if (!compareStrings(
-        (String) endoresedMap.get(JsonKey.ROOT_ORG_ID),
+        (String) endorsedMap.get(JsonKey.ROOT_ORG_ID),
         (String) requestedUserMap.get(JsonKey.ROOT_ORG_ID))) {
-
       throw new ProjectCommonException(
           ResponseCode.canNotEndorse.getErrorCode(),
           ResponseCode.canNotEndorse.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
+  }
+
+  private Map<String, Object> getUser(String id, String parameter) {
+    Response response =
+        cassandraOperation.getRecordById(userDbInfo.getKeySpace(), userDbInfo.getTableName(), id);
+    List<Map<String, Object>> responseUserList =
+        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+
+    if (responseUserList.isEmpty()) {
+      throw new ProjectCommonException(
+          ResponseCode.invalidParameterValue.getErrorCode(),
+          ResponseCode.invalidParameterValue.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode(),
+          id,
+          parameter);
+    }
+    return responseUserList.get(0);
   }
 }

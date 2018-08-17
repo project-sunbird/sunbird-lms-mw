@@ -388,7 +388,14 @@ public class UserSkillManagementActor extends BaseActor {
   }
 
   private void addUserSkillEndorsement(Request request) {
-    String skillId = (String) request.getRequest().get("skillId");
+    String skillName = (String) request.getRequest().get(JsonKey.SKILL_NAME);
+    String endorsedUserId = (String) request.getRequest().get(JsonKey.ENDORSED_USER_ID);
+    String requestedUserId = (String) request.getRequest().get(JsonKey.USER_ID);
+    String skillId =
+        OneWayHashing.encryptVal(
+            endorsedUserId + JsonKey.PRIMARY_KEY_DELIMETER + skillName.toLowerCase());
+    validateUserRootOrg(requestedUserId, endorsedUserId);
+
     Skill skill = userSkillDao.read(skillId);
     if (null == skill) {
       throw new ProjectCommonException(
@@ -555,5 +562,43 @@ public class UserSkillManagementActor extends BaseActor {
     targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
     TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
     TelemetryUtil.telemetryProcessingCall(request.getRequest(), targetObject, correlatedObject);
+  }
+
+  private void validateUserRootOrg(String requestedUserId, String endorsedUserId) {
+    Response endorsedUserResponse =
+        cassandraOperation.getRecordById(
+            userDbInfo.getKeySpace(), userDbInfo.getTableName(), endorsedUserId);
+    Response requestedUserResponse =
+        cassandraOperation.getRecordById(
+            userDbInfo.getKeySpace(), userDbInfo.getTableName(), requestedUserId);
+    List<Map<String, Object>> endoresedList =
+        (List<Map<String, Object>>) endorsedUserResponse.get(JsonKey.RESPONSE);
+    List<Map<String, Object>> requestedUserList =
+        (List<Map<String, Object>>) requestedUserResponse.get(JsonKey.RESPONSE);
+
+    // check whether both userid exist or not if not throw exception
+    if (endoresedList.isEmpty() || requestedUserList.isEmpty()) {
+      // generate context and params here ...
+      throw new ProjectCommonException(
+          ResponseCode.invalidUserId.getErrorCode(),
+          ResponseCode.invalidUserId.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+
+    Map<String, Object> endoresedMap = endoresedList.get(0);
+    Map<String, Object> requestedUserMap = requestedUserList.get(0);
+
+    // check whether both belongs to same org or not(check root or id of both users)
+    // , if not then
+    // throw exception ---
+    if (!compareStrings(
+        (String) endoresedMap.get(JsonKey.ROOT_ORG_ID),
+        (String) requestedUserMap.get(JsonKey.ROOT_ORG_ID))) {
+
+      throw new ProjectCommonException(
+          ResponseCode.canNotEndorse.getErrorCode(),
+          ResponseCode.canNotEndorse.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
   }
 }

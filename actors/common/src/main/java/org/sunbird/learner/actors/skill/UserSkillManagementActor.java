@@ -422,16 +422,8 @@ public class UserSkillManagementActor extends BaseActor {
   private void addEndorsement(Skill skill, String endorsedId, String endorsersId) {
 
     List<HashMap<String, String>> endorsersList = skill.getEndorsersList();
-    if (CollectionUtils.isNotEmpty(endorsersList)) {
-      skill.setEndorsementCount(skill.getEndorsementCount() + 1);
-    } else {
-      if (endorsersList == null) endorsersList = new ArrayList<>();
-      skill.setEndorsementCount(1);
-    }
-    updateEndorsersList(endorsersList, endorsersId, endorsedId);
+    skill = updateEndorsersList(skill, endorsersList, endorsersId, endorsedId);
 
-    skill.setEndorsersList(endorsersList);
-    skill.setLastUpdatedOn(new Timestamp(Calendar.getInstance().getTime().getTime()));
     userSkillDao.update(skill);
     updateES(endorsedId);
     Response response = new Response();
@@ -439,13 +431,17 @@ public class UserSkillManagementActor extends BaseActor {
     sender().tell(response, self());
   }
 
-  private void updateEndorsersList(
-      List<HashMap<String, String>> endorsersList, String endorsersId, String endorsedId) {
+  private Skill updateEndorsersList(
+      Skill skill,
+      List<HashMap<String, String>> endorsersList,
+      String endorsersId,
+      String endorsedId) {
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     HashMap<String, String> endorsers = new HashMap<>();
     if (CollectionUtils.isEmpty(endorsersList)) {
       endorsers.put(JsonKey.USER_ID, endorsersId);
       endorsers.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
+      skill.setEndorsementCount(1);
       endorsersList.add(endorsers);
     } else {
       boolean foundEndorser = false;
@@ -461,9 +457,12 @@ public class UserSkillManagementActor extends BaseActor {
       } else {
         endorsers.put(JsonKey.USER_ID, endorsersId);
         endorsers.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
+        skill.setEndorsementCount(skill.getEndorsementCount() + 1);
         endorsersList.add(endorsers);
       }
     }
+    skill.setEndorsersList(endorsersList);
+    return skill;
   }
 
   private void updateMasterSkillsList(List<String> skillset) {

@@ -270,8 +270,11 @@ public class UserSkillManagementActor extends BaseActor {
 
     List<String> list = (List<String>) actorMessage.getRequest().get(JsonKey.SKILL_NAME);
     CopyOnWriteArraySet<String> skillset = new CopyOnWriteArraySet<>(list);
-    String requestedByUserId = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
-
+    String requestedByUserId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
+    ProjectLogger.log(
+        "UserSkillManagementActor:endorseSkill: context userId "
+            + actorMessage.getContext().get(JsonKey.REQUESTED_BY),
+        LoggerEnum.INFO.name());
     Response response1 =
         cassandraOperation.getRecordById(
             userDbInfo.getKeySpace(), userDbInfo.getTableName(), endoresedUserId);

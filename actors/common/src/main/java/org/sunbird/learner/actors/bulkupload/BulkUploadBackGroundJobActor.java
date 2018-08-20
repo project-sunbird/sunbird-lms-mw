@@ -812,7 +812,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       }
 
       if (null != isRootOrgFlag && isRootOrgFlag) {
-        boolean bool = true; // Util.registerChannel(concurrentHashMap);
+        boolean bool = Util.registerChannel(concurrentHashMap);
         if (!bool) {
           ProjectLogger.log("channel registration failed.");
           concurrentHashMap.put(JsonKey.ERROR_MSG, "channel registration failed.");

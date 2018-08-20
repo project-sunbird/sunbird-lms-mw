@@ -61,10 +61,10 @@ public class UserSkillDaoImpl implements UserSkillDao {
     ObjectMapper objectMapper = new ObjectMapper();
     HashMap<String, Object> map =
         (HashMap<String, Object>) objectMapper.convertValue(skill, Map.class);
-    if (map.containsKey("createdOn")) {
-      map.remove("createdOn");
+    if (map.containsKey(JsonKey.CREATED_ON)) {
+      map.remove(JsonKey.CREATED_ON);
     }
-    map.put("lastUpdatedOn", new Timestamp(Calendar.getInstance().getTime().getTime()));
+    map.put(JsonKey.LAST_UPDATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
     cassandraOperation.updateRecord(
         userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), map);
   }

@@ -282,7 +282,7 @@ public class UserSkillManagementActor extends BaseActor {
     CopyOnWriteArraySet<String> skillset = new CopyOnWriteArraySet<>(list);
     String requestedByUserId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
     if (StringUtils.isBlank(requestedByUserId)) {
-      requestedByUserId = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
+      requestedByUserId = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
     }
     ProjectLogger.log(
         "UserSkillManagementActor:endorseSkill: context userId "

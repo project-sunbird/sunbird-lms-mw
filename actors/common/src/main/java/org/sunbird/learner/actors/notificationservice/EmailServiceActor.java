@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.WeakHashMap;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -28,6 +27,8 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.notificationservice.dao.EmailTemplateDao;
+import org.sunbird.learner.actors.notificationservice.dao.impl.EmailTemplateDaoImpl;
 import org.sunbird.learner.util.Util;
 
 @ActorConfig(
@@ -43,6 +44,7 @@ public class EmailServiceActor extends BaseActor {
   private EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
           null);
+  private static final String TEMPLATE = "template";
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -139,27 +141,25 @@ public class EmailServiceActor extends BaseActor {
   }
 
   private String getEmailTemplateFile(String templateName) {
-    Map<String, Object> queryMap = new WeakHashMap<>();
-    queryMap.put(JsonKey.NAME, templateName);
-    Response response = cassandraOperation.getRecordById("sunbird", "email_template", queryMap);
+    EmailTemplateDao emailTemplateDao = EmailTemplateDaoImpl.getInstance();
+    Response response = emailTemplateDao.read(templateName);
     List<Map<String, Object>> respMapList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     Map<String, Object> map = respMapList.get(0);
-    String fileContent = (String) map.get("template");
+    String fileContent = (String) map.get(TEMPLATE);
     return fileContent;
   }
 
   private List<Map<String, Object>> getUserList(List<String> userIds) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Map<String, Object> propertyMap = new WeakHashMap<String, Object>();
-    propertyMap.put(JsonKey.ID, new ArrayList<>(userIds));
+    List<String> userIdList = new ArrayList<>(userIds);
     List<String> fields = new ArrayList<>();
     fields.add(JsonKey.ID);
     fields.add(JsonKey.FIRST_NAME);
     fields.add(JsonKey.EMAIL);
     Response response =
-        cassandraOperation.getRecordsByProperties(
-            usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), propertyMap, fields);
+        cassandraOperation.getPropertiesValueByIds(
+            usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), fields, userIdList);
     List<Map<String, Object>> respMapList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     return respMapList;

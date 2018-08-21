@@ -7,7 +7,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
@@ -18,8 +24,12 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -271,7 +281,9 @@ public class UserSkillManagementActor extends BaseActor {
     List<String> list = (List<String>) actorMessage.getRequest().get(JsonKey.SKILL_NAME);
     CopyOnWriteArraySet<String> skillset = new CopyOnWriteArraySet<>(list);
     String requestedByUserId = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
-
+    if (StringUtils.isBlank(requestedByUserId)) {
+      requestedByUserId = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
+    }
     Response response1 =
         cassandraOperation.getRecordById(
             userDbInfo.getKeySpace(), userDbInfo.getTableName(), endoresedUserId);
@@ -359,7 +371,7 @@ public class UserSkillManagementActor extends BaseActor {
               (List<Map<String, String>>) responseMap.get(JsonKey.ENDORSERS_LIST);
           boolean flag = false;
           for (Map<String, String> map : endoresersList) {
-            if (((String) map.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedByUserId)) {
+            if (map.get(JsonKey.USER_ID).equalsIgnoreCase(requestedByUserId)) {
               flag = true;
               break;
             }

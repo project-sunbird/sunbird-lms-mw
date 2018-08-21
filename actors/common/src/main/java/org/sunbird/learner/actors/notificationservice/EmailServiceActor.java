@@ -69,40 +69,36 @@ public class EmailServiceActor extends BaseActor {
     if (CollectionUtils.isEmpty(userIds)) {
       userIds = new ArrayList<>();
     }
-    // fetch user email from cassandra and if email is marked as private then get user id and fetch
-    // from cassandra
-    // get user from recepient search query
-    getUserEmails(request, emails, userIds);
+    
+    // Fetch public user emails from Elastic Search based on recipient search query given in request.
+    getUserEmailsFromSearchQuery(request, emails, userIds);
+    
+    validateUserIds(userIds);
+    
     String name = "";
+    // Fetch private (masked in Elastic Search) user emails from Cassandra DB
     if (CollectionUtils.isNotEmpty(userIds)) {
-      // get user details from cassandra
-      List<Map<String, Object>> userList = getUserList(userIds);
+      List<Map<String, Object>> userList = getUsersFromDB(userIds);
       // if requested userId list and cassandra user list size not same , means requested userId
       // list
       // contains some invalid userId
       if (userIds.size() != userList.size()) {
-        userList.forEach(
-            user -> {
-              tempUserIdList.add((String) user.get(JsonKey.ID));
-            });
-        userIds.forEach(
-            userId -> {
-              if (!tempUserIdList.contains(userId)) {
+        userList.stream().map(user -> user.get(JsonKey.ID)).forEach(userIdFromDB -> {
+          if (!userIds.contains(userIdFromDB)) {
                 ProjectCommonException.throwClientErrorException(
                     ResponseCode.invalidValue, "Invalid userId " + userId);
                 return;
               }
-            });
+        });
       } else {
-        for (Map<String, Object> map : userList) {
-          String email = (String) map.get(JsonKey.EMAIL);
+        for (Map<String, Object> userMap : userList) {
+          String email = (String) userMap.get(JsonKey.EMAIL);
           if (StringUtils.isNotBlank(email)) {
             String decryptedEmail = decryptionService.decryptData(email);
             emails.add(decryptedEmail);
           }
         }
       }
-      // This name will be used only in case of sending email to single person.
       name = (String) userList.get(0).get(JsonKey.FIRST_NAME);
     }
 
@@ -115,6 +111,8 @@ public class EmailServiceActor extends BaseActor {
     }
 
     // fetch orgname inorder to set in the Template context
+    String orgName = getOrgName(request, userId);
+
     String orgName = (String) request.get(JsonKey.ORG_NAME);
     if (null == orgName && !tempUserIdList.isEmpty()) {
       String usrId = tempUserIdList.get(0);
@@ -133,7 +131,7 @@ public class EmailServiceActor extends BaseActor {
           getEmailTemplateFile((String) request.get(JsonKey.EMAIL_TEMPLATE_TYPE)));
     } catch (Exception e) {
       resMsg = JsonKey.FAILURE;
-      ProjectLogger.log("EmailServiceActor:sendMail: " + e.getMessage(), e);
+      ProjectLogger.log("EmailServiceActor:sendMail: Exception occurred with message = " + e.getMessage(), e);
     }
     Response res = new Response();
     res.put(JsonKey.RESPONSE, resMsg);
@@ -150,7 +148,7 @@ public class EmailServiceActor extends BaseActor {
     return fileContent;
   }
 
-  private List<Map<String, Object>> getUserList(List<String> userIds) {
+  private List<Map<String, Object>> getUsersFromDB(List<String> userIds) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     List<String> userIdList = new ArrayList<>(userIds);
     List<String> fields = new ArrayList<>();
@@ -158,23 +156,21 @@ public class EmailServiceActor extends BaseActor {
     fields.add(JsonKey.FIRST_NAME);
     fields.add(JsonKey.EMAIL);
     Response response =
-        cassandraOperation.getPropertiesValueByIds(
+        cassandraOperation.getRecordsByIdsWithSpecifiedColumns(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), fields, userIdList);
-    List<Map<String, Object>> respMapList =
+    List<Map<String, Object>> userList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    return respMapList;
+    return userList;
   }
 
-  private void getUserEmails(
+  private void getUserEmailsFromSearchQuery(
       Map<String, Object> request, List<String> emails, List<String> userIds) {
-    // get userId and email from search query
     Map<String, Object> recipientSearchQuery =
         (Map<String, Object>) request.get(JsonKey.RECIPIENT_SEARCH_QUERY);
     if (MapUtils.isNotEmpty(recipientSearchQuery)) {
       List<String> fields = new ArrayList<>();
       fields.add(JsonKey.USER_ID);
       fields.add(JsonKey.ENC_EMAIL);
-      fields.add(JsonKey.FIRST_NAME);
       recipientSearchQuery.put(JsonKey.FIELDS, fields);
       Map<String, Object> esResult =
           ElasticSearchUtil.complexSearch(
@@ -183,9 +179,9 @@ public class EmailServiceActor extends BaseActor {
               EsType.user.getTypeName());
       if (MapUtils.isNotEmpty(esResult)
           && CollectionUtils.isNotEmpty((List) esResult.get(JsonKey.CONTENT))) {
-        List<Map<String, Object>> esUserEmailList =
+        List<Map<String, Object>> usersList =
             (List<Map<String, Object>>) esResult.get(JsonKey.CONTENT);
-        esUserEmailList.forEach(
+        usersList.forEach(
             user -> {
               if (StringUtils.isNotBlank((String) user.get(JsonKey.ENC_EMAIL))) {
                 String email = decryptionService.decryptData((String) user.get(JsonKey.ENC_EMAIL));
@@ -193,11 +189,11 @@ public class EmailServiceActor extends BaseActor {
                   emails.add(email);
                 } else {
                   ProjectLogger.log(
-                      "EmailServiceActor:sendMail : Email decryption failed for userId "
+                      "EmailServiceActor:sendMail: Email decryption failed for userId = "
                           + user.get(JsonKey.USER_ID));
                 }
               } else {
-                // if email is blank(or private) then fetch email from cassandra
+                // If email is blank (or private) then fetch email from cassandra
                 userIds.add((String) user.get(JsonKey.USER_ID));
               }
             });

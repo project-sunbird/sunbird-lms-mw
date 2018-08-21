@@ -124,11 +124,10 @@ public class EmailServiceActor extends BaseActor {
     }
     String resMsg = JsonKey.SUCCESS;
     try {
-      SendMail.sendMail(
+      SendMail.sendMailWithBody(
           emails.toArray(new String[emails.size()]),
           (String) request.get(JsonKey.SUBJECT),
           ProjectUtil.getContext(request),
-          (String) request.get(JsonKey.EMAIL_TEMPLATE_TYPE),
           getEmailTemplateFile((String) request.get(JsonKey.EMAIL_TEMPLATE_TYPE)));
     } catch (Exception e) {
       resMsg = JsonKey.FAILURE;

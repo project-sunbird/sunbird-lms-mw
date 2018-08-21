@@ -5,10 +5,10 @@ import org.sunbird.common.models.response.Response;
 public interface EmailTemplateDao {
 
   /**
-   * Get email template information.
+   * Get email template information for given name.
    *
-   * @param templateName email template identifier
-   * @return email template body
+   * @param templateName Email template name
+   * @return Response containing email template information
    */
   Response read(String templateName);
 }

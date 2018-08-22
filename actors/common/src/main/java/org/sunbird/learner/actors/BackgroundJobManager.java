@@ -2,9 +2,6 @@ package org.sunbird.learner.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.*;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -14,7 +11,6 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
@@ -283,16 +279,6 @@ public class BackgroundJobManager extends BaseActor {
   @SuppressWarnings("unchecked")
   private void updateCourseBatchInfoToEs(Request actorMessage) {
     Map<String, Object> batch = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
-    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-    try {
-      Date todaydate = format.parse(format.format(new Date()));
-      Date startDate = format.parse((String) batch.get(JsonKey.START_DATE));
-      if (todaydate.equals(startDate)) {
-        CourseBatchSchedulerUtil.updateCourseBatchDbStatus(batch, true);
-      }
-    } catch (ParseException e) {
-      e.printStackTrace();
-    }
     updateDataToElastic(
         ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.course.getTypeName(),

@@ -62,6 +62,8 @@ public class EmailServiceActor extends BaseActor {
     List<String> emails = (List<String>) request.get(JsonKey.RECIPIENT_EMAILS);
     if (CollectionUtils.isNotEmpty(emails)) {
       checkEmailValidity(emails);
+    } else {
+      emails = new ArrayList<>();
     }
 
     List<String> userIds = (List<String>) request.get(JsonKey.RECIPIENT_USERIDS);

@@ -364,7 +364,7 @@ public class UserSkillManagementActor extends BaseActor {
           try {
             String responseObj = (String) objectMapper.writeValueAsString(skillMap);
             ProjectLogger.log(
-                "UserSkillManagementActor:endorseSkill: context responseMap" + responseObj,
+                "UserSkillManagementActor:endorseSkill: responseMap while insert" + responseObj,
                 LoggerEnum.INFO.name());
 
           } catch (JsonProcessingException e) {
@@ -410,7 +410,7 @@ public class UserSkillManagementActor extends BaseActor {
             try {
               String responseObj = (String) objectMapper.writeValueAsString(responseMap);
               ProjectLogger.log(
-                  "UserSkillManagementActor:endorseSkill: context responseMap" + responseObj,
+                  "UserSkillManagementActor:endorseSkill:  responseMap while update" + responseObj,
                   LoggerEnum.INFO.name());
 
             } catch (JsonProcessingException e) {

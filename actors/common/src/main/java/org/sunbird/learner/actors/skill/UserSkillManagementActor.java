@@ -347,6 +347,10 @@ public class UserSkillManagementActor extends BaseActor {
           Map<String, Object> skillMap = new HashMap<>();
           skillMap.put(JsonKey.ID, id);
           skillMap.put(JsonKey.USER_ID, endoresedUserId);
+          ProjectLogger.log(
+                  "UserSkillManagementActor:endorseSkill: context endoresedUserId "
+                          + endoresedUserId,
+                  LoggerEnum.INFO.name());
           skillMap.put(JsonKey.SKILL_NAME, skillName);
           skillMap.put(JsonKey.SKILL_NAME_TO_LOWERCASE, skillName.toLowerCase());
           //          skillMap.put(JsonKey.ADDED_BY, requestedByUserId);

@@ -86,8 +86,6 @@ public class EmailServiceActor extends BaseActor {
       name = "All";
     } else if (emails.size() == 1) {
       name = StringUtils.capitalize((String) user.get(JsonKey.FIRST_NAME));
-    } else {
-      name = "";
     }
 
     // fetch orgname inorder to set in the Template context
@@ -121,17 +119,21 @@ public class EmailServiceActor extends BaseActor {
       // if requested userId list and cassandra user list size not same , means requested userId
       // list
       // contains some invalid userId
-      List<String> tempUserIdList = new ArrayList<>();
+      List<String> userIdFromDBList = new ArrayList<>();
       if (userIds.size() != userList.size()) {
         userList.forEach(
             user -> {
-              tempUserIdList.add((String) user.get(JsonKey.ID));
+              userIdFromDBList.add((String) user.get(JsonKey.ID));
             });
         userIds.forEach(
             userId -> {
-              if (!tempUserIdList.contains(userId)) {
+              if (!userIdFromDBList.contains(userId)) {
                 ProjectCommonException.throwClientErrorException(
-                    ResponseCode.invalidValue, "Invalid userId " + userId);
+                    ResponseCode.invalidParameterValue,
+                    MessageFormat.format(
+                        ResponseCode.invalidParameterValue.getErrorMessage(),
+                        userId,
+                        JsonKey.RECIPIENT_USERIDS));
                 return;
               }
             });
@@ -258,7 +260,9 @@ public class EmailServiceActor extends BaseActor {
         ProjectCommonException.throwClientErrorException(
             ResponseCode.invalidParameterValue,
             MessageFormat.format(
-                ResponseCode.invalidParameterValue.getErrorMessage(), email, JsonKey.EMAIL));
+                ResponseCode.invalidParameterValue.getErrorMessage(),
+                email,
+                JsonKey.RECIPIENT_EMAILS));
         return;
       }
     }

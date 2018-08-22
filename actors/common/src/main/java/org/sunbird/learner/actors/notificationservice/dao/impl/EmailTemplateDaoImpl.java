@@ -28,20 +28,18 @@ public class EmailTemplateDaoImpl implements EmailTemplateDao {
 
   @Override
   public String getOrDefault(String templateName) {
-    List<Object> idList = new ArrayList<>();
+    List<String> idList = new ArrayList<>();
     idList.add(templateName);
     idList.add(DEFAULT_EMAIL_TEMPLATE_NAME);
-    Response response =
-        cassandraOperation.getRecordsByProperty(
-            JsonKey.SUNBIRD, EMAIL_TEMPLATE, JsonKey.NAME, idList, null);
-    List<Map<String, Object>> respMapList =
+    Response response = cassandraOperation.getRecordsByIds(JsonKey.SUNBIRD, EMAIL_TEMPLATE, idList);
+    List<Map<String, Object>> emailTemplateList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     Map<String, Object> map = null;
-    if (CollectionUtils.isNotEmpty(respMapList) && respMapList.size() == 1) {
-      map = respMapList.get(0);
+    if (CollectionUtils.isNotEmpty(emailTemplateList) && emailTemplateList.size() == 1) {
+      map = emailTemplateList.get(0);
     } else {
-      Optional<Map<String, Object>> userMap =
-          respMapList
+      Optional<Map<String, Object>> emailTemplateMap =
+          emailTemplateList
               .stream()
               .filter(
                   emailTemplate -> {
@@ -51,13 +49,12 @@ public class EmailTemplateDaoImpl implements EmailTemplateDao {
                     return false;
                   })
               .findFirst();
-      if (userMap.isPresent()) {
-        map = userMap.get();
+      if (emailTemplateMap.isPresent()) {
+        map = emailTemplateMap.get();
       } else {
-        map = respMapList.get(0);
+        map = emailTemplateList.get(0);
       }
     }
-    String fileContent = (String) map.get(TEMPLATE);
-    return fileContent;
+    return (String) map.get(TEMPLATE);
   }
 }

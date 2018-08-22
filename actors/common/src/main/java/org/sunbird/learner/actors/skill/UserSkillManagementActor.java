@@ -289,6 +289,10 @@ public class UserSkillManagementActor extends BaseActor {
         "UserSkillManagementActor:endorseSkill: context userId "
             + actorMessage.getContext().get(JsonKey.REQUESTED_BY),
         LoggerEnum.INFO.name());
+
+    ProjectLogger.log(
+        "UserSkillManagementActor:endorseSkill: context endorsedUserId " + endoresedUserId,
+        LoggerEnum.INFO.name());
     Response response1 =
         cassandraOperation.getRecordById(
             userDbInfo.getKeySpace(), userDbInfo.getTableName(), endoresedUserId);
@@ -303,6 +307,9 @@ public class UserSkillManagementActor extends BaseActor {
     // check whether both userid exist or not if not throw exception
     if (endoresedList.isEmpty() || requestedUserList.isEmpty()) {
       // generate context and params here ...
+
+      ProjectLogger.log(
+          "UserSkillManagementActor:endorseSkill: context Valid User", LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.invalidUserId.getErrorCode(),
           ResponseCode.invalidUserId.getErrorMessage(),
@@ -318,7 +325,8 @@ public class UserSkillManagementActor extends BaseActor {
     if (!compareStrings(
         (String) endoresedMap.get(JsonKey.ROOT_ORG_ID),
         (String) requestedUserMap.get(JsonKey.ROOT_ORG_ID))) {
-
+      ProjectLogger.log(
+          "UserSkillManagementActor:endorseSkill: context rootOrg", LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.canNotEndorse.getErrorCode(),
           ResponseCode.canNotEndorse.getErrorMessage(),
@@ -347,11 +355,10 @@ public class UserSkillManagementActor extends BaseActor {
           Map<String, Object> skillMap = new HashMap<>();
           skillMap.put(JsonKey.ID, id);
           skillMap.put(JsonKey.USER_ID, endoresedUserId);
-          ProjectLogger.log(
-                  "UserSkillManagementActor:endorseSkill: context endoresedUserId "
-                          + endoresedUserId,
-                  LoggerEnum.INFO.name());
           skillMap.put(JsonKey.SKILL_NAME, skillName);
+          ProjectLogger.log(
+              "UserSkillManagementActor:endorseSkill: context skillName " + skillName,
+              LoggerEnum.INFO.name());
           skillMap.put(JsonKey.SKILL_NAME_TO_LOWERCASE, skillName.toLowerCase());
           //          skillMap.put(JsonKey.ADDED_BY, requestedByUserId);
           //          skillMap.put(JsonKey.ADDED_AT, format.format(new Date()));
@@ -372,7 +379,7 @@ public class UserSkillManagementActor extends BaseActor {
                 LoggerEnum.INFO.name());
 
           } catch (JsonProcessingException e) {
-            ProjectLogger.log("Exception", e);
+            ProjectLogger.log("Exception while converting", LoggerEnum.INFO);
           }
           cassandraOperation.insertRecord(
               userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), skillMap);
@@ -399,9 +406,17 @@ public class UserSkillManagementActor extends BaseActor {
             // donot do anything..
             ProjectLogger.log(requestedByUserId + " has already endorsed the " + endoresedUserId);
           } else {
+            ProjectLogger.log(
+                "UserSkillManagementActor:endorseSkill: context skillName " + skillName,
+                LoggerEnum.INFO.name());
             Integer endoresementCount = (Integer) responseMap.get(JsonKey.ENDORSEMENT_COUNT) + 1;
             Map<String, String> endorsersMap = new HashMap<>();
             endorsersMap.put(JsonKey.USER_ID, requestedByUserId);
+
+            ProjectLogger.log(
+                "UserSkillManagementActor:endorseSkill: context requestedByUserId "
+                    + requestedByUserId,
+                LoggerEnum.INFO.name());
             endorsersMap.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
             endoresersList.add(endorsersMap);
 
@@ -418,7 +433,7 @@ public class UserSkillManagementActor extends BaseActor {
                   LoggerEnum.INFO.name());
 
             } catch (JsonProcessingException e) {
-              ProjectLogger.log("Exception", e);
+              ProjectLogger.log("Exception while converting", LoggerEnum.INFO);
             }
 
             cassandraOperation.updateRecord(

@@ -678,7 +678,7 @@ public class CourseBatchManagementActor extends BaseActor {
       Map<String, String> rollUp = new HashMap<>();
       rollUp.put("l1", (String) res.get(JsonKey.COURSE_ID));
       TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
-
+      
       if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
         ProjectLogger.log("method call going to satrt for ES--.....");
         Request request = new Request();

@@ -3,6 +3,7 @@ package org.sunbird.learner.actors.skill;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import java.sql.Timestamp;
@@ -359,6 +360,16 @@ public class UserSkillManagementActor extends BaseActor {
 
           skillMap.put(JsonKey.ENDORSERS_LIST, endorsersList);
           skillMap.put(JsonKey.ENDORSEMENT_COUNT, 0);
+          ObjectMapper objectMapper = new ObjectMapper();
+          try {
+            String responseObj = (String) objectMapper.writeValueAsString(skillMap);
+            ProjectLogger.log(
+                "UserSkillManagementActor:endorseSkill: context responseMap" + responseObj,
+                LoggerEnum.INFO.name());
+
+          } catch (JsonProcessingException e) {
+            ProjectLogger.log("Exception", e);
+          }
           cassandraOperation.insertRecord(
               userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), skillMap);
 
@@ -392,6 +403,20 @@ public class UserSkillManagementActor extends BaseActor {
 
             responseMap.put(JsonKey.ENDORSERS_LIST, endoresersList);
             responseMap.put(JsonKey.ENDORSEMENT_COUNT, endoresementCount);
+            /*
+             *Logs
+             * */
+            ObjectMapper objectMapper = new ObjectMapper();
+            try {
+              String responseObj = (String) objectMapper.writeValueAsString(responseMap);
+              ProjectLogger.log(
+                  "UserSkillManagementActor:endorseSkill: context responseMap" + responseObj,
+                  LoggerEnum.INFO.name());
+
+            } catch (JsonProcessingException e) {
+              ProjectLogger.log("Exception", e);
+            }
+
             cassandraOperation.updateRecord(
                 userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), responseMap);
             updateES(endoresedUserId);

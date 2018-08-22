@@ -1,10 +1,11 @@
 package org.sunbird.learner.actors.notificationservice;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
@@ -44,7 +45,6 @@ public class EmailServiceActor extends BaseActor {
   private EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
           null);
-  private static final String TEMPLATE = "template";
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -64,60 +64,33 @@ public class EmailServiceActor extends BaseActor {
       checkEmailValidity(emails);
     }
 
-    List<String> tempUserIdList = new ArrayList<>();
     List<String> userIds = (List<String>) request.get(JsonKey.RECIPIENT_USERIDS);
     if (CollectionUtils.isEmpty(userIds)) {
       userIds = new ArrayList<>();
     }
-    
-    // Fetch public user emails from Elastic Search based on recipient search query given in request.
+    // Fetch public user emails from Elastic Search based on recipient search query given in
+    // request.
     getUserEmailsFromSearchQuery(request, emails, userIds);
-    
-    validateUserIds(userIds);
-    
-    String name = "";
-    // Fetch private (masked in Elastic Search) user emails from Cassandra DB
-    if (CollectionUtils.isNotEmpty(userIds)) {
-      List<Map<String, Object>> userList = getUsersFromDB(userIds);
-      // if requested userId list and cassandra user list size not same , means requested userId
-      // list
-      // contains some invalid userId
-      if (userIds.size() != userList.size()) {
-        userList.stream().map(user -> user.get(JsonKey.ID)).forEach(userIdFromDB -> {
-          if (!userIds.contains(userIdFromDB)) {
-                ProjectCommonException.throwClientErrorException(
-                    ResponseCode.invalidValue, "Invalid userId " + userId);
-                return;
-              }
-        });
-      } else {
-        for (Map<String, Object> userMap : userList) {
-          String email = (String) userMap.get(JsonKey.EMAIL);
-          if (StringUtils.isNotBlank(email)) {
-            String decryptedEmail = decryptionService.decryptData(email);
-            emails.add(decryptedEmail);
-          }
-        }
-      }
-      name = (String) userList.get(0).get(JsonKey.FIRST_NAME);
+
+    validateUserIds(userIds, emails);
+
+    Map<String, Object> user = null;
+    if (CollectionUtils.isNotEmpty(emails)) {
+      user = getUserInfo(emails.get(0));
     }
 
+    String name = "";
     if (emails.size() > 1) {
       name = "All";
-    } else if (StringUtils.isBlank(name)) {
-      name = "";
+    } else if (emails.size() == 1) {
+      name = StringUtils.capitalize((String) user.get(JsonKey.FIRST_NAME));
     } else {
-      name = StringUtils.capitalize(name);
+      name = "";
     }
 
     // fetch orgname inorder to set in the Template context
-    String orgName = getOrgName(request, userId);
+    String orgName = getOrgName(request, (String) user.get(JsonKey.USER_ID));
 
-    String orgName = (String) request.get(JsonKey.ORG_NAME);
-    if (null == orgName && !tempUserIdList.isEmpty()) {
-      String usrId = tempUserIdList.get(0);
-      orgName = getOrgName(usrId);
-    }
     request.put(JsonKey.NAME, name);
     if (orgName != null) {
       request.put(JsonKey.ORG_NAME, orgName);
@@ -131,21 +104,50 @@ public class EmailServiceActor extends BaseActor {
           getEmailTemplateFile((String) request.get(JsonKey.EMAIL_TEMPLATE_TYPE)));
     } catch (Exception e) {
       resMsg = JsonKey.FAILURE;
-      ProjectLogger.log("EmailServiceActor:sendMail: Exception occurred with message = " + e.getMessage(), e);
+      ProjectLogger.log(
+          "EmailServiceActor:sendMail: Exception occurred with message = " + e.getMessage(), e);
     }
     Response res = new Response();
     res.put(JsonKey.RESPONSE, resMsg);
     sender().tell(res, self());
   }
 
+  private void validateUserIds(List<String> userIds, List<String> emails) {
+    // Fetch private (masked in Elastic Search) user emails from Cassandra DB
+    if (CollectionUtils.isNotEmpty(userIds)) {
+      List<Map<String, Object>> userList = getUsersFromDB(userIds);
+      // if requested userId list and cassandra user list size not same , means requested userId
+      // list
+      // contains some invalid userId
+      List<String> tempUserIdList = new ArrayList<>();
+      if (userIds.size() != userList.size()) {
+        userList.forEach(
+            user -> {
+              tempUserIdList.add((String) user.get(JsonKey.ID));
+            });
+        userIds.forEach(
+            userId -> {
+              if (!tempUserIdList.contains(userId)) {
+                ProjectCommonException.throwClientErrorException(
+                    ResponseCode.invalidValue, "Invalid userId " + userId);
+                return;
+              }
+            });
+      } else {
+        for (Map<String, Object> userMap : userList) {
+          String email = (String) userMap.get(JsonKey.EMAIL);
+          if (StringUtils.isNotBlank(email)) {
+            String decryptedEmail = decryptionService.decryptData(email);
+            emails.add(decryptedEmail);
+          }
+        }
+      }
+    }
+  }
+
   private String getEmailTemplateFile(String templateName) {
     EmailTemplateDao emailTemplateDao = EmailTemplateDaoImpl.getInstance();
-    Response response = emailTemplateDao.read(templateName);
-    List<Map<String, Object>> respMapList =
-        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    Map<String, Object> map = respMapList.get(0);
-    String fileContent = (String) map.get(TEMPLATE);
-    return fileContent;
+    return emailTemplateDao.getOrDefault(templateName);
   }
 
   private List<Map<String, Object>> getUsersFromDB(List<String> userIds) {
@@ -158,8 +160,7 @@ public class EmailServiceActor extends BaseActor {
     Response response =
         cassandraOperation.getRecordsByIdsWithSpecifiedColumns(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), fields, userIdList);
-    List<Map<String, Object>> userList =
-        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    List<Map<String, Object>> userList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     return userList;
   }
 
@@ -201,8 +202,11 @@ public class EmailServiceActor extends BaseActor {
     }
   }
 
-  private String getOrgName(String usrId) {
-    String orgName = "";
+  private String getOrgName(Map<String, Object> request, String usrId) {
+    String orgName = (String) request.get(JsonKey.ORG_NAME);
+    if (StringUtils.isNotBlank(orgName)) {
+      return orgName;
+    }
     Map<String, Object> esUserResult =
         ElasticSearchUtil.getDataByIdentifier(
             EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), usrId);
@@ -223,33 +227,36 @@ public class EmailServiceActor extends BaseActor {
     return orgName;
   }
 
-  private Map<String, Object> getUserInfo(List<String> emails) {
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> getUserInfo(String email) {
+    String encryptedMail = "";
+    try {
+      encryptedMail = encryptionService.encryptData(email);
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
     SearchDTO searchDTO = new SearchDTO();
     Map<String, Object> additionalProperties = new HashMap<>();
-    additionalProperties.put(
-        JsonKey.ENC_EMAIL,
-        emails
-            .stream()
-            .map(
-                i -> {
-                  String encryptedMail = null;
-                  try {
-                    encryptedMail = encryptionService.encryptData(i);
-                  } catch (Exception e) {
-                    ProjectLogger.log(e.getMessage(), e);
-                  }
-                  return encryptedMail;
-                })
-            .collect(Collectors.toList()));
+    additionalProperties.put(JsonKey.ENC_EMAIL, encryptedMail);
     searchDTO.addAdditionalProperty(JsonKey.FILTERS, additionalProperties);
-    return ElasticSearchUtil.complexSearch(
-        searchDTO, EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+    Map<String, Object> esResult =
+        ElasticSearchUtil.complexSearch(
+            searchDTO, EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+    if (MapUtils.isNotEmpty(esResult)
+        && CollectionUtils.isNotEmpty((List) esResult.get(JsonKey.CONTENT))) {
+      return ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
+    } else {
+      return Collections.EMPTY_MAP;
+    }
   }
 
   private void checkEmailValidity(List<String> emails) {
     for (String email : emails) {
       if (!ProjectUtil.isEmailvalid(email)) {
-        ProjectCommonException.throwClientErrorException(ResponseCode.emailFormatError, null);
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.invalidParameterValue,
+            MessageFormat.format(
+                ResponseCode.invalidParameterValue.getErrorMessage(), email, JsonKey.EMAIL));
         return;
       }
     }

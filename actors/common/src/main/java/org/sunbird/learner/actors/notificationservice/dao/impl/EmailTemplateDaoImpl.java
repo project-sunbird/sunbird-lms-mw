@@ -31,7 +31,9 @@ public class EmailTemplateDaoImpl implements EmailTemplateDao {
     List<String> idList = new ArrayList<>();
     idList.add(templateName);
     idList.add(DEFAULT_EMAIL_TEMPLATE_NAME);
-    Response response = cassandraOperation.getRecordsByIds(JsonKey.SUNBIRD, EMAIL_TEMPLATE, idList);
+    Response response =
+        cassandraOperation.getRecordsByPrimaryKeys(
+            JsonKey.SUNBIRD, EMAIL_TEMPLATE, idList, JsonKey.NAME);
     List<Map<String, Object>> emailTemplateList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     Map<String, Object> map = null;

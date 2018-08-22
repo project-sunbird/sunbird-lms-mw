@@ -587,12 +587,6 @@ public class CourseBatchManagementActor extends BaseActor {
 
       validateBatchStartAndEndDate(dbBatchStartDate, dbBatchEndDate, requestedStartDate, requestedEndDate, todayDate);
 
-      if (null != requestedStartDate) {
-        if (todayDate.equals(requestedStartDate)) {
-          req.put(JsonKey.STATUS, ProgressStatus.STARTED.getValue());
-        }
-      }
-
       String enrolmentType = "";
       if (req.containsKey(JsonKey.ENROLMENTTYPE)) {
         enrolmentType = (String) req.get(JsonKey.ENROLMENTTYPE);
@@ -662,6 +656,13 @@ public class CourseBatchManagementActor extends BaseActor {
           }
         }
         req.put(JsonKey.MENTORS, dnMentorsValue);
+      }
+
+      if (null != requestedStartDate) {
+        if (todayDate.equals(requestedStartDate)) {
+          req.put(JsonKey.STATUS, ProgressStatus.STARTED.getValue());
+          CourseBatchSchedulerUtil.updateCourseBatchDbStatus(req, true);
+        }
       }
 
       Response result =

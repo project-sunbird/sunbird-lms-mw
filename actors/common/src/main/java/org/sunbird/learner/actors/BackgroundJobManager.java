@@ -283,12 +283,11 @@ public class BackgroundJobManager extends BaseActor {
   @SuppressWarnings("unchecked")
   private void updateCourseBatchInfoToEs(Request actorMessage) {
     Map<String, Object> batch = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
-    // kirti
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     try {
       Date todaydate = format.parse(format.format(new Date()));
       Date startDate = format.parse((String) batch.get(JsonKey.START_DATE));
-      if (todaydate.compareTo(startDate) == 0) {
+      if (todaydate.equals(startDate)) {
         CourseBatchSchedulerUtil.updateCourseBatchDbStatus(batch, true);
       }
     } catch (ParseException e) {

@@ -595,18 +595,7 @@ public class BackgroundJobManager extends BaseActor {
       ProjectLogger.log(
           "BackgroundJobManager:registertag register tag call started with tagid = " + tagId,
           LoggerEnum.INFO.name());
-      String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-      if (StringUtils.isBlank(ekStepBaseUrl)) {
-        ekStepBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
-      }
-      tagStatus =
-          HttpUtil.sendPostRequest(
-              ekStepBaseUrl
-                  + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_TAG_API_URL)
-                  + "/"
-                  + tagId,
-              body,
-              header);
+      tagStatus = ProjectUtil.registertag(tagId, body, header);
       ProjectLogger.log(
           "BackgroundJobManager:registertag  register tag call end with id and status = "
               + tagId
@@ -619,7 +608,6 @@ public class BackgroundJobManager extends BaseActor {
               + e.getMessage(),
           e);
     }
-
     return tagStatus;
   }
 

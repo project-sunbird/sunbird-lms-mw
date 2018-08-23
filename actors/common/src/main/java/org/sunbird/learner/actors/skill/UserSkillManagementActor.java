@@ -3,11 +3,18 @@ package org.sunbird.learner.actors.skill;
 import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
@@ -18,8 +25,12 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -276,9 +287,16 @@ public class UserSkillManagementActor extends BaseActor {
     List<String> list = (List<String>) actorMessage.getRequest().get(JsonKey.SKILL_NAME);
     CopyOnWriteArraySet<String> skillset = new CopyOnWriteArraySet<>(list);
     String requestedByUserId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
+    if (StringUtils.isBlank(requestedByUserId)) {
+      requestedByUserId = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
+    }
     ProjectLogger.log(
         "UserSkillManagementActor:endorseSkill: context userId "
             + actorMessage.getContext().get(JsonKey.REQUESTED_BY),
+        LoggerEnum.INFO.name());
+
+    ProjectLogger.log(
+        "UserSkillManagementActor:endorseSkill: context endorsedUserId " + endoresedUserId,
         LoggerEnum.INFO.name());
     Response response1 =
         cassandraOperation.getRecordById(
@@ -294,6 +312,9 @@ public class UserSkillManagementActor extends BaseActor {
     // check whether both userid exist or not if not throw exception
     if (endoresedList.isEmpty() || requestedUserList.isEmpty()) {
       // generate context and params here ...
+
+      ProjectLogger.log(
+          "UserSkillManagementActor:endorseSkill: context Valid User", LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.invalidUserId.getErrorCode(),
           ResponseCode.invalidUserId.getErrorMessage(),
@@ -309,7 +330,8 @@ public class UserSkillManagementActor extends BaseActor {
     if (!compareStrings(
         (String) endoresedMap.get(JsonKey.ROOT_ORG_ID),
         (String) requestedUserMap.get(JsonKey.ROOT_ORG_ID))) {
-
+      ProjectLogger.log(
+          "UserSkillManagementActor:endorseSkill: context rootOrg", LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.canNotEndorse.getErrorCode(),
           ResponseCode.canNotEndorse.getErrorMessage(),
@@ -339,6 +361,9 @@ public class UserSkillManagementActor extends BaseActor {
           skillMap.put(JsonKey.ID, id);
           skillMap.put(JsonKey.USER_ID, endoresedUserId);
           skillMap.put(JsonKey.SKILL_NAME, skillName);
+          ProjectLogger.log(
+              "UserSkillManagementActor:endorseSkill: context skillName " + skillName,
+              LoggerEnum.INFO.name());
           skillMap.put(JsonKey.SKILL_NAME_TO_LOWERCASE, skillName.toLowerCase());
           //          skillMap.put(JsonKey.ADDED_BY, requestedByUserId);
           //          skillMap.put(JsonKey.ADDED_AT, format.format(new Date()));
@@ -351,6 +376,16 @@ public class UserSkillManagementActor extends BaseActor {
 
           skillMap.put(JsonKey.ENDORSERS_LIST, endorsersList);
           skillMap.put(JsonKey.ENDORSEMENT_COUNT, 0);
+          ObjectMapper objectMapper = new ObjectMapper();
+          try {
+            String responseObj = (String) objectMapper.writeValueAsString(skillMap);
+            ProjectLogger.log(
+                "UserSkillManagementActor:endorseSkill: responseMap while insert" + responseObj,
+                LoggerEnum.INFO.name());
+
+          } catch (JsonProcessingException e) {
+            ProjectLogger.log("Exception while converting", LoggerEnum.INFO);
+          }
           cassandraOperation.insertRecord(
               userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), skillMap);
 
@@ -367,7 +402,7 @@ public class UserSkillManagementActor extends BaseActor {
               (List<Map<String, String>>) responseMap.get(JsonKey.ENDORSERS_LIST);
           boolean flag = false;
           for (Map<String, String> map : endoresersList) {
-            if (((String) map.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedByUserId)) {
+            if (map.get(JsonKey.USER_ID).equalsIgnoreCase(requestedByUserId)) {
               flag = true;
               break;
             }
@@ -376,14 +411,36 @@ public class UserSkillManagementActor extends BaseActor {
             // donot do anything..
             ProjectLogger.log(requestedByUserId + " has already endorsed the " + endoresedUserId);
           } else {
+            ProjectLogger.log(
+                "UserSkillManagementActor:endorseSkill: context skillName " + skillName,
+                LoggerEnum.INFO.name());
             Integer endoresementCount = (Integer) responseMap.get(JsonKey.ENDORSEMENT_COUNT) + 1;
             Map<String, String> endorsersMap = new HashMap<>();
             endorsersMap.put(JsonKey.USER_ID, requestedByUserId);
+
+            ProjectLogger.log(
+                "UserSkillManagementActor:endorseSkill: context requestedByUserId "
+                    + requestedByUserId,
+                LoggerEnum.INFO.name());
             endorsersMap.put(JsonKey.ENDORSE_DATE, format.format(new Date()));
             endoresersList.add(endorsersMap);
 
             responseMap.put(JsonKey.ENDORSERS_LIST, endoresersList);
             responseMap.put(JsonKey.ENDORSEMENT_COUNT, endoresementCount);
+            /*
+             *Logs
+             * */
+            ObjectMapper objectMapper = new ObjectMapper();
+            try {
+              String responseObj = (String) objectMapper.writeValueAsString(responseMap);
+              ProjectLogger.log(
+                  "UserSkillManagementActor:endorseSkill:  responseMap while update" + responseObj,
+                  LoggerEnum.INFO.name());
+
+            } catch (JsonProcessingException e) {
+              ProjectLogger.log("Exception while converting", LoggerEnum.INFO);
+            }
+
             cassandraOperation.updateRecord(
                 userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), responseMap);
             updateES(endoresedUserId);

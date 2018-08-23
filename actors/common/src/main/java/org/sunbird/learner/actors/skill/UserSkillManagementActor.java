@@ -90,7 +90,7 @@ public class UserSkillManagementActor extends BaseActor {
       saveUserSkill(newUserSkillsSet, userId);
     } else {
       List<Map<String, Object>> searchedUserList =
-          (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+              (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
 
       Map<String, Object> userMap = new HashMap();
       userMap = searchedUserList.get(0);
@@ -99,60 +99,65 @@ public class UserSkillManagementActor extends BaseActor {
       objectMapper.configure(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS, false);
       objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, true);
       List<Map<String, Object>> userSkills =
-          objectMapper.convertValue(userMap.get(JsonKey.SKILLS), List.class);
-      List<Skill> skills =
-          userSkills
-              .stream()
-              .map(
-                  map -> {
-                    return objectMapper.convertValue(map, Skill.class);
-                  })
-              .collect(Collectors.toList());
-      HashSet<Skill> currentUserSkillsSet = new HashSet<>(skills);
-      List<Skill> commonSkills =
-          currentUserSkillsSet
-              .stream()
-              .flatMap(
-                  skill ->
-                      newUserSkillsSet
-                          .stream()
-                          .filter(
-                              skillName -> {
-                                String id =
-                                    OneWayHashing.encryptVal(
-                                        userId
-                                            + JsonKey.PRIMARY_KEY_DELIMETER
-                                            + skillName.toLowerCase());
-                                return skill.getId().equals(id);
-                              })
-                          .map(skillName -> skill))
-              .collect(Collectors.toList());
-      List<String> addedSkillsList = newUserSkillsSet;
-      HashSet<Skill> removedSkillsList = currentUserSkillsSet;
+              objectMapper.convertValue(userMap.get(JsonKey.SKILLS), List.class);
+      if (!CollectionUtils.isEmpty(userSkills)) {
+        List<Skill> skills =
+                userSkills
+                        .stream()
+                        .map(
+                                map -> {
+                                  return objectMapper.convertValue(map, Skill.class);
+                                })
+                        .collect(Collectors.toList());
+        HashSet<Skill> currentUserSkillsSet = new HashSet<>(skills);
+        List<Skill> commonSkills =
+                currentUserSkillsSet
+                        .stream()
+                        .flatMap(
+                                skill ->
+                                        newUserSkillsSet
+                                                .stream()
+                                                .filter(
+                                                        skillName -> {
+                                                          String id =
+                                                                  OneWayHashing.encryptVal(
+                                                                          userId
+                                                                                  + JsonKey.PRIMARY_KEY_DELIMETER
+                                                                                  + skillName.toLowerCase());
+                                                          return skill.getId().equals(id);
+                                                        })
+                                                .map(skillName -> skill))
+                        .collect(Collectors.toList());
+        List<String> addedSkillsList = newUserSkillsSet;
+        HashSet<Skill> removedSkillsList = currentUserSkillsSet;
 
-      commonSkills.forEach(
-          skill -> {
-            if (addedSkillsList.contains(skill.getSkillName())) {
-              addedSkillsList.remove(skill.getSkillName());
-              removedSkillsList.remove(skill);
-            }
-          });
+        commonSkills.forEach(
+                skill -> {
+                  if (addedSkillsList.contains(skill.getSkillName())) {
+                    addedSkillsList.remove(skill.getSkillName());
+                    removedSkillsList.remove(skill);
+                  }
+                });
 
-      if (CollectionUtils.isNotEmpty(addedSkillsList)) {
-        saveUserSkill(addedSkillsList, userId);
-      }
-      if (CollectionUtils.isNotEmpty(removedSkillsList)) {
-        List<String> idList =
-            removedSkillsList.stream().map(skill -> skill.getId()).collect(Collectors.toList());
-        Boolean deleted = userSkillDao.delete(idList);
-        if (!deleted) {
-          ProjectLogger.log(
-              "UserSkillManagementActor:updateSkill: Delete skills failed for " + userId,
-              idList,
-              LoggerEnum.ERROR.name());
+        if (CollectionUtils.isNotEmpty(addedSkillsList)) {
+          saveUserSkill(addedSkillsList, userId);
         }
+        if (CollectionUtils.isNotEmpty(removedSkillsList)) {
+          List<String> idList =
+                  removedSkillsList.stream().map(skill -> skill.getId()).collect(Collectors.toList());
+          Boolean deleted = userSkillDao.delete(idList);
+          if (!deleted) {
+            ProjectLogger.log(
+                    "UserSkillManagementActor:updateSkill: Delete skills failed for " + userId,
+                    idList,
+                    LoggerEnum.ERROR.name());
+          }
 
-        updateES(userId);
+          updateES(userId);
+        }
+      }
+      else{
+        saveUserSkill(newUserSkillsSet, userId);
       }
     }
     Response response = new Response();

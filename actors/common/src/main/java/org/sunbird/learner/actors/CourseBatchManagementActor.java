@@ -2,7 +2,12 @@ package org.sunbird.learner.actors;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -10,17 +15,23 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
 import org.sunbird.common.models.util.ProjectUtil.Status;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
 
@@ -577,15 +588,16 @@ public class CourseBatchManagementActor extends BaseActor {
       Map<String, Object> res = courseBatch.get(0);
 
       Date todayDate = getDate(null, format, null);
-      
+
       Date dbBatchStartDate = getDate(JsonKey.START_DATE, format, res);
       Date dbBatchEndDate = getDate(JsonKey.END_DATE, format, res);
       Date endDate = dbBatchEndDate;
-      
+
       Date requestedStartDate = getDate(JsonKey.START_DATE, format, req);
       Date requestedEndDate = getDate(JsonKey.END_DATE, format, req);
 
-      validateBatchStartAndEndDate(dbBatchStartDate, dbBatchEndDate, requestedStartDate, requestedEndDate, todayDate);
+      validateBatchStartAndEndDate(
+          dbBatchStartDate, dbBatchEndDate, requestedStartDate, requestedEndDate, todayDate);
 
       String enrolmentType = "";
       if (req.containsKey(JsonKey.ENROLMENTTYPE)) {
@@ -679,7 +691,7 @@ public class CourseBatchManagementActor extends BaseActor {
       Map<String, String> rollUp = new HashMap<>();
       rollUp.put("l1", (String) res.get(JsonKey.COURSE_ID));
       TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
-      
+
       if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
         ProjectLogger.log("method call going to satrt for ES--.....");
         Request request = new Request();
@@ -704,33 +716,37 @@ public class CourseBatchManagementActor extends BaseActor {
     }
   }
 
-  private void validateBatchStartDate(
-      Date existingStartDate, Date existingEndDate, Date requestedStartDate, Date requestedEndDate, Date todayDate) {
-    
+  private void validateBatchStartAndEndDate(
+      Date existingStartDate,
+      Date existingEndDate,
+      Date requestedStartDate,
+      Date requestedEndDate,
+      Date todayDate) {
+
     Date startDate = requestedStartDate != null ? requestedStartDate : existingStartDate;
     Date endDate = requestedEndDate != null ? requestedEndDate : existingEndDate;
-    
-    if (!startDate.after(todayDate) && !(startDate.equals(existingStartDate)) {
+
+    if (!startDate.after(todayDate) && !(startDate.equals(existingStartDate))) {
       throw new ProjectCommonException(
           ResponseCode.invalidBatchStartDateError.getErrorCode(),
           ResponseCode.invalidBatchStartDateError.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-        
+
     if (requestedStartDate != null && requestedStartDate.before(todayDate)) {
       throw new ProjectCommonException(
           ResponseCode.invalidBatchStartDateError.getErrorCode(),
           ResponseCode.invalidBatchStartDateError.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-        
+
     if (startDate.after(endDate)) {
       throw new ProjectCommonException(
           ResponseCode.invalidBatchStartDateError.getErrorCode(),
           ResponseCode.invalidBatchStartDateError.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-        
+
     if (!endDate.after(todayDate)) {
       throw new ProjectCommonException(
           ResponseCode.courseBatchEndDateError.getErrorCode(),
@@ -738,17 +754,19 @@ public class CourseBatchManagementActor extends BaseActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
   }
-        
+
   private Date getDate(String key, SimpleDateFormat format, Map<String, Object> map) {
     try {
       if (key == null) {
         return format.parse(format.format(new Date()));
-      }      
+      }
       if (StringUtils.isNotBlank(key)) {
-          return format.parse((String) map.get(key));
+        return format.parse((String) map.get(key));
       }
     } catch (ParseException e) {
-      ProjectLogger.log("CourseBatchManagementActor:getDate: Exception occurred with message = " + e.getMessage(), e);
+      ProjectLogger.log(
+          "CourseBatchManagementActor:getDate: Exception occurred with message = " + e.getMessage(),
+          e);
     }
     return null;
   }

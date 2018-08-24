@@ -232,7 +232,7 @@ public class EmailServiceActor extends BaseActor {
                 EsType.user.getTypeName());
       } catch (Exception ex) {
         ProjectLogger.log(
-            "EmailSerciceActor:getUserEmailsFromSearchQuery: Exception occurred with error message = "
+            "EmailServiceActor:getUserEmailsFromSearchQuery: Exception occurred with error message = "
                 + ex.getMessage(),
             ex);
         ProjectCommonException.throwClientErrorException(

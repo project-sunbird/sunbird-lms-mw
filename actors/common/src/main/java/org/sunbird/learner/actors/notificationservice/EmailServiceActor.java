@@ -75,6 +75,7 @@ public class EmailServiceActor extends BaseActor {
     getUserEmailsFromSearchQuery(request, emails, userIds);
 
     validateUserIds(userIds, emails);
+    validateRecepientEmailMaxLimit(emails);
 
     Map<String, Object> user = null;
     if (CollectionUtils.isNotEmpty(emails)) {
@@ -95,21 +96,38 @@ public class EmailServiceActor extends BaseActor {
     if (orgName != null) {
       request.put(JsonKey.ORG_NAME, orgName);
     }
-    String resMsg = JsonKey.SUCCESS;
+
+    String template = getEmailTemplateFile((String) request.get(JsonKey.EMAIL_TEMPLATE_TYPE));
+
+    Response res = new Response();
+    res.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    sender().tell(res, self());
+
     try {
       SendMail.sendMailWithBody(
           emails.toArray(new String[emails.size()]),
           (String) request.get(JsonKey.SUBJECT),
           ProjectUtil.getContext(request),
-          getEmailTemplateFile((String) request.get(JsonKey.EMAIL_TEMPLATE_TYPE)));
+          template);
     } catch (Exception e) {
-      resMsg = JsonKey.FAILURE;
       ProjectLogger.log(
           "EmailServiceActor:sendMail: Exception occurred with message = " + e.getMessage(), e);
     }
-    Response res = new Response();
-    res.put(JsonKey.RESPONSE, resMsg);
-    sender().tell(res, self());
+  }
+
+  private void validateRecepientEmailMaxLimit(List<String> emails) {
+    int maxLimit = 100;
+    try {
+      maxLimit =
+          Integer.parseInt(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_EMAIL_MAX_RECEPIENT_LIMIT));
+    } catch (Exception ex) {
+      maxLimit = 100;
+    }
+    if (emails.size() > maxLimit) {
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.emailNotificationNotSent,
+          MessageFormat.format(ResponseCode.emailNotificationNotSent.getErrorMessage(), maxLimit));
+    }
   }
 
   private void validateUserIds(List<String> userIds, List<String> emails) {
@@ -151,7 +169,16 @@ public class EmailServiceActor extends BaseActor {
 
   private String getEmailTemplateFile(String templateName) {
     EmailTemplateDao emailTemplateDao = EmailTemplateDaoImpl.getInstance();
-    return emailTemplateDao.getOrDefault(templateName);
+    String template = emailTemplateDao.getTemplate(templateName);
+    if (StringUtils.isBlank(template)) {
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.invalidParameterValue,
+          MessageFormat.format(
+              ResponseCode.invalidParameterValue.getErrorMessage(),
+              templateName,
+              JsonKey.EMAIL_TEMPLATE_TYPE));
+    }
+    return template;
   }
 
   private List<Map<String, Object>> getUsersFromDB(List<String> userIds) {
@@ -173,15 +200,41 @@ public class EmailServiceActor extends BaseActor {
     Map<String, Object> recipientSearchQuery =
         (Map<String, Object>) request.get(JsonKey.RECIPIENT_SEARCH_QUERY);
     if (MapUtils.isNotEmpty(recipientSearchQuery)) {
+
+      if (MapUtils.isNotEmpty((Map<String, Object>) recipientSearchQuery.get(JsonKey.FILTERS))) {
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.invalidParameterValue,
+            MessageFormat.format(
+                ResponseCode.invalidParameterValue.getErrorMessage(),
+                recipientSearchQuery,
+                JsonKey.RECIPIENT_SEARCH_QUERY));
+        return;
+      }
+
       List<String> fields = new ArrayList<>();
       fields.add(JsonKey.USER_ID);
       fields.add(JsonKey.ENC_EMAIL);
       recipientSearchQuery.put(JsonKey.FIELDS, fields);
-      Map<String, Object> esResult =
-          ElasticSearchUtil.complexSearch(
-              ElasticSearchUtil.createSearchDTO(recipientSearchQuery),
-              EsIndex.sunbird.getIndexName(),
-              EsType.user.getTypeName());
+      Map<String, Object> esResult = Collections.emptyMap();
+      try {
+        esResult =
+            ElasticSearchUtil.complexSearch(
+                ElasticSearchUtil.createSearchDTO(recipientSearchQuery),
+                EsIndex.sunbird.getIndexName(),
+                EsType.user.getTypeName());
+      } catch (Exception ex) {
+        ProjectLogger.log(
+            "EmailSercviceActor:getUserEmailsFromSearchQuery: Exception occurred "
+                + ex.getMessage(),
+            ex);
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.invalidParameterValue,
+            MessageFormat.format(
+                ResponseCode.invalidParameterValue.getErrorMessage(),
+                recipientSearchQuery,
+                JsonKey.RECIPIENT_SEARCH_QUERY));
+        return;
+      }
       if (MapUtils.isNotEmpty(esResult)
           && CollectionUtils.isNotEmpty((List) esResult.get(JsonKey.CONTENT))) {
         List<Map<String, Object>> usersList =
@@ -202,6 +255,14 @@ public class EmailServiceActor extends BaseActor {
                 userIds.add((String) user.get(JsonKey.USER_ID));
               }
             });
+      } else {
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.invalidParameterValue,
+            MessageFormat.format(
+                ResponseCode.invalidParameterValue.getErrorMessage(),
+                recipientSearchQuery,
+                JsonKey.RECIPIENT_SEARCH_QUERY));
+        return;
       }
     }
   }

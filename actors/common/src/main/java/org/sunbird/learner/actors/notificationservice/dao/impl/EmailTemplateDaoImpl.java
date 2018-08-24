@@ -3,8 +3,8 @@ package org.sunbird.learner.actors.notificationservice.dao.impl;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
@@ -27,35 +27,22 @@ public class EmailTemplateDaoImpl implements EmailTemplateDao {
   }
 
   @Override
-  public String getOrDefault(String templateName) {
+  public String getTemplate(String templateName) {
+
     List<String> idList = new ArrayList<>();
-    idList.add(templateName);
-    idList.add(DEFAULT_EMAIL_TEMPLATE_NAME);
+    if (StringUtils.isBlank(templateName)) {
+      idList.add(DEFAULT_EMAIL_TEMPLATE_NAME);
+    } else {
+      idList.add(templateName);
+    }
     Response response =
         cassandraOperation.getRecordsByPrimaryKeys(
             JsonKey.SUNBIRD, EMAIL_TEMPLATE, idList, JsonKey.NAME);
     List<Map<String, Object>> emailTemplateList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     Map<String, Object> map = null;
-    if (CollectionUtils.isNotEmpty(emailTemplateList) && emailTemplateList.size() == 1) {
+    if (CollectionUtils.isNotEmpty(emailTemplateList)) {
       map = emailTemplateList.get(0);
-    } else {
-      Optional<Map<String, Object>> emailTemplateMap =
-          emailTemplateList
-              .stream()
-              .filter(
-                  emailTemplate -> {
-                    if (((String) emailTemplate.get(JsonKey.NAME)).equalsIgnoreCase(templateName)) {
-                      return true;
-                    }
-                    return false;
-                  })
-              .findFirst();
-      if (emailTemplateMap.isPresent()) {
-        map = emailTemplateMap.get();
-      } else {
-        map = emailTemplateList.get(0);
-      }
     }
     return (String) map.get(TEMPLATE);
   }

@@ -1817,6 +1817,16 @@ public final class Util {
       }
     }
   }
+
+  public static List<Map<String, String>> copyAndConvertExternalIdsToLower(
+      List<Map<String, String>> externalIds) {
+    List<Map<String, String>> list = new ArrayList<>();
+    if (CollectionUtils.isNotEmpty(externalIds)) {
+      storeOriginalExternalIdsValue(externalIds);
+      list = convertExternalIdsValueToLowerCase(externalIds);
+    }
+    return list;
+  }
 }
 
 @FunctionalInterface

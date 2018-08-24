@@ -767,9 +767,8 @@ public class UserManagementActor extends BaseActor {
     try {
       User user = mapper.convertValue(userMap, User.class);
       if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
-        Util.storeOriginalExternalIdsValue(user.getExternalIds());
         List<Map<String, String>> list =
-            Util.convertExternalIdsValueToLowerCase(user.getExternalIds());
+            Util.copyAndConvertExternalIdsToLower(user.getExternalIds());
         user.setExternalIds(list);
         userMap.put(JsonKey.EXTERNAL_IDS, list);
       }

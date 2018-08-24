@@ -86,7 +86,6 @@ public class UserManagementActor extends BaseActor {
       Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
   private Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
-  private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String KEY_SPACE_NAME = "sunbird";
   private static final String DEFAULT_USER_ROLE = "PUBLIC";
   private static final boolean IS_REGISTRY_ENABLED =
@@ -617,8 +616,23 @@ public class UserManagementActor extends BaseActor {
             .stream()
             .forEach(
                 s -> {
-                  s.put(JsonKey.ID, decryptionService.decryptData(s.get(JsonKey.EXTERNAL_ID)));
+                  if (StringUtils.isNotBlank(s.get(JsonKey.ORIGINAL_EXTERNAL_ID))
+                      && StringUtils.isNotBlank(s.get(JsonKey.ORIGINAL_ID_TYPE))
+                      && StringUtils.isNotBlank(s.get(JsonKey.ORIGINAL_PROVIDER))) {
+                    s.put(
+                        JsonKey.ID,
+                        decryptionService.decryptData(s.get(JsonKey.ORIGINAL_EXTERNAL_ID)));
+                    s.put(JsonKey.ID_TYPE, s.get(JsonKey.ORIGINAL_ID_TYPE));
+                    s.put(JsonKey.PROVIDER, s.get(JsonKey.ORIGINAL_PROVIDER));
+
+                  } else {
+                    s.put(JsonKey.ID, decryptionService.decryptData(s.get(JsonKey.EXTERNAL_ID)));
+                  }
+
                   s.remove(JsonKey.EXTERNAL_ID);
+                  s.remove(JsonKey.ORIGINAL_EXTERNAL_ID);
+                  s.remove(JsonKey.ORIGINAL_ID_TYPE);
+                  s.remove(JsonKey.ORIGINAL_PROVIDER);
                   s.remove(JsonKey.CREATED_BY);
                   s.remove(JsonKey.LAST_UPDATED_BY);
                   s.remove(JsonKey.LAST_UPDATED_ON);
@@ -753,6 +767,7 @@ public class UserManagementActor extends BaseActor {
     try {
       User user = mapper.convertValue(userMap, User.class);
       if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
+        Util.storeOriginalExternalIdsValue(user.getExternalIds());
         List<Map<String, String>> list =
             Util.convertExternalIdsValueToLowerCase(user.getExternalIds());
         user.setExternalIds(list);
@@ -1324,6 +1339,7 @@ public class UserManagementActor extends BaseActor {
       User user = mapper.convertValue(userMap, User.class);
       Util.checkUserExistOrNot(user);
       if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
+        Util.storeOriginalExternalIdsValue(user.getExternalIds());
         List<Map<String, String>> list =
             Util.convertExternalIdsValueToLowerCase(user.getExternalIds());
         user.setExternalIds(list);

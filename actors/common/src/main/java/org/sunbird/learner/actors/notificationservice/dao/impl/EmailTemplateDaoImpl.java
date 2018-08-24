@@ -1,6 +1,7 @@
 package org.sunbird.learner.actors.notificationservice.dao.impl;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
@@ -40,7 +41,7 @@ public class EmailTemplateDaoImpl implements EmailTemplateDao {
             JsonKey.SUNBIRD, EMAIL_TEMPLATE, idList, JsonKey.NAME);
     List<Map<String, Object>> emailTemplateList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    Map<String, Object> map = null;
+    Map<String, Object> map = Collections.emptyMap();
     if (CollectionUtils.isNotEmpty(emailTemplateList)) {
       map = emailTemplateList.get(0);
     }

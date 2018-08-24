@@ -75,7 +75,7 @@ public class EmailServiceActor extends BaseActor {
     getUserEmailsFromSearchQuery(request, emails, userIds);
 
     validateUserIds(userIds, emails);
-    validateRecepientEmailLimit(emails);
+    validateEmailRecipientsLimit(emails);
 
     Map<String, Object> user = null;
     if (CollectionUtils.isNotEmpty(emails)) {
@@ -115,7 +115,7 @@ public class EmailServiceActor extends BaseActor {
     }
   }
 
-  private void validateRecepientEmailLimit(List<String> emails) {
+  private void validateEmailRecipientsLimit(List<String> emails) {
     if (CollectionUtils.isEmpty(emails)) {
       ProjectCommonException.throwClientErrorException(
           ResponseCode.emailNotSentRecipientsZero,
@@ -125,7 +125,9 @@ public class EmailServiceActor extends BaseActor {
     try {
       maxLimit =
           Integer.parseInt(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_EMAIL_MAX_RECEPIENT_LIMIT));
-    } catch (Exception ex) {
+    } catch (Exception exception) {
+      ProjectLogger.log(
+          "EmailServiceActor:validateEmailRecipientsLimit: Exception occurred with error message = " + exception.getMessage(), LoggerEnum.INFO);
       maxLimit = 100;
     }
     if (emails.size() > maxLimit) {
@@ -230,7 +232,7 @@ public class EmailServiceActor extends BaseActor {
                 EsType.user.getTypeName());
       } catch (Exception ex) {
         ProjectLogger.log(
-            "EmailSercviceActor:getUserEmailsFromSearchQuery: Exception occurred "
+            "EmailServiceActor:getUserEmailsFromSearchQuery: Exception occurred with error message = "
                 + ex.getMessage(),
             ex);
         ProjectCommonException.throwClientErrorException(

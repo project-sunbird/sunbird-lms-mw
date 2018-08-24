@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -726,7 +727,8 @@ public class CourseBatchManagementActor extends BaseActor {
     Date startDate = requestedStartDate != null ? requestedStartDate : existingStartDate;
     Date endDate = requestedEndDate != null ? requestedEndDate : existingEndDate;
 
-    if (!startDate.after(todayDate) && !(startDate.equals(existingStartDate))) {
+    if ((existingStartDate.before(todayDate) || existingStartDate.equals(todayDate))
+        && !(existingStartDate.equals(requestedStartDate))) {
       throw new ProjectCommonException(
           ResponseCode.invalidBatchStartDateError.getErrorCode(),
           ResponseCode.invalidBatchStartDateError.getErrorMessage(),
@@ -757,10 +759,13 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private Date getDate(String key, SimpleDateFormat format, Map<String, Object> map) {
     try {
-      if (key == null) {
+      if (MapUtils.isEmpty(map)) {
+        map = new HashMap<>();
+      }
+      if (StringUtils.isBlank((String) map.get(key))) {
         return format.parse(format.format(new Date()));
       }
-      if (StringUtils.isNotBlank(key)) {
+      if (StringUtils.isNotBlank((String) map.get(key))) {
         return format.parse((String) map.get(key));
       }
     } catch (ParseException e) {

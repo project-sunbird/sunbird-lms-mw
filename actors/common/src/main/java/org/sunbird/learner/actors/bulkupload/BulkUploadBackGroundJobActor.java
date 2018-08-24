@@ -1125,6 +1125,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           try {
             if (null != userMap.get(JsonKey.EXTERNAL_IDS)) {
               Util.updateUserExtId(userMap);
+              removeOriginalExternalIds(
+                  (List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
             }
           } catch (Exception ex) {
             userMap.put(
@@ -1196,6 +1198,18 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           "Exception Occurred while updating bulk_upload_process in BulkUploadBackGroundJobActor : ",
           e);
     }
+  }
+
+  private void removeOriginalExternalIds(List<Map<String, Object>> externalIds) {
+    externalIds.forEach(
+        externalId -> {
+          externalId.put(JsonKey.ID, externalId.get(JsonKey.ORIGINAL_EXTERNAL_ID));
+          externalId.remove(JsonKey.ORIGINAL_EXTERNAL_ID);
+          externalId.put(JsonKey.PROVIDER, externalId.get(JsonKey.ORIGINAL_PROVIDER));
+          externalId.remove(JsonKey.ORIGINAL_PROVIDER);
+          externalId.put(JsonKey.ID_TYPE, externalId.get(JsonKey.ORIGINAL_ID_TYPE));
+          externalId.remove(JsonKey.ORIGINAL_ID_TYPE);
+        });
   }
 
   private void parseExternalIds(Map<String, Object> userMap) throws IOException {

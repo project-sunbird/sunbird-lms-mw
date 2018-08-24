@@ -1430,7 +1430,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
   private void validateExternalIds(Map<String, Object> userMap, String operation) {
     if (CollectionUtils.isNotEmpty((List<Map<String, String>>) userMap.get(JsonKey.EXTERNAL_IDS))) {
       List<Map<String, String>> list =
-          Util.convertExternalIdsValueToLowerCase(
+          Util.copyAndConvertExternalIdsToLower(
               (List<Map<String, String>>) userMap.get(JsonKey.EXTERNAL_IDS));
       userMap.put(JsonKey.EXTERNAL_IDS, list);
     }

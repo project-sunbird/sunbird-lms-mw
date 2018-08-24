@@ -1138,8 +1138,12 @@ public final class Util {
     try {
       Map<String, Object> map = new HashMap<>();
       map.put(JsonKey.EXTERNAL_ID, encryptData(extIdsMap.get(JsonKey.ID)));
+      map.put(
+          JsonKey.ORIGINAL_EXTERNAL_ID, encryptData(extIdsMap.get(JsonKey.ORIGINAL_EXTERNAL_ID)));
       map.put(JsonKey.PROVIDER, extIdsMap.get(JsonKey.PROVIDER));
+      map.put(JsonKey.ORIGINAL_PROVIDER, extIdsMap.get(JsonKey.ORIGINAL_PROVIDER));
       map.put(JsonKey.ID_TYPE, extIdsMap.get(JsonKey.ID_TYPE));
+      map.put(JsonKey.ORIGINAL_ID_TYPE, extIdsMap.get(JsonKey.ORIGINAL_ID_TYPE));
       map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
       if (JsonKey.CREATE.equalsIgnoreCase(operation)) {
         map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
@@ -1225,6 +1229,9 @@ public final class Util {
     map.remove(JsonKey.LAST_UPDATED_ON);
     map.remove(JsonKey.CREATED_ON);
     map.remove(JsonKey.USER_ID);
+    map.remove(JsonKey.ORIGINAL_EXTERNAL_ID);
+    map.remove(JsonKey.ORIGINAL_ID_TYPE);
+    map.remove(JsonKey.ORIGINAL_PROVIDER);
     cassandraOperation.deleteRecord(KEY_SPACE_NAME, JsonKey.USR_EXT_IDNT_TABLE, map);
   }
 
@@ -1379,6 +1386,15 @@ public final class Util {
           return s;
         };
     return externalIds.stream().map(s -> mapper.convertToLowerCase(s)).collect(Collectors.toList());
+  }
+
+  public static void storeOriginalExternalIdsValue(List<Map<String, String>> externalIds) {
+    externalIds.forEach(
+        externalIdMap -> {
+          externalIdMap.put(JsonKey.ORIGINAL_EXTERNAL_ID, externalIdMap.get(JsonKey.ID));
+          externalIdMap.put(JsonKey.ORIGINAL_PROVIDER, externalIdMap.get(JsonKey.PROVIDER));
+          externalIdMap.put(JsonKey.ORIGINAL_ID_TYPE, externalIdMap.get(JsonKey.ID_TYPE));
+        });
   }
 
   @SuppressWarnings("unchecked")
@@ -1800,6 +1816,16 @@ public final class Util {
             "Welcome Message failed for ." + (String) userMap.get(JsonKey.PHONE), LoggerEnum.INFO);
       }
     }
+  }
+
+  public static List<Map<String, String>> copyAndConvertExternalIdsToLower(
+      List<Map<String, String>> externalIds) {
+    List<Map<String, String>> list = new ArrayList<>();
+    if (CollectionUtils.isNotEmpty(externalIds)) {
+      storeOriginalExternalIdsValue(externalIds);
+      list = convertExternalIdsValueToLowerCase(externalIds);
+    }
+    return list;
   }
 }
 

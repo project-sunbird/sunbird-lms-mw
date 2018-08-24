@@ -764,6 +764,7 @@ public class CourseBatchManagementActor extends BaseActor {
         return format.parse((String) map.get(key));
       }
     } catch (ParseException e) {
+
       ProjectLogger.log(
           "CourseBatchManagementActor:getDate: Exception occurred with message = " + e.getMessage(),
           e);

@@ -17,6 +17,7 @@ import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
@@ -127,7 +128,9 @@ public class EmailServiceActor extends BaseActor {
           Integer.parseInt(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_EMAIL_MAX_RECEPIENT_LIMIT));
     } catch (Exception exception) {
       ProjectLogger.log(
-          "EmailServiceActor:validateEmailRecipientsLimit: Exception occurred with error message = " + exception.getMessage(), LoggerEnum.INFO);
+          "EmailServiceActor:validateEmailRecipientsLimit: Exception occurred with error message = "
+              + exception.getMessage(),
+          LoggerEnum.INFO);
       maxLimit = 100;
     }
     if (emails.size() > maxLimit) {
@@ -209,7 +212,7 @@ public class EmailServiceActor extends BaseActor {
         (Map<String, Object>) request.get(JsonKey.RECIPIENT_SEARCH_QUERY);
     if (MapUtils.isNotEmpty(recipientSearchQuery)) {
 
-      if (MapUtils.isNotEmpty((Map<String, Object>) recipientSearchQuery.get(JsonKey.FILTERS))) {
+      if (MapUtils.isEmpty((Map<String, Object>) recipientSearchQuery.get(JsonKey.FILTERS))) {
         ProjectCommonException.throwClientErrorException(
             ResponseCode.invalidParameterValue,
             MessageFormat.format(

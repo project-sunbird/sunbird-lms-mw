@@ -1050,6 +1050,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               userMap.remove(JsonKey.ID);
               userMap.remove(JsonKey.PASSWORD);
               userMap.put(JsonKey.ERROR_MSG, ex.getMessage() + " ,user insertion failed.");
+              removeOriginalExternalIds(
+                  (List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
               failureUserReq.add(userMap);
               continue;
             } finally {
@@ -1113,6 +1115,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               userMap.remove(JsonKey.ID);
               userMap.remove(JsonKey.PASSWORD);
               userMap.put(JsonKey.ERROR_MSG, ex.getMessage() + " ,user updation failed.");
+              removeOriginalExternalIds(
+                  (List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
               failureUserReq.add(userMap);
               continue;
             }
@@ -1163,10 +1167,12 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           userMap.remove(JsonKey.ID);
           userMap.remove(JsonKey.PASSWORD);
           userMap.put(JsonKey.ERROR_MSG, ex.getMessage());
+          removeOriginalExternalIds((List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
           failureUserReq.add(userMap);
         }
       } else {
         userMap.put(JsonKey.ERROR_MSG, errMsg);
+        removeOriginalExternalIds((List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
         failureUserReq.add(userMap);
       }
     }

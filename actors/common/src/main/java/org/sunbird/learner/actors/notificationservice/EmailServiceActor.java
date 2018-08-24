@@ -75,7 +75,7 @@ public class EmailServiceActor extends BaseActor {
     getUserEmailsFromSearchQuery(request, emails, userIds);
 
     validateUserIds(userIds, emails);
-    validateRecepientEmailMaxLimit(emails);
+    validateRecepientEmailLimit(emails);
 
     Map<String, Object> user = null;
     if (CollectionUtils.isNotEmpty(emails)) {
@@ -115,7 +115,12 @@ public class EmailServiceActor extends BaseActor {
     }
   }
 
-  private void validateRecepientEmailMaxLimit(List<String> emails) {
+  private void validateRecepientEmailLimit(List<String> emails) {
+    if (CollectionUtils.isEmpty(emails)) {
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.emailNotSentRecipientsZero,
+          ResponseCode.emailNotSentRecipientsZero.getErrorMessage());
+    }
     int maxLimit = 100;
     try {
       maxLimit =
@@ -125,8 +130,9 @@ public class EmailServiceActor extends BaseActor {
     }
     if (emails.size() > maxLimit) {
       ProjectCommonException.throwClientErrorException(
-          ResponseCode.emailNotificationNotSent,
-          MessageFormat.format(ResponseCode.emailNotificationNotSent.getErrorMessage(), maxLimit));
+          ResponseCode.emailNotSentRecipientsExceededMaxLimit,
+          MessageFormat.format(
+              ResponseCode.emailNotSentRecipientsExceededMaxLimit.getErrorMessage(), maxLimit));
     }
   }
 
@@ -255,14 +261,6 @@ public class EmailServiceActor extends BaseActor {
                 userIds.add((String) user.get(JsonKey.USER_ID));
               }
             });
-      } else {
-        ProjectCommonException.throwClientErrorException(
-            ResponseCode.invalidParameterValue,
-            MessageFormat.format(
-                ResponseCode.invalidParameterValue.getErrorMessage(),
-                recipientSearchQuery,
-                JsonKey.RECIPIENT_SEARCH_QUERY));
-        return;
       }
     }
   }

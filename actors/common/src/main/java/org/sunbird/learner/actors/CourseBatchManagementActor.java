@@ -727,8 +727,22 @@ public class CourseBatchManagementActor extends BaseActor {
     Date startDate = requestedStartDate != null ? requestedStartDate : existingStartDate;
     Date endDate = requestedEndDate != null ? requestedEndDate : existingEndDate;
 
+    ProjectLogger.log(
+        "existingStartDate, existingEndDate, requestedStartDate, requestedEndDate, todaydate"
+            + existingStartDate
+            + ","
+            + existingEndDate
+            + ","
+            + requestedStartDate
+            + ","
+            + requestedEndDate
+            + ","
+            + todayDate,
+        LoggerEnum.INFO.name());
     if ((existingStartDate.before(todayDate) || existingStartDate.equals(todayDate))
         && !(existingStartDate.equals(requestedStartDate))) {
+
+      ProjectLogger.log("validateBatchStartAndEndDate: senario1: ", LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.invalidBatchStartDateError.getErrorCode(),
           ResponseCode.invalidBatchStartDateError.getErrorMessage(),
@@ -736,6 +750,8 @@ public class CourseBatchManagementActor extends BaseActor {
     }
 
     if (requestedStartDate != null && requestedStartDate.before(todayDate)) {
+
+      ProjectLogger.log("validateBatchStartAndEndDate: senario2: ", LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.invalidBatchStartDateError.getErrorCode(),
           ResponseCode.invalidBatchStartDateError.getErrorMessage(),
@@ -743,6 +759,8 @@ public class CourseBatchManagementActor extends BaseActor {
     }
 
     if (startDate.after(endDate)) {
+
+      ProjectLogger.log("validateBatchStartAndEndDate: senario3: ", LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.invalidBatchStartDateError.getErrorCode(),
           ResponseCode.invalidBatchStartDateError.getErrorMessage(),
@@ -750,6 +768,8 @@ public class CourseBatchManagementActor extends BaseActor {
     }
 
     if (!endDate.after(todayDate)) {
+
+      ProjectLogger.log("validateBatchStartAndEndDate: senario4: ", LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.courseBatchEndDateError.getErrorCode(),
           ResponseCode.courseBatchEndDateError.getErrorMessage(),

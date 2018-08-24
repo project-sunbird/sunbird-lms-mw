@@ -1229,6 +1229,9 @@ public final class Util {
     map.remove(JsonKey.LAST_UPDATED_ON);
     map.remove(JsonKey.CREATED_ON);
     map.remove(JsonKey.USER_ID);
+    map.remove(JsonKey.ORIGINAL_EXTERNAL_ID);
+    map.remove(JsonKey.ORIGINAL_ID_TYPE);
+    map.remove(JsonKey.ORIGINAL_PROVIDER);
     cassandraOperation.deleteRecord(KEY_SPACE_NAME, JsonKey.USR_EXT_IDNT_TABLE, map);
   }
 

@@ -1363,12 +1363,11 @@ public class UserManagementActor extends BaseActor {
       userExtension.create(userMap);
     }
 
-    // Create temp password if password field is null or empty in request
-    if (!StringUtils.isBlank((String) userMap.get(JsonKey.PASSWORD))) {
+    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
       emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, userMap.get(JsonKey.PASSWORD));
       userMap.put(JsonKey.PASSWORD, userMap.get(JsonKey.PASSWORD));
     } else {
-      // create tempPassword
+      // Create temp password if password field is null or empty in request
       String tempPassword = ProjectUtil.generateRandomPassword();
       userMap.put(JsonKey.PASSWORD, tempPassword);
       emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, tempPassword);

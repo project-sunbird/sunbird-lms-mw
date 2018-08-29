@@ -19,5 +19,6 @@
 		<module>badge</module>
     	<module>dashboard</module>
 		<module>location</module>
-  </modules>
+        <module>systemsettings</module>
+    </modules>
 </project>

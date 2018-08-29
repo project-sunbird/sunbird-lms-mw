@@ -86,7 +86,6 @@ public class UserManagementActor extends BaseActor {
       Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
   private Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
-  private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String KEY_SPACE_NAME = "sunbird";
   private static final String DEFAULT_USER_ROLE = "PUBLIC";
   private static final boolean IS_REGISTRY_ENABLED =
@@ -617,8 +616,23 @@ public class UserManagementActor extends BaseActor {
             .stream()
             .forEach(
                 s -> {
-                  s.put(JsonKey.ID, decryptionService.decryptData(s.get(JsonKey.EXTERNAL_ID)));
+                  if (StringUtils.isNotBlank(s.get(JsonKey.ORIGINAL_EXTERNAL_ID))
+                      && StringUtils.isNotBlank(s.get(JsonKey.ORIGINAL_ID_TYPE))
+                      && StringUtils.isNotBlank(s.get(JsonKey.ORIGINAL_PROVIDER))) {
+                    s.put(
+                        JsonKey.ID,
+                        decryptionService.decryptData(s.get(JsonKey.ORIGINAL_EXTERNAL_ID)));
+                    s.put(JsonKey.ID_TYPE, s.get(JsonKey.ORIGINAL_ID_TYPE));
+                    s.put(JsonKey.PROVIDER, s.get(JsonKey.ORIGINAL_PROVIDER));
+
+                  } else {
+                    s.put(JsonKey.ID, decryptionService.decryptData(s.get(JsonKey.EXTERNAL_ID)));
+                  }
+
                   s.remove(JsonKey.EXTERNAL_ID);
+                  s.remove(JsonKey.ORIGINAL_EXTERNAL_ID);
+                  s.remove(JsonKey.ORIGINAL_ID_TYPE);
+                  s.remove(JsonKey.ORIGINAL_PROVIDER);
                   s.remove(JsonKey.CREATED_BY);
                   s.remove(JsonKey.LAST_UPDATED_BY);
                   s.remove(JsonKey.LAST_UPDATED_ON);
@@ -754,7 +768,7 @@ public class UserManagementActor extends BaseActor {
       User user = mapper.convertValue(userMap, User.class);
       if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
         List<Map<String, String>> list =
-            Util.convertExternalIdsValueToLowerCase(user.getExternalIds());
+            Util.copyAndConvertExternalIdsToLower(user.getExternalIds());
         user.setExternalIds(list);
         userMap.put(JsonKey.EXTERNAL_IDS, list);
       }
@@ -794,10 +808,12 @@ public class UserManagementActor extends BaseActor {
         userDbRecord = Util.getUserbyUserId((String) userMap.get(JsonKey.USER_ID));
       }
       String registryId = (String) userDbRecord.get(JsonKey.REGISTRY_ID);
+      UserExtension userExtension = new UserProviderRegistryImpl();
       if (StringUtils.isNotBlank(registryId)) {
         userMap.put(JsonKey.REGISTRY_ID, registryId);
-        UserExtension userExtension = new UserProviderRegistryImpl();
         userExtension.update(userMap);
+      } else {
+        userExtension.create(userMap);
       }
     }
 
@@ -1323,7 +1339,7 @@ public class UserManagementActor extends BaseActor {
       Util.checkUserExistOrNot(user);
       if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
         List<Map<String, String>> list =
-            Util.convertExternalIdsValueToLowerCase(user.getExternalIds());
+            Util.copyAndConvertExternalIdsToLower(user.getExternalIds());
         user.setExternalIds(list);
         userMap.put(JsonKey.EXTERNAL_IDS, list);
       }
@@ -1347,6 +1363,15 @@ public class UserManagementActor extends BaseActor {
       userExtension.create(userMap);
     }
 
+    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
+      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, userMap.get(JsonKey.PASSWORD));
+      userMap.put(JsonKey.PASSWORD, userMap.get(JsonKey.PASSWORD));
+    } else {
+      // Create temp password if password field is null or empty in request
+      String tempPassword = ProjectUtil.generateRandomPassword();
+      userMap.put(JsonKey.PASSWORD, tempPassword);
+      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, tempPassword);
+    }
     String accessToken = "";
     if (isSSOEnabled) {
       try {
@@ -1379,17 +1404,7 @@ public class UserManagementActor extends BaseActor {
 
     userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
-
-    if (!StringUtils.isBlank((String) userMap.get(JsonKey.PASSWORD))) {
-      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, userMap.get(JsonKey.PASSWORD));
-      userMap.put(
-          JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
-    } else {
-      // create tempPassword
-      String tempPassword = ProjectUtil.generateRandomPassword();
-      userMap.put(JsonKey.PASSWORD, OneWayHashing.encryptVal(tempPassword));
-      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, tempPassword);
-    }
+    userMap.put(JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
     try {
       UserUtility.encryptUserData(userMap);
     } catch (Exception e1) {

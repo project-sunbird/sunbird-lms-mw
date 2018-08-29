@@ -611,28 +611,16 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         failureList.add(concurrentHashMap);
         return;
       }
-
       // check for unique root org for channel -----
-      Map<String, Object> filters = new HashMap<>();
-      filters.put(JsonKey.CHANNEL, concurrentHashMap.get(JsonKey.CHANNEL));
-      filters.put(JsonKey.IS_ROOT_ORG, true);
-
-      Map<String, Object> esResult =
-          elasticSearchComplexSearch(
-              filters, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
-
+      List<Map<String, Object>> rootOrgListRes =
+          searchOrgByChannel((String) concurrentHashMap.get(JsonKey.CHANNEL), orgDbInfo);
       // if for root org true for this channel means simply update the existing record
       // ...
-      if (isNotNull(esResult)
-          && esResult.containsKey(JsonKey.CONTENT)
-          && isNotNull(esResult.get(JsonKey.CONTENT))
-          && ((List) esResult.get(JsonKey.CONTENT)).size() > 0) {
-
-        List<Map<String, Object>> contentList =
-            (List<Map<String, Object>>) esResult.get(JsonKey.CONTENT);
-        Map<String, Object> rootOrgInfo = contentList.get(0);
-        concurrentHashMap.put(JsonKey.ID, contentList.get(0).get(JsonKey.ID));
-
+      if (CollectionUtils.isNotEmpty(rootOrgListRes)) {
+        Map<String, Object> rootOrgInfo = rootOrgListRes.get(0);
+        concurrentHashMap.put(JsonKey.ID, rootOrgInfo.get(JsonKey.ID));
+        concurrentHashMap.put(JsonKey.UPDATED_BY, dataMap.get(JsonKey.UPLOADED_BY));
+        concurrentHashMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
         if (!compareStrings(
             (String) concurrentHashMap.get(JsonKey.EXTERNAL_ID),
             (String) rootOrgInfo.get(JsonKey.EXTERNAL_ID))) {
@@ -689,8 +677,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           orgResponse.put(JsonKey.ORGANISATION, concurrentHashMap);
           orgResponse.put(JsonKey.OPERATION, ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
           ProjectLogger.log(
-              "Calling background job to save org data into ES"
-                  + contentList.get(0).get(JsonKey.ID));
+              "Calling background job to save org data into ES" + rootOrgInfo.get(JsonKey.ID));
           Request request = new Request();
           request.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
           request.getRequest().put(JsonKey.ORGANISATION, concurrentHashMap);
@@ -721,24 +708,17 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         if (channelToRootOrgCache.containsKey(channel)) {
           concurrentHashMap.put(JsonKey.ROOT_ORG_ID, channelToRootOrgCache.get(channel));
         } else {
-          Map<String, Object> filters = new HashMap<>();
-          filters.put(JsonKey.CHANNEL, concurrentHashMap.get(JsonKey.CHANNEL));
-          filters.put(JsonKey.IS_ROOT_ORG, true);
+          // check for unique root org for channel -----
+          List<Map<String, Object>> rootOrgListRes =
+              searchOrgByChannel((String) concurrentHashMap.get(JsonKey.CHANNEL), orgDbInfo);
 
-          Map<String, Object> esResult =
-              elasticSearchComplexSearch(
-                  filters, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
-          if (isNotNull(esResult)
-              && esResult.containsKey(JsonKey.CONTENT)
-              && isNotNull(esResult.get(JsonKey.CONTENT))
-              && ((List) esResult.get(JsonKey.CONTENT)).size() > 0) {
+          if (CollectionUtils.isNotEmpty(rootOrgListRes)) {
 
-            Map<String, Object> esContent =
-                ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
-            concurrentHashMap.put(JsonKey.ROOT_ORG_ID, esContent.get(JsonKey.ID));
+            Map<String, Object> rootOrgResult = rootOrgListRes.get(0);
+            concurrentHashMap.put(JsonKey.ROOT_ORG_ID, rootOrgResult);
             channelToRootOrgCache.put(
                 (String) concurrentHashMap.get(JsonKey.CHANNEL),
-                (String) esContent.get(JsonKey.ID));
+                (String) rootOrgResult.get(JsonKey.ID));
 
           } else {
             concurrentHashMap.put(
@@ -879,6 +859,19 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       return;
     }
     generateTelemetryForOrganisation(map, uniqueId, isOrgUpdated);
+  }
+
+  private List<Map<String, Object>> searchOrgByChannel(String channel, Util.DbInfo orgDbInfo) {
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(JsonKey.CHANNEL, channel);
+    filters.put(JsonKey.IS_ROOT_ORG, true);
+
+    Response orgResponse =
+        cassandraOperation.getRecordsByProperties(
+            orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), filters);
+    List<Map<String, Object>> rootOrgListRes =
+        (List<Map<String, Object>>) orgResponse.get(JsonKey.RESPONSE);
+    return rootOrgListRes;
   }
 
   private void generateTelemetryForOrganisation(
@@ -1057,6 +1050,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               userMap.remove(JsonKey.ID);
               userMap.remove(JsonKey.PASSWORD);
               userMap.put(JsonKey.ERROR_MSG, ex.getMessage() + " ,user insertion failed.");
+              removeOriginalExternalIds(
+                  (List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
               failureUserReq.add(userMap);
               continue;
             } finally {
@@ -1120,6 +1115,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               userMap.remove(JsonKey.ID);
               userMap.remove(JsonKey.PASSWORD);
               userMap.put(JsonKey.ERROR_MSG, ex.getMessage() + " ,user updation failed.");
+              removeOriginalExternalIds(
+                  (List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
               failureUserReq.add(userMap);
               continue;
             }
@@ -1132,6 +1129,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           try {
             if (null != userMap.get(JsonKey.EXTERNAL_IDS)) {
               Util.updateUserExtId(userMap);
+              removeOriginalExternalIds(
+                  (List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
             }
           } catch (Exception ex) {
             userMap.put(
@@ -1168,10 +1167,12 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           userMap.remove(JsonKey.ID);
           userMap.remove(JsonKey.PASSWORD);
           userMap.put(JsonKey.ERROR_MSG, ex.getMessage());
+          removeOriginalExternalIds((List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
           failureUserReq.add(userMap);
         }
       } else {
         userMap.put(JsonKey.ERROR_MSG, errMsg);
+        removeOriginalExternalIds((List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
         failureUserReq.add(userMap);
       }
     }
@@ -1203,6 +1204,18 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           "Exception Occurred while updating bulk_upload_process in BulkUploadBackGroundJobActor : ",
           e);
     }
+  }
+
+  private void removeOriginalExternalIds(List<Map<String, Object>> externalIds) {
+    externalIds.forEach(
+        externalId -> {
+          externalId.put(JsonKey.ID, externalId.get(JsonKey.ORIGINAL_EXTERNAL_ID));
+          externalId.remove(JsonKey.ORIGINAL_EXTERNAL_ID);
+          externalId.put(JsonKey.PROVIDER, externalId.get(JsonKey.ORIGINAL_PROVIDER));
+          externalId.remove(JsonKey.ORIGINAL_PROVIDER);
+          externalId.put(JsonKey.ID_TYPE, externalId.get(JsonKey.ORIGINAL_ID_TYPE));
+          externalId.remove(JsonKey.ORIGINAL_ID_TYPE);
+        });
   }
 
   private void parseExternalIds(Map<String, Object> userMap) throws IOException {
@@ -1437,7 +1450,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
   private void validateExternalIds(Map<String, Object> userMap, String operation) {
     if (CollectionUtils.isNotEmpty((List<Map<String, String>>) userMap.get(JsonKey.EXTERNAL_IDS))) {
       List<Map<String, String>> list =
-          Util.convertExternalIdsValueToLowerCase(
+          Util.copyAndConvertExternalIdsToLower(
               (List<Map<String, String>>) userMap.get(JsonKey.EXTERNAL_IDS));
       userMap.put(JsonKey.EXTERNAL_IDS, list);
     }

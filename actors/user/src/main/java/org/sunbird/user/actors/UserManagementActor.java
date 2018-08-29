@@ -1363,6 +1363,16 @@ public class UserManagementActor extends BaseActor {
       userExtension.create(userMap);
     }
 
+    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
+      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, userMap.get(JsonKey.PASSWORD));
+      userMap.put(
+          JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
+    } else {
+      // Create temp password if password field is null or empty in request
+      String tempPassword = ProjectUtil.generateRandomPassword();
+      userMap.put(JsonKey.PASSWORD, tempPassword);
+      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, tempPassword);
+    }
     String accessToken = "";
     if (isSSOEnabled) {
       try {
@@ -1395,17 +1405,7 @@ public class UserManagementActor extends BaseActor {
 
     userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
-
-    if (!StringUtils.isBlank((String) userMap.get(JsonKey.PASSWORD))) {
-      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, userMap.get(JsonKey.PASSWORD));
-      userMap.put(
-          JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
-    } else {
-      // create tempPassword
-      String tempPassword = ProjectUtil.generateRandomPassword();
-      userMap.put(JsonKey.PASSWORD, OneWayHashing.encryptVal(tempPassword));
-      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, tempPassword);
-    }
+    userMap.put(JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
     try {
       UserUtility.encryptUserData(userMap);
     } catch (Exception e1) {

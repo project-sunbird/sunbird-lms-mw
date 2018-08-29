@@ -373,6 +373,9 @@ public abstract class BaseMetricsActor extends BaseActor {
         LoggerEnum.INFO.name());
     HttpResponse response = client.execute(post);
     if (response.getStatusLine().getStatusCode() != 200) {
+      ProjectLogger.log(
+          "BaseMetricsActor:makePostRequest: Status code from analytics is not 200 ",
+          LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.unableToConnect.getErrorCode(),
           ResponseCode.unableToConnect.getErrorMessage(),
@@ -388,7 +391,9 @@ public abstract class BaseMetricsActor extends BaseActor {
       result.append(line);
     }
     ProjectLogger.log(
-        "BaseMetricsActor:makePostRequest: Response from analytics store for metrics = " + response.toString(), LoggerEnum.INFO.name());
+        "BaseMetricsActor:makePostRequest: Response from analytics store for metrics = "
+            + response.toString(),
+        LoggerEnum.INFO.name());
     return result.toString();
   }
 

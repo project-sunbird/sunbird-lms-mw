@@ -388,7 +388,7 @@ public abstract class BaseMetricsActor extends BaseActor {
       result.append(line);
     }
     ProjectLogger.log(
-        "Response from Ekstep for metrics" + response.toString(), LoggerEnum.INFO.name());
+        "BaseMetricsActor:makePostRequest: Response from analytics store for metrics = " + response.toString(), LoggerEnum.INFO.name());
     return result.toString();
   }
 

@@ -58,6 +58,14 @@ public class CourseBatchManagementActor extends BaseActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo dbInfo = null;
 
+  public CourseBatchManagementActor() {
+    this.cassandraOperation = ServiceFactory.getInstance();
+  }
+
+  public CourseBatchManagementActor(CassandraOperation cassandraOperation) {
+    this.cassandraOperation = cassandraOperation;
+  }
+
   /**
    * Receives the actor message and perform the course enrollment operation .
    *
@@ -588,6 +596,8 @@ public class CourseBatchManagementActor extends BaseActor {
     if (CollectionUtils.isNotEmpty(courseBatch)) {
       Map<String, Object> res = courseBatch.get(0);
 
+      System.out.println(res.toString());
+
       Date todayDate = getDate(null, format, null);
 
       Date dbBatchStartDate = getDate(JsonKey.START_DATE, format, res);
@@ -739,6 +749,7 @@ public class CourseBatchManagementActor extends BaseActor {
             + ","
             + todayDate,
         LoggerEnum.INFO.name());
+
     if ((existingStartDate.before(todayDate) || existingStartDate.equals(todayDate))
         && !(existingStartDate.equals(requestedStartDate))) {
 
@@ -749,7 +760,9 @@ public class CourseBatchManagementActor extends BaseActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
-    if (requestedStartDate != null && requestedStartDate.before(todayDate)) {
+    // breaking
+    if ((requestedStartDate != null && requestedStartDate.before(todayDate))
+        && !requestedStartDate.equals(existingEndDate)) {
 
       ProjectLogger.log("validateBatchStartAndEndDate: senario2: ", LoggerEnum.INFO.name());
       throw new ProjectCommonException(
@@ -780,13 +793,13 @@ public class CourseBatchManagementActor extends BaseActor {
   private Date getDate(String key, SimpleDateFormat format, Map<String, Object> map) {
     try {
       if (MapUtils.isEmpty(map)) {
-        map = new HashMap<>();
-      }
-      if (StringUtils.isBlank((String) map.get(key))) {
         return format.parse(format.format(new Date()));
-      }
-      if (StringUtils.isNotBlank((String) map.get(key))) {
-        return format.parse((String) map.get(key));
+      } else {
+        if (StringUtils.isNotBlank((String) map.get(key))) {
+          return format.parse((String) map.get(key));
+        } else {
+          return null;
+        }
       }
     } catch (ParseException e) {
 

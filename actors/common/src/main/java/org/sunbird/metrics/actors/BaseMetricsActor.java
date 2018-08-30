@@ -349,7 +349,8 @@ public abstract class BaseMetricsActor extends BaseActor {
     return response;
   }
 
-  public static String makePostRequest(String baseURL, String apiURL, String body) throws IOException {
+  public static String makePostRequest(String baseURL, String apiURL, String body)
+      throws IOException {
     ProjectLogger.log("Request to Ekstep for Metrics" + body);
     String authKey = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
     if (StringUtils.isBlank(authKey)) {
@@ -364,14 +365,17 @@ public abstract class BaseMetricsActor extends BaseActor {
     post.setEntity(new StringEntity(body, CHARSETS_UTF_8));
     ProjectLogger.log(
         "BaseMetricsActor:makePostRequest completed requested data : " + body,
-        LoggerEnum.DEBUG.name());
+        LoggerEnum.INFO.name());
     ProjectLogger.log(
         "BaseMetricsActor:makePostRequest completed Url : "
             + baseURL
             + PropertiesCache.getInstance().getProperty(apiURL),
-        LoggerEnum.DEBUG.name());
+        LoggerEnum.INFO.name());
     HttpResponse response = client.execute(post);
     if (response.getStatusLine().getStatusCode() != 200) {
+      ProjectLogger.log(
+          "BaseMetricsActor:makePostRequest: Status code from analytics is not 200 ",
+          LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.unableToConnect.getErrorCode(),
           ResponseCode.unableToConnect.getErrorMessage(),
@@ -386,7 +390,10 @@ public abstract class BaseMetricsActor extends BaseActor {
     while ((line = rd.readLine()) != null) {
       result.append(line);
     }
-    ProjectLogger.log("Response from Ekstep for metrics" + response.toString());
+    ProjectLogger.log(
+        "BaseMetricsActor:makePostRequest: Response from analytics store for metrics = "
+            + response.toString(),
+        LoggerEnum.INFO.name());
     return result.toString();
   }
 

@@ -18,6 +18,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.actors.search.SearchHandlerActor;
 import org.sunbird.learner.util.Util;
@@ -36,6 +37,25 @@ public class SearchHandlerActorTest {
 
   @Test
   public void searchUser() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.COMPOSITE_SEARCH.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    Map<String, Object> filters = new HashMap<>();
+    List<String> objectType = new ArrayList<String>();
+    objectType.add(ProjectUtil.EsType.course.getTypeName());
+    filters.put(JsonKey.OBJECT_TYPE, objectType);
+    filters.put(JsonKey.CREATED_BY, "someUserId");
+    innerMap.put(JsonKey.FILTERS, filters);
+    reqObj.setRequest(innerMap);
+    subject.tell(reqObj, probe.getRef());
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+  }
+
+  @Test
+  public void searchCourseBatch() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 

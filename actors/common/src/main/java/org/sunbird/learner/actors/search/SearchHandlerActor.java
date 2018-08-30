@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.ElasticSearchUtil;
@@ -44,6 +45,11 @@ public class SearchHandlerActor extends BaseActor {
 
     if (request.getOperation().equalsIgnoreCase(ActorOperations.COMPOSITE_SEARCH.getValue())) {
       Map<String, Object> searchQueryMap = request.getRequest();
+      String mentorData = (String) request.get(JsonKey.MENTOR_COURSE_VIEW);
+      boolean isMentorViewAllowed = false;
+      if (StringUtils.isNotBlank(mentorData)) {
+        isMentorViewAllowed = Boolean.parseBoolean(mentorData);
+      }
       Object objectType =
           ((Map<String, Object>) searchQueryMap.get(JsonKey.FILTERS)).get(JsonKey.OBJECT_TYPE);
       String[] types = null;
@@ -66,6 +72,12 @@ public class SearchHandlerActor extends BaseActor {
       Map<String, Object> result =
           ElasticSearchUtil.complexSearch(
               searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
+      // now if course mentor view is allowed then do one more elasticsearch
+      // based of mentors list.
+      if (isMentorViewAllowed) {
+        Map<String, Object> mentorCourseBatchResp = getMentorCourseBatch(searchQueryMap);
+        result = mergeEsSearchResponse(result, mentorCourseBatchResp);
+      }
       // Decrypt the data
       if (EsType.user.getTypeName().equalsIgnoreCase(filterObjectType)) {
         List<Map<String, Object>> userMapList =
@@ -89,6 +101,59 @@ public class SearchHandlerActor extends BaseActor {
     } else {
       onReceiveUnsupportedOperation(request.getOperation());
     }
+  }
+
+  private Map<String, Object> getMentorCourseBatch(Map<String, Object> requestedFiltermap) {
+    String createdById =
+        (String)
+            ((Map<String, Object>) requestedFiltermap.get(JsonKey.FILTERS)).get(JsonKey.CREATED_BY);
+    ((Map<String, Object>) requestedFiltermap.get(JsonKey.FILTERS)).remove(JsonKey.CREATED_BY);
+    List<String> list = new ArrayList<>();
+    list.add(createdById);
+    ((Map<String, Object>) requestedFiltermap.get(JsonKey.FILTERS)).put(JsonKey.MENTORS, list);
+    SearchDTO searchDto = Util.createSearchDto(requestedFiltermap);
+    Map<String, Object> result =
+        ElasticSearchUtil.complexSearch(
+            searchDto,
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.course.getTypeName());
+    return result;
+  }
+
+  /**
+   * @param request1 map will have key as count and content []
+   * @param request2 map will have key as count and content []
+   * @return map with sum of count and all content.
+   */
+  private Map<String, Object> mergeEsSearchResponse(
+      Map<String, Object> request1, Map<String, Object> request2) {
+    long firstReqCount = getCount(request1);
+    List<Object> firstReqData = getData(request1);
+    long secondReqCount = getCount(request2);
+    List<Object> secondReqData = getData(request2);
+    long totalCount = firstReqCount + secondReqCount;
+    List<Object> list = new ArrayList<>();
+    list.addAll(firstReqData);
+    list.addAll(secondReqData);
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.COUNT, totalCount);
+    map.put(JsonKey.CONTENT, list);
+    return map;
+  }
+
+  private long getCount(Map<String, Object> request) {
+
+    if (request != null) {
+      return (long) request.get(JsonKey.COUNT);
+    }
+    return 0;
+  }
+
+  private List<Object> getData(Map<String, Object> request) {
+    if (request != null) {
+      return (List<Object>) request.get(JsonKey.CONTENT);
+    }
+    return new ArrayList<Object>();
   }
 
   private void generateSearchTelemetryEvent(

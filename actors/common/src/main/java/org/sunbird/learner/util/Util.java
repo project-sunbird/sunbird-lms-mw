@@ -354,6 +354,7 @@ public final class Util {
         boolean result =
             cassandraConnectionManager.createConnection(ip, port, userName, password, keyspace);
         if (result) {
+          response = true;
           ProjectLogger.log(
               "CONNECTION CREATED SUCCESSFULLY FOR IP: " + ip + " : KEYSPACE :" + keyspace,
               LoggerEnum.INFO.name());
@@ -362,14 +363,15 @@ public final class Util {
               "CONNECTION CREATION FAILED FOR IP: " + ip + " : KEYSPACE :" + keyspace,
               LoggerEnum.INFO.name());
         }
-        response = true;
       } catch (ProjectCommonException ex) {
-        ProjectLogger.log(ex.getMessage(), ex);
-        throw new ProjectCommonException(
-            ResponseCode.invaidConfiguration.getErrorCode(),
-            ResponseCode.invaidConfiguration.getErrorCode(),
-            ResponseCode.SERVER_ERROR.hashCode());
+        ProjectLogger.log("Util:readConfigFromEnv: Exception occurred with message = " + ex.getMessage(), LoggerEnum.ERROR);
       }
+    }
+    if (!response) {
+      throw new ProjectCommonException(
+              ResponseCode.invaidConfiguration.getErrorCode(),
+              ResponseCode.invaidConfiguration.getErrorCode(),
+              ResponseCode.SERVER_ERROR.hashCode());
     }
     return response;
   }

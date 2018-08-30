@@ -595,11 +595,7 @@ public class CourseBatchManagementActor extends BaseActor {
         ((List<Map<String, Object>>) response.get(JsonKey.RESPONSE));
     if (CollectionUtils.isNotEmpty(courseBatch)) {
       Map<String, Object> res = courseBatch.get(0);
-
-      System.out.println(res.toString());
-
       Date todayDate = getDate(null, format, null);
-
       Date dbBatchStartDate = getDate(JsonKey.START_DATE, format, res);
       Date dbBatchEndDate = getDate(JsonKey.END_DATE, format, res);
       Date endDate = dbBatchEndDate;
@@ -760,7 +756,6 @@ public class CourseBatchManagementActor extends BaseActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
-    // breaking
     if ((requestedStartDate != null && requestedStartDate.before(todayDate))
         && !requestedStartDate.equals(existingEndDate)) {
 

@@ -968,11 +968,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     String hashTagId = null;
     if (dataMapList != null && dataMapList.size() > 0) {
       String orgId = (String) dataMapList.get(0).get(JsonKey.ORGANISATION_ID);
-      Map<String, Object> organisation = Util.getOrgDetails(orgId);
-      hashTagId =
-          StringUtils.isNotEmpty((String) organisation.get(JsonKey.HASHTAGID))
-              ? (String) organisation.get(JsonKey.HASHTAGID)
-              : (String) organisation.get(JsonKey.ID);
+      hashTagId = Util.getHashTagIdFromOrgId(orgId);
     }
     for (int i = 0; i < dataMapList.size(); i++) {
       userMap = dataMapList.get(i);
@@ -1208,19 +1204,20 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         // for update
         Util.upsertUserOrgData(userMap);
       }
-    } else if (!(((String) userMap.get(JsonKey.ORGANISATION_ID))
-        .equalsIgnoreCase((String) userMap.get(JsonKey.ROOT_ORG_ID)))) {
+    } else {
       Map<String, Object> map = new HashMap<>(userMap);
       if (operation.equalsIgnoreCase(JsonKey.CREATE)) {
         // first register for subOrg then root org
         Util.registerUserToOrg(map);
         prepareRequestForAddingUserToRootOrg(userMap, map);
+        // register user to root org
         Util.registerUserToOrg(map);
       } else {
         // for update
         // first register for subOrg then root org
         Util.upsertUserOrgData(map);
         prepareRequestForAddingUserToRootOrg(userMap, map);
+        // register user to root org
         Util.upsertUserOrgData(userMap);
       }
     }
@@ -1229,8 +1226,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
   private void prepareRequestForAddingUserToRootOrg(
       Map<String, Object> userMap, Map<String, Object> map) {
     map.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ROOT_ORG_ID));
-    List<String> roles = new ArrayList<>();
-    roles.add(JsonKey.PUBLIC);
+    List<String> roles = Arrays.asList(JsonKey.PUBLIC);
     map.put(JsonKey.ROLES, roles);
   }
 

@@ -757,7 +757,7 @@ public class CourseBatchManagementActor extends BaseActor {
     }
 
     if ((requestedStartDate != null && requestedStartDate.before(todayDate))
-        && !requestedStartDate.equals(existingEndDate)) {
+        && !requestedStartDate.equals(existingStartDate)) {
 
       ProjectLogger.log("validateBatchStartAndEndDate: senario2: ", LoggerEnum.INFO.name());
       throw new ProjectCommonException(

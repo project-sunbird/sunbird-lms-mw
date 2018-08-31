@@ -1,28 +1,25 @@
 package org.sunbird.systemsettings.dao;
 
+import java.util.List;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.systemsettings.model.SystemSetting;
 
 public interface SystemSettingDao {
   /**
-   * This methods inserts the given settings record into cassandra table through CassandraOperation
-   * methods
+   * Update system setting.
    *
-   * @param systemSetting instance of SystemSetting class contains the setting to be written
-   * @return response instance of Response class contains the response of cassandra Dao insert
-   *     operation
+   * @param systemSetting Setting information
+   * @return Response containing setting identifier.
    */
   Response write(SystemSetting systemSetting);
+
   /**
-   * This methods fetch the settings record using given id from cassandra table through
-   * CassandraOperation methods
+   * Read system setting for given identifier.
    *
-   * @param id id of the settings record to be fetched
-   * @return instance of SystemSetting class with mapped field values(id,field,value) from cassandra
-   *     table
+   * @param id System setting identifier
+   * @return System setting information
    */
   SystemSetting readById(String id);
-
   /**
    * This methods fetch the settings record using given id from cassandra table through
    * CassandraOperation methods
@@ -32,11 +29,11 @@ public interface SystemSettingDao {
    *     table
    */
   SystemSetting readByField(String field);
+
   /**
-   * This methods fetches all the system settings records from cassandra table through
-   * CassandraOperation methods
+   * Read all system settings.
    *
-   * @return instance of Response class with system settings from cassandra table.
+   * @return Response containing list of system settings.
    */
-  Response readAll();
+  List<SystemSetting> readAll();
 }

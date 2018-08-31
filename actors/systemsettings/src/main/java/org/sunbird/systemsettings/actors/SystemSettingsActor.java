@@ -1,6 +1,7 @@
 package org.sunbird.systemsettings.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
 import java.util.Map;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -16,9 +17,8 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+import org.sunbird.systemsettings.dao.impl.SystemSettingDaoImpl;
 import org.sunbird.systemsettings.model.SystemSetting;
-import org.sunbird.systemsettings.service.SystemSettingService;
-import org.sunbird.systemsettings.service.impl.SystemSettingServiceImpl;
 
 @ActorConfig(
   tasks = {"getSystemSetting", "getAllSystemSettings", "setSystemSetting"},
@@ -27,8 +27,8 @@ import org.sunbird.systemsettings.service.impl.SystemSettingServiceImpl;
 public class SystemSettingsActor extends BaseActor {
   private final ObjectMapper mapper = new ObjectMapper();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private final SystemSettingService systemSettingService =
-      new SystemSettingServiceImpl(cassandraOperation);
+  private final SystemSettingDaoImpl systemSettingDaoImpl =
+      new SystemSettingDaoImpl(cassandraOperation);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -50,13 +50,13 @@ public class SystemSettingsActor extends BaseActor {
         break;
     }
   }
-  /** @param actorMessage Instance of Request class contains the Setting id data */
+
   @SuppressWarnings("unchecked")
   private void getSystemSetting(Request actorMessage) {
-    ProjectLogger.log("getSystemSettingById method call started", LoggerEnum.DEBUG.name());
+    ProjectLogger.log("SystemSettingsActor: getSystemSetting called", LoggerEnum.DEBUG.name());
 
     Map<String, Object> req = actorMessage.getRequest();
-    SystemSetting setting = systemSettingService.readSetting((String) req.get(JsonKey.ID));
+    SystemSetting setting = systemSettingDaoImpl.readByField((String) req.get(JsonKey.FIELD));
     if (setting == null) {
       throw new ProjectCommonException(
           ResponseCode.resourceNotFound.getErrorCode(),
@@ -71,23 +71,20 @@ public class SystemSettingsActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private void getAllSystemSettings() {
-    ProjectLogger.log("getAllSystemSettings method call started", LoggerEnum.DEBUG.name());
-    Response response = systemSettingService.readAllSettings();
+    ProjectLogger.log("SystemSettingsActor: getAllSystemSettings called", LoggerEnum.DEBUG.name());
+    List<SystemSetting> allSystemSettings = systemSettingDaoImpl.readAll();
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, allSystemSettings);
     sender().tell(response, self());
   }
 
   @SuppressWarnings("unchecked")
   private void setSystemSetting(Request actorMessage) {
-    Map<String, Object> req = actorMessage.getRequest();
-    SystemSetting setting = mapper.convertValue(req, SystemSetting.class);
-    Response result = writeSystemSetting(setting);
-    sender().tell(result, self());
-  }
+    ProjectLogger.log("SystemSettingsActor: setSystemSetting called", LoggerEnum.DEBUG.name());
 
-  private Response writeSystemSetting(SystemSetting systemSetting) {
-    Response response = new Response();
-    ProjectLogger.log("SystemInitActor: writeSystemSetting called", LoggerEnum.DEBUG.name());
-    response = systemSettingService.setSetting(systemSetting);
-    return response;
+    Map<String, Object> req = actorMessage.getRequest();
+    SystemSetting systemSetting = mapper.convertValue(req, SystemSetting.class);
+    Response response = systemSettingDaoImpl.write(systemSetting);
+    sender().tell(response, self());
   }
 }

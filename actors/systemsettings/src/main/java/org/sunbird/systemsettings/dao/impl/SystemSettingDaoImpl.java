@@ -2,6 +2,7 @@ package org.sunbird.systemsettings.dao.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections4.CollectionUtils;
@@ -51,6 +52,40 @@ public class SystemSettingDaoImpl implements SystemSettingDao {
     if (CollectionUtils.isEmpty(list)) {
       return null;
     }
+    return getSystemSetting(list);
+  }
+
+  @Override
+  public SystemSetting readByField(String field) {
+    Response response =
+        cassandraOperation.getRecordsByIndexedProperty(
+            KEYSPACE_NAME, TABLE_NAME, JsonKey.FIELD, field);
+    List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if (CollectionUtils.isEmpty(list)) {
+      return null;
+    }
+    return getSystemSetting(list);
+  }
+
+  /**
+   * This methods fetches all the system settings records from cassandra table through
+   * CassandraOperation methods
+   *
+   * @return instance of Response class with system settings from cassandra table
+   */
+  public List<SystemSetting> readAll() {
+    Response response = cassandraOperation.getAllRecords(KEYSPACE_NAME, TABLE_NAME);
+    List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    List<SystemSetting> systemSettings = new ArrayList<>();
+    list.forEach(
+        map -> {
+          SystemSetting systemSetting = mapper.convertValue(map, SystemSetting.class);
+          systemSettings.add(systemSetting);
+        });
+    return systemSettings;
+  }
+
+  private SystemSetting getSystemSetting(List<Map<String, Object>> list) {
     try {
       String jsonString = mapper.writeValueAsString((list.get(0)));
       return mapper.readValue(jsonString, SystemSetting.class);
@@ -61,35 +96,5 @@ public class SystemSettingDaoImpl implements SystemSettingDao {
           ResponseCode.SERVER_ERROR, ResponseCode.SERVER_ERROR.getErrorMessage());
     }
     return null;
-  }
-
-  @Override
-  public SystemSetting readByField(String field) {
-    Response response = cassandraOperation.getRecordsByIndexedProperty(KEYSPACE_NAME, TABLE_NAME, id);
-    List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    if (CollectionUtils.isEmpty(list)) {
-      return null;
-    }
-    try {
-      String jsonString = mapper.writeValueAsString((list.get(0)));
-      return mapper.readValue(jsonString, SystemSetting.class);
-    } catch (IOException e) {
-      ProjectLogger.log(
-              "Exception at SystemSettingDaoImpl:readById " + e.getMessage(), LoggerEnum.DEBUG.name());
-      ProjectCommonException.throwServerErrorException(
-              ResponseCode.SERVER_ERROR, ResponseCode.SERVER_ERROR.getErrorMessage());
-    }
-    return null;
-  }
-
-  /**
-   * This methods fetches all the system settings records from cassandra table through
-   * CassandraOperation methods
-   *
-   * @return instance of Response class with system settings from cassandra table
-   */
-  public Response readAll() {
-    Response response = cassandraOperation.getAllRecords(KEYSPACE_NAME, TABLE_NAME);
-    return response;
   }
 }

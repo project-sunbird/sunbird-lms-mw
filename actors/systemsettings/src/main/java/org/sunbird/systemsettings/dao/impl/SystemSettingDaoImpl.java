@@ -62,6 +62,26 @@ public class SystemSettingDaoImpl implements SystemSettingDao {
     }
     return null;
   }
+
+  @Override
+  public SystemSetting readByField(String field) {
+    Response response = cassandraOperation.getRecordsByIndexedProperty(KEYSPACE_NAME, TABLE_NAME, id);
+    List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if (CollectionUtils.isEmpty(list)) {
+      return null;
+    }
+    try {
+      String jsonString = mapper.writeValueAsString((list.get(0)));
+      return mapper.readValue(jsonString, SystemSetting.class);
+    } catch (IOException e) {
+      ProjectLogger.log(
+              "Exception at SystemSettingDaoImpl:readById " + e.getMessage(), LoggerEnum.DEBUG.name());
+      ProjectCommonException.throwServerErrorException(
+              ResponseCode.SERVER_ERROR, ResponseCode.SERVER_ERROR.getErrorMessage());
+    }
+    return null;
+  }
+
   /**
    * This methods fetches all the system settings records from cassandra table through
    * CassandraOperation methods

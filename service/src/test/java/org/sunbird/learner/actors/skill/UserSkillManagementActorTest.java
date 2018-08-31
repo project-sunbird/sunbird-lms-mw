@@ -213,41 +213,6 @@ public class UserSkillManagementActorTest {
         null != res && res.getResponseCode() == ResponseCode.CLIENT_ERROR.getResponseCode());
   }
 
-  private Response createCassandraInsertSuccessResponse() {
-    Response response = new Response();
-    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    return response;
-  }
-
-  private Response createGetUserSuccessResponse() {
-    Response response = new Response();
-    Map<String, Object> userMap = new HashMap<>();
-    userMap.put(JsonKey.ID, USER_ID);
-    userMap.put(JsonKey.ROOT_ORG_ID, ROOT_ORG_ID);
-    List<Map<String, Object>> result = new ArrayList<>();
-    result.add(userMap);
-    response.put(JsonKey.RESPONSE, result);
-    return response;
-  }
-
-  private Response createGetUserFailureResponse() {
-    Response response = new Response();
-    List<Map<String, Object>> result = new ArrayList<>();
-    response.put(JsonKey.RESPONSE, result);
-    return response;
-  }
-
-  private void mockCasandraRequestForGetUser(boolean isFailure) {
-    if (isFailure)
-      when(cassandraOperation.getRecordById(
-              Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-          .thenReturn(createGetUserFailureResponse());
-    else
-      when(cassandraOperation.getRecordById(
-              Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-          .thenReturn(createGetUserSuccessResponse());
-  }
-
   private Request createAddSkillRequest(
       String userId, String endorseUserId, List<String> skillsList) {
 
@@ -349,5 +314,40 @@ public class UserSkillManagementActorTest {
         .thenReturn(createGetUserSuccessResponse())
         .thenReturn(createGetSkillsSuccessResponse())
         .thenReturn(createSkillEndorsementResponse());
+  }
+
+  private Response createCassandraInsertSuccessResponse() {
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    return response;
+  }
+
+  private Response createGetUserSuccessResponse() {
+    Response response = new Response();
+    Map<String, Object> userMap = new HashMap<>();
+    userMap.put(JsonKey.ID, USER_ID);
+    userMap.put(JsonKey.ROOT_ORG_ID, ROOT_ORG_ID);
+    List<Map<String, Object>> result = new ArrayList<>();
+    result.add(userMap);
+    response.put(JsonKey.RESPONSE, result);
+    return response;
+  }
+
+  private Response createGetUserFailureResponse() {
+    Response response = new Response();
+    List<Map<String, Object>> result = new ArrayList<>();
+    response.put(JsonKey.RESPONSE, result);
+    return response;
+  }
+
+  private void mockCasandraRequestForGetUser(boolean isFailure) {
+    if (isFailure)
+      when(cassandraOperation.getRecordById(
+              Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+          .thenReturn(createGetUserFailureResponse());
+    else
+      when(cassandraOperation.getRecordById(
+              Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+          .thenReturn(createGetUserSuccessResponse());
   }
 }

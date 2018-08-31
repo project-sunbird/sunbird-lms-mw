@@ -774,7 +774,6 @@ public class CourseBatchManagementActor extends BaseActor {
           ResponseCode.invalidBatchStartDateError.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-
     if (!endDate.after(todayDate)) {
 
       ProjectLogger.log("validateBatchStartAndEndDate: senario4: ", LoggerEnum.INFO.name());

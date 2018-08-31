@@ -57,16 +57,17 @@ public class SystemSettingsActor extends BaseActor {
 
     Map<String, Object> req = actorMessage.getRequest();
     SystemSetting setting = systemSettingDaoImpl.readByField((String) req.get(JsonKey.FIELD));
+    
     if (setting == null) {
       throw new ProjectCommonException(
           ResponseCode.resourceNotFound.getErrorCode(),
           ResponseCode.resourceNotFound.getErrorMessage(),
           ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
-    } else {
-      Response response = new Response();
-      response.put(JsonKey.RESPONSE, setting);
-      sender().tell(response, self());
     }
+    
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, setting);
+    sender().tell(response, self());
   }
 
   @SuppressWarnings("unchecked")

@@ -592,6 +592,7 @@ public class UserManagementActor extends BaseActor {
 
     if (null != result) {
       UserUtility.decryptUserDataFrmES(result);
+      updateSkillWithEndoresmentCount(result);
       // loginId is used internally for checking the duplicate user
       result.remove(JsonKey.LOGIN_ID);
       result.remove(JsonKey.ENC_EMAIL);
@@ -602,6 +603,18 @@ public class UserManagementActor extends BaseActor {
       response.put(JsonKey.RESPONSE, result);
     }
     sender().tell(response, self());
+  }
+
+  @SuppressWarnings("unchecked")
+  private void updateSkillWithEndoresmentCount(Map<String, Object> result) {
+    if (MapUtils.isNotEmpty(result) && result.containsKey(JsonKey.SKILLS)) {
+      List<Map<String, Object>> skillList = (List<Map<String, Object>>) result.get(JsonKey.SKILLS);
+      for (Map<String, Object> skill : skillList) {
+        skill.put(
+            JsonKey.ENDORSEMENT_COUNT.toLowerCase(),
+            (int) skill.getOrDefault(JsonKey.ENDORSEMENT_COUNT, 0));
+      }
+    }
   }
 
   @SuppressWarnings("unchecked")

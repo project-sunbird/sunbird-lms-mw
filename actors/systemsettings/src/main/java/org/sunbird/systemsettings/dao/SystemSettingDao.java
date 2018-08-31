@@ -20,13 +20,12 @@ public interface SystemSettingDao {
    * @return System setting information
    */
   SystemSetting readById(String id);
+  
   /**
-   * This methods fetch the settings record using given id from cassandra table through
-   * CassandraOperation methods
+   * Read system setting for given field name.
    *
-   * @param field field of the settings record to be fetched
-   * @return instance of SystemSetting class with mapped field values(id,field,value) from cassandra
-   *     table
+   * @param field System setting field name
+   * @return System setting information
    */
   SystemSetting readByField(String field);
 

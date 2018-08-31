@@ -50,10 +50,10 @@ public class SystemSettingsActor extends BaseActor {
         break;
     }
   }
-  /** @param actorMessage Instance of Request class contains the Setting id data */
+
   @SuppressWarnings("unchecked")
   private void getSystemSetting(Request actorMessage) {
-    ProjectLogger.log("getSystemSettingById method call started", LoggerEnum.DEBUG.name());
+    ProjectLogger.log("SystemSettingsActor: getSystemSetting called", LoggerEnum.DEBUG.name());
 
     Map<String, Object> req = actorMessage.getRequest();
     SystemSetting setting = systemSettingService.readSetting((String) req.get(JsonKey.ID));
@@ -71,23 +71,18 @@ public class SystemSettingsActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private void getAllSystemSettings() {
-    ProjectLogger.log("getAllSystemSettings method call started", LoggerEnum.DEBUG.name());
+    ProjectLogger.log("SystemSettingsActor: getAllSystemSettings called", LoggerEnum.DEBUG.name());
     Response response = systemSettingService.readAllSettings();
     sender().tell(response, self());
   }
 
   @SuppressWarnings("unchecked")
   private void setSystemSetting(Request actorMessage) {
+    ProjectLogger.log("SystemSettingsActor: setSystemSetting called", LoggerEnum.DEBUG.name());
+    
     Map<String, Object> req = actorMessage.getRequest();
-    SystemSetting setting = mapper.convertValue(req, SystemSetting.class);
-    Response result = writeSystemSetting(setting);
-    sender().tell(result, self());
-  }
-
-  private Response writeSystemSetting(SystemSetting systemSetting) {
-    Response response = new Response();
-    ProjectLogger.log("SystemInitActor: writeSystemSetting called", LoggerEnum.DEBUG.name());
-    response = systemSettingService.setSetting(systemSetting);
-    return response;
+    SystemSetting systemSetting = mapper.convertValue(req, SystemSetting.class);
+    Response response = systemSettingService.setSetting(systemSetting);
+    sender().tell(response, self());
   }
 }

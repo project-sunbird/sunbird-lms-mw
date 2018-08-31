@@ -968,19 +968,11 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     String hashTagId = null;
     if (dataMapList != null && dataMapList.size() > 0) {
       String orgId = (String) dataMapList.get(0).get(JsonKey.ORGANISATION_ID);
-      if (StringUtils.isNotBlank(orgId)) {
-        Map<String, Object> map =
-            ElasticSearchUtil.getDataByIdentifier(
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.organisation.getTypeName(),
-                orgId);
-        if (MapUtils.isNotEmpty(map)) {
-          hashTagId = (String) map.get(JsonKey.HASHTAGID);
-          ProjectLogger.log(
-              "BulkUploadBackGroundJobActor:processUserInfo org hashTagId value : " + hashTagId,
-              LoggerEnum.INFO.name());
-        }
-      }
+      Map<String, Object> organisation = Util.getOrgDetails(orgId);
+      hashTagId =
+          StringUtils.isNotEmpty((String) organisation.get(JsonKey.HASHTAGID))
+              ? (String) organisation.get(JsonKey.HASHTAGID)
+              : (String) organisation.get(JsonKey.ID);
     }
     for (int i = 0; i < dataMapList.size(); i++) {
       userMap = dataMapList.get(i);
@@ -1038,8 +1030,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                   cassandraOperation.insertRecord(
                       usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
               // insert details to user_org table
+
               userMap.put(JsonKey.HASHTAGID, hashTagId);
-              Util.registerUserToOrg(userMap);
+              registerUserToOrg(userMap, JsonKey.CREATE);
               // removing added hashTagId
               userMap.remove(JsonKey.HASHTAGID);
             } catch (Exception ex) {
@@ -1106,7 +1099,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               // update user-org table(role update)
               userMap.put(JsonKey.UPDATED_BY, updatedBy);
               userMap.put(JsonKey.HASHTAGID, hashTagId);
-              Util.upsertUserOrgData(userMap);
+              registerUserToOrg(userMap, JsonKey.UPDATE);
               userMap.remove(JsonKey.HASHTAGID);
             } catch (Exception ex) {
               userMap.remove(JsonKey.HASHTAGID);
@@ -1204,6 +1197,41 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           "Exception Occurred while updating bulk_upload_process in BulkUploadBackGroundJobActor : ",
           e);
     }
+  }
+
+  private void registerUserToOrg(Map<String, Object> userMap, String operation) {
+    if (((String) userMap.get(JsonKey.ORGANISATION_ID))
+        .equalsIgnoreCase((String) userMap.get(JsonKey.ROOT_ORG_ID))) {
+      if (operation.equalsIgnoreCase(JsonKey.CREATE)) {
+        Util.registerUserToOrg(userMap);
+      } else {
+        // for update
+        Util.upsertUserOrgData(userMap);
+      }
+    } else if (!(((String) userMap.get(JsonKey.ORGANISATION_ID))
+        .equalsIgnoreCase((String) userMap.get(JsonKey.ROOT_ORG_ID)))) {
+      Map<String, Object> map = new HashMap<>(userMap);
+      if (operation.equalsIgnoreCase(JsonKey.CREATE)) {
+        // first register for subOrg then root org
+        Util.registerUserToOrg(map);
+        prepareRequestForAddingUserToRootOrg(userMap, map);
+        Util.registerUserToOrg(map);
+      } else {
+        // for update
+        // first register for subOrg then root org
+        Util.upsertUserOrgData(map);
+        prepareRequestForAddingUserToRootOrg(userMap, map);
+        Util.upsertUserOrgData(userMap);
+      }
+    }
+  }
+
+  private void prepareRequestForAddingUserToRootOrg(
+      Map<String, Object> userMap, Map<String, Object> map) {
+    map.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ROOT_ORG_ID));
+    List<String> roles = new ArrayList<>();
+    roles.add(JsonKey.PUBLIC);
+    map.put(JsonKey.ROLES, roles);
   }
 
   private void removeOriginalExternalIds(List<Map<String, Object>> externalIds) {

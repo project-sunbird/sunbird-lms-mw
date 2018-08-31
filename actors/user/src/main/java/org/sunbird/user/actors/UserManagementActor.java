@@ -604,6 +604,7 @@ public class UserManagementActor extends BaseActor {
     sender().tell(response, self());
   }
 
+  @SuppressWarnings("unchecked")
   private List<Map<String, String>> fetchUserExternalIdentity(String userId) {
     Response response =
         cassandraOperation.getRecordsByIndexedProperty(
@@ -645,6 +646,7 @@ public class UserManagementActor extends BaseActor {
     return dbResExternalIds;
   }
 
+  @SuppressWarnings("unchecked")
   private void fetchTopicOfAssociatedOrgs(Map<String, Object> result) {
 
     String userId = (String) result.get(JsonKey.ID);
@@ -885,6 +887,7 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private boolean isUserDeleted(Map<String, Object> userMap) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Response response =
@@ -920,6 +923,7 @@ public class UserManagementActor extends BaseActor {
     userMap.remove(JsonKey.CHANNEL);
   }
 
+  @SuppressWarnings("unchecked")
   private void updateUserJobProfile(Map<String, Object> req, Map<String, Object> userMap) {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
@@ -963,6 +967,7 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void updateUserEducation(Map<String, Object> req, Map<String, Object> userMap) {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
@@ -1003,6 +1008,7 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void updateUserAddress(Map<String, Object> req, Map<String, Object> userMap) {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     List<Map<String, Object>> reqList = (List<Map<String, Object>>) userMap.get(JsonKey.ADDRESS);
@@ -1021,6 +1027,7 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private boolean checkEmailSameOrDiff(Map<String, Object> userMap) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Response response =
@@ -1495,6 +1502,12 @@ public class UserManagementActor extends BaseActor {
       if (userMap.containsKey(JsonKey.JOB_PROFILE)) {
         insertJobProfileDetails(userMap);
       }
+      // Add user to root org
+      userMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ROOT_ORG_ID));
+      String hashTagId = Util.getHashTagIdFromOrgId((String) userMap.get(JsonKey.ROOT_ORG_ID));
+      userMap.put(JsonKey.HASHTAGID, hashTagId);
+      Util.registerUserToOrg(userMap);
+
       try {
         // update the user external identity data
         Util.addUserExtIds(userMap);
@@ -1810,7 +1823,6 @@ public class UserManagementActor extends BaseActor {
    * @param roleName String
    * @return Map< String, Object>
    */
-  @SuppressWarnings("rawtypes")
   private Map<String, Object> getSubRoleListMap(
       List<Map<String, Object>> urlActionListMap, String roleName) {
     Map<String, Object> response = new HashMap<>();

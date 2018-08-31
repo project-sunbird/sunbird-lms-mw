@@ -692,6 +692,16 @@ public final class Util {
     return null;
   }
 
+  public static String getHashTagIdFromOrgId(String orgId) {
+    String hashTagId = "";
+    Map<String, Object> organisation = getOrgDetails(orgId);
+    hashTagId =
+        StringUtils.isNotEmpty((String) organisation.get(JsonKey.HASHTAGID))
+            ? (String) organisation.get(JsonKey.HASHTAGID)
+            : (String) organisation.get(JsonKey.ID);
+    return hashTagId;
+  }
+
   /**
    * This method will validate channel and return the id of organization associated with this
    * channel.
@@ -943,7 +953,7 @@ public final class Util {
     return webUrl.toString();
   }
 
-  private static Map<String, Object> getOrgDetails(String identifier) {
+  public static Map<String, Object> getOrgDetails(String identifier) {
     DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
     Response response =
         cassandraOperation.getRecordById(

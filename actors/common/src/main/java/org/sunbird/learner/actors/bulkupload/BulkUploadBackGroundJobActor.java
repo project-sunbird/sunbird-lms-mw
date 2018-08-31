@@ -1039,8 +1039,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               userMap.remove(JsonKey.ID);
               userMap.remove(JsonKey.PASSWORD);
               userMap.put(JsonKey.ERROR_MSG, ex.getMessage() + " ,user insertion failed.");
-              removeOriginalExternalIds(
-                  (List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
+              removeOriginalExternalIds(userMap.get(JsonKey.EXTERNAL_IDS));
               failureUserReq.add(userMap);
               continue;
             } finally {
@@ -1104,8 +1103,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               userMap.remove(JsonKey.ID);
               userMap.remove(JsonKey.PASSWORD);
               userMap.put(JsonKey.ERROR_MSG, ex.getMessage() + " ,user updation failed.");
-              removeOriginalExternalIds(
-                  (List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
+              removeOriginalExternalIds(userMap.get(JsonKey.EXTERNAL_IDS));
               failureUserReq.add(userMap);
               continue;
             }
@@ -1118,8 +1116,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           try {
             if (null != userMap.get(JsonKey.EXTERNAL_IDS)) {
               Util.updateUserExtId(userMap);
-              removeOriginalExternalIds(
-                  (List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
+              removeOriginalExternalIds(userMap.get(JsonKey.EXTERNAL_IDS));
             }
           } catch (Exception ex) {
             userMap.put(
@@ -1156,12 +1153,12 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           userMap.remove(JsonKey.ID);
           userMap.remove(JsonKey.PASSWORD);
           userMap.put(JsonKey.ERROR_MSG, ex.getMessage());
-          removeOriginalExternalIds((List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
+          removeOriginalExternalIds(userMap.get(JsonKey.EXTERNAL_IDS));
           failureUserReq.add(userMap);
         }
       } else {
         userMap.put(JsonKey.ERROR_MSG, errMsg);
-        removeOriginalExternalIds((List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
+        removeOriginalExternalIds(userMap.get(JsonKey.EXTERNAL_IDS));
         failureUserReq.add(userMap);
       }
     }
@@ -1230,16 +1227,25 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     map.put(JsonKey.ROLES, roles);
   }
 
-  private void removeOriginalExternalIds(List<Map<String, Object>> externalIds) {
-    externalIds.forEach(
-        externalId -> {
-          externalId.put(JsonKey.ID, externalId.get(JsonKey.ORIGINAL_EXTERNAL_ID));
-          externalId.remove(JsonKey.ORIGINAL_EXTERNAL_ID);
-          externalId.put(JsonKey.PROVIDER, externalId.get(JsonKey.ORIGINAL_PROVIDER));
-          externalId.remove(JsonKey.ORIGINAL_PROVIDER);
-          externalId.put(JsonKey.ID_TYPE, externalId.get(JsonKey.ORIGINAL_ID_TYPE));
-          externalId.remove(JsonKey.ORIGINAL_ID_TYPE);
-        });
+  private void removeOriginalExternalIds(Object externalIds) {
+    if (externalIds instanceof List) {
+      @SuppressWarnings("unchecked")
+      List<Map<String, Object>> request = (List<Map<String, Object>>) externalIds;
+      try {
+        request.forEach(
+            externalId -> {
+              externalId.put(JsonKey.ID, externalId.get(JsonKey.ORIGINAL_EXTERNAL_ID));
+              externalId.remove(JsonKey.ORIGINAL_EXTERNAL_ID);
+              externalId.put(JsonKey.PROVIDER, externalId.get(JsonKey.ORIGINAL_PROVIDER));
+              externalId.remove(JsonKey.ORIGINAL_PROVIDER);
+              externalId.put(JsonKey.ID_TYPE, externalId.get(JsonKey.ORIGINAL_ID_TYPE));
+              externalId.remove(JsonKey.ORIGINAL_ID_TYPE);
+            });
+      } catch (Exception ex) {
+        ProjectLogger.log(
+            "BulkUploadBackGroundJobActor:removeOriginalExternalIds : exception msg: " + ex);
+      }
+    }
   }
 
   private void parseExternalIds(Map<String, Object> userMap) throws IOException {

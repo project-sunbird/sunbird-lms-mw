@@ -25,27 +25,16 @@ public class SystemSettingDaoImpl implements SystemSettingDao {
   public SystemSettingDaoImpl(CassandraOperation cassandraOperation) {
     this.cassandraOperation = cassandraOperation;
   }
-  /**
-   * This methods inserts the given settings record into cassandra table through CassandraOperation
-   * methods
-   *
-   * @param systemSetting instance of SystemSetting class conatins elements like id,field,value
-   * @return response instance of Response class returned by CassandraOperation insert method
-   */
+
+  @Override
   public Response write(SystemSetting systemSetting) {
     Map<String, Object> map = mapper.convertValue(systemSetting, Map.class);
     Response response = cassandraOperation.upsertRecord(KEYSPACE_NAME, TABLE_NAME, map);
     response.put(JsonKey.ID, map.get(JsonKey.ID));
     return response;
   }
-  /**
-   * This methods fetch the settings record using given id from cassandra table through
-   * CassandraOperation methods
-   *
-   * @param id id of the settings record to be fetched
-   * @return instance of SystemSetting class with mapped field values(id,field,value) from cassandra
-   *     table
-   */
+
+  @Override
   public SystemSetting readById(String id) {
     Response response = cassandraOperation.getRecordById(KEYSPACE_NAME, TABLE_NAME, id);
     List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
@@ -66,13 +55,7 @@ public class SystemSettingDaoImpl implements SystemSettingDao {
     }
     return getSystemSetting(list);
   }
-
-  /**
-   * This methods fetches all the system settings records from cassandra table through
-   * CassandraOperation methods
-   *
-   * @return instance of Response class with system settings from cassandra table
-   */
+  
   public List<SystemSetting> readAll() {
     Response response = cassandraOperation.getAllRecords(KEYSPACE_NAME, TABLE_NAME);
     List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
@@ -91,7 +74,7 @@ public class SystemSettingDaoImpl implements SystemSettingDao {
       return mapper.readValue(jsonString, SystemSetting.class);
     } catch (IOException e) {
       ProjectLogger.log(
-          "Exception at SystemSettingDaoImpl:readById " + e.getMessage(), LoggerEnum.DEBUG.name());
+          "SystemSetting:getSystemSetting: Exception occurred with error messgae = " + e.getMessage(), LoggerEnum.ERROR.name());
       ProjectCommonException.throwServerErrorException(
           ResponseCode.SERVER_ERROR, ResponseCode.SERVER_ERROR.getErrorMessage());
     }

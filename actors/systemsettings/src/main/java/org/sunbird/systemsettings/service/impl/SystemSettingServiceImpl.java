@@ -1,6 +1,5 @@
 package org.sunbird.systemsettings.service.impl;
 
-import java.io.IOException;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.systemsettings.dao.SystemSettingDao;
@@ -21,9 +20,8 @@ public class SystemSettingServiceImpl implements SystemSettingService {
    *     (id,field,value)
    * @return returns the instance of Reponse class with 'id' of created record
    */
-  @Override
-  public Response setSetting(SystemSetting systemSetting) throws IOException {
-    Response response = this.systemSettingDao.upsert(systemSetting);
+  public Response setSetting(SystemSetting systemSetting) {
+    Response response = this.systemSettingDao.write(systemSetting);
     return response;
   }
   /**
@@ -32,8 +30,7 @@ public class SystemSettingServiceImpl implements SystemSettingService {
    * @param id id of the setting to be fetched from system settings
    * @return returns the instance of SystemSetting class with elements id,field,value
    */
-  @Override
-  public SystemSetting readSetting(String id) throws IOException {
+  public SystemSetting readSetting(String id) {
     SystemSetting systemSetting = this.systemSettingDao.readById(id);
     return systemSetting;
   }
@@ -42,7 +39,6 @@ public class SystemSettingServiceImpl implements SystemSettingService {
    *
    * @return returns the instance of Response class with settings elements list
    */
-  @Override
   public Response readAllSettings() {
     Response response = this.systemSettingDao.readAll();
     return response;

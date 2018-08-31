@@ -1,6 +1,5 @@
 package org.sunbird.systemsettings.service;
 
-import java.io.IOException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.systemsettings.model.SystemSetting;
 
@@ -17,14 +16,14 @@ public interface SystemSettingService {
    *     (id,field,value)
    * @return returns the instance of Reponse class with 'id' of created record
    */
-  public Response setSetting(SystemSetting systemSetting) throws IOException;
+  public Response setSetting(SystemSetting systemSetting);
   /**
    * This methods reads the setting from System settings by its id
    *
    * @param id id of the setting to be fetched from system settings
    * @return returns the instance of SystemSetting class with elements id,field,value
    */
-  public SystemSetting readSetting(String id) throws IOException;
+  public SystemSetting readSetting(String id);
   /**
    * This methods reads all the settings from System settings
    *

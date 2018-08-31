@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -31,8 +31,7 @@ public class SystemSettingDaoImpl implements SystemSettingDao {
    * @param systemSetting instance of SystemSetting class conatins elements like id,field,value
    * @return response instance of Response class returned by CassandraOperation insert method
    */
-  @Override
-  public Response upsert(SystemSetting systemSetting) {
+  public Response write(SystemSetting systemSetting) {
     Map<String, Object> map = mapper.convertValue(systemSetting, Map.class);
     Response response = cassandraOperation.upsertRecord(KEYSPACE_NAME, TABLE_NAME, map);
     response.put(JsonKey.ID, map.get(JsonKey.ID));
@@ -46,7 +45,6 @@ public class SystemSettingDaoImpl implements SystemSettingDao {
    * @return instance of SystemSetting class with mapped field values(id,field,value) from cassandra
    *     table
    */
-  @Override
   public SystemSetting readById(String id) {
     Response response = cassandraOperation.getRecordById(KEYSPACE_NAME, TABLE_NAME, id);
     List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
@@ -54,7 +52,7 @@ public class SystemSettingDaoImpl implements SystemSettingDao {
       return null;
     }
     try {
-      String jsonString = mapper.writeValueAsString((Map<String, Object>) list.get(0));
+      String jsonString = mapper.writeValueAsString((list.get(0)));
       return mapper.readValue(jsonString, SystemSetting.class);
     } catch (IOException e) {
       ProjectLogger.log(
@@ -70,7 +68,6 @@ public class SystemSettingDaoImpl implements SystemSettingDao {
    *
    * @return instance of Response class with system settings from cassandra table
    */
-  @Override
   public Response readAll() {
     Response response = cassandraOperation.getAllRecords(KEYSPACE_NAME, TABLE_NAME);
     return response;

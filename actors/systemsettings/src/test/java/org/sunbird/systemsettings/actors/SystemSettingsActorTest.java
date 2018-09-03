@@ -37,7 +37,7 @@ import scala.concurrent.duration.FiniteDuration;
 })
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
 public class SystemSettingsActorTest {
-  private static final FiniteDuration ACTOR_MAX_WAIT_DURATION = duration("100 second");
+  private static final FiniteDuration ACTOR_MAX_WAIT_DURATION = duration("10 second");
   private ActorSystem system;
   private Props props;
   private TestKit probe;

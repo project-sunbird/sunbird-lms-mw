@@ -86,7 +86,7 @@ public class CourseBatchManagementActorTest {
     subject.tell(reqObj, probe.getRef());
 
     ProjectCommonException exception =
-        probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
     return exception;
   }
 
@@ -120,7 +120,7 @@ public class CourseBatchManagementActorTest {
 
     subject.tell(reqObj, probe.getRef());
 
-    Response response = probe.expectMsgClass(duration("1000 second"), Response.class);
+    Response response = probe.expectMsgClass(duration("10 second"), Response.class);
     return response;
   }
 

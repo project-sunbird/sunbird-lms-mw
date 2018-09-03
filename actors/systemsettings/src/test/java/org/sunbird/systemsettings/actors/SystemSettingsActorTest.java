@@ -114,7 +114,7 @@ public class SystemSettingsActorTest {
   }
 
   @Test
-  public void TestGetAllSystemSettingsEmptySuccess() {
+  public void testGetAllSystemSettingsSuccessWithEmptyResponse() {
     when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getSystemSettingEmptyResponse());
     actorMessage.setOperation(ActorOperations.GET_ALL_SYSTEM_SETTINGS.getValue());

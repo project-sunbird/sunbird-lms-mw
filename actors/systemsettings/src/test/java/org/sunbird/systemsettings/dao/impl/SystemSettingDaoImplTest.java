@@ -79,7 +79,7 @@ public class SystemSettingDaoImplTest {
   }
 
   @Test
-  public void testGetAllSystemSettingsSuccessWithEmptyResponse() {
+  public void testReadAllSystemSettingsEmpty() {
     PowerMockito.when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getSystemSettingSuccessResponse(true));
     List<SystemSetting> result = systemSettingDaoImpl.readAll();

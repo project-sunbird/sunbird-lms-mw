@@ -4,6 +4,7 @@ import static org.sunbird.learner.util.Util.isNotNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigInteger;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -1360,7 +1361,9 @@ public class UserManagementActor extends BaseActor {
       if (!rootOrgId.equalsIgnoreCase(subOrgRootOrgId)) {
         ProjectCommonException.throwClientErrorException(
             ResponseCode.parameterMismatch,
-            StringFormatter.joinByComma(JsonKey.CHANNEL, JsonKey.ORGANISATION_ID));
+            MessageFormat.format(
+                ResponseCode.parameterMismatch.getErrorMessage(),
+                StringFormatter.joinByComma(JsonKey.CHANNEL, JsonKey.ORGANISATION_ID)));
       }
     }
   }

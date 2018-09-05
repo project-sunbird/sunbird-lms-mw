@@ -1849,11 +1849,17 @@ public final class Util {
   public static String getCustodianChannel(Map<String, Object> userMap, ActorRef actorRef) {
     String channel = (String) userMap.get(JsonKey.CHANNEL);
     if (StringUtils.isBlank(channel)) {
-      SystemSettingClient client = SystemSettingClientImpl.getInstance();
-      SystemSetting systemSetting =
-          client.getSystemSettingByField(actorRef, JsonKey.CUSTODIAN_ORG_CHANNEL);
-      if (null != systemSetting && StringUtils.isNotBlank(systemSetting.getValue())) {
-        channel = systemSetting.getValue();
+      try {
+        SystemSettingClient client = SystemSettingClientImpl.getInstance();
+        SystemSetting systemSetting =
+            client.getSystemSettingByField(actorRef, JsonKey.CUSTODIAN_ORG_CHANNEL);
+        if (null != systemSetting && StringUtils.isNotBlank(systemSetting.getValue())) {
+          channel = systemSetting.getValue();
+        }
+      } catch (Exception ex) {
+        ProjectLogger.log(
+            "Util:getCustodianChannel: Exception occurred while fetching custodian channel from system setting.",
+            ex);
       }
     }
     if (StringUtils.isBlank(channel)) {

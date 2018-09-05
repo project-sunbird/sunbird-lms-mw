@@ -1119,6 +1119,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               removeOriginalExternalIds(userMap.get(JsonKey.EXTERNAL_IDS));
             }
           } catch (Exception ex) {
+            removeOriginalExternalIds(userMap.get(JsonKey.EXTERNAL_IDS));
             userMap.put(
                 JsonKey.ERROR_MSG, "Update of user external IDs failed. " + ex.getMessage());
           }

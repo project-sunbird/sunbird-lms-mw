@@ -780,15 +780,6 @@ public class CourseBatchManagementActor extends BaseActor {
 
       ProjectLogger.log("validateBatchStartAndEndDate: senario3: ", LoggerEnum.INFO.name());
       throw new ProjectCommonException(
-          ResponseCode.invalidBatchStartDateError.getErrorCode(),
-          ResponseCode.invalidBatchStartDateError.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
-
-    if (startDate.after(endDate)) {
-
-      ProjectLogger.log("validateBatchStartAndEndDate: senario3: ", LoggerEnum.INFO.name());
-      throw new ProjectCommonException(
           ResponseCode.invalidBatchEndDateError.getErrorCode(),
           ResponseCode.invalidBatchEndDateError.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());

@@ -4,7 +4,6 @@ import static org.sunbird.learner.util.Util.isNotNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigInteger;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -1323,12 +1322,9 @@ public class UserManagementActor extends BaseActor {
     userMap.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
     actorMessage.getRequest().putAll(userMap);
     try {
-      String channel = (String) userMap.get(JsonKey.CHANNEL);
-      // validate channel and set rootOrgId of user
-      if (StringUtils.isBlank(channel)) {
-        channel = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL);
-        userMap.put(JsonKey.CHANNEL, channel);
-      }
+      String channel =
+          Util.getCustodianChannel(
+              userMap, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
       String rootOrgId = Util.getRootOrgIdFromChannel(channel);
       userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
     } catch (Exception ex) {
@@ -1336,7 +1332,7 @@ public class UserManagementActor extends BaseActor {
       return;
     }
     String version = (String) actorMessage.getRequest().get(JsonKey.VERSION);
-    if (StringUtils.isNotBlank(version) && "V2".equalsIgnoreCase(version)) {
+    if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
       UserRequestValidator.validateCreateUserV2(actorMessage);
       validateChannelAndOrganisationId(userMap);
     } else {
@@ -1349,22 +1345,22 @@ public class UserManagementActor extends BaseActor {
 
   private void validateChannelAndOrganisationId(Map<String, Object> userMap) {
     String organisationId = (String) userMap.get(JsonKey.ORGANISATION_ID);
-    String channel = (String) userMap.get(JsonKey.CHANNEL);
     if (StringUtils.isNotBlank(organisationId)) {
       Map<String, Object> orgMap = Util.getOrgDetails(organisationId);
       if (MapUtils.isEmpty(orgMap)) {
         ProjectCommonException.throwClientErrorException(ResponseCode.invalidOrgData, null);
       }
-      String subOrgRootOrgId = (String) orgMap.get(JsonKey.ROOT_ORG_ID);
+      String subOrgRootOrgId = "";
+      if ((boolean) orgMap.get(JsonKey.IS_ROOT_ORG)) {
+        subOrgRootOrgId = (String) orgMap.get(JsonKey.ID);
+      } else {
+        subOrgRootOrgId = (String) orgMap.get(JsonKey.ROOT_ORG_ID);
+      }
       String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
       if (!rootOrgId.equalsIgnoreCase(subOrgRootOrgId)) {
-        String excMsg =
-            MessageFormat.format(
-                ResponseCode.invalidOrgIdAndChannelRelation.getErrorMessage(),
-                organisationId,
-                channel);
         ProjectCommonException.throwClientErrorException(
-            ResponseCode.invalidOrgIdAndChannelRelation, excMsg);
+            ResponseCode.invalidOrgIdAndChannelRelation,
+            StringFormatter.joinByComma(JsonKey.CHANNEL, JsonKey.ORGANISATION_ID));
       }
     }
   }

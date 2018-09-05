@@ -1,5 +1,6 @@
 package org.sunbird.learner.util;
 
+import akka.actor.ActorRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,6 +28,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.actor.background.BackgroundOperations;
+import org.sunbird.actorutil.systemsettings.SystemSettingClient;
+import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -58,6 +61,7 @@ import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.helper.CassandraConnectionManager;
 import org.sunbird.helper.CassandraConnectionMngrFactory;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.models.user.User;
 import org.sunbird.notification.sms.provider.ISmsProvider;
 import org.sunbird.notification.utils.SMSFactory;
@@ -1840,6 +1844,23 @@ public final class Util {
       list = convertExternalIdsValueToLowerCase(externalIds);
     }
     return list;
+  }
+
+  public static String getCustodianChannel(Map<String, Object> userMap, ActorRef actorRef) {
+    String channel = (String) userMap.get(JsonKey.CHANNEL);
+    if (StringUtils.isBlank(channel)) {
+      SystemSettingClient client = SystemSettingClientImpl.getInstance();
+      SystemSetting systemSetting =
+          client.getSystemSettingByField(actorRef, JsonKey.CUSTODIAN_ORG_CHANNEL);
+      if (null != systemSetting && StringUtils.isNotBlank(systemSetting.getValue())) {
+        channel = systemSetting.getValue();
+      }
+    }
+    if (StringUtils.isBlank(channel)) {
+      channel = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL);
+      userMap.put(JsonKey.CHANNEL, channel);
+    }
+    return channel;
   }
 }
 

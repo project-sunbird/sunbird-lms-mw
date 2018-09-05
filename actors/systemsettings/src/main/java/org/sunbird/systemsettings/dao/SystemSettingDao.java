@@ -2,7 +2,7 @@ package org.sunbird.systemsettings.dao;
 
 import java.util.List;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.systemsettings.model.SystemSetting;
+import org.sunbird.models.systemsetting.SystemSetting;
 
 public interface SystemSettingDao {
   /**
@@ -20,7 +20,7 @@ public interface SystemSettingDao {
    * @return System setting information
    */
   SystemSetting readById(String id);
-  
+
   /**
    * Read system setting for given field name.
    *

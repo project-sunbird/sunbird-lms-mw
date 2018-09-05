@@ -1359,7 +1359,7 @@ public class UserManagementActor extends BaseActor {
       String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
       if (!rootOrgId.equalsIgnoreCase(subOrgRootOrgId)) {
         ProjectCommonException.throwClientErrorException(
-            ResponseCode.invalidOrgIdAndChannelRelation,
+            ResponseCode.parameterMismatch,
             StringFormatter.joinByComma(JsonKey.CHANNEL, JsonKey.ORGANISATION_ID));
       }
     }

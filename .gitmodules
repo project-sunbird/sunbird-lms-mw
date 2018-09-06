@@ -1,7 +1,3 @@
-[submodule "actors/sunbird-utils"]
-	path = actors/sunbird-utils
-	url = https://github.com/project-sunbird/sunbird-utils.git
-	branch = release-1.10
 [submodule "actors/sunbird-open-saber-bridge"]
 	path = actors/sunbird-open-saber-bridge
 	url = https://github.com/project-sunbird/sunbird-open-saber-bridge.git
@@ -10,3 +6,7 @@
 	path = actors/open-saber-client
 	url = https://github.com/project-sunbird/open-saber-client.git
 	branch = release-1.9
+[submodule "actors/sunbird-utils"]
+	path = actors/sunbird-utils
+	url = https://github.com/project-sunbird/sunbird-utils.git
+	branch = SB-6890

@@ -1,3 +1,3 @@
 #!/bin/sh
 # return version
-echo '{"name":"actor-service","version":"SB-6890","org":"sunbird","hubuser":"purplesunbird"}'
+echo '{"name":"actor-service","version":"release-1.10","org":"sunbird","hubuser":"purplesunbird"}'

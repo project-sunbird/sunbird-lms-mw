@@ -14,8 +14,8 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.systemsettings.dao.SystemSettingDao;
-import org.sunbird.systemsettings.model.SystemSetting;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({CassandraOperationImpl.class})

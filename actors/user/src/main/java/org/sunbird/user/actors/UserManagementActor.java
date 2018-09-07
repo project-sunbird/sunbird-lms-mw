@@ -1328,6 +1328,7 @@ public class UserManagementActor extends BaseActor {
               userMap, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
       String rootOrgId = Util.getRootOrgIdFromChannel(channel);
       userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+      userMap.put(JsonKey.CHANNEL, channel);
     } catch (Exception ex) {
       sender().tell(ex, self());
       return;

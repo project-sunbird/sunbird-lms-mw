@@ -23,9 +23,6 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
-import org.sunbird.common.models.util.datasecurity.DataMaskingService;
-import org.sunbird.common.models.util.datasecurity.DecryptionService;
-import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -63,16 +60,6 @@ public class BackgroundJobManager extends BaseActor {
 
   private static Map<String, String> headerMap = new HashMap<>();
   private static Util.DbInfo dbInfo = null;
-  private EncryptionService service =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
-          null);
-  private DecryptionService decService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
-          null);
-  private DataMaskingService maskingService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(
-          null);
-
   private ObjectMapper mapper = new ObjectMapper();
 
   static {
@@ -494,7 +481,7 @@ public class BackgroundJobManager extends BaseActor {
    * Method to get the content details of the given content id.
    *
    * @param content String
-   * @return Map<String, Object>
+   * @return Map<String , Object>
    */
   @SuppressWarnings("unchecked")
   private Map<String, Object> getContentDetails(String content) {
@@ -592,25 +579,22 @@ public class BackgroundJobManager extends BaseActor {
   private String registertag(String tagId, String body, Map<String, String> header) {
     String tagStatus = "";
     try {
-      ProjectLogger.log("start call for registering the tag ==" + tagId);
-      String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
-      if (StringUtils.isBlank(ekStepBaseUrl)) {
-        ekStepBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
-      }
-      tagStatus =
-          HttpUtil.sendPostRequest(
-              ekStepBaseUrl
-                  + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_TAG_API_URL)
-                  + "/"
-                  + tagId,
-              body,
-              header);
       ProjectLogger.log(
-          "end call for tag registration id and status  ==" + tagId + " " + tagStatus);
+          "BackgroundJobManager:registertag register tag call started with tagid = " + tagId,
+          LoggerEnum.INFO.name());
+      tagStatus = ProjectUtil.registertag(tagId, body, header);
+      ProjectLogger.log(
+          "BackgroundJobManager:registertag  register tag call end with id and status = "
+              + tagId
+              + ", "
+              + tagStatus,
+          LoggerEnum.INFO.name());
     } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log(
+          "BackgroundJobManager:registertag register tag call failure with error message = "
+              + e.getMessage(),
+          e);
     }
-
     return tagStatus;
   }
 

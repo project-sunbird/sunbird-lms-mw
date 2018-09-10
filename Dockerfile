@@ -10,7 +10,4 @@ RUN chown -R sunbird:sunbird /home/sunbird
 EXPOSE 8088
 USER sunbird
 WORKDIR /home/sunbird/learner/
-RUN mkdir -p /home/sunbird/learner/logs/
-RUN touch /home/sunbird/learner/logs/learnerActorProject.log
-RUN ln -sf /dev/stdout /home/sunbird/learner/logs/learnerActorProject.log
 CMD ["java",  "-cp", "actor-service.jar", "-Dactor_hostname=actor-service", "-Dbind_hostname=0.0.0.0", "org.sunbird.middleware.Application"]

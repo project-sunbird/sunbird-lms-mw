@@ -1,5 +1,6 @@
 package org.sunbird.learner.util;
 
+import akka.actor.ActorRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,6 +28,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.actor.background.BackgroundOperations;
+import org.sunbird.actorutil.systemsettings.SystemSettingClient;
+import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -58,6 +61,7 @@ import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.helper.CassandraConnectionManager;
 import org.sunbird.helper.CassandraConnectionMngrFactory;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.models.user.User;
 import org.sunbird.notification.sms.provider.ISmsProvider;
 import org.sunbird.notification.utils.SMSFactory;
@@ -354,6 +358,7 @@ public final class Util {
         boolean result =
             cassandraConnectionManager.createConnection(ip, port, userName, password, keyspace);
         if (result) {
+          response = true;
           ProjectLogger.log(
               "CONNECTION CREATED SUCCESSFULLY FOR IP: " + ip + " : KEYSPACE :" + keyspace,
               LoggerEnum.INFO.name());
@@ -362,14 +367,17 @@ public final class Util {
               "CONNECTION CREATION FAILED FOR IP: " + ip + " : KEYSPACE :" + keyspace,
               LoggerEnum.INFO.name());
         }
-        response = true;
       } catch (ProjectCommonException ex) {
-        ProjectLogger.log(ex.getMessage(), ex);
-        throw new ProjectCommonException(
-            ResponseCode.invaidConfiguration.getErrorCode(),
-            ResponseCode.invaidConfiguration.getErrorCode(),
-            ResponseCode.SERVER_ERROR.hashCode());
+        ProjectLogger.log(
+            "Util:readConfigFromEnv: Exception occurred with message = " + ex.getMessage(),
+            LoggerEnum.ERROR);
       }
+    }
+    if (!response) {
+      throw new ProjectCommonException(
+          ResponseCode.invaidConfiguration.getErrorCode(),
+          ResponseCode.invaidConfiguration.getErrorCode(),
+          ResponseCode.SERVER_ERROR.hashCode());
     }
     return response;
   }
@@ -608,7 +616,7 @@ public final class Util {
     JSONObject data;
     JSONObject jObject;
     try {
-    	  String baseSearchUrl = ProjectUtil.getConfigValue(JsonKey.SEARCH_SERVICE_API_BASE_URL);
+      String baseSearchUrl = ProjectUtil.getConfigValue(JsonKey.SEARCH_SERVICE_API_BASE_URL);
       headers.put(
           JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
       if (StringUtils.isBlank(headers.get(JsonKey.AUTHORIZATION))) {
@@ -690,6 +698,16 @@ public final class Util {
       return list.get(0);
     }
     return null;
+  }
+
+  public static String getHashTagIdFromOrgId(String orgId) {
+    String hashTagId = "";
+    Map<String, Object> organisation = getOrgDetails(orgId);
+    hashTagId =
+        StringUtils.isNotEmpty((String) organisation.get(JsonKey.HASHTAGID))
+            ? (String) organisation.get(JsonKey.HASHTAGID)
+            : (String) organisation.get(JsonKey.ID);
+    return hashTagId;
   }
 
   /**
@@ -943,7 +961,7 @@ public final class Util {
     return webUrl.toString();
   }
 
-  private static Map<String, Object> getOrgDetails(String identifier) {
+  public static Map<String, Object> getOrgDetails(String identifier) {
     DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
     Response response =
         cassandraOperation.getRecordById(
@@ -1138,8 +1156,12 @@ public final class Util {
     try {
       Map<String, Object> map = new HashMap<>();
       map.put(JsonKey.EXTERNAL_ID, encryptData(extIdsMap.get(JsonKey.ID)));
+      map.put(
+          JsonKey.ORIGINAL_EXTERNAL_ID, encryptData(extIdsMap.get(JsonKey.ORIGINAL_EXTERNAL_ID)));
       map.put(JsonKey.PROVIDER, extIdsMap.get(JsonKey.PROVIDER));
+      map.put(JsonKey.ORIGINAL_PROVIDER, extIdsMap.get(JsonKey.ORIGINAL_PROVIDER));
       map.put(JsonKey.ID_TYPE, extIdsMap.get(JsonKey.ID_TYPE));
+      map.put(JsonKey.ORIGINAL_ID_TYPE, extIdsMap.get(JsonKey.ORIGINAL_ID_TYPE));
       map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
       if (JsonKey.CREATE.equalsIgnoreCase(operation)) {
         map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
@@ -1225,6 +1247,9 @@ public final class Util {
     map.remove(JsonKey.LAST_UPDATED_ON);
     map.remove(JsonKey.CREATED_ON);
     map.remove(JsonKey.USER_ID);
+    map.remove(JsonKey.ORIGINAL_EXTERNAL_ID);
+    map.remove(JsonKey.ORIGINAL_ID_TYPE);
+    map.remove(JsonKey.ORIGINAL_PROVIDER);
     cassandraOperation.deleteRecord(KEY_SPACE_NAME, JsonKey.USR_EXT_IDNT_TABLE, map);
   }
 
@@ -1379,6 +1404,15 @@ public final class Util {
           return s;
         };
     return externalIds.stream().map(s -> mapper.convertToLowerCase(s)).collect(Collectors.toList());
+  }
+
+  public static void storeOriginalExternalIdsValue(List<Map<String, String>> externalIds) {
+    externalIds.forEach(
+        externalIdMap -> {
+          externalIdMap.put(JsonKey.ORIGINAL_EXTERNAL_ID, externalIdMap.get(JsonKey.ID));
+          externalIdMap.put(JsonKey.ORIGINAL_PROVIDER, externalIdMap.get(JsonKey.PROVIDER));
+          externalIdMap.put(JsonKey.ORIGINAL_ID_TYPE, externalIdMap.get(JsonKey.ID_TYPE));
+        });
   }
 
   @SuppressWarnings("unchecked")
@@ -1618,15 +1652,9 @@ public final class Util {
         reqMap.putAll(userMap);
       } catch (Exception ex) {
         ProjectLogger.log(
-            "ErrorMessage from registry read failure = " + ex.getMessage(), LoggerEnum.INFO.name());
-        ProjectLogger.log(
-            "StackTrace from registry read failure = " + ex.getStackTrace(),
-            LoggerEnum.INFO.name());
-        ex.printStackTrace();
-        ProjectLogger.log(
             "getUserDetailsFromRegistry: Failed to fetch registry details for registryId : "
                 + registryId,
-            LoggerEnum.INFO.name());
+            ex);
         reqMap.clear();
       }
       return MapUtils.isNotEmpty(reqMap) ? reqMap : userMap;
@@ -1806,6 +1834,39 @@ public final class Util {
             "Welcome Message failed for ." + (String) userMap.get(JsonKey.PHONE), LoggerEnum.INFO);
       }
     }
+  }
+
+  public static List<Map<String, String>> copyAndConvertExternalIdsToLower(
+      List<Map<String, String>> externalIds) {
+    List<Map<String, String>> list = new ArrayList<>();
+    if (CollectionUtils.isNotEmpty(externalIds)) {
+      storeOriginalExternalIdsValue(externalIds);
+      list = convertExternalIdsValueToLowerCase(externalIds);
+    }
+    return list;
+  }
+
+  public static String getCustodianChannel(Map<String, Object> userMap, ActorRef actorRef) {
+    String channel = (String) userMap.get(JsonKey.CHANNEL);
+    if (StringUtils.isBlank(channel)) {
+      try {
+        SystemSettingClient client = SystemSettingClientImpl.getInstance();
+        SystemSetting systemSetting =
+            client.getSystemSettingByField(actorRef, JsonKey.CUSTODIAN_ORG_CHANNEL);
+        if (null != systemSetting && StringUtils.isNotBlank(systemSetting.getValue())) {
+          channel = systemSetting.getValue();
+        }
+      } catch (Exception ex) {
+        ProjectLogger.log(
+            "Util:getCustodianChannel: Exception occurred while fetching custodian channel from system setting.",
+            ex);
+      }
+    }
+    if (StringUtils.isBlank(channel)) {
+      channel = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL);
+      userMap.put(JsonKey.CHANNEL, channel);
+    }
+    return channel;
   }
 }
 

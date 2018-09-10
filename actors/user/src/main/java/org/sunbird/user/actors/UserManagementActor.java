@@ -4,7 +4,9 @@ import static org.sunbird.learner.util.Util.isNotNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigInteger;
+import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -86,7 +88,6 @@ public class UserManagementActor extends BaseActor {
       Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
   private Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
-  private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static final String KEY_SPACE_NAME = "sunbird";
   private static final String DEFAULT_USER_ROLE = "PUBLIC";
   private static final boolean IS_REGISTRY_ENABLED =
@@ -593,6 +594,7 @@ public class UserManagementActor extends BaseActor {
 
     if (null != result) {
       UserUtility.decryptUserDataFrmES(result);
+      updateSkillWithEndoresmentCount(result);
       // loginId is used internally for checking the duplicate user
       result.remove(JsonKey.LOGIN_ID);
       result.remove(JsonKey.ENC_EMAIL);
@@ -605,6 +607,19 @@ public class UserManagementActor extends BaseActor {
     sender().tell(response, self());
   }
 
+  @SuppressWarnings("unchecked")
+  private void updateSkillWithEndoresmentCount(Map<String, Object> result) {
+    if (MapUtils.isNotEmpty(result) && result.containsKey(JsonKey.SKILLS)) {
+      List<Map<String, Object>> skillList = (List<Map<String, Object>>) result.get(JsonKey.SKILLS);
+      for (Map<String, Object> skill : skillList) {
+        skill.put(
+            JsonKey.ENDORSEMENT_COUNT.toLowerCase(),
+            (int) skill.getOrDefault(JsonKey.ENDORSEMENT_COUNT, 0));
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
   private List<Map<String, String>> fetchUserExternalIdentity(String userId) {
     Response response =
         cassandraOperation.getRecordsByIndexedProperty(
@@ -617,8 +632,23 @@ public class UserManagementActor extends BaseActor {
             .stream()
             .forEach(
                 s -> {
-                  s.put(JsonKey.ID, decryptionService.decryptData(s.get(JsonKey.EXTERNAL_ID)));
+                  if (StringUtils.isNotBlank(s.get(JsonKey.ORIGINAL_EXTERNAL_ID))
+                      && StringUtils.isNotBlank(s.get(JsonKey.ORIGINAL_ID_TYPE))
+                      && StringUtils.isNotBlank(s.get(JsonKey.ORIGINAL_PROVIDER))) {
+                    s.put(
+                        JsonKey.ID,
+                        decryptionService.decryptData(s.get(JsonKey.ORIGINAL_EXTERNAL_ID)));
+                    s.put(JsonKey.ID_TYPE, s.get(JsonKey.ORIGINAL_ID_TYPE));
+                    s.put(JsonKey.PROVIDER, s.get(JsonKey.ORIGINAL_PROVIDER));
+
+                  } else {
+                    s.put(JsonKey.ID, decryptionService.decryptData(s.get(JsonKey.EXTERNAL_ID)));
+                  }
+
                   s.remove(JsonKey.EXTERNAL_ID);
+                  s.remove(JsonKey.ORIGINAL_EXTERNAL_ID);
+                  s.remove(JsonKey.ORIGINAL_ID_TYPE);
+                  s.remove(JsonKey.ORIGINAL_PROVIDER);
                   s.remove(JsonKey.CREATED_BY);
                   s.remove(JsonKey.LAST_UPDATED_BY);
                   s.remove(JsonKey.LAST_UPDATED_ON);
@@ -631,6 +661,7 @@ public class UserManagementActor extends BaseActor {
     return dbResExternalIds;
   }
 
+  @SuppressWarnings("unchecked")
   private void fetchTopicOfAssociatedOrgs(Map<String, Object> result) {
 
     String userId = (String) result.get(JsonKey.ID);
@@ -754,7 +785,7 @@ public class UserManagementActor extends BaseActor {
       User user = mapper.convertValue(userMap, User.class);
       if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
         List<Map<String, String>> list =
-            Util.convertExternalIdsValueToLowerCase(user.getExternalIds());
+            Util.copyAndConvertExternalIdsToLower(user.getExternalIds());
         user.setExternalIds(list);
         userMap.put(JsonKey.EXTERNAL_IDS, list);
       }
@@ -794,10 +825,12 @@ public class UserManagementActor extends BaseActor {
         userDbRecord = Util.getUserbyUserId((String) userMap.get(JsonKey.USER_ID));
       }
       String registryId = (String) userDbRecord.get(JsonKey.REGISTRY_ID);
+      UserExtension userExtension = new UserProviderRegistryImpl();
       if (StringUtils.isNotBlank(registryId)) {
         userMap.put(JsonKey.REGISTRY_ID, registryId);
-        UserExtension userExtension = new UserProviderRegistryImpl();
         userExtension.update(userMap);
+      } else {
+        userExtension.create(userMap);
       }
     }
 
@@ -869,6 +902,7 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private boolean isUserDeleted(Map<String, Object> userMap) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Response response =
@@ -904,6 +938,7 @@ public class UserManagementActor extends BaseActor {
     userMap.remove(JsonKey.CHANNEL);
   }
 
+  @SuppressWarnings("unchecked")
   private void updateUserJobProfile(Map<String, Object> req, Map<String, Object> userMap) {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
@@ -947,6 +982,7 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void updateUserEducation(Map<String, Object> req, Map<String, Object> userMap) {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
@@ -987,6 +1023,7 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void updateUserAddress(Map<String, Object> req, Map<String, Object> userMap) {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     List<Map<String, Object>> reqList = (List<Map<String, Object>>) userMap.get(JsonKey.ADDRESS);
@@ -1005,6 +1042,7 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private boolean checkEmailSameOrDiff(Map<String, Object> userMap) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Response response =
@@ -1276,14 +1314,67 @@ public class UserManagementActor extends BaseActor {
    */
   @SuppressWarnings("unchecked")
   private void createUser(Request actorMessage) {
-    ProjectLogger.log("create user method started..");
+    Map<String, Object> req = actorMessage.getRequest();
+    Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
+    // remove these fields from req
+    userMap.remove(JsonKey.ENC_EMAIL);
+    userMap.remove(JsonKey.ENC_PHONE);
+    userMap.remove(JsonKey.EMAIL_VERIFIED);
+    userMap.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
+    actorMessage.getRequest().putAll(userMap);
+    try {
+      String channel =
+          Util.getCustodianChannel(
+              userMap, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+      String rootOrgId = Util.getRootOrgIdFromChannel(channel);
+      userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+      userMap.put(JsonKey.CHANNEL, channel);
+    } catch (Exception ex) {
+      sender().tell(ex, self());
+      return;
+    }
+    String version = (String) actorMessage.getRequest().get(JsonKey.VERSION);
+    if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
+      UserRequestValidator.validateCreateUserV2(actorMessage);
+      validateChannelAndOrganisationId(userMap);
+    } else {
+      // For V1
+      UserRequestValidator.fieldsNotAllowed(Arrays.asList(JsonKey.ORGANISATION_ID), actorMessage);
+      UserRequestValidator.validateCreateUser(actorMessage);
+    }
+    processUserRequest(userMap);
+  }
+
+  private void validateChannelAndOrganisationId(Map<String, Object> userMap) {
+    String organisationId = (String) userMap.get(JsonKey.ORGANISATION_ID);
+    if (StringUtils.isNotBlank(organisationId)) {
+      Map<String, Object> orgMap = Util.getOrgDetails(organisationId);
+      if (MapUtils.isEmpty(orgMap)) {
+        ProjectCommonException.throwClientErrorException(ResponseCode.invalidOrgData, null);
+      }
+      String subOrgRootOrgId = "";
+      if ((boolean) orgMap.get(JsonKey.IS_ROOT_ORG)) {
+        subOrgRootOrgId = (String) orgMap.get(JsonKey.ID);
+      } else {
+        subOrgRootOrgId = (String) orgMap.get(JsonKey.ROOT_ORG_ID);
+      }
+      String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
+      if (!rootOrgId.equalsIgnoreCase(subOrgRootOrgId)) {
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.parameterMismatch,
+            MessageFormat.format(
+                ResponseCode.parameterMismatch.getErrorMessage(),
+                StringFormatter.joinByComma(JsonKey.CHANNEL, JsonKey.ORGANISATION_ID)));
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void processUserRequest(Map<String, Object> userMap) {
+    ProjectLogger.log("processUserRequest method started..");
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-    Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
-    Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
-    actorMessage.getRequest().putAll(userMap);
-    UserRequestValidator.validateCreateUser(actorMessage);
     Util.checkPhoneUniqueness(userMap, JsonKey.CREATE);
     Util.checkEmailUniqueness(userMap, JsonKey.CREATE);
     Map<String, Object> emailTemplateMap = new HashMap<>(userMap);
@@ -1291,29 +1382,6 @@ public class UserManagementActor extends BaseActor {
       SocialMediaType.validateSocialMedia(
           (List<Map<String, String>>) userMap.get(JsonKey.WEB_PAGES));
     }
-    userMap.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
-    // remove these fields from req
-    userMap.remove(JsonKey.ENC_EMAIL);
-    userMap.remove(JsonKey.ENC_PHONE);
-    userMap.remove(JsonKey.EMAIL_VERIFIED);
-    // Will ignore these fields in create api
-    userMap.remove(JsonKey.EXTERNAL_ID);
-    userMap.remove(JsonKey.PROVIDER);
-    userMap.remove(JsonKey.EXTERNAL_ID_PROVIDER);
-    userMap.remove(JsonKey.ID_TYPE);
-    userMap.remove(JsonKey.EXTERNAL_ID_TYPE);
-    try {
-      // validate channel and set rootOrgId of user
-      if (StringUtils.isBlank((String) userMap.get(JsonKey.CHANNEL))) {
-        userMap.put(JsonKey.CHANNEL, ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL));
-      }
-      String rootOrgId = Util.getRootOrgIdFromChannel((String) userMap.get(JsonKey.CHANNEL));
-      userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
-    } catch (Exception ex) {
-      sender().tell(ex, self());
-      return;
-    }
-
     // create loginId to ensure uniqueness for combination of userName and channel
     String loginId = Util.getLoginId(userMap);
     userMap.put(JsonKey.LOGIN_ID, loginId);
@@ -1323,7 +1391,7 @@ public class UserManagementActor extends BaseActor {
       Util.checkUserExistOrNot(user);
       if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
         List<Map<String, String>> list =
-            Util.convertExternalIdsValueToLowerCase(user.getExternalIds());
+            Util.copyAndConvertExternalIdsToLower(user.getExternalIds());
         user.setExternalIds(list);
         userMap.put(JsonKey.EXTERNAL_IDS, list);
       }
@@ -1347,6 +1415,15 @@ public class UserManagementActor extends BaseActor {
       userExtension.create(userMap);
     }
 
+    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
+      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, userMap.get(JsonKey.PASSWORD));
+      userMap.put(JsonKey.PASSWORD, userMap.get(JsonKey.PASSWORD));
+    } else {
+      // Create temp password if password field is null or empty in request
+      String tempPassword = ProjectUtil.generateRandomPassword();
+      userMap.put(JsonKey.PASSWORD, tempPassword);
+      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, tempPassword);
+    }
     String accessToken = "";
     if (isSSOEnabled) {
       try {
@@ -1379,17 +1456,7 @@ public class UserManagementActor extends BaseActor {
 
     userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
-
-    if (!StringUtils.isBlank((String) userMap.get(JsonKey.PASSWORD))) {
-      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, userMap.get(JsonKey.PASSWORD));
-      userMap.put(
-          JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
-    } else {
-      // create tempPassword
-      String tempPassword = ProjectUtil.generateRandomPassword();
-      userMap.put(JsonKey.PASSWORD, OneWayHashing.encryptVal(tempPassword));
-      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, tempPassword);
-    }
+    userMap.put(JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
     try {
       UserUtility.encryptUserData(userMap);
     } catch (Exception e1) {
@@ -1480,12 +1547,14 @@ public class UserManagementActor extends BaseActor {
       if (userMap.containsKey(JsonKey.JOB_PROFILE)) {
         insertJobProfileDetails(userMap);
       }
+      registerUserToOrg(userMap);
+
       try {
         // update the user external identity data
         Util.addUserExtIds(userMap);
       } catch (Exception ex) {
         ProjectLogger.log(
-            "UserManagementActor:createUser: Exception occurred while updating user external identity table.",
+            "UserManagementActor:processUserRequest: Exception occurred while updating user external identity table.",
             ex);
       }
     }
@@ -1501,10 +1570,7 @@ public class UserManagementActor extends BaseActor {
     targetObject =
         TelemetryUtil.generateTargetObject(
             (String) userMap.get(JsonKey.ID), JsonKey.USER, JsonKey.CREATE, null);
-    TelemetryUtil.telemetryProcessingCall(
-        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER),
-        targetObject,
-        correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
 
     // user created successfully send the onboarding mail
     // putting rootOrgId to get web url per tenant while sending mail
@@ -1531,6 +1597,25 @@ public class UserManagementActor extends BaseActor {
       }
     } else {
       ProjectLogger.log("no call for ES to save user");
+    }
+  }
+
+  private void registerUserToOrg(Map<String, Object> userMap) {
+    // Register user to given orgId(not root orgId)
+    String organisationId = (String) userMap.get(JsonKey.ORGANISATION_ID);
+    if (StringUtils.isNotBlank(organisationId)) {
+      String hashTagId = Util.getHashTagIdFromOrgId((String) userMap.get(JsonKey.ORGANISATION_ID));
+      userMap.put(JsonKey.HASHTAGID, hashTagId);
+      Util.registerUserToOrg(userMap);
+    }
+    if ((StringUtils.isNotBlank(organisationId)
+            && !organisationId.equalsIgnoreCase((String) userMap.get(JsonKey.ROOT_ORG_ID)))
+        || StringUtils.isBlank(organisationId)) {
+      // Add user to root org
+      userMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ROOT_ORG_ID));
+      String hashTagId = Util.getHashTagIdFromOrgId((String) userMap.get(JsonKey.ROOT_ORG_ID));
+      userMap.put(JsonKey.HASHTAGID, hashTagId);
+      Util.registerUserToOrg(userMap);
     }
   }
 
@@ -1701,6 +1786,7 @@ public class UserManagementActor extends BaseActor {
     reqMap.remove(JsonKey.PROVIDER);
     reqMap.remove(JsonKey.EXTERNAL_ID_PROVIDER);
     reqMap.remove(JsonKey.EXTERNAL_IDS);
+    reqMap.remove(JsonKey.ORGANISATION_ID);
   }
 
   /** This method will provide the complete role structure.. */
@@ -1795,7 +1881,6 @@ public class UserManagementActor extends BaseActor {
    * @param roleName String
    * @return Map< String, Object>
    */
-  @SuppressWarnings("rawtypes")
   private Map<String, Object> getSubRoleListMap(
       List<Map<String, Object>> urlActionListMap, String roleName) {
     Map<String, Object> response = new HashMap<>();

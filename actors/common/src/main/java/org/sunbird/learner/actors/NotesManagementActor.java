@@ -37,28 +37,28 @@ public class NotesManagementActor extends BaseActor {
 
   /** Receives the actor message and perform the operation for user note */
   @Override
-  public void onReceive(Request requsst) throws Throwable {
-    Util.initializeContext(requsst, JsonKey.USER);
+  public void onReceive(Request request) throws Throwable {
+    Util.initializeContext(request, JsonKey.USER);
     // set request id fto thread loacl...
-    ExecutionContext.setRequestId(requsst.getRequestId());
-    switch (requsst.getOperation()) {
+    ExecutionContext.setRequestId(request.getRequestId());
+    switch (request.getOperation()) {
       case "createNote":
-        createNote(requsst);
+        createNote(request);
         break;
       case "updateNote":
-        updateNote(requsst);
+        updateNote(request);
         break;
       case "searchNote":
-        searchNote(requsst);
+        searchNote(request);
         break;
       case "getNote":
-        getNote(requsst);
+        getNote(request);
         break;
       case "deleteNote":
-        deleteNote(requsst);
+        deleteNote(request);
         break;
       default:
-        onReceiveUnsupportedOperation(requsst.getOperation());
+        onReceiveUnsupportedOperation(request.getOperation());
     }
   }
 

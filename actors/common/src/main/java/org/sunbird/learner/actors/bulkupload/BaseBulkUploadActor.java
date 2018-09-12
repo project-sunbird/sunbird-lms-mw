@@ -3,11 +3,10 @@ package org.sunbird.learner.actors.bulkupload;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
-import com.opencsv.RFC4180Parser;
-import com.opencsv.RFC4180ParserBuilder;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -123,14 +122,15 @@ public abstract class BaseBulkUploadActor extends BaseActor {
    * @param quoteChar The character to use for quoted elements.
    * @param lineNum The number of lines to skip before reading.
    * @return CsvReader.
+   * @throws UnsupportedEncodingException
    */
-  public CSVReader getCsvReader(byte[] byteArray, char seperator, char quoteChar, int lineNum) {
+  public CSVReader getCsvReader(byte[] byteArray, char seperator, char quoteChar, int lineNum)
+      throws UnsupportedEncodingException {
 
     InputStreamReader inputStreamReader =
-        new InputStreamReader(new ByteArrayInputStream(byteArray));
-    RFC4180Parser rfc4180Parser = new RFC4180ParserBuilder().build();
-    CSVReaderBuilder csvReaderBuilder =
-        new CSVReaderBuilder(inputStreamReader).withCSVParser(rfc4180Parser);
+        new InputStreamReader(new ByteArrayInputStream(byteArray), "UTF-8");
+    // RFC4180Parser rfc4180Parser = new RFC4180ParserBuilder().build();
+    CSVReaderBuilder csvReaderBuilder = new CSVReaderBuilder(inputStreamReader);
     CSVReader csvReader = csvReaderBuilder.build();
     return csvReader;
   }

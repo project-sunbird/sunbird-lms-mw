@@ -7,6 +7,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -128,7 +129,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
       throws UnsupportedEncodingException {
 
     InputStreamReader inputStreamReader =
-        new InputStreamReader(new ByteArrayInputStream(byteArray), "UTF-8");
+        new InputStreamReader(new ByteArrayInputStream(byteArray), StandardCharsets.UTF_8);
     // RFC4180Parser rfc4180Parser = new RFC4180ParserBuilder().build();
     CSVReaderBuilder csvReaderBuilder = new CSVReaderBuilder(inputStreamReader);
     CSVReader csvReader = csvReaderBuilder.build();

@@ -968,19 +968,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     String hashTagId = null;
     if (dataMapList != null && dataMapList.size() > 0) {
       String orgId = (String) dataMapList.get(0).get(JsonKey.ORGANISATION_ID);
-      if (StringUtils.isNotBlank(orgId)) {
-        Map<String, Object> map =
-            ElasticSearchUtil.getDataByIdentifier(
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.organisation.getTypeName(),
-                orgId);
-        if (MapUtils.isNotEmpty(map)) {
-          hashTagId = (String) map.get(JsonKey.HASHTAGID);
-          ProjectLogger.log(
-              "BulkUploadBackGroundJobActor:processUserInfo org hashTagId value : " + hashTagId,
-              LoggerEnum.INFO.name());
-        }
-      }
+      hashTagId = Util.getHashTagIdFromOrgId(orgId);
     }
     for (int i = 0; i < dataMapList.size(); i++) {
       userMap = dataMapList.get(i);
@@ -1038,8 +1026,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                   cassandraOperation.insertRecord(
                       usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), tempMap);
               // insert details to user_org table
+
               userMap.put(JsonKey.HASHTAGID, hashTagId);
-              Util.registerUserToOrg(userMap);
+              registerUserToOrg(userMap, JsonKey.CREATE);
               // removing added hashTagId
               userMap.remove(JsonKey.HASHTAGID);
             } catch (Exception ex) {
@@ -1050,8 +1039,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               userMap.remove(JsonKey.ID);
               userMap.remove(JsonKey.PASSWORD);
               userMap.put(JsonKey.ERROR_MSG, ex.getMessage() + " ,user insertion failed.");
-              removeOriginalExternalIds(
-                  (List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
+              removeOriginalExternalIds(userMap.get(JsonKey.EXTERNAL_IDS));
               failureUserReq.add(userMap);
               continue;
             } finally {
@@ -1106,7 +1094,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               // update user-org table(role update)
               userMap.put(JsonKey.UPDATED_BY, updatedBy);
               userMap.put(JsonKey.HASHTAGID, hashTagId);
-              Util.upsertUserOrgData(userMap);
+              registerUserToOrg(userMap, JsonKey.UPDATE);
               userMap.remove(JsonKey.HASHTAGID);
             } catch (Exception ex) {
               userMap.remove(JsonKey.HASHTAGID);
@@ -1115,8 +1103,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
               userMap.remove(JsonKey.ID);
               userMap.remove(JsonKey.PASSWORD);
               userMap.put(JsonKey.ERROR_MSG, ex.getMessage() + " ,user updation failed.");
-              removeOriginalExternalIds(
-                  (List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
+              removeOriginalExternalIds(userMap.get(JsonKey.EXTERNAL_IDS));
               failureUserReq.add(userMap);
               continue;
             }
@@ -1129,10 +1116,10 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           try {
             if (null != userMap.get(JsonKey.EXTERNAL_IDS)) {
               Util.updateUserExtId(userMap);
-              removeOriginalExternalIds(
-                  (List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
+              removeOriginalExternalIds(userMap.get(JsonKey.EXTERNAL_IDS));
             }
           } catch (Exception ex) {
+            removeOriginalExternalIds(userMap.get(JsonKey.EXTERNAL_IDS));
             userMap.put(
                 JsonKey.ERROR_MSG, "Update of user external IDs failed. " + ex.getMessage());
           }
@@ -1167,12 +1154,12 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           userMap.remove(JsonKey.ID);
           userMap.remove(JsonKey.PASSWORD);
           userMap.put(JsonKey.ERROR_MSG, ex.getMessage());
-          removeOriginalExternalIds((List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
+          removeOriginalExternalIds(userMap.get(JsonKey.EXTERNAL_IDS));
           failureUserReq.add(userMap);
         }
       } else {
         userMap.put(JsonKey.ERROR_MSG, errMsg);
-        removeOriginalExternalIds((List<Map<String, Object>>) userMap.get(JsonKey.EXTERNAL_IDS));
+        removeOriginalExternalIds(userMap.get(JsonKey.EXTERNAL_IDS));
         failureUserReq.add(userMap);
       }
     }
@@ -1206,16 +1193,60 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     }
   }
 
-  private void removeOriginalExternalIds(List<Map<String, Object>> externalIds) {
-    externalIds.forEach(
-        externalId -> {
-          externalId.put(JsonKey.ID, externalId.get(JsonKey.ORIGINAL_EXTERNAL_ID));
-          externalId.remove(JsonKey.ORIGINAL_EXTERNAL_ID);
-          externalId.put(JsonKey.PROVIDER, externalId.get(JsonKey.ORIGINAL_PROVIDER));
-          externalId.remove(JsonKey.ORIGINAL_PROVIDER);
-          externalId.put(JsonKey.ID_TYPE, externalId.get(JsonKey.ORIGINAL_ID_TYPE));
-          externalId.remove(JsonKey.ORIGINAL_ID_TYPE);
-        });
+  private void registerUserToOrg(Map<String, Object> userMap, String operation) {
+    if (((String) userMap.get(JsonKey.ORGANISATION_ID))
+        .equalsIgnoreCase((String) userMap.get(JsonKey.ROOT_ORG_ID))) {
+      if (operation.equalsIgnoreCase(JsonKey.CREATE)) {
+        Util.registerUserToOrg(userMap);
+      } else {
+        // for update
+        Util.upsertUserOrgData(userMap);
+      }
+    } else {
+      Map<String, Object> map = new HashMap<>(userMap);
+      if (operation.equalsIgnoreCase(JsonKey.CREATE)) {
+        // first register for subOrg then root org
+        Util.registerUserToOrg(map);
+        prepareRequestForAddingUserToRootOrg(userMap, map);
+        // register user to root org
+        Util.registerUserToOrg(map);
+      } else {
+        // for update
+        // first register for subOrg then root org
+        Util.upsertUserOrgData(map);
+        prepareRequestForAddingUserToRootOrg(userMap, map);
+        // register user to root org
+        Util.upsertUserOrgData(userMap);
+      }
+    }
+  }
+
+  private void prepareRequestForAddingUserToRootOrg(
+      Map<String, Object> userMap, Map<String, Object> map) {
+    map.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ROOT_ORG_ID));
+    List<String> roles = Arrays.asList(JsonKey.PUBLIC);
+    map.put(JsonKey.ROLES, roles);
+  }
+
+  private void removeOriginalExternalIds(Object externalIds) {
+    if (externalIds instanceof List) {
+      @SuppressWarnings("unchecked")
+      List<Map<String, Object>> request = (List<Map<String, Object>>) externalIds;
+      try {
+        request.forEach(
+            externalId -> {
+              externalId.put(JsonKey.ID, externalId.get(JsonKey.ORIGINAL_EXTERNAL_ID));
+              externalId.remove(JsonKey.ORIGINAL_EXTERNAL_ID);
+              externalId.put(JsonKey.PROVIDER, externalId.get(JsonKey.ORIGINAL_PROVIDER));
+              externalId.remove(JsonKey.ORIGINAL_PROVIDER);
+              externalId.put(JsonKey.ID_TYPE, externalId.get(JsonKey.ORIGINAL_ID_TYPE));
+              externalId.remove(JsonKey.ORIGINAL_ID_TYPE);
+            });
+      } catch (Exception ex) {
+        ProjectLogger.log(
+            "BulkUploadBackGroundJobActor:removeOriginalExternalIds : exception msg: " + ex);
+      }
+    }
   }
 
   private void parseExternalIds(Map<String, Object> userMap) throws IOException {

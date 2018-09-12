@@ -13,8 +13,8 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.systemsettings.dao.SystemSettingDao;
-import org.sunbird.systemsettings.model.SystemSetting;
 
 public class SystemSettingDaoImpl implements SystemSettingDao {
   private CassandraOperation cassandraOperation;
@@ -55,7 +55,7 @@ public class SystemSettingDaoImpl implements SystemSettingDao {
     }
     return getSystemSetting(list);
   }
-  
+
   public List<SystemSetting> readAll() {
     Response response = cassandraOperation.getAllRecords(KEYSPACE_NAME, TABLE_NAME);
     List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
@@ -74,7 +74,9 @@ public class SystemSettingDaoImpl implements SystemSettingDao {
       return mapper.readValue(jsonString, SystemSetting.class);
     } catch (IOException e) {
       ProjectLogger.log(
-          "SystemSetting:getSystemSetting: Exception occurred with error messgae = " + e.getMessage(), LoggerEnum.ERROR.name());
+          "SystemSetting:getSystemSetting: Exception occurred with error messgae = "
+              + e.getMessage(),
+          LoggerEnum.ERROR.name());
       ProjectCommonException.throwServerErrorException(
           ResponseCode.SERVER_ERROR, ResponseCode.SERVER_ERROR.getErrorMessage());
     }

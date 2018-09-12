@@ -17,8 +17,8 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.systemsettings.dao.impl.SystemSettingDaoImpl;
-import org.sunbird.systemsettings.model.SystemSetting;
 
 @ActorConfig(
   tasks = {"getSystemSetting", "getAllSystemSettings", "setSystemSetting"},
@@ -57,14 +57,14 @@ public class SystemSettingsActor extends BaseActor {
 
     Map<String, Object> req = actorMessage.getRequest();
     SystemSetting setting = systemSettingDaoImpl.readByField((String) req.get(JsonKey.FIELD));
-    
+
     if (setting == null) {
       throw new ProjectCommonException(
           ResponseCode.resourceNotFound.getErrorCode(),
           ResponseCode.resourceNotFound.getErrorMessage(),
           ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
-    
+
     Response response = new Response();
     response.put(JsonKey.RESPONSE, setting);
     sender().tell(response, self());

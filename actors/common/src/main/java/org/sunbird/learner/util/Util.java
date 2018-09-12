@@ -1,5 +1,6 @@
 package org.sunbird.learner.util;
 
+import akka.actor.ActorRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,6 +28,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.actor.background.BackgroundOperations;
+import org.sunbird.actorutil.systemsettings.SystemSettingClient;
+import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -58,6 +61,7 @@ import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.helper.CassandraConnectionManager;
 import org.sunbird.helper.CassandraConnectionMngrFactory;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.models.user.User;
 import org.sunbird.notification.sms.provider.ISmsProvider;
 import org.sunbird.notification.utils.SMSFactory;
@@ -364,14 +368,16 @@ public final class Util {
               LoggerEnum.INFO.name());
         }
       } catch (ProjectCommonException ex) {
-        ProjectLogger.log("Util:readConfigFromEnv: Exception occurred with message = " + ex.getMessage(), LoggerEnum.ERROR);
+        ProjectLogger.log(
+            "Util:readConfigFromEnv: Exception occurred with message = " + ex.getMessage(),
+            LoggerEnum.ERROR);
       }
     }
     if (!response) {
       throw new ProjectCommonException(
-              ResponseCode.invaidConfiguration.getErrorCode(),
-              ResponseCode.invaidConfiguration.getErrorCode(),
-              ResponseCode.SERVER_ERROR.hashCode());
+          ResponseCode.invaidConfiguration.getErrorCode(),
+          ResponseCode.invaidConfiguration.getErrorCode(),
+          ResponseCode.SERVER_ERROR.hashCode());
     }
     return response;
   }
@@ -694,6 +700,16 @@ public final class Util {
     return null;
   }
 
+  public static String getHashTagIdFromOrgId(String orgId) {
+    String hashTagId = "";
+    Map<String, Object> organisation = getOrgDetails(orgId);
+    hashTagId =
+        StringUtils.isNotEmpty((String) organisation.get(JsonKey.HASHTAGID))
+            ? (String) organisation.get(JsonKey.HASHTAGID)
+            : (String) organisation.get(JsonKey.ID);
+    return hashTagId;
+  }
+
   /**
    * This method will validate channel and return the id of organization associated with this
    * channel.
@@ -945,7 +961,7 @@ public final class Util {
     return webUrl.toString();
   }
 
-  private static Map<String, Object> getOrgDetails(String identifier) {
+  public static Map<String, Object> getOrgDetails(String identifier) {
     DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
     Response response =
         cassandraOperation.getRecordById(
@@ -1828,6 +1844,29 @@ public final class Util {
       list = convertExternalIdsValueToLowerCase(externalIds);
     }
     return list;
+  }
+
+  public static String getCustodianChannel(Map<String, Object> userMap, ActorRef actorRef) {
+    String channel = (String) userMap.get(JsonKey.CHANNEL);
+    if (StringUtils.isBlank(channel)) {
+      try {
+        SystemSettingClient client = SystemSettingClientImpl.getInstance();
+        SystemSetting systemSetting =
+            client.getSystemSettingByField(actorRef, JsonKey.CUSTODIAN_ORG_CHANNEL);
+        if (null != systemSetting && StringUtils.isNotBlank(systemSetting.getValue())) {
+          channel = systemSetting.getValue();
+        }
+      } catch (Exception ex) {
+        ProjectLogger.log(
+            "Util:getCustodianChannel: Exception occurred while fetching custodian channel from system setting.",
+            ex);
+      }
+    }
+    if (StringUtils.isBlank(channel)) {
+      channel = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL);
+      userMap.put(JsonKey.CHANNEL, channel);
+    }
+    return channel;
   }
 }
 

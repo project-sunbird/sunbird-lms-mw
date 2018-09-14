@@ -37,22 +37,28 @@ public class NotesManagementActor extends BaseActor {
 
   /** Receives the actor message and perform the operation for user note */
   @Override
-  public void onReceive(Request requsst) throws Throwable {
-    Util.initializeContext(requsst, JsonKey.USER);
+  public void onReceive(Request request) throws Throwable {
+    Util.initializeContext(request, JsonKey.USER);
     // set request id fto thread loacl...
-    ExecutionContext.setRequestId(requsst.getRequestId());
-    if (requsst.getOperation().equalsIgnoreCase(ActorOperations.CREATE_NOTE.getValue())) {
-      createNote(requsst);
-    } else if (requsst.getOperation().equalsIgnoreCase(ActorOperations.UPDATE_NOTE.getValue())) {
-      updateNote(requsst);
-    } else if (requsst.getOperation().equalsIgnoreCase(ActorOperations.SEARCH_NOTE.getValue())) {
-      searchNote(requsst);
-    } else if (requsst.getOperation().equalsIgnoreCase(ActorOperations.GET_NOTE.getValue())) {
-      getNote(requsst);
-    } else if (requsst.getOperation().equalsIgnoreCase(ActorOperations.DELETE_NOTE.getValue())) {
-      deleteNote(requsst);
-    } else {
-      onReceiveUnsupportedOperation(requsst.getOperation());
+    ExecutionContext.setRequestId(request.getRequestId());
+    switch (request.getOperation()) {
+      case "createNote":
+        createNote(request);
+        break;
+      case "updateNote":
+        updateNote(request);
+        break;
+      case "searchNote":
+        searchNote(request);
+        break;
+      case "getNote":
+        getNote(request);
+        break;
+      case "deleteNote":
+        deleteNote(request);
+        break;
+      default:
+        onReceiveUnsupportedOperation(request.getOperation());
     }
   }
 
@@ -70,7 +76,7 @@ public class NotesManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     try {
-      Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.NOTE);
+      Map<String, Object> req = actorMessage.getRequest();
       if (!validUser((String) req.get(JsonKey.USER_ID))) {
         ProjectCommonException exception =
             new ProjectCommonException(
@@ -136,8 +142,8 @@ public class NotesManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     try {
-      String noteId = (String) actorMessage.getRequest().get(JsonKey.NOTE_ID);
-      String userId = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
+      String noteId = (String) actorMessage.getContext().get(JsonKey.NOTE_ID);
+      String userId = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
       if (!validateUserForNoteUpdation(userId, noteId)) {
         throw new ProjectCommonException(
             ResponseCode.unAuthorized.getErrorCode(),
@@ -154,14 +160,13 @@ public class NotesManagementActor extends BaseActor {
         sender().tell(exception, self());
         return;
       }
-      Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.NOTE);
+      Map<String, Object> req = actorMessage.getRequest();
       req.remove(JsonKey.USER_ID);
       req.remove(JsonKey.COURSE_ID);
       req.remove(JsonKey.CONTENT_ID);
       req.remove(JsonKey.IS_DELETED);
       req.put(JsonKey.ID, noteId);
-      String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
-      req.put(JsonKey.UPDATED_BY, updatedBy);
+      req.put(JsonKey.UPDATED_BY, userId);
       req.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
 
       Response result =
@@ -177,16 +182,8 @@ public class NotesManagementActor extends BaseActor {
       TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
 
       Map<String, String> rollup = new HashMap<>();
-      rollup.put(
-          "l1",
-          (String)
-              ((Map<String, Object>) actorMessage.getRequest().get(JsonKey.NOTE))
-                  .get(JsonKey.COURSE_ID));
-      rollup.put(
-          "l2",
-          (String)
-              ((Map<String, Object>) actorMessage.getRequest().get(JsonKey.NOTE))
-                  .get(JsonKey.CONTENT_ID));
+      rollup.put("l1", (String) (actorMessage.getRequest()).get(JsonKey.COURSE_ID));
+      rollup.put("l2", (String) (actorMessage.getRequest()).get(JsonKey.CONTENT_ID));
       TelemetryUtil.addTargetObjectRollUp(rollup, targetObject);
 
       TelemetryUtil.telemetryProcessingCall(
@@ -212,8 +209,8 @@ public class NotesManagementActor extends BaseActor {
   private void getNote(Request actorMessage) {
     ProjectLogger.log("Update Note method call start");
     try {
-      String noteId = (String) actorMessage.getRequest().get(JsonKey.NOTE_ID);
-      String userId = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
+      String noteId = (String) actorMessage.getContext().get(JsonKey.NOTE_ID);
+      String userId = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
       if (!validateUserForNoteUpdation(userId, noteId)) {
         throw new ProjectCommonException(
             ResponseCode.unAuthorized.getErrorCode(),
@@ -253,7 +250,9 @@ public class NotesManagementActor extends BaseActor {
   private void searchNote(Request actorMessage) {
     ProjectLogger.log("Update Note method call start");
     try {
+
       Map<String, Object> searchQueryMap = actorMessage.getRequest();
+      searchQueryMap.put(JsonKey.REQUESTED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
       Response response = new Response();
       Map<String, Object> result = getElasticSearchData(searchQueryMap);
       response.put(JsonKey.RESPONSE, result);
@@ -315,8 +314,8 @@ public class NotesManagementActor extends BaseActor {
     Map<String, Object> targetObject = new HashMap<>();
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     try {
-      String noteId = (String) actorMessage.getRequest().get(JsonKey.NOTE_ID);
-      String userId = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
+      String noteId = (String) actorMessage.getContext().get(JsonKey.NOTE_ID);
+      String userId = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
       if (!validateUserForNoteUpdation(userId, noteId)) {
         throw new ProjectCommonException(
             ResponseCode.unAuthorized.getErrorCode(),
@@ -335,8 +334,7 @@ public class NotesManagementActor extends BaseActor {
       Map<String, Object> req = new HashMap<>();
       req.put(JsonKey.ID, noteId);
       req.put(JsonKey.IS_DELETED, true);
-      String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
-      req.put(JsonKey.UPDATED_BY, updatedBy);
+      req.put(JsonKey.UPDATED_BY, userId);
       req.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
       Response result =
           cassandraOperation.updateRecord(

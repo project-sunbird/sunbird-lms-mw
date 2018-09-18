@@ -973,9 +973,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     for (int i = 0; i < dataMapList.size(); i++) {
       userMap = dataMapList.get(i);
       Map<String, Object> welcomeMailTemplateMap = new HashMap<>();
-      if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
-        welcomeMailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, userMap.get(JsonKey.PASSWORD));
-      }
       String errMsg = validateUser(userMap);
       if (errMsg.equalsIgnoreCase(JsonKey.SUCCESS)) {
         try {
@@ -1220,7 +1217,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
   private void prepareRequestForAddingUserToRootOrg(
       Map<String, Object> userMap, Map<String, Object> map) {
     map.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ROOT_ORG_ID));
-    List<String> roles = Arrays.asList(JsonKey.PUBLIC);
+    List<String> roles = Arrays.asList(ProjectUtil.UserRole.PUBLIC.getValue());
     map.put(JsonKey.ROLES, roles);
   }
 

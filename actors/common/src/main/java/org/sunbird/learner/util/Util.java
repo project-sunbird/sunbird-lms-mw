@@ -1789,31 +1789,35 @@ public final class Util {
           JsonKey.WELCOME_MESSAGE, ProjectUtil.formatMessage(welcomeMessage, envName));
 
       emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
-      String redirectUri =
-          StringUtils.isNotBlank((String) emailTemplateMap.get(JsonKey.REDIRECT_URI))
-              ? ((String) emailTemplateMap.get(JsonKey.REDIRECT_URI))
-              : null;
-
-      if (StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.PASSWORD))) {
-        emailTemplateMap.put(
-            "update_password_link",
-            KeyCloakUtil.getUpdatePasswordOrVerifyEmailLink(
-                (String) emailTemplateMap.get(JsonKey.USERNAME),
-                redirectUri,
-                KeyCloakUtil.UPDATE_PASSWORD_LINK));
-      } else {
-        emailTemplateMap.put(
-            "verify_email_link",
-            KeyCloakUtil.getUpdatePasswordOrVerifyEmailLink(
-                (String) emailTemplateMap.get(JsonKey.USERNAME),
-                redirectUri,
-                KeyCloakUtil.VERIFY_EMAIL_LINK));
-      }
+      getUpdatePasswordOrVerifyEmailLink(emailTemplateMap);
       request = new Request();
       request.setOperation(BackgroundOperations.emailService.name());
       request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);
     }
     return request;
+  }
+
+  private static void getUpdatePasswordOrVerifyEmailLink(Map<String, Object> templateMap) {
+    String redirectUri =
+        StringUtils.isNotBlank((String) templateMap.get(JsonKey.REDIRECT_URI))
+            ? ((String) templateMap.get(JsonKey.REDIRECT_URI))
+            : null;
+
+    if (StringUtils.isBlank((String) templateMap.get(JsonKey.PASSWORD))) {
+      templateMap.put(
+          KeyCloakUtil.UPDATE_PASSWORD_LINK,
+          KeyCloakUtil.getUpdatePasswordOrVerifyEmailLink(
+              (String) templateMap.get(JsonKey.USERNAME),
+              redirectUri,
+              KeyCloakUtil.UPDATE_PASSWORD_LINK));
+    } else {
+      templateMap.put(
+          KeyCloakUtil.VERIFY_EMAIL_LINK,
+          KeyCloakUtil.getUpdatePasswordOrVerifyEmailLink(
+              (String) templateMap.get(JsonKey.USERNAME),
+              redirectUri,
+              KeyCloakUtil.VERIFY_EMAIL_LINK));
+    }
   }
 
   public static void sendSMS(Map<String, Object> userMap) {
@@ -1827,9 +1831,13 @@ public final class Util {
       String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
       String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
       String appName = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_APP_NAME);
-
+      getUpdatePasswordOrVerifyEmailLink(userMap);
+      String updatePasswordLink = (String) userMap.get(KeyCloakUtil.UPDATE_PASSWORD_LINK);
+      String verifyEmailLink = (String) userMap.get(KeyCloakUtil.VERIFY_EMAIL_LINK);
       ProjectLogger.log("shortened url :: " + webUrl, LoggerEnum.INFO);
-      String sms = ProjectUtil.getSMSBody(name, webUrl, envName, appName);
+      String sms =
+          ProjectUtil.getSMSBody(
+              name, webUrl, envName, appName, updatePasswordLink, verifyEmailLink);
       if (StringUtils.isBlank(sms)) {
         sms = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_DEFAULT_WELCOME_MSG);
       }

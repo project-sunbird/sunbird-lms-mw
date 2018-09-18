@@ -1,4 +1,4 @@
-package org.sunbird.learner.actors;
+package org.sunbird.learner.actors.coursebatch;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -8,7 +8,6 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -22,7 +21,9 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
-import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.CourseEnrollmentActor;
+import org.sunbird.learner.actors.coursebatch.dao.CourseBatchManagementDao;
+import org.sunbird.learner.actors.coursebatch.dao.impl.CourseBatchManagementDaoImpl;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
@@ -46,21 +47,13 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 )
 public class CourseBatchManagementActor extends BaseActor {
 
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private CourseBatchManagementDao courseBatchManagementDao =
+      CourseBatchManagementDaoImpl.getInstance();
   private Util.DbInfo dbInfo = null;
-
-  public CourseBatchManagementActor() {
-    this.cassandraOperation = ServiceFactory.getInstance();
-  }
-
-  public CourseBatchManagementActor(CassandraOperation cassandraOperation) {
-    this.cassandraOperation = cassandraOperation;
-  }
-
   /**
    * Receives the actor message and perform the course enrollment operation .
    *
-   * @param message Object is an instance of Request
+   * @param request Object is an instance of Request
    */
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -71,32 +64,34 @@ public class CourseBatchManagementActor extends BaseActor {
     ExecutionContext.setRequestId(request.getRequestId());
 
     String requestedOperation = request.getOperation();
-    if (requestedOperation.equalsIgnoreCase(ActorOperations.CREATE_BATCH.getValue())) {
-      createCourseBatch(request);
-    }
-    if (requestedOperation.equalsIgnoreCase(ActorOperations.UPDATE_BATCH.getValue())) {
-      updateCourseBatch(request);
-    }
-    if (requestedOperation.equalsIgnoreCase(ActorOperations.GET_BATCH.getValue())) {
-      getCourseBatch(request);
-    } else if (requestedOperation.equalsIgnoreCase(ActorOperations.ADD_USER_TO_BATCH.getValue())) {
-      addUserCourseBatch(request);
-    } else if (requestedOperation.equalsIgnoreCase(
-        ActorOperations.GET_COURSE_BATCH_DETAIL.getValue())) {
-      getCourseBatchDetail(request);
-    } else {
-      onReceiveUnsupportedOperation(request.getOperation());
+    switch (requestedOperation) {
+      case "createBatch":
+        createCourseBatch(request);
+        break;
+      case "updateBatch":
+        updateCourseBatch(request);
+        break;
+      case "getBatch":
+        getCourseBatch(request);
+        break;
+      case "addUserBatch":
+        addUserCourseBatch(request);
+        break;
+      case "getCourseBatchDetail":
+        getCourseBatchDetail(request);
+        break;
+      default:
+        onReceiveUnsupportedOperation(request.getOperation());
+        break;
     }
   }
 
   private void getCourseBatch(Request actorMessage) {
-
-    Map<String, Object> map = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
     Map<String, Object> result =
         ElasticSearchUtil.getDataByIdentifier(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.course.getTypeName(),
-            (String) map.get(JsonKey.BATCH_ID));
+            (String) actorMessage.getContext().get(JsonKey.BATCH_ID));
     Response response = new Response();
     if (null != result) {
       response.put(JsonKey.RESPONSE, result);
@@ -109,24 +104,27 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private void getCourseBatchDetail(Request actorMessage) {
 
-    Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
-    String batchId = (String) req.get(JsonKey.BATCH_ID);
-    Response result =
-        cassandraOperation.getRecordById(dbInfo.getKeySpace(), dbInfo.getTableName(), batchId);
-    List<Map<String, Object>> courseList = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+    //    Map<String, Object> req = (Map<String, Object>)
+    // actorMessage.getRequest().get(JsonKey.BATCH);
+    String batchId = (String) actorMessage.getContext().get(JsonKey.BATCH_ID);
+    List<Map<String, Object>> courseList = courseBatchManagementDao.readById(batchId);
+    ;
     if ((courseList.isEmpty())) {
       throw new ProjectCommonException(
           ResponseCode.invalidCourseBatchId.getErrorCode(),
           ResponseCode.invalidCourseBatchId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
+    Response result = new Response();
+    result.getResult().put(JsonKey.RESPONSE, courseList);
+
     sender().tell(result, self());
   }
 
   private void addUserCourseBatch(Request actorMessage) {
 
     ProjectLogger.log("Add user to course batch - called");
-    Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
+    Map<String, Object> req = actorMessage.getRequest();
     Response response = new Response();
 
     // objects of telemetry event...
@@ -135,18 +133,8 @@ public class CourseBatchManagementActor extends BaseActor {
 
     String batchId = (String) req.get(JsonKey.BATCH_ID);
     TelemetryUtil.generateCorrelatedObject(batchId, JsonKey.BATCH, null, correlatedObject);
-    // check batch exist in db or not
-    Response courseBatchResult =
-        cassandraOperation.getRecordById(dbInfo.getKeySpace(), dbInfo.getTableName(), batchId);
-    List<Map<String, Object>> courseList =
-        (List<Map<String, Object>>) courseBatchResult.get(JsonKey.RESPONSE);
-    if ((courseList.isEmpty())) {
-      throw new ProjectCommonException(
-          ResponseCode.invalidCourseBatchId.getErrorCode(),
-          ResponseCode.invalidCourseBatchId.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
-    Map<String, Object> courseBatchObject = courseList.get(0);
+
+    Map<String, Object> courseBatchObject = courseBatchManagementDao.readById(batchId).get(0);
     // check whether coursebbatch type is invite only or not ...
     if (ProjectUtil.isNull(courseBatchObject.get(JsonKey.ENROLLMENT_TYPE))
         || !((String) courseBatchObject.get(JsonKey.ENROLLMENT_TYPE))
@@ -215,7 +203,7 @@ public class CourseBatchManagementActor extends BaseActor {
     }
 
     courseBatchObject.put(JsonKey.PARTICIPANT, participants);
-    cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), courseBatchObject);
+    courseBatchManagementDao.update(courseBatchObject);
     sender().tell(response, self());
 
     ProjectLogger.log("method call going to satrt for ES--.....");
@@ -282,14 +270,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private Boolean addUserCourses(
       String batchId, String courseId, String userId, Map<String, String> additionalCourseInfo) {
-
-    Util.DbInfo courseEnrollmentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
-    Util.DbInfo coursePublishdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
-    Response response =
-        cassandraOperation.getRecordById(
-            coursePublishdbInfo.getKeySpace(), coursePublishdbInfo.getTableName(), courseId);
-    List<Map<String, Object>> resultList =
-        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    List<Map<String, Object>> resultList = courseBatchManagementDao.readPublishedCourse(courseId);
     if (!ProjectUtil.CourseMgmtStatus.LIVE
         .getValue()
         .equalsIgnoreCase(additionalCourseInfo.get(JsonKey.STATUS))) {
@@ -323,8 +304,7 @@ public class CourseBatchManagementActor extends BaseActor {
     }
     userCourses.put(JsonKey.TOC_URL, additionalCourseInfo.get(JsonKey.TOC_URL));
     try {
-      cassandraOperation.insertRecord(
-          courseEnrollmentdbInfo.getKeySpace(), courseEnrollmentdbInfo.getTableName(), userCourses);
+      courseBatchManagementDao.createCourseEnrolment(userCourses);
       insertUserCoursesToES(userCourses);
       flag = true;
     } catch (Exception ex) {
@@ -354,9 +334,9 @@ public class CourseBatchManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void createCourseBatch(Request actorMessage) {
 
-    Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
+    Map<String, Object> req = actorMessage.getRequest();
     Map<String, String> headers =
-        (Map<String, String>) actorMessage.getRequest().get(JsonKey.HEADER);
+        (Map<String, String>) actorMessage.getContext().get(JsonKey.HEADER);
 
     // objects of telemetry event...
     Map<String, Object> targetObject = null;
@@ -446,8 +426,7 @@ public class CourseBatchManagementActor extends BaseActor {
     req.put(JsonKey.COUNTER_INCREMENT_STATUS, false);
     req.put(JsonKey.COUNTER_DECREMENT_STATUS, false);
 
-    Response result =
-        cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), req);
+    Response result = courseBatchManagementDao.create(req);
 
     ProjectLogger.log(
         "Course Batch data saving to ES started-- for Id  " + uniqueId, LoggerEnum.INFO.name());
@@ -564,13 +543,10 @@ public class CourseBatchManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void updateCourseBatch(Request actorMessage) {
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-    Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.BATCH);
+    Map<String, Object> req = actorMessage.getRequest();
     // objects of telemetry event...
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    Response response =
-        cassandraOperation.getRecordById(
-            dbInfo.getKeySpace(), dbInfo.getTableName(), (String) req.get(JsonKey.ID));
     req.remove(JsonKey.IDENTIFIER);
     req.remove(JsonKey.STATUS);
     req.remove(JsonKey.COUNTER_INCREMENT_STATUS);
@@ -583,7 +559,7 @@ public class CourseBatchManagementActor extends BaseActor {
               ((String) req.get(JsonKey.HASHTAGID)), JsonKey.UPDATE, (String) req.get(JsonKey.ID)));
     }
     List<Map<String, Object>> courseBatch =
-        ((List<Map<String, Object>>) response.get(JsonKey.RESPONSE));
+        courseBatchManagementDao.readById((String) req.get(JsonKey.ID));
     if (CollectionUtils.isNotEmpty(courseBatch)) {
       Map<String, Object> res = courseBatch.get(0);
       Date todayDate = getDate(null, format, null);
@@ -676,8 +652,7 @@ public class CourseBatchManagementActor extends BaseActor {
         }
       }
 
-      Response result =
-          cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), req);
+      Response result = courseBatchManagementDao.update(req);
       sender().tell(result, self());
       req.put(JsonKey.ENROLLMENT_TYPE, res.get(JsonKey.ENROLLMENT_TYPE));
       req.put(JsonKey.COURSE_ID, res.get(JsonKey.COURSE_ID));

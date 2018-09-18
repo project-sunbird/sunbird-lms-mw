@@ -973,11 +973,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     for (int i = 0; i < dataMapList.size(); i++) {
       userMap = dataMapList.get(i);
       Map<String, Object> welcomeMailTemplateMap = new HashMap<>();
-      if (StringUtils.isBlank((String) userMap.get(JsonKey.PASSWORD))) {
-        String randomPassword = ProjectUtil.generateRandomPassword();
-        userMap.put(JsonKey.PASSWORD, randomPassword);
-        welcomeMailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, randomPassword);
-      } else {
+      if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
         welcomeMailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, userMap.get(JsonKey.PASSWORD));
       }
       String errMsg = validateUser(userMap);
@@ -1365,11 +1361,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       updateUser(requestedUserMap, foundUserMap);
     } else {
       createUser(requestedUserMap);
-    }
-    if (!StringUtils.isBlank((String) requestedUserMap.get(JsonKey.PASSWORD))) {
-      requestedUserMap.put(
-          JsonKey.PASSWORD,
-          OneWayHashing.encryptVal((String) requestedUserMap.get(JsonKey.PASSWORD)));
     }
     return requestedUserMap;
   }

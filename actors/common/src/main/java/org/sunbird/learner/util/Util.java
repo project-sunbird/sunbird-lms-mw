@@ -55,6 +55,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.common.services.ProfileCompletenessService;
 import org.sunbird.common.services.impl.ProfileCompletenessFactory;
+import org.sunbird.common.util.KeyCloakUtil;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.extension.user.UserExtension;
 import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
@@ -1788,6 +1789,26 @@ public final class Util {
           JsonKey.WELCOME_MESSAGE, ProjectUtil.formatMessage(welcomeMessage, envName));
 
       emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
+      String redirectUri =
+          StringUtils.isNotBlank((String) emailTemplateMap.get(JsonKey.REDIRECT_URI))
+              ? ((String) emailTemplateMap.get(JsonKey.REDIRECT_URI))
+              : null;
+
+      if (StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.PASSWORD))) {
+        emailTemplateMap.put(
+            "update_password_link",
+            KeyCloakUtil.getUpdatePasswordOrVerifyEmailLink(
+                (String) emailTemplateMap.get(JsonKey.USERNAME),
+                redirectUri,
+                KeyCloakUtil.UPDATE_PASSWORD_LINK));
+      } else {
+        emailTemplateMap.put(
+            "verify_email_link",
+            KeyCloakUtil.getUpdatePasswordOrVerifyEmailLink(
+                (String) emailTemplateMap.get(JsonKey.USERNAME),
+                redirectUri,
+                KeyCloakUtil.VERIFY_EMAIL_LINK));
+      }
       request = new Request();
       request.setOperation(BackgroundOperations.emailService.name());
       request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);

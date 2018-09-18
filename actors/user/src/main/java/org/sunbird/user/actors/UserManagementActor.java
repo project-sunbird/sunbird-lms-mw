@@ -1418,12 +1418,8 @@ public class UserManagementActor extends BaseActor {
     if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
       emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, userMap.get(JsonKey.PASSWORD));
       userMap.put(JsonKey.PASSWORD, userMap.get(JsonKey.PASSWORD));
-    } else {
-      // Create temp password if password field is null or empty in request
-      String tempPassword = ProjectUtil.generateRandomPassword();
-      userMap.put(JsonKey.PASSWORD, tempPassword);
-      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, tempPassword);
     }
+
     String accessToken = "";
     if (isSSOEnabled) {
       try {
@@ -1456,7 +1452,10 @@ public class UserManagementActor extends BaseActor {
 
     userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
-    userMap.put(JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
+    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
+      userMap.put(
+          JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
+    }
     try {
       UserUtility.encryptUserData(userMap);
     } catch (Exception e1) {
@@ -1563,6 +1562,21 @@ public class UserManagementActor extends BaseActor {
     response.put(JsonKey.ACCESSTOKEN, accessToken);
     sender().tell(response, self());
 
+    if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      ProjectLogger.log("method call going to start for ES--.....");
+      Request userRequest = new Request();
+      userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+      userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
+      ProjectLogger.log("making a call to save user data to ES");
+      try {
+        tellToAnother(userRequest);
+      } catch (Exception ex) {
+        ProjectLogger.log("Exception Occurred during saving user to Es while creating user : ", ex);
+      }
+    } else {
+      ProjectLogger.log("no call for ES to save user");
+    }
+
     // object of telemetry event...
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
@@ -1582,21 +1596,6 @@ public class UserManagementActor extends BaseActor {
     ProjectLogger.log("calling Send SMS method:", LoggerEnum.INFO);
     if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PHONE))) {
       Util.sendSMS(userMap);
-    }
-
-    if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      ProjectLogger.log("method call going to start for ES--.....");
-      Request userRequest = new Request();
-      userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-      userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
-      ProjectLogger.log("making a call to save user data to ES");
-      try {
-        tellToAnother(userRequest);
-      } catch (Exception ex) {
-        ProjectLogger.log("Exception Occurred during saving user to Es while creating user : ", ex);
-      }
-    } else {
-      ProjectLogger.log("no call for ES to save user");
     }
   }
 

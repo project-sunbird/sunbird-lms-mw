@@ -1557,6 +1557,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         return ResponseMessage.Message.INVALID_ROLE;
       }
       roles = roles.stream().map(s -> s.trim()).collect(Collectors.toList());
+      userMap.put(JsonKey.ROLES, roles);
     } catch (ProjectCommonException ex) {
       return ex.getMessage();
     }

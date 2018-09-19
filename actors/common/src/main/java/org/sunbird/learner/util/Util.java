@@ -1795,8 +1795,7 @@ public final class Util {
       if (StringUtils.isBlank((String) emailTemplateMap.get(SET_PASSWORD_LINK))
           && StringUtils.isBlank((String) emailTemplateMap.get(VERIFY_EMAIL_LINK))) {
         ProjectLogger.log(
-          "Util:sendOnboardingMail: Email not sent as generated link is empty",
-          LoggerEnum.ERROR);
+            "Util:sendOnboardingMail: Email not sent as generated link is empty", LoggerEnum.ERROR);
         return null;
       }
       request = new Request();
@@ -1840,13 +1839,13 @@ public final class Util {
       String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
       String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
       String appName = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_APP_NAME);
+      userMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
       getUserRequiredActionLink(userMap);
       String setPasswordLink = (String) userMap.get(SET_PASSWORD_LINK);
       String verifyEmailLink = (String) userMap.get(VERIFY_EMAIL_LINK);
       if (StringUtils.isBlank(setPasswordLink) && StringUtils.isBlank(verifyEmailLink)) {
         ProjectLogger.log(
-          "Util:sendSMS: SMS not sent as generated link is empty",
-          LoggerEnum.ERROR);
+            "Util:sendSMS: SMS not sent as generated link is empty", LoggerEnum.ERROR);
         return;
       }
       ProjectLogger.log("shortened url :: " + webUrl, LoggerEnum.INFO);

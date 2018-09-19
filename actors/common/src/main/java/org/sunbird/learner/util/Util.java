@@ -1838,12 +1838,14 @@ public final class Util {
       String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
       String appName = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_APP_NAME);
       getUserRequiredActionLink(userMap);
-      String updatePasswordLink = (String) userMap.get(SET_PASSWORD_LINK);
+      String setPasswordLink = (String) userMap.get(SET_PASSWORD_LINK);
       String verifyEmailLink = (String) userMap.get(VERIFY_EMAIL_LINK);
+      if (StringUtils.isBlank(setPasswordLink) && StringUtils.isBlank(verifyEmailLink)) {
+        return;
+      }
       ProjectLogger.log("shortened url :: " + webUrl, LoggerEnum.INFO);
       String sms =
-          ProjectUtil.getSMSBody(
-              name, webUrl, envName, appName, updatePasswordLink, verifyEmailLink);
+          ProjectUtil.getSMSBody(name, webUrl, envName, appName, setPasswordLink, verifyEmailLink);
       if (StringUtils.isBlank(sms)) {
         sms = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_DEFAULT_WELCOME_MSG);
       }

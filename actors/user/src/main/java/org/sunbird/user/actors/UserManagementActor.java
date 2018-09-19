@@ -1558,23 +1558,22 @@ public class UserManagementActor extends BaseActor {
       }
     }
 
-    ProjectLogger.log("User created successfully.....");
     response.put(JsonKey.ACCESSTOKEN, accessToken);
     sender().tell(response, self());
 
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      ProjectLogger.log("method call going to start for ES--.....");
+      ProjectLogger.log("UserManagementActor:processUserRequest: User creation success");
       Request userRequest = new Request();
       userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
       userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
-      ProjectLogger.log("making a call to save user data to ES");
+      ProjectLogger.log("UserManagementActor:processUserRequest: Trigger sync of user details to ES");
       try {
         tellToAnother(userRequest);
       } catch (Exception ex) {
-        ProjectLogger.log("Exception Occurred during saving user to Es while creating user : ", ex);
+        ProjectLogger.log("UserManagementActor:processUserRequest: Exception occurred with error message = " + ex.getMessage(), ex);
       }
     } else {
-      ProjectLogger.log("no call for ES to save user");
+      ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
     }
 
     // object of telemetry event...

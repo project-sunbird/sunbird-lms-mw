@@ -56,10 +56,6 @@ public class DbOperationActor extends BaseActor {
   private static List<String> tableList = null;
   private static final String RAW_QUERY = "rawQuery";
 
-  static {
-    createtableList();
-  }
-
   public static void createtableList() {
     try {
       tableList = manager.getTableList(JsonKey.SUNBIRD_PLUGIN);

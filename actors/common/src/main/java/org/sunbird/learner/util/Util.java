@@ -1792,6 +1792,10 @@ public final class Util {
 
       emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
       getUserRequiredActionLink(emailTemplateMap);
+      if (StringUtils.isBlank((String) emailTemplateMap.get(SET_PASSWORD_LINK))
+          && StringUtils.isBlank((String) emailTemplateMap.get(VERIFY_EMAIL_LINK))) {
+        return null;
+      }
       request = new Request();
       request.setOperation(BackgroundOperations.emailService.name());
       request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);

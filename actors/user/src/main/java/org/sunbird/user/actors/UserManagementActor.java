@@ -157,7 +157,7 @@ public class UserManagementActor extends BaseActor {
       throw new ProjectCommonException(
           ResponseCode.userNotFound.getErrorCode(),
           ResponseCode.userNotFound.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
     Map<String, Object> esPrivateResult =
         ElasticSearchUtil.getDataByIdentifier(
@@ -362,13 +362,13 @@ public class UserManagementActor extends BaseActor {
         throw new ProjectCommonException(
             ResponseCode.userNotFound.getErrorCode(),
             ResponseCode.userNotFound.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+            ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
       }
       if (result == null || result.size() == 0) {
         throw new ProjectCommonException(
             ResponseCode.userNotFound.getErrorCode(),
             ResponseCode.userNotFound.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+            ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
       }
 
       // check whether is_deletd true or false
@@ -511,7 +511,7 @@ public class UserManagementActor extends BaseActor {
       throw new ProjectCommonException(
           ResponseCode.userNotFound.getErrorCode(),
           ResponseCode.userNotFound.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
     // check whether is_deletd true or false
     if (ProjectUtil.isNotNull(result)
@@ -1566,11 +1566,15 @@ public class UserManagementActor extends BaseActor {
       Request userRequest = new Request();
       userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
       userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
-      ProjectLogger.log("UserManagementActor:processUserRequest: Trigger sync of user details to ES");
+      ProjectLogger.log(
+          "UserManagementActor:processUserRequest: Trigger sync of user details to ES");
       try {
         tellToAnother(userRequest);
       } catch (Exception ex) {
-        ProjectLogger.log("UserManagementActor:processUserRequest: Exception occurred with error message = " + ex.getMessage(), ex);
+        ProjectLogger.log(
+            "UserManagementActor:processUserRequest: Exception occurred with error message = "
+                + ex.getMessage(),
+            ex);
       }
     } else {
       ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");

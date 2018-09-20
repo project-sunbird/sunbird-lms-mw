@@ -1769,6 +1769,7 @@ public final class Util {
       emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
 
       String webUrl = Util.getSunbirdWebUrlPerTenent(emailTemplateMap);
+      ProjectLogger.log("Util:sendOnboardingMail redirectURI = " + webUrl, LoggerEnum.INFO.name());
       if ((!StringUtils.isBlank(webUrl)) && (!SUNBIRD_WEB_URL.equalsIgnoreCase(webUrl))) {
         emailTemplateMap.put(JsonKey.WEB_URL, webUrl);
       }
@@ -1791,6 +1792,7 @@ public final class Util {
           JsonKey.WELCOME_MESSAGE, ProjectUtil.formatMessage(welcomeMessage, envName));
 
       emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
+      emailTemplateMap.put(JsonKey.REDIRECT_URI, webUrl);
       getUserRequiredActionLink(emailTemplateMap);
       if (StringUtils.isBlank((String) emailTemplateMap.get(SET_PASSWORD_LINK))
           && StringUtils.isBlank((String) emailTemplateMap.get(VERIFY_EMAIL_LINK))) {
@@ -1810,7 +1812,8 @@ public final class Util {
         StringUtils.isNotBlank((String) templateMap.get(JsonKey.REDIRECT_URI))
             ? ((String) templateMap.get(JsonKey.REDIRECT_URI))
             : null;
-
+    ProjectLogger.log(
+        "Util:getUserRequiredActionLink redirectURI = " + redirectUri, LoggerEnum.INFO.name());
     if (StringUtils.isBlank((String) templateMap.get(JsonKey.PASSWORD))) {
       templateMap.put(
           SET_PASSWORD_LINK,
@@ -1840,6 +1843,7 @@ public final class Util {
       String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
       String appName = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_APP_NAME);
       userMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
+      userMap.put(JsonKey.REDIRECT_URI, webUrl);
       getUserRequiredActionLink(userMap);
       String setPasswordLink = (String) userMap.get(SET_PASSWORD_LINK);
       String verifyEmailLink = (String) userMap.get(VERIFY_EMAIL_LINK);
@@ -1848,7 +1852,7 @@ public final class Util {
             "Util:sendSMS: SMS not sent as generated link is empty", LoggerEnum.ERROR);
         return;
       }
-      ProjectLogger.log("shortened url :: " + webUrl, LoggerEnum.INFO);
+      ProjectLogger.log("Util:sendSMS redirectURI = " + webUrl, LoggerEnum.INFO.name());
       String sms =
           ProjectUtil.getSMSBody(name, webUrl, envName, appName, setPasswordLink, verifyEmailLink);
       if (StringUtils.isBlank(sms)) {

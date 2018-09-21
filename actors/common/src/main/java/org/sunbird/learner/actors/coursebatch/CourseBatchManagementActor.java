@@ -102,36 +102,18 @@ public class CourseBatchManagementActor extends BaseActor {
 
     String courseId = (String) req.get(JsonKey.COURSE_ID);
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-    Map<String, Object> ekStepContent =
-        CourseEnrollmentActor.getCourseObjectFromEkStep(courseId, headers);
-    if (null == ekStepContent || ekStepContent.size() == 0) {
-      ProjectLogger.log("Course Id not found in EkStep===" + courseId, LoggerEnum.INFO.name());
-      throw new ProjectCommonException(
-          ResponseCode.invalidCourseId.getErrorCode(),
-          ResponseCode.invalidCourseId.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
+    Map<String, Object> ekStepContent = getEkStepContent(courseId, headers);
     String enrolmentType = (String) req.get(JsonKey.ENROLLMENT_TYPE);
     List<String> createdFor = new ArrayList<>();
     if (req.containsKey(JsonKey.COURSE_CREATED_FOR)) {
       createdFor = (List<String>) req.get(JsonKey.COURSE_CREATED_FOR);
     }
     if (ProjectUtil.EnrolmentType.inviteOnly.getVal().equalsIgnoreCase(enrolmentType)) {
-      for (String orgId : createdFor) {
-        if (!isOrgValid(orgId)) {
-          throw new ProjectCommonException(
-              ResponseCode.invalidOrgId.getErrorCode(),
-              ResponseCode.invalidOrgId.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-        }
-      }
+      validateCreatedFor(createdFor);
     }
     if (req.containsKey(JsonKey.MENTORS))
       req.put(JsonKey.MENTORS, addMentors((List<String>) req.get(JsonKey.MENTORS)));
     req.remove(JsonKey.PARTICIPANT);
-    //    if(req.containsKey(JsonKey.PARTICIPANTS))
-    //      req.put(JsonKey.PARTICIPANTS,
-    // addParticipants((List<String>)req.get(JsonKey.PARTICIPANTS)));
     String courseCreator = (String) ekStepContent.get(JsonKey.CREATED_BY);
     String createdBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
     String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
@@ -249,23 +231,7 @@ public class CourseBatchManagementActor extends BaseActor {
           ResponseCode.invalidCourseCreatorId.getErrorMessage(),
           ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
-    if (ProjectUtil.isNull(courseBatchObject.get(JsonKey.COURSE_CREATED_FOR))
-        || ((List) courseBatchObject.get(JsonKey.COURSE_CREATED_FOR)).isEmpty()) {
-      // throw exception since batch does not belong to any createdfor in DB ...
-      throw new ProjectCommonException(
-          ResponseCode.courseCreatedForIsNull.getErrorCode(),
-          ResponseCode.courseCreatedForIsNull.getErrorMessage(),
-          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
-    }
-    if (ProjectUtil.isNull(courseBatchObject.get(JsonKey.ENROLLMENT_TYPE))
-        || !((String) courseBatchObject.get(JsonKey.ENROLLMENT_TYPE))
-            .equalsIgnoreCase(JsonKey.INVITE_ONLY)) {
-      throw new ProjectCommonException(
-          ResponseCode.enrollmentTypeValidation.getErrorCode(),
-          ResponseCode.enrollmentTypeValidation.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
-
+    validateCourseBatchData(courseBatchObject);
     String batchCreatorRootOrgId = getRootOrg(batchCreator);
     Map<String, Boolean> dbParticipants =
         (Map<String, Boolean>) courseBatchObject.get(JsonKey.PARTICIPANT);
@@ -310,6 +276,25 @@ public class CourseBatchManagementActor extends BaseActor {
     }
   }
 
+  private void validateCourseBatchData(Map<String, Object> courseBatchObject) {
+    if (ProjectUtil.isNull(courseBatchObject.get(JsonKey.COURSE_CREATED_FOR))
+        || ((List) courseBatchObject.get(JsonKey.COURSE_CREATED_FOR)).isEmpty()) {
+      // throw exception since batch does not belong to any createdfor in DB ...
+      throw new ProjectCommonException(
+          ResponseCode.courseCreatedForIsNull.getErrorCode(),
+          ResponseCode.courseCreatedForIsNull.getErrorMessage(),
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+    }
+    if (ProjectUtil.isNull(courseBatchObject.get(JsonKey.ENROLLMENT_TYPE))
+        || !((String) courseBatchObject.get(JsonKey.ENROLLMENT_TYPE))
+            .equalsIgnoreCase(JsonKey.INVITE_ONLY)) {
+      throw new ProjectCommonException(
+          ResponseCode.enrollmentTypeValidation.getErrorCode(),
+          ResponseCode.enrollmentTypeValidation.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+  }
+
   /**
    * This method will allow user to update the course batch details.
    *
@@ -340,15 +325,13 @@ public class CourseBatchManagementActor extends BaseActor {
       Date todayDate = getDate(null, format, null);
       Date dbBatchStartDate = getDate(JsonKey.START_DATE, format, res);
       Date dbBatchEndDate = getDate(JsonKey.END_DATE, format, res);
-      Date endDate = dbBatchEndDate;
-
       Date requestedStartDate = getDate(JsonKey.START_DATE, format, req);
       Date requestedEndDate = getDate(JsonKey.END_DATE, format, req);
 
       validateUpdateBatchStartDate(requestedStartDate);
       validateBatchStartAndEndDate(
           dbBatchStartDate, dbBatchEndDate, requestedStartDate, requestedEndDate, todayDate);
-
+      validateUserPermission(res, (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
       String enrolmentType = "";
       if (req.containsKey(JsonKey.ENROLMENTTYPE)) {
         enrolmentType = (String) req.get(JsonKey.ENROLMENTTYPE);
@@ -362,7 +345,6 @@ public class CourseBatchManagementActor extends BaseActor {
       }
       List<String> dbValueCreatedFor = (List<String>) res.get(JsonKey.COURSE_CREATED_FOR);
       if (ProjectUtil.EnrolmentType.inviteOnly.getVal().equalsIgnoreCase(enrolmentType)) {
-        validateUserPermission(res, (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
         for (String orgId : createdFor) {
           if (!dbValueCreatedFor.contains(orgId)) {
             if (!isOrgValid(orgId)) {
@@ -438,10 +420,8 @@ public class CourseBatchManagementActor extends BaseActor {
   }
 
   private void validateUserPermission(Map<String, Object> res, String requestedBy) {
-    if (requestedBy.equalsIgnoreCase((String) res.get(JsonKey.CREATED_BY))
-        || ((Map<String, Boolean>) res.get(JsonKey.PARTICIPANT)).containsKey(requestedBy)) {
-
-    } else {
+    if (!(requestedBy.equalsIgnoreCase((String) res.get(JsonKey.CREATED_BY))
+        || ((Map<String, Boolean>) res.get(JsonKey.PARTICIPANT)).containsKey(requestedBy))) {
       throw new ProjectCommonException(
           ResponseCode.unAuthorized.getErrorCode(),
           ResponseCode.unAuthorized.getErrorMessage(),
@@ -569,7 +549,6 @@ public class CourseBatchManagementActor extends BaseActor {
     // actorMessage.getRequest().get(JsonKey.BATCH);
     String batchId = (String) actorMessage.getContext().get(JsonKey.BATCH_ID);
     List<Map<String, Object>> courseList = courseBatchDao.readById(batchId);
-    ;
     if ((courseList.isEmpty())) {
       throw new ProjectCommonException(
           ResponseCode.invalidCourseBatchId.getErrorCode(),
@@ -880,6 +859,30 @@ public class CourseBatchManagementActor extends BaseActor {
       tellToAnother(request);
     } catch (Exception ex) {
       ProjectLogger.log("Exception Occurred during saving user count to Es : ", ex);
+    }
+  }
+
+  private Map<String, Object> getEkStepContent(String courseId, Map<String, String> headers) {
+    Map<String, Object> ekStepContent =
+        CourseEnrollmentActor.getCourseObjectFromEkStep(courseId, headers);
+    if (null == ekStepContent || ekStepContent.size() == 0) {
+      ProjectLogger.log("Course Id not found in EkStep===" + courseId, LoggerEnum.INFO.name());
+      throw new ProjectCommonException(
+          ResponseCode.invalidCourseId.getErrorCode(),
+          ResponseCode.invalidCourseId.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    return ekStepContent;
+  }
+
+  private void validateCreatedFor(List<String> createdFor) {
+    for (String orgId : createdFor) {
+      if (!isOrgValid(orgId)) {
+        throw new ProjectCommonException(
+            ResponseCode.invalidOrgId.getErrorCode(),
+            ResponseCode.invalidOrgId.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
     }
   }
 }

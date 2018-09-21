@@ -14,9 +14,9 @@ import org.sunbird.learner.util.Util;
 public class CourseBatchDaoImpl implements CourseBatchDao {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo courseBatchDb = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
-  static CourseBatchDao courseBatchDao;
-  Util.DbInfo coursePublishDb = Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
-  Util.DbInfo userCourseDb = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
+  private static CourseBatchDao courseBatchDao;
+  private Util.DbInfo coursePublishDb = Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
+  private Util.DbInfo userCourseDb = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
 
   public static CourseBatchDao getInstance() {
     if (courseBatchDao == null) {

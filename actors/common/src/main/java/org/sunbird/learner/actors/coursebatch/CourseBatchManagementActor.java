@@ -297,6 +297,17 @@ public class CourseBatchManagementActor extends BaseActor {
     }
     courseBatchObject.put(JsonKey.PARTICIPANT, finalParticipants);
     courseBatchDao.update(courseBatchObject);
+    ProjectLogger.log("method call going to satrt for ES--.....");
+    Request request = new Request();
+    request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
+    request.getRequest().put(JsonKey.BATCH, courseBatchObject);
+    ProjectLogger.log("making a call to save Course Batch data to ES");
+    try {
+      tellToAnother(request);
+    } catch (Exception ex) {
+      ProjectLogger.log(
+          "Exception Occurred during saving Course Batch to Es while updating Course Batch : ", ex);
+    }
   }
 
   /**

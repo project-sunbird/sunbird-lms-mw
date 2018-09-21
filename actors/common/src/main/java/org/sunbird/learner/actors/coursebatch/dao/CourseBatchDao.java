@@ -5,7 +5,7 @@ import java.util.Map;
 import org.sunbird.common.models.response.Response;
 
 /** Created by rajatgupta on 12/09/18. */
-public interface CourseBatchManagementDao {
+public interface CourseBatchDao {
 
   /**
    * Update system setting.

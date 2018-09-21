@@ -8,21 +8,21 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.coursebatch.dao.CourseBatchManagementDao;
+import org.sunbird.learner.actors.coursebatch.dao.CourseBatchDao;
 import org.sunbird.learner.util.Util;
 
-public class CourseBatchManagementDaoImpl implements CourseBatchManagementDao {
+public class CourseBatchDaoImpl implements CourseBatchDao {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo courseBatchDb = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
-  static CourseBatchManagementDao courseBatchManagementDao;
+  static CourseBatchDao courseBatchDao;
   Util.DbInfo coursePublishDb = Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
   Util.DbInfo userCourseDb = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
 
-  public static CourseBatchManagementDao getInstance() {
-    if (courseBatchManagementDao == null) {
-      courseBatchManagementDao = new CourseBatchManagementDaoImpl();
+  public static CourseBatchDao getInstance() {
+    if (courseBatchDao == null) {
+      courseBatchDao = new CourseBatchDaoImpl();
     }
-    return courseBatchManagementDao;
+    return courseBatchDao;
   }
 
   @Override

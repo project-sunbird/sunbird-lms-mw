@@ -22,8 +22,8 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.actors.CourseEnrollmentActor;
-import org.sunbird.learner.actors.coursebatch.dao.CourseBatchManagementDao;
-import org.sunbird.learner.actors.coursebatch.dao.impl.CourseBatchManagementDaoImpl;
+import org.sunbird.learner.actors.coursebatch.dao.CourseBatchDao;
+import org.sunbird.learner.actors.coursebatch.dao.impl.CourseBatchDaoImpl;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
@@ -47,8 +47,7 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 )
 public class CourseBatchManagementActor extends BaseActor {
 
-  private CourseBatchManagementDao courseBatchManagementDao =
-      CourseBatchManagementDaoImpl.getInstance();
+  private CourseBatchDao courseBatchDao = CourseBatchDaoImpl.getInstance();
   private Util.DbInfo dbInfo = null;
   /**
    * Receives the actor message and perform the course enrollment operation .
@@ -167,7 +166,7 @@ public class CourseBatchManagementActor extends BaseActor {
     req.put(JsonKey.COUNTER_DECREMENT_STATUS, false);
     List<String> participants = (List<String>) req.get(JsonKey.PARTICIPANTS);
     req.remove(JsonKey.PARTICIPANTS);
-    Response result = courseBatchManagementDao.create(req);
+    Response result = courseBatchDao.create(req);
 
     ProjectLogger.log(
         "Course Batch data saving to ES started-- for Id  " + uniqueId, LoggerEnum.INFO.name());
@@ -242,7 +241,7 @@ public class CourseBatchManagementActor extends BaseActor {
   }
 
   private void addParticipants(List<String> participants, String batchId) {
-    Map<String, Object> courseBatchObject = courseBatchManagementDao.readById(batchId).get(0);
+    Map<String, Object> courseBatchObject = courseBatchDao.readById(batchId).get(0);
     String batchCreator = (String) courseBatchObject.get(JsonKey.CREATED_BY);
     if (StringUtils.isBlank(batchCreator)) {
       throw new ProjectCommonException(
@@ -297,7 +296,7 @@ public class CourseBatchManagementActor extends BaseActor {
       // Add code to remove user from course;
     }
     courseBatchObject.put(JsonKey.PARTICIPANT, finalParticipants);
-    courseBatchManagementDao.update(courseBatchObject);
+    courseBatchDao.update(courseBatchObject);
   }
 
   /**
@@ -323,8 +322,7 @@ public class CourseBatchManagementActor extends BaseActor {
           validateHashTagId(
               ((String) req.get(JsonKey.HASHTAGID)), JsonKey.UPDATE, (String) req.get(JsonKey.ID)));
     }
-    List<Map<String, Object>> courseBatch =
-        courseBatchManagementDao.readById((String) req.get(JsonKey.ID));
+    List<Map<String, Object>> courseBatch = courseBatchDao.readById((String) req.get(JsonKey.ID));
     if (CollectionUtils.isNotEmpty(courseBatch)) {
       Map<String, Object> res = courseBatch.get(0);
 
@@ -386,7 +384,7 @@ public class CourseBatchManagementActor extends BaseActor {
       }
       List<String> participants = (List<String>) req.get(JsonKey.PARTICIPANTS);
       req.remove(JsonKey.PARTICIPANTS);
-      Response result = courseBatchManagementDao.update(req);
+      Response result = courseBatchDao.update(req);
 
       if (participants != null) {
         addParticipants(participants, (String) req.get(JsonKey.ID));
@@ -453,7 +451,7 @@ public class CourseBatchManagementActor extends BaseActor {
     String batchId = (String) req.get(JsonKey.BATCH_ID);
     TelemetryUtil.generateCorrelatedObject(batchId, JsonKey.BATCH, null, correlatedObject);
 
-    Map<String, Object> courseBatchObject = courseBatchManagementDao.readById(batchId).get(0);
+    Map<String, Object> courseBatchObject = courseBatchDao.readById(batchId).get(0);
     // check whether coursebbatch type is invite only or not ...
     if (ProjectUtil.isNull(courseBatchObject.get(JsonKey.ENROLLMENT_TYPE))
         || !((String) courseBatchObject.get(JsonKey.ENROLLMENT_TYPE))
@@ -522,7 +520,7 @@ public class CourseBatchManagementActor extends BaseActor {
     }
 
     courseBatchObject.put(JsonKey.PARTICIPANT, participants);
-    courseBatchManagementDao.update(courseBatchObject);
+    courseBatchDao.update(courseBatchObject);
     sender().tell(response, self());
 
     ProjectLogger.log("method call going to satrt for ES--.....");
@@ -559,7 +557,7 @@ public class CourseBatchManagementActor extends BaseActor {
     //    Map<String, Object> req = (Map<String, Object>)
     // actorMessage.getRequest().get(JsonKey.BATCH);
     String batchId = (String) actorMessage.getContext().get(JsonKey.BATCH_ID);
-    List<Map<String, Object>> courseList = courseBatchManagementDao.readById(batchId);
+    List<Map<String, Object>> courseList = courseBatchDao.readById(batchId);
     ;
     if ((courseList.isEmpty())) {
       throw new ProjectCommonException(
@@ -624,7 +622,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private Boolean addUserCourses(
       String batchId, String courseId, String userId, Map<String, String> additionalCourseInfo) {
-    List<Map<String, Object>> resultList = courseBatchManagementDao.readPublishedCourse(courseId);
+    List<Map<String, Object>> resultList = courseBatchDao.readPublishedCourse(courseId);
     if (!ProjectUtil.CourseMgmtStatus.LIVE
         .getValue()
         .equalsIgnoreCase(additionalCourseInfo.get(JsonKey.STATUS))) {
@@ -658,7 +656,7 @@ public class CourseBatchManagementActor extends BaseActor {
     }
     userCourses.put(JsonKey.TOC_URL, additionalCourseInfo.get(JsonKey.TOC_URL));
     try {
-      courseBatchManagementDao.createCourseEnrolment(userCourses);
+      courseBatchDao.createCourseEnrolment(userCourses);
       insertUserCoursesToES(userCourses);
       flag = true;
     } catch (Exception ex) {

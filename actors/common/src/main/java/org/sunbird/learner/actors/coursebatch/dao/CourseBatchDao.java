@@ -1,8 +1,8 @@
 package org.sunbird.learner.actors.coursebatch.dao;
 
-import java.util.List;
 import java.util.Map;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.models.course.batch.CourseBatch;
 
 /** Created by rajatgupta on 12/09/18. */
 public interface CourseBatchDao {
@@ -29,14 +29,7 @@ public interface CourseBatchDao {
    * @param id fetch course batch using id
    * @return course batch information
    */
-  List<Map<String, Object>> readById(String id);
-
-  /**
-   * Read all course batch.
-   *
-   * @return Response containing list of course batch.
-   */
-  List<Map<String, Object>> readAll();
+  CourseBatch readById(String id);
 
   /**
    * Read all course batch.
@@ -44,8 +37,6 @@ public interface CourseBatchDao {
    * @return Response containing operation is success or not.
    */
   Response delete(String id);
-
-  List<Map<String, Object>> readPublishedCourse(String id);
 
   Response createCourseEnrolment(Map<String, Object> map);
 }

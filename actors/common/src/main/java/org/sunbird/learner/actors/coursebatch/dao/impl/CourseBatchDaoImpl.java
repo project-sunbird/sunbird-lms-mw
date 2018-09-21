@@ -1,22 +1,27 @@
 package org.sunbird.learner.actors.coursebatch.dao.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.coursebatch.dao.CourseBatchDao;
 import org.sunbird.learner.util.Util;
+import org.sunbird.models.course.batch.CourseBatch;
 
 public class CourseBatchDaoImpl implements CourseBatchDao {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo courseBatchDb = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
   private static CourseBatchDao courseBatchDao;
-  private Util.DbInfo coursePublishDb = Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
   private Util.DbInfo userCourseDb = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
+  private ObjectMapper mapper = new ObjectMapper();
 
   public static CourseBatchDao getInstance() {
     if (courseBatchDao == null) {
@@ -38,7 +43,7 @@ public class CourseBatchDaoImpl implements CourseBatchDao {
   }
 
   @Override
-  public List<Map<String, Object>> readById(String id) {
+  public CourseBatch readById(String id) {
     Response courseBatchResult =
         cassandraOperation.getRecordById(
             courseBatchDb.getKeySpace(), courseBatchDb.getTableName(), id);
@@ -50,11 +55,22 @@ public class CourseBatchDaoImpl implements CourseBatchDao {
           ResponseCode.invalidCourseBatchId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-    return courseList;
-  }
-
-  @Override
-  public List<Map<String, Object>> readAll() {
+    try {
+      if ((courseList.isEmpty())) {
+        throw new ProjectCommonException(
+            ResponseCode.invalidCourseBatchId.getErrorCode(),
+            ResponseCode.invalidCourseBatchId.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+      String jsonString = mapper.writeValueAsString((courseList.get(0)));
+      return mapper.readValue(jsonString, CourseBatch.class);
+    } catch (IOException e) {
+      ProjectLogger.log(
+          "CourseBatch:readById: Exception occurred with error messgae = " + e.getMessage(),
+          LoggerEnum.ERROR.name());
+      ProjectCommonException.throwServerErrorException(
+          ResponseCode.SERVER_ERROR, ResponseCode.SERVER_ERROR.getErrorMessage());
+    }
     return null;
   }
 
@@ -62,16 +78,6 @@ public class CourseBatchDaoImpl implements CourseBatchDao {
   public Response delete(String id) {
     return cassandraOperation.deleteRecord(
         courseBatchDb.getKeySpace(), courseBatchDb.getTableName(), id);
-  }
-
-  @Override
-  public List<Map<String, Object>> readPublishedCourse(String id) {
-    Response courseBatchResult =
-        cassandraOperation.getRecordById(
-            coursePublishDb.getKeySpace(), coursePublishDb.getTableName(), id);
-    List<Map<String, Object>> publishedCourse =
-        (List<Map<String, Object>>) courseBatchResult.get(JsonKey.RESPONSE);
-    return publishedCourse;
   }
 
   @Override

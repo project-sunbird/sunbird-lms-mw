@@ -8,7 +8,7 @@ import org.sunbird.common.models.response.Response;
 public interface CourseBatchDao {
 
   /**
-   * Update system setting.
+   * Create course batch.
    *
    * @param map Create course batch map
    * @return Response containing setting identifier.
@@ -16,7 +16,7 @@ public interface CourseBatchDao {
   Response create(Map<String, Object> map);
 
   /**
-   * Update system setting.
+   * Update course batch.
    *
    * @param map Create course batch map
    * @return Response containing setting identifier.
@@ -24,7 +24,7 @@ public interface CourseBatchDao {
   Response update(Map<String, Object> map);
 
   /**
-   * Read system setting for given identifier.
+   * Read course batch for given identifier.
    *
    * @param id fetch course batch using id
    * @return course batch information
@@ -32,14 +32,14 @@ public interface CourseBatchDao {
   List<Map<String, Object>> readById(String id);
 
   /**
-   * Read all system settings.
+   * Read all course batch.
    *
    * @return Response containing list of course batch.
    */
   List<Map<String, Object>> readAll();
 
   /**
-   * Read all system settings.
+   * Read all course batch.
    *
    * @return Response containing operation is success or not.
    */

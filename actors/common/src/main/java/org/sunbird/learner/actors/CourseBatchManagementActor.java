@@ -716,9 +716,9 @@ public class CourseBatchManagementActor extends BaseActor {
   }
 
   private void validateUpdateBatchStartDate(Date startDate) {
-    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-    if (StringUtils.isNotBlank(format.format(startDate))) {
+    if (startDate != null) {
       try {
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
         format.format(startDate);
       } catch (Exception e) {
         throw new ProjectCommonException(

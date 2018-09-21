@@ -31,7 +31,6 @@ import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -1677,12 +1676,10 @@ public final class Util {
         } catch (Exception e) {
           ProjectLogger.log("Exception occurred while encrypting phone number ", e);
         }
-        // private Util.DbInfo userDb = Util.dbInfoMap.get(JsonKey.USER_DB);
         DbInfo userDb = dbInfoMap.get(JsonKey.USER_DB);
-        CassandraOperationImpl cassandraOperation = new CassandraOperationImpl();
         Response result =
             cassandraOperation.getRecordsByIndexedProperty(
-                userDb.getKeySpace(), userDb.getTableName(), "phone", phone);
+                userDb.getKeySpace(), userDb.getTableName(), (JsonKey.PHONE), phone);
         List<Map<String, Object>> userMapList =
             (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
         if (!userMapList.isEmpty()) {

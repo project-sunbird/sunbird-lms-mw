@@ -15,8 +15,8 @@ public class CourseBatchManagementDaoImpl implements CourseBatchManagementDao {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo courseBatchDb = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
   static CourseBatchManagementDao courseBatchManagementDao;
-  Util.DbInfo coursePublishdb = Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
-  Util.DbInfo courseEnrollmentdb = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
+  Util.DbInfo coursePublishDb = Util.dbInfoMap.get(JsonKey.COURSE_PUBLISHED_STATUS);
+  Util.DbInfo userCourseDb = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
 
   public static CourseBatchManagementDao getInstance() {
     if (courseBatchManagementDao == null) {
@@ -68,21 +68,15 @@ public class CourseBatchManagementDaoImpl implements CourseBatchManagementDao {
   public List<Map<String, Object>> readPublishedCourse(String id) {
     Response courseBatchResult =
         cassandraOperation.getRecordById(
-            coursePublishdb.getKeySpace(), coursePublishdb.getTableName(), id);
+            coursePublishDb.getKeySpace(), coursePublishDb.getTableName(), id);
     List<Map<String, Object>> publishedCourse =
         (List<Map<String, Object>>) courseBatchResult.get(JsonKey.RESPONSE);
-    if ((publishedCourse.isEmpty())) {
-      throw new ProjectCommonException(
-          ResponseCode.invalidCourseBatchId.getErrorCode(),
-          ResponseCode.invalidCourseBatchId.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
     return publishedCourse;
   }
 
   @Override
   public Response createCourseEnrolment(Map<String, Object> map) {
     return cassandraOperation.insertRecord(
-        courseEnrollmentdb.getKeySpace(), courseEnrollmentdb.getTableName(), map);
+        userCourseDb.getKeySpace(), userCourseDb.getTableName(), map);
   }
 }

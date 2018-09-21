@@ -85,40 +85,359 @@ public class CourseBatchManagementActor extends BaseActor {
         break;
     }
   }
+  /**
+   * This method will create course under cassandra db.
+   *
+   * @param actorMessage Request
+   */
+  @SuppressWarnings("unchecked")
+  private void createCourseBatch(Request actorMessage) {
 
-  private void getCourseBatch(Request actorMessage) {
-    Map<String, Object> result =
-        ElasticSearchUtil.getDataByIdentifier(
+    Map<String, Object> req = actorMessage.getRequest();
+    Map<String, String> headers =
+        (Map<String, String>) actorMessage.getContext().get(JsonKey.HEADER);
+
+    // objects of telemetry event...
+    Map<String, Object> targetObject = null;
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
+    String courseId = (String) req.get(JsonKey.COURSE_ID);
+    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+    Map<String, Object> ekStepContent =
+        CourseEnrollmentActor.getCourseObjectFromEkStep(courseId, headers);
+    if (null == ekStepContent || ekStepContent.size() == 0) {
+      ProjectLogger.log("Course Id not found in EkStep===" + courseId, LoggerEnum.INFO.name());
+      throw new ProjectCommonException(
+          ResponseCode.invalidCourseId.getErrorCode(),
+          ResponseCode.invalidCourseId.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    String enrolmentType = (String) req.get(JsonKey.ENROLLMENT_TYPE);
+    List<String> createdFor = new ArrayList<>();
+    if (req.containsKey(JsonKey.COURSE_CREATED_FOR)) {
+      createdFor = (List<String>) req.get(JsonKey.COURSE_CREATED_FOR);
+    }
+    if (ProjectUtil.EnrolmentType.inviteOnly.getVal().equalsIgnoreCase(enrolmentType)) {
+      for (String orgId : createdFor) {
+        if (!isOrgValid(orgId)) {
+          throw new ProjectCommonException(
+              ResponseCode.invalidOrgId.getErrorCode(),
+              ResponseCode.invalidOrgId.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
+      }
+    }
+    if (req.containsKey(JsonKey.MENTORS))
+      req.put(JsonKey.MENTORS, addMentors((List<String>) req.get(JsonKey.MENTORS)));
+    req.remove(JsonKey.PARTICIPANT);
+    //    if(req.containsKey(JsonKey.PARTICIPANTS))
+    //      req.put(JsonKey.PARTICIPANTS,
+    // addParticipants((List<String>)req.get(JsonKey.PARTICIPANTS)));
+    String courseCreator = (String) ekStepContent.get(JsonKey.CREATED_BY);
+    String createdBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
+    String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
+    req.put(JsonKey.ID, uniqueId);
+    req.put(JsonKey.COURSE_ID, courseId);
+    req.put(JsonKey.COURSE_CREATOR, courseCreator);
+    req.put(JsonKey.CREATED_BY, createdBy);
+    req.put(JsonKey.COUNTER_DECREMENT_STATUS, false);
+    req.put(JsonKey.COUNTER_INCREMENT_STATUS, false);
+    try {
+      Date todaydate = format.parse(format.format(new Date()));
+      Date requestedStartDate = format.parse((String) req.get(JsonKey.START_DATE));
+      if (todaydate.compareTo(requestedStartDate) == 0) {
+        req.put(JsonKey.STATUS, ProgressStatus.STARTED.getValue());
+      } else {
+        req.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
+      }
+    } catch (ParseException e) {
+      ProjectLogger.log("Exception occurred while parsing date in CourseBatchManagementActor ", e);
+    }
+
+    req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+    req.put(JsonKey.COURSE_ADDITIONAL_INFO, getAdditionalCourseInfo(ekStepContent));
+    if (!StringUtils.isBlank(((String) req.get(JsonKey.HASHTAGID)))) {
+      req.put(
+          JsonKey.HASHTAGID,
+          validateHashTagId(((String) req.get(JsonKey.HASHTAGID)), JsonKey.CREATE, ""));
+    } else {
+      req.put(JsonKey.HASHTAGID, uniqueId);
+    }
+    req.put(JsonKey.COUNTER_INCREMENT_STATUS, false);
+    req.put(JsonKey.COUNTER_DECREMENT_STATUS, false);
+    List<String> participants = (List<String>) req.get(JsonKey.PARTICIPANTS);
+    req.remove(JsonKey.PARTICIPANTS);
+    Response result = courseBatchManagementDao.create(req);
+
+    ProjectLogger.log(
+        "Course Batch data saving to ES started-- for Id  " + uniqueId, LoggerEnum.INFO.name());
+    String esResponse =
+        ElasticSearchUtil.createData(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.course.getTypeName(),
-            (String) actorMessage.getContext().get(JsonKey.BATCH_ID));
-    Response response = new Response();
-    if (null != result) {
-      response.put(JsonKey.RESPONSE, result);
-    } else {
-      result = new HashMap<>();
-      response.put(JsonKey.RESPONSE, result);
+            uniqueId,
+            req);
+    ProjectLogger.log(
+        "Course Batch data saving to ES Completed -- for Id "
+            + uniqueId
+            + " with response =="
+            + esResponse,
+        LoggerEnum.INFO.name());
+
+    result.put(JsonKey.BATCH_ID, uniqueId);
+    if (participants != null) {
+      addParticipants(participants, uniqueId);
     }
-    sender().tell(response, self());
+    sender().tell(result, self());
+
+    targetObject =
+        TelemetryUtil.generateTargetObject(uniqueId, JsonKey.BATCH, JsonKey.CREATE, null);
+    TelemetryUtil.generateCorrelatedObject(courseId, JsonKey.COURSE, null, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
+
+    Map<String, String> rollUp = new HashMap<>();
+    rollUp.put("l1", courseId);
+    TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
+
+    if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      Request request = new Request();
+      request.setOperation(ActorOperations.INSERT_COURSE_BATCH_ES.getValue());
+      request.getRequest().put(JsonKey.BATCH, req);
+      ProjectLogger.log(
+          "CourseBatchManagementActor:createCourseBatch making a call to save Course Batch data to ES.",
+          LoggerEnum.INFO.name());
+      try {
+        tellToAnother(request);
+      } catch (Exception ex) {
+        ProjectLogger.log(
+            "Exception Occurred during saving Course Batch to Es while creating Course Batch : ",
+            ex);
+      }
+    } else {
+      ProjectLogger.log("no call for ES to save Course Batch");
+    }
   }
 
-  private void getCourseBatchDetail(Request actorMessage) {
+  private List<String> addMentors(List<String> mentors) {
+    for (String userId : mentors) {
+      Map<String, Object> result =
+          ElasticSearchUtil.getDataByIdentifier(
+              ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.user.getTypeName(),
+              userId);
+      // check whether is_deletd true or false
+      if ((ProjectUtil.isNull(result))
+          || (ProjectUtil.isNotNull(result) && result.isEmpty())
+          || (ProjectUtil.isNotNull(result)
+              && result.containsKey(JsonKey.IS_DELETED)
+              && ProjectUtil.isNotNull(result.get(JsonKey.IS_DELETED))
+              && (Boolean) result.get(JsonKey.IS_DELETED))) {
+        throw new ProjectCommonException(
+            ResponseCode.invalidUserId.getErrorCode(),
+            ResponseCode.invalidUserId.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
+    return mentors;
+  }
 
-    //    Map<String, Object> req = (Map<String, Object>)
-    // actorMessage.getRequest().get(JsonKey.BATCH);
-    String batchId = (String) actorMessage.getContext().get(JsonKey.BATCH_ID);
-    List<Map<String, Object>> courseList = courseBatchManagementDao.readById(batchId);
-    ;
-    if ((courseList.isEmpty())) {
+  private void addParticipants(List<String> participants, String batchId) {
+    Map<String, Object> courseBatchObject = courseBatchManagementDao.readById(batchId).get(0);
+    String batchCreator = (String) courseBatchObject.get(JsonKey.CREATED_BY);
+    if (StringUtils.isBlank(batchCreator)) {
+      throw new ProjectCommonException(
+          ResponseCode.invalidCourseCreatorId.getErrorCode(),
+          ResponseCode.invalidCourseCreatorId.getErrorMessage(),
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+    }
+    if (ProjectUtil.isNull(courseBatchObject.get(JsonKey.COURSE_CREATED_FOR))
+        || ((List) courseBatchObject.get(JsonKey.COURSE_CREATED_FOR)).isEmpty()) {
+      // throw exception since batch does not belong to any createdfor in DB ...
+      throw new ProjectCommonException(
+          ResponseCode.courseCreatedForIsNull.getErrorCode(),
+          ResponseCode.courseCreatedForIsNull.getErrorMessage(),
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+    }
+    if (ProjectUtil.isNull(courseBatchObject.get(JsonKey.ENROLLMENT_TYPE))
+        || !((String) courseBatchObject.get(JsonKey.ENROLLMENT_TYPE))
+            .equalsIgnoreCase(JsonKey.INVITE_ONLY)) {
+      throw new ProjectCommonException(
+          ResponseCode.enrollmentTypeValidation.getErrorCode(),
+          ResponseCode.enrollmentTypeValidation.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+
+    String batchCreatorRootOrgId = getRootOrg(batchCreator);
+    Map<String, Boolean> dbParticipants =
+        (Map<String, Boolean>) courseBatchObject.get(JsonKey.PARTICIPANT);
+    if (dbParticipants == null) {
+      dbParticipants = new HashMap();
+    }
+    Map<String, String> participantWithRootOrgIds = getRootOrgForMultipleUsers(participants);
+    Map<String, Boolean> finalParticipants = new HashMap<>();
+    for (String userId : participants) {
+      if (!(dbParticipants.containsKey(userId))) {
+        if (!participantWithRootOrgIds.containsKey(userId)
+            || (!batchCreatorRootOrgId.equals(participantWithRootOrgIds.get(userId)))) {
+          continue;
+        }
+        finalParticipants.put(
+            userId,
+            addUserCourses(
+                batchId,
+                (String) courseBatchObject.get(JsonKey.COURSE_ID),
+                userId,
+                (Map<String, String>) (courseBatchObject.get(JsonKey.COURSE_ADDITIONAL_INFO))));
+      } else {
+        finalParticipants.put(userId, dbParticipants.get(userId));
+        dbParticipants.remove(userId);
+      }
+    }
+    if (!dbParticipants.isEmpty()) {
+      // Add code to remove user from course;
+    }
+    courseBatchObject.put(JsonKey.PARTICIPANT, finalParticipants);
+    courseBatchManagementDao.update(courseBatchObject);
+  }
+
+  /**
+   * This method will allow user to update the course batch details.
+   *
+   * @param actorMessage Request
+   */
+  @SuppressWarnings("unchecked")
+  private void updateCourseBatch(Request actorMessage) {
+    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+    Map<String, Object> req = actorMessage.getRequest();
+    // objects of telemetry event...
+    Map<String, Object> targetObject = null;
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+    req.remove(JsonKey.IDENTIFIER);
+    req.remove(JsonKey.STATUS);
+    req.remove(JsonKey.COUNTER_INCREMENT_STATUS);
+    req.remove(JsonKey.COUNTER_DECREMENT_STATUS);
+    req.remove(JsonKey.PARTICIPANT);
+    if (!StringUtils.isBlank(((String) req.get(JsonKey.HASHTAGID)))) {
+      req.put(
+          JsonKey.HASHTAGID,
+          validateHashTagId(
+              ((String) req.get(JsonKey.HASHTAGID)), JsonKey.UPDATE, (String) req.get(JsonKey.ID)));
+    }
+    List<Map<String, Object>> courseBatch =
+        courseBatchManagementDao.readById((String) req.get(JsonKey.ID));
+    if (CollectionUtils.isNotEmpty(courseBatch)) {
+      Map<String, Object> res = courseBatch.get(0);
+
+      Date todayDate = getDate(null, format, null);
+      Date dbBatchStartDate = getDate(JsonKey.START_DATE, format, res);
+      Date dbBatchEndDate = getDate(JsonKey.END_DATE, format, res);
+      Date endDate = dbBatchEndDate;
+
+      Date requestedStartDate = getDate(JsonKey.START_DATE, format, req);
+      Date requestedEndDate = getDate(JsonKey.END_DATE, format, req);
+
+      validateUpdateBatchStartDate(requestedStartDate);
+      validateBatchStartAndEndDate(
+          dbBatchStartDate, dbBatchEndDate, requestedStartDate, requestedEndDate, todayDate);
+
+      String enrolmentType = "";
+      if (req.containsKey(JsonKey.ENROLMENTTYPE)) {
+        enrolmentType = (String) req.get(JsonKey.ENROLMENTTYPE);
+      } else {
+        enrolmentType = (String) res.get(JsonKey.ENROLMENTTYPE);
+      }
+
+      List<String> createdFor = new ArrayList<>();
+      if (req.containsKey(JsonKey.COURSE_CREATED_FOR)) {
+        createdFor = (List<String>) req.get(JsonKey.COURSE_CREATED_FOR);
+      }
+      List<String> dbValueCreatedFor = (List<String>) res.get(JsonKey.COURSE_CREATED_FOR);
+      if (ProjectUtil.EnrolmentType.inviteOnly.getVal().equalsIgnoreCase(enrolmentType)) {
+        validateUserPermission(res, (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
+        for (String orgId : createdFor) {
+          if (!dbValueCreatedFor.contains(orgId)) {
+            if (!isOrgValid(orgId)) {
+              throw new ProjectCommonException(
+                  ResponseCode.invalidOrgId.getErrorCode(),
+                  ResponseCode.invalidOrgId.getErrorMessage(),
+                  ResponseCode.CLIENT_ERROR.getResponseCode());
+            } else {
+              dbValueCreatedFor.add(orgId);
+            }
+          }
+        }
+      } else {
+        for (String orgId : createdFor) {
+          if (!dbValueCreatedFor.contains(orgId)) {
+            dbValueCreatedFor.add(orgId);
+          }
+        }
+      }
+      req.put(JsonKey.COURSE_CREATED_FOR, dbValueCreatedFor);
+      if (req.containsKey(JsonKey.MENTORS)) {
+        req.put(JsonKey.MENTORS, addMentors((List<String>) req.get(JsonKey.MENTORS)));
+      }
+
+      if (null != requestedStartDate) {
+        if (todayDate.equals(requestedStartDate)) {
+          req.put(JsonKey.STATUS, ProgressStatus.STARTED.getValue());
+          CourseBatchSchedulerUtil.updateCourseBatchDbStatus(req, true);
+        }
+      }
+      List<String> participants = (List<String>) req.get(JsonKey.PARTICIPANTS);
+      req.remove(JsonKey.PARTICIPANTS);
+      Response result = courseBatchManagementDao.update(req);
+
+      if (participants != null) {
+        addParticipants(participants, (String) req.get(JsonKey.ID));
+      }
+      sender().tell(result, self());
+      req.put(JsonKey.ENROLLMENT_TYPE, res.get(JsonKey.ENROLLMENT_TYPE));
+      req.put(JsonKey.COURSE_ID, res.get(JsonKey.COURSE_ID));
+      req.put(JsonKey.HASHTAGID, res.get(JsonKey.HASHTAGID));
+      targetObject =
+          TelemetryUtil.generateTargetObject(
+              (String) req.get(JsonKey.ID), JsonKey.BATCH, JsonKey.UPDATE, null);
+      TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
+
+      Map<String, String> rollUp = new HashMap<>();
+      rollUp.put("l1", (String) res.get(JsonKey.COURSE_ID));
+      TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
+
+      if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+        ProjectLogger.log("method call going to satrt for ES--.....");
+        Request request = new Request();
+        request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
+        request.getRequest().put(JsonKey.BATCH, req);
+        ProjectLogger.log("making a call to save Course Batch data to ES");
+        try {
+          tellToAnother(request);
+        } catch (Exception ex) {
+          ProjectLogger.log(
+              "Exception Occurred during saving Course Batch to Es while updating Course Batch : ",
+              ex);
+        }
+      } else {
+        ProjectLogger.log("no call for ES to save Course Batch");
+      }
+    } else {
       throw new ProjectCommonException(
           ResponseCode.invalidCourseBatchId.getErrorCode(),
           ResponseCode.invalidCourseBatchId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-    Response result = new Response();
-    result.getResult().put(JsonKey.RESPONSE, courseList);
+  }
 
-    sender().tell(result, self());
+  private void validateUserPermission(Map<String, Object> res, String requestedBy) {
+    if (requestedBy.equalsIgnoreCase((String) res.get(JsonKey.CREATED_BY))
+        || ((Map<String, Boolean>) res.get(JsonKey.PARTICIPANT)).containsKey(requestedBy)) {
+
+    } else {
+      throw new ProjectCommonException(
+          ResponseCode.unAuthorized.getErrorCode(),
+          ResponseCode.unAuthorized.getErrorMessage(),
+          ResponseCode.unAuthorized.getResponseCode());
+    }
   }
 
   private void addUserCourseBatch(Request actorMessage) {
@@ -217,6 +536,41 @@ public class CourseBatchManagementActor extends BaseActor {
       ProjectLogger.log(
           "Exception Occurred during saving Course Batch to Es while updating Course Batch : ", ex);
     }
+  }
+
+  private void getCourseBatch(Request actorMessage) {
+    Map<String, Object> result =
+        ElasticSearchUtil.getDataByIdentifier(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.course.getTypeName(),
+            (String) actorMessage.getContext().get(JsonKey.BATCH_ID));
+    Response response = new Response();
+    if (null != result) {
+      response.put(JsonKey.RESPONSE, result);
+    } else {
+      result = new HashMap<>();
+      response.put(JsonKey.RESPONSE, result);
+    }
+    sender().tell(response, self());
+  }
+
+  private void getCourseBatchDetail(Request actorMessage) {
+
+    //    Map<String, Object> req = (Map<String, Object>)
+    // actorMessage.getRequest().get(JsonKey.BATCH);
+    String batchId = (String) actorMessage.getContext().get(JsonKey.BATCH_ID);
+    List<Map<String, Object>> courseList = courseBatchManagementDao.readById(batchId);
+    ;
+    if ((courseList.isEmpty())) {
+      throw new ProjectCommonException(
+          ResponseCode.invalidCourseBatchId.getErrorCode(),
+          ResponseCode.invalidCourseBatchId.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    Response result = new Response();
+    result.getResult().put(JsonKey.RESPONSE, courseList);
+
+    sender().tell(result, self());
   }
 
   private Map<String, String> getRootOrgForMultipleUsers(List<String> userIds) {
@@ -326,153 +680,6 @@ public class CourseBatchManagementActor extends BaseActor {
             + batchId);
   }
 
-  /**
-   * This method will create course under cassandra db.
-   *
-   * @param actorMessage Request
-   */
-  @SuppressWarnings("unchecked")
-  private void createCourseBatch(Request actorMessage) {
-
-    Map<String, Object> req = actorMessage.getRequest();
-    Map<String, String> headers =
-        (Map<String, String>) actorMessage.getContext().get(JsonKey.HEADER);
-
-    // objects of telemetry event...
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-
-    String courseId = (String) req.get(JsonKey.COURSE_ID);
-    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-    Map<String, Object> ekStepContent =
-        CourseEnrollmentActor.getCourseObjectFromEkStep(courseId, headers);
-    if (null == ekStepContent || ekStepContent.size() == 0) {
-      ProjectLogger.log("Course Id not found in EkStep===" + courseId, LoggerEnum.INFO.name());
-      throw new ProjectCommonException(
-          ResponseCode.invalidCourseId.getErrorCode(),
-          ResponseCode.invalidCourseId.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
-    String enrolmentType = (String) req.get(JsonKey.ENROLLMENT_TYPE);
-    List<String> createdFor = new ArrayList<>();
-    if (req.containsKey(JsonKey.COURSE_CREATED_FOR)
-        && req.get(JsonKey.COURSE_CREATED_FOR) instanceof List) {
-      createdFor = (List<String>) req.get(JsonKey.COURSE_CREATED_FOR);
-    }
-    if (ProjectUtil.EnrolmentType.inviteOnly.getVal().equalsIgnoreCase(enrolmentType)
-        && createdFor != null) {
-      for (String orgId : createdFor) {
-        if (!isOrgValid(orgId)) {
-          throw new ProjectCommonException(
-              ResponseCode.invalidOrgId.getErrorCode(),
-              ResponseCode.invalidOrgId.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-        }
-      }
-    }
-    if (req.containsKey(JsonKey.MENTORS) && req.get(JsonKey.MENTORS) instanceof List) {
-      List<String> mentors = (List<String>) req.get(JsonKey.MENTORS);
-      for (String userId : mentors) {
-        Map<String, Object> result =
-            ElasticSearchUtil.getDataByIdentifier(
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName(),
-                userId);
-        // check whether is_deletd true or false
-        if ((ProjectUtil.isNull(result))
-            || (ProjectUtil.isNotNull(result) && result.isEmpty())
-            || (ProjectUtil.isNotNull(result)
-                && result.containsKey(JsonKey.IS_DELETED)
-                && ProjectUtil.isNotNull(result.get(JsonKey.IS_DELETED))
-                && (Boolean) result.get(JsonKey.IS_DELETED))) {
-          throw new ProjectCommonException(
-              ResponseCode.invalidUserId.getErrorCode(),
-              ResponseCode.invalidUserId.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-        }
-      }
-    }
-    req.remove(JsonKey.PARTICIPANT);
-    String courseCreator = (String) ekStepContent.get(JsonKey.CREATED_BY);
-    String createdBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
-    String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
-    req.put(JsonKey.ID, uniqueId);
-    req.put(JsonKey.COURSE_ID, courseId);
-    req.put(JsonKey.COURSE_CREATOR, courseCreator);
-    req.put(JsonKey.CREATED_BY, createdBy);
-    req.put(JsonKey.COUNTER_DECREMENT_STATUS, false);
-    req.put(JsonKey.COUNTER_INCREMENT_STATUS, false);
-    try {
-      Date todaydate = format.parse(format.format(new Date()));
-      Date requestedStartDate = format.parse((String) req.get(JsonKey.START_DATE));
-      if (todaydate.compareTo(requestedStartDate) == 0) {
-        req.put(JsonKey.STATUS, ProgressStatus.STARTED.getValue());
-      } else {
-        req.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
-      }
-    } catch (ParseException e) {
-      ProjectLogger.log("Exception occurred while parsing date in CourseBatchManagementActor ", e);
-    }
-
-    req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-    req.put(JsonKey.COURSE_ADDITIONAL_INFO, getAdditionalCourseInfo(ekStepContent));
-    if (!StringUtils.isBlank(((String) req.get(JsonKey.HASHTAGID)))) {
-      req.put(
-          JsonKey.HASHTAGID,
-          validateHashTagId(((String) req.get(JsonKey.HASHTAGID)), JsonKey.CREATE, ""));
-    } else {
-      req.put(JsonKey.HASHTAGID, uniqueId);
-    }
-    req.put(JsonKey.COUNTER_INCREMENT_STATUS, false);
-    req.put(JsonKey.COUNTER_DECREMENT_STATUS, false);
-
-    Response result = courseBatchManagementDao.create(req);
-
-    ProjectLogger.log(
-        "Course Batch data saving to ES started-- for Id  " + uniqueId, LoggerEnum.INFO.name());
-    String esResponse =
-        ElasticSearchUtil.createData(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.course.getTypeName(),
-            uniqueId,
-            req);
-    ProjectLogger.log(
-        "Course Batch data saving to ES Completed -- for Id "
-            + uniqueId
-            + " with response =="
-            + esResponse,
-        LoggerEnum.INFO.name());
-    result.put(JsonKey.BATCH_ID, uniqueId);
-    sender().tell(result, self());
-
-    targetObject =
-        TelemetryUtil.generateTargetObject(uniqueId, JsonKey.BATCH, JsonKey.CREATE, null);
-    TelemetryUtil.generateCorrelatedObject(courseId, JsonKey.COURSE, null, correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
-
-    Map<String, String> rollUp = new HashMap<>();
-    rollUp.put("l1", courseId);
-    TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
-
-    if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      Request request = new Request();
-      request.setOperation(ActorOperations.INSERT_COURSE_BATCH_ES.getValue());
-      request.getRequest().put(JsonKey.BATCH, req);
-      ProjectLogger.log(
-          "CourseBatchManagementActor:createCourseBatch making a call to save Course Batch data to ES.",
-          LoggerEnum.INFO.name());
-      try {
-        tellToAnother(request);
-      } catch (Exception ex) {
-        ProjectLogger.log(
-            "Exception Occurred during saving Course Batch to Es while creating Course Batch : ",
-            ex);
-      }
-    } else {
-      ProjectLogger.log("no call for ES to save Course Batch");
-    }
-  }
-
   private String validateHashTagId(String hashTagId, String opType, String id) {
     Map<String, Object> filters = new HashMap<>();
     filters.put(JsonKey.HASHTAGID, hashTagId);
@@ -533,161 +740,6 @@ public class CourseBatchManagementActor extends BaseActor {
     }
     courseMap.put(JsonKey.STATUS, (String) ekStepContent.getOrDefault(JsonKey.STATUS, ""));
     return courseMap;
-  }
-
-  /**
-   * This method will allow user to update the course batch details.
-   *
-   * @param actorMessage Request
-   */
-  @SuppressWarnings("unchecked")
-  private void updateCourseBatch(Request actorMessage) {
-    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-    Map<String, Object> req = actorMessage.getRequest();
-    // objects of telemetry event...
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    req.remove(JsonKey.IDENTIFIER);
-    req.remove(JsonKey.STATUS);
-    req.remove(JsonKey.COUNTER_INCREMENT_STATUS);
-    req.remove(JsonKey.COUNTER_DECREMENT_STATUS);
-    req.remove(JsonKey.PARTICIPANT);
-    if (!StringUtils.isBlank(((String) req.get(JsonKey.HASHTAGID)))) {
-      req.put(
-          JsonKey.HASHTAGID,
-          validateHashTagId(
-              ((String) req.get(JsonKey.HASHTAGID)), JsonKey.UPDATE, (String) req.get(JsonKey.ID)));
-    }
-    List<Map<String, Object>> courseBatch =
-        courseBatchManagementDao.readById((String) req.get(JsonKey.ID));
-    if (CollectionUtils.isNotEmpty(courseBatch)) {
-      Map<String, Object> res = courseBatch.get(0);
-      Date todayDate = getDate(null, format, null);
-      Date dbBatchStartDate = getDate(JsonKey.START_DATE, format, res);
-      Date dbBatchEndDate = getDate(JsonKey.END_DATE, format, res);
-      Date endDate = dbBatchEndDate;
-
-      Date requestedStartDate = getDate(JsonKey.START_DATE, format, req);
-      Date requestedEndDate = getDate(JsonKey.END_DATE, format, req);
-
-      validateUpdateBatchStartDate(requestedStartDate);
-      validateBatchStartAndEndDate(
-          dbBatchStartDate, dbBatchEndDate, requestedStartDate, requestedEndDate, todayDate);
-
-      String enrolmentType = "";
-      if (req.containsKey(JsonKey.ENROLMENTTYPE)) {
-        enrolmentType = (String) req.get(JsonKey.ENROLMENTTYPE);
-      } else {
-        enrolmentType = (String) res.get(JsonKey.ENROLMENTTYPE);
-      }
-      List<String> createdFor = new ArrayList<>();
-      if (req.containsKey(JsonKey.COURSE_CREATED_FOR)
-          && req.get(JsonKey.COURSE_CREATED_FOR) instanceof List) {
-        createdFor = (List<String>) req.get(JsonKey.COURSE_CREATED_FOR);
-      }
-
-      if (null != createdFor) {
-        List<String> dbValueCreatedFor = (List<String>) res.get(JsonKey.COURSE_CREATED_FOR);
-        if (ProjectUtil.EnrolmentType.inviteOnly.getVal().equalsIgnoreCase(enrolmentType)) {
-          if (createdFor != null) {
-            for (String orgId : createdFor) {
-              if (!dbValueCreatedFor.contains(orgId)) {
-                if (!isOrgValid(orgId)) {
-                  throw new ProjectCommonException(
-                      ResponseCode.invalidOrgId.getErrorCode(),
-                      ResponseCode.invalidOrgId.getErrorMessage(),
-                      ResponseCode.CLIENT_ERROR.getResponseCode());
-                } else {
-                  dbValueCreatedFor.add(orgId);
-                }
-              }
-            }
-          }
-        } else {
-          // enrollmentType is open
-          if (null != createdFor)
-            for (String orgId : createdFor) {
-              if (!dbValueCreatedFor.contains(orgId)) {
-                dbValueCreatedFor.add(orgId);
-              }
-            }
-        }
-        req.put(JsonKey.COURSE_CREATED_FOR, dbValueCreatedFor);
-      }
-
-      if (req.containsKey(JsonKey.MENTORS) && req.get(JsonKey.MENTORS) instanceof List) {
-        List<String> mentors = (List<String>) req.get(JsonKey.MENTORS);
-        List<String> dnMentorsValue = (List<String>) res.get(JsonKey.MENTORS);
-        if (null != mentors) {
-          for (String userId : mentors) {
-            if (!dnMentorsValue.contains(userId)) {
-              Map<String, Object> result =
-                  ElasticSearchUtil.getDataByIdentifier(
-                      ProjectUtil.EsIndex.sunbird.getIndexName(),
-                      ProjectUtil.EsType.user.getTypeName(),
-                      userId);
-              // check whether is_deletd true or false
-              if ((ProjectUtil.isNull(result))
-                  || (ProjectUtil.isNotNull(result) && result.isEmpty())
-                  || (ProjectUtil.isNotNull(result)
-                      && result.containsKey(JsonKey.IS_DELETED)
-                      && ProjectUtil.isNotNull(result.get(JsonKey.IS_DELETED))
-                      && (Boolean) result.get(JsonKey.IS_DELETED))) {
-                throw new ProjectCommonException(
-                    ResponseCode.invalidUserId.getErrorCode(),
-                    ResponseCode.invalidUserId.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
-              }
-              dnMentorsValue.add(userId);
-            }
-          }
-        }
-        req.put(JsonKey.MENTORS, dnMentorsValue);
-      }
-
-      if (null != requestedStartDate) {
-        if (todayDate.equals(requestedStartDate)) {
-          req.put(JsonKey.STATUS, ProgressStatus.STARTED.getValue());
-          CourseBatchSchedulerUtil.updateCourseBatchDbStatus(req, true);
-        }
-      }
-
-      Response result = courseBatchManagementDao.update(req);
-      sender().tell(result, self());
-      req.put(JsonKey.ENROLLMENT_TYPE, res.get(JsonKey.ENROLLMENT_TYPE));
-      req.put(JsonKey.COURSE_ID, res.get(JsonKey.COURSE_ID));
-      req.put(JsonKey.HASHTAGID, res.get(JsonKey.HASHTAGID));
-      targetObject =
-          TelemetryUtil.generateTargetObject(
-              (String) req.get(JsonKey.ID), JsonKey.BATCH, JsonKey.UPDATE, null);
-      TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
-
-      Map<String, String> rollUp = new HashMap<>();
-      rollUp.put("l1", (String) res.get(JsonKey.COURSE_ID));
-      TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
-
-      if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-        ProjectLogger.log("method call going to satrt for ES--.....");
-        Request request = new Request();
-        request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
-        request.getRequest().put(JsonKey.BATCH, req);
-        ProjectLogger.log("making a call to save Course Batch data to ES");
-        try {
-          tellToAnother(request);
-        } catch (Exception ex) {
-          ProjectLogger.log(
-              "Exception Occurred during saving Course Batch to Es while updating Course Batch : ",
-              ex);
-        }
-      } else {
-        ProjectLogger.log("no call for ES to save Course Batch");
-      }
-    } else {
-      throw new ProjectCommonException(
-          ResponseCode.invalidCourseBatchId.getErrorCode(),
-          ResponseCode.invalidCourseBatchId.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
   }
 
   private void validateUpdateBatchStartDate(Date startDate) {
@@ -760,7 +812,8 @@ public class CourseBatchManagementActor extends BaseActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
-    if (!endDate.after(todayDate) || !existingEndDate.after(todayDate)) {
+    if ((endDate != null && !endDate.after(todayDate))
+        || (existingEndDate != null && !existingEndDate.after(todayDate))) {
 
       ProjectLogger.log("validateBatchStartAndEndDate: senario4: ", LoggerEnum.INFO.name());
       throw new ProjectCommonException(

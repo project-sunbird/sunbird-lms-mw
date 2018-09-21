@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -1562,6 +1563,13 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     request.getRequest().putAll(userMap);
     try {
       UserRequestValidator.validateBulkUserData(request);
+      List<String> roles = (List<String>) userMap.get(JsonKey.ROLES);
+      String response = Util.validateRoles(roles);
+      if (!JsonKey.SUCCESS.equalsIgnoreCase(response)) {
+        return ResponseMessage.Message.INVALID_ROLE;
+      }
+      roles = roles.stream().map(s -> s.trim()).collect(Collectors.toList());
+      userMap.put(JsonKey.ROLES, roles);
     } catch (ProjectCommonException ex) {
       return ex.getMessage();
     }

@@ -157,7 +157,7 @@ public class UserManagementActor extends BaseActor {
       throw new ProjectCommonException(
           ResponseCode.userNotFound.getErrorCode(),
           ResponseCode.userNotFound.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
     Map<String, Object> esPrivateResult =
         ElasticSearchUtil.getDataByIdentifier(
@@ -362,13 +362,13 @@ public class UserManagementActor extends BaseActor {
         throw new ProjectCommonException(
             ResponseCode.userNotFound.getErrorCode(),
             ResponseCode.userNotFound.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+            ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
       }
       if (result == null || result.size() == 0) {
         throw new ProjectCommonException(
             ResponseCode.userNotFound.getErrorCode(),
             ResponseCode.userNotFound.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+            ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
       }
 
       // check whether is_deletd true or false
@@ -511,7 +511,7 @@ public class UserManagementActor extends BaseActor {
       throw new ProjectCommonException(
           ResponseCode.userNotFound.getErrorCode(),
           ResponseCode.userNotFound.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
     // check whether is_deletd true or false
     if (ProjectUtil.isNotNull(result)

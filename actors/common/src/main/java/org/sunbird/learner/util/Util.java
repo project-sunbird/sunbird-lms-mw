@@ -905,6 +905,7 @@ public final class Util {
       requestContext.put(JsonKey.CHANNEL, channel);
       requestContext.put(JsonKey.ACTOR_ID, actorMessage.getContext().get(JsonKey.ACTOR_ID));
       requestContext.put(JsonKey.ACTOR_TYPE, actorMessage.getContext().get(JsonKey.ACTOR_TYPE));
+      requestContext.put(JsonKey.APP_ID, actorMessage.getContext().get(JsonKey.APP_ID));
       requestContext.put(JsonKey.ENV, env);
       requestContext.put(JsonKey.REQUEST_ID, actorMessage.getRequestId());
       requestContext.put(JsonKey.REQUEST_TYPE, JsonKey.API_CALL);

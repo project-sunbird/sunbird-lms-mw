@@ -1794,11 +1794,21 @@ public final class Util {
       emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
       emailTemplateMap.put(JsonKey.REDIRECT_URI, webUrl);
       getUserRequiredActionLink(emailTemplateMap);
-      if (StringUtils.isBlank((String) emailTemplateMap.get(SET_PASSWORD_LINK))
-          && StringUtils.isBlank((String) emailTemplateMap.get(VERIFY_EMAIL_LINK))) {
+      String setPasswordLink = (String) emailTemplateMap.get(SET_PASSWORD_LINK);
+      String verifyEmailLink = (String) emailTemplateMap.get(VERIFY_EMAIL_LINK);
+
+      if (StringUtils.isBlank(setPasswordLink) && StringUtils.isBlank(verifyEmailLink)) {
         ProjectLogger.log(
             "Util:sendOnboardingMail: Email not sent as generated link is empty", LoggerEnum.ERROR);
         return null;
+      }
+      if (StringUtils.isNotBlank(setPasswordLink)) {
+        emailTemplateMap.put("link", setPasswordLink);
+        emailTemplateMap.put("setPasswordLink", "true");
+      }
+      if (StringUtils.isNotBlank(verifyEmailLink)) {
+        emailTemplateMap.put("link", verifyEmailLink);
+        emailTemplateMap.put("setPasswordLink", null);
       }
       request = new Request();
       request.setOperation(BackgroundOperations.emailService.name());

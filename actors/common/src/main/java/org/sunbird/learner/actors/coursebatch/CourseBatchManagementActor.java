@@ -117,7 +117,7 @@ public class CourseBatchManagementActor extends BaseActor {
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
 
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      inserCourseBatchToEs(req);
+      insertCourseBatchToEs(req);
     } else {
       ProjectLogger.log("no call for ES to save Course Batch");
     }
@@ -191,7 +191,7 @@ public class CourseBatchManagementActor extends BaseActor {
     return req;
   }
 
-  private void inserCourseBatchToEs(Map<String, Object> req) {
+  private void insertCourseBatchToEs(Map<String, Object> req) {
     Request request = new Request();
     request.setOperation(ActorOperations.INSERT_COURSE_BATCH_ES.getValue());
     request.getRequest().put(JsonKey.BATCH, req);
@@ -265,6 +265,7 @@ public class CourseBatchManagementActor extends BaseActor {
     }
     if (!dbParticipants.isEmpty()) {
       // Add code to remove user from course;
+
     }
     courseBatchObject.setParticipant(finalParticipants);
     courseBatchDao.update(new ObjectMapper().convertValue(courseBatchObject, Map.class));
@@ -408,11 +409,10 @@ public class CourseBatchManagementActor extends BaseActor {
       validateMentors((List<String>) req.get(JsonKey.MENTORS));
     }
 
-    if (null != requestedStartDate) {
-      if (todayDate.equals(requestedStartDate)) {
+    if (null != requestedStartDate && todayDate.equals(requestedStartDate)) {
         req.put(JsonKey.STATUS, ProgressStatus.STARTED.getValue());
         CourseBatchSchedulerUtil.updateCourseBatchDbStatus(req, true);
-      }
+
     }
     return req;
   }

@@ -124,6 +124,187 @@ public class CourseBatchManagementActor extends BaseActor {
     }
   }
 
+  /**
+   * This method will allow user to update the course batch details.
+   *
+   * @param actorMessage Request
+   */
+  @SuppressWarnings("unchecked")
+  private void updateCourseBatch(Request actorMessage) {
+    Map<String, Object> targetObject = null;
+
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+    Map<String, Object> req = setDataForUpdateRequest(actorMessage);
+    CourseBatch courseBatch = courseBatchDao.readById((String) req.get(JsonKey.ID));
+    req = updateReq(req, (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY), courseBatch);
+    List<String> participants = (List<String>) req.get(JsonKey.PARTICIPANTS);
+    req.remove(JsonKey.PARTICIPANTS);
+    Response result = courseBatchDao.update(req);
+
+    if (participants != null) {
+      addParticipants(participants, req);
+    }
+    sender().tell(result, self());
+    req.put(JsonKey.ENROLLMENT_TYPE, courseBatch.getEnrollmentType());
+    req.put(JsonKey.COURSE_ID, courseBatch.getCourseId());
+    req.put(JsonKey.HASHTAGID, courseBatch.getHashTagId());
+    targetObject =
+        TelemetryUtil.generateTargetObject(
+            (String) req.get(JsonKey.ID), JsonKey.BATCH, JsonKey.UPDATE, null);
+    TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
+
+    Map<String, String> rollUp = new HashMap<>();
+    rollUp.put("l1", courseBatch.getCourseId());
+    TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
+
+    if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      ProjectLogger.log("method call going to satrt for ES--.....");
+      Request request = new Request();
+      request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
+      request.getRequest().put(JsonKey.BATCH, req);
+      ProjectLogger.log("making a call to save Course Batch data to ES");
+      try {
+        tellToAnother(request);
+      } catch (Exception ex) {
+        ProjectLogger.log(
+            "Exception Occurred during saving Course Batch to Es while updating Course Batch : ",
+            ex);
+      }
+    } else {
+      ProjectLogger.log("no call for ES to save Course Batch");
+    }
+  }
+
+  private void addUserCourseBatch(Request actorMessage) {
+
+    ProjectLogger.log("Add user to course batch - called");
+    Map<String, Object> req = actorMessage.getRequest();
+    Response response = new Response();
+
+    // objects of telemetry event...
+    Map<String, Object> targetObject = null;
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
+    String batchId = (String) req.get(JsonKey.BATCH_ID);
+    TelemetryUtil.generateCorrelatedObject(batchId, JsonKey.BATCH, null, correlatedObject);
+
+    CourseBatch courseBatch = courseBatchDao.readById(batchId);
+    Map<String, Object> courseBatchObject = new ObjectMapper().convertValue(courseBatch, Map.class);
+    // check whether coursebbatch type is invite only or not ...
+    if (ProjectUtil.isNull(courseBatchObject.get(JsonKey.ENROLLMENT_TYPE))
+        || !((String) courseBatchObject.get(JsonKey.ENROLLMENT_TYPE))
+            .equalsIgnoreCase(JsonKey.INVITE_ONLY)) {
+      throw new ProjectCommonException(
+          ResponseCode.enrollmentTypeValidation.getErrorCode(),
+          ResponseCode.enrollmentTypeValidation.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    if (ProjectUtil.isNull(courseBatchObject.get(JsonKey.COURSE_CREATED_FOR))
+        || ((List) courseBatchObject.get(JsonKey.COURSE_CREATED_FOR)).isEmpty()) {
+      // throw exception since batch does not belong to any createdfor in DB ...
+      throw new ProjectCommonException(
+          ResponseCode.courseCreatedForIsNull.getErrorCode(),
+          ResponseCode.courseCreatedForIsNull.getErrorMessage(),
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+    }
+
+    String batchCreator = (String) courseBatchObject.get(JsonKey.CREATED_BY);
+    if (StringUtils.isBlank(batchCreator)) {
+      throw new ProjectCommonException(
+          ResponseCode.invalidCourseCreatorId.getErrorCode(),
+          ResponseCode.invalidCourseCreatorId.getErrorMessage(),
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+    }
+    String batchCreatorRootOrgId = getRootOrg(batchCreator);
+
+    Map<String, Boolean> participants =
+        (Map<String, Boolean>) courseBatchObject.get(JsonKey.PARTICIPANT);
+    // check whether can update user or not
+    List<String> userIds = (List<String>) req.get(JsonKey.USER_IDs);
+    if (participants == null) {
+      participants = new HashMap<>();
+    }
+
+    Map<String, String> participantWithRootOrgIds = getRootOrgForMultipleUsers(userIds);
+
+    for (String userId : userIds) {
+      if (!(participants.containsKey(userId))) {
+        if (!participantWithRootOrgIds.containsKey(userId)
+            || (!batchCreatorRootOrgId.equals(participantWithRootOrgIds.get(userId)))) {
+          response.put(userId, ResponseCode.userNotAssociatedToRootOrg.getErrorMessage());
+          continue;
+        }
+
+        participants.put(
+            userId,
+            addUserCourses(
+                batchId,
+                (String) courseBatchObject.get(JsonKey.COURSE_ID),
+                userId,
+                (Map<String, String>) (courseBatchObject.get(JsonKey.COURSE_ADDITIONAL_INFO))));
+
+        response.getResult().put(userId, JsonKey.SUCCESS);
+        // create audit log for user here that user associated to the batch here , here
+        // user is the targer object ...
+        targetObject =
+            TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+        correlatedObject = new ArrayList<>();
+        TelemetryUtil.generateCorrelatedObject(batchId, JsonKey.BATCH, null, correlatedObject);
+        TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
+
+      } else {
+        response.getResult().put(userId, JsonKey.SUCCESS);
+      }
+    }
+
+    courseBatchObject.put(JsonKey.PARTICIPANT, participants);
+    courseBatchDao.update(courseBatchObject);
+    sender().tell(response, self());
+
+    ProjectLogger.log("method call going to satrt for ES--.....");
+    Request request = new Request();
+    request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
+    request.getRequest().put(JsonKey.BATCH, courseBatchObject);
+    ProjectLogger.log("making a call to save Course Batch data to ES");
+    try {
+      tellToAnother(request);
+    } catch (Exception ex) {
+      ProjectLogger.log(
+          "Exception Occurred during saving Course Batch to Es while updating Course Batch : ", ex);
+    }
+  }
+
+  private void getCourseBatch(Request actorMessage) {
+    Map<String, Object> result =
+        ElasticSearchUtil.getDataByIdentifier(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.course.getTypeName(),
+            (String) actorMessage.getContext().get(JsonKey.BATCH_ID));
+    Response response = new Response();
+    if (null != result) {
+      response.put(JsonKey.RESPONSE, result);
+    } else {
+      result = new HashMap<>();
+      response.put(JsonKey.RESPONSE, result);
+    }
+    sender().tell(response, self());
+  }
+
+  private void getCourseBatchDetail(Request actorMessage) {
+
+    //    Map<String, Object> req = (Map<String, Object>)
+    // actorMessage.getRequest().get(JsonKey.BATCH);
+    String batchId = (String) actorMessage.getContext().get(JsonKey.BATCH_ID);
+    CourseBatch courseBatch = courseBatchDao.readById(batchId);
+    List<Map<String, Object>> courseBatchList = new ArrayList<>();
+    ObjectMapper mapper = new ObjectMapper();
+    courseBatchList.add(mapper.convertValue(courseBatch, Map.class));
+    Response result = new Response();
+    result.getResult().put(JsonKey.RESPONSE, courseBatchList);
+
+    sender().tell(result, self());
+  }
+
   private void createDataToEs(String uniqueId, Map<String, Object> req) {
     ProjectLogger.log(
         "Course Batch data saving to ES started-- for Id  " + uniqueId, LoggerEnum.INFO.name());
@@ -146,7 +327,6 @@ public class CourseBatchManagementActor extends BaseActor {
         (Map<String, String>) actorMessage.getContext().get(JsonKey.HEADER);
     String courseId = (String) req.get(JsonKey.COURSE_ID);
     Map<String, Object> ekStepContent = getEkStepContent(courseId, headers);
-    String enrolmentType = (String) req.get(JsonKey.ENROLLMENT_TYPE);
     validateContentOrg(req);
     if (req.containsKey(JsonKey.MENTORS)) validateMentors((List<String>) req.get(JsonKey.MENTORS));
     req.remove(JsonKey.PARTICIPANT);
@@ -322,57 +502,6 @@ public class CourseBatchManagementActor extends BaseActor {
     }
   }
 
-  /**
-   * This method will allow user to update the course batch details.
-   *
-   * @param actorMessage Request
-   */
-  @SuppressWarnings("unchecked")
-  private void updateCourseBatch(Request actorMessage) {
-    Map<String, Object> targetObject = null;
-
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    Map<String, Object> req = setUpdateReq(actorMessage);
-    CourseBatch courseBatch = courseBatchDao.readById((String) req.get(JsonKey.ID));
-    req = updateReq(req, (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY), courseBatch);
-    List<String> participants = (List<String>) req.get(JsonKey.PARTICIPANTS);
-    req.remove(JsonKey.PARTICIPANTS);
-    Response result = courseBatchDao.update(req);
-
-    if (participants != null) {
-      addParticipants(participants, req);
-    }
-    sender().tell(result, self());
-    req.put(JsonKey.ENROLLMENT_TYPE, courseBatch.getEnrollmentType());
-    req.put(JsonKey.COURSE_ID, courseBatch.getCourseId());
-    req.put(JsonKey.HASHTAGID, courseBatch.getHashtagId());
-    targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) req.get(JsonKey.ID), JsonKey.BATCH, JsonKey.UPDATE, null);
-    TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
-
-    Map<String, String> rollUp = new HashMap<>();
-    rollUp.put("l1", courseBatch.getCourseId());
-    TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
-
-    if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      ProjectLogger.log("method call going to satrt for ES--.....");
-      Request request = new Request();
-      request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
-      request.getRequest().put(JsonKey.BATCH, req);
-      ProjectLogger.log("making a call to save Course Batch data to ES");
-      try {
-        tellToAnother(request);
-      } catch (Exception ex) {
-        ProjectLogger.log(
-            "Exception Occurred during saving Course Batch to Es while updating Course Batch : ",
-            ex);
-      }
-    } else {
-      ProjectLogger.log("no call for ES to save Course Batch");
-    }
-  }
-
   private Map<String, Object> updateReq(
       Map<String, Object> req, String requestedBy, CourseBatch courseBatch) {
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
@@ -432,7 +561,7 @@ public class CourseBatchManagementActor extends BaseActor {
     return req;
   }
 
-  private Map<String, Object> setUpdateReq(Request actorMessage) {
+  private Map<String, Object> setDataForUpdateRequest(Request actorMessage) {
 
     Map<String, Object> req = actorMessage.getRequest();
     // objects of telemetry event...
@@ -459,136 +588,6 @@ public class CourseBatchManagementActor extends BaseActor {
           ResponseCode.unAuthorized.getErrorMessage(),
           ResponseCode.unAuthorized.getResponseCode());
     }
-  }
-
-  private void addUserCourseBatch(Request actorMessage) {
-
-    ProjectLogger.log("Add user to course batch - called");
-    Map<String, Object> req = actorMessage.getRequest();
-    Response response = new Response();
-
-    // objects of telemetry event...
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-
-    String batchId = (String) req.get(JsonKey.BATCH_ID);
-    TelemetryUtil.generateCorrelatedObject(batchId, JsonKey.BATCH, null, correlatedObject);
-
-    CourseBatch courseBatch = courseBatchDao.readById(batchId);
-    Map<String, Object> courseBatchObject = new ObjectMapper().convertValue(courseBatch, Map.class);
-    // check whether coursebbatch type is invite only or not ...
-    if (ProjectUtil.isNull(courseBatchObject.get(JsonKey.ENROLLMENT_TYPE))
-        || !((String) courseBatchObject.get(JsonKey.ENROLLMENT_TYPE))
-            .equalsIgnoreCase(JsonKey.INVITE_ONLY)) {
-      throw new ProjectCommonException(
-          ResponseCode.enrollmentTypeValidation.getErrorCode(),
-          ResponseCode.enrollmentTypeValidation.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
-    if (ProjectUtil.isNull(courseBatchObject.get(JsonKey.COURSE_CREATED_FOR))
-        || ((List) courseBatchObject.get(JsonKey.COURSE_CREATED_FOR)).isEmpty()) {
-      // throw exception since batch does not belong to any createdfor in DB ...
-      throw new ProjectCommonException(
-          ResponseCode.courseCreatedForIsNull.getErrorCode(),
-          ResponseCode.courseCreatedForIsNull.getErrorMessage(),
-          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
-    }
-
-    String batchCreator = (String) courseBatchObject.get(JsonKey.CREATED_BY);
-    if (StringUtils.isBlank(batchCreator)) {
-      throw new ProjectCommonException(
-          ResponseCode.invalidCourseCreatorId.getErrorCode(),
-          ResponseCode.invalidCourseCreatorId.getErrorMessage(),
-          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
-    }
-    String batchCreatorRootOrgId = getRootOrg(batchCreator);
-
-    Map<String, Boolean> participants =
-        (Map<String, Boolean>) courseBatchObject.get(JsonKey.PARTICIPANT);
-    // check whether can update user or not
-    List<String> userIds = (List<String>) req.get(JsonKey.USER_IDs);
-    if (participants == null) {
-      participants = new HashMap<>();
-    }
-
-    Map<String, String> participantWithRootOrgIds = getRootOrgForMultipleUsers(userIds);
-
-    for (String userId : userIds) {
-      if (!(participants.containsKey(userId))) {
-        if (!participantWithRootOrgIds.containsKey(userId)
-            || (!batchCreatorRootOrgId.equals(participantWithRootOrgIds.get(userId)))) {
-          response.put(userId, ResponseCode.userNotAssociatedToRootOrg.getErrorMessage());
-          continue;
-        }
-
-        participants.put(
-            userId,
-            addUserCourses(
-                batchId,
-                (String) courseBatchObject.get(JsonKey.COURSE_ID),
-                userId,
-                (Map<String, String>) (courseBatchObject.get(JsonKey.COURSE_ADDITIONAL_INFO))));
-
-        response.getResult().put(userId, JsonKey.SUCCESS);
-        // create audit log for user here that user associated to the batch here , here
-        // user is the targer object ...
-        targetObject =
-            TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-        correlatedObject = new ArrayList<>();
-        TelemetryUtil.generateCorrelatedObject(batchId, JsonKey.BATCH, null, correlatedObject);
-        TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
-
-      } else {
-        response.getResult().put(userId, JsonKey.SUCCESS);
-      }
-    }
-
-    courseBatchObject.put(JsonKey.PARTICIPANT, participants);
-    courseBatchDao.update(courseBatchObject);
-    sender().tell(response, self());
-
-    ProjectLogger.log("method call going to satrt for ES--.....");
-    Request request = new Request();
-    request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
-    request.getRequest().put(JsonKey.BATCH, courseBatchObject);
-    ProjectLogger.log("making a call to save Course Batch data to ES");
-    try {
-      tellToAnother(request);
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "Exception Occurred during saving Course Batch to Es while updating Course Batch : ", ex);
-    }
-  }
-
-  private void getCourseBatch(Request actorMessage) {
-    Map<String, Object> result =
-        ElasticSearchUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.course.getTypeName(),
-            (String) actorMessage.getContext().get(JsonKey.BATCH_ID));
-    Response response = new Response();
-    if (null != result) {
-      response.put(JsonKey.RESPONSE, result);
-    } else {
-      result = new HashMap<>();
-      response.put(JsonKey.RESPONSE, result);
-    }
-    sender().tell(response, self());
-  }
-
-  private void getCourseBatchDetail(Request actorMessage) {
-
-    //    Map<String, Object> req = (Map<String, Object>)
-    // actorMessage.getRequest().get(JsonKey.BATCH);
-    String batchId = (String) actorMessage.getContext().get(JsonKey.BATCH_ID);
-    CourseBatch courseBatch = courseBatchDao.readById(batchId);
-    List<Map<String, Object>> courseBatchList = new ArrayList<>();
-    ObjectMapper mapper = new ObjectMapper();
-    courseBatchList.add(mapper.convertValue(courseBatch, Map.class));
-    Response result = new Response();
-    result.getResult().put(JsonKey.RESPONSE, courseBatchList);
-
-    sender().tell(result, self());
   }
 
   private Map<String, String> getRootOrgForMultipleUsers(List<String> userIds) {

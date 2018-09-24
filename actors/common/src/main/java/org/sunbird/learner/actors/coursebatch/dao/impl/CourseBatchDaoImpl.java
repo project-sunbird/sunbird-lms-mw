@@ -1,15 +1,12 @@
 package org.sunbird.learner.actors.coursebatch.dao.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.coursebatch.dao.CourseBatchDao;
@@ -54,24 +51,9 @@ public class CourseBatchDaoImpl implements CourseBatchDao {
           ResponseCode.invalidCourseBatchId.getErrorCode(),
           ResponseCode.invalidCourseBatchId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
+    } else {
+      return mapper.convertValue(courseList.get(0), CourseBatch.class);
     }
-    try {
-      if ((courseList.isEmpty())) {
-        throw new ProjectCommonException(
-            ResponseCode.invalidCourseBatchId.getErrorCode(),
-            ResponseCode.invalidCourseBatchId.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-      }
-      String jsonString = mapper.writeValueAsString((courseList.get(0)));
-      return mapper.readValue(jsonString, CourseBatch.class);
-    } catch (IOException e) {
-      ProjectLogger.log(
-          "CourseBatch:readById: Exception occurred with error messgae = " + e.getMessage(),
-          LoggerEnum.ERROR.name());
-      ProjectCommonException.throwServerErrorException(
-          ResponseCode.SERVER_ERROR, ResponseCode.SERVER_ERROR.getErrorMessage());
-    }
-    return null;
   }
 
   @Override

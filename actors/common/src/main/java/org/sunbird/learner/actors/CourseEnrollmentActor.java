@@ -87,15 +87,17 @@ public class CourseEnrollmentActor extends BaseActor {
    *     BatchId
    * @return Return a promise for enroll course class API result.
    */
-  private void enrollCourseClass(Request request) {
+  @SuppressWarnings("unchecked")
+  private void enrollCourseClass(Request actorMessage) {
     ProjectLogger.log("enrollCourseClass called");
 
     Map<String, Object> targetObject = new HashMap<>();
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
-    // Map<String, Object> req = request.getRequest();
-    // String addedBy = (String) req.get(JsonKey.REQUESTED_BY);
-    Map<String, Object> courseMap = (Map<String, Object>) request.get(JsonKey.COURSE);
+    Map<String, Object> request = actorMessage.getRequest();
+    Map<String, String> headers =
+        (Map<String, String>) actorMessage.getContext().get(JsonKey.HEADER);
+    Map<String, Object> courseMap = (Map<String, Object>) actorMessage.getRequest();
 
     CourseBatch courseBatchResult = courseBatchDao.readById((String) request.get(JsonKey.BATCH_ID));
     validateCourseBatch(courseBatchResult, request);
@@ -113,8 +115,7 @@ public class CourseEnrollmentActor extends BaseActor {
       return;
     }
 
-    Map<String, String> headers = (Map<String, String>) request.get(JsonKey.HEADER);
-    String courseId = (String) request.getRequest().get(JsonKey.COURSE_ID);
+    String courseId = (String) request.get(JsonKey.COURSE_ID);
     Map<String, Object> ekStepContent = getCourseObjectFromEkStep(courseId, headers);
 
     Timestamp ts = new Timestamp(new Date().getTime());
@@ -146,7 +147,7 @@ public class CourseEnrollmentActor extends BaseActor {
     TelemetryUtil.generateCorrelatedObject(
         (String) courseMap.get(JsonKey.BATCH_ID), JsonKey.BATCH, "user.batch", correlatedObject);
 
-    TelemetryUtil.telemetryProcessingCall(request.getRequest(), targetObject, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(request, targetObject, correlatedObject);
     // TODO: for some reason, ES indexing is failing with Timestamp value. need to
     // check and
     // correct it.
@@ -161,16 +162,16 @@ public class CourseEnrollmentActor extends BaseActor {
    * @param request Request message containing following request data: userId, courseId, BatchId
    * @return Return a promise for unenroll course class API result.
    */
-  private void unenrollCourseClass(Request request) {
+  @SuppressWarnings("unchecked")
+  private void unenrollCourseClass(Request actorMessage) {
     ProjectLogger.log("unenrollCourseClass called");
     // objects of telemetry event...
     Map<String, Object> targetObject = new HashMap<>();
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    Map<String, Object> req = request.getRequest();
-    Map<String, Object> courseMap = (Map<String, Object>) req.get(JsonKey.COURSE);
+    Map<String, Object> request = actorMessage.getRequest();
     CourseBatch courseBatchResult = courseBatchDao.readById((String) request.get(JsonKey.BATCH_ID));
     validateCourseBatch(courseBatchResult, request);
-    UserCourses userCourseResult = userCourseDao.read(generateUserCoursesPrimaryKey(courseMap));
+    UserCourses userCourseResult = userCourseDao.read(generateUserCoursesPrimaryKey(request));
     // check whether user already enroll for course
     if (userCourseResult == null) {
       ProjectLogger.log("User Have not Enrolled Course ");
@@ -328,7 +329,7 @@ public class CourseEnrollmentActor extends BaseActor {
    * @Params
    */
   @SuppressWarnings("unchecked")
-  private void validateCourseBatch(CourseBatch courseBatchDetails, Request request) {
+  private void validateCourseBatch(CourseBatch courseBatchDetails, Map<String, Object> request) {
 
     if (ProjectUtil.isNull(courseBatchDetails)) {
       throw new ProjectCommonException(
@@ -338,7 +339,7 @@ public class CourseEnrollmentActor extends BaseActor {
     }
     // Map<String, String> headers = (Map<String, String>) request.getRequest().get(JsonKey.HEADER);
     Map<String, String> headers = (Map<String, String>) request.get(JsonKey.HEADER);
-    String courseId = (String) request.getRequest().get(JsonKey.COURSE_ID);
+    String courseId = (String) request.get(JsonKey.COURSE_ID);
     Map<String, Object> ekStepContent = getCourseObjectFromEkStep(courseId, headers);
     if (null == ekStepContent || ekStepContent.size() == 0) {
       ProjectLogger.log("Course Id not found in EkStep");

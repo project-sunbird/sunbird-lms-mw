@@ -1,6 +1,5 @@
 package org.sunbird.learner.actors.coursebatch;
 
-import akka.actor.ActorRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -9,7 +8,6 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.actorutil.impl.InterServiceCommunicationImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -149,7 +147,7 @@ public class CourseBatchManagementActor extends BaseActor {
     String courseId = (String) req.get(JsonKey.COURSE_ID);
     Map<String, Object> ekStepContent = getEkStepContent(courseId, headers);
     String enrolmentType = (String) req.get(JsonKey.ENROLLMENT_TYPE);
-    validateContentOrg(req,enrolmentType);
+    validateContentOrg(req);
     if (req.containsKey(JsonKey.MENTORS)) validateMentors((List<String>) req.get(JsonKey.MENTORS));
     req.remove(JsonKey.PARTICIPANT);
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
@@ -225,10 +223,10 @@ public class CourseBatchManagementActor extends BaseActor {
     }
   }
 
-  private void addParticipants(List<String> participants, Map<String,Object> req) {
+  private void addParticipants(List<String> participants, Map<String, Object> req) {
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    String batchId =(String) req.get(JsonKey.ID);
+    String batchId = (String) req.get(JsonKey.ID);
 
     CourseBatch courseBatchObject = courseBatchDao.readById(batchId);
     String batchCreator = courseBatchObject.getCreatedBy();
@@ -260,7 +258,7 @@ public class CourseBatchManagementActor extends BaseActor {
                 userId,
                 (courseBatchObject.getCourseAdditionalInfo())));
         targetObject =
-                TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+            TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
         correlatedObject = new ArrayList<>();
         TelemetryUtil.generateCorrelatedObject(batchId, JsonKey.BATCH, null, correlatedObject);
         TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
@@ -272,19 +270,18 @@ public class CourseBatchManagementActor extends BaseActor {
     if (!dbParticipants.isEmpty()) {
       // Add code to remove user from course;
       InterServiceCommunicationImpl interServiceCommunication = new InterServiceCommunicationImpl();
-      dbParticipants.forEach((s, aBoolean) ->
-              {
-                Request request  = new Request();
-                request.setOperation(ActorOperations.UNENROLL_COURSE.getValue());
-                Map<String,Object> map = new HashMap<>();
-                map.put(JsonKey.USER_ID,s);
-                map.put(JsonKey.BATCH_ID,batchId);
-                map.put(JsonKey.COURSE_ID,req.get(JsonKey.COURSE_ID));
-                request.setRequest(map);
-                interServiceCommunication.getResponse(getActorRef(ActorOperations.UNENROLL_COURSE.getValue()), request);
-              }
-      );
-
+      dbParticipants.forEach(
+          (s, aBoolean) -> {
+            Request request = new Request();
+            request.setOperation(ActorOperations.UNENROLL_COURSE.getValue());
+            Map<String, Object> map = new HashMap<>();
+            map.put(JsonKey.USER_ID, s);
+            map.put(JsonKey.BATCH_ID, batchId);
+            map.put(JsonKey.COURSE_ID, req.get(JsonKey.COURSE_ID));
+            request.setRequest(map);
+            interServiceCommunication.getResponse(
+                getActorRef(ActorOperations.UNENROLL_COURSE.getValue()), request);
+          });
     }
     courseBatchObject.setParticipant(finalParticipants);
     courseBatchDao.update(new ObjectMapper().convertValue(courseBatchObject, Map.class));
@@ -400,7 +397,7 @@ public class CourseBatchManagementActor extends BaseActor {
     List<String> createdFor = new ArrayList<>();
     if (req.containsKey(JsonKey.COURSE_CREATED_FOR)) {
       createdFor = (List<String>) req.get(JsonKey.COURSE_CREATED_FOR);
-      validateContentOrg(req,enrolmentType);
+      validateContentOrg(req);
     }
     List<String> dbValueCreatedFor = courseBatch.getCreatedFor();
     if (ProjectUtil.EnrolmentType.inviteOnly.getVal().equalsIgnoreCase(enrolmentType)) {
@@ -429,9 +426,8 @@ public class CourseBatchManagementActor extends BaseActor {
     }
 
     if (null != requestedStartDate && todayDate.equals(requestedStartDate)) {
-        req.put(JsonKey.STATUS, ProgressStatus.STARTED.getValue());
-        CourseBatchSchedulerUtil.updateCourseBatchDbStatus(req, true);
-
+      req.put(JsonKey.STATUS, ProgressStatus.STARTED.getValue());
+      CourseBatchSchedulerUtil.updateCourseBatchDbStatus(req, true);
     }
     return req;
   }
@@ -896,7 +892,7 @@ public class CourseBatchManagementActor extends BaseActor {
     return ekStepContent;
   }
 
-  private void validateContentOrg(Map<String,Object> req,String enrolmentType) {
+  private void validateContentOrg(Map<String, Object> req) {
     List<String> createdFor = new ArrayList<>();
     if (req.containsKey(JsonKey.COURSE_CREATED_FOR)) {
       createdFor = (List<String>) req.get(JsonKey.COURSE_CREATED_FOR);

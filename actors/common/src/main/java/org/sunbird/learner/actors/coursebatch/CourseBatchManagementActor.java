@@ -23,7 +23,9 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.actors.CourseEnrollmentActor;
 import org.sunbird.learner.actors.coursebatch.dao.CourseBatchDao;
+import org.sunbird.learner.actors.coursebatch.dao.UserCourseDao;
 import org.sunbird.learner.actors.coursebatch.dao.impl.CourseBatchDaoImpl;
+import org.sunbird.learner.actors.coursebatch.dao.impl.UserCourseDaoImpl;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.course.batch.CourseBatch;
@@ -48,7 +50,8 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 )
 public class CourseBatchManagementActor extends BaseActor {
 
-  private CourseBatchDao courseBatchDao = CourseBatchDaoImpl.getInstance();
+  private CourseBatchDao courseBatchDao = new CourseBatchDaoImpl();
+  private UserCourseDao userCourseDao = new UserCourseDaoImpl();
   /**
    * Receives the actor message and perform the course enrollment operation .
    *
@@ -108,7 +111,7 @@ public class CourseBatchManagementActor extends BaseActor {
     courseBatch.setHashTagId(
         getHashTagId((String) request.get(JsonKey.HASH_TAG_ID), JsonKey.CREATE, "", courseBatchId));
     String courseId = (String) request.get(JsonKey.COURSE_ID);
-    Map<String, Object> contentDetails = getEkStepContent(courseId, headers);
+    Map<String, Object> contentDetails = getContentDetails(courseId, headers);
     courseBatch.setContentDetails(contentDetails, requestedBy);
     // validations
     validateContentOrg(courseBatch.getCreatedFor());
@@ -633,7 +636,7 @@ public class CourseBatchManagementActor extends BaseActor {
     }
     userCourses.put(JsonKey.TOC_URL, additionalCourseInfo.get(JsonKey.TOC_URL));
     try {
-      courseBatchDao.createCourseEnrolment(userCourses);
+      userCourseDao.createCourseEnrolment(userCourses);
       insertUserCoursesToES(userCourses);
       flag = true;
     } catch (Exception ex) {
@@ -822,7 +825,7 @@ public class CourseBatchManagementActor extends BaseActor {
     }
   }
 
-  private Map<String, Object> getEkStepContent(String courseId, Map<String, String> headers) {
+  private Map<String, Object> getContentDetails(String courseId, Map<String, String> headers) {
     Map<String, Object> ekStepContent =
         CourseEnrollmentActor.getCourseObjectFromEkStep(courseId, headers);
     if (null == ekStepContent || ekStepContent.size() == 0) {

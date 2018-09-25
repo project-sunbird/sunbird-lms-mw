@@ -101,12 +101,15 @@ public class CourseBatchManagementActor extends BaseActor {
     String requestedBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
 
     List<String> participants = (List<String>) req.get(JsonKey.PARTICIPANTS);
-    CourseBatch courseBatch = new CourseBatch(req, requestedBy);
+    req.remove(JsonKey.PARTICIPANTS);
+    req.remove(JsonKey.PARTICIPANT);
+    CourseBatch courseBatch = new CourseBatch().init(req, requestedBy);
     courseBatch.setId(uniqueId);
     courseBatch.setStatus(setCourseBatchStatus((String) req.get(JsonKey.START_DATE)));
     courseBatch.setHashTagId(
         getHashTagId((String) req.get(JsonKey.HASH_TAG_ID), JsonKey.CREATE, "", uniqueId));
     // validations
+    validateContentOrg(courseBatch.getCreatedFor());
     validateMentors(courseBatch);
     validateParticipants(participants, courseBatch);
 
@@ -117,10 +120,9 @@ public class CourseBatchManagementActor extends BaseActor {
     if (participants != null) {
       courseBatch.setParticipant(addParticipants(participants, courseBatch));
     }
-    syncCourseBatch((String) req.get(JsonKey.ID), req);
     Response result = courseBatchDao.create(courseBatch);
     result.put(JsonKey.BATCH_ID, uniqueId);
-
+    syncCourseBatch(uniqueId, new ObjectMapper().convertValue(courseBatch, Map.class));
     sender().tell(result, self());
     targetObject =
         TelemetryUtil.generateTargetObject(
@@ -390,6 +392,7 @@ public class CourseBatchManagementActor extends BaseActor {
     List<String> mentors = courseBatch.getMentors();
     if (mentors != null) {
       String batchCreatorRootOrgId = getRootOrg(courseBatch.getCreatedBy());
+
       for (String userId : mentors) {
         Map<String, Object> result =
             ElasticSearchUtil.getDataByIdentifier(
@@ -397,7 +400,8 @@ public class CourseBatchManagementActor extends BaseActor {
                 ProjectUtil.EsType.user.getTypeName(),
                 userId);
         // check whether is_deleted true or false
-        if (!batchCreatorRootOrgId.equals(batchCreatorRootOrgId)) {
+        String mentorRootOrgId = getRootOrg(userId);
+        if (!batchCreatorRootOrgId.equals(mentorRootOrgId)) {
           throw new ProjectCommonException(
               ResponseCode.invalidUserId.getErrorCode(),
               ResponseCode.invalidUserId.getErrorMessage(),
@@ -481,22 +485,6 @@ public class CourseBatchManagementActor extends BaseActor {
           courseEnrollmentClient.createCourseUnEnrollment(
               getActorRef(ActorOperations.UNENROLL_COURSE.getValue()), map);
         });
-  }
-
-  private void updateEs(CourseBatch courseBatch) {
-    ProjectLogger.log("method call going to satrt for ES--.....");
-    Request request = new Request();
-    request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
-    request
-        .getRequest()
-        .put(JsonKey.BATCH, new ObjectMapper().convertValue(courseBatch, Map.class));
-    ProjectLogger.log("making a call to save Course Batch data to ES");
-    try {
-      tellToAnother(request);
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "Exception Occurred during saving Course Batch to Es while updating Course Batch : ", ex);
-    }
   }
 
   private void validateCourseBatchData(CourseBatch courseBatchObject) {
@@ -673,7 +661,7 @@ public class CourseBatchManagementActor extends BaseActor {
             + batchId);
   }
 
-  String getHashTagId(String hasTagId, String operation, String id, String uniqueId) {
+  private String getHashTagId(String hasTagId, String operation, String id, String uniqueId) {
     if (hasTagId != null) return validateHashTagId(hasTagId, operation, id);
     return uniqueId;
   }
@@ -854,13 +842,14 @@ public class CourseBatchManagementActor extends BaseActor {
   }
 
   private void validateContentOrg(List<String> createdFor) {
-    for (String orgId : createdFor) {
-      if (!isOrgValid(orgId)) {
-        throw new ProjectCommonException(
-            ResponseCode.invalidOrgId.getErrorCode(),
-            ResponseCode.invalidOrgId.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+    if (createdFor != null)
+      for (String orgId : createdFor) {
+        if (!isOrgValid(orgId)) {
+          throw new ProjectCommonException(
+              ResponseCode.invalidOrgId.getErrorCode(),
+              ResponseCode.invalidOrgId.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
       }
-    }
   }
 }

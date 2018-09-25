@@ -29,12 +29,6 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.course.batch.CourseBatch;
 import org.sunbird.telemetry.util.TelemetryUtil;
 
-/**
- * This actor will handle course batch related operations.
- *
- * @author Manzarul
- * @author Amit Kumar
- */
 @ActorConfig(
   tasks = {
     "createBatch",
@@ -49,16 +43,11 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 public class CourseBatchManagementActor extends BaseActor {
 
   private CourseBatchDao courseBatchDao = CourseBatchDaoImpl.getInstance();
-  /**
-   * Receives the actor message and perform the course enrollment operation .
-   *
-   * @param request Object is an instance of Request
-   */
+
   @Override
   public void onReceive(Request request) throws Throwable {
 
     Util.initializeContext(request, TelemetryEnvKey.BATCH);
-    // set request id to thread local...
     ExecutionContext.setRequestId(request.getRequestId());
 
     String requestedOperation = request.getOperation();
@@ -83,11 +72,7 @@ public class CourseBatchManagementActor extends BaseActor {
         break;
     }
   }
-  /**
-   * This method will create course under cassandra db.
-   *
-   * @param actorMessage Request
-   */
+
   @SuppressWarnings("unchecked")
   private void createCourseBatch(Request actorMessage) {
     Map<String, Object> request = actorMessage.getRequest();
@@ -107,21 +92,25 @@ public class CourseBatchManagementActor extends BaseActor {
     courseBatch.setStatus(setCourseBatchStatus((String) request.get(JsonKey.START_DATE)));
     courseBatch.setHashTagId(
         getHashTagId((String) request.get(JsonKey.HASH_TAG_ID), JsonKey.CREATE, "", courseBatchId));
+    
     String courseId = (String) request.get(JsonKey.COURSE_ID);
     Map<String, Object> contentDetails = getEkStepContent(courseId, headers);
     courseBatch.setContentDetails(contentDetails, requestedBy);
-    // validations
+    
     validateContentOrg(courseBatch.getCreatedFor());
     validateMentors(courseBatch);
     if (participants != null) {
       validateParticipants(participants, courseBatch);
       courseBatch.setParticipant(getParticipantsMap(participants, courseBatch));
     }
+    
     Response result = courseBatchDao.create(courseBatch);
     result.put(JsonKey.BATCH_ID, courseBatchId);
+
     syncCourseBatchForeground(
         courseBatchId, new ObjectMapper().convertValue(courseBatch, Map.class));
     sender().tell(result, self());
+
     targetObject =
         TelemetryUtil.generateTargetObject(
             (String) request.get(JsonKey.ID), JsonKey.BATCH, JsonKey.CREATE, null);
@@ -133,11 +122,7 @@ public class CourseBatchManagementActor extends BaseActor {
     rollUp.put("l1", (String) request.get(JsonKey.COURSE_ID));
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
   }
-  /**
-   * This method will allow user to update the course batch details.
-   *
-   * @param actorMessage Request
-   */
+
   @SuppressWarnings("unchecked")
   private void updateCourseBatch(Request actorMessage) {
     Map<String, Object> targetObject = null;
@@ -145,10 +130,12 @@ public class CourseBatchManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     Map<String, Object> request = actorMessage.getRequest();
-    String requestedBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
-    CourseBatch courseBatch = getUpdateCourseBatch(request);
     List<String> participants = (List<String>) request.get(JsonKey.PARTICIPANTS);
+    String requestedBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
+    
+    CourseBatch courseBatch = getUpdateCourseBatch(request);
     courseBatch.setUpdatedDate(ProjectUtil.getFormattedDate());
+    
     validateUserPermission(courseBatch, requestedBy);
     validateContentOrg(courseBatch.getCreatedFor());
     validateMentors(courseBatch);
@@ -161,6 +148,7 @@ public class CourseBatchManagementActor extends BaseActor {
     Response result =
         courseBatchDao.update(new ObjectMapper().convertValue(courseBatch, Map.class));
     sender().tell(result, self());
+
     targetObject =
         TelemetryUtil.generateTargetObject(
             (String) request.get(JsonKey.ID), JsonKey.BATCH, JsonKey.UPDATE, null);
@@ -173,12 +161,13 @@ public class CourseBatchManagementActor extends BaseActor {
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       syncCourseBatchBackground(request, ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
     } else {
-      ProjectLogger.log("no call for ES to save Course Batch");
+      ProjectLogger.log("CourseBatchManagementActor:updateCourseBatch: Course batch not synced to ES are response is not successful");
     }
   }
 
   private CourseBatch getUpdateCourseBatch(Map<String, Object> request) {
     CourseBatch courseBatch = courseBatchDao.readById((String) request.get(JsonKey.ID));
+    
     courseBatch.setEnrollmentType(
         getEnrollmentType(
             (String) request.get(JsonKey.ENROLLMENT_TYPE), courseBatch.getEnrollmentType()));
@@ -193,13 +182,18 @@ public class CourseBatchManagementActor extends BaseActor {
             JsonKey.UPDATE,
             (String) request.get(JsonKey.ID),
             ""));
+
     if (request.containsKey(JsonKey.NAME)) courseBatch.setName((String) request.get(JsonKey.NAME));
+    
     if (request.containsKey(JsonKey.DESCRIPTION))
       courseBatch.setDescription((String) request.get(JsonKey.DESCRIPTION));
+    
     if (request.containsKey(JsonKey.MENTORS)
         && !((List<String>) request.get(JsonKey.MENTORS)).isEmpty())
       courseBatch.setMentors((List<String>) request.get(JsonKey.MENTORS));
+    
     updateCourseBatchDate(courseBatch, request);
+    
     return courseBatch;
   }
 
@@ -209,12 +203,9 @@ public class CourseBatchManagementActor extends BaseActor {
   }
 
   private void addUserCourseBatch(Request actorMessage) {
-
-    ProjectLogger.log("Add user to course batch - called");
     Map<String, Object> req = actorMessage.getRequest();
     Response response = new Response();
 
-    // objects of telemetry event...
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
@@ -223,7 +214,8 @@ public class CourseBatchManagementActor extends BaseActor {
 
     CourseBatch courseBatch = courseBatchDao.readById(batchId);
     Map<String, Object> courseBatchObject = new ObjectMapper().convertValue(courseBatch, Map.class);
-    // check whether coursebbatch type is invite only or not ...
+    
+    // Check whether courseb batch enrollment type is invite only or not.
     if (ProjectUtil.isNull(courseBatchObject.get(JsonKey.ENROLLMENT_TYPE))
         || !((String) courseBatchObject.get(JsonKey.ENROLLMENT_TYPE))
             .equalsIgnoreCase(JsonKey.INVITE_ONLY)) {
@@ -232,9 +224,9 @@ public class CourseBatchManagementActor extends BaseActor {
           ResponseCode.enrollmentTypeValidation.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
+    
     if (ProjectUtil.isNull(courseBatchObject.get(JsonKey.COURSE_CREATED_FOR))
         || ((List) courseBatchObject.get(JsonKey.COURSE_CREATED_FOR)).isEmpty()) {
-      // throw exception since batch does not belong to any createdfor in DB ...
       throw new ProjectCommonException(
           ResponseCode.courseCreatedForIsNull.getErrorCode(),
           ResponseCode.courseCreatedForIsNull.getErrorMessage(),
@@ -248,11 +240,12 @@ public class CourseBatchManagementActor extends BaseActor {
           ResponseCode.invalidCourseCreatorId.getErrorMessage(),
           ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
+
     String batchCreatorRootOrgId = getRootOrg(batchCreator);
 
     Map<String, Boolean> participants =
         (Map<String, Boolean>) courseBatchObject.get(JsonKey.PARTICIPANT);
-    // check whether can update user or not
+
     List<String> userIds = (List<String>) req.get(JsonKey.USER_IDs);
     if (participants == null) {
       participants = new HashMap<>();
@@ -277,8 +270,7 @@ public class CourseBatchManagementActor extends BaseActor {
                 (Map<String, String>) (courseBatchObject.get(JsonKey.COURSE_ADDITIONAL_INFO))));
 
         response.getResult().put(userId, JsonKey.SUCCESS);
-        // create audit log for user here that user associated to the batch here , here
-        // user is the targer object ...
+
         targetObject =
             TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
         correlatedObject = new ArrayList<>();
@@ -294,16 +286,16 @@ public class CourseBatchManagementActor extends BaseActor {
     courseBatchDao.update(courseBatchObject);
     sender().tell(response, self());
 
-    ProjectLogger.log("method call going to satrt for ES--.....");
     Request request = new Request();
     request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
     request.getRequest().put(JsonKey.BATCH, courseBatchObject);
-    ProjectLogger.log("making a call to save Course Batch data to ES");
+    
     try {
+      ProjectLogger.log("CourseBatchManagementActor:addUserCourseBatch: Sync course batch details to ES called");
       tellToAnother(request);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "Exception Occurred during saving Course Batch to Es while updating Course Batch : ", ex);
+          "CourseBatchManagementActor:addUserCourseBatch: Exception occurred with error message = " + ex.getMessage(), ex);
     }
   }
 
@@ -337,7 +329,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private void syncCourseBatchForeground(String uniqueId, Map<String, Object> req) {
     ProjectLogger.log(
-        "Course Batch data saving to ES started-- for Id  " + uniqueId, LoggerEnum.INFO.name());
+        "CourseBatchManagementActor: syncCourseBatchForeground called for course batch ID = " + uniqueId, LoggerEnum.INFO.name());
     String esResponse =
         ElasticSearchUtil.createData(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
@@ -345,9 +337,9 @@ public class CourseBatchManagementActor extends BaseActor {
             uniqueId,
             req);
     ProjectLogger.log(
-        "Course Batch data saving to ES Completed -- for Id "
+        "CourseBatchManagementActor::syncCourseBatchForeground: Sync response for course batch ID = "
             + uniqueId
-            + " with response =="
+            + " received response = "
             + esResponse,
         LoggerEnum.INFO.name());
   }
@@ -363,23 +355,21 @@ public class CourseBatchManagementActor extends BaseActor {
         return ProgressStatus.NOT_STARTED.getValue();
       }
     } catch (ParseException e) {
-      ProjectLogger.log("Exception occurred while parsing date in CourseBatchManagementActor ", e);
+      ProjectLogger.log("CourseBatchManagementActor:setCourseBatchStatus: Exception occurred with error message = " + e.getMessage(), e);
     }
     return ProgressStatus.NOT_STARTED.getValue();
   }
 
   private void syncCourseBatchBackground(Map<String, Object> req, String operation) {
+    ProjectLogger.log("CourseBatchManagementActor: syncCourseBatchBackground called", LoggerEnum.INFO.name());
     Request request = new Request();
     request.setOperation(operation);
     request.getRequest().put(JsonKey.BATCH, req);
-    ProjectLogger.log(
-        "CourseBatchManagementActor:createCourseBatch making a call to save Course Batch data to ES.",
-        LoggerEnum.INFO.name());
     try {
       tellToAnother(request);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "Exception Occurred during saving Course Batch to Es while creating Course Batch : ", ex);
+          "CourseBatchManagementActor:syncCourseBatchBackground: Exception occurred with error message = " + ex.getMessage(), ex);
     }
   }
 
@@ -394,7 +384,7 @@ public class CourseBatchManagementActor extends BaseActor {
                 ProjectUtil.EsIndex.sunbird.getIndexName(),
                 ProjectUtil.EsType.user.getTypeName(),
                 userId);
-        // check whether is_deleted true or false
+
         String mentorRootOrgId = getRootOrg(userId);
         if (!batchCreatorRootOrgId.equals(mentorRootOrgId)) {
           throw new ProjectCommonException(
@@ -485,7 +475,6 @@ public class CourseBatchManagementActor extends BaseActor {
   private void validateCourseBatchData(CourseBatch courseBatchObject) {
     if (ProjectUtil.isNull(courseBatchObject.getCreatedFor())
         || courseBatchObject.getCreatedFor().isEmpty()) {
-      // throw exception since batch does not belong to any createdfor in DB ...
       throw new ProjectCommonException(
           ResponseCode.courseCreatedForIsNull.getErrorCode(),
           ResponseCode.courseCreatedForIsNull.getErrorMessage(),
@@ -734,8 +723,6 @@ public class CourseBatchManagementActor extends BaseActor {
 
     if ((existingStartDate.before(todayDate) || existingStartDate.equals(todayDate))
         && !(existingStartDate.equals(requestedStartDate))) {
-
-      ProjectLogger.log("validateBatchStartAndEndDate: senario1: ", LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.invalidBatchStartDateError.getErrorCode(),
           ResponseCode.invalidBatchStartDateError.getErrorMessage(),
@@ -743,8 +730,6 @@ public class CourseBatchManagementActor extends BaseActor {
     }
 
     if ((requestedStartDate.before(todayDate)) && !requestedStartDate.equals(existingStartDate)) {
-
-      ProjectLogger.log("validateBatchStartAndEndDate: senario2: ", LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.invalidBatchStartDateError.getErrorCode(),
           ResponseCode.invalidBatchStartDateError.getErrorMessage(),
@@ -752,8 +737,6 @@ public class CourseBatchManagementActor extends BaseActor {
     }
 
     if (startDate.after(endDate)) {
-
-      ProjectLogger.log("validateBatchStartAndEndDate: senario3: ", LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.invalidBatchEndDateError.getErrorCode(),
           ResponseCode.invalidBatchEndDateError.getErrorMessage(),
@@ -762,8 +745,6 @@ public class CourseBatchManagementActor extends BaseActor {
 
     if ((endDate != null && !endDate.after(todayDate))
         || (existingEndDate != null && !existingEndDate.after(todayDate))) {
-
-      ProjectLogger.log("validateBatchStartAndEndDate: senario4: ", LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.courseBatchEndDateError.getErrorCode(),
           ResponseCode.courseBatchEndDateError.getErrorMessage(),
@@ -791,12 +772,6 @@ public class CourseBatchManagementActor extends BaseActor {
     return null;
   }
 
-  /**
-   * THis method will do the organization validation.
-   *
-   * @param orgId String
-   * @return boolean
-   */
   private boolean isOrgValid(String orgId) {
     Map<String, Object> resp =
         ElasticSearchUtil.getDataByIdentifier(
@@ -804,10 +779,10 @@ public class CourseBatchManagementActor extends BaseActor {
             ProjectUtil.EsType.organisation.getTypeName(),
             orgId);
     if (resp != null && resp.size() > 0) {
-      ProjectLogger.log("organisation found in ES with id ==" + orgId);
+      ProjectLogger.log("CourseBatchManagementActor:isOrgValid: Organisation found in ES with id = " + orgId);
       return true;
     }
-    ProjectLogger.log("organisation not found in ES with id ==" + orgId);
+    ProjectLogger.log("CourseBatchManagementActor:isOrgValid: Organisation NOT found in ES with id = " + orgId);
     return false;
   }
 
@@ -818,7 +793,7 @@ public class CourseBatchManagementActor extends BaseActor {
     try {
       tellToAnother(request);
     } catch (Exception ex) {
-      ProjectLogger.log("Exception Occurred during saving user count to Es : ", ex);
+      ProjectLogger.log("CourseBatchManagementActor:insertUserCoursesToES: Exception occurred with error message = " + ex.getMessage(), ex);
     }
   }
 
@@ -826,7 +801,7 @@ public class CourseBatchManagementActor extends BaseActor {
     Map<String, Object> ekStepContent =
         CourseEnrollmentActor.getCourseObjectFromEkStep(courseId, headers);
     if (null == ekStepContent || ekStepContent.size() == 0) {
-      ProjectLogger.log("Course Id not found in EkStep===" + courseId, LoggerEnum.INFO.name());
+      ProjectLogger.log("CourseBatchManagementActor:getEkStepContent: Not found course for ID = " + courseId, LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.invalidCourseId.getErrorCode(),
           ResponseCode.invalidCourseId.getErrorMessage(),

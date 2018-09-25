@@ -10,6 +10,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.usercourses.dao.UserCoursesDao;
+import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.courses.UserCourses;
 
 public class UserCoursesDaoImpl implements UserCoursesDao {
@@ -17,8 +18,10 @@ public class UserCoursesDaoImpl implements UserCoursesDao {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
   static UserCoursesDao userCoursesDao;
-  private static final String KEYSPACE_NAME = "sunbird";
-  private static final String TABLE_NAME = "user_courses";
+  private static final String KEYSPACE_NAME =
+      Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB).getKeySpace();
+  private static final String TABLE_NAME =
+      Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB).getTableName();
 
   public static UserCoursesDao getInstance() {
     if (userCoursesDao == null) {
@@ -44,9 +47,8 @@ public class UserCoursesDaoImpl implements UserCoursesDao {
   }
 
   @Override
-  public Response update(Map<String, Object> updateAttributes, Map<String, Object> compositeKey) {
-    return cassandraOperation.updateRecord(
-        KEYSPACE_NAME, TABLE_NAME, updateAttributes, compositeKey);
+  public Response update(Map<String, Object> updateAttributes) {
+    return cassandraOperation.updateRecord(KEYSPACE_NAME, TABLE_NAME, updateAttributes);
   }
 
   @Override

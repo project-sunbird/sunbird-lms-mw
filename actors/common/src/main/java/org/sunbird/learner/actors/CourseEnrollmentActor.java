@@ -11,6 +11,7 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -58,7 +59,6 @@ public class CourseEnrollmentActor extends BaseActor {
    *
    * @param message Object (Request)
    */
-  @SuppressWarnings("unchecked")
   @Override
   public void onReceive(Request request) throws Throwable {
 
@@ -87,7 +87,6 @@ public class CourseEnrollmentActor extends BaseActor {
    *     BatchId
    * @return Return a promise for enroll course class API result.
    */
-  @SuppressWarnings("unchecked")
   private void enrollCourseClass(Request actorMessage) {
     ProjectLogger.log("enrollCourseClass called");
 
@@ -95,8 +94,6 @@ public class CourseEnrollmentActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     Map<String, Object> request = actorMessage.getRequest();
-    Map<String, String> headers =
-        (Map<String, String>) actorMessage.getContext().get(JsonKey.HEADER);
     Map<String, Object> courseMap = (Map<String, Object>) actorMessage.getRequest();
 
     CourseBatch courseBatchResult = courseBatchDao.readById((String) request.get(JsonKey.BATCH_ID));
@@ -104,7 +101,7 @@ public class CourseEnrollmentActor extends BaseActor {
 
     UserCourses userCourseResult = userCourseDao.read(generateUserCoursesPrimaryKey(courseMap));
 
-    if (!ProjectUtil.isNull(userCourseResult) || userCourseResult.isActive()) {
+    if (!ProjectUtil.isNull(userCourseResult) && userCourseResult.isActive()) {
       ProjectLogger.log("User Already Enrolled Course ");
       ProjectCommonException exception =
           new ProjectCommonException(
@@ -115,27 +112,27 @@ public class CourseEnrollmentActor extends BaseActor {
       return;
     }
 
-    String courseId = (String) request.get(JsonKey.COURSE_ID);
-    Map<String, Object> ekStepContent = getCourseObjectFromEkStep(courseId, headers);
-
     Timestamp ts = new Timestamp(new Date().getTime());
     String addedBy = (String) request.get(JsonKey.REQUESTED_BY);
-    courseMap.put(JsonKey.COURSE_LOGO_URL, ekStepContent.get(JsonKey.APP_ICON));
-    courseMap.put(JsonKey.CONTENT_ID, courseId);
-    courseMap.put(JsonKey.COURSE_NAME, ekStepContent.get(JsonKey.NAME));
-    courseMap.put(JsonKey.DESCRIPTION, ekStepContent.get(JsonKey.DESCRIPTION));
+    courseMap.put(
+        JsonKey.COURSE_LOGO_URL, courseBatchResult.getCourseAdditionalInfo().get(JsonKey.APP_ICON));
+    courseMap.put(JsonKey.CONTENT_ID, (String) request.get(JsonKey.COURSE_ID));
+    courseMap.put(
+        JsonKey.COURSE_NAME, courseBatchResult.getCourseAdditionalInfo().get(JsonKey.NAME));
+    courseMap.put(
+        JsonKey.DESCRIPTION, courseBatchResult.getCourseAdditionalInfo().get(JsonKey.DESCRIPTION));
     courseMap.put(JsonKey.ADDED_BY, addedBy);
     courseMap.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
     courseMap.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
     courseMap.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
     courseMap.put(JsonKey.DATE_TIME, ts);
     courseMap.put(JsonKey.ID, generateUserCoursesPrimaryKey(courseMap));
-    courseMap.put(JsonKey.COURSE_PROGRESS, 0);
-    courseMap.put(JsonKey.LEAF_NODE_COUNT, ekStepContent.get(JsonKey.LEAF_NODE_COUNT));
-
+    courseMap.put(JsonKey.COURSE_PROGRESS, userCourseResult.getProgress());
+    courseMap.put(
+        JsonKey.LEAF_NODE_COUNT,
+        courseBatchResult.getCourseAdditionalInfo().get(JsonKey.LEAF_NODE_COUNT));
     Response result = userCourseDao.insert(courseMap);
     sender().tell(result, self());
-
     targetObject =
         TelemetryUtil.generateTargetObject(
             (String) courseMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
@@ -162,19 +159,18 @@ public class CourseEnrollmentActor extends BaseActor {
    * @param request Request message containing following request data: userId, courseId, BatchId
    * @return Return a promise for unenroll course class API result.
    */
-  @SuppressWarnings("unchecked")
   private void unenrollCourseClass(Request actorMessage) {
     ProjectLogger.log("unenrollCourseClass called");
     // objects of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
     Map<String, Object> request = actorMessage.getRequest();
     CourseBatch courseBatchResult = courseBatchDao.readById((String) request.get(JsonKey.BATCH_ID));
     validateCourseBatch(courseBatchResult, request);
     UserCourses userCourseResult = userCourseDao.read(generateUserCoursesPrimaryKey(request));
     // check whether user already enroll for course
     if (userCourseResult == null) {
-      ProjectLogger.log("User Have not Enrolled Course ");
+      ProjectLogger.log(
+          "CourseEnrollmentActor unenrollCourseClass user is not enrolled yet.",
+          LoggerEnum.INFO.name());
       ProjectCommonException exception =
           new ProjectCommonException(
               ResponseCode.userNotEnrolledCourse.getErrorCode(),
@@ -194,7 +190,8 @@ public class CourseEnrollmentActor extends BaseActor {
       return;
     }
     // Check if user has completed the course
-    if (ProgressStatus.COMPLETED.getValue() == userCourseResult.getProgress()) {
+    // TODO need to change course completed business logic
+    if (userCourseResult.getProgress() == userCourseResult.getLeafNodesCount()) {
       ProjectLogger.log("User already have completed course ");
       ProjectCommonException exception =
           new ProjectCommonException(
@@ -204,39 +201,43 @@ public class CourseEnrollmentActor extends BaseActor {
       sender().tell(exception, self());
       return;
     }
-    Timestamp ts = new Timestamp(new Date().getTime());
     Map<String, Object> updateAttributes = new HashMap<String, Object>();
     updateAttributes.put(JsonKey.ACTIVE, false);
-    Map<String, Object> compositeKey = new HashMap<String, Object>();
-    compositeKey.put(JsonKey.USER_ID, userCourseResult.getUserId());
-    compositeKey.put(JsonKey.COURSE_ID, userCourseResult.getCourseId());
-    compositeKey.put(JsonKey.BATCH_ID, userCourseResult.getBatchId());
-
-    Response result = userCourseDao.update(updateAttributes, compositeKey);
+    updateAttributes.put(JsonKey.ID, userCourseResult.getId());
+    Response result = userCourseDao.update(updateAttributes);
     sender().tell(result, self());
-    /*
+    updateUserCourseBatchToES(updateAttributes, userCourseResult.getId());
+    generateAndProcessTelemetryEvent(request);
+    return;
+  }
+
+  private void generateAndProcessTelemetryEvent(Map<String, Object> request) {
+    Map<String, Object> targetObject = new HashMap<>();
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
     targetObject =
         TelemetryUtil.generateTargetObject(
-            (String) userCourseResult.getUserId(), JsonKey.USER, JsonKey.UPDATE, null);
+            (String) request.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
     TelemetryUtil.generateCorrelatedObject(
-        (String) userCourseResult.get(JsonKey.COURSE_ID),
+        (String) request.get(JsonKey.COURSE_ID),
         JsonKey.COURSE,
-        "user.batch.course",
+        "user.batch.course.unenroll",
         correlatedObject);
     TelemetryUtil.generateCorrelatedObject(
-        (String) resultList.get(JsonKey.BATCH_ID),
-        JsonKey.BATCH,
-        "user.batch",
-        correlatedObject);
+        (String) request.get(JsonKey.BATCH_ID), JsonKey.BATCH, "user.batch", correlatedObject);
 
-    TelemetryUtil.telemetryProcessingCall(request.getRequest(), targetObject, correlatedObject);
-    // TODO: for some reason, ES indexing is failing with Timestamp value. need to
-    // check and
-    // correct it.
-    courseMap.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
-    */
-    // insertUserCoursesToES(courseMap);
-    return;
+    TelemetryUtil.telemetryProcessingCall(request, targetObject, correlatedObject);
+  }
+
+  private void updateUserCourseBatchToES(Map<String, Object> courseMap, String id) {
+    boolean response =
+        ElasticSearchUtil.updateData(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.usercourses.getTypeName(),
+            id,
+            courseMap);
+    ProjectLogger.log(
+        "CourseEnrollmentActor updateUserCourseBatchToES user course unenrollment response "
+            + response);
   }
 
   private void insertUserCoursesToES(Map<String, Object> courseMap) {
@@ -328,31 +329,21 @@ public class CourseEnrollmentActor extends BaseActor {
    *
    * @Params
    */
-  @SuppressWarnings("unchecked")
   private void validateCourseBatch(CourseBatch courseBatchDetails, Map<String, Object> request) {
 
     if (ProjectUtil.isNull(courseBatchDetails)) {
-      throw new ProjectCommonException(
-          ResponseCode.invalidCourseBatchId.getErrorCode(),
-          ResponseCode.invalidCourseBatchId.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
-    // Map<String, String> headers = (Map<String, String>) request.getRequest().get(JsonKey.HEADER);
-    Map<String, String> headers = (Map<String, String>) request.get(JsonKey.HEADER);
-    String courseId = (String) request.get(JsonKey.COURSE_ID);
-    Map<String, Object> ekStepContent = getCourseObjectFromEkStep(courseId, headers);
-    if (null == ekStepContent || ekStepContent.size() == 0) {
-      ProjectLogger.log("Course Id not found in EkStep");
       ProjectCommonException exception =
           new ProjectCommonException(
-              ResponseCode.invalidCourseId.getErrorCode(),
-              ResponseCode.invalidCourseId.getErrorMessage(),
+              ResponseCode.invalidCourseBatchId.getErrorCode(),
+              ResponseCode.invalidCourseBatchId.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
       return;
     }
     if (EnrolmentType.inviteOnly.getVal().equals(courseBatchDetails.getEnrollmentType())) {
-      ProjectLogger.log("Cannot un-enroll from invite-only batch ");
+      ProjectLogger.log(
+          "CourseEnrollmentActor validateCourseBatch self enrollment or unenrollment is not applicable for invite only batch.",
+          LoggerEnum.INFO.name());
       ProjectCommonException exception =
           new ProjectCommonException(
               ResponseCode.enrollmentTypeValidation.getErrorCode(),
@@ -361,13 +352,28 @@ public class CourseEnrollmentActor extends BaseActor {
       sender().tell(exception, self());
       return;
     }
+    if (!((String) request.get(JsonKey.COURSE_ID)).equals(courseBatchDetails.getCourseId())) {
+      ProjectCommonException exception =
+          new ProjectCommonException(
+              ResponseCode.invalidCourseBatchId.getErrorCode(),
+              ResponseCode.invalidCourseBatchId.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     try {
       Date todaydate = format.parse(format.format(new Date()));
-      Date courseBatchEndDate = format.parse(courseBatchDetails.getEndDate());
+      // there might be chance end date is not present
+      Date courseBatchEndDate = null;
+      if (StringUtils.isNotBlank(courseBatchDetails.getEndDate())) {
+        courseBatchEndDate = format.parse(courseBatchDetails.getEndDate());
+      }
       if (ProgressStatus.COMPLETED.getValue() == courseBatchDetails.getStatus()
-          || courseBatchEndDate.before(todaydate)) {
-        ProjectLogger.log("Course is completed already. ");
+          || (courseBatchEndDate != null && courseBatchEndDate.before(todaydate))) {
+        ProjectLogger.log(
+            "CourseEnrollmentActor validateCourseBatch Course is completed already.",
+            LoggerEnum.INFO.name());
         ProjectCommonException exception =
             new ProjectCommonException(
                 ResponseCode.courseBatchAlreadyCompleted.getErrorCode(),
@@ -376,9 +382,8 @@ public class CourseEnrollmentActor extends BaseActor {
         sender().tell(exception, self());
         return;
       }
-
     } catch (ParseException e) {
-      ProjectLogger.log("Exception occurred while parsing date in CourseBatchManagementActor ", e);
+      ProjectLogger.log("CourseEnrollmentActor validateCourseBatch ", e);
     }
   }
 }

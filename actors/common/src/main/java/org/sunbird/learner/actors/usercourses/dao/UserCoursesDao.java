@@ -19,7 +19,7 @@ public interface UserCoursesDao {
    *
    * @param
    */
-  Response update(Map<String, Object> updateAttributes, Map<String, Object> compositeKey);
+  Response update(Map<String, Object> updateAttributes);
 
   /**
    * Insert user skills information.

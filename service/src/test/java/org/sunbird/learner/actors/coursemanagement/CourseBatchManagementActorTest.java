@@ -29,7 +29,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.CourseBatchManagementActor;
+import org.sunbird.learner.actors.coursebatch.CourseBatchManagementActor;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ServiceFactory.class})

@@ -97,8 +97,8 @@ public class CourseEnrollmentActor extends BaseActor {
         ProjectLogger.log("User Already Enrolled Course ");
         ProjectCommonException exception =
             new ProjectCommonException(
-                ResponseCode.userAlreadyEnrolledThisCourse.getErrorCode(),
-                ResponseCode.userAlreadyEnrolledThisCourse.getErrorMessage(),
+                ResponseCode.userAlreadyEnrolledCourse.getErrorCode(),
+                ResponseCode.userAlreadyEnrolledCourse.getErrorMessage(),
                 ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
         return;

@@ -4,39 +4,39 @@ import java.util.Map;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.models.course.batch.CourseBatch;
 
-/** Created by rajatgupta on 12/09/18. */
 public interface CourseBatchDao {
 
   /**
    * Create course batch.
    *
-   * @param courseBatch Create course batch map
-   * @return Response containing setting identifier.
+   * @param courseBatch Course batch information to be created
+   * @return Response containing identifier of created course batch
    */
   Response create(CourseBatch courseBatch);
 
   /**
    * Update course batch.
    *
-   * @param map Create course batch map
-   * @return Response containing setting identifier.
+   * @param courseBatchMap Course batch information to be updated
+   * @return Response containing status of course batch update
    */
-  Response update(Map<String, Object> map);
+  Response update(Map<String, Object> courseBatchMap);
 
   /**
    * Read course batch for given identifier.
    *
-   * @param id fetch course batch using id
-   * @return course batch information
+   * @param courseBatchId Course batch identifier
+   * @return Course batch information
    */
-  CourseBatch readById(String id);
+  CourseBatch readById(String courseBatchId);
 
   /**
-   * Read all course batch.
+   * Delete specified course batch.
    *
-   * @return Response containing operation is success or not.
+   * @param courseBatchId Course batch identifier
+   * @return Response containing status of course batch delete
    */
-  Response delete(String id);
+  Response delete(String courseBatchId);
 
   Response createCourseEnrolment(Map<String, Object> map);
 }

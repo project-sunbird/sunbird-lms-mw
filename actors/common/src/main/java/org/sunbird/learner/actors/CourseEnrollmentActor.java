@@ -70,10 +70,10 @@ public class CourseEnrollmentActor extends BaseActor {
 
     switch (operation) {
       case "enrollCourse":
-        enrollCourseClass(request);
+        enrollCourseBatch(request);
         break;
       case "unenrollCourse":
-        unenrollCourseClass(request);
+        unenrollCourseBatch(request);
         break;
       default:
         onReceiveUnsupportedOperation("CourseEnrollmentActor");
@@ -81,23 +81,22 @@ public class CourseEnrollmentActor extends BaseActor {
   }
 
   /**
-   * Creates a enroll Course class for a user to enroll in a course.
+   * Creates a enroll Course batch for a user to enroll in a course.
    *
    * @param actorMessage Request message containing following request data: userId, courseId,
    *     BatchId
    * @return Return a promise for enroll course class API result.
    */
-  private void enrollCourseClass(Request actorMessage) {
+  private void enrollCourseBatch(Request actorMessage) {
     ProjectLogger.log("enrollCourseClass called");
 
     Map<String, Object> targetObject = new HashMap<>();
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
-    Map<String, Object> request = actorMessage.getRequest();
     Map<String, Object> courseMap = (Map<String, Object>) actorMessage.getRequest();
-
-    CourseBatch courseBatchResult = courseBatchDao.readById((String) request.get(JsonKey.BATCH_ID));
-    validateCourseBatch(courseBatchResult, request);
+    CourseBatch courseBatchResult =
+        courseBatchDao.readById((String) courseMap.get(JsonKey.BATCH_ID));
+    validateCourseBatch(courseBatchResult, courseMap);
 
     UserCourses userCourseResult = userCourseDao.read(generateUserCoursesPrimaryKey(courseMap));
 
@@ -111,12 +110,36 @@ public class CourseEnrollmentActor extends BaseActor {
       sender().tell(exception, self());
       return;
     }
+    courseMap = createUserCourseMap(courseMap, courseBatchResult, userCourseResult);
+    Response result = userCourseDao.insert(courseMap);
+    sender().tell(result, self());
+    // TODO: for some reason, ES indexing is failing with Timestamp value. need to
+    // check and
+    // correct it.
+    courseMap.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(new Timestamp(new Date().getTime())));
+    updateUserCoursesToES(courseMap);
+    targetObject =
+        TelemetryUtil.generateTargetObject(
+            (String) courseMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
+    TelemetryUtil.generateCorrelatedObject(
+        (String) courseMap.get(JsonKey.COURSE_ID),
+        JsonKey.COURSE,
+        "user.batch.course",
+        correlatedObject);
+    TelemetryUtil.generateCorrelatedObject(
+        (String) courseMap.get(JsonKey.BATCH_ID), JsonKey.BATCH, "user.batch", correlatedObject);
 
+    TelemetryUtil.telemetryProcessingCall(courseMap, targetObject, correlatedObject);
+    return;
+  }
+
+  private Map<String, Object> createUserCourseMap(
+      Map<String, Object> courseMap, CourseBatch courseBatchResult, UserCourses userCourseResult) {
     Timestamp ts = new Timestamp(new Date().getTime());
-    String addedBy = (String) request.get(JsonKey.REQUESTED_BY);
+    String addedBy = (String) courseMap.get(JsonKey.REQUESTED_BY);
     courseMap.put(
         JsonKey.COURSE_LOGO_URL, courseBatchResult.getCourseAdditionalInfo().get(JsonKey.APP_ICON));
-    courseMap.put(JsonKey.CONTENT_ID, (String) request.get(JsonKey.COURSE_ID));
+    courseMap.put(JsonKey.CONTENT_ID, (String) courseMap.get(JsonKey.COURSE_ID));
     courseMap.put(
         JsonKey.COURSE_NAME, courseBatchResult.getCourseAdditionalInfo().get(JsonKey.NAME));
     courseMap.put(
@@ -131,35 +154,16 @@ public class CourseEnrollmentActor extends BaseActor {
     courseMap.put(
         JsonKey.LEAF_NODE_COUNT,
         courseBatchResult.getCourseAdditionalInfo().get(JsonKey.LEAF_NODE_COUNT));
-    Response result = userCourseDao.insert(courseMap);
-    sender().tell(result, self());
-    targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) courseMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
-    TelemetryUtil.generateCorrelatedObject(
-        (String) courseMap.get(JsonKey.COURSE_ID),
-        JsonKey.COURSE,
-        "user.batch.course",
-        correlatedObject);
-    TelemetryUtil.generateCorrelatedObject(
-        (String) courseMap.get(JsonKey.BATCH_ID), JsonKey.BATCH, "user.batch", correlatedObject);
-
-    TelemetryUtil.telemetryProcessingCall(request, targetObject, correlatedObject);
-    // TODO: for some reason, ES indexing is failing with Timestamp value. need to
-    // check and
-    // correct it.
-    courseMap.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
-    updateUserCoursesToES(courseMap);
-    return;
+    return courseMap;
   }
 
   /**
-   * Creates a unenroll Course class for a user to enroll in a course.
+   * Creates a unenroll Course batch for a user to enroll in a course.
    *
    * @param request Request message containing following request data: userId, courseId, BatchId
    * @return Return a promise for unenroll course class API result.
    */
-  private void unenrollCourseClass(Request actorMessage) {
+  private void unenrollCourseBatch(Request actorMessage) {
     ProjectLogger.log("unenrollCourseClass called");
     // objects of telemetry event...
     Map<String, Object> request = actorMessage.getRequest();
@@ -240,17 +244,6 @@ public class CourseEnrollmentActor extends BaseActor {
             + response);
   }
 
-  private void insertUserCoursesToES(Map<String, Object> courseMap) {
-    Request request = new Request();
-    request.setOperation(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue());
-    request.getRequest().put(JsonKey.USER_COURSES, courseMap);
-    try {
-      tellToAnother(request);
-    } catch (Exception ex) {
-      ProjectLogger.log("Exception Occurred during saving user count to Es : ", ex);
-    }
-  }
-
   private void updateUserCoursesToES(Map<String, Object> courseMap) {
     Request request = new Request();
     request.setOperation(ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue());
@@ -297,31 +290,6 @@ public class CourseEnrollmentActor extends BaseActor {
             + courseId
             + JsonKey.PRIMARY_KEY_DELIMETER
             + batchId);
-  }
-
-  /**
-   * This method will call the background job manager and update course enroll user count.
-   *
-   * @param operation String (operation name)
-   * @param courseData Object
-   * @param innerOperation String
-   */
-  @SuppressWarnings("unused")
-  private void updateCoursemanagement(String operation, Object courseData, String innerOperation) {
-    Request request = new Request();
-    request.setOperation(operation);
-    request.getRequest().put(JsonKey.COURSE_ID, courseData);
-    request.getRequest().put(JsonKey.OPERATION, innerOperation);
-    /*
-     * userCountresponse.put(JsonKey.OPERATION, operation);
-     * userCountresponse.put(JsonKey.COURSE_ID, courseData);
-     * userCountresponse.getResult().put(JsonKey.OPERATION, innerOperation);
-     */
-    try {
-      tellToAnother(request);
-    } catch (Exception ex) {
-      ProjectLogger.log("Exception Occurred during saving user count to Es : ", ex);
-    }
   }
 
   /*

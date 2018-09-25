@@ -10,10 +10,10 @@ public interface CourseBatchDao {
   /**
    * Create course batch.
    *
-   * @param map Create course batch map
+   * @param courseBatch Create course batch map
    * @return Response containing setting identifier.
    */
-  Response create(Map<String, Object> map);
+  Response create(CourseBatch courseBatch);
 
   /**
    * Update course batch.

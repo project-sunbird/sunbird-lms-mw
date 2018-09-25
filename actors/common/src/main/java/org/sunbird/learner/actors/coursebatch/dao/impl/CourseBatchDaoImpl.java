@@ -28,7 +28,8 @@ public class CourseBatchDaoImpl implements CourseBatchDao {
   }
 
   @Override
-  public Response create(Map<String, Object> map) {
+  public Response create(CourseBatch courseBatch) {
+    Map<String, Object> map = mapper.convertValue(courseBatch, Map.class);
     return cassandraOperation.insertRecord(
         courseBatchDb.getKeySpace(), courseBatchDb.getTableName(), map);
   }

@@ -89,10 +89,6 @@ public class CourseEnrollmentActor extends BaseActor {
    */
   private void enrollCourseBatch(Request actorMessage) {
     ProjectLogger.log("enrollCourseClass called");
-
-    Map<String, Object> targetObject = new HashMap<>();
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-
     Map<String, Object> courseMap = (Map<String, Object>) actorMessage.getRequest();
     CourseBatch courseBatchResult =
         courseBatchDao.readById((String) courseMap.get(JsonKey.BATCH_ID));
@@ -111,49 +107,50 @@ public class CourseEnrollmentActor extends BaseActor {
       return;
     }
     courseMap = createUserCourseMap(courseMap, courseBatchResult, userCourseResult);
-    Response result = userCourseDao.insert(courseMap);
+    Response result = null;
+    if (userCourseResult == null) {
+      // user is doing enrollment first time
+      result = userCourseDao.insert(courseMap);
+    } else {
+      // second time user is doing enrollment for same course batch
+      result = userCourseDao.update(courseMap);
+    }
     sender().tell(result, self());
-    // TODO: for some reason, ES indexing is failing with Timestamp value. need to
-    // check and
-    // correct it.
-    courseMap.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(new Timestamp(new Date().getTime())));
-    updateUserCoursesToES(courseMap);
-    targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) courseMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
-    TelemetryUtil.generateCorrelatedObject(
-        (String) courseMap.get(JsonKey.COURSE_ID),
-        JsonKey.COURSE,
-        "user.batch.course",
-        correlatedObject);
-    TelemetryUtil.generateCorrelatedObject(
-        (String) courseMap.get(JsonKey.BATCH_ID), JsonKey.BATCH, "user.batch", correlatedObject);
-
-    TelemetryUtil.telemetryProcessingCall(courseMap, targetObject, correlatedObject);
-    return;
+    if (userCourseResult == null) {
+      courseMap.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(new Timestamp(new Date().getTime())));
+      updateUserCoursesToES(courseMap);
+    } else {
+      updateUserCourseBatchToES(courseMap, (String) courseMap.get(JsonKey.ID));
+    }
+    generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
   }
 
   private Map<String, Object> createUserCourseMap(
       Map<String, Object> courseMap, CourseBatch courseBatchResult, UserCourses userCourseResult) {
-    Timestamp ts = new Timestamp(new Date().getTime());
-    String addedBy = (String) courseMap.get(JsonKey.REQUESTED_BY);
-    courseMap.put(
-        JsonKey.COURSE_LOGO_URL, courseBatchResult.getCourseAdditionalInfo().get(JsonKey.APP_ICON));
-    courseMap.put(JsonKey.CONTENT_ID, (String) courseMap.get(JsonKey.COURSE_ID));
-    courseMap.put(
-        JsonKey.COURSE_NAME, courseBatchResult.getCourseAdditionalInfo().get(JsonKey.NAME));
-    courseMap.put(
-        JsonKey.DESCRIPTION, courseBatchResult.getCourseAdditionalInfo().get(JsonKey.DESCRIPTION));
-    courseMap.put(JsonKey.ADDED_BY, addedBy);
-    courseMap.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
-    courseMap.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
-    courseMap.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
-    courseMap.put(JsonKey.DATE_TIME, ts);
     courseMap.put(JsonKey.ID, generateUserCoursesPrimaryKey(courseMap));
-    courseMap.put(JsonKey.COURSE_PROGRESS, userCourseResult.getProgress());
-    courseMap.put(
-        JsonKey.LEAF_NODE_COUNT,
-        courseBatchResult.getCourseAdditionalInfo().get(JsonKey.LEAF_NODE_COUNT));
+    courseMap.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
+    if (userCourseResult == null) {
+      // this will create user batch data for new user
+      Timestamp ts = new Timestamp(new Date().getTime());
+      String addedBy = (String) courseMap.get(JsonKey.REQUESTED_BY);
+      courseMap.put(
+          JsonKey.COURSE_LOGO_URL,
+          courseBatchResult.getCourseAdditionalInfo().get(JsonKey.APP_ICON));
+      courseMap.put(JsonKey.CONTENT_ID, (String) courseMap.get(JsonKey.COURSE_ID));
+      courseMap.put(
+          JsonKey.COURSE_NAME, courseBatchResult.getCourseAdditionalInfo().get(JsonKey.NAME));
+      courseMap.put(
+          JsonKey.DESCRIPTION,
+          courseBatchResult.getCourseAdditionalInfo().get(JsonKey.DESCRIPTION));
+      courseMap.put(JsonKey.ADDED_BY, addedBy);
+      courseMap.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
+      courseMap.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
+      courseMap.put(JsonKey.DATE_TIME, ts);
+      courseMap.put(JsonKey.COURSE_PROGRESS, 0);
+      courseMap.put(
+          JsonKey.LEAF_NODE_COUNT,
+          courseBatchResult.getCourseAdditionalInfo().get(JsonKey.LEAF_NODE_COUNT));
+    }
     return courseMap;
   }
 
@@ -208,21 +205,17 @@ public class CourseEnrollmentActor extends BaseActor {
     Response result = userCourseDao.update(updateAttributes);
     sender().tell(result, self());
     updateUserCourseBatchToES(updateAttributes, userCourseResult.getId());
-    generateAndProcessTelemetryEvent(request);
-    return;
+    generateAndProcessTelemetryEvent(request, "user.batch.course.unenroll");
   }
 
-  private void generateAndProcessTelemetryEvent(Map<String, Object> request) {
+  private void generateAndProcessTelemetryEvent(Map<String, Object> request, String corelation) {
     Map<String, Object> targetObject = new HashMap<>();
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     targetObject =
         TelemetryUtil.generateTargetObject(
             (String) request.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
     TelemetryUtil.generateCorrelatedObject(
-        (String) request.get(JsonKey.COURSE_ID),
-        JsonKey.COURSE,
-        "user.batch.course.unenroll",
-        correlatedObject);
+        (String) request.get(JsonKey.COURSE_ID), JsonKey.COURSE, corelation, correlatedObject);
     TelemetryUtil.generateCorrelatedObject(
         (String) request.get(JsonKey.BATCH_ID), JsonKey.BATCH, "user.batch", correlatedObject);
 

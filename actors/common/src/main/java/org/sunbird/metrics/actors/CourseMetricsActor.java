@@ -232,6 +232,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     requestMap.put(JsonKey.PERIOD, periodStr);
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.BATCH_ID, batchId);
+    filter.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
     if (!("fromBegining".equalsIgnoreCase(periodStr))) {
       Map<String, String> dateRange = getDateRange(periodStr);
       dateRangeFilter.put(GTE, (String) dateRange.get(STARTDATE));
@@ -499,7 +500,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
     try {
       String requestStr = mapper.writeValueAsString(request);
       String analyticsBaseUrl = ProjectUtil.getConfigValue(JsonKey.ANALYTICS_API_BASE_URL);
-      String ekStepResponse = makePostRequest(analyticsBaseUrl, JsonKey.EKSTEP_METRICS_API_URL, requestStr);
+      String ekStepResponse =
+          makePostRequest(analyticsBaseUrl, JsonKey.EKSTEP_METRICS_API_URL, requestStr);
       responseFormat =
           courseConsumptionResponseGenerator(periodStr, ekStepResponse, courseId, channel);
     } catch (Exception e) {
@@ -591,7 +593,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
     try {
       String requestStr = mapper.writeValueAsString(request);
       String analyticsBaseUrl = ProjectUtil.getConfigValue(JsonKey.ANALYTICS_API_BASE_URL);
-      String ekStepResponse = makePostRequest(analyticsBaseUrl, JsonKey.EKSTEP_METRICS_API_URL, requestStr);
+      String ekStepResponse =
+          makePostRequest(analyticsBaseUrl, JsonKey.EKSTEP_METRICS_API_URL, requestStr);
       Map<String, Object> resultData = mapper.readValue(ekStepResponse, Map.class);
       resultData = (Map<String, Object>) resultData.get(JsonKey.RESULT);
       userTimeConsumed = (Double) resultData.get("m_total_ts");

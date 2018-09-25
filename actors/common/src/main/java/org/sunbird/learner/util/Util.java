@@ -1808,8 +1808,7 @@ public final class Util {
       if (StringUtils.isNotBlank(setPasswordLink)) {
         emailTemplateMap.put("link", urlShortner.shortUrl(setPasswordLink));
         emailTemplateMap.put("setPasswordLink", "true");
-      }
-      if (StringUtils.isNotBlank(verifyEmailLink)) {
+      } else if (StringUtils.isNotBlank(verifyEmailLink)) {
         emailTemplateMap.put("link", urlShortner.shortUrl(verifyEmailLink));
         emailTemplateMap.put("setPasswordLink", null);
       }

@@ -975,7 +975,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       userMap = dataMapList.get(i);
       Map<String, Object> welcomeMailTemplateMap = new HashMap<>();
       String errMsg = validateUser(userMap);
-      if (errMsg.equalsIgnoreCase(JsonKey.SUCCESS)) {
+      if (JsonKey.SUCCESS.equalsIgnoreCase(errMsg)) {
         try {
 
           // convert userName,provide,loginId,externalId.. value to lowercase

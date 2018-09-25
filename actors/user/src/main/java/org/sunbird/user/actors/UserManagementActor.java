@@ -1415,11 +1415,6 @@ public class UserManagementActor extends BaseActor {
       userExtension.create(userMap);
     }
 
-    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
-      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, userMap.get(JsonKey.PASSWORD));
-      userMap.put(JsonKey.PASSWORD, userMap.get(JsonKey.PASSWORD));
-    }
-
     String accessToken = "";
     if (isSSOEnabled) {
       try {

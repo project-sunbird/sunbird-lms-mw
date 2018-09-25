@@ -102,12 +102,12 @@ public class CourseEnrollmentActor extends BaseActor {
 
     if (!ProjectUtil.isNull(userCourseResult) && userCourseResult.isActive()) {
       ProjectLogger.log("User Already Enrolled Course ");
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.userAlreadyEnrolledCourse.getErrorCode(),
-              ResponseCode.userAlreadyEnrolledCourse.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+      sender()
+          .tell(
+              createExceptionObject(
+                  ResponseCode.userAlreadyEnrolledCourse,
+                  ResponseCode.CLIENT_ERROR.getResponseCode()),
+              self());
       return;
     }
     courseMap = createUserCourseMap(courseMap, courseBatchResult, userCourseResult);
@@ -175,34 +175,31 @@ public class CourseEnrollmentActor extends BaseActor {
       ProjectLogger.log(
           "CourseEnrollmentActor unenrollCourseClass user is not enrolled yet.",
           LoggerEnum.INFO.name());
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.userNotEnrolledCourse.getErrorCode(),
-              ResponseCode.userNotEnrolledCourse.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+      sender()
+          .tell(
+              createExceptionObject(
+                  ResponseCode.userNotEnrolledCourse, ResponseCode.CLIENT_ERROR.getResponseCode()),
+              self());
       return;
     }
     if (!userCourseResult.isActive()) {
       ProjectLogger.log("User Have not Enrolled Course ");
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.userNotEnrolledCourse.getErrorCode(),
-              ResponseCode.userNotEnrolledCourse.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+      sender()
+          .tell(
+              createExceptionObject(
+                  ResponseCode.userNotEnrolledCourse, ResponseCode.CLIENT_ERROR.getResponseCode()),
+              self());
       return;
     }
     // Check if user has completed the course
-    // TODO need to change course completed business logic
     if (userCourseResult.getProgress() == userCourseResult.getLeafNodesCount()) {
       ProjectLogger.log("User already have completed course ");
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.userAlreadyCompletedCourse.getErrorCode(),
-              ResponseCode.userAlreadyCompletedCourse.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+      sender()
+          .tell(
+              createExceptionObject(
+                  ResponseCode.userAlreadyCompletedCourse,
+                  ResponseCode.CLIENT_ERROR.getResponseCode()),
+              self());
       return;
     }
     Map<String, Object> updateAttributes = new HashMap<String, Object>();
@@ -300,33 +297,33 @@ public class CourseEnrollmentActor extends BaseActor {
   private void validateCourseBatch(CourseBatch courseBatchDetails, Map<String, Object> request) {
 
     if (ProjectUtil.isNull(courseBatchDetails)) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.invalidCourseBatchId.getErrorCode(),
-              ResponseCode.invalidCourseBatchId.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+      sender()
+          .tell(
+              createExceptionObject(
+                  ResponseCode.invalidCourseBatchId, ResponseCode.CLIENT_ERROR.getResponseCode()),
+              self());
       return;
     }
+    verifyRequestedByAndThrowErrorIfNotMatch(
+        (String) request.get(JsonKey.USER_ID), (String) request.get(JsonKey.REQUESTED_BY));
     if (EnrolmentType.inviteOnly.getVal().equals(courseBatchDetails.getEnrollmentType())) {
       ProjectLogger.log(
           "CourseEnrollmentActor validateCourseBatch self enrollment or unenrollment is not applicable for invite only batch.",
           LoggerEnum.INFO.name());
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.enrollmentTypeValidation.getErrorCode(),
-              ResponseCode.enrollmentTypeValidation.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+      sender()
+          .tell(
+              createExceptionObject(
+                  ResponseCode.enrollmentTypeValidation,
+                  ResponseCode.CLIENT_ERROR.getResponseCode()),
+              self());
       return;
     }
     if (!((String) request.get(JsonKey.COURSE_ID)).equals(courseBatchDetails.getCourseId())) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.invalidCourseBatchId.getErrorCode(),
-              ResponseCode.invalidCourseBatchId.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+      sender()
+          .tell(
+              createExceptionObject(
+                  ResponseCode.invalidCourseBatchId, ResponseCode.CLIENT_ERROR.getResponseCode()),
+              self());
       return;
     }
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
@@ -342,16 +339,32 @@ public class CourseEnrollmentActor extends BaseActor {
         ProjectLogger.log(
             "CourseEnrollmentActor validateCourseBatch Course is completed already.",
             LoggerEnum.INFO.name());
-        ProjectCommonException exception =
-            new ProjectCommonException(
-                ResponseCode.courseBatchAlreadyCompleted.getErrorCode(),
-                ResponseCode.courseBatchAlreadyCompleted.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-        sender().tell(exception, self());
+        sender()
+            .tell(
+                createExceptionObject(
+                    ResponseCode.courseBatchAlreadyCompleted,
+                    ResponseCode.CLIENT_ERROR.getResponseCode()),
+                self());
         return;
       }
     } catch (ParseException e) {
       ProjectLogger.log("CourseEnrollmentActor validateCourseBatch ", e);
     }
+  }
+
+  private void verifyRequestedByAndThrowErrorIfNotMatch(String userId, String requestedBy) {
+    if (!(userId.equals(requestedBy))) {
+      sender()
+          .tell(
+              createExceptionObject(
+                  ResponseCode.UNAUTHORIZED, ResponseCode.UNAUTHORIZED.getResponseCode()),
+              self());
+      return;
+    }
+  }
+
+  private ProjectCommonException createExceptionObject(ResponseCode responseCode, int statusCode) {
+    return new ProjectCommonException(
+        responseCode.getErrorCode(), responseCode.getErrorMessage(), statusCode);
   }
 }

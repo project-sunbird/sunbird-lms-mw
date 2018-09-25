@@ -102,14 +102,14 @@ public class CourseBatchManagementActor extends BaseActor {
     request.remove(JsonKey.PARTICIPANTS);
     request.remove(JsonKey.PARTICIPANT);
     CourseBatch courseBatch = new ObjectMapper().convertValue(request, CourseBatch.class);
-    courseBatch.init(requestedBy);
+    courseBatch.initCount();
     courseBatch.setId(courseBatchId);
     courseBatch.setStatus(setCourseBatchStatus((String) request.get(JsonKey.START_DATE)));
     courseBatch.setHashTagId(
         getHashTagId((String) request.get(JsonKey.HASH_TAG_ID), JsonKey.CREATE, "", courseBatchId));
     String courseId = (String) request.get(JsonKey.COURSE_ID);
     Map<String, Object> contentDetails = getEkStepContent(courseId, headers);
-    courseBatch.setContentDetails(contentDetails);
+    courseBatch.setContentDetails(contentDetails, requestedBy);
     // validations
     validateContentOrg(courseBatch.getCreatedFor());
     validateMentors(courseBatch);

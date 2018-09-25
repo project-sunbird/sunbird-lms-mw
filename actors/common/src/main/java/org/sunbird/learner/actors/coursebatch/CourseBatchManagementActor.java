@@ -92,47 +92,47 @@ public class CourseBatchManagementActor extends BaseActor {
    */
   @SuppressWarnings("unchecked")
   private void createCourseBatch(Request actorMessage) {
-    Map<String, Object> req = actorMessage.getRequest();
+    Map<String, Object> request = actorMessage.getRequest();
     Map<String, Object> targetObject;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
+    String courseBatchId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
     Map<String, String> headers =
         (Map<String, String>) actorMessage.getContext().get(JsonKey.HEADER);
     String requestedBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
 
-    List<String> participants = (List<String>) req.get(JsonKey.PARTICIPANTS);
-    req.remove(JsonKey.PARTICIPANTS);
-    req.remove(JsonKey.PARTICIPANT);
-    CourseBatch courseBatch = new CourseBatch().init(req, requestedBy);
-    courseBatch.setId(uniqueId);
-    courseBatch.setStatus(setCourseBatchStatus((String) req.get(JsonKey.START_DATE)));
+    List<String> participants = (List<String>) request.get(JsonKey.PARTICIPANTS);
+    request.remove(JsonKey.PARTICIPANTS);
+    request.remove(JsonKey.PARTICIPANT);
+    CourseBatch courseBatch = new CourseBatch().init(request, requestedBy);
+    courseBatch.setId(courseBatchId);
+    courseBatch.setStatus(setCourseBatchStatus((String) request.get(JsonKey.START_DATE)));
     courseBatch.setHashTagId(
-        getHashTagId((String) req.get(JsonKey.HASH_TAG_ID), JsonKey.CREATE, "", uniqueId));
+        getHashTagId((String) request.get(JsonKey.HASH_TAG_ID), JsonKey.CREATE, "", courseBatchId));
     // validations
     validateContentOrg(courseBatch.getCreatedFor());
     validateMentors(courseBatch);
     validateParticipants(participants, courseBatch);
 
-    String courseId = (String) req.get(JsonKey.COURSE_ID);
+    String courseId = (String) request.get(JsonKey.COURSE_ID);
     Map<String, Object> contentDetails = getEkStepContent(courseId, headers);
     courseBatch.setContentDetails(contentDetails);
 
     if (participants != null) {
-      courseBatch.setParticipant(addParticipants(participants, courseBatch));
+      courseBatch.setParticipant(getParticipantsMap(participants, courseBatch));
     }
     Response result = courseBatchDao.create(courseBatch);
-    result.put(JsonKey.BATCH_ID, uniqueId);
-    syncCourseBatch(uniqueId, new ObjectMapper().convertValue(courseBatch, Map.class));
+    result.put(JsonKey.BATCH_ID, courseBatchId);
+    syncCourseBatch(courseBatchId, new ObjectMapper().convertValue(courseBatch, Map.class));
     sender().tell(result, self());
     targetObject =
         TelemetryUtil.generateTargetObject(
-            (String) req.get(JsonKey.ID), JsonKey.BATCH, JsonKey.CREATE, null);
+            (String) request.get(JsonKey.ID), JsonKey.BATCH, JsonKey.CREATE, null);
     TelemetryUtil.generateCorrelatedObject(
-        (String) req.get(JsonKey.COURSE_ID), JsonKey.COURSE, null, correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
+        (String) request.get(JsonKey.COURSE_ID), JsonKey.COURSE, null, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(request, targetObject, correlatedObject);
 
     Map<String, String> rollUp = new HashMap<>();
-    rollUp.put("l1", (String) req.get(JsonKey.COURSE_ID));
+    rollUp.put("l1", (String) request.get(JsonKey.COURSE_ID));
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
   }
   /**
@@ -157,7 +157,7 @@ public class CourseBatchManagementActor extends BaseActor {
     validateParticipants(participants, courseBatch);
 
     if (participants != null) {
-      courseBatch.setParticipant(addParticipants(participants, courseBatch));
+      courseBatch.setParticipant(getParticipantsMap(participants, courseBatch));
     }
 
     Response result =
@@ -422,7 +422,7 @@ public class CourseBatchManagementActor extends BaseActor {
     }
   }
 
-  private Map<String, Boolean> addParticipants(
+  private Map<String, Boolean> getParticipantsMap(
       List<String> participants, CourseBatch courseBatchObject) {
     String batchId = courseBatchObject.getId();
     Map<String, Boolean> dbParticipants = courseBatchObject.getParticipant();

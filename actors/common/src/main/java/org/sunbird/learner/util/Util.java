@@ -48,6 +48,7 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
+import org.sunbird.common.models.util.url.URLShortnerImpl;
 import org.sunbird.common.quartz.scheduler.SchedulerManager;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -1760,6 +1761,7 @@ public final class Util {
 
   public static Request sendOnboardingMail(Map<String, Object> emailTemplateMap) {
     Request request = null;
+    URLShortnerImpl urlShortner = new URLShortnerImpl();
     if ((StringUtils.isNotBlank((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
       String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
       String welcomeSubject = propertiesCache.getProperty(JsonKey.ONBOARDING_MAIL_SUBJECT);
@@ -1803,11 +1805,11 @@ public final class Util {
         return null;
       }
       if (StringUtils.isNotBlank(setPasswordLink)) {
-        emailTemplateMap.put("link", setPasswordLink);
+        emailTemplateMap.put("link", urlShortner.shortUrl(setPasswordLink));
         emailTemplateMap.put("setPasswordLink", "true");
       }
       if (StringUtils.isNotBlank(verifyEmailLink)) {
-        emailTemplateMap.put("link", verifyEmailLink);
+        emailTemplateMap.put("link", urlShortner.shortUrl(verifyEmailLink));
         emailTemplateMap.put("setPasswordLink", null);
       }
       request = new Request();

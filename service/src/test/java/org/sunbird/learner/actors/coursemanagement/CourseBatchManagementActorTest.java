@@ -43,7 +43,7 @@ public class CourseBatchManagementActorTest {
   private static final String BATCH_ID = "123";
   private static final String BATCH_NAME = "Some Batch Name";
   SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-
+  private Request actorMessage;
   private String existingStartDate = "";
   private String existingEndDate = "";
 
@@ -54,9 +54,9 @@ public class CourseBatchManagementActorTest {
     ActorSystem system = ActorSystem.create("system");
     probe = new TestKit(system);
 
-    Props props = Props.create(CourseBatchManagementActor.class, mockCassandraOperation);
+    Props props = Props.create(CourseBatchManagementActor.class);
     subject = system.actorOf(props);
-
+    actorMessage = new Request();
     PowerMockito.mockStatic(ServiceFactory.class);
     when(ServiceFactory.getInstance()).thenReturn(mockCassandraOperation);
   }
@@ -221,9 +221,7 @@ public class CourseBatchManagementActorTest {
             getOffsetDate(existingEndDate, 4),
             mockGetRecordByIdResponse);
     Assert.assertTrue(
-        ((ProjectCommonException) exception)
-            .getCode()
-            .equals(ResponseCode.invalidBatchStartDateError.getErrorCode()));
+        (exception).getCode().equals(ResponseCode.invalidBatchStartDateError.getErrorCode()));
   }
 
   @Test
@@ -368,5 +366,36 @@ public class CourseBatchManagementActorTest {
         ((ProjectCommonException) exception)
             .getCode()
             .equals(ResponseCode.invalidBatchStartDateError.getErrorCode()));
+  }
+
+  @Test
+  public void testCreateCourseBatchSuccess() {
+    when(mockCassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(new Response());
+    actorMessage.setOperation(ActorOperations.CREATE_BATCH.getValue());
+    actorMessage.getRequest().putAll(getCourseBatchMap());
+    subject.tell(actorMessage, probe.getRef());
+  }
+
+  //  {
+  //    "courseId": "do_21259396651757568013469",
+  //          "name": "test3",
+  //          "description": "desc",
+  //          "enrollmentType": "invite-only",
+  //          "startDate": "2018-10-05",
+  //          "createdFor":["012582622136401920242"],
+  //    "mentors":["93ce97dc-db55-4c6b-ba57-5325fa15250b"],
+  //    "participants":["7c27c86d-a472-4349-b091-449f4993d2e4"]
+  //  }
+  public Map<String, Object> getCourseBatchMap() {
+    Map<String, Object> courseBatchMap = new HashMap();
+    courseBatchMap.put(JsonKey.COURSE_ID, "courseId");
+    courseBatchMap.put(JsonKey.NAME, "someName");
+    courseBatchMap.put(JsonKey.DESCRIPTION, "desc");
+    courseBatchMap.put(JsonKey.ENROLLMENT_TYPE, "invite-only");
+    courseBatchMap.put(JsonKey.COURSE_CREATED_FOR, Arrays.asList("OrgId"));
+    courseBatchMap.put(JsonKey.START_DATE, "startDate");
+    return courseBatchMap;
   }
 }

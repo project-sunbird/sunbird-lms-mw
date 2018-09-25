@@ -48,7 +48,6 @@ public class BulkUploadManagementActorTest {
   private static final String USER_ID = "bcic783gfu239";
   private static final String refOrgId = "id34fy";
   private static final String PROCESS_ID = "process-13647-fuzzy";
-  private static final String rootOrgID = "0125883816782069760";
   private static CassandraOperationImpl mockCassandraOperation;
 
   @Before
@@ -250,9 +249,6 @@ public class BulkUploadManagementActorTest {
         probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
     Assert.assertTrue(null != res);
   }
-
-  @Test
-  public void testUserBulkUploadFailureWithSamePhoneNumbers() {}
 
   private Response createCassandraInsertSuccessResponse() {
     Response response = new Response();

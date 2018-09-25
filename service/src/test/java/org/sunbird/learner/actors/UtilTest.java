@@ -34,7 +34,6 @@ import org.sunbird.learner.util.Util;
 public class UtilTest {
 
   private static CassandraOperationImpl mockCassandraOperation;
-  private static ServiceFactory factory;
 
   @Before
   public void setUp() {
@@ -48,27 +47,21 @@ public class UtilTest {
   public void testCheckPhoneUniqnessFailureCreate() {
 
     Map<String, String> map = new HashMap<>();
-    map.put(JsonKey.PHONE, "UNIQUE");
+    map.put(JsonKey.PHONE, JsonKey.UNIQUE);
 
     when(DataCacheHandler.getConfigSettings()).thenReturn(map);
     Response response = createCassandraResponse();
 
-    Map<String, Object> userMap = new HashMap<>();
-    userMap.put(JsonKey.LAST_NAME, "xyz");
-    userMap.put(JsonKey.FIRST_NAME, "abc");
-    userMap.put(JsonKey.ORGANISATION_ID, "12345");
-    userMap.put(JsonKey.PHONE, "1234567890");
-    userMap.put(JsonKey.EMAIL, "abc@gmail.com");
-    userMap.put(JsonKey.ROOT_ORG_ID, "123");
-
+    Map<String, Object> userMap = createUserMap();
+    // during create we don't need Id
+    userMap.remove(JsonKey.ID);
     when(mockCassandraOperation.getRecordsByIndexedProperty(
             "sunbird", "user", "phone", "1234567890"))
         .thenReturn(response);
-    String opType = "CREATE";
-    Throwable e = null;
+    Exception e = null;
     try {
-      Util.checkPhoneUniqueness(userMap, opType);
-    } catch (Throwable ex) {
+      Util.checkPhoneUniqueness(userMap, JsonKey.CREATE);
+    } catch (Exception ex) {
       e = ex;
     }
     Assert.assertTrue(
@@ -81,29 +74,17 @@ public class UtilTest {
   public void testCheckPhoneUniqnessFailureUpdate() {
 
     Map<String, String> map = new HashMap<>();
-    map.put(JsonKey.PHONE, "UNIQUE");
+    map.put(JsonKey.PHONE, JsonKey.UNIQUE);
 
     when(DataCacheHandler.getConfigSettings()).thenReturn(map);
     Response response = createCassandraResponse();
-
-    Map<String, Object> userMap = new HashMap<>();
-    userMap.put(JsonKey.ID, "123xyz");
-    userMap.put(JsonKey.LAST_NAME, "xyz");
-    userMap.put(JsonKey.FIRST_NAME, "abc");
-    userMap.put(JsonKey.ORGANISATION_ID, "12345");
-    userMap.put(JsonKey.PHONE, "1234567890");
-    userMap.put(JsonKey.EMAIL, "abc@gmail.com");
-    userMap.put(JsonKey.ROOT_ORG_ID, "123");
-
     when(mockCassandraOperation.getRecordsByIndexedProperty(
             "sunbird", "user", "phone", "1234567890"))
         .thenReturn(response);
-
-    String opType = "UPDATE";
-    Throwable e = null;
+    Exception e = null;
     try {
-      Util.checkPhoneUniqueness(userMap, opType);
-    } catch (Throwable ex) {
+      Util.checkPhoneUniqueness(createUserMap(), JsonKey.UPDATE);
+    } catch (Exception ex) {
       e = ex;
     }
     Assert.assertTrue(
@@ -116,58 +97,35 @@ public class UtilTest {
   public void testCheckPhoneUniqnessSuccessCreate() {
 
     Map<String, String> map = new HashMap<>();
-    map.put(JsonKey.PHONE, "UNIQUE");
+    map.put(JsonKey.PHONE, JsonKey.UNIQUE);
 
     when(DataCacheHandler.getConfigSettings()).thenReturn(map);
     Response response = createCassandraNullResponse();
-
-    Map<String, Object> userMap = new HashMap<>();
-    userMap.put(JsonKey.ID, "123xyz");
-    userMap.put(JsonKey.LAST_NAME, "xyz");
-    userMap.put(JsonKey.FIRST_NAME, "abc");
-    userMap.put(JsonKey.ORGANISATION_ID, "12345");
-    userMap.put(JsonKey.PHONE, "1234567890");
-    userMap.put(JsonKey.EMAIL, "abc@gmail.com");
-    userMap.put(JsonKey.ROOT_ORG_ID, "123");
-
     when(mockCassandraOperation.getRecordsByIndexedProperty(
             "sunbird", "user", "phone", "1234567890"))
         .thenReturn(response)
         .thenReturn(response);
-    String opType = "CREATE";
-    Util.checkPhoneUniqueness(userMap, opType);
+    Util.checkPhoneUniqueness(createUserMap(), JsonKey.CREATE);
     String testResult = "success";
-
-    Assert.assertTrue(testResult.equals("success"));
+    Assert.assertTrue(JsonKey.SUCCESS.equalsIgnoreCase((testResult)));
   }
 
   @Test
   public void testCheckPhoneUniqnessSuccessUpdate() {
 
     Map<String, String> map = new HashMap<>();
-    map.put(JsonKey.PHONE, "UNIQUE");
+    map.put(JsonKey.PHONE, JsonKey.UNIQUE);
 
     when(DataCacheHandler.getConfigSettings()).thenReturn(map);
     Response response = createCassandraNullResponse();
-
-    Map<String, Object> userMap = new HashMap<>();
-    userMap.put(JsonKey.ID, "123xyz");
-    userMap.put(JsonKey.LAST_NAME, "xyz");
-    userMap.put(JsonKey.FIRST_NAME, "abc");
-    userMap.put(JsonKey.ORGANISATION_ID, "12345");
-    userMap.put(JsonKey.PHONE, "1234567890");
-    userMap.put(JsonKey.EMAIL, "abc@gmail.com");
-    userMap.put(JsonKey.ROOT_ORG_ID, "123");
     mockCassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(mockCassandraOperation);
     when(mockCassandraOperation.getRecordsByIndexedProperty(
             "sunbird", "user", "phone", "1234567890"))
         .thenReturn(response);
-    String opType = "UPDATE";
-    Util.checkPhoneUniqueness(userMap, opType);
+    Util.checkPhoneUniqueness(createUserMap(), JsonKey.UPDATE);
     String testResult = "success";
-
-    Assert.assertTrue(testResult.equals("success"));
+    Assert.assertTrue(JsonKey.SUCCESS.equalsIgnoreCase((testResult)));
   }
 
   private Response createCassandraNullResponse() {
@@ -182,18 +140,23 @@ public class UtilTest {
 
     Response response = new Response();
     List<Map<String, Object>> list = new ArrayList<>();
-    Map<String, Object> bulkUploadProcessMap = new HashMap<>();
-    bulkUploadProcessMap.put(JsonKey.ID, "qwerty123");
-    bulkUploadProcessMap.put(JsonKey.LAST_NAME, "singh");
-    bulkUploadProcessMap.put(JsonKey.CHANNEL, "abc");
-    bulkUploadProcessMap.put(JsonKey.PASSWORD, "qwerty");
-    bulkUploadProcessMap.put(JsonKey.EMAIL, "abc123@gmail.com");
-    bulkUploadProcessMap.put(JsonKey.FIRST_NAME, "rajiv");
-    bulkUploadProcessMap.put(JsonKey.PHONE, "1234567890");
+    Map<String, Object> bulkUploadProcessMap = createUserMap();
     bulkUploadProcessMap.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
 
     list.add(bulkUploadProcessMap);
     response.put(JsonKey.RESPONSE, list);
     return response;
+  }
+
+  private Map<String, Object> createUserMap() {
+    Map<String, Object> userMap = new HashMap<>();
+    userMap.put(JsonKey.ID, "123xyz");
+    userMap.put(JsonKey.LAST_NAME, "xyz");
+    userMap.put(JsonKey.FIRST_NAME, "abc");
+    userMap.put(JsonKey.ORGANISATION_ID, "12345");
+    userMap.put(JsonKey.PHONE, "1234567890");
+    userMap.put(JsonKey.EMAIL, "abc@gmail.com");
+    userMap.put(JsonKey.ROOT_ORG_ID, "123");
+    return userMap;
   }
 }

@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -1224,7 +1225,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
   private void prepareRequestForAddingUserToRootOrg(
       Map<String, Object> userMap, Map<String, Object> map) {
     map.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ROOT_ORG_ID));
-    List<String> roles = Arrays.asList(JsonKey.PUBLIC);
+    List<String> roles = Arrays.asList(ProjectUtil.UserRole.PUBLIC.getValue());
     map.put(JsonKey.ROLES, roles);
   }
 
@@ -1562,7 +1563,16 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     request.getRequest().putAll(userMap);
     try {
       UserRequestValidator.validateBulkUserData(request);
-    } catch (ProjectCommonException ex) {
+      List<String> roles = (List<String>) userMap.get(JsonKey.ROLES);
+      if (CollectionUtils.isNotEmpty(roles)) {
+        String response = Util.validateRoles(roles);
+        if (!JsonKey.SUCCESS.equalsIgnoreCase(response)) {
+          return ResponseMessage.Message.INVALID_ROLE;
+        }
+        roles = roles.stream().map(s -> s.trim()).collect(Collectors.toList());
+        userMap.put(JsonKey.ROLES, roles);
+      }
+    } catch (Exception ex) {
       return ex.getMessage();
     }
 

@@ -48,6 +48,8 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
+import org.sunbird.common.models.util.url.URLShortner;
+import org.sunbird.common.models.util.url.URLShortnerImpl;
 import org.sunbird.common.quartz.scheduler.SchedulerManager;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -55,6 +57,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.common.services.ProfileCompletenessService;
 import org.sunbird.common.services.impl.ProfileCompletenessFactory;
+import org.sunbird.common.util.KeycloakRequiredActionLinkUtil;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.extension.user.UserExtension;
 import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
@@ -94,6 +97,8 @@ public final class Util {
           null);
   private static ObjectMapper mapper = new ObjectMapper();
   private static final String SUNBIRD_APP_URL = "sunbird_app_url";
+  private static final String SET_PASSWORD_LINK = "set_password_link";
+  private static final String VERIFY_EMAIL_LINK = "verify_email_link";
 
   static {
     loadPropertiesFile();
@@ -1751,6 +1756,7 @@ public final class Util {
 
   public static Request sendOnboardingMail(Map<String, Object> emailTemplateMap) {
     Request request = null;
+    URLShortner urlShortner = new URLShortnerImpl();
     if ((StringUtils.isNotBlank((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
       String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
       String welcomeSubject = propertiesCache.getProperty(JsonKey.ONBOARDING_MAIL_SUBJECT);
@@ -1760,6 +1766,7 @@ public final class Util {
       emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
 
       String webUrl = Util.getSunbirdWebUrlPerTenent(emailTemplateMap);
+      ProjectLogger.log("Util:sendOnboardingMail redirectURI = " + webUrl, LoggerEnum.INFO.name());
       if ((!StringUtils.isBlank(webUrl)) && (!SUNBIRD_WEB_URL.equalsIgnoreCase(webUrl))) {
         emailTemplateMap.put(JsonKey.WEB_URL, webUrl);
       }
@@ -1782,11 +1789,52 @@ public final class Util {
           JsonKey.WELCOME_MESSAGE, ProjectUtil.formatMessage(welcomeMessage, envName));
 
       emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
+      emailTemplateMap.put(JsonKey.REDIRECT_URI, webUrl);
+      getUserRequiredActionLink(emailTemplateMap);
+      String setPasswordLink = (String) emailTemplateMap.get(SET_PASSWORD_LINK);
+      String verifyEmailLink = (String) emailTemplateMap.get(VERIFY_EMAIL_LINK);
+
+      if (StringUtils.isBlank(setPasswordLink) && StringUtils.isBlank(verifyEmailLink)) {
+        ProjectLogger.log(
+            "Util:sendOnboardingMail: Email not sent as generated link is empty", LoggerEnum.ERROR);
+        return null;
+      }
+      if (StringUtils.isNotBlank(setPasswordLink)) {
+        emailTemplateMap.put("link", urlShortner.shortUrl(setPasswordLink));
+        emailTemplateMap.put("setPasswordLink", "true");
+      } else if (StringUtils.isNotBlank(verifyEmailLink)) {
+        emailTemplateMap.put("link", urlShortner.shortUrl(verifyEmailLink));
+        emailTemplateMap.put("setPasswordLink", null);
+      }
       request = new Request();
       request.setOperation(BackgroundOperations.emailService.name());
       request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);
     }
     return request;
+  }
+
+  private static void getUserRequiredActionLink(Map<String, Object> templateMap) {
+    String redirectUri =
+        StringUtils.isNotBlank((String) templateMap.get(JsonKey.REDIRECT_URI))
+            ? ((String) templateMap.get(JsonKey.REDIRECT_URI))
+            : null;
+    ProjectLogger.log(
+        "Util:getUserRequiredActionLink redirectURI = " + redirectUri, LoggerEnum.INFO.name());
+    if (StringUtils.isBlank((String) templateMap.get(JsonKey.PASSWORD))) {
+      templateMap.put(
+          SET_PASSWORD_LINK,
+          KeycloakRequiredActionLinkUtil.getLink(
+              (String) templateMap.get(JsonKey.USERNAME),
+              redirectUri,
+              KeycloakRequiredActionLinkUtil.UPDATE_PASSWORD));
+    } else {
+      templateMap.put(
+          VERIFY_EMAIL_LINK,
+          KeycloakRequiredActionLinkUtil.getLink(
+              (String) templateMap.get(JsonKey.USERNAME),
+              redirectUri,
+              KeycloakRequiredActionLinkUtil.VERIFY_EMAIL));
+    }
   }
 
   public static void sendSMS(Map<String, Object> userMap) {
@@ -1800,9 +1848,19 @@ public final class Util {
       String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
       String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
       String appName = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_APP_NAME);
-
-      ProjectLogger.log("shortened url :: " + webUrl, LoggerEnum.INFO);
-      String sms = ProjectUtil.getSMSBody(name, webUrl, envName, appName);
+      userMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
+      userMap.put(JsonKey.REDIRECT_URI, webUrl);
+      getUserRequiredActionLink(userMap);
+      String setPasswordLink = (String) userMap.get(SET_PASSWORD_LINK);
+      String verifyEmailLink = (String) userMap.get(VERIFY_EMAIL_LINK);
+      if (StringUtils.isBlank(setPasswordLink) && StringUtils.isBlank(verifyEmailLink)) {
+        ProjectLogger.log(
+            "Util:sendSMS: SMS not sent as generated link is empty", LoggerEnum.ERROR);
+        return;
+      }
+      ProjectLogger.log("Util:sendSMS redirectURI = " + webUrl, LoggerEnum.INFO.name());
+      String sms =
+          ProjectUtil.getSMSBody(name, webUrl, envName, appName, setPasswordLink, verifyEmailLink);
       if (StringUtils.isBlank(sms)) {
         sms = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_DEFAULT_WELCOME_MSG);
       }

@@ -142,7 +142,7 @@ public class CourseEnrollmentActor extends BaseActor {
     CourseBatch courseBatchResult = courseBatchDao.readById((String) request.get(JsonKey.BATCH_ID));
     validateCourseBatch(courseBatchResult, request);
     UserCourses userCourseResult = userCourseDao.read(UserCoursesService.getPrimaryKey(request));
-    UserCoursesService.validateUserUnEnroll(userCourseResult);
+    UserCoursesService.validateUserUnenroll(userCourseResult);
     Map<String, Object> updateAttributes = new HashMap<>();
     updateAttributes.put(JsonKey.ACTIVE, false);
     updateAttributes.put(JsonKey.ID, userCourseResult.getId());

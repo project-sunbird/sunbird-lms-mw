@@ -267,7 +267,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
         participants.put(
             userId,
-            userCoursesService.addUserCourses(
+            userCoursesService.enroll(
                 batchId,
                 (String) courseBatchObject.get(JsonKey.COURSE_ID),
                 userId,
@@ -435,7 +435,7 @@ public class CourseBatchManagementActor extends BaseActor {
       if (!(dbParticipants.containsKey(userId))) {
         finalParticipants.put(
             userId,
-            userCoursesService.addUserCourses(
+            userCoursesService.enroll(
                 batchId,
                 courseBatchObject.getCourseId(),
                 userId,

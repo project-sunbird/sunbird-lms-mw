@@ -19,7 +19,7 @@ public class UserCoursesService {
    *
    * @Params
    */
-  public static void validateUserUnEnroll(UserCourses userCourseResult) {
+  public static void validateUserUnenroll(UserCourses userCourseResult) {
     if (userCourseResult == null) {
       ProjectLogger.log(
           "UserCoursesService unEnrollCourseClass user is not enrolled yet.",
@@ -87,7 +87,7 @@ public class UserCoursesService {
 
   public void unenroll(String userId, String courseId, String batchId) {
     UserCourses userCourses = userCourseDao.read(getPrimaryKey(userId, courseId, batchId));
-    validateUserUnEnroll(userCourses);
+    validateUserUnenroll(userCourses);
     Map<String, Object> updateAttributes = new HashMap<>();
     updateAttributes.put(JsonKey.ACTIVE, false);
     updateAttributes.put(JsonKey.ID, userCourses.getId());
@@ -95,7 +95,7 @@ public class UserCoursesService {
     sync(updateAttributes, userCourses.getId());
   }
 
-  public Boolean addUserCourses(
+  public Boolean enroll(
       String batchId, String courseId, String userId, Map<String, String> additionalCourseInfo) {
     Boolean flag = false;
     Map<String, Object> userCourses = new HashMap<>();

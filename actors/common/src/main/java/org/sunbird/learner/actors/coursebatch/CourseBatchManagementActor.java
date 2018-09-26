@@ -15,20 +15,16 @@ import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
-import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
-import org.sunbird.learner.actors.coursebatch.coursebatchvalidator.Useruneroll;
 import org.sunbird.learner.actors.coursebatch.dao.CourseBatchDao;
-import org.sunbird.learner.actors.coursebatch.dao.UserCoursesDao;
 import org.sunbird.learner.actors.coursebatch.dao.impl.CourseBatchDaoImpl;
-import org.sunbird.learner.actors.coursebatch.dao.impl.UserCoursesDaoImpl;
+import org.sunbird.learner.actors.coursebatch.service.UserCoursesService;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.course.batch.CourseBatch;
-import org.sunbird.models.user.courses.UserCourses;
 import org.sunbird.telemetry.util.TelemetryUtil;
 
 @ActorConfig(
@@ -45,7 +41,7 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 public class CourseBatchManagementActor extends BaseActor {
 
   private CourseBatchDao courseBatchDao = new CourseBatchDaoImpl();
-  private UserCoursesDao userCourseDao = new UserCoursesDaoImpl();
+  private UserCoursesService userCoursesService = new UserCoursesService();
   /**
    * Receives the actor message and perform the course enrollment operation .
    *
@@ -271,7 +267,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
         participants.put(
             userId,
-            addUserCourses(
+            userCoursesService.addUserCourses(
                 batchId,
                 (String) courseBatchObject.get(JsonKey.COURSE_ID),
                 userId,
@@ -439,7 +435,7 @@ public class CourseBatchManagementActor extends BaseActor {
       if (!(dbParticipants.containsKey(userId))) {
         finalParticipants.put(
             userId,
-            addUserCourses(
+            userCoursesService.addUserCourses(
                 batchId,
                 courseBatchObject.getCourseId(),
                 userId,
@@ -480,21 +476,10 @@ public class CourseBatchManagementActor extends BaseActor {
   }
 
   private void removeParticipants(
-      Map<String, Boolean> dbParticipants, String batchId, String courseId) {
-    dbParticipants.forEach(
-        (s, aBoolean) -> {
-          Map<String, Object> map = new HashMap<>();
-          map.put(JsonKey.USER_ID, s);
-          map.put(JsonKey.BATCH_ID, batchId);
-          map.put(JsonKey.COURSE_ID, courseId);
-          UserCourses userCourses =
-              userCourseDao.read(Useruneroll.generateUserCoursesPrimaryKey(map));
-          Useruneroll.validateUserUneroll(userCourses);
-          Map<String, Object> updateAttributes = new HashMap<>();
-          updateAttributes.put(JsonKey.ACTIVE, false);
-          updateAttributes.put(JsonKey.ID, userCourses.getId());
-          userCourseDao.update(updateAttributes);
-          Useruneroll.updateUserCourseBatchToES(updateAttributes, userCourses.getId());
+      Map<String, Boolean> removedParticipant, String batchId, String courseId) {
+    removedParticipant.forEach(
+        (userId, aBoolean) -> {
+          new UserCoursesService().unenroll(userId, courseId, batchId);
         });
   }
 
@@ -623,51 +608,6 @@ public class CourseBatchManagementActor extends BaseActor {
       }
     }
     return rootOrg;
-  }
-
-  private Boolean addUserCourses(
-      String batchId, String courseId, String userId, Map<String, String> additionalCourseInfo) {
-    Boolean flag = false;
-    Map<String, Object> userCourses = new HashMap<>();
-    userCourses.put(JsonKey.USER_ID, userId);
-    userCourses.put(JsonKey.BATCH_ID, batchId);
-    userCourses.put(JsonKey.COURSE_ID, courseId);
-    userCourses.put(JsonKey.ID, generatePrimaryKey(userCourses));
-    userCourses.put(JsonKey.CONTENT_ID, courseId);
-    userCourses.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
-    userCourses.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
-    userCourses.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
-    userCourses.put(JsonKey.COURSE_PROGRESS, 0);
-    userCourses.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.COURSE_LOGO_URL));
-    userCourses.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.COURSE_NAME));
-    userCourses.put(JsonKey.DESCRIPTION, additionalCourseInfo.get(JsonKey.DESCRIPTION));
-    if (!StringUtils.isBlank(additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT))) {
-      userCourses.put(
-          JsonKey.LEAF_NODE_COUNT,
-          Integer.parseInt("" + additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT)));
-    }
-    userCourses.put(JsonKey.TOC_URL, additionalCourseInfo.get(JsonKey.TOC_URL));
-    try {
-      userCourseDao.insert(userCourses);
-      insertUserCoursesToES(userCourses);
-      flag = true;
-    } catch (Exception ex) {
-      ProjectLogger.log("INSERT RECORD TO USER COURSES EXCEPTION ", ex);
-      flag = false;
-    }
-    return flag;
-  }
-
-  private String generatePrimaryKey(Map<String, Object> req) {
-    String userId = (String) req.get(JsonKey.USER_ID);
-    String courseId = (String) req.get(JsonKey.COURSE_ID);
-    String batchId = (String) req.get(JsonKey.BATCH_ID);
-    return OneWayHashing.encryptVal(
-        userId
-            + JsonKey.PRIMARY_KEY_DELIMETER
-            + courseId
-            + JsonKey.PRIMARY_KEY_DELIMETER
-            + batchId);
   }
 
   private String getHashTagId(String hasTagId, String operation, String id, String uniqueId) {
@@ -812,20 +752,6 @@ public class CourseBatchManagementActor extends BaseActor {
     ProjectLogger.log(
         "CourseBatchManagementActor:isOrgValid: Organisation NOT found in ES with id = " + orgId);
     return false;
-  }
-
-  private void insertUserCoursesToES(Map<String, Object> courseMap) {
-    Request request = new Request();
-    request.setOperation(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue());
-    request.getRequest().put(JsonKey.USER_COURSES, courseMap);
-    try {
-      tellToAnother(request);
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "CourseBatchManagementActor:insertUserCoursesToES: Exception occurred with error message = "
-              + ex.getMessage(),
-          ex);
-    }
   }
 
   private Map<String, Object> getContentDetails(String courseId, Map<String, String> headers) {

@@ -24,11 +24,11 @@ import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.learner.actors.coursebatch.coursebatchvalidator.Useruneroll;
 import org.sunbird.learner.actors.coursebatch.dao.CourseBatchDao;
 import org.sunbird.learner.actors.coursebatch.dao.UserCoursesDao;
 import org.sunbird.learner.actors.coursebatch.dao.impl.CourseBatchDaoImpl;
 import org.sunbird.learner.actors.coursebatch.dao.impl.UserCoursesDaoImpl;
+import org.sunbird.learner.actors.coursebatch.service.UserCoursesService;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.course.batch.CourseBatch;
@@ -75,8 +75,7 @@ public class CourseEnrollmentActor extends BaseActor {
         courseBatchDao.readById((String) courseMap.get(JsonKey.BATCH_ID));
     validateCourseBatch(courseBatchResult, courseMap);
 
-    UserCourses userCourseResult =
-        userCourseDao.read(Useruneroll.generateUserCoursesPrimaryKey(courseMap));
+    UserCourses userCourseResult = userCourseDao.read(UserCoursesService.getPrimaryKey(courseMap));
 
     if (!ProjectUtil.isNull(userCourseResult) && userCourseResult.isActive()) {
       ProjectLogger.log("User Already Enrolled Course ");
@@ -102,14 +101,14 @@ public class CourseEnrollmentActor extends BaseActor {
       courseMap.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(new Timestamp(new Date().getTime())));
       updateUserCoursesToES(courseMap);
     } else {
-      Useruneroll.updateUserCourseBatchToES(courseMap, (String) courseMap.get(JsonKey.ID));
+      UserCoursesService.sync(courseMap, (String) courseMap.get(JsonKey.ID));
     }
     generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
   }
 
   private Map<String, Object> createUserCourseMap(
       Map<String, Object> courseMap, CourseBatch courseBatchResult, UserCourses userCourseResult) {
-    courseMap.put(JsonKey.ID, Useruneroll.generateUserCoursesPrimaryKey(courseMap));
+    courseMap.put(JsonKey.ID, UserCoursesService.getPrimaryKey(courseMap));
     courseMap.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
     if (userCourseResult == null) {
       // this will create user batch data for new user
@@ -142,15 +141,14 @@ public class CourseEnrollmentActor extends BaseActor {
     Map<String, Object> request = actorMessage.getRequest();
     CourseBatch courseBatchResult = courseBatchDao.readById((String) request.get(JsonKey.BATCH_ID));
     validateCourseBatch(courseBatchResult, request);
-    UserCourses userCourseResult =
-        userCourseDao.read(Useruneroll.generateUserCoursesPrimaryKey(request));
-    Useruneroll.validateUserUneroll(userCourseResult);
+    UserCourses userCourseResult = userCourseDao.read(UserCoursesService.getPrimaryKey(request));
+    UserCoursesService.validateUserUnEnroll(userCourseResult);
     Map<String, Object> updateAttributes = new HashMap<>();
     updateAttributes.put(JsonKey.ACTIVE, false);
     updateAttributes.put(JsonKey.ID, userCourseResult.getId());
     Response result = userCourseDao.update(updateAttributes);
     sender().tell(result, self());
-    Useruneroll.updateUserCourseBatchToES(updateAttributes, userCourseResult.getId());
+    UserCoursesService.sync(updateAttributes, userCourseResult.getId());
     generateAndProcessTelemetryEvent(request, "user.batch.course.unenroll");
   }
 

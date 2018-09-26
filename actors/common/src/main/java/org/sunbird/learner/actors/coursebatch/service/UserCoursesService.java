@@ -14,15 +14,11 @@ import org.sunbird.models.user.courses.UserCourses;
 
 public class UserCoursesService {
   private UserCoursesDao userCourseDao = UserCoursesDaoImpl.getInstance();
-  /*
-   * This method will validate courseBatch details
-   *
-   * @Params
-   */
+
   public static void validateUserUnenroll(UserCourses userCourseResult) {
     if (userCourseResult == null) {
       ProjectLogger.log(
-          "UserCoursesService unEnrollCourseClass user is not enrolled yet.",
+          "UserCoursesService:validateUserUnenroll: User is not enrolled yet",
           LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.userNotEnrolledCourse.getErrorCode(),
@@ -30,27 +26,21 @@ public class UserCoursesService {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     if (!userCourseResult.isActive()) {
-      ProjectLogger.log("UserCoursesService: User Have not Enrolled Course ");
+      ProjectLogger.log("UserCoursesService:validateUserUnenroll: User does not have an enrolled course");
       throw new ProjectCommonException(
           ResponseCode.userNotEnrolledCourse.getErrorCode(),
           ResponseCode.userNotEnrolledCourse.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-    // Check if user has completed the course
     if (userCourseResult.getProgress() == userCourseResult.getLeafNodesCount()) {
-      ProjectLogger.log("UserCoursesService: User already have completed course ");
+      ProjectLogger.log("UserCoursesService:validateUserUnenroll: User already completed the course");
       throw new ProjectCommonException(
           ResponseCode.userAlreadyCompletedCourse.getErrorCode(),
           ResponseCode.userAlreadyCompletedCourse.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
   }
-  /**
-   * This method will combined map values with delimiter and create an encrypted key.
-   *
-   * @param userCourseMap Map<String , Object>
-   * @return String encrypted value
-   */
+
   public static String getPrimaryKey(Map<String, Object> userCourseMap) {
     String userId = (String) userCourseMap.get(JsonKey.USER_ID);
     String courseId = (String) userCourseMap.get(JsonKey.COURSE_ID);
@@ -58,14 +48,6 @@ public class UserCoursesService {
     return getPrimaryKey(userId, courseId, batchId);
   }
 
-  /**
-   * This method will combined map values with delimiter and create an encrypted key.
-   *
-   * @param userId id of user
-   * @param courseId course id
-   * @param batchId batch id
-   * @return String encrypted value
-   */
   public static String getPrimaryKey(String userId, String courseId, String batchId) {
     return OneWayHashing.encryptVal(
         userId
@@ -73,26 +55,6 @@ public class UserCoursesService {
             + courseId
             + JsonKey.PRIMARY_KEY_DELIMETER
             + batchId);
-  }
-
-  public static void sync(Map<String, Object> courseMap, String id) {
-    boolean response =
-        ElasticSearchUtil.updateData(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.usercourses.getTypeName(),
-            id,
-            courseMap);
-    ProjectLogger.log("UserCoursesService sync user course response " + response);
-  }
-
-  public void unenroll(String userId, String courseId, String batchId) {
-    UserCourses userCourses = userCourseDao.read(getPrimaryKey(userId, courseId, batchId));
-    validateUserUnenroll(userCourses);
-    Map<String, Object> updateAttributes = new HashMap<>();
-    updateAttributes.put(JsonKey.ACTIVE, false);
-    updateAttributes.put(JsonKey.ID, userCourses.getId());
-    userCourseDao.update(updateAttributes);
-    sync(updateAttributes, userCourses.getId());
   }
 
   public Boolean enroll(
@@ -122,9 +84,29 @@ public class UserCoursesService {
       sync(userCourses, (String) userCourses.get(JsonKey.ID));
       flag = true;
     } catch (Exception ex) {
-      ProjectLogger.log("UserCoursesService: INSERT RECORD TO USER COURSES EXCEPTION ", ex);
+      ProjectLogger.log("UserCoursesService:enroll: Exception occurred with error message = " + ex.getMessage(), ex);
       flag = false;
     }
     return flag;
+  }
+  
+  public void unenroll(String userId, String courseId, String batchId) {
+    UserCourses userCourses = userCourseDao.read(getPrimaryKey(userId, courseId, batchId));
+    validateUserUnenroll(userCourses);
+    Map<String, Object> updateAttributes = new HashMap<>();
+    updateAttributes.put(JsonKey.ACTIVE, false);
+    updateAttributes.put(JsonKey.ID, userCourses.getId());
+    userCourseDao.update(updateAttributes);
+    sync(updateAttributes, userCourses.getId());
+  }
+  
+  public static void sync(Map<String, Object> courseMap, String id) {
+    boolean response =
+        ElasticSearchUtil.updateData(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.usercourses.getTypeName(),
+            id,
+            courseMap);
+    ProjectLogger.log("UserCoursesService:sync: sync user courses response = " + response);
   }
 }

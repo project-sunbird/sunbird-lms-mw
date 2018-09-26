@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -148,6 +149,21 @@ public class UserManagementActor extends BaseActor {
     String userId = (String) map.get(JsonKey.USER_ID);
     List<String> privateList = (List) map.get(JsonKey.PRIVATE);
     List<String> publicList = (List) map.get(JsonKey.PUBLIC);
+
+    // Remove duplicate entries from the list
+    privateList = privateList.stream().distinct().collect(Collectors.toList());
+    publicList = publicList.stream().distinct().collect(Collectors.toList());
+
+    // Eternal fields visibility cannot be changed
+    Util.removeEternalFields(
+        JsonKey.PRIVATE,
+        privateList,
+        getActorRef(ActorOperations.GET_ALL_SYSTEM_SETTINGS.getValue()));
+    Util.removeEternalFields(
+        JsonKey.PUBLIC,
+        publicList,
+        getActorRef(ActorOperations.GET_ALL_SYSTEM_SETTINGS.getValue()));
+
     Map<String, Object> esResult =
         ElasticSearchUtil.getDataByIdentifier(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
@@ -190,26 +206,26 @@ public class UserManagementActor extends BaseActor {
         }
       }
     }
-    Map<String, String> privateFieldMap =
+    Map<String, String> profileVisibilityMap =
         (Map<String, String>) esResult.get(JsonKey.PROFILE_VISIBILITY);
-    if (null == privateFieldMap) {
-      privateFieldMap = new HashMap<>();
+    if (null == profileVisibilityMap) {
+      profileVisibilityMap = new HashMap<>();
     }
     if (privateList != null) {
       for (String key : privateList) {
-        privateFieldMap.put(key, JsonKey.PRIVATE);
+        profileVisibilityMap.put(key, JsonKey.PRIVATE);
       }
     }
     if (publicList != null) {
       for (String key : publicList) {
-        privateFieldMap.remove(key);
+        profileVisibilityMap.put(key, JsonKey.PUBLIC);
       }
-      updateCassandraWithPrivateFiled(userId, privateFieldMap);
-      esResult.put(JsonKey.PROFILE_VISIBILITY, privateFieldMap);
+      updateCassandraWithPrivateFiled(userId, profileVisibilityMap);
+      esResult.put(JsonKey.PROFILE_VISIBILITY, profileVisibilityMap);
     }
-    if (privateFieldMap.size() > 0) {
-      updateCassandraWithPrivateFiled(userId, privateFieldMap);
-      esResult.put(JsonKey.PROFILE_VISIBILITY, privateFieldMap);
+    if (profileVisibilityMap.size() > 0) {
+      updateCassandraWithPrivateFiled(userId, profileVisibilityMap);
+      esResult.put(JsonKey.PROFILE_VISIBILITY, profileVisibilityMap);
     }
     boolean updateResponse = true;
     updateResponse = updateDataInES(esResult, esPrivateResult, userId);
@@ -256,6 +272,10 @@ public class UserManagementActor extends BaseActor {
           privateMap.put(JsonKey.JOB_PROFILE, map.get(JsonKey.JOB_PROFILE));
         } else if (field.contains(JsonKey.SKILLS + ".")) {
           privateMap.put(JsonKey.SKILLS, map.get(JsonKey.SKILLS));
+        } else if (field.contains(JsonKey.BADGE_ASSERTIONS + ".")) {
+          privateMap.put(JsonKey.BADGE_ASSERTIONS, map.get(JsonKey.BADGE_ASSERTIONS));
+        } else if (field.contains(JsonKey.ORGANISATIONS + ".")) {
+          privateMap.put(JsonKey.ORGANISATIONS, map.get(JsonKey.ORGANISATIONS));
         } else {
           if (!map.containsKey(field)) {
             throw new ProjectCommonException(
@@ -396,6 +416,11 @@ public class UserManagementActor extends BaseActor {
         if (!(((String) result.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById))) {
           result = removeUserPrivateField(result);
         } else {
+          // These values are set to ensure backward compatibility post introduction of global
+          // settings in user profile visibility
+          setCompleteProfileVisibilityMap(result);
+          setDefaultUserProfileVisibility(result);
+
           // If the user requests his data then we are fetching the private data from
           // userprofilevisibility index
           // and merge it with user index data
@@ -537,6 +562,11 @@ public class UserManagementActor extends BaseActor {
       if (!((String) userMap.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById)) {
         result = removeUserPrivateField(result);
       } else {
+        // These values are set to ensure backward compatibility post introduction of global
+        // settings in user profile visibility
+        setCompleteProfileVisibilityMap(result);
+        setDefaultUserProfileVisibility(result);
+
         // If the user requests his data then we are fetching the private data from
         // userprofilevisibility index
         // and merge it with user index data
@@ -1475,11 +1505,10 @@ public class UserManagementActor extends BaseActor {
     // update db with emailVerified as false (default)
     requestMap.put(JsonKey.EMAIL_VERIFIED, false);
 
-    Map<String, String> profileVisbility = new HashMap<>();
-    for (String field : ProjectUtil.defaultPrivateFields) {
-      profileVisbility.put(field, JsonKey.PRIVATE);
-    }
-    requestMap.put(JsonKey.PROFILE_VISIBILITY, profileVisbility);
+    // Since global settings are introduced, profile visibility map should be empty during user
+    // creation
+    requestMap.put(JsonKey.PROFILE_VISIBILITY, new HashMap<String, String>());
+
     if (!StringUtils.isBlank((String) requestMap.get(JsonKey.COUNTRY_CODE))) {
       requestMap.put(
           JsonKey.COUNTRY_CODE, propertiesCache.getProperty(JsonKey.SUNBIRD_DEFAULT_COUNTRY_CODE));
@@ -2255,5 +2284,20 @@ public class UserManagementActor extends BaseActor {
       return "0";
     }
     return lastLoginTime;
+  }
+
+  private void setCompleteProfileVisibilityMap(Map<String, Object> userMap) {
+    Map<String, String> profileVisibilityMap =
+        (Map<String, String>) userMap.get(JsonKey.PROFILE_VISIBILITY);
+    Map<String, String> completeProfileVisibilityMap =
+        Util.getCompleteProfileVisibilityMap(
+            profileVisibilityMap, getActorRef(ActorOperations.GET_ALL_SYSTEM_SETTINGS.getValue()));
+    userMap.put(JsonKey.PROFILE_VISIBILITY, completeProfileVisibilityMap);
+  }
+
+  private void setDefaultUserProfileVisibility(Map<String, Object> userMap) {
+    userMap.put(
+        JsonKey.DEFAULT_USER_PROFILE_VISIBILITY,
+        ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_USER_PROFILE_VISIBILITY));
   }
 }

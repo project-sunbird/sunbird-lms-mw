@@ -25,6 +25,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -579,7 +580,12 @@ public class UserSkillManagementActor extends BaseActor {
     if (null != profile && !profile.isEmpty()) {
       Map<String, String> visibility =
           (Map<String, String>) profile.get(JsonKey.PROFILE_VISIBILITY);
-      if ((null != visibility && !visibility.isEmpty()) && visibility.containsKey(JsonKey.SKILLS)) {
+      // Fetching complete private map including global settings
+      Map<String, String> privateVisibilityMap =
+          Util.getCompleteProfileVisibilityPrivateMap(
+              visibility, getActorRef(ActorOperations.GET_ALL_SYSTEM_SETTINGS.getValue()));
+      if ((null != privateVisibilityMap && !privateVisibilityMap.isEmpty())
+          && privateVisibilityMap.containsKey(JsonKey.SKILLS)) {
         Map<String, Object> visibilityMap =
             ElasticSearchUtil.getDataByIdentifier(
                 ProjectUtil.EsIndex.sunbird.getIndexName(),

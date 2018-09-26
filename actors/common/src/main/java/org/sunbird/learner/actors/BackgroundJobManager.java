@@ -370,7 +370,9 @@ public class BackgroundJobManager extends BaseActor {
 
   private void updateUserInfoToEs(Request actorMessage) {
     String userId = (String) actorMessage.getRequest().get(JsonKey.ID);
-    Map<String, Object> userDetails = Util.getUserDetails(userId);
+    Map<String, Object> userDetails =
+        Util.getUserDetails(
+            userId, getActorRef(ActorOperations.GET_ALL_SYSTEM_SETTINGS.getValue()));
     insertDataToElastic(
         ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.user.getTypeName(),

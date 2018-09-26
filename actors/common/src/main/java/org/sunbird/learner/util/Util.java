@@ -2,6 +2,7 @@ package org.sunbird.learner.util;
 
 import akka.actor.ActorRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.typesafe.config.Config;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
@@ -55,6 +56,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.common.services.ProfileCompletenessService;
 import org.sunbird.common.services.impl.ProfileCompletenessFactory;
+import org.sunbird.common.util.ConfigUtil;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.extension.user.UserExtension;
 import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
@@ -94,6 +96,7 @@ public final class Util {
           null);
   private static ObjectMapper mapper = new ObjectMapper();
   private static final String SUNBIRD_APP_URL = "sunbird_app_url";
+  private static List<SystemSetting> systemSettingsList;
 
   static {
     loadPropertiesFile();
@@ -1417,7 +1420,7 @@ public final class Util {
   }
 
   @SuppressWarnings("unchecked")
-  public static Map<String, Object> getUserDetails(String userId) {
+  public static Map<String, Object> getUserDetails(String userId, ActorRef actorRef) {
     ProjectLogger.log("get user profile method call started user Id : " + userId);
     Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Response response = null;
@@ -1446,6 +1449,7 @@ public final class Util {
       // save masked email and phone number
       addMaskEmailAndPhone(userDetails);
       checkProfileCompleteness(userDetails);
+      checkUserProfileVisibility(userDetails, actorRef);
       userDetails.remove(JsonKey.PASSWORD);
       userDetails = getUserDetailsFromRegistry(userDetails);
     } else {
@@ -1460,22 +1464,84 @@ public final class Util {
     ProfileCompletenessService profileService = ProfileCompletenessFactory.getInstance();
     Map<String, Object> profileResponse = profileService.computeProfile(userMap);
     userMap.putAll(profileResponse);
-    Map<String, String> profileVisibility =
+  }
+
+  public static void checkUserProfileVisibility(Map<String, Object> userMap, ActorRef actorRef) {
+
+    Map<String, String> userProfileVisibilityMap =
         (Map<String, String>) userMap.get(JsonKey.PROFILE_VISIBILITY);
-    if (null != profileVisibility && !profileVisibility.isEmpty()) {
-      Map<String, Object> profileVisibilityMap = new HashMap<>();
-      for (String field : profileVisibility.keySet()) {
-        profileVisibilityMap.put(field, userMap.get(field));
+    Map<String, String> completeProfileVisibilityMap =
+        getCompleteProfileVisibilityMap(userProfileVisibilityMap, actorRef);
+
+    if (null != completeProfileVisibilityMap && !completeProfileVisibilityMap.isEmpty()) {
+      Map<String, Object> privateFieldsMap = new HashMap<>();
+      for (String field : completeProfileVisibilityMap.keySet()) {
+        if (JsonKey.PRIVATE.equals(completeProfileVisibilityMap.get(field))) {
+          privateFieldsMap.put(field, userMap.get(field));
+        }
       }
       ElasticSearchUtil.upsertData(
           ProjectUtil.EsIndex.sunbird.getIndexName(),
           ProjectUtil.EsType.userprofilevisibility.getTypeName(),
           (String) userMap.get(JsonKey.USER_ID),
-          profileVisibilityMap);
-      UserUtility.updateProfileVisibilityFields(profileVisibilityMap, userMap);
+          privateFieldsMap);
+      UserUtility.updateProfileVisibilityFields(privateFieldsMap, userMap);
     } else {
       userMap.put(JsonKey.PROFILE_VISIBILITY, new HashMap<String, String>());
     }
+  }
+
+  public static Map<String, String> getCompleteProfileVisibilityPrivateMap(
+      Map<String, String> userProfileVisibilityMap, ActorRef actorRef) {
+    Map<String, String> completeProfileVisibilityMap =
+        getCompleteProfileVisibilityMap(userProfileVisibilityMap, actorRef);
+    for (String key : completeProfileVisibilityMap.keySet()) {
+      if (JsonKey.PUBLIC.equals(completeProfileVisibilityMap.get(key))) {
+        completeProfileVisibilityMap.remove(key);
+      }
+    }
+    return completeProfileVisibilityMap;
+  }
+
+  public static Map<String, String> getCompleteProfileVisibilityMap(
+      Map<String, String> userProfileVisibilityMap, ActorRef actorRef) {
+    String defaultProfileVisibility =
+        ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_USER_PROFILE_VISIBILITY);
+    if (!(defaultProfileVisibility.equals(JsonKey.PUBLIC)
+        || defaultProfileVisibility.equals(JsonKey.PRIVATE))) {
+      ProjectLogger.log(
+          "Util:getCompleteProfileVisibilityMap: Invalid configuration - "
+              + defaultProfileVisibility
+              + " - for default profile visibility(public/private)",
+          LoggerEnum.ERROR.name());
+      ProjectCommonException.throwServerErrorException(
+          ResponseCode.defaultProfileVisibilityInvalidConfig,
+          ProjectUtil.formatMessage(
+              ResponseCode.defaultProfileVisibilityInvalidConfig.getErrorMessage(),
+              defaultProfileVisibility));
+    }
+
+    Config userProfileConfig = getUserProfileConfig(actorRef);
+    List<String> userDataFields = userProfileConfig.getStringList(JsonKey.USER_DATA_FIELDS);
+    List<String> eternalPublicFields =
+        userProfileConfig.getStringList(JsonKey.ETERNAL_PUBLIC_FIELDS);
+    List<String> eternalPrivateFields =
+        userProfileConfig.getStringList(JsonKey.ETERNAL_PRIVATE_FIELDS);
+
+    // Order of preference - eternal fields settings, user settings, global settings
+    Map<String, String> completeProfileVisibilityMap = new HashMap<String, String>();
+    for (String field : userDataFields) {
+      completeProfileVisibilityMap.put(field, defaultProfileVisibility);
+    }
+    completeProfileVisibilityMap.putAll(userProfileVisibilityMap);
+    for (String field : eternalPublicFields) {
+      completeProfileVisibilityMap.put(field, JsonKey.PUBLIC);
+    }
+    for (String field : eternalPrivateFields) {
+      completeProfileVisibilityMap.put(field, JsonKey.PRIVATE);
+    }
+
+    return completeProfileVisibilityMap;
   }
 
   public static void addMaskEmailAndPhone(Map<String, Object> userMap) {
@@ -1868,6 +1934,124 @@ public final class Util {
       userMap.put(JsonKey.CHANNEL, channel);
     }
     return channel;
+  }
+
+  public static void removeEternalFields(
+      String visibilityType, List<String> fieldList, ActorRef actorRef) {
+    Config userProfileConfig = getUserProfileConfig(actorRef);
+    List<String> eternalPublicFields =
+        userProfileConfig.getStringList(JsonKey.ETERNAL_PUBLIC_FIELDS);
+    List<String> eternalPrivateFields =
+        userProfileConfig.getStringList(JsonKey.ETERNAL_PRIVATE_FIELDS);
+    if (JsonKey.PRIVATE.equals(visibilityType)) {
+      for (String field : eternalPrivateFields) {
+        fieldList.remove(field);
+      }
+    } else if (JsonKey.PUBLIC.equals(visibilityType)) {
+      for (String field : eternalPublicFields) {
+        fieldList.remove(field);
+      }
+    }
+  }
+
+  /*
+   * @desc Get user profile configuration from system settings
+   * @param getAllSystemSettings actor reference
+   * @return user profile configuration
+   */
+  public static Config getUserProfileConfig(ActorRef actorRef) {
+    SystemSetting userProfileConfigSetting =
+        getSystemSettingById(JsonKey.USER_PROFILE_CONFIG, actorRef);
+    String userProfileConfigString = userProfileConfigSetting.getValue();
+    Config userProfileConfig = ConfigUtil.parseJSONString(userProfileConfigString);
+    validateUserProfileConfig(userProfileConfig);
+    return userProfileConfig;
+  }
+
+  private static void validateUserProfileConfig(Config userProfileConfig) {
+    if (CollectionUtils.isEmpty(userProfileConfig.getStringList(JsonKey.USER_DATA_FIELDS))) {
+      ProjectLogger.log(
+          "Util:validateUserProfileConfig: User data fields are not configured.",
+          LoggerEnum.ERROR.name());
+      ProjectCommonException.throwServerErrorException(
+          ResponseCode.userDataFieldsNotConfigured, "");
+    }
+    List<String> eternalPublicFields =
+        userProfileConfig.getStringList(JsonKey.ETERNAL_PUBLIC_FIELDS);
+    List<String> eternalPrivateFields =
+        userProfileConfig.getStringList(JsonKey.ETERNAL_PRIVATE_FIELDS);
+    if (CollectionUtils.isEmpty(eternalPublicFields)) {
+      ProjectLogger.log(
+          "Util:validateUserProfileConfig: Eternal public fields are not configured.",
+          LoggerEnum.ERROR.name());
+      ProjectCommonException.throwServerErrorException(
+          ResponseCode.eternalPublicFieldsNotConfigured, "");
+    }
+    if (CollectionUtils.isEmpty(eternalPrivateFields)) {
+      ProjectLogger.log(
+          "Util:validateUserProfileConfig: Eternal private fields are not configured.",
+          LoggerEnum.ERROR.name());
+      ProjectCommonException.throwServerErrorException(
+          ResponseCode.eternalPrivateFieldsNotConfigured, "");
+    }
+    List<String> tempList = new ArrayList<String>(eternalPublicFields);
+    tempList.retainAll(eternalPrivateFields);
+    if (tempList.size() != 0) {
+      ProjectLogger.log(
+          tempList.toString()
+              + " fields are configured in both eternal private and public fields list",
+          LoggerEnum.ERROR.name());
+      ProjectCommonException.throwServerErrorException(
+          ResponseCode.fieldConfiguredInMultipleEternalLists,
+          ProjectUtil.formatMessage(
+              ResponseCode.fieldConfiguredInMultipleEternalLists.getErrorMessage(),
+              tempList.toString()));
+    }
+  }
+
+  /*
+   * @desc Method to fetch a system setting based on given system setting id
+   * @param system setting id
+   * @param getAllSystemSettings actor reference
+   * @return system setting
+   */
+  public static SystemSetting getSystemSettingById(String systemSettingId, ActorRef actorRef) {
+    List<SystemSetting> systemSettings = getAllSystemSettings(actorRef);
+    for (SystemSetting systemSetting : systemSettings) {
+      if (systemSetting.getId().equalsIgnoreCase(systemSettingId)) {
+        return systemSetting;
+      }
+    }
+    ProjectLogger.log(
+        "Util:getSystemSettingById: System setting not found for id - " + systemSettingId,
+        LoggerEnum.ERROR.name());
+    ProjectCommonException.throwServerErrorException(
+        ResponseCode.errorSystemSettingNotFound,
+        ProjectUtil.formatMessage(
+            ResponseCode.errorSystemSettingNotFound.getErrorMessage(), systemSettingId));
+    return null;
+  }
+
+  /*
+   * @desc Method to fetch all system settings
+   * @param getAllSystemSettings actor reference
+   * @return list of system settings
+   */
+  public static List<SystemSetting> getAllSystemSettings(ActorRef actorRef) {
+    if (CollectionUtils.isEmpty(systemSettingsList)) {
+      ProjectLogger.log(
+          "Util:getAllSystemSettings: System Settings actor call to fetch all system settings",
+          LoggerEnum.INFO.name());
+      SystemSettingClient client = SystemSettingClientImpl.getInstance();
+      systemSettingsList = client.getAllSystemSettings(actorRef);
+    }
+    if (CollectionUtils.isEmpty(systemSettingsList)) {
+      ProjectLogger.log(
+          "Util:getAllSystemSettings: Error while fetching system settings",
+          LoggerEnum.ERROR.name());
+      ProjectCommonException.throwServerErrorException(ResponseCode.errorFetchSystemSettings, "");
+    }
+    return systemSettingsList;
   }
 }
 

@@ -37,6 +37,4 @@ public interface CourseBatchDao {
    * @return Response containing operation is success or not.
    */
   Response delete(String id);
-
-  Response createCourseEnrolment(Map<String, Object> map);
 }

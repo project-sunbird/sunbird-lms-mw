@@ -29,6 +29,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.CourseEnrollmentActor;
 import org.sunbird.learner.actors.coursebatch.CourseBatchManagementActor;
 
 @RunWith(PowerMockRunner.class)
@@ -369,16 +370,20 @@ public class CourseBatchManagementActorTest {
   }
 
   @Test
-  public void testCreateCourseBatchSuccess() {
+  public void testCreateCourseBatchInviteOnlySuccess() {
     when(mockCassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(new Response());
+    when(CourseEnrollmentActor.getCourseObjectFromEkStep(Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(new HashMap<String, Object>());
     actorMessage.setOperation(ActorOperations.CREATE_BATCH.getValue());
     actorMessage.getRequest().putAll(getCourseBatchMap());
     subject.tell(actorMessage, probe.getRef());
+    Response response = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertTrue(response != null);
   }
 
-  //  {
+  //
   //    "courseId": "do_21259396651757568013469",
   //          "name": "test3",
   //          "description": "desc",

@@ -157,7 +157,7 @@ public class UserManagementActor extends BaseActor {
       throw new ProjectCommonException(
           ResponseCode.userNotFound.getErrorCode(),
           ResponseCode.userNotFound.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
     Map<String, Object> esPrivateResult =
         ElasticSearchUtil.getDataByIdentifier(
@@ -362,13 +362,13 @@ public class UserManagementActor extends BaseActor {
         throw new ProjectCommonException(
             ResponseCode.userNotFound.getErrorCode(),
             ResponseCode.userNotFound.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+            ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
       }
       if (result == null || result.size() == 0) {
         throw new ProjectCommonException(
             ResponseCode.userNotFound.getErrorCode(),
             ResponseCode.userNotFound.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+            ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
       }
 
       // check whether is_deletd true or false
@@ -511,7 +511,7 @@ public class UserManagementActor extends BaseActor {
       throw new ProjectCommonException(
           ResponseCode.userNotFound.getErrorCode(),
           ResponseCode.userNotFound.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
     // check whether is_deletd true or false
     if (ProjectUtil.isNotNull(result)
@@ -1415,15 +1415,6 @@ public class UserManagementActor extends BaseActor {
       userExtension.create(userMap);
     }
 
-    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
-      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, userMap.get(JsonKey.PASSWORD));
-      userMap.put(JsonKey.PASSWORD, userMap.get(JsonKey.PASSWORD));
-    } else {
-      // Create temp password if password field is null or empty in request
-      String tempPassword = ProjectUtil.generateRandomPassword();
-      userMap.put(JsonKey.PASSWORD, tempPassword);
-      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, tempPassword);
-    }
     String accessToken = "";
     if (isSSOEnabled) {
       try {
@@ -1456,7 +1447,10 @@ public class UserManagementActor extends BaseActor {
 
     userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
-    userMap.put(JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
+    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
+      userMap.put(
+          JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
+    }
     try {
       UserUtility.encryptUserData(userMap);
     } catch (Exception e1) {
@@ -1559,9 +1553,27 @@ public class UserManagementActor extends BaseActor {
       }
     }
 
-    ProjectLogger.log("User created successfully.....");
     response.put(JsonKey.ACCESSTOKEN, accessToken);
     sender().tell(response, self());
+
+    if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      ProjectLogger.log("UserManagementActor:processUserRequest: User creation success");
+      Request userRequest = new Request();
+      userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+      userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
+      ProjectLogger.log(
+          "UserManagementActor:processUserRequest: Trigger sync of user details to ES");
+      try {
+        tellToAnother(userRequest);
+      } catch (Exception ex) {
+        ProjectLogger.log(
+            "UserManagementActor:processUserRequest: Exception occurred with error message = "
+                + ex.getMessage(),
+            ex);
+      }
+    } else {
+      ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
+    }
 
     // object of telemetry event...
     Map<String, Object> targetObject = null;
@@ -1582,21 +1594,6 @@ public class UserManagementActor extends BaseActor {
     ProjectLogger.log("calling Send SMS method:", LoggerEnum.INFO);
     if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PHONE))) {
       Util.sendSMS(userMap);
-    }
-
-    if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      ProjectLogger.log("method call going to start for ES--.....");
-      Request userRequest = new Request();
-      userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-      userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
-      ProjectLogger.log("making a call to save user data to ES");
-      try {
-        tellToAnother(userRequest);
-      } catch (Exception ex) {
-        ProjectLogger.log("Exception Occurred during saving user to Es while creating user : ", ex);
-      }
-    } else {
-      ProjectLogger.log("no call for ES to save user");
     }
   }
 

@@ -97,8 +97,6 @@ public final class Util {
           null);
   private static ObjectMapper mapper = new ObjectMapper();
   private static final String SUNBIRD_APP_URL = "sunbird_app_url";
-  private static final String SET_PASSWORD_LINK = "set_password_link";
-  private static final String VERIFY_EMAIL_LINK = "verify_email_link";
 
   static {
     loadPropertiesFile();
@@ -1756,7 +1754,6 @@ public final class Util {
 
   public static Request sendOnboardingMail(Map<String, Object> emailTemplateMap) {
     Request request = null;
-    URLShortner urlShortner = new URLShortnerImpl();
     if ((StringUtils.isNotBlank((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
       String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
       String welcomeSubject = propertiesCache.getProperty(JsonKey.ONBOARDING_MAIL_SUBJECT);
@@ -1790,9 +1787,8 @@ public final class Util {
 
       emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
       emailTemplateMap.put(JsonKey.REDIRECT_URI, webUrl);
-      getUserRequiredActionLink(emailTemplateMap);
-      String setPasswordLink = (String) emailTemplateMap.get(SET_PASSWORD_LINK);
-      String verifyEmailLink = (String) emailTemplateMap.get(VERIFY_EMAIL_LINK);
+      String setPasswordLink = (String) emailTemplateMap.get(JsonKey.SET_PASSWORD_LINK);
+      String verifyEmailLink = (String) emailTemplateMap.get(JsonKey.VERIFY_EMAIL_LINK);
 
       if (StringUtils.isBlank(setPasswordLink) && StringUtils.isBlank(verifyEmailLink)) {
         ProjectLogger.log(
@@ -1800,10 +1796,10 @@ public final class Util {
         return null;
       }
       if (StringUtils.isNotBlank(setPasswordLink)) {
-        emailTemplateMap.put("link", urlShortner.shortUrl(setPasswordLink));
+        emailTemplateMap.put("link", setPasswordLink);
         emailTemplateMap.put("setPasswordLink", "true");
       } else if (StringUtils.isNotBlank(verifyEmailLink)) {
-        emailTemplateMap.put("link", urlShortner.shortUrl(verifyEmailLink));
+        emailTemplateMap.put("link", verifyEmailLink);
         emailTemplateMap.put("setPasswordLink", null);
       }
       request = new Request();
@@ -1813,7 +1809,8 @@ public final class Util {
     return request;
   }
 
-  private static void getUserRequiredActionLink(Map<String, Object> templateMap) {
+  public static void getUserRequiredActionLink(Map<String, Object> templateMap) {
+    URLShortner urlShortner = new URLShortnerImpl();
     String redirectUri =
         StringUtils.isNotBlank((String) templateMap.get(JsonKey.REDIRECT_URI))
             ? ((String) templateMap.get(JsonKey.REDIRECT_URI))
@@ -1822,18 +1819,20 @@ public final class Util {
         "Util:getUserRequiredActionLink redirectURI = " + redirectUri, LoggerEnum.INFO.name());
     if (StringUtils.isBlank((String) templateMap.get(JsonKey.PASSWORD))) {
       templateMap.put(
-          SET_PASSWORD_LINK,
-          KeycloakRequiredActionLinkUtil.getLink(
-              (String) templateMap.get(JsonKey.USERNAME),
-              redirectUri,
-              KeycloakRequiredActionLinkUtil.UPDATE_PASSWORD));
+          JsonKey.SET_PASSWORD_LINK,
+          urlShortner.shortUrl(
+              KeycloakRequiredActionLinkUtil.getLink(
+                  (String) templateMap.get(JsonKey.USERNAME),
+                  redirectUri,
+                  KeycloakRequiredActionLinkUtil.UPDATE_PASSWORD)));
     } else {
       templateMap.put(
-          VERIFY_EMAIL_LINK,
-          KeycloakRequiredActionLinkUtil.getLink(
-              (String) templateMap.get(JsonKey.USERNAME),
-              redirectUri,
-              KeycloakRequiredActionLinkUtil.VERIFY_EMAIL));
+          JsonKey.VERIFY_EMAIL_LINK,
+          urlShortner.shortUrl(
+              KeycloakRequiredActionLinkUtil.getLink(
+                  (String) templateMap.get(JsonKey.USERNAME),
+                  redirectUri,
+                  KeycloakRequiredActionLinkUtil.VERIFY_EMAIL)));
     }
   }
 
@@ -1850,9 +1849,8 @@ public final class Util {
       String appName = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_APP_NAME);
       userMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
       userMap.put(JsonKey.REDIRECT_URI, webUrl);
-      getUserRequiredActionLink(userMap);
-      String setPasswordLink = (String) userMap.get(SET_PASSWORD_LINK);
-      String verifyEmailLink = (String) userMap.get(VERIFY_EMAIL_LINK);
+      String setPasswordLink = (String) userMap.get(JsonKey.SET_PASSWORD_LINK);
+      String verifyEmailLink = (String) userMap.get(JsonKey.VERIFY_EMAIL_LINK);
       if (StringUtils.isBlank(setPasswordLink) && StringUtils.isBlank(verifyEmailLink)) {
         ProjectLogger.log(
             "Util:sendSMS: SMS not sent as generated link is empty", LoggerEnum.ERROR);

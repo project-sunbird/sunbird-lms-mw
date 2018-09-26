@@ -1041,9 +1041,10 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 ssoManager.removeUser(userMap);
               }
             }
+            // generate required action link and shorten the url
+            Util.getUserRequiredActionLink(userMap);
             // send the welcome mail to user
             welcomeMailTemplateMap.putAll(userMap);
-            // the loginid will become user id for logon purpose .
             welcomeMailTemplateMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
             Request welcomeMailReqObj = Util.sendOnboardingMail(welcomeMailTemplateMap);
             if (null != welcomeMailReqObj) {

@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -973,15 +974,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     for (int i = 0; i < dataMapList.size(); i++) {
       userMap = dataMapList.get(i);
       Map<String, Object> welcomeMailTemplateMap = new HashMap<>();
-      if (StringUtils.isBlank((String) userMap.get(JsonKey.PASSWORD))) {
-        String randomPassword = ProjectUtil.generateRandomPassword();
-        userMap.put(JsonKey.PASSWORD, randomPassword);
-        welcomeMailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, randomPassword);
-      } else {
-        welcomeMailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, userMap.get(JsonKey.PASSWORD));
-      }
       String errMsg = validateUser(userMap);
-      if (errMsg.equalsIgnoreCase(JsonKey.SUCCESS)) {
+      if (JsonKey.SUCCESS.equalsIgnoreCase(errMsg)) {
         try {
 
           // convert userName,provide,loginId,externalId.. value to lowercase
@@ -1047,9 +1041,10 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 ssoManager.removeUser(userMap);
               }
             }
+            // generate required action link and shorten the url
+            Util.getUserRequiredActionLink(userMap);
             // send the welcome mail to user
             welcomeMailTemplateMap.putAll(userMap);
-            // the loginid will become user id for logon purpose .
             welcomeMailTemplateMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
             Request welcomeMailReqObj = Util.sendOnboardingMail(welcomeMailTemplateMap);
             if (null != welcomeMailReqObj) {
@@ -1224,7 +1219,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
   private void prepareRequestForAddingUserToRootOrg(
       Map<String, Object> userMap, Map<String, Object> map) {
     map.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ROOT_ORG_ID));
-    List<String> roles = Arrays.asList(JsonKey.PUBLIC);
+    List<String> roles = Arrays.asList(ProjectUtil.UserRole.PUBLIC.getValue());
     map.put(JsonKey.ROLES, roles);
   }
 
@@ -1365,11 +1360,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       updateUser(requestedUserMap, foundUserMap);
     } else {
       createUser(requestedUserMap);
-    }
-    if (!StringUtils.isBlank((String) requestedUserMap.get(JsonKey.PASSWORD))) {
-      requestedUserMap.put(
-          JsonKey.PASSWORD,
-          OneWayHashing.encryptVal((String) requestedUserMap.get(JsonKey.PASSWORD)));
     }
     return requestedUserMap;
   }
@@ -1562,7 +1552,16 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     request.getRequest().putAll(userMap);
     try {
       UserRequestValidator.validateBulkUserData(request);
-    } catch (ProjectCommonException ex) {
+      List<String> roles = (List<String>) userMap.get(JsonKey.ROLES);
+      if (CollectionUtils.isNotEmpty(roles)) {
+        String response = Util.validateRoles(roles);
+        if (!JsonKey.SUCCESS.equalsIgnoreCase(response)) {
+          return ResponseMessage.Message.INVALID_ROLE;
+        }
+        roles = roles.stream().map(s -> s.trim()).collect(Collectors.toList());
+        userMap.put(JsonKey.ROLES, roles);
+      }
+    } catch (Exception ex) {
       return ex.getMessage();
     }
 

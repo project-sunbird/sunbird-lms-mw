@@ -39,6 +39,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.coursebatch.CourseBatchManagementActor;
+import org.sunbird.learner.actors.coursebatch.CourseEnrollmentActor;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
 

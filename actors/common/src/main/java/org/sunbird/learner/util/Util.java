@@ -48,6 +48,8 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
+import org.sunbird.common.models.util.url.URLShortner;
+import org.sunbird.common.models.util.url.URLShortnerImpl;
 import org.sunbird.common.quartz.scheduler.SchedulerManager;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -55,6 +57,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.common.services.ProfileCompletenessService;
 import org.sunbird.common.services.impl.ProfileCompletenessFactory;
+import org.sunbird.common.util.KeycloakRequiredActionLinkUtil;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.extension.user.UserExtension;
 import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
@@ -1676,18 +1679,12 @@ public final class Util {
         } catch (Exception e) {
           ProjectLogger.log("Exception occurred while encrypting phone number ", e);
         }
-        Map<String, Object> filters = new HashMap<>();
-        filters.put(JsonKey.ENC_PHONE, phone);
-        Map<String, Object> map = new HashMap<>();
-        map.put(JsonKey.FILTERS, filters);
-        SearchDTO searchDto = Util.createSearchDto(map);
-        Map<String, Object> result =
-            ElasticSearchUtil.complexSearch(
-                searchDto,
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName());
+        DbInfo userDb = dbInfoMap.get(JsonKey.USER_DB);
+        Response result =
+            cassandraOperation.getRecordsByIndexedProperty(
+                userDb.getKeySpace(), userDb.getTableName(), (JsonKey.PHONE), phone);
         List<Map<String, Object>> userMapList =
-            (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+            (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
         if (!userMapList.isEmpty()) {
           if (opType.equalsIgnoreCase(JsonKey.CREATE)) {
             throw new ProjectCommonException(
@@ -1766,6 +1763,7 @@ public final class Util {
       emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
 
       String webUrl = Util.getSunbirdWebUrlPerTenent(emailTemplateMap);
+      ProjectLogger.log("Util:sendOnboardingMail redirectURI = " + webUrl, LoggerEnum.INFO.name());
       if ((!StringUtils.isBlank(webUrl)) && (!SUNBIRD_WEB_URL.equalsIgnoreCase(webUrl))) {
         emailTemplateMap.put(JsonKey.WEB_URL, webUrl);
       }
@@ -1788,11 +1786,54 @@ public final class Util {
           JsonKey.WELCOME_MESSAGE, ProjectUtil.formatMessage(welcomeMessage, envName));
 
       emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
+      emailTemplateMap.put(JsonKey.REDIRECT_URI, webUrl);
+      String setPasswordLink = (String) emailTemplateMap.get(JsonKey.SET_PASSWORD_LINK);
+      String verifyEmailLink = (String) emailTemplateMap.get(JsonKey.VERIFY_EMAIL_LINK);
+
+      if (StringUtils.isBlank(setPasswordLink) && StringUtils.isBlank(verifyEmailLink)) {
+        ProjectLogger.log(
+            "Util:sendOnboardingMail: Email not sent as generated link is empty", LoggerEnum.ERROR);
+        return null;
+      }
+      if (StringUtils.isNotBlank(setPasswordLink)) {
+        emailTemplateMap.put(JsonKey.LINK, setPasswordLink);
+        emailTemplateMap.put(JsonKey.SET_PW_LINK, "true");
+      } else if (StringUtils.isNotBlank(verifyEmailLink)) {
+        emailTemplateMap.put(JsonKey.LINK, verifyEmailLink);
+        emailTemplateMap.put(JsonKey.SET_PW_LINK, null);
+      }
       request = new Request();
       request.setOperation(BackgroundOperations.emailService.name());
       request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);
     }
     return request;
+  }
+
+  public static void getUserRequiredActionLink(Map<String, Object> templateMap) {
+    URLShortner urlShortner = new URLShortnerImpl();
+    String redirectUri =
+        StringUtils.isNotBlank((String) templateMap.get(JsonKey.REDIRECT_URI))
+            ? ((String) templateMap.get(JsonKey.REDIRECT_URI))
+            : null;
+    ProjectLogger.log(
+        "Util:getUserRequiredActionLink redirectURI = " + redirectUri, LoggerEnum.INFO.name());
+    if (StringUtils.isBlank((String) templateMap.get(JsonKey.PASSWORD))) {
+      templateMap.put(
+          JsonKey.SET_PASSWORD_LINK,
+          urlShortner.shortUrl(
+              KeycloakRequiredActionLinkUtil.getLink(
+                  (String) templateMap.get(JsonKey.USERNAME),
+                  redirectUri,
+                  KeycloakRequiredActionLinkUtil.UPDATE_PASSWORD)));
+    } else {
+      templateMap.put(
+          JsonKey.VERIFY_EMAIL_LINK,
+          urlShortner.shortUrl(
+              KeycloakRequiredActionLinkUtil.getLink(
+                  (String) templateMap.get(JsonKey.USERNAME),
+                  redirectUri,
+                  KeycloakRequiredActionLinkUtil.VERIFY_EMAIL)));
+    }
   }
 
   public static void sendSMS(Map<String, Object> userMap) {
@@ -1806,9 +1847,18 @@ public final class Util {
       String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
       String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
       String appName = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_APP_NAME);
-
-      ProjectLogger.log("shortened url :: " + webUrl, LoggerEnum.INFO);
-      String sms = ProjectUtil.getSMSBody(name, webUrl, envName, appName);
+      userMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
+      userMap.put(JsonKey.REDIRECT_URI, webUrl);
+      String setPasswordLink = (String) userMap.get(JsonKey.SET_PASSWORD_LINK);
+      String verifyEmailLink = (String) userMap.get(JsonKey.VERIFY_EMAIL_LINK);
+      if (StringUtils.isBlank(setPasswordLink) && StringUtils.isBlank(verifyEmailLink)) {
+        ProjectLogger.log(
+            "Util:sendSMS: SMS not sent as generated link is empty", LoggerEnum.ERROR);
+        return;
+      }
+      ProjectLogger.log("Util:sendSMS redirectURI = " + webUrl, LoggerEnum.INFO.name());
+      String sms =
+          ProjectUtil.getSMSBody(name, webUrl, envName, appName, setPasswordLink, verifyEmailLink);
       if (StringUtils.isBlank(sms)) {
         sms = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_DEFAULT_WELCOME_MSG);
       }

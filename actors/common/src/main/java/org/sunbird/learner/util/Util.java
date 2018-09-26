@@ -1796,11 +1796,11 @@ public final class Util {
         return null;
       }
       if (StringUtils.isNotBlank(setPasswordLink)) {
-        emailTemplateMap.put("link", setPasswordLink);
-        emailTemplateMap.put("setPasswordLink", "true");
+        emailTemplateMap.put(JsonKey.LINK, setPasswordLink);
+        emailTemplateMap.put(JsonKey.SET_PW_LINK, "true");
       } else if (StringUtils.isNotBlank(verifyEmailLink)) {
-        emailTemplateMap.put("link", verifyEmailLink);
-        emailTemplateMap.put("setPasswordLink", null);
+        emailTemplateMap.put(JsonKey.LINK, verifyEmailLink);
+        emailTemplateMap.put(JsonKey.SET_PW_LINK, null);
       }
       request = new Request();
       request.setOperation(BackgroundOperations.emailService.name());

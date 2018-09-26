@@ -37,6 +37,4 @@ public interface CourseBatchDao {
    * @return Response containing status of course batch delete
    */
   Response delete(String courseBatchId);
-
-  Response createCourseEnrolment(Map<String, Object> map);
 }

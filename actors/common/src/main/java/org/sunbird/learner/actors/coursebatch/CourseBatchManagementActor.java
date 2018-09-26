@@ -42,11 +42,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private CourseBatchDao courseBatchDao = new CourseBatchDaoImpl();
   private UserCoursesService userCoursesService = new UserCoursesService();
-  /**
-   * Receives the actor message and perform the course enrollment operation .
-   *
-   * @param request Object is an instance of Request
-   */
+
   @Override
   public void onReceive(Request request) throws Throwable {
 

@@ -1840,7 +1840,6 @@ public final class Util {
     ProjectLogger.log("Inside Send SMS method:", LoggerEnum.INFO);
     // removing email check now we need to send welcome mail as well as welcome sms Ref:SB-4009
     if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PHONE))) {
-      UserUtility.decryptUserData(userMap);
       String name =
           (String) userMap.get(JsonKey.FIRST_NAME) + " " + (String) userMap.get(JsonKey.LAST_NAME);
 

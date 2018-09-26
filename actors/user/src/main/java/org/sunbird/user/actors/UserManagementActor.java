@@ -1584,6 +1584,8 @@ public class UserManagementActor extends BaseActor {
             (String) userMap.get(JsonKey.ID), JsonKey.USER, JsonKey.CREATE, null);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
     // generate required action link and shorten the url
+    UserUtility.decryptUserData(userMap);
+    userMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
     Util.getUserRequiredActionLink(userMap);
     // user created successfully send the onboarding mail
     // putting rootOrgId to get web url per tenant while sending mail

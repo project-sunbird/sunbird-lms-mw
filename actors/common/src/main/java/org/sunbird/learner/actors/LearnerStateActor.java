@@ -52,7 +52,7 @@ public class LearnerStateActor extends BaseActor {
 
       Map<String, Object> filter = new HashMap<>();
       filter.put(JsonKey.USER_ID, userId);
-
+      filter.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
       SearchDTO searchDto = new SearchDTO();
       searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
 

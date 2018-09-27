@@ -1586,12 +1586,14 @@ public class UserManagementActor extends BaseActor {
     // generate required action link and shorten the url
     UserUtility.decryptUserData(userMap);
     userMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
+    userMap.put(JsonKey.REDIRECT_URI, Util.getSunbirdWebUrlPerTenent(userMap));
     Util.getUserRequiredActionLink(userMap);
     // user created successfully send the onboarding mail
     // putting rootOrgId to get web url per tenant while sending mail
     emailTemplateMap.put(JsonKey.ROOT_ORG_ID, userMap.get(JsonKey.ROOT_ORG_ID));
     emailTemplateMap.put(JsonKey.SET_PASSWORD_LINK, userMap.get(JsonKey.SET_PASSWORD_LINK));
     emailTemplateMap.put(JsonKey.VERIFY_EMAIL_LINK, userMap.get(JsonKey.VERIFY_EMAIL_LINK));
+    emailTemplateMap.put(JsonKey.REDIRECT_URI, userMap.get(JsonKey.REDIRECT_URI));
     Request welcomeMailReqObj = Util.sendOnboardingMail(emailTemplateMap);
     if (null != welcomeMailReqObj) {
       tellToAnother(welcomeMailReqObj);

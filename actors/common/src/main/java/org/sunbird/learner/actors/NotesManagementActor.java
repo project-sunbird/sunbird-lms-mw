@@ -165,6 +165,7 @@ public class NotesManagementActor extends BaseActor {
       req.remove(JsonKey.COURSE_ID);
       req.remove(JsonKey.CONTENT_ID);
       req.remove(JsonKey.IS_DELETED);
+      req.remove(JsonKey.NOTE_ID);
       req.put(JsonKey.ID, noteId);
       req.put(JsonKey.UPDATED_BY, userId);
       req.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());

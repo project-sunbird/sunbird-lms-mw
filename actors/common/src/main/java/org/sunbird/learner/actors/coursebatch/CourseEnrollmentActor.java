@@ -44,7 +44,7 @@ public class CourseEnrollmentActor extends BaseActor {
 
   private static String EKSTEP_COURSE_SEARCH_QUERY =
           "{\"request\": {\"filters\":{\"contentType\": [\"Course\"], \"objectType\": [\"Content\"], \"identifier\": \"COURSE_ID_PLACEHOLDER\", \"status\": \"Live\"},\"limit\": 1}}";
-
+  private BatchOperationNotifier batchOperationNotifier ;
   private CourseBatchDao courseBatchDao = CourseBatchDaoImpl.getInstance();
   private UserCoursesDao userCourseDao = UserCoursesDaoImpl.getInstance();
 
@@ -104,6 +104,7 @@ public class CourseEnrollmentActor extends BaseActor {
     } else {
       updateUserCourseBatchToES(courseMap, (String) courseMap.get(JsonKey.ID));
     }
+    batchOperationNotifier.batchOPerationNotifier(courseMap, JsonKey.ADD);
     generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
   }
 
@@ -182,6 +183,7 @@ public class CourseEnrollmentActor extends BaseActor {
     sender().tell(result, self());
     updateUserCourseBatchToES(updateAttributes, userCourseResult.getId());
     generateAndProcessTelemetryEvent(request, "user.batch.course.unenroll");
+    batchOperationNotifier.batchOPerationNotifier(request,JsonKey.REMOVE);
   }
 
   private void generateAndProcessTelemetryEvent(Map<String, Object> request, String corelation) {

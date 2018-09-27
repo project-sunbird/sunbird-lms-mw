@@ -42,6 +42,8 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 public class CourseBatchManagementActor extends BaseActor {
 
   private CourseBatchDao courseBatchDao = CourseBatchDaoImpl.getInstance();
+  
+  private BatchOperationNotifier batchOperationNotifier;
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -78,8 +80,7 @@ public class CourseBatchManagementActor extends BaseActor {
     Map<String, Object> targetObject;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     String courseBatchId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
-    Map<String, String> headers =
-        (Map<String, String>) actorMessage.getContext().get(JsonKey.HEADER);
+    Map<String, String> headers = (Map<String, String>) actorMessage.getContext().get(JsonKey.HEADER);
     String requestedBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
 
     List<String> participants = (List<String>) request.get(JsonKey.PARTICIPANTS);
@@ -89,37 +90,37 @@ public class CourseBatchManagementActor extends BaseActor {
     courseBatch.initCount();
     courseBatch.setId(courseBatchId);
     courseBatch.setStatus(setCourseBatchStatus((String) request.get(JsonKey.START_DATE)));
-    courseBatch.setHashTagId(
-        getHashTagId((String) request.get(JsonKey.HASH_TAG_ID), JsonKey.CREATE, "", courseBatchId));
-    
+    courseBatch
+        .setHashTagId(getHashTagId((String) request.get(JsonKey.HASH_TAG_ID), JsonKey.CREATE, "", courseBatchId));
+
     String courseId = (String) request.get(JsonKey.COURSE_ID);
     Map<String, Object> contentDetails = getEkStepContent(courseId, headers);
     courseBatch.setContentDetails(contentDetails, requestedBy);
-    
+
     validateContentOrg(courseBatch.getCreatedFor());
     validateMentors(courseBatch);
     if (participants != null) {
       validateParticipants(participants, courseBatch);
       courseBatch.setParticipant(getParticipantsMap(participants, courseBatch));
     }
-    
+
+
     Response result = courseBatchDao.create(courseBatch);
     result.put(JsonKey.BATCH_ID, courseBatchId);
 
-    syncCourseBatchForeground(
-        courseBatchId, new ObjectMapper().convertValue(courseBatch, Map.class));
+    syncCourseBatchForeground(courseBatchId, new ObjectMapper().convertValue(courseBatch, Map.class));
     sender().tell(result, self());
 
-    targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) request.get(JsonKey.ID), JsonKey.BATCH, JsonKey.CREATE, null);
-    TelemetryUtil.generateCorrelatedObject(
-        (String) request.get(JsonKey.COURSE_ID), JsonKey.COURSE, null, correlatedObject);
+    targetObject = TelemetryUtil.generateTargetObject((String) request.get(JsonKey.ID), JsonKey.BATCH, JsonKey.CREATE,
+        null);
+    TelemetryUtil.generateCorrelatedObject((String) request.get(JsonKey.COURSE_ID), JsonKey.COURSE, null,
+        correlatedObject);
     TelemetryUtil.telemetryProcessingCall(request, targetObject, correlatedObject);
 
     Map<String, String> rollUp = new HashMap<>();
     rollUp.put("l1", (String) request.get(JsonKey.COURSE_ID));
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
+    batchOperationNotifier.batchBulkOperationNotifier(courseBatch, batchOperationNotifier.MENTOR);
   }
 
   @SuppressWarnings("unchecked")
@@ -288,6 +289,7 @@ public class CourseBatchManagementActor extends BaseActor {
     Request request = new Request();
     request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
     request.getRequest().put(JsonKey.BATCH, courseBatchObject);
+    batchOperationNotifier.batchBulkOperationNotifier(courseBatch, batchOperationNotifier.PARTICIPANTS);
     
     try {
       ProjectLogger.log("CourseBatchManagementActor:addUserCourseBatch: Sync course batch details to ES called");

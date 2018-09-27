@@ -102,6 +102,9 @@ public class CourseEnrollmentActor extends BaseActor {
       courseMap.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(new Timestamp(new Date().getTime())));
       updateUserCoursesToES(courseMap);
     } else {
+      ProjectLogger.log(
+          "CourseEnrollmentActor:enrollCourseBatch user is enrolling second time.",
+          LoggerEnum.INFO.name());
       UserCoursesService.sync(courseMap, (String) courseMap.get(JsonKey.ID));
     }
     generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
@@ -170,7 +173,7 @@ public class CourseEnrollmentActor extends BaseActor {
 
   private void updateUserCoursesToES(Map<String, Object> courseMap) {
     Request request = new Request();
-    request.setOperation(ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue());
+    request.setOperation(ActorOperations.INSERT_USR_COURSES_INFO_ELASTIC.getValue());
     request.getRequest().put(JsonKey.USER_COURSES, courseMap);
     try {
       tellToAnother(request);

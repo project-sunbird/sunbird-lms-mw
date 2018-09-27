@@ -5,7 +5,10 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.coursebatch.dao.UserCoursesDao;
@@ -112,6 +115,8 @@ public class UserCoursesService {
             ProjectUtil.EsType.usercourses.getTypeName(),
             id,
             courseMap);
-    ProjectLogger.log("UserCoursesService:sync: sync user courses response = " + response);
+    ProjectLogger.log(
+        "UserCoursesService:sync: sync user courses response = " + response,
+        LoggerEnum.INFO.name());
   }
 }

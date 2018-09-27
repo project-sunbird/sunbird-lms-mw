@@ -1821,7 +1821,8 @@ public final class Util {
       reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
       emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
 
-      String webUrl = Util.getSunbirdWebUrlPerTenent(emailTemplateMap);
+      String webUrl = (String) emailTemplateMap.get(JsonKey.REDIRECT_URI);
+      ;
       ProjectLogger.log("Util:sendOnboardingMail redirectURI = " + webUrl, LoggerEnum.INFO.name());
       if ((!StringUtils.isBlank(webUrl)) && (!SUNBIRD_WEB_URL.equalsIgnoreCase(webUrl))) {
         emailTemplateMap.put(JsonKey.WEB_URL, webUrl);
@@ -1903,10 +1904,9 @@ public final class Util {
           (String) userMap.get(JsonKey.FIRST_NAME) + " " + (String) userMap.get(JsonKey.LAST_NAME);
 
       String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
-      String webUrl = Util.getSunbirdWebUrlPerTenent(userMap);
+      String webUrl = (String) userMap.get(JsonKey.REDIRECT_URI);
       String appName = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_APP_NAME);
       userMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
-      userMap.put(JsonKey.REDIRECT_URI, webUrl);
       String setPasswordLink = (String) userMap.get(JsonKey.SET_PASSWORD_LINK);
       String verifyEmailLink = (String) userMap.get(JsonKey.VERIFY_EMAIL_LINK);
       if (StringUtils.isBlank(setPasswordLink) && StringUtils.isBlank(verifyEmailLink)) {

@@ -33,7 +33,8 @@ public class UserCoursesService {
           ResponseCode.userNotEnrolledCourse.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-    if (userCourseResult.getProgress() == userCourseResult.getLeafNodesCount()) {
+    if (userCourseResult.getProgress() > 0
+        && (userCourseResult.getProgress() == userCourseResult.getLeafNodesCount())) {
       ProjectLogger.log(
           "UserCoursesService:validateUserUnenroll: User already completed the course");
       throw new ProjectCommonException(

@@ -97,7 +97,7 @@ public class CourseBatchManagementActor extends BaseActor {
     courseBatch.setContentDetails(contentDetails, requestedBy);
 
     validateContentOrg(courseBatch.getCreatedFor());
-    validateMentors(courseBatch);
+    validateMentors(courseBatch.getMentors(), requestedBy);
     if (participants != null) {
       validateParticipants(participants, courseBatch);
       courseBatch.setParticipant(getParticipantsMap(participants, courseBatch));
@@ -130,6 +130,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
     Map<String, Object> request = actorMessage.getRequest();
     List<String> participants = (List<String>) request.get(JsonKey.PARTICIPANTS);
+    request.remove(JsonKey.PARTICIPANTS);
     String requestedBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
 
     CourseBatch courseBatch = getUpdateCourseBatch(request);
@@ -137,28 +138,28 @@ public class CourseBatchManagementActor extends BaseActor {
 
     validateUserPermission(courseBatch, requestedBy);
     validateContentOrg(courseBatch.getCreatedFor());
-    validateMentors(courseBatch);
+    validateMentors((List<String>) request.get(JsonKey.MENTORS), courseBatch);
 
     if (participants != null) {
       validateParticipants(participants, courseBatch);
       courseBatch.setParticipant(getParticipantsMap(participants, courseBatch));
     }
+    Map<String, Object> courseMapObject = new ObjectMapper().convertValue(courseBatch, Map.class);
 
-    Response result =
-        courseBatchDao.update(new ObjectMapper().convertValue(courseBatch, Map.class));
+    Response result = courseBatchDao.update(courseMapObject);
     sender().tell(result, self());
 
     targetObject =
         TelemetryUtil.generateTargetObject(
             (String) request.get(JsonKey.ID), JsonKey.BATCH, JsonKey.UPDATE, null);
-    TelemetryUtil.telemetryProcessingCall(request, targetObject, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(courseMapObject, targetObject, correlatedObject);
 
     Map<String, String> rollUp = new HashMap<>();
     rollUp.put("l1", courseBatch.getCourseId());
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
 
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      syncCourseBatchBackground(request, ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
+      syncCourseBatchBackground(courseMapObject, ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
     } else {
       ProjectLogger.log(
           "CourseBatchManagementActor:updateCourseBatch: Course batch not synced to ES are response is not successful");
@@ -187,10 +188,6 @@ public class CourseBatchManagementActor extends BaseActor {
 
     if (request.containsKey(JsonKey.DESCRIPTION))
       courseBatch.setDescription((String) request.get(JsonKey.DESCRIPTION));
-
-    if (request.containsKey(JsonKey.MENTORS)
-        && !((List<String>) request.get(JsonKey.MENTORS)).isEmpty())
-      courseBatch.setMentors((List<String>) request.get(JsonKey.MENTORS));
 
     updateCourseBatchDate(courseBatch, request);
 
@@ -384,10 +381,27 @@ public class CourseBatchManagementActor extends BaseActor {
     }
   }
 
-  private void validateMentors(CourseBatch courseBatch) {
-    List<String> mentors = courseBatch.getMentors();
+  private void validateMentors(List<String> newMentors, CourseBatch courseBatch) {
+    if (newMentors == null) return;
+    List<String> finalMentors = new ArrayList<>();
+    List<String> dbMentors = courseBatch.getMentors();
+    for (String mentor : dbMentors) {
+      if (newMentors.contains(mentor)) {
+        newMentors.remove(mentor);
+      }
+      finalMentors.add(mentor);
+    }
+
+    if (!newMentors.isEmpty()) {
+      validateMentors(newMentors, courseBatch.getCreatedBy());
+      finalMentors.addAll(newMentors);
+    }
+    courseBatch.setMentors(finalMentors);
+  }
+
+  private void validateMentors(List<String> mentors, String createdBy) {
     if (mentors != null) {
-      String batchCreatorRootOrgId = getRootOrg(courseBatch.getCreatedBy());
+      String batchCreatorRootOrgId = getRootOrg(createdBy);
 
       for (String userId : mentors) {
         Map<String, Object> result =
@@ -698,7 +712,7 @@ public class CourseBatchManagementActor extends BaseActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
-    if (startDate.after(endDate)) {
+    if (endDate != null && startDate.after(endDate)) {
       throw new ProjectCommonException(
           ResponseCode.invalidBatchEndDateError.getErrorCode(),
           ResponseCode.invalidBatchEndDateError.getErrorMessage(),

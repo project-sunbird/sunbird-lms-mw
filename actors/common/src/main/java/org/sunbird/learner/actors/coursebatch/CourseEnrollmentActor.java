@@ -73,7 +73,8 @@ public class CourseEnrollmentActor extends BaseActor {
     Map<String, Object> courseMap = (Map<String, Object>) actorMessage.getRequest();
     CourseBatch courseBatchResult =
         courseBatchDao.readById((String) courseMap.get(JsonKey.BATCH_ID));
-    validateCourseBatch(courseBatchResult, courseMap);
+    validateCourseBatch(
+        courseBatchResult, courseMap, (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
 
     UserCourses userCourseResult = userCourseDao.read(UserCoursesService.getPrimaryKey(courseMap));
 
@@ -140,7 +141,8 @@ public class CourseEnrollmentActor extends BaseActor {
     // objects of telemetry event...
     Map<String, Object> request = actorMessage.getRequest();
     CourseBatch courseBatchResult = courseBatchDao.readById((String) request.get(JsonKey.BATCH_ID));
-    validateCourseBatch(courseBatchResult, request);
+    validateCourseBatch(
+        courseBatchResult, request, (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     UserCourses userCourseResult = userCourseDao.read(UserCoursesService.getPrimaryKey(request));
     UserCoursesService.validateUserUnenroll(userCourseResult);
     Map<String, Object> updateAttributes = new HashMap<>();
@@ -201,7 +203,8 @@ public class CourseEnrollmentActor extends BaseActor {
    *
    * @Params
    */
-  private void validateCourseBatch(CourseBatch courseBatchDetails, Map<String, Object> request) {
+  private void validateCourseBatch(
+      CourseBatch courseBatchDetails, Map<String, Object> request, String requestedBy) {
 
     if (ProjectUtil.isNull(courseBatchDetails)) {
       sender()
@@ -211,8 +214,7 @@ public class CourseEnrollmentActor extends BaseActor {
               self());
       return;
     }
-    verifyRequestedByAndThrowErrorIfNotMatch(
-        (String) request.get(JsonKey.USER_ID), (String) request.get(JsonKey.REQUESTED_BY));
+    verifyRequestedByAndThrowErrorIfNotMatch((String) request.get(JsonKey.USER_ID), requestedBy);
     if (EnrolmentType.inviteOnly.getVal().equals(courseBatchDetails.getEnrollmentType())) {
       ProjectLogger.log(
           "CourseEnrollmentActor validateCourseBatch self enrollment or unenrollment is not applicable for invite only batch.",

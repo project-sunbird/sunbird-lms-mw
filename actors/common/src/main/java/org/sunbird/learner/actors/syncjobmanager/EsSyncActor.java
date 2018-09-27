@@ -203,7 +203,7 @@ public class EsSyncActor extends BaseActor {
     Util.checkProfileCompleteness(userMap);
     // handle user profile visibility
     Util.checkUserProfileVisibility(
-        userMap, getActorRef(ActorOperations.GET_ALL_SYSTEM_SETTINGS.getValue()));
+        userMap, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
     userMap = Util.getUserDetailsFromRegistry(userMap);
     ProjectLogger.log("fetching user data completed", LoggerEnum.INFO);
     return userMap;

@@ -154,15 +154,11 @@ public class UserManagementActor extends BaseActor {
     privateList = privateList.stream().distinct().collect(Collectors.toList());
     publicList = publicList.stream().distinct().collect(Collectors.toList());
 
-    // Eternal fields visibility cannot be changed
-    Util.removeEternalFields(
-        JsonKey.PRIVATE,
-        privateList,
-        getActorRef(ActorOperations.GET_ALL_SYSTEM_SETTINGS.getValue()));
-    Util.removeEternalFields(
-        JsonKey.PUBLIC,
-        publicList,
-        getActorRef(ActorOperations.GET_ALL_SYSTEM_SETTINGS.getValue()));
+    // visibility frozen fields cannot be changed
+    Util.removeVisibilityFrozenFields(
+        privateList, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+    Util.removeVisibilityFrozenFields(
+        publicList, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
 
     Map<String, Object> esResult =
         ElasticSearchUtil.getDataByIdentifier(
@@ -2293,13 +2289,13 @@ public class UserManagementActor extends BaseActor {
         (Map<String, String>) userMap.get(JsonKey.PROFILE_VISIBILITY);
     Map<String, String> completeProfileVisibilityMap =
         Util.getCompleteProfileVisibilityMap(
-            profileVisibilityMap, getActorRef(ActorOperations.GET_ALL_SYSTEM_SETTINGS.getValue()));
+            profileVisibilityMap, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
     userMap.put(JsonKey.PROFILE_VISIBILITY, completeProfileVisibilityMap);
   }
 
   private void setDefaultUserProfileVisibility(Map<String, Object> userMap) {
     userMap.put(
-        JsonKey.DEFAULT_USER_PROFILE_VISIBILITY,
-        ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_USER_PROFILE_VISIBILITY));
+        JsonKey.DEFAULT_PROFILE_FIELD_VISIBILITY,
+        ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USER_PROFILE_FIELD_DEFAULT_VISIBILITY));
   }
 }

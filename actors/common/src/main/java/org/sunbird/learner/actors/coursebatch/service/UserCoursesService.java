@@ -26,14 +26,17 @@ public class UserCoursesService {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     if (!userCourseResult.isActive()) {
-      ProjectLogger.log("UserCoursesService:validateUserUnenroll: User does not have an enrolled course");
+      ProjectLogger.log(
+          "UserCoursesService:validateUserUnenroll: User does not have an enrolled course");
       throw new ProjectCommonException(
           ResponseCode.userNotEnrolledCourse.getErrorCode(),
           ResponseCode.userNotEnrolledCourse.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-    if (userCourseResult.getProgress() == userCourseResult.getLeafNodesCount()) {
-      ProjectLogger.log("UserCoursesService:validateUserUnenroll: User already completed the course");
+    if (userCourseResult.getProgress() > 0
+        && (userCourseResult.getProgress() == userCourseResult.getLeafNodesCount())) {
+      ProjectLogger.log(
+          "UserCoursesService:validateUserUnenroll: User already completed the course");
       throw new ProjectCommonException(
           ResponseCode.userAlreadyCompletedCourse.getErrorCode(),
           ResponseCode.userAlreadyCompletedCourse.getErrorMessage(),
@@ -84,12 +87,14 @@ public class UserCoursesService {
       sync(userCourses, (String) userCourses.get(JsonKey.ID));
       flag = true;
     } catch (Exception ex) {
-      ProjectLogger.log("UserCoursesService:enroll: Exception occurred with error message = " + ex.getMessage(), ex);
+      ProjectLogger.log(
+          "UserCoursesService:enroll: Exception occurred with error message = " + ex.getMessage(),
+          ex);
       flag = false;
     }
     return flag;
   }
-  
+
   public void unenroll(String userId, String courseId, String batchId) {
     UserCourses userCourses = userCourseDao.read(getPrimaryKey(userId, courseId, batchId));
     validateUserUnenroll(userCourses);
@@ -99,7 +104,7 @@ public class UserCoursesService {
     userCourseDao.update(updateAttributes);
     sync(updateAttributes, userCourses.getId());
   }
-  
+
   public static void sync(Map<String, Object> courseMap, String id) {
     boolean response =
         ElasticSearchUtil.updateData(

@@ -143,22 +143,21 @@ public class CourseBatchManagementActor extends BaseActor {
       validateParticipants(participants, courseBatch);
       courseBatch.setParticipant(getParticipantsMap(participants, courseBatch));
     }
-
-    Response result =
-        courseBatchDao.update(new ObjectMapper().convertValue(courseBatch, Map.class));
+    Map<String, Object> courseBatchMap = new ObjectMapper().convertValue(courseBatch, Map.class);
+    Response result = courseBatchDao.update(courseBatchMap);
     sender().tell(result, self());
 
     targetObject =
         TelemetryUtil.generateTargetObject(
             (String) request.get(JsonKey.ID), JsonKey.BATCH, JsonKey.UPDATE, null);
-    TelemetryUtil.telemetryProcessingCall(request, targetObject, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(courseBatchMap, targetObject, correlatedObject);
 
     Map<String, String> rollUp = new HashMap<>();
     rollUp.put("l1", courseBatch.getCourseId());
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
 
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      syncCourseBatchBackground(request, ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
+      syncCourseBatchBackground(courseBatchMap, ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
     } else {
       ProjectLogger.log(
           "CourseBatchManagementActor:updateCourseBatch: Course batch not synced to ES are response is not successful");

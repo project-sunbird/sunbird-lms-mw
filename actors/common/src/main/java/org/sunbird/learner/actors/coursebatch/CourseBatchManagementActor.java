@@ -174,6 +174,9 @@ public class CourseBatchManagementActor extends BaseActor {
   }
 
   private void checkBatchStatus(CourseBatch courseBatch) {
+    ProjectLogger.log(
+        "CourseBatchManagementActor:checkBatchStatus batch staus is :" + courseBatch.getStatus(),
+        LoggerEnum.INFO.name());
     if (ProjectUtil.ProgressStatus.COMPLETED.getValue() == courseBatch.getStatus()) {
       throw new ProjectCommonException(
           ResponseCode.courseBatchEndDateError.getErrorCode(),
@@ -570,7 +573,7 @@ public class CourseBatchManagementActor extends BaseActor {
       throw new ProjectCommonException(
           ResponseCode.unAuthorized.getErrorCode(),
           ResponseCode.unAuthorized.getErrorMessage(),
-          ResponseCode.unAuthorized.getResponseCode());
+          ResponseCode.UNAUTHORIZED.getResponseCode());
     }
   }
 

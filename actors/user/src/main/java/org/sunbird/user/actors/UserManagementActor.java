@@ -155,10 +155,10 @@ public class UserManagementActor extends BaseActor {
     publicList = publicList.stream().distinct().collect(Collectors.toList());
 
     // Visibility of permanent fields cannot be changed
-    Util.checkForPermanentPublicFields(
-        privateList, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
-    Util.checkForPermanentPrivateFields(
-        publicList, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+    Util.validateProfileVisibilityFields(
+        privateList, JsonKey.PUBLIC_FIELDS, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+    Util.validateProfileVisibilityFields(
+        publicList, JsonKey.PRIVATE_FIELDS, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
 
     Map<String, Object> esResult =
         ElasticSearchUtil.getDataByIdentifier(

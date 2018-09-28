@@ -1979,11 +1979,10 @@ public final class Util {
     return channel;
   }
 
-  public static void checkVisibilityFrozenFields(List<String> fieldList, ActorRef actorRef) {
+  public static void checkForPermanentPublicFields(List<String> fieldList, ActorRef actorRef) {
     Config userProfileConfig = getUserProfileConfig(actorRef);
-    List<String> publicFields = userProfileConfig.getStringList(JsonKey.PUBLIC_FIELDS);
-    List<String> privateFields = userProfileConfig.getStringList(JsonKey.PRIVATE_FIELDS);
 
+    List<String> publicFields = userProfileConfig.getStringList(JsonKey.PUBLIC_FIELDS);
     List<String> publicFieldsCopy = new ArrayList<String>(publicFields);
     publicFieldsCopy.retainAll(fieldList);
     if (!publicFieldsCopy.isEmpty()) {
@@ -1992,8 +1991,14 @@ public final class Util {
           ProjectUtil.formatMessage(
               ResponseCode.invalidParameterValue.getErrorMessage(),
               publicFieldsCopy.toString(),
-              StringFormatter.joinByDot(JsonKey.PROFILE_VISIBILITY, JsonKey.PUBLIC)));
+              StringFormatter.joinByDot(JsonKey.PROFILE_VISIBILITY, JsonKey.PRIVATE)));
     }
+  }
+
+  public static void checkForPermanentPrivateFields(List<String> fieldList, ActorRef actorRef) {
+    Config userProfileConfig = getUserProfileConfig(actorRef);
+
+    List<String> privateFields = userProfileConfig.getStringList(JsonKey.PRIVATE_FIELDS);
     List<String> privateFieldsCopy = new ArrayList<String>(privateFields);
     privateFieldsCopy.retainAll(fieldList);
     if (!privateFieldsCopy.isEmpty()) {
@@ -2002,7 +2007,7 @@ public final class Util {
           ProjectUtil.formatMessage(
               ResponseCode.invalidParameterValue.getErrorMessage(),
               privateFieldsCopy.toString(),
-              StringFormatter.joinByDot(JsonKey.PROFILE_VISIBILITY, JsonKey.PRIVATE)));
+              StringFormatter.joinByDot(JsonKey.PROFILE_VISIBILITY, JsonKey.PUBLIC)));
     }
   }
 

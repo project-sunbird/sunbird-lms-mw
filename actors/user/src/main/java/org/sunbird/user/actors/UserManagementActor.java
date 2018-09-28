@@ -154,10 +154,10 @@ public class UserManagementActor extends BaseActor {
     privateList = privateList.stream().distinct().collect(Collectors.toList());
     publicList = publicList.stream().distinct().collect(Collectors.toList());
 
-    // visibility frozen fields cannot be changed
-    Util.checkVisibilityFrozenFields(
+    // Visibility of permanent fields cannot be changed
+    Util.checkForPermanentPublicFields(
         privateList, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
-    Util.checkVisibilityFrozenFields(
+    Util.checkForPermanentPrivateFields(
         publicList, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
 
     Map<String, Object> esResult =

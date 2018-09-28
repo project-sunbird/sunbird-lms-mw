@@ -1979,38 +1979,25 @@ public final class Util {
     return channel;
   }
 
-  public static void checkForPermanentPublicFields(List<String> fieldList, ActorRef actorRef) {
+  public static void validateProfileVisibilityFields(List<String> fieldList, String fieldTypeKey, ActorRef actorRef) {
+    String conflictingFieldTypeKey = JsonKey.PUBLIC_FIELDS.equalsIgnorecase(fieldTypeKey) ? JsonKey.PRIVATE : JsonKey.PUBLIC;
+
     Config userProfileConfig = getUserProfileConfig(actorRef);
 
-    List<String> publicFields = userProfileConfig.getStringList(JsonKey.PUBLIC_FIELDS);
-    List<String> publicFieldsCopy = new ArrayList<String>(publicFields);
-    publicFieldsCopy.retainAll(fieldList);
-    if (!publicFieldsCopy.isEmpty()) {
+    List<String> fields = userProfileConfig.getStringList(fieldTypeKey);
+    List<String> fieldsCopy = new ArrayList<String>(fields);
+    fieldsCopy.retainAll(fieldList);
+    
+    if (!fieldsCopy.isEmpty()) {
       ProjectCommonException.throwClientErrorException(
           ResponseCode.invalidParameterValue,
           ProjectUtil.formatMessage(
               ResponseCode.invalidParameterValue.getErrorMessage(),
-              publicFieldsCopy.toString(),
-              StringFormatter.joinByDot(JsonKey.PROFILE_VISIBILITY, JsonKey.PRIVATE)));
+              fieldsCopy.toString(),
+              StringFormatter.joinByDot(JsonKey.PROFILE_VISIBILITY, conflictingFieldTypeKey)));
     }
   }
-
-  public static void checkForPermanentPrivateFields(List<String> fieldList, ActorRef actorRef) {
-    Config userProfileConfig = getUserProfileConfig(actorRef);
-
-    List<String> privateFields = userProfileConfig.getStringList(JsonKey.PRIVATE_FIELDS);
-    List<String> privateFieldsCopy = new ArrayList<String>(privateFields);
-    privateFieldsCopy.retainAll(fieldList);
-    if (!privateFieldsCopy.isEmpty()) {
-      ProjectCommonException.throwClientErrorException(
-          ResponseCode.invalidParameterValue,
-          ProjectUtil.formatMessage(
-              ResponseCode.invalidParameterValue.getErrorMessage(),
-              privateFieldsCopy.toString(),
-              StringFormatter.joinByDot(JsonKey.PROFILE_VISIBILITY, JsonKey.PUBLIC)));
-    }
-  }
-
+  
   /*
    * Get user profile configuration from system settings
    *

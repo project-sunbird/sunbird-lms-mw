@@ -143,7 +143,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
     CourseBatch courseBatch = getUpdateCourseBatch(request);
     courseBatch.setUpdatedDate(ProjectUtil.getFormattedDate());
-
+    checkBatchStatus(courseBatch);
     validateUserPermission(courseBatch, requestedBy);
     validateContentOrg(courseBatch.getCreatedFor());
     validateMentors(courseBatch);
@@ -170,6 +170,15 @@ public class CourseBatchManagementActor extends BaseActor {
     } else {
       ProjectLogger.log(
           "CourseBatchManagementActor:updateCourseBatch: Course batch not synced to ES are response is not successful");
+    }
+  }
+
+  private void checkBatchStatus(CourseBatch courseBatch) {
+    if (ProjectUtil.ProgressStatus.COMPLETED.getValue() == courseBatch.getStatus()) {
+      throw new ProjectCommonException(
+          ResponseCode.courseBatchEndDateError.getErrorCode(),
+          ResponseCode.courseBatchEndDateError.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
   }
 

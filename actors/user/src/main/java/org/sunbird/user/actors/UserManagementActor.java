@@ -270,8 +270,6 @@ public class UserManagementActor extends BaseActor {
           privateMap.put(JsonKey.SKILLS, map.get(JsonKey.SKILLS));
         } else if (field.contains(JsonKey.BADGE_ASSERTIONS + ".")) {
           privateMap.put(JsonKey.BADGE_ASSERTIONS, map.get(JsonKey.BADGE_ASSERTIONS));
-        } else if (field.contains(JsonKey.ORGANISATIONS + ".")) {
-          privateMap.put(JsonKey.ORGANISATIONS, map.get(JsonKey.ORGANISATIONS));
         } else {
           if (!map.containsKey(field)) {
             throw new ProjectCommonException(

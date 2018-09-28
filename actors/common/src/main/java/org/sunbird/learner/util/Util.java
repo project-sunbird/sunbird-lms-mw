@@ -1514,7 +1514,7 @@ public final class Util {
       ProjectLogger.log(
           "Util:getCompleteProfileVisibilityMap: Invalid configuration - "
               + defaultProfileVisibility
-              + " - for default profile visibility(public/private)",
+              + " - for default profile visibility (public / private)",
           LoggerEnum.ERROR.name());
       ProjectCommonException.throwServerErrorException(ResponseCode.invaidConfiguration, "");
     }
@@ -2005,7 +2005,7 @@ public final class Util {
   private static void validateUserProfileConfig(Config userProfileConfig) {
     if (CollectionUtils.isEmpty(userProfileConfig.getStringList(JsonKey.FIELDS))) {
       ProjectLogger.log(
-          "Util:validateUserProfileConfig: User data fields are not configured.",
+          "Util:validateUserProfileConfig: User profile fields is not configured.",
           LoggerEnum.ERROR.name());
       ProjectCommonException.throwServerErrorException(ResponseCode.invaidConfiguration, "");
     }
@@ -2016,7 +2016,7 @@ public final class Util {
       privateFields = userProfileConfig.getStringList(JsonKey.PRIVATE_FIELDS);
     } catch (Exception e) {
       ProjectLogger.log(
-          "Util:validateUserProfileConfig: Invalid configuration for public/private fields.",
+          "Util:validateUserProfileConfig: Invalid configuration for public / private fields.",
           LoggerEnum.ERROR.name());
     }
 

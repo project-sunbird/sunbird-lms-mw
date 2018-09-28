@@ -46,6 +46,7 @@ import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
@@ -1978,12 +1979,31 @@ public final class Util {
     return channel;
   }
 
-  public static void removeVisibilityFrozenFields(List<String> fieldList, ActorRef actorRef) {
+  public static void checkVisibilityFrozenFields(List<String> fieldList, ActorRef actorRef) {
     Config userProfileConfig = getUserProfileConfig(actorRef);
     List<String> publicFields = userProfileConfig.getStringList(JsonKey.PUBLIC_FIELDS);
     List<String> privateFields = userProfileConfig.getStringList(JsonKey.PRIVATE_FIELDS);
-    fieldList.removeAll(publicFields);
-    fieldList.removeAll(privateFields);
+
+    List<String> publicFieldsCopy = new ArrayList<String>(publicFields);
+    publicFieldsCopy.retainAll(fieldList);
+    if (!publicFieldsCopy.isEmpty()) {
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.invalidParameterValue,
+          ProjectUtil.formatMessage(
+              ResponseCode.invalidParameterValue.getErrorMessage(),
+              publicFieldsCopy.toString(),
+              StringFormatter.joinByDot(JsonKey.PROFILE_VISIBILITY, JsonKey.PUBLIC)));
+    }
+    List<String> privateFieldsCopy = new ArrayList<String>(privateFields);
+    privateFieldsCopy.retainAll(fieldList);
+    if (!privateFieldsCopy.isEmpty()) {
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.invalidParameterValue,
+          ProjectUtil.formatMessage(
+              ResponseCode.invalidParameterValue.getErrorMessage(),
+              privateFieldsCopy.toString(),
+              StringFormatter.joinByDot(JsonKey.PROFILE_VISIBILITY, JsonKey.PRIVATE)));
+    }
   }
 
   /*

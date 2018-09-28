@@ -1979,15 +1979,17 @@ public final class Util {
     return channel;
   }
 
-  public static void validateProfileVisibilityFields(List<String> fieldList, String fieldTypeKey, ActorRef actorRef) {
-    String conflictingFieldTypeKey = JsonKey.PUBLIC_FIELDS.equalsIgnorecase(fieldTypeKey) ? JsonKey.PRIVATE : JsonKey.PUBLIC;
+  public static void validateProfileVisibilityFields(
+      List<String> fieldList, String fieldTypeKey, ActorRef actorRef) {
+    String conflictingFieldTypeKey =
+        JsonKey.PUBLIC_FIELDS.equalsIgnoreCase(fieldTypeKey) ? JsonKey.PRIVATE : JsonKey.PUBLIC;
 
     Config userProfileConfig = getUserProfileConfig(actorRef);
 
     List<String> fields = userProfileConfig.getStringList(fieldTypeKey);
     List<String> fieldsCopy = new ArrayList<String>(fields);
     fieldsCopy.retainAll(fieldList);
-    
+
     if (!fieldsCopy.isEmpty()) {
       ProjectCommonException.throwClientErrorException(
           ResponseCode.invalidParameterValue,
@@ -1997,7 +1999,7 @@ public final class Util {
               StringFormatter.joinByDot(JsonKey.PROFILE_VISIBILITY, conflictingFieldTypeKey)));
     }
   }
-  
+
   /*
    * Get user profile configuration from system settings
    *

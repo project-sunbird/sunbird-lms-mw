@@ -102,7 +102,7 @@ public class UserCoursesService {
     UserCourses userCourses = userCourseDao.read(getPrimaryKey(userId, courseId, batchId));
     validateUserUnenroll(userCourses);
     Map<String, Object> updateAttributes = new HashMap<>();
-    updateAttributes.put(JsonKey.ACTIVE, false);
+    updateAttributes.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.INACTIVE.getValue());
     updateAttributes.put(JsonKey.ID, userCourses.getId());
     userCourseDao.update(updateAttributes);
     sync(updateAttributes, userCourses.getId());
@@ -116,7 +116,7 @@ public class UserCoursesService {
             id,
             courseMap);
     ProjectLogger.log(
-        "UserCoursesService:sync: sync user courses response = " + response,
+        "UserCoursesService:sync: sync user courses id and  response  " + id + "==" + response,
         LoggerEnum.INFO.name());
   }
 }

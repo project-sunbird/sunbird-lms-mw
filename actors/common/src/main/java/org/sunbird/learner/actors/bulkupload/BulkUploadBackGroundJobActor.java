@@ -1185,19 +1185,20 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
   private void sendEmailAndSms(
       Map<String, Object> userMap, Map<String, Object> welcomeMailTemplateMap) {
-    userMap.put(JsonKey.REDIRECT_URI, Util.getSunbirdWebUrlPerTenent(userMap));
+    Map<String, Object> usrMap = new HashMap<>(userMap);
+    usrMap.put(JsonKey.REDIRECT_URI, Util.getSunbirdWebUrlPerTenent(userMap));
+    usrMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
     // generate required action link and shorten the url
-    Util.getUserRequiredActionLink(userMap);
+    Util.getUserRequiredActionLink(usrMap);
     // send the welcome mail to user
-    welcomeMailTemplateMap.putAll(userMap);
-    welcomeMailTemplateMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
+    welcomeMailTemplateMap.putAll(usrMap);
     Request welcomeMailReqObj = Util.sendOnboardingMail(welcomeMailTemplateMap);
     if (null != welcomeMailReqObj) {
       tellToAnother(welcomeMailReqObj);
     }
 
-    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PHONE))) {
-      Util.sendSMS(userMap);
+    if (StringUtils.isNotBlank((String) usrMap.get(JsonKey.PHONE))) {
+      Util.sendSMS(usrMap);
     }
   }
 

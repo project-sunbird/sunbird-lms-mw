@@ -110,7 +110,7 @@ public class UserCoursesService {
 
   public static void sync(Map<String, Object> courseMap, String id) {
     boolean response =
-        ElasticSearchUtil.updateData(
+        ElasticSearchUtil.upsertData(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.usercourses.getTypeName(),
             id,

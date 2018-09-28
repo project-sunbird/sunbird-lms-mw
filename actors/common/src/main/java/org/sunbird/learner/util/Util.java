@@ -1670,10 +1670,10 @@ public final class Util {
   public static void checkPhoneUniqueness(Map<String, Object> userMap, String opType) {
     // Get Phone configuration if not found , by default phone will be unique across
     // the application
-    String phoneSetting = DataCacheHandler.getConfigSettings().get(JsonKey.PHONE);
-    if (null != phoneSetting && JsonKey.UNIQUE.equalsIgnoreCase(phoneSetting)) {
+    String phoneSetting = DataCacheHandler.getConfigSettings().get(JsonKey.PHONE_UNIQUE);
+    if (StringUtils.isNotBlank(phoneSetting) && Boolean.parseBoolean(phoneSetting)) {
       String phone = (String) userMap.get(JsonKey.PHONE);
-      if (!StringUtils.isBlank(phone)) {
+      if (StringUtils.isNotBlank(phone)) {
         try {
           phone = encryptionService.encryptData(phone);
         } catch (Exception e) {
@@ -1711,9 +1711,9 @@ public final class Util {
     // across the
     // application
     String emailSetting = DataCacheHandler.getConfigSettings().get(JsonKey.EMAIL_UNIQUE);
-    if (null != emailSetting && Boolean.parseBoolean(emailSetting)) {
+    if (StringUtils.isNotBlank(emailSetting) && Boolean.parseBoolean(emailSetting)) {
       String email = (String) userMap.get(JsonKey.EMAIL);
-      if (!StringUtils.isBlank(email)) {
+      if (StringUtils.isNotBlank(email)) {
         try {
           email = encryptionService.encryptData(email);
         } catch (Exception e) {
@@ -1761,23 +1761,6 @@ public final class Util {
       List<String> reciptientsMail = new ArrayList<>();
       reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
       emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
-
-      String webUrl = (String) emailTemplateMap.get(JsonKey.REDIRECT_URI);
-      ;
-      ProjectLogger.log("Util:sendOnboardingMail redirectURI = " + webUrl, LoggerEnum.INFO.name());
-      if ((!StringUtils.isBlank(webUrl)) && (!SUNBIRD_WEB_URL.equalsIgnoreCase(webUrl))) {
-        emailTemplateMap.put(JsonKey.WEB_URL, webUrl);
-      }
-
-      String appUrl = System.getenv(SUNBIRD_APP_URL);
-      if (StringUtils.isBlank(appUrl)) {
-        appUrl = propertiesCache.getProperty(SUNBIRD_APP_URL);
-      }
-
-      if ((!StringUtils.isBlank(appUrl)) && (!SUNBIRD_APP_URL.equalsIgnoreCase(appUrl))) {
-        emailTemplateMap.put(JsonKey.APP_URL, appUrl);
-      }
-
       emailTemplateMap.put(
           JsonKey.BODY, propertiesCache.getProperty(JsonKey.ONBOARDING_WELCOME_MAIL_BODY));
       emailTemplateMap.put(JsonKey.NOTE, propertiesCache.getProperty(JsonKey.MAIL_NOTE));
@@ -1787,27 +1770,31 @@ public final class Util {
           JsonKey.WELCOME_MESSAGE, ProjectUtil.formatMessage(welcomeMessage, envName));
 
       emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "welcome");
-      emailTemplateMap.put(JsonKey.REDIRECT_URI, webUrl);
-      String setPasswordLink = (String) emailTemplateMap.get(JsonKey.SET_PASSWORD_LINK);
-      String verifyEmailLink = (String) emailTemplateMap.get(JsonKey.VERIFY_EMAIL_LINK);
-
-      if (StringUtils.isBlank(setPasswordLink) && StringUtils.isBlank(verifyEmailLink)) {
+      setRequiredActionLink(emailTemplateMap);
+      if (StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.SET_PASSWORD_LINK))
+          && StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.VERIFY_EMAIL_LINK))) {
         ProjectLogger.log(
             "Util:sendOnboardingMail: Email not sent as generated link is empty", LoggerEnum.ERROR);
         return null;
       }
-      if (StringUtils.isNotBlank(setPasswordLink)) {
-        emailTemplateMap.put(JsonKey.LINK, setPasswordLink);
-        emailTemplateMap.put(JsonKey.SET_PW_LINK, "true");
-      } else if (StringUtils.isNotBlank(verifyEmailLink)) {
-        emailTemplateMap.put(JsonKey.LINK, verifyEmailLink);
-        emailTemplateMap.put(JsonKey.SET_PW_LINK, null);
-      }
+
       request = new Request();
       request.setOperation(BackgroundOperations.emailService.name());
       request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);
     }
     return request;
+  }
+
+  private static void setRequiredActionLink(Map<String, Object> templateMap) {
+    String setPasswordLink = (String) templateMap.get(JsonKey.SET_PASSWORD_LINK);
+    String verifyEmailLink = (String) templateMap.get(JsonKey.VERIFY_EMAIL_LINK);
+    if (StringUtils.isNotBlank(setPasswordLink)) {
+      templateMap.put(JsonKey.LINK, setPasswordLink);
+      templateMap.put(JsonKey.SET_PW_LINK, "true");
+    } else if (StringUtils.isNotBlank(verifyEmailLink)) {
+      templateMap.put(JsonKey.LINK, verifyEmailLink);
+      templateMap.put(JsonKey.SET_PW_LINK, null);
+    }
   }
 
   public static void getUserRequiredActionLink(Map<String, Object> templateMap) {
@@ -1838,26 +1825,20 @@ public final class Util {
   }
 
   public static void sendSMS(Map<String, Object> userMap) {
-    ProjectLogger.log("Inside Send SMS method:", LoggerEnum.INFO);
-    // removing email check now we need to send welcome mail as well as welcome sms Ref:SB-4009
     if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PHONE))) {
-      String name =
-          (String) userMap.get(JsonKey.FIRST_NAME) + " " + (String) userMap.get(JsonKey.LAST_NAME);
-
       String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
-      String webUrl = (String) userMap.get(JsonKey.REDIRECT_URI);
-      String appName = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_APP_NAME);
-      userMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
-      String setPasswordLink = (String) userMap.get(JsonKey.SET_PASSWORD_LINK);
-      String verifyEmailLink = (String) userMap.get(JsonKey.VERIFY_EMAIL_LINK);
-      if (StringUtils.isBlank(setPasswordLink) && StringUtils.isBlank(verifyEmailLink)) {
+      setRequiredActionLink(userMap);
+      if (StringUtils.isBlank((String) userMap.get(JsonKey.SET_PASSWORD_LINK))
+          && StringUtils.isBlank((String) userMap.get(JsonKey.VERIFY_EMAIL_LINK))) {
         ProjectLogger.log(
             "Util:sendSMS: SMS not sent as generated link is empty", LoggerEnum.ERROR);
         return;
       }
-      ProjectLogger.log("Util:sendSMS redirectURI = " + webUrl, LoggerEnum.INFO.name());
-      String sms =
-          ProjectUtil.getSMSBody(name, webUrl, envName, appName, setPasswordLink, verifyEmailLink);
+      Map<String, String> smsTemplate = new HashMap<>();
+      smsTemplate.put("instanceName", envName);
+      smsTemplate.put(JsonKey.LINK, (String) userMap.get(JsonKey.LINK));
+      smsTemplate.put(JsonKey.SET_PW_LINK, (String) userMap.get(JsonKey.SET_PW_LINK));
+      String sms = ProjectUtil.getSMSBody(smsTemplate);
       if (StringUtils.isBlank(sms)) {
         sms = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_DEFAULT_WELCOME_MSG);
       }
@@ -1872,16 +1853,17 @@ public final class Util {
       ISmsProvider smsProvider = SMSFactory.getInstance("91SMS");
       ProjectLogger.log(
           "SMS text : " + sms + " with phone " + (String) userMap.get(JsonKey.PHONE),
-          LoggerEnum.INFO);
+          LoggerEnum.INFO.name());
       boolean response = smsProvider.send((String) userMap.get(JsonKey.PHONE), countryCode, sms);
       ProjectLogger.log("Response from smsProvider : " + response, LoggerEnum.INFO);
       if (response) {
         ProjectLogger.log(
             "Welcome Message sent successfully to ." + (String) userMap.get(JsonKey.PHONE),
-            LoggerEnum.INFO);
+            LoggerEnum.INFO.name());
       } else {
         ProjectLogger.log(
-            "Welcome Message failed for ." + (String) userMap.get(JsonKey.PHONE), LoggerEnum.INFO);
+            "Welcome Message failed for ." + (String) userMap.get(JsonKey.PHONE),
+            LoggerEnum.INFO.name());
       }
     }
   }

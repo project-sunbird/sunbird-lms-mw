@@ -46,6 +46,7 @@ import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
@@ -1960,14 +1961,25 @@ public final class Util {
     return channel;
   }
 
-  public static void removeVisibilityFrozenFields(List<String> fieldList, ActorRef actorRef) {
-    Config userProfileConfig = getUserProfileConfig(actorRef);
-    List<String> publicFields = userProfileConfig.getStringList(JsonKey.PUBLIC_FIELDS);
-    List<String> privateFields = userProfileConfig.getStringList(JsonKey.PRIVATE_FIELDS);
-    fieldList.removeAll(publicFields);
-    fieldList.removeAll(privateFields);
-  }
+  public static void validateProfileVisibilityFields(List<String> fieldList, String fieldTypeKey, ActorRef actorRef) {
+    String conflictingFieldTypeKey = JsonKey.PUBLIC_FIELDS.equalsIgnorecase(fieldTypeKey) ? JsonKey.PRIVATE : JsonKey.PUBLIC;
 
+    Config userProfileConfig = getUserProfileConfig(actorRef);
+
+    List<String> fields = userProfileConfig.getStringList(fieldTypeKey);
+    List<String> fieldsCopy = new ArrayList<String>(fields);
+    fieldsCopy.retainAll(fieldList);
+    
+    if (!fieldsCopy.isEmpty()) {
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.invalidParameterValue,
+          ProjectUtil.formatMessage(
+              ResponseCode.invalidParameterValue.getErrorMessage(),
+              fieldsCopy.toString(),
+              StringFormatter.joinByDot(JsonKey.PROFILE_VISIBILITY, conflictingFieldTypeKey)));
+    }
+  }
+  
   /*
    * Get user profile configuration from system settings
    *

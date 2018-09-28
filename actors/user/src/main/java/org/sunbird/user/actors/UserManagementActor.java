@@ -154,11 +154,11 @@ public class UserManagementActor extends BaseActor {
     privateList = privateList.stream().distinct().collect(Collectors.toList());
     publicList = publicList.stream().distinct().collect(Collectors.toList());
 
-    // visibility frozen fields cannot be changed
-    Util.removeVisibilityFrozenFields(
-        privateList, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
-    Util.removeVisibilityFrozenFields(
-        publicList, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+    // Visibility of permanent fields cannot be changed
+    Util.validateProfileVisibilityFields(
+        privateList, JsonKey.PUBLIC_FIELDS, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+    Util.validateProfileVisibilityFields(
+        publicList, JsonKey.PRIVATE_FIELDS, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
 
     Map<String, Object> esResult =
         ElasticSearchUtil.getDataByIdentifier(
@@ -270,8 +270,6 @@ public class UserManagementActor extends BaseActor {
           privateMap.put(JsonKey.SKILLS, map.get(JsonKey.SKILLS));
         } else if (field.contains(JsonKey.BADGE_ASSERTIONS + ".")) {
           privateMap.put(JsonKey.BADGE_ASSERTIONS, map.get(JsonKey.BADGE_ASSERTIONS));
-        } else if (field.contains(JsonKey.ORGANISATIONS + ".")) {
-          privateMap.put(JsonKey.ORGANISATIONS, map.get(JsonKey.ORGANISATIONS));
         } else {
           if (!map.containsKey(field)) {
             throw new ProjectCommonException(

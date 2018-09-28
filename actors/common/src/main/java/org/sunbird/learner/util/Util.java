@@ -1520,7 +1520,7 @@ public final class Util {
     }
 
     Config userProfileConfig = getUserProfileConfig(actorRef);
-    List<String> userDataFields = userProfileConfig.getStringList(JsonKey.USER_DATA_FIELDS);
+    List<String> userDataFields = userProfileConfig.getStringList(JsonKey.FIELDS);
     List<String> publicFields = userProfileConfig.getStringList(JsonKey.PUBLIC_FIELDS);
     List<String> privateFields = userProfileConfig.getStringList(JsonKey.PRIVATE_FIELDS);
 
@@ -2003,7 +2003,7 @@ public final class Util {
   }
 
   private static void validateUserProfileConfig(Config userProfileConfig) {
-    if (CollectionUtils.isEmpty(userProfileConfig.getStringList(JsonKey.USER_DATA_FIELDS))) {
+    if (CollectionUtils.isEmpty(userProfileConfig.getStringList(JsonKey.FIELDS))) {
       ProjectLogger.log(
           "Util:validateUserProfileConfig: User data fields are not configured.",
           LoggerEnum.ERROR.name());
@@ -2018,30 +2018,11 @@ public final class Util {
       ProjectLogger.log(
           "Util:validateUserProfileConfig: Invalid configuration for public/private fields.",
           LoggerEnum.ERROR.name());
-      ProjectCommonException.throwServerErrorException(ResponseCode.invaidConfiguration, "");
     }
 
-    if (privateFields.size() > publicFields.size()) {
+    if (CollectionUtils.isNotEmpty(privateFields) && CollectionUtils.isNotEmpty(publicFields)) {
       for (String field : publicFields) {
         if (privateFields.contains(field)) {
-          ProjectLogger.log(
-              "Field "
-                  + field
-                  + " in user configuration is conflicting in publicFields and privateFields.",
-              LoggerEnum.ERROR.name());
-          ProjectCommonException.throwServerErrorException(
-              ResponseCode.errorConflictingFieldConfiguration,
-              ProjectUtil.formatMessage(
-                  ResponseCode.errorConflictingFieldConfiguration.getErrorMessage(),
-                  field,
-                  JsonKey.USER,
-                  JsonKey.PUBLIC_FIELDS,
-                  JsonKey.PRIVATE_FIELDS));
-        }
-      }
-    } else {
-      for (String field : privateFields) {
-        if (publicFields.contains(field)) {
           ProjectLogger.log(
               "Field "
                   + field

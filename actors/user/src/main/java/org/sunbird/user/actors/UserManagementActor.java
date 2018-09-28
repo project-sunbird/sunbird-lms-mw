@@ -1583,6 +1583,10 @@ public class UserManagementActor extends BaseActor {
         TelemetryUtil.generateTargetObject(
             (String) userMap.get(JsonKey.ID), JsonKey.USER, JsonKey.CREATE, null);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
+    sendEmailAndSms(userMap, emailTemplateMap);
+  }
+
+  private void sendEmailAndSms(Map<String, Object> userMap, Map<String, Object> emailTemplateMap) {
     // generate required action link and shorten the url
     UserUtility.decryptUserData(userMap);
     userMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));

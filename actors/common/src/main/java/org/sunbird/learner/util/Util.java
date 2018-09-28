@@ -1996,7 +1996,8 @@ public final class Util {
     SystemSetting userProfileConfigSetting =
         getSystemSettingByField(JsonKey.USER_PROFILE_CONFIG, actorRef);
     String userProfileConfigString = userProfileConfigSetting.getValue();
-    Config userProfileConfig = ConfigUtil.getConfigFromJsonString(userProfileConfigString);
+    Config userProfileConfig =
+        ConfigUtil.getConfigFromJsonString(userProfileConfigString, JsonKey.USER_PROFILE_CONFIG);
     validateUserProfileConfig(userProfileConfig);
     return userProfileConfig;
   }
@@ -2020,17 +2021,42 @@ public final class Util {
       ProjectCommonException.throwServerErrorException(ResponseCode.invaidConfiguration, "");
     }
 
-    List<String> tempList = new ArrayList<String>(publicFields);
-    tempList.retainAll(privateFields);
-    if (tempList.size() != 0) {
-      ProjectLogger.log(
-          tempList.toString() + " fields are configured in both private and public fields list",
-          LoggerEnum.ERROR.name());
-      ProjectCommonException.throwServerErrorException(
-          ResponseCode.fieldConfiguredInMultipleFieldsLists,
-          ProjectUtil.formatMessage(
-              ResponseCode.fieldConfiguredInMultipleFieldsLists.getErrorMessage(),
-              tempList.toString()));
+    if (privateFields.size() > publicFields.size()) {
+      for (String field : publicFields) {
+        if (privateFields.contains(field)) {
+          ProjectLogger.log(
+              "Field "
+                  + field
+                  + " in user configuration is conflicting in publicFields and privateFields.",
+              LoggerEnum.ERROR.name());
+          ProjectCommonException.throwServerErrorException(
+              ResponseCode.errorConflictingFieldConfiguration,
+              ProjectUtil.formatMessage(
+                  ResponseCode.errorConflictingFieldConfiguration.getErrorMessage(),
+                  field,
+                  JsonKey.USER,
+                  JsonKey.PUBLIC_FIELDS,
+                  JsonKey.PRIVATE_FIELDS));
+        }
+      }
+    } else {
+      for (String field : privateFields) {
+        if (publicFields.contains(field)) {
+          ProjectLogger.log(
+              "Field "
+                  + field
+                  + " in user configuration is conflicting in publicFields and privateFields.",
+              LoggerEnum.ERROR.name());
+          ProjectCommonException.throwServerErrorException(
+              ResponseCode.errorConflictingFieldConfiguration,
+              ProjectUtil.formatMessage(
+                  ResponseCode.errorConflictingFieldConfiguration.getErrorMessage(),
+                  field,
+                  JsonKey.USER,
+                  JsonKey.PUBLIC_FIELDS,
+                  JsonKey.PRIVATE_FIELDS));
+        }
+      }
     }
   }
 

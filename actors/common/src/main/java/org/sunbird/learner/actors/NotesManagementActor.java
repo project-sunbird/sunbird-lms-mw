@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -410,14 +411,14 @@ public class NotesManagementActor extends BaseActor {
   private Boolean validateUserForNoteUpdation(String userId, String noteId) {
     Boolean result = false;
     Map<String, Object> noteData = getNoteRecordById(noteId);
-    if (noteData == null || noteData.size() == 0) return result;
-    if ((null != noteData && !noteData.isEmpty()) && !StringUtils.isBlank(userId)) {
+    if (MapUtils.isEmpty(noteData)) return result;
+    if (!StringUtils.isBlank(userId)) {
       result = true;
     }
     if (!userId.equalsIgnoreCase((String) noteData.get(JsonKey.USER_ID))) {
       throw new ProjectCommonException(
-          ResponseCode.forbidden.getErrorCode(),
-          ResponseCode.forbidden.getErrorMessage(),
+          ResponseCode.errorForbidden.getErrorCode(),
+          ResponseCode.errorForbidden.getErrorMessage(),
           ResponseCode.FORBIDDEN.getResponseCode());
     }
     return result;

@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -214,9 +215,9 @@ public class NotesManagementActor extends BaseActor {
       String userId = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
       if (!validateUserForNoteUpdation(userId, noteId)) {
         throw new ProjectCommonException(
-            ResponseCode.unAuthorized.getErrorCode(),
-            ResponseCode.unAuthorized.getErrorMessage(),
-            ResponseCode.UNAUTHORIZED.getResponseCode());
+            ResponseCode.invalidParameterValue.getErrorCode(),
+            ResponseCode.invalidParameterValue.getErrorMessage(),
+            ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
       }
       Map<String, Object> request = new HashMap<>();
       Map<String, Object> filters = new HashMap<>();
@@ -410,10 +411,15 @@ public class NotesManagementActor extends BaseActor {
   private Boolean validateUserForNoteUpdation(String userId, String noteId) {
     Boolean result = false;
     Map<String, Object> noteData = getNoteRecordById(noteId);
-    if ((null != noteData && !noteData.isEmpty())
-        && !StringUtils.isBlank(userId)
-        && userId.equalsIgnoreCase((String) noteData.get(JsonKey.USER_ID))) {
+    if (MapUtils.isEmpty(noteData)) return result;
+    if (!StringUtils.isBlank(userId)) {
       result = true;
+    }
+    if (!userId.equalsIgnoreCase((String) noteData.get(JsonKey.USER_ID))) {
+      throw new ProjectCommonException(
+          ResponseCode.errorForbidden.getErrorCode(),
+          ResponseCode.errorForbidden.getErrorMessage(),
+          ResponseCode.FORBIDDEN.getResponseCode());
     }
     return result;
   }

@@ -132,9 +132,14 @@ public class CourseEnrollmentActor extends BaseActor {
       courseMap.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
       courseMap.put(JsonKey.DATE_TIME, ts);
       courseMap.put(JsonKey.COURSE_PROGRESS, 0);
-      courseMap.put(
-          JsonKey.LEAF_NODE_COUNT,
-          courseBatchResult.getCourseAdditionalInfo().get(JsonKey.LEAF_NODE_COUNT));
+      if (null != courseBatchResult.getCourseAdditionalInfo().get(JsonKey.LEAF_NODE_COUNT)) {
+        courseMap.put(
+            JsonKey.LEAF_NODE_COUNT,
+            Integer.parseInt(
+                courseBatchResult.getCourseAdditionalInfo().get(JsonKey.LEAF_NODE_COUNT).trim()));
+      } else {
+        courseMap.put(JsonKey.LEAF_NODE_COUNT, 0);
+      }
     }
     return courseMap;
   }

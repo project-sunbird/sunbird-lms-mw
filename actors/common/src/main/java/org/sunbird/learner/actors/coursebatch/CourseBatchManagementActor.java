@@ -120,7 +120,7 @@ public class CourseBatchManagementActor extends BaseActor {
     Map<String, String> rollUp = new HashMap<>();
     rollUp.put("l1", (String) request.get(JsonKey.COURSE_ID));
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
-    batchOperationNotifier.batchBulkOperationNotifier(courseBatch, batchOperationNotifier.MENTOR);
+    batchOperationNotifier.batchBulkOperationNotifier(courseBatch, batchOperationNotifier.MENTOR, JsonKey.ADD);
   }
 
   @SuppressWarnings("unchecked")
@@ -157,7 +157,9 @@ public class CourseBatchManagementActor extends BaseActor {
     Map<String, String> rollUp = new HashMap<>();
     rollUp.put("l1", courseBatch.getCourseId());
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
-
+    
+    batchOperationNotifier.batchUpdateOperationNotifier(courseBatchDao.readById((String) request.get(JsonKey.ID)), courseBatch);
+    
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       syncCourseBatchBackground(request, ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
     } else {
@@ -289,7 +291,7 @@ public class CourseBatchManagementActor extends BaseActor {
     Request request = new Request();
     request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
     request.getRequest().put(JsonKey.BATCH, courseBatchObject);
-    batchOperationNotifier.batchBulkOperationNotifier(courseBatch, batchOperationNotifier.PARTICIPANTS);
+    batchOperationNotifier.batchBulkOperationNotifier(courseBatch, batchOperationNotifier.PARTICIPANTS, JsonKey.ADD);
     
     try {
       ProjectLogger.log("CourseBatchManagementActor:addUserCourseBatch: Sync course batch details to ES called");

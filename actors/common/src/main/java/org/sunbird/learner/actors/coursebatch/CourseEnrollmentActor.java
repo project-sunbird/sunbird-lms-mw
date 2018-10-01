@@ -104,7 +104,7 @@ public class CourseEnrollmentActor extends BaseActor {
     } else {
       updateUserCourseBatchToES(courseMap, (String) courseMap.get(JsonKey.ID));
     }
-    batchOperationNotifier.batchOPerationNotifier(courseMap, JsonKey.ADD);
+    batchOperationNotifier.batchOperationNotifier(courseMap, JsonKey.ADD);
     generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
   }
 
@@ -183,7 +183,7 @@ public class CourseEnrollmentActor extends BaseActor {
     sender().tell(result, self());
     updateUserCourseBatchToES(updateAttributes, userCourseResult.getId());
     generateAndProcessTelemetryEvent(request, "user.batch.course.unenroll");
-    batchOperationNotifier.batchOPerationNotifier(request,JsonKey.REMOVE);
+    batchOperationNotifier.batchOperationNotifier(request,JsonKey.REMOVE);
   }
 
   private void generateAndProcessTelemetryEvent(Map<String, Object> request, String corelation) {

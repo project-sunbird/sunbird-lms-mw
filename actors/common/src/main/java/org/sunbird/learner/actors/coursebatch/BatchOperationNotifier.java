@@ -52,22 +52,79 @@ public class BatchOperationNotifier {
 
   // from operation type we can decide the type of mail we have to get i.e
   // enrolled / unenrolled
-  public void batchOPerationNotifier(Map<String, Object> courseMap, String operationType) {
+  public void batchOperationNotifier(Map<String, Object> courseMap, String operationType) {
     Request request = getMailRequest(courseMap);
     sendMail(request);
   }
 
-  public void batchBulkOperationNotifier(CourseBatch courseBatch, String userType) {
+  public void batchBulkOperationNotifier(CourseBatch courseBatch, String userType, String operationType) {
 
     if (userType.equals(MENTOR)) {
-      Request requestForMentor = getMailRequest(courseBatch, MENTOR);
-      sendMail(requestForMentor);
+      if (operationType.equals(JsonKey.ADD)) {
+        Request requestForMentor = getMailRequest(courseBatch, MENTOR, JsonKey.ADD);
+        sendMail(requestForMentor);
+      } else if (operationType.equals(JsonKey.REMOVE)) {
+        Request requestForMentor = getMailRequest(courseBatch, MENTOR, JsonKey.ADD);
+        sendMail(requestForMentor);
+      }
     }
     if (userType.equals(PARTICIPANTS)) {
 
-      Request requestForParticipients = getMailRequest(courseBatch, PARTICIPANTS);
-      sendMail(requestForParticipients);
+      if (operationType.equals(JsonKey.ADD)) {
+        Request requestForParticipients = getMailRequest(courseBatch, PARTICIPANTS, JsonKey.ADD);
+        sendMail(requestForParticipients);
+      } else if (operationType.equals(JsonKey.REMOVE)) {
+        Request requestForParticipients = getMailRequest(courseBatch, PARTICIPANTS, JsonKey.REMOVE);
+        sendMail(requestForParticipients);
+      }
+
     }
+
+  }
+
+  public void batchUpdateOperationNotifier(CourseBatch courseBatchPrev, CourseBatch courseBatchNew) {
+    List<String> prevMentors = courseBatchPrev.getMentors();
+    List<String> newMentors = courseBatchNew.getMentors();
+    List<String> removedMentors = courseBatchPrev.getMentors();
+    if (prevMentors == null) {
+      prevMentors = new ArrayList<>();
+      removedMentors = new ArrayList<>();
+    }
+    if (newMentors == null) {
+      newMentors = new ArrayList<>();
+    }
+    for (String mentor : prevMentors) {
+      if (newMentors.contains(mentor)) {
+        newMentors.remove(mentor);
+        removedMentors.remove(mentor);
+      }
+    }
+    courseBatchPrev.setMentors(removedMentors);
+    courseBatchNew.setMentors(newMentors);
+    if (!removedMentors.isEmpty())
+      batchBulkOperationNotifier(courseBatchPrev, MENTOR, JsonKey.REMOVE);
+    if (!newMentors.isEmpty())
+      batchBulkOperationNotifier(courseBatchNew, MENTOR, JsonKey.ADD);
+    Map<String, Boolean> oldParticipants = courseBatchPrev.getParticipant();
+    Map<String, Boolean> newParticipants = courseBatchNew.getParticipant();
+    Map<String, Boolean> removedParticipants = courseBatchPrev.getParticipant();
+    if (oldParticipants == null) {
+      oldParticipants = new HashMap<>();
+      removedParticipants = new HashMap<>();
+    }
+    if (newParticipants == null)
+      newParticipants = new HashMap<>();
+    Set<String> oldParticipantsSet = oldParticipants.keySet();
+    for (String participant : oldParticipantsSet) {
+      if (newParticipants.containsKey(participant)) {
+        newParticipants.remove(participant);
+        removedParticipants.remove(participant);
+      }
+    }
+    courseBatchPrev.setParticipant(removedParticipants);
+    courseBatchNew.setParticipant(newParticipants);
+    batchBulkOperationNotifier(courseBatchPrev, PARTICIPANTS, JsonKey.REMOVE);
+    batchBulkOperationNotifier(courseBatchNew, PARTICIPANTS, JsonKey.ADD);
   }
 
   private void sendMail(Request request) {
@@ -87,10 +144,10 @@ public class BatchOperationNotifier {
     return request;
   }
 
-  private Request getMailRequest(CourseBatch courseBatch, String userType) {
+  private Request getMailRequest(CourseBatch courseBatch, String userType, String operationType) {
 
     Request request = new Request();
-    Map<String, Object> requestMap = getRequestMap(courseBatch, userType);
+    Map<String, Object> requestMap = getRequestMap(courseBatch, userType, operationType);
     request.getRequest().put(JsonKey.EMAIL_REQUEST, requestMap);
     return request;
   }
@@ -114,7 +171,7 @@ public class BatchOperationNotifier {
   }
 
   @SuppressWarnings("unchecked")
-  private Map<String, Object> getRequestMap(CourseBatch courseBatch, String userType) {
+  private Map<String, Object> getRequestMap(CourseBatch courseBatch, String userType, String operationType) {
     Map<String, Object> courseBatchObject = new ObjectMapper().convertValue(courseBatch, Map.class);
     Map<String, String> additionalCourseInfo = (Map<String, String>) courseBatchObject
         .get(JsonKey.COURSE_ADDITIONAL_INFO);
@@ -126,6 +183,7 @@ public class BatchOperationNotifier {
     if (userType.equals(PARTICIPANTS)) {
       getParticipants(requestMap, courseBatch);
     }
+    // template can be set depending upon operationType
     requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, null);
     // setting description as subject
     requestMap.put(JsonKey.SUBJECT, courseBatch.getCourseAdditionalInfo().get(JsonKey.SUBJECT));

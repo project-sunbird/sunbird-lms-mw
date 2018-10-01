@@ -151,14 +151,22 @@ public class UserManagementActor extends BaseActor {
     List<String> publicList = (List) map.get(JsonKey.PUBLIC);
 
     // Remove duplicate entries from the list
-    privateList = privateList.stream().distinct().collect(Collectors.toList());
-    publicList = publicList.stream().distinct().collect(Collectors.toList());
-
     // Visibility of permanent fields cannot be changed
-    Util.validateProfileVisibilityFields(
-        privateList, JsonKey.PUBLIC_FIELDS, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
-    Util.validateProfileVisibilityFields(
-        publicList, JsonKey.PRIVATE_FIELDS, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+    if (CollectionUtils.isNotEmpty(privateList)) {
+      privateList = privateList.stream().distinct().collect(Collectors.toList());
+      Util.validateProfileVisibilityFields(
+          privateList,
+          JsonKey.PUBLIC_FIELDS,
+          getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+    }
+
+    if (CollectionUtils.isNotEmpty(publicList)) {
+      publicList = publicList.stream().distinct().collect(Collectors.toList());
+      Util.validateProfileVisibilityFields(
+          publicList,
+          JsonKey.PRIVATE_FIELDS,
+          getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+    }
 
     Map<String, Object> esResult =
         ElasticSearchUtil.getDataByIdentifier(

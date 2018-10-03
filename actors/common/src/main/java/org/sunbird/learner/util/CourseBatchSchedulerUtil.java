@@ -16,7 +16,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.CourseEnrollmentActor;
+import org.sunbird.learner.actors.coursebatch.CourseEnrollmentActor;
 
 /**
  * This class will update course batch count to EKStep. First it will get batch details from ES ,

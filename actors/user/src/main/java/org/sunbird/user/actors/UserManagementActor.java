@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -148,6 +149,25 @@ public class UserManagementActor extends BaseActor {
     String userId = (String) map.get(JsonKey.USER_ID);
     List<String> privateList = (List) map.get(JsonKey.PRIVATE);
     List<String> publicList = (List) map.get(JsonKey.PUBLIC);
+
+    // Remove duplicate entries from the list
+    // Visibility of permanent fields cannot be changed
+    if (CollectionUtils.isNotEmpty(privateList)) {
+      privateList = privateList.stream().distinct().collect(Collectors.toList());
+      Util.validateProfileVisibilityFields(
+          privateList,
+          JsonKey.PUBLIC_FIELDS,
+          getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+    }
+
+    if (CollectionUtils.isNotEmpty(publicList)) {
+      publicList = publicList.stream().distinct().collect(Collectors.toList());
+      Util.validateProfileVisibilityFields(
+          publicList,
+          JsonKey.PRIVATE_FIELDS,
+          getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+    }
+
     Map<String, Object> esResult =
         ElasticSearchUtil.getDataByIdentifier(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
@@ -157,7 +177,7 @@ public class UserManagementActor extends BaseActor {
       throw new ProjectCommonException(
           ResponseCode.userNotFound.getErrorCode(),
           ResponseCode.userNotFound.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
     Map<String, Object> esPrivateResult =
         ElasticSearchUtil.getDataByIdentifier(
@@ -190,26 +210,26 @@ public class UserManagementActor extends BaseActor {
         }
       }
     }
-    Map<String, String> privateFieldMap =
+    Map<String, String> profileVisibilityMap =
         (Map<String, String>) esResult.get(JsonKey.PROFILE_VISIBILITY);
-    if (null == privateFieldMap) {
-      privateFieldMap = new HashMap<>();
+    if (null == profileVisibilityMap) {
+      profileVisibilityMap = new HashMap<>();
     }
     if (privateList != null) {
       for (String key : privateList) {
-        privateFieldMap.put(key, JsonKey.PRIVATE);
+        profileVisibilityMap.put(key, JsonKey.PRIVATE);
       }
     }
     if (publicList != null) {
       for (String key : publicList) {
-        privateFieldMap.remove(key);
+        profileVisibilityMap.put(key, JsonKey.PUBLIC);
       }
-      updateCassandraWithPrivateFiled(userId, privateFieldMap);
-      esResult.put(JsonKey.PROFILE_VISIBILITY, privateFieldMap);
+      updateCassandraWithPrivateFiled(userId, profileVisibilityMap);
+      esResult.put(JsonKey.PROFILE_VISIBILITY, profileVisibilityMap);
     }
-    if (privateFieldMap.size() > 0) {
-      updateCassandraWithPrivateFiled(userId, privateFieldMap);
-      esResult.put(JsonKey.PROFILE_VISIBILITY, privateFieldMap);
+    if (profileVisibilityMap.size() > 0) {
+      updateCassandraWithPrivateFiled(userId, profileVisibilityMap);
+      esResult.put(JsonKey.PROFILE_VISIBILITY, profileVisibilityMap);
     }
     boolean updateResponse = true;
     updateResponse = updateDataInES(esResult, esPrivateResult, userId);
@@ -256,6 +276,8 @@ public class UserManagementActor extends BaseActor {
           privateMap.put(JsonKey.JOB_PROFILE, map.get(JsonKey.JOB_PROFILE));
         } else if (field.contains(JsonKey.SKILLS + ".")) {
           privateMap.put(JsonKey.SKILLS, map.get(JsonKey.SKILLS));
+        } else if (field.contains(JsonKey.BADGE_ASSERTIONS + ".")) {
+          privateMap.put(JsonKey.BADGE_ASSERTIONS, map.get(JsonKey.BADGE_ASSERTIONS));
         } else {
           if (!map.containsKey(field)) {
             throw new ProjectCommonException(
@@ -362,13 +384,13 @@ public class UserManagementActor extends BaseActor {
         throw new ProjectCommonException(
             ResponseCode.userNotFound.getErrorCode(),
             ResponseCode.userNotFound.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+            ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
       }
       if (result == null || result.size() == 0) {
         throw new ProjectCommonException(
             ResponseCode.userNotFound.getErrorCode(),
             ResponseCode.userNotFound.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+            ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
       }
 
       // check whether is_deletd true or false
@@ -396,6 +418,11 @@ public class UserManagementActor extends BaseActor {
         if (!(((String) result.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById))) {
           result = removeUserPrivateField(result);
         } else {
+          // These values are set to ensure backward compatibility post introduction of global
+          // settings in user profile visibility
+          setCompleteProfileVisibilityMap(result);
+          setDefaultUserProfileVisibility(result);
+
           // If the user requests his data then we are fetching the private data from
           // userprofilevisibility index
           // and merge it with user index data
@@ -511,7 +538,7 @@ public class UserManagementActor extends BaseActor {
       throw new ProjectCommonException(
           ResponseCode.userNotFound.getErrorCode(),
           ResponseCode.userNotFound.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
     // check whether is_deletd true or false
     if (ProjectUtil.isNotNull(result)
@@ -537,6 +564,11 @@ public class UserManagementActor extends BaseActor {
       if (!((String) userMap.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById)) {
         result = removeUserPrivateField(result);
       } else {
+        // These values are set to ensure backward compatibility post introduction of global
+        // settings in user profile visibility
+        setCompleteProfileVisibilityMap(result);
+        setDefaultUserProfileVisibility(result);
+
         // If the user requests his data then we are fetching the private data from
         // userprofilevisibility index
         // and merge it with user index data
@@ -1415,15 +1447,6 @@ public class UserManagementActor extends BaseActor {
       userExtension.create(userMap);
     }
 
-    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
-      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, userMap.get(JsonKey.PASSWORD));
-      userMap.put(JsonKey.PASSWORD, userMap.get(JsonKey.PASSWORD));
-    } else {
-      // Create temp password if password field is null or empty in request
-      String tempPassword = ProjectUtil.generateRandomPassword();
-      userMap.put(JsonKey.PASSWORD, tempPassword);
-      emailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, tempPassword);
-    }
     String accessToken = "";
     if (isSSOEnabled) {
       try {
@@ -1456,7 +1479,10 @@ public class UserManagementActor extends BaseActor {
 
     userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
-    userMap.put(JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
+    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
+      userMap.put(
+          JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
+    }
     try {
       UserUtility.encryptUserData(userMap);
     } catch (Exception e1) {
@@ -1475,11 +1501,10 @@ public class UserManagementActor extends BaseActor {
     // update db with emailVerified as false (default)
     requestMap.put(JsonKey.EMAIL_VERIFIED, false);
 
-    Map<String, String> profileVisbility = new HashMap<>();
-    for (String field : ProjectUtil.defaultPrivateFields) {
-      profileVisbility.put(field, JsonKey.PRIVATE);
-    }
-    requestMap.put(JsonKey.PROFILE_VISIBILITY, profileVisbility);
+    // Since global settings are introduced, profile visibility map should be empty during user
+    // creation
+    requestMap.put(JsonKey.PROFILE_VISIBILITY, new HashMap<String, String>());
+
     if (!StringUtils.isBlank((String) requestMap.get(JsonKey.COUNTRY_CODE))) {
       requestMap.put(
           JsonKey.COUNTRY_CODE, propertiesCache.getProperty(JsonKey.SUNBIRD_DEFAULT_COUNTRY_CODE));
@@ -1559,9 +1584,27 @@ public class UserManagementActor extends BaseActor {
       }
     }
 
-    ProjectLogger.log("User created successfully.....");
     response.put(JsonKey.ACCESSTOKEN, accessToken);
     sender().tell(response, self());
+
+    if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      ProjectLogger.log("UserManagementActor:processUserRequest: User creation success");
+      Request userRequest = new Request();
+      userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+      userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
+      ProjectLogger.log(
+          "UserManagementActor:processUserRequest: Trigger sync of user details to ES");
+      try {
+        tellToAnother(userRequest);
+      } catch (Exception ex) {
+        ProjectLogger.log(
+            "UserManagementActor:processUserRequest: Exception occurred with error message = "
+                + ex.getMessage(),
+            ex);
+      }
+    } else {
+      ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
+    }
 
     // object of telemetry event...
     Map<String, Object> targetObject = null;
@@ -1571,10 +1614,21 @@ public class UserManagementActor extends BaseActor {
         TelemetryUtil.generateTargetObject(
             (String) userMap.get(JsonKey.ID), JsonKey.USER, JsonKey.CREATE, null);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
+    sendEmailAndSms(userMap, emailTemplateMap);
+  }
 
+  private void sendEmailAndSms(Map<String, Object> userMap, Map<String, Object> emailTemplateMap) {
+    // generate required action link and shorten the url
+    UserUtility.decryptUserData(userMap);
+    userMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
+    userMap.put(JsonKey.REDIRECT_URI, Util.getSunbirdWebUrlPerTenent(userMap));
+    Util.getUserRequiredActionLink(userMap);
     // user created successfully send the onboarding mail
     // putting rootOrgId to get web url per tenant while sending mail
     emailTemplateMap.put(JsonKey.ROOT_ORG_ID, userMap.get(JsonKey.ROOT_ORG_ID));
+    emailTemplateMap.put(JsonKey.SET_PASSWORD_LINK, userMap.get(JsonKey.SET_PASSWORD_LINK));
+    emailTemplateMap.put(JsonKey.VERIFY_EMAIL_LINK, userMap.get(JsonKey.VERIFY_EMAIL_LINK));
+    emailTemplateMap.put(JsonKey.REDIRECT_URI, userMap.get(JsonKey.REDIRECT_URI));
     Request welcomeMailReqObj = Util.sendOnboardingMail(emailTemplateMap);
     if (null != welcomeMailReqObj) {
       tellToAnother(welcomeMailReqObj);
@@ -1582,21 +1636,6 @@ public class UserManagementActor extends BaseActor {
     ProjectLogger.log("calling Send SMS method:", LoggerEnum.INFO);
     if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PHONE))) {
       Util.sendSMS(userMap);
-    }
-
-    if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      ProjectLogger.log("method call going to start for ES--.....");
-      Request userRequest = new Request();
-      userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-      userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
-      ProjectLogger.log("making a call to save user data to ES");
-      try {
-        tellToAnother(userRequest);
-      } catch (Exception ex) {
-        ProjectLogger.log("Exception Occurred during saving user to Es while creating user : ", ex);
-      }
-    } else {
-      ProjectLogger.log("no call for ES to save user");
     }
   }
 
@@ -2255,5 +2294,20 @@ public class UserManagementActor extends BaseActor {
       return "0";
     }
     return lastLoginTime;
+  }
+
+  private void setCompleteProfileVisibilityMap(Map<String, Object> userMap) {
+    Map<String, String> profileVisibilityMap =
+        (Map<String, String>) userMap.get(JsonKey.PROFILE_VISIBILITY);
+    Map<String, String> completeProfileVisibilityMap =
+        Util.getCompleteProfileVisibilityMap(
+            profileVisibilityMap, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+    userMap.put(JsonKey.PROFILE_VISIBILITY, completeProfileVisibilityMap);
+  }
+
+  private void setDefaultUserProfileVisibility(Map<String, Object> userMap) {
+    userMap.put(
+        JsonKey.DEFAULT_PROFILE_FIELD_VISIBILITY,
+        ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USER_PROFILE_FIELD_DEFAULT_VISIBILITY));
   }
 }

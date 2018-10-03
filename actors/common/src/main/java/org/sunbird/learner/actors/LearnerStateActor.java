@@ -52,7 +52,7 @@ public class LearnerStateActor extends BaseActor {
 
       Map<String, Object> filter = new HashMap<>();
       filter.put(JsonKey.USER_ID, userId);
-
+      filter.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
       SearchDTO searchDto = new SearchDTO();
       searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
 
@@ -62,7 +62,7 @@ public class LearnerStateActor extends BaseActor {
               ProjectUtil.EsIndex.sunbird.getIndexName(),
               ProjectUtil.EsType.usercourses.getTypeName());
 
-      response.put(JsonKey.RESPONSE, result.get(JsonKey.CONTENT));
+      response.put(JsonKey.COURSES, result.get(JsonKey.CONTENT));
       sender().tell(response, self());
 
     } else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_CONTENT.getValue())) {

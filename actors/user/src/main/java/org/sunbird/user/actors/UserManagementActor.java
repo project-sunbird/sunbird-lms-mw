@@ -2,6 +2,7 @@ package org.sunbird.user.actors;
 
 import static org.sunbird.learner.util.Util.isNotNull;
 
+import akka.actor.ActorRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigInteger;
 import java.text.MessageFormat;
@@ -89,10 +90,10 @@ public class UserManagementActor extends BaseActor {
       Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
   private Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
-  private static final String KEY_SPACE_NAME = "sunbird";
-  private static final String DEFAULT_USER_ROLE = "PUBLIC";
   private static final boolean IS_REGISTRY_ENABLED =
       Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE));
+  private ActorRef systemSettingActorRef =
+      getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
 
   /** Receives the actor message and perform the course enrollment operation . */
   @Override
@@ -155,17 +156,13 @@ public class UserManagementActor extends BaseActor {
     if (CollectionUtils.isNotEmpty(privateList)) {
       privateList = privateList.stream().distinct().collect(Collectors.toList());
       Util.validateProfileVisibilityFields(
-          privateList,
-          JsonKey.PUBLIC_FIELDS,
-          getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+          privateList, JsonKey.PUBLIC_FIELDS, systemSettingActorRef);
     }
 
     if (CollectionUtils.isNotEmpty(publicList)) {
       publicList = publicList.stream().distinct().collect(Collectors.toList());
       Util.validateProfileVisibilityFields(
-          publicList,
-          JsonKey.PRIVATE_FIELDS,
-          getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+          publicList, JsonKey.PRIVATE_FIELDS, systemSettingActorRef);
     }
 
     Map<String, Object> esResult =
@@ -655,7 +652,7 @@ public class UserManagementActor extends BaseActor {
   private List<Map<String, String>> fetchUserExternalIdentity(String userId) {
     Response response =
         cassandraOperation.getRecordsByIndexedProperty(
-            KEY_SPACE_NAME, JsonKey.USR_EXT_IDNT_TABLE, JsonKey.USER_ID, userId);
+            JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, JsonKey.USER_ID, userId);
     List<Map<String, String>> dbResExternalIds = new ArrayList<>();
     if (null != response && null != response.getResult()) {
       dbResExternalIds = (List<Map<String, String>>) response.getResult().get(JsonKey.RESPONSE);
@@ -776,6 +773,7 @@ public class UserManagementActor extends BaseActor {
     Map<String, Object> requestMap = null;
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
     actorMessage.getRequest().putAll(userMap);
+    Util.getUserProfileConfig(systemSettingActorRef);
     UserRequestValidator.validateUpdateUser(actorMessage);
     Map<String, Object> userDbRecord = null;
     String extId = (String) userMap.get(JsonKey.EXTERNAL_ID);
@@ -1354,10 +1352,9 @@ public class UserManagementActor extends BaseActor {
     userMap.remove(JsonKey.EMAIL_VERIFIED);
     userMap.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
     actorMessage.getRequest().putAll(userMap);
+    Util.getUserProfileConfig(systemSettingActorRef);
     try {
-      String channel =
-          Util.getCustodianChannel(
-              userMap, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+      String channel = Util.getCustodianChannel(userMap, systemSettingActorRef);
       String rootOrgId = Util.getRootOrgIdFromChannel(channel);
       userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
       userMap.put(JsonKey.CHANNEL, channel);
@@ -2107,7 +2104,8 @@ public class UserManagementActor extends BaseActor {
     }
     // Add default role into Requested Roles if it is not provided and then update into DB
     List<String> roles = (List<String>) requestMap.get(JsonKey.ROLES);
-    if (!roles.contains(DEFAULT_USER_ROLE)) roles.add(DEFAULT_USER_ROLE);
+    if (!roles.contains(ProjectUtil.UserRole.PUBLIC.name()))
+      roles.add(ProjectUtil.UserRole.PUBLIC.name());
     userOrgDBMap.put(JsonKey.ROLES, roles);
     userOrgDBMap.put(JsonKey.ID, list.get(0).get(JsonKey.ID));
     if (StringUtils.isNotBlank(hashTagId)) {
@@ -2185,6 +2183,7 @@ public class UserManagementActor extends BaseActor {
   private void unBlockUser(Request actorMessage) {
 
     ProjectLogger.log("Method call  " + "UnblockeUser");
+    Util.getUserProfileConfig(systemSettingActorRef);
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> userMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
     if (ProjectUtil.isNull(userMap.get(JsonKey.USER_ID))) {
@@ -2296,8 +2295,7 @@ public class UserManagementActor extends BaseActor {
     Map<String, String> profileVisibilityMap =
         (Map<String, String>) userMap.get(JsonKey.PROFILE_VISIBILITY);
     Map<String, String> completeProfileVisibilityMap =
-        Util.getCompleteProfileVisibilityMap(
-            profileVisibilityMap, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+        Util.getCompleteProfileVisibilityMap(profileVisibilityMap, systemSettingActorRef);
     userMap.put(JsonKey.PROFILE_VISIBILITY, completeProfileVisibilityMap);
   }
 

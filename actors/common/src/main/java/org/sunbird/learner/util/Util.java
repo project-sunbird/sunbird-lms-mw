@@ -1498,12 +1498,13 @@ public final class Util {
       Map<String, String> userProfileVisibilityMap, ActorRef actorRef) {
     Map<String, String> completeProfileVisibilityMap =
         getCompleteProfileVisibilityMap(userProfileVisibilityMap, actorRef);
+    Map<String, String> completeProfileVisibilityPrivateMap = new HashMap<String, String>();
     for (String key : completeProfileVisibilityMap.keySet()) {
-      if (JsonKey.PUBLIC.equalsIgnoreCase(completeProfileVisibilityMap.get(key))) {
-        completeProfileVisibilityMap.remove(key);
+      if (JsonKey.PRIVATE.equalsIgnoreCase(completeProfileVisibilityMap.get(key))) {
+        completeProfileVisibilityPrivateMap.put(key, JsonKey.PRIVATE);
       }
     }
-    return completeProfileVisibilityMap;
+    return completeProfileVisibilityPrivateMap;
   }
 
   public static Map<String, String> getCompleteProfileVisibilityMap(

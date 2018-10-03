@@ -16,16 +16,8 @@ import org.sunbird.models.course.batch.CourseBatch;
 public class CourseBatchDaoImpl implements CourseBatchDao {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo courseBatchDb = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
-  private static CourseBatchDao courseBatchDao;
-  private Util.DbInfo userCourseDb = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
-  private ObjectMapper mapper = new ObjectMapper();
 
-  public static CourseBatchDao getInstance() {
-    if (courseBatchDao == null) {
-      courseBatchDao = new CourseBatchDaoImpl();
-    }
-    return courseBatchDao;
-  }
+  private ObjectMapper mapper = new ObjectMapper();
 
   @Override
   public Response create(CourseBatch courseBatch) {
@@ -61,11 +53,5 @@ public class CourseBatchDaoImpl implements CourseBatchDao {
   public Response delete(String id) {
     return cassandraOperation.deleteRecord(
         courseBatchDb.getKeySpace(), courseBatchDb.getTableName(), id);
-  }
-
-  @Override
-  public Response createCourseEnrolment(Map<String, Object> map) {
-    return cassandraOperation.insertRecord(
-        userCourseDb.getKeySpace(), userCourseDb.getTableName(), map);
   }
 }

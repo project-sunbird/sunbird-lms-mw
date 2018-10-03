@@ -1041,19 +1041,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 ssoManager.removeUser(userMap);
               }
             }
-            // generate required action link and shorten the url
-            Util.getUserRequiredActionLink(userMap);
-            // send the welcome mail to user
-            welcomeMailTemplateMap.putAll(userMap);
-            welcomeMailTemplateMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
-            Request welcomeMailReqObj = Util.sendOnboardingMail(welcomeMailTemplateMap);
-            if (null != welcomeMailReqObj) {
-              tellToAnother(welcomeMailReqObj);
-            }
-
-            if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PHONE))) {
-              Util.sendSMS(userMap);
-            }
+            sendEmailAndSms(userMap, welcomeMailTemplateMap);
             // process Audit Log
             processAuditLog(
                 userMap, ActorOperations.CREATE_USER.getValue(), updatedBy, JsonKey.USER);
@@ -1158,6 +1146,13 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         failureUserReq.add(userMap);
       }
     }
+    updateSuccessAndFailureResultToDb(processId, failureUserReq, successUserReq);
+  }
+
+  private void updateSuccessAndFailureResultToDb(
+      String processId,
+      List<Map<String, Object>> failureUserReq,
+      List<Map<String, Object>> successUserReq) {
     // Insert record to BulkDb table
     // After Successful completion of bulk upload process , encrypt the success and
     // failure result
@@ -1185,6 +1180,25 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       ProjectLogger.log(
           "Exception Occurred while updating bulk_upload_process in BulkUploadBackGroundJobActor : ",
           e);
+    }
+  }
+
+  private void sendEmailAndSms(
+      Map<String, Object> userMap, Map<String, Object> welcomeMailTemplateMap) {
+    Map<String, Object> usrMap = new HashMap<>(userMap);
+    usrMap.put(JsonKey.REDIRECT_URI, Util.getSunbirdWebUrlPerTenent(userMap));
+    usrMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
+    // generate required action link and shorten the url
+    Util.getUserRequiredActionLink(usrMap);
+    // send the welcome mail to user
+    welcomeMailTemplateMap.putAll(usrMap);
+    Request welcomeMailReqObj = Util.sendOnboardingMail(welcomeMailTemplateMap);
+    if (null != welcomeMailReqObj) {
+      tellToAnother(welcomeMailReqObj);
+    }
+
+    if (StringUtils.isNotBlank((String) usrMap.get(JsonKey.PHONE))) {
+      Util.sendSMS(usrMap);
     }
   }
 

@@ -716,7 +716,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           if (CollectionUtils.isNotEmpty(rootOrgListRes)) {
 
             Map<String, Object> rootOrgResult = rootOrgListRes.get(0);
-            concurrentHashMap.put(JsonKey.ROOT_ORG_ID, rootOrgResult);
+            concurrentHashMap.put(JsonKey.ROOT_ORG_ID, rootOrgResult.get(JsonKey.ID));
             channelToRootOrgCache.put(
                 (String) concurrentHashMap.get(JsonKey.CHANNEL),
                 (String) rootOrgResult.get(JsonKey.ID));

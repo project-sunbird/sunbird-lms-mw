@@ -640,6 +640,9 @@ public class UserManagementActor extends BaseActor {
   private void updateSkillWithEndoresmentCount(Map<String, Object> result) {
     if (MapUtils.isNotEmpty(result) && result.containsKey(JsonKey.SKILLS)) {
       List<Map<String, Object>> skillList = (List<Map<String, Object>>) result.get(JsonKey.SKILLS);
+      if (CollectionUtils.isEmpty(skillList)) {
+        return;
+      }
       for (Map<String, Object> skill : skillList) {
         skill.put(
             JsonKey.ENDORSEMENT_COUNT.toLowerCase(),

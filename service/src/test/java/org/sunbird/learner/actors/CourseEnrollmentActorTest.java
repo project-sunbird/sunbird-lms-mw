@@ -132,15 +132,6 @@ public class CourseEnrollmentActorTest {
   }
 
   @Test
-  public void test4OnReceiveTestWithInvalidOperation() throws Throwable {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    // Request reqObj = testOnReceive("invalid-operation");
-    // ProjectCommonException exc = performRequest(reqObj);
-    // Assert.assertTrue(null != exc);
-  }
-
-  @Test
   public void testUnenrollCourseFailureWithoutEnroll() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);

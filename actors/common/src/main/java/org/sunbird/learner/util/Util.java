@@ -2065,9 +2065,14 @@ public final class Util {
    */
   public static SystemSetting getSystemSettingByField(
       String systemSettingField, ActorRef actorRef) {
-    SystemSettingClient client = SystemSettingClientImpl.getInstance();
-    SystemSetting systemSetting = client.getSystemSettingByField(actorRef, systemSettingField);
-    if (null == systemSetting || null == systemSetting.getValue()) {
+    SystemSetting systemSetting = null;
+    try {
+      SystemSettingClient client = SystemSettingClientImpl.getInstance();
+      systemSetting = client.getSystemSettingByField(actorRef, systemSettingField);
+      if (null == systemSetting || null == systemSetting.getValue()) {
+        throw new Exception();
+      }
+    } catch (Exception e) {
       ProjectLogger.log(
           "Util:getSystemSettingByField: System setting not found for field - "
               + systemSettingField,

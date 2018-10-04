@@ -53,7 +53,7 @@ public class CourseEnrollmentActorTest {
   private static String courseName = "someCourseName";
   private static String courseDescription = "someCourseDescription";
   private static String courseAppIcon = "somecourseAppIcon";
-  SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+  private static SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 
   @BeforeClass
   public static void setUp() {
@@ -70,77 +70,64 @@ public class CourseEnrollmentActorTest {
   }
 
   @Test
-  public void testEnrollCourseSuccess() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
+  public void testEnrollCourseSuccessForStartedBatch() {
+    Response response =
+        getEnrollSuccessTestResponse(true, false, ProgressStatus.STARTED.getValue());
+    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
+  }
 
-    Response insertResponse = createCassandraInsertSuccessResponse();
-    when(cassandraOperation.insertRecord(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(insertResponse);
-    mockCassandraRequestForReadRecordById(true, false, ProgressStatus.STARTED.getValue());
-    subject.tell(
-        createRequest(userId, batchId, courseId, ActorOperations.ENROLL_COURSE.getValue()),
-        probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
+  @Test
+  public void testEnrollCourseSuccessForNotStartedBatch() {
+    Response response =
+        getEnrollSuccessTestResponse(true, false, ProgressStatus.NOT_STARTED.getValue());
+    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
+  }
+
+  @Test
+  public void testEnrollCourseSuccessAfterUnenroll() {
+    Response response =
+        getEnrollSuccessTestResponse(false, false, ProgressStatus.STARTED.getValue());
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
   }
 
   @Test
   public void testEnrollCourseFailureWithAlreadyEnrolled() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    mockCassandraRequestForReadRecordById(false, true, ProgressStatus.STARTED.getValue());
-    subject.tell(
-        createRequest(userId, batchId, courseId, ActorOperations.ENROLL_COURSE.getValue()),
-        probe.getRef());
-    ProjectCommonException exception = probe.expectMsgClass(ProjectCommonException.class);
+    ProjectCommonException exception =
+        getEnrollFailureTestResponse(false, true, ProgressStatus.STARTED.getValue());
     Assert.assertTrue(
         null != exception
             && exception.getResponseCode() == ResponseCode.CLIENT_ERROR.getResponseCode());
   }
 
   @Test
-  public void testEnrollCourseSuccessAfterUnenroll() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Response insertResponse = createCassandraInsertSuccessResponse();
-    when(cassandraOperation.insertRecord(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(insertResponse);
-    mockCassandraRequestForReadRecordById(false, false, ProgressStatus.STARTED.getValue());
-    subject.tell(
-        createRequest(userId, batchId, courseId, ActorOperations.ENROLL_COURSE.getValue()),
-        probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
-    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
+  public void testEnrollCourseFailureWithBatchAlreadyCompleted() {
+    ProjectCommonException exception =
+        getEnrollFailureTestResponse(true, false, ProgressStatus.COMPLETED.getValue());
+    Assert.assertTrue(
+        null != exception
+            && exception.getResponseCode() == ResponseCode.CLIENT_ERROR.getResponseCode());
   }
 
   @Test
   public void testUnenrollCourseSuccess() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    mockCassandraRequestForReadRecordById(false, true, ProgressStatus.STARTED.getValue());
-    subject.tell(
-        createRequest(userId, batchId, courseId, ActorOperations.UNENROLL_COURSE.getValue()),
-        probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
+    Response response =
+        getUnenrollSuccessTestResponse(false, true, ProgressStatus.STARTED.getValue());
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
   }
 
   @Test
   public void testUnenrollCourseFailureWithoutEnroll() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
+    ProjectCommonException exception =
+        getUnenrollFailureTestResponse(true, false, ProgressStatus.STARTED.getValue());
+    Assert.assertTrue(
+        null != exception
+            && exception.getResponseCode() == ResponseCode.CLIENT_ERROR.getResponseCode());
+  }
 
-    mockCassandraRequestForReadRecordById(false, false, ProgressStatus.STARTED.getValue());
-    subject.tell(
-        createRequest(userId, batchId, courseId, ActorOperations.UNENROLL_COURSE.getValue()),
-        probe.getRef());
-    ProjectCommonException exception = probe.expectMsgClass(ProjectCommonException.class);
+  @Test
+  public void testUnenrollCourseFailureWithAlreadyUnenrolled() {
+    ProjectCommonException exception =
+        getUnenrollFailureTestResponse(false, false, ProgressStatus.STARTED.getValue());
     Assert.assertTrue(
         null != exception
             && exception.getResponseCode() == ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -148,17 +135,69 @@ public class CourseEnrollmentActorTest {
 
   @Test
   public void testUnenrollCourseFailureWithCourseAlreadyCompleted() {
+    ProjectCommonException exception =
+        getUnenrollFailureTestResponse(false, false, ProgressStatus.COMPLETED.getValue());
+    Assert.assertTrue(
+        null != exception
+            && exception.getResponseCode() == ResponseCode.CLIENT_ERROR.getResponseCode());
+  }
+
+  private Response getEnrollSuccessTestResponse(
+      boolean isUserFirstTimeEnrolled, boolean userEnrollStatus, int batchStatus) {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
-    mockCassandraRequestForReadRecordById(false, false, ProgressStatus.COMPLETED.getValue());
+    if (isUserFirstTimeEnrolled) {
+      Response insertResponse = createCassandraInsertSuccessResponse();
+      when(cassandraOperation.insertRecord(
+              Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+          .thenReturn(insertResponse);
+    }
+    mockCassandraRequestForReadRecordById(isUserFirstTimeEnrolled, userEnrollStatus, batchStatus);
+    subject.tell(
+        createRequest(userId, batchId, courseId, ActorOperations.ENROLL_COURSE.getValue()),
+        probe.getRef());
+    Response response = probe.expectMsgClass(Response.class);
+    return response;
+  }
+
+  private ProjectCommonException getEnrollFailureTestResponse(
+      boolean isUserFirstTimeEnrolled, boolean userEnrollStatus, int batchStatus) {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    mockCassandraRequestForReadRecordById(isUserFirstTimeEnrolled, userEnrollStatus, batchStatus);
+    subject.tell(
+        createRequest(userId, batchId, courseId, ActorOperations.ENROLL_COURSE.getValue()),
+        probe.getRef());
+    ProjectCommonException exception = probe.expectMsgClass(ProjectCommonException.class);
+    return exception;
+  }
+
+  private Response getUnenrollSuccessTestResponse(
+      boolean isUserFirstTimeEnrolled, boolean userEnrollStatus, int batchStatus) {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    mockCassandraRequestForReadRecordById(isUserFirstTimeEnrolled, userEnrollStatus, batchStatus);
+    subject.tell(
+        createRequest(userId, batchId, courseId, ActorOperations.UNENROLL_COURSE.getValue()),
+        probe.getRef());
+    Response response = probe.expectMsgClass(Response.class);
+    return response;
+  }
+
+  private ProjectCommonException getUnenrollFailureTestResponse(
+      boolean isUserFirstTimeEnrolled, boolean userEnrollStatus, int batchStatus) {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    mockCassandraRequestForReadRecordById(isUserFirstTimeEnrolled, userEnrollStatus, batchStatus);
     subject.tell(
         createRequest(userId, batchId, courseId, ActorOperations.UNENROLL_COURSE.getValue()),
         probe.getRef());
     ProjectCommonException exception = probe.expectMsgClass(ProjectCommonException.class);
-    Assert.assertTrue(
-        null != exception
-            && exception.getResponseCode() == ResponseCode.CLIENT_ERROR.getResponseCode());
+    return exception;
   }
 
   private Response createCassandraInsertSuccessResponse() {
@@ -168,17 +207,19 @@ public class CourseEnrollmentActorTest {
   }
 
   private void mockCassandraRequestForReadRecordById(
-      boolean firstTime, boolean active, int status) {
-    if (firstTime)
+      boolean isUserFirstTimeEnrolled, boolean userEnrollStatus, int batchStatus) {
+    if (isUserFirstTimeEnrolled)
       when(cassandraOperation.getRecordById(
               Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-          .thenReturn(createGetCourseBatchSuccessResponse(status))
-          .thenReturn(createGetUserCourseFailureResponse());
+          .thenReturn(
+              createGetCourseBatchSuccessResponse(batchStatus),
+              createGetUserCourseFailureResponse());
     else
       when(cassandraOperation.getRecordById(
               Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-          .thenReturn(createGetCourseBatchSuccessResponse(status))
-          .thenReturn(createGetUserCourseSuccessResponse(active));
+          .thenReturn(
+              createGetCourseBatchSuccessResponse(batchStatus),
+              createGetUserCourseSuccessResponse(userEnrollStatus, batchStatus));
   }
 
   private Response createGetUserCourseFailureResponse() {
@@ -188,14 +229,14 @@ public class CourseEnrollmentActorTest {
     return response;
   }
 
-  private Response createGetUserCourseSuccessResponse(boolean active) {
+  private Response createGetUserCourseSuccessResponse(boolean active, int batchStatus) {
     Response response = new Response();
     Map<String, Object> userMap = new HashMap<>();
     userMap.put(JsonKey.USER_ID, userId);
     userMap.put(JsonKey.BATCH_ID, batchId);
     userMap.put(JsonKey.COURSE_ID, courseId);
     userMap.put(JsonKey.ACTIVE, active);
-    userMap.put(JsonKey.PROGRESS, 0);
+    userMap.put(JsonKey.PROGRESS, batchStatus);
     userMap.put(JsonKey.ID, id);
     List<Map<String, Object>> result = new ArrayList<>();
     result.add(userMap);

@@ -88,9 +88,8 @@ public class CourseBatchDaoImpTest {
 
   @Test
   public void testUpdateCourseBatchSuccess() {
-    PowerMockito.when(
-            cassandraOperation.updateRecord(
-                Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+    when(cassandraOperation.updateRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(new Response());
 
     CourseBatch courseBatch = new CourseBatch();
@@ -104,11 +103,11 @@ public class CourseBatchDaoImpTest {
 
   private Response getCourseBatchResponse(boolean isEmpty) {
     Response response = new Response();
-    if (!isEmpty)
+    if (!isEmpty) {
       response.put(
           JsonKey.RESPONSE,
           new ArrayList<Map<String, Object>>(Arrays.asList(new HashMap<String, Object>())));
-    else {
+    } else {
       response.put(JsonKey.RESPONSE, new ArrayList<Map<String, Object>>());
     }
     return response;

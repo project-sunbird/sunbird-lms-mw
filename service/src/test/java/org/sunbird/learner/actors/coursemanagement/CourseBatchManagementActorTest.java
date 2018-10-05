@@ -489,8 +489,11 @@ public class CourseBatchManagementActorTest {
   private Map getElasticSearchResponse(boolean sameOrg) {
     Map<String, Object> elasticSearchResponse = new HashMap<String, Object>();
     elasticSearchResponse.put(JsonKey.RESPONSE, Arrays.asList(""));
-    if (sameOrg) elasticSearchResponse.put(JsonKey.ROOT_ORG_ID, ROOT_ORG);
-    else elasticSearchResponse.put(JsonKey.ROOT_ORG_ID, OTHER_ORG);
+    if (sameOrg) {
+      elasticSearchResponse.put(JsonKey.ROOT_ORG_ID, ROOT_ORG);
+    } else {
+      elasticSearchResponse.put(JsonKey.ROOT_ORG_ID, OTHER_ORG);
+    }
     return elasticSearchResponse;
   }
 

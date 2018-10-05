@@ -716,7 +716,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
           if (CollectionUtils.isNotEmpty(rootOrgListRes)) {
 
             Map<String, Object> rootOrgResult = rootOrgListRes.get(0);
-            concurrentHashMap.put(JsonKey.ROOT_ORG_ID, rootOrgResult);
+            concurrentHashMap.put(JsonKey.ROOT_ORG_ID, rootOrgResult.get(JsonKey.ID));
             channelToRootOrgCache.put(
                 (String) concurrentHashMap.get(JsonKey.CHANNEL),
                 (String) rootOrgResult.get(JsonKey.ID));
@@ -974,15 +974,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     for (int i = 0; i < dataMapList.size(); i++) {
       userMap = dataMapList.get(i);
       Map<String, Object> welcomeMailTemplateMap = new HashMap<>();
-      if (StringUtils.isBlank((String) userMap.get(JsonKey.PASSWORD))) {
-        String randomPassword = ProjectUtil.generateRandomPassword();
-        userMap.put(JsonKey.PASSWORD, randomPassword);
-        welcomeMailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, randomPassword);
-      } else {
-        welcomeMailTemplateMap.put(JsonKey.TEMPORARY_PASSWORD, userMap.get(JsonKey.PASSWORD));
-      }
       String errMsg = validateUser(userMap);
-      if (errMsg.equalsIgnoreCase(JsonKey.SUCCESS)) {
+      if (JsonKey.SUCCESS.equalsIgnoreCase(errMsg)) {
         try {
 
           // convert userName,provide,loginId,externalId.. value to lowercase
@@ -1048,18 +1041,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
                 ssoManager.removeUser(userMap);
               }
             }
-            // send the welcome mail to user
-            welcomeMailTemplateMap.putAll(userMap);
-            // the loginid will become user id for logon purpose .
-            welcomeMailTemplateMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
-            Request welcomeMailReqObj = Util.sendOnboardingMail(welcomeMailTemplateMap);
-            if (null != welcomeMailReqObj) {
-              tellToAnother(welcomeMailReqObj);
-            }
-
-            if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PHONE))) {
-              Util.sendSMS(userMap);
-            }
+            sendEmailAndSms(userMap, welcomeMailTemplateMap);
             // process Audit Log
             processAuditLog(
                 userMap, ActorOperations.CREATE_USER.getValue(), updatedBy, JsonKey.USER);
@@ -1164,6 +1146,13 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
         failureUserReq.add(userMap);
       }
     }
+    updateSuccessAndFailureResultToDb(processId, failureUserReq, successUserReq);
+  }
+
+  private void updateSuccessAndFailureResultToDb(
+      String processId,
+      List<Map<String, Object>> failureUserReq,
+      List<Map<String, Object>> successUserReq) {
     // Insert record to BulkDb table
     // After Successful completion of bulk upload process , encrypt the success and
     // failure result
@@ -1191,6 +1180,25 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       ProjectLogger.log(
           "Exception Occurred while updating bulk_upload_process in BulkUploadBackGroundJobActor : ",
           e);
+    }
+  }
+
+  private void sendEmailAndSms(
+      Map<String, Object> userMap, Map<String, Object> welcomeMailTemplateMap) {
+    Map<String, Object> usrMap = new HashMap<>(userMap);
+    usrMap.put(JsonKey.REDIRECT_URI, Util.getSunbirdWebUrlPerTenent(userMap));
+    usrMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
+    // generate required action link and shorten the url
+    Util.getUserRequiredActionLink(usrMap);
+    // send the welcome mail to user
+    welcomeMailTemplateMap.putAll(usrMap);
+    Request welcomeMailReqObj = Util.sendOnboardingMail(welcomeMailTemplateMap);
+    if (null != welcomeMailReqObj) {
+      tellToAnother(welcomeMailReqObj);
+    }
+
+    if (StringUtils.isNotBlank((String) usrMap.get(JsonKey.PHONE))) {
+      Util.sendSMS(usrMap);
     }
   }
 
@@ -1366,11 +1374,6 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       updateUser(requestedUserMap, foundUserMap);
     } else {
       createUser(requestedUserMap);
-    }
-    if (!StringUtils.isBlank((String) requestedUserMap.get(JsonKey.PASSWORD))) {
-      requestedUserMap.put(
-          JsonKey.PASSWORD,
-          OneWayHashing.encryptVal((String) requestedUserMap.get(JsonKey.PASSWORD)));
     }
     return requestedUserMap;
   }

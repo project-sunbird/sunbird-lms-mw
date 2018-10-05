@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -25,6 +26,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -576,16 +578,21 @@ public class UserSkillManagementActor extends BaseActor {
     Map<String, Object> profile =
         ElasticSearchUtil.getDataByIdentifier(
             ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId);
-    if (null != profile && !profile.isEmpty()) {
+    if (MapUtils.isNotEmpty(profile)) {
       Map<String, String> visibility =
           (Map<String, String>) profile.get(JsonKey.PROFILE_VISIBILITY);
-      if ((null != visibility && !visibility.isEmpty()) && visibility.containsKey(JsonKey.SKILLS)) {
+      // Fetching complete private map including global settings
+      Map<String, String> privateVisibilityMap =
+          Util.getCompleteProfileVisibilityPrivateMap(
+              visibility, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+      if (MapUtils.isNotEmpty(privateVisibilityMap)
+          && privateVisibilityMap.containsKey(JsonKey.SKILLS)) {
         Map<String, Object> visibilityMap =
             ElasticSearchUtil.getDataByIdentifier(
                 ProjectUtil.EsIndex.sunbird.getIndexName(),
                 EsType.userprofilevisibility.getTypeName(),
                 userId);
-        if (null != visibilityMap && !visibilityMap.isEmpty()) {
+        if (MapUtils.isNotEmpty(visibilityMap)) {
           visibilityMap.putAll(esMap);
           ElasticSearchUtil.createData(
               ProjectUtil.EsIndex.sunbird.getIndexName(),

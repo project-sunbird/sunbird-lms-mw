@@ -56,7 +56,6 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     JsonKey.PHONE,
     JsonKey.COUNTRY_CODE,
     JsonKey.EMAIL,
-    JsonKey.PASSWORD,
     JsonKey.USERNAME,
     JsonKey.PHONE_VERIFIED,
     JsonKey.EMAIL_VERIFIED,

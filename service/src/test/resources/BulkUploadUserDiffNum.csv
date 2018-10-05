@@ -1,0 +1,3 @@
+firstName,lastName,phone,email,password,userName,phoneVerified
+abc,xyz,1234567890,xyz@gmail.com,abc123,abc123,true
+abcd,wxyz,6543217890,wxyz@gmail.com,abcd123,abcd123,true

@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -44,36 +43,34 @@ import org.sunbird.helper.ServiceFactory;
 @PowerMockIgnore("javax.management.*")
 public class BulkUploadManagementActorTest {
 
-  private static ActorSystem system;
-  private static final Props props = Props.create(BulkUploadManagementActor.class);
+  private TestKit probe;
+  private ActorRef subject;
   private static final String USER_ID = "bcic783gfu239";
   private static final String refOrgId = "id34fy";
-  private static CassandraOperationImpl cassandraOperation;
   private static final String PROCESS_ID = "process-13647-fuzzy";
-
-  @BeforeClass
-  public static void setUp() {
-    PowerMockito.mockStatic(ServiceFactory.class);
-    cassandraOperation = mock(CassandraOperationImpl.class);
-    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    system = ActorSystem.create("system");
-  }
+  private static CassandraOperationImpl mockCassandraOperation;
 
   @Before
-  public void beforeEachTest() {
+  public void setUp() {
+    mockCassandraOperation = mock(CassandraOperationImpl.class);
+
+    ActorSystem system = ActorSystem.create("system");
+    probe = new TestKit(system);
+
+    Props props = Props.create(BulkUploadManagementActor.class);
+    subject = system.actorOf(props);
+
     PowerMockito.mockStatic(ServiceFactory.class);
-    cassandraOperation = mock(CassandraOperationImpl.class);
-    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+    when(ServiceFactory.getInstance()).thenReturn(mockCassandraOperation);
   }
 
   @Test
   public void testOrgBulkUploadCreateOrgSuccess() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
+
     byte[] bytes = getFileAsBytes("BulkOrgUploadSample.csv");
 
     Response response = createCassandraInsertSuccessResponse();
-    when(cassandraOperation.insertRecord(
+    when(mockCassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(response);
     Request reqObj = new Request();
@@ -90,66 +87,16 @@ public class BulkUploadManagementActorTest {
   }
 
   @Test
-  public void testOrgBulkUploadCreateOrgWithInvalidHeaders() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    String headerLine = "batchId,orgName,isRootOrg,channel";
-    String firstLine = "batch78575ir8478,hello001,false,,1119";
-    StringBuilder builder = new StringBuilder();
-    builder.append(headerLine).append("\n").append(firstLine);
-
-    Response response = createCassandraInsertSuccessResponse();
-    when(cassandraOperation.insertRecord(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(response);
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.BULK_UPLOAD.getValue());
-    HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.CREATED_BY, USER_ID);
-    innerMap.put(JsonKey.OBJECT_TYPE, JsonKey.ORGANISATION);
-    innerMap.put(JsonKey.FILE, builder.toString().getBytes());
-    reqObj.getRequest().put(JsonKey.DATA, innerMap);
-    subject.tell(reqObj, probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != res);
-  }
-
-  @Test
-  public void testBulkUploadGetStatus() {
-    Response response = getCassandraRecordByIdForBulkUploadResponse();
-    when(cassandraOperation.getRecordById(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyList()))
-        .thenReturn(response);
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.GET_BULK_OP_STATUS.getValue());
-    reqObj.getRequest().put(JsonKey.PROCESS_ID, PROCESS_ID);
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    List<Map<String, Object>> list = (List<Map<String, Object>>) res.get(JsonKey.RESPONSE);
-    if (!list.isEmpty()) {
-      Map<String, Object> map = list.get(0);
-      String processId = (String) map.get(JsonKey.PROCESS_ID);
-      Assert.assertTrue(null != processId);
-    }
-  }
-
-  @Test
   public void testUserBulkUploadCreateUserSuccess() {
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
     byte[] bytes = getFileAsBytes("BulkUploadUserSample.csv");
 
     Response response = getCassandraRecordByIdForOrgResponse();
-    when(cassandraOperation.getRecordById(
+    when(mockCassandraOperation.getRecordById(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(response);
     Response insertResponse = createCassandraInsertSuccessResponse();
-    when(cassandraOperation.insertRecord(
+    when(mockCassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(insertResponse);
 
@@ -168,21 +115,63 @@ public class BulkUploadManagementActorTest {
   }
 
   @Test
+  public void testOrgBulkUploadCreateOrgWithInvalidHeaders() {
+
+    String headerLine = "batchId,orgName,isRootOrg,channel";
+    String firstLine = "batch78575ir8478,hello001,false,,1119";
+    StringBuilder builder = new StringBuilder();
+    builder.append(headerLine).append("\n").append(firstLine);
+
+    Response response = createCassandraInsertSuccessResponse();
+    when(mockCassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(response);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.BULK_UPLOAD.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.CREATED_BY, USER_ID);
+    innerMap.put(JsonKey.OBJECT_TYPE, JsonKey.ORGANISATION);
+    innerMap.put(JsonKey.FILE, builder.toString().getBytes());
+    reqObj.getRequest().put(JsonKey.DATA, innerMap);
+    subject.tell(reqObj, probe.getRef());
+    ProjectCommonException res =
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != res);
+  }
+
+  @Test
+  public void testBulkUploadGetStatus() {
+    Response response = getCassandraRecordByIdForBulkUploadResponse();
+    when(mockCassandraOperation.getRecordById(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyList()))
+        .thenReturn(response);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.GET_BULK_OP_STATUS.getValue());
+    reqObj.getRequest().put(JsonKey.PROCESS_ID, PROCESS_ID);
+    subject.tell(reqObj, probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    List<Map<String, Object>> list = (List<Map<String, Object>>) res.get(JsonKey.RESPONSE);
+    if (!list.isEmpty()) {
+      Map<String, Object> map = list.get(0);
+      String processId = (String) map.get(JsonKey.PROCESS_ID);
+      Assert.assertTrue(null != processId);
+    }
+  }
+
+  @Test
   public void testUserBulkUploadCreateUserWithInvalidHeaders() {
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
     String headerLine = "batchId,firstName,lastName,phone";
     String firstLine = "batch78575ir8478,xyz1234516,Kumar15,9000000011";
     StringBuilder builder = new StringBuilder();
     builder.append(headerLine).append("\n").append(firstLine);
 
     Response response = getCassandraRecordByIdForOrgResponse();
-    when(cassandraOperation.getRecordById(
+    when(mockCassandraOperation.getRecordById(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(response);
     Response insertResponse = createCassandraInsertSuccessResponse();
-    when(cassandraOperation.insertRecord(
+    when(mockCassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(insertResponse);
 
@@ -206,16 +195,13 @@ public class BulkUploadManagementActorTest {
   @Test
   public void testBatchBulkUploadCreateBatchSuccess() {
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
     String headerLine = "batchId,userIds";
     String firstLine = "batch78575ir8478,\"bcic783gfu239,nhhuc37i5t8,h7884f7t8\"";
     StringBuilder builder = new StringBuilder();
     builder.append(headerLine).append("\n").append(firstLine);
 
     Response insertResponse = createCassandraInsertSuccessResponse();
-    when(cassandraOperation.insertRecord(
+    when(mockCassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(insertResponse);
 
@@ -238,16 +224,13 @@ public class BulkUploadManagementActorTest {
   @Test
   public void testBatchBulkUploadWithInvalidFileHeaders() {
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
     String headerLine = "batchId,userIds,orgId";
     String firstLine = "batch78575ir8478,\"bcic783gfu239,nhhuc37i5t8,h7884f7t8\",org123";
     StringBuilder builder = new StringBuilder();
     builder.append(headerLine).append("\n").append(firstLine);
 
     Response insertResponse = createCassandraInsertSuccessResponse();
-    when(cassandraOperation.insertRecord(
+    when(mockCassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(insertResponse);
 

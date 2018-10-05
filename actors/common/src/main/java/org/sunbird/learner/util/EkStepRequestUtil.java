@@ -39,7 +39,7 @@ public final class EkStepRequestUtil {
     String response = "";
     JSONObject jObject;
     try {
-    	  String baseSearchUrl = ProjectUtil.getConfigValue(JsonKey.SEARCH_SERVICE_API_BASE_URL);
+      String baseSearchUrl = ProjectUtil.getConfigValue(JsonKey.SEARCH_SERVICE_API_BASE_URL);
       headers.put(
           JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
       headers.put(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
@@ -51,6 +51,11 @@ public final class EkStepRequestUtil {
             PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
       }
       ProjectLogger.log("making call for content search ==" + params, LoggerEnum.INFO.name());
+      ProjectLogger.log(
+          "URL = "
+              + baseSearchUrl
+              + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_URL),
+          LoggerEnum.INFO.name());
       response =
           HttpUtil.sendPostRequest(
               baseSearchUrl

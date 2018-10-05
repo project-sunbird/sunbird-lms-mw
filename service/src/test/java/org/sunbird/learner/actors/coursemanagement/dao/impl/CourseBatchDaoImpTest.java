@@ -26,7 +26,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.coursebatch.dao.CourseBatchDao;
 import org.sunbird.learner.actors.coursebatch.dao.impl.CourseBatchDaoImpl;
-import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.models.course.batch.CourseBatch;
 
 @RunWith(PowerMockRunner.class)
@@ -52,9 +51,8 @@ public class CourseBatchDaoImpTest {
 
   @Test
   public void testCreateCourseBatchSuccess() {
-    PowerMockito.when(
-            cassandraOperation.insertRecord(
-                Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+    when(cassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(new Response());
     CourseBatch courseBatch = new CourseBatch();
     courseBatch.setId(COURSE_BATCH_ID);
@@ -64,13 +62,10 @@ public class CourseBatchDaoImpTest {
     Assert.assertTrue(null != insertResponse);
   }
 
-
-
   @Test
   public void testGetCourseBatchSuccess() {
-    PowerMockito.when(
-            cassandraOperation.getRecordById(
-                Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(cassandraOperation.getRecordById(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getCourseBatchResponse(false));
     CourseBatch courseBatch = courseBatchDaoImpl.readById(COURSE_BATCH_ID);
     Assert.assertTrue(null != courseBatch);
@@ -78,12 +73,11 @@ public class CourseBatchDaoImpTest {
 
   @Test
   public void testGetCourseBatchFailure() {
-    PowerMockito.when(
-            cassandraOperation.getRecordById(
-                Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(cassandraOperation.getRecordById(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getCourseBatchResponse(true));
     try {
-      CourseBatch courseBatch = courseBatchDaoImpl.readById(COURSE_BATCH_ID);
+      courseBatchDaoImpl.readById(COURSE_BATCH_ID);
     } catch (ProjectCommonException exception) {
       Assert.assertTrue(
           exception

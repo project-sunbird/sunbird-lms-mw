@@ -298,10 +298,6 @@ public class CourseBatchManagementActor extends BaseActor {
     Map<String, String> participantWithRootOrgIds = getRootOrgForMultipleUsers(userIds);
 
     for (String userId : userIds) {
-      participants.put(userId, true);
-      if(userId.equals("testuser")) {
-        participants.remove(userId);
-      }
       if (!(participants.containsKey(userId))) {
         if (!participantWithRootOrgIds.containsKey(userId)
             || (!batchCreatorRootOrgId.equals(participantWithRootOrgIds.get(userId)))) {

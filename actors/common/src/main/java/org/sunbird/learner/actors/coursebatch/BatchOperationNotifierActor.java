@@ -167,6 +167,7 @@ public class BatchOperationNotifierActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private Map<String, Object> getRequestMap(CourseBatch courseBatch, String userType, String operationType) {
+    //operationType will be used for getting add or remove template 
     Map<String, Object> courseBatchObject = new ObjectMapper().convertValue(courseBatch, Map.class);
     Map<String, String> additionalCourseInfo = (Map<String, String>) courseBatchObject
         .get(JsonKey.COURSE_ADDITIONAL_INFO);

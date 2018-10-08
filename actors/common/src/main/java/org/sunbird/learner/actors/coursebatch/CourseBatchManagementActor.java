@@ -105,7 +105,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
     String courseId = (String) request.get(JsonKey.COURSE_ID);
     Map<String, Object> contentDetails = getContentDetails(courseId, headers);
-    courseBatch.setContentDetails(new HashMap<>(), requestedBy);
+    courseBatch.setContentDetails(contentDetails, requestedBy);
 
     validateContentOrg(courseBatch.getCreatedFor());
     validateMentors(courseBatch);

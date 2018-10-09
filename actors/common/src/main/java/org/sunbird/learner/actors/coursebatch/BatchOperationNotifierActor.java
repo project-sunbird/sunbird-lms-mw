@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.commons.lang.StringUtils;
 import org.apache.velocity.VelocityContext;
-import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -30,12 +29,11 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.course.batch.CourseBatch;
 
 /**
- * This actor will handle course enrollment operations.
+ * This actor will initiates email notification when user get enrolled/unenrolled to a open batch
+ * and also for Mentor/Participants addition/removal for an "invite-only" batches
  *
  * @author github.com/iostream04
  */
-
-/** @author mayank */
 @ActorConfig(
   tasks = {"batchBulk", "batchUpdate", "batchOperation"},
   asyncTasks = {"batchBulk", "batchUpdate", "batchOperation"}
@@ -52,21 +50,20 @@ public class BatchOperationNotifierActor extends BaseActor {
     if (request.getOperation().equalsIgnoreCase(ActorOperations.BATCH_BULK.getValue())) {
       Map<String, Object> requestMap = request.getRequest();
       batchCreateOperationNotifier(
-          (CourseBatch) requestMap.get(BackgroundOperations.COURSE_BATCH.name()),
-          (String) requestMap.get(BackgroundOperations.OPERATION_TYPE.name()));
+          (CourseBatch) requestMap.get(JsonKey.COURSE_BATCH),
+          (String) requestMap.get(JsonKey.OPERATION_TYPE));
     } else if (request.getOperation().equalsIgnoreCase(ActorOperations.BATCH_UPDATE.getValue())) {
       Map<String, Object> requestMap = request.getRequest();
       batchUpdateOperationNotifier(
-          (CourseBatch) requestMap.get(BackgroundOperations.OLD.name()),
-          (CourseBatch) requestMap.get(BackgroundOperations.NEW.name()));
+          (CourseBatch) requestMap.get(JsonKey.OLD), (CourseBatch) requestMap.get(JsonKey.NEW));
     } else if (request
         .getOperation()
         .equalsIgnoreCase(ActorOperations.BATCH_OPERATION.getValue())) {
       Map<String, Object> requestMap = request.getRequest();
       batchEnrollOperationNotifier(
-          (Map<String, Object>) requestMap.get(BackgroundOperations.COURSE_MAP.name()),
-          (CourseBatch) requestMap.get(BackgroundOperations.COURSE_BATCH.name()),
-          (String) requestMap.get(BackgroundOperations.OPERATION_TYPE.name()));
+          (Map<String, Object>) requestMap.get(JsonKey.COURSE_MAP),
+          (CourseBatch) requestMap.get(JsonKey.COURSE_BATCH),
+          (String) requestMap.get(JsonKey.OPERATION_TYPE));
     } else {
       onReceiveUnsupportedOperation(request.getOperation());
     }
@@ -115,7 +112,8 @@ public class BatchOperationNotifierActor extends BaseActor {
    */
   @SuppressWarnings("unchecked")
   private void sendEmailNotification(CourseBatch courseBatch, String operationType) {
-    List<Map<String, Object>> mentorList, participentList;
+    List<Map<String, Object>> mentorList;
+    List<Map<String, Object>> participentList;
     mentorList = getUsersFromDB(courseBatch.getMentors());
     participentList = getUsersFromDB(getParticipants(courseBatch));
     if (mentorList != null) {

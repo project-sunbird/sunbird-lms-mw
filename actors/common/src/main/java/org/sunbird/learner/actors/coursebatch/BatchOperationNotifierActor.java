@@ -65,7 +65,10 @@ public class BatchOperationNotifierActor extends BaseActor {
       onReceiveUnsupportedOperation(request.getOperation());
     }
   }
-
+  /* This method takes courseBatch and operationType String as parameter and process invite-only
+   *  batch enrol and unenroll operation notifications
+   *  mentor and learner add remove Operation
+   */  
   private void batchCreateOperationNotifier(CourseBatch courseBatch, String operationType) {
     if (operationType.equals(JsonKey.ADD)) {
       sendEmailNotification(courseBatch, JsonKey.ADD);
@@ -73,8 +76,9 @@ public class BatchOperationNotifierActor extends BaseActor {
     } else if (operationType.equals(JsonKey.REMOVE)) {
       sendEmailNotification(courseBatch, JsonKey.REMOVE);
     }
-  }
-
+  }  
+   /* This method takes map and courseBatch as parameter and process open batch enrol and unenroll operation notifications
+   */  
   @SuppressWarnings("unchecked")
   public void batchEnrollOperationNotifier(Map<String, Object> courseMap, CourseBatch courseBatch,
       String operationType) {
@@ -102,6 +106,7 @@ public class BatchOperationNotifierActor extends BaseActor {
     List<Map<String, Object>> mentorList, participentList;
     mentorList = getUsersFromDB(courseBatch.getMentors());
     participentList = getUsersFromDB(getParticipants(courseBatch));
+    if(mentorList != null) {
     for (Map<String, Object> mentor : mentorList) {
       Map<String, Object> requestMap = new HashMap<String, Object>();
       requestMap = this.createRequestMap(courseBatch);
@@ -114,7 +119,8 @@ public class BatchOperationNotifierActor extends BaseActor {
         user.put(JsonKey.TEMPLATE_NAME, JsonKey.BATCH_MENTOR_UNENROL);
       }
       sendMail(user, requestMap);
-    }
+    }}
+    if(participentList != null) {
     for (Map<String, Object> participant : participentList) {
       Map<String, Object> requestMap = new HashMap<String, Object>();
       requestMap = this.createRequestMap(courseBatch);
@@ -127,9 +133,11 @@ public class BatchOperationNotifierActor extends BaseActor {
         user.put(JsonKey.TEMPLATE_NAME, JsonKey.BATCH_LEARNER_UNENROL);
       }
       sendMail(user, requestMap);
-    }
+    }}
   }
-
+  
+  /* This method takes two courseBatch object as parameter and process update batch related operation notifications
+   */  
   private void batchUpdateOperationNotifier(CourseBatch courseBatchPrev, CourseBatch courseBatchNew) {
     List<String> prevMentors = courseBatchPrev.getMentors();
     List<String> newMentors = courseBatchNew.getMentors();
@@ -184,6 +192,12 @@ public class BatchOperationNotifierActor extends BaseActor {
 
   }
 
+  
+  /* This method takes courseBatch object as parameter and returns
+    * a map which contains required data for sending email
+    * returns Map<String,Object>
+   */  
+  
   private Map<String, Object> createRequestMap(CourseBatch courseBatch) {
     Map<String, Object> courseBatchObject = new ObjectMapper().convertValue(courseBatch, Map.class);
     Map<String, String> additionalCourseInfo = (Map<String, String>) courseBatchObject
@@ -212,16 +226,20 @@ public class BatchOperationNotifierActor extends BaseActor {
     return user;
   }
 
+  /*
+   * This method is for sending e-mails for one at a time.
+   */
   private void sendMail(Map<String, String> user, Map<String, Object> requestMap) {
     String template = getEmailTemplateFile(user.get("templateName"));
     requestMap.put(JsonKey.FIRST_NAME, user.get(JsonKey.FIRST_NAME));
     VelocityContext context = getContext(requestMap);
-    for (Map.Entry<String, Object> entry : requestMap.entrySet()) {
-      ProjectLogger.log("**********Key***** " + entry.getKey() + "--Value--->" + entry.getValue(),
-          LoggerEnum.INFO.name());
-    }
     String decryptedEmail = decryptionService.decryptData(user.get(JsonKey.EMAIL));
-    SendMail.sendMailWithBody(new String[] { decryptedEmail }, user.get(JsonKey.SUBJECT), context, template);
+    try {
+      SendMail.sendMailWithBody(new String[] { decryptedEmail }, user.get(JsonKey.SUBJECT), context, template);
+    } catch (Exception e) {
+      ProjectLogger.log("Error encountered while sending email notification for batch operation for user   "
+          + user.get(JsonKey.FIRST_NAME), LoggerEnum.ERROR.name());
+    }
   }
 
   private List<String> getParticipants(CourseBatch courseBatch) {
@@ -233,7 +251,6 @@ public class BatchOperationNotifierActor extends BaseActor {
         users.add(user);
       }
     }
-    ProjectLogger.log("**********receipients***** " + users, LoggerEnum.INFO.name());
     return users;
   }
 
@@ -245,6 +262,9 @@ public class BatchOperationNotifierActor extends BaseActor {
     fields.add(JsonKey.EMAIL);
     Response response = cassandraOperation.getRecordsByIdsWithSpecifiedColumns(usrDbInfo.getKeySpace(),
         usrDbInfo.getTableName(), fields, userIdList);
+    if(response==null) {
+      ProjectLogger.log("No data from cassandra , check connection  ", LoggerEnum.ERROR.name());
+    }
     List<Map<String, Object>> userList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     return userList;
   }
@@ -273,7 +293,7 @@ public class BatchOperationNotifierActor extends BaseActor {
       context.put(JsonKey.BATCH_END_DATE, getValue(map, JsonKey.END_DATE));
     }
     if (StringUtils.isNotBlank((String) map.get(JsonKey.NAME))) {
-      context.put("batchName", getValue(map, JsonKey.NAME));
+      context.put(JsonKey.BATCH_NAME, getValue(map, JsonKey.NAME));
     }
     if (StringUtils.isNotBlank((String) map.get(JsonKey.FIRST_NAME))) {
       context.put(JsonKey.NAME, getValue(map, JsonKey.FIRST_NAME));

@@ -2058,7 +2058,7 @@ public final class Util {
       ProjectLogger.log(
           "Util:getSystemSettingByField: System setting not found for field - "
               + systemSettingField,
-          LoggerEnum.ERROR.name());
+          e);
       ProjectCommonException.throwServerErrorException(
           ResponseCode.errorSystemSettingNotFound,
           ProjectUtil.formatMessage(

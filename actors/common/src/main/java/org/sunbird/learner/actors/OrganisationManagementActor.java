@@ -260,8 +260,7 @@ public class OrganisationManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     try {
-      Map<String, Object> req =
-          (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+      Map<String, Object> req = actorMessage.getRequest();
       if (req.containsKey(JsonKey.LOCATION_CODE)
           && !CollectionUtils.isEmpty((List<String>) req.get(JsonKey.LOCATION_CODE))) {
         validateCodeAndAddLocationIds(req);
@@ -277,8 +276,9 @@ public class OrganisationManagementActor extends BaseActor {
       }
 
       Map<String, Object> addressReq = null;
-      if (null != actorMessage.getRequest().get(JsonKey.ADDRESS)) {
+      if (null != req.get(JsonKey.ADDRESS)) {
         addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
+        req.remove(JsonKey.ADDRESS);
       }
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
       boolean isChannelVerified = false;
@@ -582,8 +582,7 @@ public class OrganisationManagementActor extends BaseActor {
     try {
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
-      Map<String, Object> req =
-          (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+      Map<String, Object> req = actorMessage.getRequest();
 
       if (!(validateOrgRequest(req))) {
         ProjectLogger.log("REQUESTED DATA IS NOT VALID");
@@ -591,7 +590,7 @@ public class OrganisationManagementActor extends BaseActor {
       }
       Map<String, Object> orgDBO;
       Map<String, Object> updateOrgDBO = new HashMap<>();
-      String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
+      String updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
 
       String orgId = (String) req.get(JsonKey.ORGANISATION_ID);
       Response result =
@@ -667,8 +666,7 @@ public class OrganisationManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     try {
-      Map<String, Object> req =
-          (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+      Map<String, Object> req = actorMessage.getRequest();
       if (req.containsKey(JsonKey.LOCATION_CODE)
           && !CollectionUtils.isEmpty((List<String>) req.get(JsonKey.LOCATION_CODE))) {
         validateCodeAndAddLocationIds(req);
@@ -762,8 +760,9 @@ public class OrganisationManagementActor extends BaseActor {
         req.remove(JsonKey.CHANNEL);
       }
       Map<String, Object> addressReq = null;
-      if (null != actorMessage.getRequest().get(JsonKey.ADDRESS)) {
-        addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
+      if (null != req.get(JsonKey.ADDRESS)) {
+        addressReq = (Map<String, Object>) req.get(JsonKey.ADDRESS);
+        req.remove(JsonKey.ADDRESS);
       }
       String relation = (String) req.get(JsonKey.RELATION);
       // removing default from request, not allowing user to create default org.
@@ -814,7 +813,7 @@ public class OrganisationManagementActor extends BaseActor {
 
       boolean isAddressUpdated = false;
       // update address if present in request
-      if (null != addressReq && addressReq.size() > 0) {
+      if (null != addressReq && addressReq.size() == 1) {
         if (orgDBO.get(JsonKey.ADDRESS_ID) != null) {
           String addressId = (String) orgDBO.get(JsonKey.ADDRESS_ID);
           addressReq.put(JsonKey.ID, addressId);
@@ -829,6 +828,7 @@ public class OrganisationManagementActor extends BaseActor {
         if (!(StringUtils.isBlank(updatedBy))) {
           addressReq.put(JsonKey.UPDATED_BY, updatedBy);
         }
+        upsertAddress(addressReq);
         telemetryGenerationForOrgAddress(addressReq, orgDBO, isAddressUpdated);
       }
       if (!StringUtils.isBlank(((String) req.get(JsonKey.HASHTAGID)))) {
@@ -1243,11 +1243,9 @@ public class OrganisationManagementActor extends BaseActor {
   }
 
   /** Provides the details of the organization */
-  @SuppressWarnings("unchecked")
   private void getOrgDetails(Request actorMessage) {
 
-    Map<String, Object> req =
-        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+    Map<String, Object> req = actorMessage.getRequest();
     if (!(validateOrgRequest(req))) {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;

@@ -175,9 +175,6 @@ public class CourseBatchManagementActor extends BaseActor {
     Response result = courseBatchDao.update(courseBatchMap);
     sender().tell(result, self());
 
-    targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) request.get(JsonKey.ID), JsonKey.BATCH, JsonKey.UPDATE, null);
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       syncCourseBatchForeground((String) courseBatchMap.get(JsonKey.ID), courseBatchMap);
     } else {

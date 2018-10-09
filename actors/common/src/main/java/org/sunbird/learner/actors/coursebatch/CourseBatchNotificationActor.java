@@ -38,7 +38,7 @@ import org.sunbird.models.course.batch.CourseBatch;
   tasks = {"batchBulkNotification", "batchUpdateNotification", "batchEnrollOperation"},
   asyncTasks = {"batchBulkNotification", "batchUpdateNotification", "batchEnrollOperation"}
 )
-public class BatchOperationNotifierActor extends BaseActor {
+public class CourseBatchNotificationActor extends BaseActor {
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   private DecryptionService decryptionService =
@@ -132,17 +132,17 @@ public class BatchOperationNotifierActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void sendEmailNotification(CourseBatch courseBatch, String operationType) {
     List<Map<String, Object>> mentorList = null;
-    List<Map<String, Object>> participentList = null;
+    List<Map<String, Object>> participantList = null;
     mentorList = getUsersFromDB(courseBatch.getMentors());
     List<String> userIds = getParticipants(courseBatch);
     if (userIds != null) {
-      participentList = getUsersFromDB(userIds);
+      participantList = getUsersFromDB(userIds);
     }
     if (mentorList != null) {
       processUserDataAndSendMail(mentorList, courseBatch, operationType, JsonKey.MENTOR);
     }
-    if (participentList != null) {
-      processUserDataAndSendMail(participentList, courseBatch, operationType, JsonKey.PARTICIPANT);
+    if (participantList != null) {
+      processUserDataAndSendMail(participantList, courseBatch, operationType, JsonKey.PARTICIPANT);
     }
   }
 

@@ -271,7 +271,6 @@ public class CourseBatchManagementActor extends BaseActor {
     CourseBatch courseBatch = courseBatchDao.readById(batchId);
     Map<String, Object> courseBatchObject = new ObjectMapper().convertValue(courseBatch, Map.class);
 
-    // Check whether courseb batch enrollment type is invite only or not.
     if (ProjectUtil.isNull(courseBatchObject.get(JsonKey.ENROLLMENT_TYPE))
         || !((String) courseBatchObject.get(JsonKey.ENROLLMENT_TYPE))
             .equalsIgnoreCase(JsonKey.INVITE_ONLY)) {
@@ -280,7 +279,6 @@ public class CourseBatchManagementActor extends BaseActor {
           ResponseCode.enrollmentTypeValidation.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-
     if (ProjectUtil.isNull(courseBatchObject.get(JsonKey.COURSE_CREATED_FOR))
         || ((List) courseBatchObject.get(JsonKey.COURSE_CREATED_FOR)).isEmpty()) {
       throw new ProjectCommonException(
@@ -288,7 +286,6 @@ public class CourseBatchManagementActor extends BaseActor {
           ResponseCode.courseCreatedForIsNull.getErrorMessage(),
           ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
-
     String batchCreator = (String) courseBatchObject.get(JsonKey.CREATED_BY);
     if (StringUtils.isBlank(batchCreator)) {
       throw new ProjectCommonException(
@@ -296,17 +293,13 @@ public class CourseBatchManagementActor extends BaseActor {
           ResponseCode.invalidCourseCreatorId.getErrorMessage(),
           ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
-
     String batchCreatorRootOrgId = getRootOrg(batchCreator);
-
     Map<String, Boolean> participants =
         (Map<String, Boolean>) courseBatchObject.get(JsonKey.PARTICIPANT);
-
     List<String> userIds = (List<String>) req.get(JsonKey.USER_IDs);
     if (participants == null) {
       participants = new HashMap<>();
     }
-
     Map<String, String> participantWithRootOrgIds = getRootOrgForMultipleUsers(userIds);
 
     for (String userId : userIds) {
@@ -337,27 +330,16 @@ public class CourseBatchManagementActor extends BaseActor {
         response.getResult().put(userId, JsonKey.SUCCESS);
       }
     }
-
     courseBatchObject.put(JsonKey.PARTICIPANT, participants);
     courseBatchDao.update(courseBatchObject);
     sender().tell(response, self());
-
     Request request = new Request();
     request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
     request.getRequest().put(JsonKey.BATCH, courseBatchObject);
-    ProjectLogger.log(
-        "JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE"
-            + PropertiesCache.getInstance().getProperty(JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE),
-        LoggerEnum.INFO.name());
     if (PropertiesCache.getInstance().getProperty(JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE) != null
         && (Boolean.parseBoolean(
             PropertiesCache.getInstance()
                 .getProperty(JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
-      ProjectLogger.log(
-          "JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE INSIDE"
-              + PropertiesCache.getInstance()
-                  .getProperty(JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE),
-          LoggerEnum.INFO.name());
       Request batchNotification = new Request();
       batchNotification.setOperation(ActorOperations.BATCH_BULK.getValue());
       Map<String, Object> batchNotificationMap = new HashMap<>();
@@ -644,7 +626,6 @@ public class CourseBatchManagementActor extends BaseActor {
             searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
 
     List<Map<String, Object>> esContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-
     for (Map<String, Object> user : esContent) {
       String rootOrg = getRootOrgFromUserMap(user);
       userWithRootOrgs.put((String) user.get(JsonKey.ID), rootOrg);
@@ -660,7 +641,6 @@ public class CourseBatchManagementActor extends BaseActor {
   }
 
   private String getRootOrgFromUserMap(Map<String, Object> userInfo) {
-
     String rootOrg = (String) userInfo.get(JsonKey.ROOT_ORG_ID);
     Map<String, Object> registeredOrgInfo =
         (Map<String, Object>) userInfo.get(JsonKey.REGISTERED_ORG);
@@ -733,10 +713,8 @@ public class CourseBatchManagementActor extends BaseActor {
       Date requestedStartDate,
       Date requestedEndDate,
       Date todayDate) {
-
     Date startDate = requestedStartDate != null ? requestedStartDate : existingStartDate;
     Date endDate = requestedEndDate != null ? requestedEndDate : existingEndDate;
-
     ProjectLogger.log(
         "existingStartDate, existingEndDate, requestedStartDate, requestedEndDate, todaydate"
             + existingStartDate

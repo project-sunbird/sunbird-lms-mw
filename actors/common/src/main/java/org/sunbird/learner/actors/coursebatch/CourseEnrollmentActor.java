@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
-import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -117,9 +116,9 @@ public class CourseEnrollmentActor extends BaseActor {
       Request batchNotification = new Request();
       batchNotification.setOperation(ActorOperations.BATCH_OPERATION.getValue());
       Map<String, Object> batchNotificationMap = new HashMap<>();
-      batchNotificationMap.put(BackgroundOperations.COURSE_MAP.name(), courseMap);
-      batchNotificationMap.put(BackgroundOperations.COURSE_BATCH.name(), courseBatchResult);
-      batchNotificationMap.put(BackgroundOperations.OPERATION_TYPE.name(), JsonKey.ADD);
+      batchNotificationMap.put(JsonKey.COURSE_MAP, courseMap);
+      batchNotificationMap.put(JsonKey.COURSE_BATCH, courseBatchResult);
+      batchNotificationMap.put(JsonKey.OPERATION_TYPE, JsonKey.ADD);
       batchNotification.setRequest(batchNotificationMap);
       tellToAnother(batchNotification);
     }
@@ -185,9 +184,9 @@ public class CourseEnrollmentActor extends BaseActor {
       Request batchNotification = new Request();
       batchNotification.setOperation(ActorOperations.BATCH_OPERATION.getValue());
       Map<String, Object> batchNotificationMap = new HashMap<>();
-      batchNotificationMap.put(BackgroundOperations.COURSE_MAP.name(), request);
-      batchNotificationMap.put(BackgroundOperations.COURSE_BATCH.name(), courseBatchResult);
-      batchNotificationMap.put(BackgroundOperations.OPERATION_TYPE.name(), JsonKey.REMOVE);
+      batchNotificationMap.put(JsonKey.COURSE_MAP, request);
+      batchNotificationMap.put(JsonKey.COURSE_BATCH, courseBatchResult);
+      batchNotificationMap.put(JsonKey.OPERATION_TYPE, JsonKey.REMOVE);
       batchNotification.setRequest(batchNotificationMap);
       tellToAnother(batchNotification);
     }

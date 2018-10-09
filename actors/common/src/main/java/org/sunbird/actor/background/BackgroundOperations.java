@@ -6,12 +6,11 @@ public enum BackgroundOperations {
   updateUserCountToLocationID,
   emailService,
   PARTICIPANTS,
-  MENTOR ,
+  MENTOR,
   OPERATION_TYPE,
-  USER_TYPE ,
+  USER_TYPE,
   COURSE_BATCH,
   COURSE_MAP,
   OLD,
   NEW;
-  
 }

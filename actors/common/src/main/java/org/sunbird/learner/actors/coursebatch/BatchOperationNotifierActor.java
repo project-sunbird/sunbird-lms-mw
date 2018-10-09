@@ -142,7 +142,7 @@ public class BatchOperationNotifierActor extends BaseActor {
       processUserDataAndSendMail(mentorList, courseBatch, operationType, JsonKey.MENTOR);
     }
     if (participentList != null) {
-      processUserDataAndSendMail(mentorList, courseBatch, operationType, JsonKey.PARTICIPANT);
+      processUserDataAndSendMail(participentList, courseBatch, operationType, JsonKey.PARTICIPANT);
     }
   }
 
@@ -290,7 +290,7 @@ public class BatchOperationNotifierActor extends BaseActor {
     if (operationType.equalsIgnoreCase(JsonKey.ADD)) {
       user.put(JsonKey.SUBJECT, JsonKey.COURSE_INVITATION);
     } else if (operationType.equalsIgnoreCase(JsonKey.REMOVE)) {
-      user.put(JsonKey.SUBJECT, JsonKey.UNENROLL_FROM_COURSE);
+      user.put(JsonKey.SUBJECT, JsonKey.UNENROLL_FROM_COURSE_BATCH);
     }
     return user;
   }

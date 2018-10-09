@@ -132,10 +132,11 @@ public class CourseBatchManagementActor extends BaseActor {
     rollUp.put("l1", (String) request.get(JsonKey.COURSE_ID));
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
 
-    if (PropertiesCache.getInstance().getProperty(JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE) != null
+    if (PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)
+            != null
         && (Boolean.parseBoolean(
             PropertiesCache.getInstance()
-                .getProperty(JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
+                .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
 
       batchOperationNotifier(courseBatch);
     }
@@ -193,10 +194,11 @@ public class CourseBatchManagementActor extends BaseActor {
     rollUp.put("l1", courseBatch.getCourseId());
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
 
-    if (PropertiesCache.getInstance().getProperty(JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE) != null
+    if (PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)
+            != null
         && (Boolean.parseBoolean(
             PropertiesCache.getInstance()
-                .getProperty(JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
+                .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
       batchOperationUpdateNotifier(courseBatch, courseBatch);
     }
   }
@@ -338,10 +340,11 @@ public class CourseBatchManagementActor extends BaseActor {
     Request request = new Request();
     request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
     request.getRequest().put(JsonKey.BATCH, courseBatchObject);
-    if (PropertiesCache.getInstance().getProperty(JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE) != null
+    if (PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)
+            != null
         && (Boolean.parseBoolean(
             PropertiesCache.getInstance()
-                .getProperty(JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
+                .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
       batchOperationNotifierForUsers(courseBatch);
     }
     try {

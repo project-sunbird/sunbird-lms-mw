@@ -108,19 +108,12 @@ public class CourseEnrollmentActor extends BaseActor {
           LoggerEnum.INFO.name());
       UserCoursesService.sync(courseMap, (String) courseMap.get(JsonKey.ID));
     }
-    if (PropertiesCache.getInstance().getProperty(JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE) != null
+    if (PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)
+            != null
         && (Boolean.parseBoolean(
             PropertiesCache.getInstance()
-                .getProperty(JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
-
-      Request batchNotification = new Request();
-      batchNotification.setOperation(ActorOperations.BATCH_OPERATION.getValue());
-      Map<String, Object> batchNotificationMap = new HashMap<>();
-      batchNotificationMap.put(JsonKey.COURSE_MAP, courseMap);
-      batchNotificationMap.put(JsonKey.COURSE_BATCH, courseBatchResult);
-      batchNotificationMap.put(JsonKey.OPERATION_TYPE, JsonKey.ADD);
-      batchNotification.setRequest(batchNotificationMap);
-      tellToAnother(batchNotification);
+                .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
+      batchOperationNotifier(courseMap, courseBatchResult, JsonKey.REMOVE);
     }
     generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
   }
@@ -176,20 +169,26 @@ public class CourseEnrollmentActor extends BaseActor {
     UserCoursesService.sync(updateAttributes, userCourseResult.getId());
     generateAndProcessTelemetryEvent(request, "user.batch.course.unenroll");
 
-    if (PropertiesCache.getInstance().getProperty(JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE) != null
+    if (PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)
+            != null
         && (Boolean.parseBoolean(
             PropertiesCache.getInstance()
-                .getProperty(JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
+                .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
 
-      Request batchNotification = new Request();
-      batchNotification.setOperation(ActorOperations.BATCH_OPERATION.getValue());
-      Map<String, Object> batchNotificationMap = new HashMap<>();
-      batchNotificationMap.put(JsonKey.COURSE_MAP, request);
-      batchNotificationMap.put(JsonKey.COURSE_BATCH, courseBatchResult);
-      batchNotificationMap.put(JsonKey.OPERATION_TYPE, JsonKey.REMOVE);
-      batchNotification.setRequest(batchNotificationMap);
-      tellToAnother(batchNotification);
+      batchOperationNotifier(request, courseBatchResult, JsonKey.REMOVE);
     }
+  }
+
+  private void batchOperationNotifier(
+      Map<String, Object> request, CourseBatch courseBatchResult, String operationType) {
+    Request batchNotification = new Request();
+    batchNotification.setOperation(ActorOperations.BATCH_OPERATION.getValue());
+    Map<String, Object> batchNotificationMap = new HashMap<>();
+    batchNotificationMap.put(JsonKey.COURSE_MAP, request);
+    batchNotificationMap.put(JsonKey.COURSE_BATCH, courseBatchResult);
+    batchNotificationMap.put(JsonKey.OPERATION_TYPE, operationType);
+    batchNotification.setRequest(batchNotificationMap);
+    tellToAnother(batchNotification);
   }
 
   private void generateAndProcessTelemetryEvent(Map<String, Object> request, String corelation) {

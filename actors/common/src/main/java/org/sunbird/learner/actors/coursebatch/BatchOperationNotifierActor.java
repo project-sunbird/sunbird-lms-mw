@@ -1,6 +1,7 @@
 package org.sunbird.learner.actors.coursebatch;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,8 +14,23 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.models.course.batch.CourseBatch;
-
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.LoggerEnum;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.lang.StringUtils;
+import org.sunbird.learner.actors.notificationservice.dao.EmailTemplateDao;
+import org.sunbird.learner.actors.notificationservice.dao.impl.EmailTemplateDaoImpl;
+import org.apache.velocity.Template;
+import org.apache.velocity.VelocityContext;
+import org.sunbird.common.models.util.mail.SendMail;
+import org.sunbird.common.exception.ProjectCommonException;
+import java.text.MessageFormat;
+import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.helper.ServiceFactory;
+import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.learner.util.Util;
+import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 
 /**
  * This actor will handle course enrollment operations.
@@ -25,68 +41,100 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @ActorConfig(tasks = { "batchBulk", "batchUpdate", "batchOperation" }, asyncTasks = { "batchBulk", "batchUpdate",
     "batchOperation" })
 public class BatchOperationNotifierActor extends BaseActor {
+  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+
+  private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
+      .getDecryptionServiceInstance(null);
 
   @Override
   public void onReceive(Request request) throws Throwable {
     if (request.getOperation().equalsIgnoreCase(ActorOperations.BATCH_BULK.getValue())) {
       Map<String, Object> requestMap = request.getRequest();
-      batchBulkOperationNotifier((CourseBatch) requestMap.get(BackgroundOperations.COURSE_BATCH.name()),
-          (String) requestMap.get(BackgroundOperations.USER_TYPE.name()),
+      batchCreateOperationNotifier((CourseBatch) requestMap.get(BackgroundOperations.COURSE_BATCH.name()),
           (String) requestMap.get(BackgroundOperations.OPERATION_TYPE.name()));
     } else if (request.getOperation().equalsIgnoreCase(ActorOperations.BATCH_UPDATE.getValue())) {
       Map<String, Object> requestMap = request.getRequest();
       batchUpdateOperationNotifier((CourseBatch) requestMap.get(BackgroundOperations.OLD.name()),
           (CourseBatch) requestMap.get(BackgroundOperations.NEW.name()));
-    } else if (request.getOperation().equalsIgnoreCase(ActorOperations.BATCH_UPDATE.getValue())) {
+    } else if (request.getOperation().equalsIgnoreCase(ActorOperations.BATCH_OPERATION.getValue())) {
       Map<String, Object> requestMap = request.getRequest();
-      batchOperationNotifier((Map<String, Object>) requestMap.get(BackgroundOperations.COURSE_MAP.name()),
+      batchEnrollOperationNotifier((Map<String, Object>) requestMap.get(BackgroundOperations.COURSE_MAP.name()),
+          (CourseBatch) requestMap.get(BackgroundOperations.COURSE_BATCH.name()),
           (String) requestMap.get(BackgroundOperations.OPERATION_TYPE.name()));
     } else {
       onReceiveUnsupportedOperation(request.getOperation());
     }
   }
 
-  public void batchOperationNotifier(Map<String, Object> courseMap, String operationType) {
-    Request request = getMailRequest(courseMap);
-    sendMail(request);
+  private void batchCreateOperationNotifier(CourseBatch courseBatch, String operationType) {
+    if (operationType.equals(JsonKey.ADD)) {
+      sendEmailNotification(courseBatch, JsonKey.ADD);
+
+    } else if (operationType.equals(JsonKey.REMOVE)) {
+      sendEmailNotification(courseBatch, JsonKey.REMOVE);
+    }
   }
 
-  private void batchBulkOperationNotifier(CourseBatch courseBatch, String userType, String operationType) {
+  @SuppressWarnings("unchecked")
+  public void batchEnrollOperationNotifier(Map<String, Object> courseMap, CourseBatch courseBatch,
+      String operationType) {
+    Map<String, Object> requestMap = createRequestMap(courseBatch);
 
-    if (userType.equals(BackgroundOperations.MENTOR.name())) {
+    List<String> userId = new ArrayList<>();
+    userId.add((String) courseMap.get(JsonKey.USER_ID));
+    List<Map<String, Object>> participentList = getUsersFromDB(userId);
+    Map<String, String> user;
+    if (participentList.size() > 0) {
       if (operationType.equals(JsonKey.ADD)) {
-        Request requestForMentor = getMailRequest(courseBatch, BackgroundOperations.MENTOR.name(), JsonKey.ADD);
-        sendMail(requestForMentor);
-      } else if (operationType.equals(JsonKey.REMOVE)) {
-        Request requestForMentor = getMailRequest(courseBatch, BackgroundOperations.MENTOR.name(), JsonKey.ADD);
-        sendMail(requestForMentor);
+        user = getUserData(participentList.get(0), JsonKey.ADD);
+        user.put(JsonKey.TEMPLATE_NAME, JsonKey.BATCH_LEARNER_ENROL);
+      } else {
+        user = getUserData(participentList.get(0), JsonKey.REMOVE);
+        user.put(JsonKey.TEMPLATE_NAME, JsonKey.OPEN_BATCH_LEARNER_UNENROL);
       }
+      sendMail(user, requestMap);
     }
-    if (userType.equals(BackgroundOperations.PARTICIPANTS.name())) {
-
-      if (operationType.equals(JsonKey.ADD)) {
-        Request requestForParticipients = getMailRequest(courseBatch, BackgroundOperations.PARTICIPANTS.name(),
-            JsonKey.ADD);
-        sendMail(requestForParticipients);
-      } else if (operationType.equals(JsonKey.REMOVE)) {
-        Request requestForParticipients = getMailRequest(courseBatch, BackgroundOperations.PARTICIPANTS.name(),
-            JsonKey.REMOVE);
-        sendMail(requestForParticipients);
-      }
-
-    }
-
   }
 
-  private void sendMail(Request request) {
-    request.setOperation(BackgroundOperations.emailService.name());
-    tellToAnother(request);
+  @SuppressWarnings("unchecked")
+  private void sendEmailNotification(CourseBatch courseBatch, String operationType) {
+    // operationType will be used for getting add or remove template
+    List<Map<String, Object>> mentorList, participentList;
+    mentorList = getUsersFromDB(courseBatch.getMentors());
+    participentList = getUsersFromDB(getParticipants(courseBatch));
+    for (Map<String, Object> mentor : mentorList) {
+      Map<String, Object> requestMap = new HashMap<String, Object>();
+      requestMap = this.createRequestMap(courseBatch);
+      Map<String, String> user;
+      if (operationType.equals(JsonKey.ADD)) {
+        user = getUserData(mentor, JsonKey.ADD);
+        user.put(JsonKey.TEMPLATE_NAME, JsonKey.BATCH_MENTOR_ENROL);
+      } else {
+        user = getUserData(mentor, JsonKey.REMOVE);
+        user.put(JsonKey.TEMPLATE_NAME, JsonKey.BATCH_MENTOR_UNENROL);
+      }
+      sendMail(user, requestMap);
+    }
+    for (Map<String, Object> participant : participentList) {
+      Map<String, Object> requestMap = new HashMap<String, Object>();
+      requestMap = this.createRequestMap(courseBatch);
+      Map<String, String> user;
+      if (operationType.equals(JsonKey.ADD)) {
+        user = getUserData(participant, JsonKey.ADD);
+        user.put(JsonKey.TEMPLATE_NAME, JsonKey.BATCH_LEARNER_ENROL);
+      } else {
+        user = getUserData(participant, JsonKey.REMOVE);
+        user.put(JsonKey.TEMPLATE_NAME, JsonKey.BATCH_LEARNER_UNENROL);
+      }
+      sendMail(user, requestMap);
+    }
   }
 
   private void batchUpdateOperationNotifier(CourseBatch courseBatchPrev, CourseBatch courseBatchNew) {
     List<String> prevMentors = courseBatchPrev.getMentors();
     List<String> newMentors = courseBatchNew.getMentors();
     List<String> removedMentors = courseBatchPrev.getMentors();
+
     if (prevMentors == null) {
       prevMentors = new ArrayList<>();
       removedMentors = new ArrayList<>();
@@ -94,117 +142,151 @@ public class BatchOperationNotifierActor extends BaseActor {
     if (newMentors == null) {
       newMentors = new ArrayList<>();
     }
-    for (String mentor : prevMentors) {
-      if (newMentors.contains(mentor)) {
-        newMentors.remove(mentor);
-        removedMentors.remove(mentor);
-      }
-    }
+
+    removedMentors.removeAll(newMentors);
+    newMentors.removeAll(prevMentors);
     courseBatchPrev.setMentors(removedMentors);
     courseBatchNew.setMentors(newMentors);
-    if (!removedMentors.isEmpty())
-      batchBulkOperationNotifier(courseBatchPrev, BackgroundOperations.MENTOR.name(), JsonKey.REMOVE);
-    if (!newMentors.isEmpty())
-      batchBulkOperationNotifier(courseBatchNew, BackgroundOperations.MENTOR.name(), JsonKey.ADD);
     Map<String, Boolean> oldParticipants = courseBatchPrev.getParticipant();
     Map<String, Boolean> newParticipants = courseBatchNew.getParticipant();
     Map<String, Boolean> removedParticipants = courseBatchPrev.getParticipant();
+    courseBatchPrev.setParticipant(new HashMap<String, Boolean>());
+    courseBatchNew.setParticipant(new HashMap<String, Boolean>());
+    if (!removedMentors.isEmpty())
+      batchCreateOperationNotifier(courseBatchPrev, JsonKey.REMOVE);
+    if (!newMentors.isEmpty())
+      batchCreateOperationNotifier(courseBatchNew, JsonKey.ADD);
+
     if (oldParticipants == null) {
       oldParticipants = new HashMap<>();
       removedParticipants = new HashMap<>();
     }
-    if (newParticipants == null)
+    if (newParticipants == null) {
       newParticipants = new HashMap<>();
-    Set<String> oldParticipantsSet = oldParticipants.keySet();
-    for (String participant : oldParticipantsSet) {
-      if (newParticipants.containsKey(participant)) {
-        newParticipants.remove(participant);
-        removedParticipants.remove(participant);
+    }
+
+    for (Map.Entry<String, Boolean> entry : oldParticipants.entrySet()) {
+      if (newParticipants.containsKey(entry.getKey()) && newParticipants.get(entry.getKey())) {
+        newParticipants.remove(entry.getKey());
+        removedParticipants.remove(entry.getKey());
       }
     }
     courseBatchPrev.setParticipant(removedParticipants);
     courseBatchNew.setParticipant(newParticipants);
+    courseBatchPrev.setMentors(new ArrayList<String>());
+    courseBatchNew.setMentors(new ArrayList<String>());
+
     if (!removedParticipants.isEmpty())
-      batchBulkOperationNotifier(courseBatchPrev, BackgroundOperations.PARTICIPANTS.name(), JsonKey.REMOVE);
+      batchCreateOperationNotifier(courseBatchPrev, JsonKey.REMOVE);
+
     if (!newParticipants.isEmpty())
-      batchBulkOperationNotifier(courseBatchNew, BackgroundOperations.PARTICIPANTS.name(), JsonKey.ADD);
+      batchCreateOperationNotifier(courseBatchNew, JsonKey.ADD);
+
   }
 
-  private Request getMailRequest(Map<String, Object> courseMap) {
-    Request request = new Request();
-    Map<String, Object> requestMap = getRequestMap(courseMap);
-    Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.EMAIL_REQUEST, requestMap);
-    request.setRequest(innerMap);
-    return request;
-  }
-
-  private Request getMailRequest(CourseBatch courseBatch, String userType, String operationType) {
-
-    Request request = new Request();
-    Map<String, Object> requestMap = getRequestMap(courseBatch, userType, operationType);
-    Map<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.EMAIL_REQUEST, requestMap);
-    request.setRequest(innerMap);
-    return request;
-  }
-
-  private Map<String, Object> getRequestMap(Map<String, Object> courseMap) {
-    Map<String, Object> requestMap = new HashMap<>();
-    List<String> users = new ArrayList<>();
-    users.add((String) courseMap.get(JsonKey.USER_ID));
-    requestMap.put(JsonKey.RECIPIENT_USERIDS, users);
-    requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "default");
-    requestMap.put(JsonKey.SUBJECT, courseMap.get(JsonKey.SUBJECT));
-    requestMap.put(JsonKey.ORG_NAME, courseMap.get(JsonKey.ORG_NAME));
-    requestMap.put(JsonKey.COURSE_LOGO_URL, courseMap.get(JsonKey.COURSE_LOGO_URL));
-    requestMap.put(JsonKey.COURSE_NAME, courseMap.get(JsonKey.COURSE_NAME));
-    requestMap.put(JsonKey.DESCRIPTION, courseMap.get(JsonKey.DESCRIPTION));
-    requestMap.put(JsonKey.ADDED_BY, courseMap.get(JsonKey.ADDED_BY));
-
-    return requestMap;
-  }
-
-  @SuppressWarnings("unchecked")
-  private Map<String, Object> getRequestMap(CourseBatch courseBatch, String userType, String operationType) {
-    //operationType will be used for getting add or remove template 
+  private Map<String, Object> createRequestMap(CourseBatch courseBatch) {
     Map<String, Object> courseBatchObject = new ObjectMapper().convertValue(courseBatch, Map.class);
     Map<String, String> additionalCourseInfo = (Map<String, String>) courseBatchObject
         .get(JsonKey.COURSE_ADDITIONAL_INFO);
-
-    Map<String, Object> requestMap = new HashMap<>();
-    if (userType.equals(BackgroundOperations.MENTOR.name())) {
-      getMentors(requestMap, courseBatch);
-    }
-    if (userType.equals(BackgroundOperations.PARTICIPANTS.name())) {
-      getParticipants(requestMap, courseBatch);
-    }
-    requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "default");
-    requestMap.put(JsonKey.SUBJECT, courseBatch.getCourseAdditionalInfo().get(JsonKey.SUBJECT));
+    Map<String, Object> requestMap = new HashMap<String, Object>();
     requestMap.put(JsonKey.ORG_NAME, courseBatchObject.get(JsonKey.ORG_NAME));
     requestMap.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.COURSE_LOGO_URL));
     requestMap.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.COURSE_NAME));
-    requestMap.put(JsonKey.DESCRIPTION, additionalCourseInfo.get(JsonKey.DESCRIPTION));
-    requestMap.put(JsonKey.ADDED_BY, courseBatchObject.get(JsonKey.ADDED_BY));
-
+    requestMap.put(JsonKey.START_DATE, courseBatchObject.get(JsonKey.START_DATE));
+    requestMap.put(JsonKey.END_DATE, courseBatchObject.get(JsonKey.END_DATE));
+    requestMap.put(JsonKey.COURSE_ID, courseBatchObject.get(JsonKey.COURSE_ID));
+    requestMap.put(JsonKey.NAME, courseBatch.getName());
     return requestMap;
   }
 
-  private void getParticipants(Map<String, Object> requestMap, CourseBatch courseBatch) {
+  private Map<String, String> getUserData(Map<String, Object> data, String operationType) {
+    Map<String, String> user = new HashMap<String, String>();
+    user.put(JsonKey.FIRST_NAME, data.get(JsonKey.FIRST_NAME).toString());
+    user.put(JsonKey.EMAIL, data.get(JsonKey.EMAIL).toString());
+    if (operationType.equalsIgnoreCase(JsonKey.ADD)) {
+      user.put(JsonKey.SUBJECT, JsonKey.COURSE_INVITATION);
+    } else if (operationType.equalsIgnoreCase(JsonKey.REMOVE)) {
+      user.put(JsonKey.SUBJECT, JsonKey.UNENROLL_FROM_COURSE);
+    }
 
+    return user;
+  }
+
+  private void sendMail(Map<String, String> user, Map<String, Object> requestMap) {
+    String template = getEmailTemplateFile(user.get("templateName"));
+    requestMap.put(JsonKey.FIRST_NAME, user.get(JsonKey.FIRST_NAME));
+    VelocityContext context = getContext(requestMap);
+    for (Map.Entry<String, Object> entry : requestMap.entrySet()) {
+      ProjectLogger.log("**********Key***** " + entry.getKey() + "--Value--->" + entry.getValue(),
+          LoggerEnum.INFO.name());
+    }
+    String decryptedEmail = decryptionService.decryptData(user.get(JsonKey.EMAIL));
+    SendMail.sendMailWithBody(new String[] { decryptedEmail }, user.get(JsonKey.SUBJECT), context, template);
+  }
+
+  private List<String> getParticipants(CourseBatch courseBatch) {
     List<String> users = new ArrayList<>();
     Map<String, Boolean> participants = courseBatch.getParticipant();
     Set<String> key = participants.keySet();
     for (String user : key) {
-      users.add(user);
+      if (participants.get(user)) {
+        users.add(user);
+      }
     }
-    requestMap.put(JsonKey.RECIPIENT_EMAILS, users);
-
+    ProjectLogger.log("**********receipients***** " + users, LoggerEnum.INFO.name());
+    return users;
   }
 
-  private void getMentors(Map<String, Object> requestMap, CourseBatch courseBatch) {
+  private List<Map<String, Object>> getUsersFromDB(List<String> userIds) {
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    List<String> userIdList = new ArrayList<>(userIds);
+    List<String> fields = new ArrayList<>();
+    fields.add(JsonKey.FIRST_NAME);
+    fields.add(JsonKey.EMAIL);
+    Response response = cassandraOperation.getRecordsByIdsWithSpecifiedColumns(usrDbInfo.getKeySpace(),
+        usrDbInfo.getTableName(), fields, userIdList);
+    List<Map<String, Object>> userList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    return userList;
+  }
 
-    requestMap.put(JsonKey.RECIPIENT_EMAILS, courseBatch.getMentors());
+  private String getEmailTemplateFile(String templateName) {
+    EmailTemplateDao emailTemplateDao = EmailTemplateDaoImpl.getInstance();
+    String template = emailTemplateDao.getTemplate(templateName);
+    if (StringUtils.isBlank(template)) {
+      ProjectCommonException.throwClientErrorException(ResponseCode.invalidParameterValue, MessageFormat
+          .format(ResponseCode.invalidParameterValue.getErrorMessage(), templateName, JsonKey.EMAIL_TEMPLATE_TYPE));
+    }
+    return template;
+  }
+
+  public static VelocityContext getContext(Map<String, Object> map) {
+
+    VelocityContext context = new VelocityContext();
+
+    if (StringUtils.isNotBlank((String) map.get(JsonKey.COURSE_NAME))) {
+      context.put(JsonKey.COURSE_NAME, getValue(map, JsonKey.COURSE_NAME));
+    }
+    if (StringUtils.isNotBlank((String) map.get(JsonKey.START_DATE))) {
+      context.put(JsonKey.BATCH_START_DATE, getValue(map, JsonKey.START_DATE));
+    }
+    if (StringUtils.isNotBlank((String) map.get(JsonKey.END_DATE))) {
+      context.put(JsonKey.BATCH_END_DATE, getValue(map, JsonKey.END_DATE));
+    }
+    if (StringUtils.isNotBlank((String) map.get(JsonKey.NAME))) {
+      context.put("batchName", getValue(map, JsonKey.NAME));
+    }
+    if (StringUtils.isNotBlank((String) map.get(JsonKey.FIRST_NAME))) {
+      context.put(JsonKey.NAME, getValue(map, JsonKey.FIRST_NAME));
+    } else {
+      context.put(JsonKey.NAME, "");
+    }
+    return context;
+  }
+
+  private static Object getValue(Map<String, Object> map, String key) {
+    Object value = map.get(key);
+    map.remove(key);
+    return value;
   }
 
 }

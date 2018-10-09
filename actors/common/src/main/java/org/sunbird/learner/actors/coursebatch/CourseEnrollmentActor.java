@@ -37,14 +37,10 @@ import org.sunbird.models.course.batch.CourseBatch;
 import org.sunbird.models.user.courses.UserCourses;
 import org.sunbird.telemetry.util.TelemetryUtil;
 
-@ActorConfig(
-  tasks = {"enrollCourse", "unenrollCourse"},
-  asyncTasks = {}
-)
+@ActorConfig(tasks = { "enrollCourse", "unenrollCourse" }, asyncTasks = {})
 public class CourseEnrollmentActor extends BaseActor {
 
-  private static String EKSTEP_COURSE_SEARCH_QUERY =
-          "{\"request\": {\"filters\":{\"contentType\": [\"Course\"], \"objectType\": [\"Content\"], \"identifier\": \"COURSE_ID_PLACEHOLDER\", \"status\": \"Live\"},\"limit\": 1}}";
+  private static String EKSTEP_COURSE_SEARCH_QUERY = "{\"request\": {\"filters\":{\"contentType\": [\"Course\"], \"objectType\": [\"Content\"], \"identifier\": \"COURSE_ID_PLACEHOLDER\", \"status\": \"Live\"},\"limit\": 1}}";
 
   private CourseBatchDao courseBatchDao = new CourseBatchDaoImpl();
   private UserCoursesDao userCourseDao = UserCoursesDaoImpl.getInstance();
@@ -59,35 +55,30 @@ public class CourseEnrollmentActor extends BaseActor {
     ExecutionContext.setRequestId(request.getRequestId());
 
     switch (operation) {
-      case "enrollCourse":
-        enrollCourseBatch(request);
-        break;
-      case "unenrollCourse":
-        unenrollCourseBatch(request);
-        break;
-      default:
-        onReceiveUnsupportedOperation("CourseEnrollmentActor");
+    case "enrollCourse":
+      enrollCourseBatch(request);
+      break;
+    case "unenrollCourse":
+      unenrollCourseBatch(request);
+      break;
+    default:
+      onReceiveUnsupportedOperation("CourseEnrollmentActor");
     }
   }
 
   private void enrollCourseBatch(Request actorMessage) {
     ProjectLogger.log("enrollCourseClass called");
     Map<String, Object> courseMap = (Map<String, Object>) actorMessage.getRequest();
-    CourseBatch courseBatchResult =
-        courseBatchDao.readById((String) courseMap.get(JsonKey.BATCH_ID));
-    validateCourseBatch(
-        courseBatchResult, courseMap, (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
+    CourseBatch courseBatchResult = courseBatchDao.readById((String) courseMap.get(JsonKey.BATCH_ID));
+    validateCourseBatch(courseBatchResult, courseMap, (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
 
     UserCourses userCourseResult = userCourseDao.read(UserCoursesService.getPrimaryKey(courseMap));
 
     if (!ProjectUtil.isNull(userCourseResult) && userCourseResult.isActive()) {
       ProjectLogger.log("User Already Enrolled Course ");
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.userAlreadyEnrolledCourse,
-                  ResponseCode.CLIENT_ERROR.getResponseCode()),
-              self());
+      sender().tell(
+          createExceptionObject(ResponseCode.userAlreadyEnrolledCourse, ResponseCode.CLIENT_ERROR.getResponseCode()),
+          self());
       return;
     }
     courseMap = createUserCourseMap(courseMap, courseBatchResult, userCourseResult);
@@ -104,8 +95,7 @@ public class CourseEnrollmentActor extends BaseActor {
       courseMap.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(new Timestamp(new Date().getTime())));
       updateUserCoursesToES(courseMap);
     } else {
-      ProjectLogger.log(
-          "CourseEnrollmentActor:enrollCourseBatch user is enrolling second time.",
+      ProjectLogger.log("CourseEnrollmentActor:enrollCourseBatch user is enrolling second time.",
           LoggerEnum.INFO.name());
       UserCoursesService.sync(courseMap, (String) courseMap.get(JsonKey.ID));
     }
@@ -116,6 +106,7 @@ public class CourseEnrollmentActor extends BaseActor {
       batchNotification.setOperation(ActorOperations.BATCH_OPERATION.getValue());
       Map<String, Object> batchNotificationMap = new HashMap<>();
       batchNotificationMap.put(BackgroundOperations.COURSE_MAP.name(), courseMap);
+      batchNotificationMap.put(BackgroundOperations.COURSE_BATCH.name(), courseBatchResult);
       batchNotificationMap.put(BackgroundOperations.OPERATION_TYPE.name(), JsonKey.ADD);
       batchNotification.setRequest(batchNotificationMap);
       tellToAnother(batchNotification);
@@ -123,33 +114,26 @@ public class CourseEnrollmentActor extends BaseActor {
     generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
   }
 
-  private Map<String, Object> createUserCourseMap(
-      Map<String, Object> courseMap, CourseBatch courseBatchResult, UserCourses userCourseResult) {
+  private Map<String, Object> createUserCourseMap(Map<String, Object> courseMap, CourseBatch courseBatchResult,
+      UserCourses userCourseResult) {
     courseMap.put(JsonKey.ID, UserCoursesService.getPrimaryKey(courseMap));
     courseMap.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
     if (userCourseResult == null) {
       // this will create user batch data for new user
       Timestamp ts = new Timestamp(new Date().getTime());
       String addedBy = (String) courseMap.get(JsonKey.REQUESTED_BY);
-      courseMap.put(
-          JsonKey.COURSE_LOGO_URL,
-          courseBatchResult.getCourseAdditionalInfo().get(JsonKey.APP_ICON));
+      courseMap.put(JsonKey.COURSE_LOGO_URL, courseBatchResult.getCourseAdditionalInfo().get(JsonKey.APP_ICON));
       courseMap.put(JsonKey.CONTENT_ID, (String) courseMap.get(JsonKey.COURSE_ID));
-      courseMap.put(
-          JsonKey.COURSE_NAME, courseBatchResult.getCourseAdditionalInfo().get(JsonKey.NAME));
-      courseMap.put(
-          JsonKey.DESCRIPTION,
-          courseBatchResult.getCourseAdditionalInfo().get(JsonKey.DESCRIPTION));
+      courseMap.put(JsonKey.COURSE_NAME, courseBatchResult.getCourseAdditionalInfo().get(JsonKey.NAME));
+      courseMap.put(JsonKey.DESCRIPTION, courseBatchResult.getCourseAdditionalInfo().get(JsonKey.DESCRIPTION));
       courseMap.put(JsonKey.ADDED_BY, addedBy);
       courseMap.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
       courseMap.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
       courseMap.put(JsonKey.DATE_TIME, ts);
       courseMap.put(JsonKey.COURSE_PROGRESS, 0);
       if (null != courseBatchResult.getCourseAdditionalInfo().get(JsonKey.LEAF_NODE_COUNT)) {
-        courseMap.put(
-            JsonKey.LEAF_NODE_COUNT,
-            Integer.parseInt(
-                courseBatchResult.getCourseAdditionalInfo().get(JsonKey.LEAF_NODE_COUNT).trim()));
+        courseMap.put(JsonKey.LEAF_NODE_COUNT,
+            Integer.parseInt(courseBatchResult.getCourseAdditionalInfo().get(JsonKey.LEAF_NODE_COUNT).trim()));
       } else {
         courseMap.put(JsonKey.LEAF_NODE_COUNT, 0);
       }
@@ -162,8 +146,7 @@ public class CourseEnrollmentActor extends BaseActor {
     // objects of telemetry event...
     Map<String, Object> request = actorMessage.getRequest();
     CourseBatch courseBatchResult = courseBatchDao.readById((String) request.get(JsonKey.BATCH_ID));
-    validateCourseBatch(
-        courseBatchResult, request, (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
+    validateCourseBatch(courseBatchResult, request, (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     UserCourses userCourseResult = userCourseDao.read(UserCoursesService.getPrimaryKey(request));
     UserCoursesService.validateUserUnenroll(userCourseResult);
     Map<String, Object> updateAttributes = new HashMap<>();
@@ -173,14 +156,15 @@ public class CourseEnrollmentActor extends BaseActor {
     sender().tell(result, self());
     UserCoursesService.sync(updateAttributes, userCourseResult.getId());
     generateAndProcessTelemetryEvent(request, "user.batch.course.unenroll");
-    
-    if(PropertiesCache.getInstance().getProperty(JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE)!=null && (Boolean.parseBoolean(
-            PropertiesCache.getInstance().getProperty(JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
+
+    if (PropertiesCache.getInstance().getProperty(JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE) != null && (Boolean
+        .parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
 
       Request batchNotification = new Request();
       batchNotification.setOperation(ActorOperations.BATCH_OPERATION.getValue());
       Map<String, Object> batchNotificationMap = new HashMap<>();
       batchNotificationMap.put(BackgroundOperations.COURSE_MAP.name(), request);
+      batchNotificationMap.put(BackgroundOperations.COURSE_BATCH.name(), courseBatchResult);
       batchNotificationMap.put(BackgroundOperations.OPERATION_TYPE.name(), JsonKey.REMOVE);
       batchNotification.setRequest(batchNotificationMap);
       tellToAnother(batchNotification);
@@ -190,13 +174,12 @@ public class CourseEnrollmentActor extends BaseActor {
   private void generateAndProcessTelemetryEvent(Map<String, Object> request, String corelation) {
     Map<String, Object> targetObject = new HashMap<>();
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) request.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
-    TelemetryUtil.generateCorrelatedObject(
-        (String) request.get(JsonKey.COURSE_ID), JsonKey.COURSE, corelation, correlatedObject);
-    TelemetryUtil.generateCorrelatedObject(
-        (String) request.get(JsonKey.BATCH_ID), JsonKey.BATCH, "user.batch", correlatedObject);
+    targetObject = TelemetryUtil.generateTargetObject((String) request.get(JsonKey.USER_ID), JsonKey.USER,
+        JsonKey.UPDATE, null);
+    TelemetryUtil.generateCorrelatedObject((String) request.get(JsonKey.COURSE_ID), JsonKey.COURSE, corelation,
+        correlatedObject);
+    TelemetryUtil.generateCorrelatedObject((String) request.get(JsonKey.BATCH_ID), JsonKey.BATCH, "user.batch",
+        correlatedObject);
 
     TelemetryUtil.telemetryProcessingCall(request, targetObject, correlatedObject);
   }
@@ -213,8 +196,7 @@ public class CourseEnrollmentActor extends BaseActor {
   }
 
   @SuppressWarnings("unchecked")
-  public static Map<String, Object> getCourseObjectFromEkStep(
-      String courseId, Map<String, String> headers) {
+  public static Map<String, Object> getCourseObjectFromEkStep(String courseId, Map<String, String> headers) {
     ProjectLogger.log("Requested course id is ==" + courseId, LoggerEnum.INFO.name());
     if (!StringUtils.isBlank(courseId)) {
       try {
@@ -222,7 +204,7 @@ public class CourseEnrollmentActor extends BaseActor {
         Map<String, Object> result = EkStepRequestUtil.searchContent(query, headers);
         if (null != result && !result.isEmpty()) {
           return ((List<Map<String, Object>>) result.get(JsonKey.CONTENTS)).get(0);
-          //  return (Map<String, Object>) contentObject;
+          // return (Map<String, Object>) contentObject;
         }
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);
@@ -232,19 +214,17 @@ public class CourseEnrollmentActor extends BaseActor {
   }
 
   /*
-   * This method will validate courseBatch details before enrolling and unenrolling
+   * This method will validate courseBatch details before enrolling and
+   * unenrolling
    *
    * @Params
    */
-  private void validateCourseBatch(
-      CourseBatch courseBatchDetails, Map<String, Object> request, String requestedBy) {
+  private void validateCourseBatch(CourseBatch courseBatchDetails, Map<String, Object> request, String requestedBy) {
 
     if (ProjectUtil.isNull(courseBatchDetails)) {
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.invalidCourseBatchId, ResponseCode.CLIENT_ERROR.getResponseCode()),
-              self());
+      sender().tell(
+          createExceptionObject(ResponseCode.invalidCourseBatchId, ResponseCode.CLIENT_ERROR.getResponseCode()),
+          self());
       return;
     }
     verifyRequestedByAndThrowErrorIfNotMatch((String) request.get(JsonKey.USER_ID), requestedBy);
@@ -252,20 +232,15 @@ public class CourseEnrollmentActor extends BaseActor {
       ProjectLogger.log(
           "CourseEnrollmentActor validateCourseBatch self enrollment or unenrollment is not applicable for invite only batch.",
           LoggerEnum.INFO.name());
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.enrollmentTypeValidation,
-                  ResponseCode.CLIENT_ERROR.getResponseCode()),
-              self());
+      sender().tell(
+          createExceptionObject(ResponseCode.enrollmentTypeValidation, ResponseCode.CLIENT_ERROR.getResponseCode()),
+          self());
       return;
     }
     if (!((String) request.get(JsonKey.COURSE_ID)).equals(courseBatchDetails.getCourseId())) {
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.invalidCourseBatchId, ResponseCode.CLIENT_ERROR.getResponseCode()),
-              self());
+      sender().tell(
+          createExceptionObject(ResponseCode.invalidCourseBatchId, ResponseCode.CLIENT_ERROR.getResponseCode()),
+          self());
       return;
     }
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
@@ -278,15 +253,10 @@ public class CourseEnrollmentActor extends BaseActor {
       }
       if (ProgressStatus.COMPLETED.getValue() == courseBatchDetails.getStatus()
           || (courseBatchEndDate != null && courseBatchEndDate.before(todaydate))) {
-        ProjectLogger.log(
-            "CourseEnrollmentActor validateCourseBatch Course is completed already.",
+        ProjectLogger.log("CourseEnrollmentActor validateCourseBatch Course is completed already.",
             LoggerEnum.INFO.name());
-        sender()
-            .tell(
-                createExceptionObject(
-                    ResponseCode.courseBatchAlreadyCompleted,
-                    ResponseCode.CLIENT_ERROR.getResponseCode()),
-                self());
+        sender().tell(createExceptionObject(ResponseCode.courseBatchAlreadyCompleted,
+            ResponseCode.CLIENT_ERROR.getResponseCode()), self());
         return;
       }
     } catch (ParseException e) {
@@ -296,17 +266,13 @@ public class CourseEnrollmentActor extends BaseActor {
 
   private void verifyRequestedByAndThrowErrorIfNotMatch(String userId, String requestedBy) {
     if (!(userId.equals(requestedBy))) {
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.UNAUTHORIZED, ResponseCode.UNAUTHORIZED.getResponseCode()),
-              self());
+      sender().tell(createExceptionObject(ResponseCode.UNAUTHORIZED, ResponseCode.UNAUTHORIZED.getResponseCode()),
+          self());
       return;
     }
   }
 
   private ProjectCommonException createExceptionObject(ResponseCode responseCode, int statusCode) {
-    return new ProjectCommonException(
-        responseCode.getErrorCode(), responseCode.getErrorMessage(), statusCode);
+    return new ProjectCommonException(responseCode.getErrorCode(), responseCode.getErrorMessage(), statusCode);
   }
 }

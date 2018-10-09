@@ -394,28 +394,22 @@ public class CourseBatchNotificationActor extends BaseActor {
   public static VelocityContext getContext(Map<String, Object> map) {
     VelocityContext context = new VelocityContext();
     if (StringUtils.isNotBlank((String) map.get(JsonKey.COURSE_NAME))) {
-      context.put(JsonKey.COURSE_NAME, getValue(map, JsonKey.COURSE_NAME));
+      context.put(JsonKey.COURSE_NAME, map.remove(JsonKey.COURSE_NAME));
     }
     if (StringUtils.isNotBlank((String) map.get(JsonKey.START_DATE))) {
-      context.put(JsonKey.BATCH_START_DATE, getValue(map, JsonKey.START_DATE));
+      context.put(JsonKey.BATCH_START_DATE, map.remove(JsonKey.START_DATE));
     }
     if (StringUtils.isNotBlank((String) map.get(JsonKey.END_DATE))) {
-      context.put(JsonKey.BATCH_END_DATE, getValue(map, JsonKey.END_DATE));
+      context.put(JsonKey.BATCH_END_DATE, map.remove(JsonKey.END_DATE));
     }
     if (StringUtils.isNotBlank((String) map.get(JsonKey.NAME))) {
-      context.put(JsonKey.BATCH_NAME, getValue(map, JsonKey.NAME));
+      context.put(JsonKey.BATCH_NAME, map.remove(JsonKey.NAME));
     }
     if (StringUtils.isNotBlank((String) map.get(JsonKey.FIRST_NAME))) {
-      context.put(JsonKey.NAME, getValue(map, JsonKey.FIRST_NAME));
+      context.put(JsonKey.NAME, map.remove(JsonKey.FIRST_NAME));
     } else {
       context.put(JsonKey.NAME, "");
     }
     return context;
-  }
-
-  private static Object getValue(Map<String, Object> map, String key) {
-    Object value = map.get(key);
-    map.remove(key);
-    return value;
   }
 }

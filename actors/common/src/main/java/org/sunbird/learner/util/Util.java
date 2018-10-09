@@ -1498,12 +1498,13 @@ public final class Util {
       Map<String, String> userProfileVisibilityMap, ActorRef actorRef) {
     Map<String, String> completeProfileVisibilityMap =
         getCompleteProfileVisibilityMap(userProfileVisibilityMap, actorRef);
+    Map<String, String> completeProfileVisibilityPrivateMap = new HashMap<String, String>();
     for (String key : completeProfileVisibilityMap.keySet()) {
-      if (JsonKey.PUBLIC.equalsIgnoreCase(completeProfileVisibilityMap.get(key))) {
-        completeProfileVisibilityMap.remove(key);
+      if (JsonKey.PRIVATE.equalsIgnoreCase(completeProfileVisibilityMap.get(key))) {
+        completeProfileVisibilityPrivateMap.put(key, JsonKey.PRIVATE);
       }
     }
-    return completeProfileVisibilityMap;
+    return completeProfileVisibilityPrivateMap;
   }
 
   public static Map<String, String> getCompleteProfileVisibilityMap(
@@ -2046,9 +2047,14 @@ public final class Util {
    */
   public static SystemSetting getSystemSettingByField(
       String systemSettingField, ActorRef actorRef) {
-    SystemSettingClient client = SystemSettingClientImpl.getInstance();
-    SystemSetting systemSetting = client.getSystemSettingByField(actorRef, systemSettingField);
-    if (null == systemSetting || null == systemSetting.getValue()) {
+    SystemSetting systemSetting = null;
+    try {
+      SystemSettingClient client = SystemSettingClientImpl.getInstance();
+      systemSetting = client.getSystemSettingByField(actorRef, systemSettingField);
+      if (null == systemSetting || null == systemSetting.getValue()) {
+        throw new Exception();
+      }
+    } catch (Exception e) {
       ProjectLogger.log(
           "Util:getSystemSettingByField: System setting not found for field - "
               + systemSettingField,

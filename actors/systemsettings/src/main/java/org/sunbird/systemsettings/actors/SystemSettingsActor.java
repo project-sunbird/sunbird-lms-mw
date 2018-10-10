@@ -55,7 +55,7 @@ public class SystemSettingsActor extends BaseActor {
   private void getSystemSetting(Request actorMessage) {
     ProjectLogger.log("SystemSettingsActor: getSystemSetting called", LoggerEnum.INFO.name());
     ProjectLogger.log(
-        "SystemSettingsActor: getSystemSetting: Request is " + actorMessage.getRequest());
+        "SystemSettingsActor:getSystemSetting: request is " + actorMessage.getRequest());
 
     Map<String, Object> req = actorMessage.getRequest();
     SystemSetting setting = systemSettingDaoImpl.readByField((String) req.get(JsonKey.FIELD));

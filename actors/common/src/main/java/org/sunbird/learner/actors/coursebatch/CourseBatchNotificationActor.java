@@ -1,7 +1,6 @@
 package org.sunbird.learner.actors.coursebatch;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -9,21 +8,18 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.actorutil.email.EmailServiceClient;
+import org.sunbird.actorutil.email.impl.EmailServiceClinetImpl;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.notificationservice.dao.EmailTemplateDao;
-import org.sunbird.learner.actors.notificationservice.dao.impl.EmailTemplateDaoImpl;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.course.batch.CourseBatch;
 
@@ -40,9 +36,7 @@ import org.sunbird.models.course.batch.CourseBatch;
 public class CourseBatchNotificationActor extends BaseActor {
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
-  private DecryptionService decryptionService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
-          null);
+  private EmailServiceClient emailServiceClient = EmailServiceClinetImpl.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -154,12 +148,13 @@ public class CourseBatchNotificationActor extends BaseActor {
    *
    * @param operationType String for specifying the operation type ie: add/remove
    */
-  @SuppressWarnings("unused")
+  @SuppressWarnings("unchecked")
   private void processUserDataAndSendMail(
       List<Map<String, Object>> userList,
       CourseBatch courseBatch,
       String operationType,
       String userType) {
+
     for (Map<String, Object> user : userList) {
       Map<String, Object> requestMap = new HashMap<String, Object>();
       requestMap = this.createRequestMap(courseBatch);
@@ -307,16 +302,17 @@ public class CourseBatchNotificationActor extends BaseActor {
    * @param Map<String, Object> RequestMap for email data.
    */
   private void sendMail(Map<String, String> user, Map<String, Object> requestMap) {
-    Request actorRequest = new Request();
-    Map<String, Object> request = new HashMap<String, Object>();
     requestMap.put(JsonKey.FIRST_NAME, user.get(JsonKey.FIRST_NAME));
     requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, user.get(JsonKey.EMAIL_TEMPLATE_TYPE));
     requestMap.put(JsonKey.RECIPIENT_EMAILS, new String[] {user.get(JsonKey.EMAIL)});
     requestMap.put(JsonKey.SUBJECT, user.get(JsonKey.SUBJECT));
-    request.put(JsonKey.EMAIL_REQUEST, requestMap);
-    actorRequest.setRequest(request);
-    actorRequest.setOperation(ActorOperations.SEND_MAIL.getValue());
-    tellToAnother(actorRequest);
+    try {
+      emailServiceClient.sendMail(
+          getActorRef(BackgroundOperations.emailService.name()), requestMap);
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "CourseBatchNotificationActor: sendMail using emailService client failed ****");
+    }
   }
 
   /*
@@ -363,26 +359,5 @@ public class CourseBatchNotificationActor extends BaseActor {
     }
     List<Map<String, Object>> userList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     return userList;
-  }
-
-  /*
-   * This method takes template name and return template.
-   *
-   * @param templateName String
-   *
-   * @return email template String .
-   */
-  private String getEmailTemplateFile(String templateName) {
-    EmailTemplateDao emailTemplateDao = EmailTemplateDaoImpl.getInstance();
-    String template = emailTemplateDao.getTemplate(templateName);
-    if (StringUtils.isBlank(template)) {
-      ProjectCommonException.throwClientErrorException(
-          ResponseCode.invalidParameterValue,
-          MessageFormat.format(
-              ResponseCode.invalidParameterValue.getErrorMessage(),
-              templateName,
-              JsonKey.EMAIL_TEMPLATE_TYPE));
-    }
-    return template;
   }
 }

@@ -207,8 +207,7 @@ public class CourseBatchManagementActor extends BaseActor {
     if (request.containsKey(JsonKey.DESCRIPTION))
       courseBatch.setDescription((String) request.get(JsonKey.DESCRIPTION));
 
-    if (request.containsKey(JsonKey.MENTORS)
-        && !((List<String>) request.get(JsonKey.MENTORS)).isEmpty())
+    if (request.containsKey(JsonKey.MENTORS))
       courseBatch.setMentors((List<String>) request.get(JsonKey.MENTORS));
 
     updateCourseBatchDate(courseBatch, request);

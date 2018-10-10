@@ -974,9 +974,7 @@ public class OrganisationManagementActor extends BaseActor {
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
-    Map<String, Object> req = actorMessage.getRequest();
-
-    Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
+    Map<String, Object> usrOrgData = actorMessage.getRequest();
     if (!(validateOrgRequestForMembers(usrOrgData))) {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
@@ -999,8 +997,9 @@ public class OrganisationManagementActor extends BaseActor {
     List<String> roles = new ArrayList<>();
     orgId = (String) usrOrgData.get(JsonKey.ORGANISATION_ID);
     userId = (String) usrOrgData.get(JsonKey.USER_ID);
-    if (isNotNull(req.get(JsonKey.REQUESTED_BY))) {
-      updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
+    if (isNotNull(usrOrgData.get(JsonKey.REQUESTED_BY))) {
+      updatedBy = (String) usrOrgData.get(JsonKey.REQUESTED_BY);
+      usrOrgData.remove(JsonKey.REQUESTED_BY);
     }
     if (isNotNull(usrOrgData.get(JsonKey.ROLES))) {
       roles.addAll((List<String>) usrOrgData.get(JsonKey.ROLES));
@@ -1131,9 +1130,7 @@ public class OrganisationManagementActor extends BaseActor {
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
-    Map<String, Object> req = actorMessage.getRequest();
-
-    Map<String, Object> usrOrgData = (Map<String, Object>) req.get(JsonKey.USER_ORG);
+    Map<String, Object> usrOrgData = actorMessage.getRequest();
     if (!(validateUsrRequest(usrOrgData))) {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
@@ -1156,8 +1153,9 @@ public class OrganisationManagementActor extends BaseActor {
     orgId = (String) usrOrgData.get(JsonKey.ORGANISATION_ID);
     userId = (String) usrOrgData.get(JsonKey.USER_ID);
 
-    if (isNotNull(req.get(JsonKey.REQUESTED_BY))) {
-      updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
+    if (isNotNull(usrOrgData.get(JsonKey.REQUESTED_BY))) {
+      updatedBy = (String) usrOrgData.get(JsonKey.REQUESTED_BY);
+      usrOrgData.remove(JsonKey.REQUESTED_BY);
     }
     // check user already exist for the org or not
     Map<String, Object> requestData = new HashMap<>();

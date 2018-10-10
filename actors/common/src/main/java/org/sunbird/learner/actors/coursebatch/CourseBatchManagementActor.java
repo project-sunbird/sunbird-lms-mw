@@ -160,7 +160,7 @@ public class CourseBatchManagementActor extends BaseActor {
       syncCourseBatchForeground((String) courseBatchMap.get(JsonKey.ID), courseBatchMap);
     } else {
       ProjectLogger.log(
-          "CourseBatchManagementActor:updateCourseBatch: Course batch not synced to ES are response is not successful");
+          "CourseBatchManagementActor:updateCourseBatch: Course batch not synced to ES as response is not successful");
     }
     targetObject =
         TelemetryUtil.generateTargetObject(

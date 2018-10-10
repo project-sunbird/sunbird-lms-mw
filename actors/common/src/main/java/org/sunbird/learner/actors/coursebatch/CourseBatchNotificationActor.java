@@ -9,18 +9,16 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.velocity.VelocityContext;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
-import org.sunbird.common.models.util.mail.SendMail;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -113,10 +111,10 @@ public class CourseBatchNotificationActor extends BaseActor {
     if (!CollectionUtils.isEmpty(participentList)) {
       if (operationType.equals(JsonKey.ADD)) {
         user = getUserData(participentList.get(0), JsonKey.ADD);
-        user.put(JsonKey.TEMPLATE_NAME, JsonKey.BATCH_LEARNER_ENROL);
+        user.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.BATCH_LEARNER_ENROL);
       } else {
         user = getUserData(participentList.get(0), JsonKey.REMOVE);
-        user.put(JsonKey.TEMPLATE_NAME, JsonKey.OPEN_BATCH_LEARNER_UNENROL);
+        user.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.OPEN_BATCH_LEARNER_UNENROL);
       }
       sendMail(user, requestMap);
     }
@@ -170,9 +168,9 @@ public class CourseBatchNotificationActor extends BaseActor {
         userData = getUserData(user, JsonKey.ADD);
         if (userData != null) {
           if (userType.equals(JsonKey.PARTICIPANT)) {
-            userData.put(JsonKey.TEMPLATE_NAME, JsonKey.BATCH_LEARNER_ENROL);
+            userData.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.BATCH_LEARNER_ENROL);
           } else {
-            userData.put(JsonKey.TEMPLATE_NAME, JsonKey.BATCH_MENTOR_ENROL);
+            userData.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.BATCH_MENTOR_ENROL);
           }
         } else {
           ProjectLogger.log(
@@ -183,15 +181,19 @@ public class CourseBatchNotificationActor extends BaseActor {
         userData = getUserData(user, JsonKey.REMOVE);
         if (userData != null) {
           if (userType.equals(JsonKey.PARTICIPANT)) {
-            userData.put(JsonKey.TEMPLATE_NAME, JsonKey.BATCH_LEARNER_UNENROL);
+            userData.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.BATCH_LEARNER_UNENROL);
           } else {
-            userData.put(JsonKey.TEMPLATE_NAME, JsonKey.BATCH_MENTOR_UNENROL);
+            userData.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.BATCH_MENTOR_UNENROL);
           }
         } else {
           ProjectLogger.log(
               "BatchOperationNotifierActor: processUserDataAndSendMail : User data is NULL",
               LoggerEnum.ERROR.name());
         }
+      }
+      if (user.get(JsonKey.USER_ID) != null
+          && StringUtils.isNotBlank((String) user.get(JsonKey.USER_ID))) {
+        requestMap.put(JsonKey.RECIPIENT_USERIDS, (String) user.get(JsonKey.USER_ID));
       }
       sendMail(userData, requestMap);
     }
@@ -297,32 +299,24 @@ public class CourseBatchNotificationActor extends BaseActor {
   }
 
   /*
-   * This method is for sending e-mails for one at a time.
+   * This method is for sending e-mails for one at a time, EmailServiceActor will
+   * be called for sending email
    *
    * @param Map<String, String> user will have user data
    *
    * @param Map<String, Object> RequestMap for email data.
    */
   private void sendMail(Map<String, String> user, Map<String, Object> requestMap) {
-    String template = getEmailTemplateFile(user.get("templateName"));
+    Request actorRequest = new Request();
+    Map<String, Object> request = new HashMap<String, Object>();
     requestMap.put(JsonKey.FIRST_NAME, user.get(JsonKey.FIRST_NAME));
-    VelocityContext context = ProjectUtil.getContext(requestMap);
-    String decryptedEmail = decryptionService.decryptData(user.get(JsonKey.EMAIL));
-    if (decryptedEmail != null && !StringUtils.isBlank(decryptedEmail)) {
-      try {
-        SendMail.sendMailWithBody(
-            new String[] {decryptedEmail}, user.get(JsonKey.SUBJECT), context, template);
-      } catch (Exception e) {
-        ProjectLogger.log(
-            "BatchOperationNotifierActor : sendMail, Error encountered while sending email notification for batch operation for user   "
-                + e.getMessage(),
-            LoggerEnum.ERROR.name());
-      }
-    } else {
-      ProjectLogger.log(
-          "BatchOperationNotifierActor : sendMail, Error encountered while sending email, eitheer it is black or null ",
-          LoggerEnum.ERROR.name());
-    }
+    requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, user.get(JsonKey.EMAIL_TEMPLATE_TYPE));
+    requestMap.put(JsonKey.RECIPIENT_EMAILS, new String[] {user.get(JsonKey.EMAIL)});
+    requestMap.put(JsonKey.SUBJECT, user.get(JsonKey.SUBJECT));
+    request.put(JsonKey.EMAIL_REQUEST, requestMap);
+    actorRequest.setRequest(request);
+    actorRequest.setOperation(ActorOperations.SEND_MAIL.getValue());
+    tellToAnother(actorRequest);
   }
 
   /*

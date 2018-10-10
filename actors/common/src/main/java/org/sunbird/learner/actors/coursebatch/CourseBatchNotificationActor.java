@@ -18,6 +18,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.mail.SendMail;
 import org.sunbird.common.request.Request;
@@ -305,7 +306,7 @@ public class CourseBatchNotificationActor extends BaseActor {
   private void sendMail(Map<String, String> user, Map<String, Object> requestMap) {
     String template = getEmailTemplateFile(user.get("templateName"));
     requestMap.put(JsonKey.FIRST_NAME, user.get(JsonKey.FIRST_NAME));
-    VelocityContext context = getContext(requestMap);
+    VelocityContext context = ProjectUtil.getContext(requestMap);
     String decryptedEmail = decryptionService.decryptData(user.get(JsonKey.EMAIL));
     if (decryptedEmail != null && !StringUtils.isBlank(decryptedEmail)) {
       try {
@@ -389,27 +390,5 @@ public class CourseBatchNotificationActor extends BaseActor {
               JsonKey.EMAIL_TEMPLATE_TYPE));
     }
     return template;
-  }
-
-  public static VelocityContext getContext(Map<String, Object> map) {
-    VelocityContext context = new VelocityContext();
-    if (StringUtils.isNotBlank((String) map.get(JsonKey.COURSE_NAME))) {
-      context.put(JsonKey.COURSE_NAME, map.remove(JsonKey.COURSE_NAME));
-    }
-    if (StringUtils.isNotBlank((String) map.get(JsonKey.START_DATE))) {
-      context.put(JsonKey.BATCH_START_DATE, map.remove(JsonKey.START_DATE));
-    }
-    if (StringUtils.isNotBlank((String) map.get(JsonKey.END_DATE))) {
-      context.put(JsonKey.BATCH_END_DATE, map.remove(JsonKey.END_DATE));
-    }
-    if (StringUtils.isNotBlank((String) map.get(JsonKey.NAME))) {
-      context.put(JsonKey.BATCH_NAME, map.remove(JsonKey.NAME));
-    }
-    if (StringUtils.isNotBlank((String) map.get(JsonKey.FIRST_NAME))) {
-      context.put(JsonKey.NAME, map.remove(JsonKey.FIRST_NAME));
-    } else {
-      context.put(JsonKey.NAME, "");
-    }
-    return context;
   }
 }

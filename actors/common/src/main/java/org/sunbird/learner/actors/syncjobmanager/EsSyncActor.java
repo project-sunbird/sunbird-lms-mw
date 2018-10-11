@@ -38,7 +38,7 @@ public class EsSyncActor extends BaseActor {
       backgroundSyncRequest.getRequest().put(JsonKey.DATA, request.getRequest().get(JsonKey.DATA));
     
       try {
-        tellToAnother(syncESRequest);
+        tellToAnother(backgroundSyncRequest);
       } catch (Exception e) {
         ProjectLogger.log("EsSyncActor:triggerBackgroundSync: Exception occurred with error message = " + e.getMessage(), e);
       }    

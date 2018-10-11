@@ -21,11 +21,9 @@ public class EsSyncActor extends BaseActor {
   public void onReceive(Request request) throws Throwable {
     String operation = request.getOperation();
 
-    switch (operation) {
-      case "sync":
+    if (operation.equalsIgnoreCase(ActorOperations.SYNC.getValue())) {
         triggerBackgroundSync(request);
-        break;
-      default:
+    } else {
         onReceiveUnsupportedOperation("EsSyncActor");
     }
   }

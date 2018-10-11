@@ -29,8 +29,6 @@ import org.sunbird.learner.util.Util.DbInfo;
 
 /**
  * Background sync of data between Cassandra and Elastic Search.
- *
- * @author Amit Kumar
  */
 @ActorConfig(
   tasks = {},
@@ -44,11 +42,9 @@ public class EsSyncBackgroundActor extends BaseActor {
   public void onReceive(Request request) throws Throwable {    
     String operation = request.getOperation();
 
-    switch (operation) {
-      case "backgroundSync":
+    if (operation.equalsIgnoreCase(ActorOperations.BACKGROUND_SYNC.getValue())) {
         sync(request);
-        break;
-      default:
+    } else {
         onReceiveUnsupportedOperation("EsSyncBackgroundActor");
     }
   }

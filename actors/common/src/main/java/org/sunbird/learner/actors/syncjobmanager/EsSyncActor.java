@@ -9,9 +9,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 
 /**
- * This class is used to sync the ElasticSearch and DB.
- *
- * @author Amit Kumar
+ * Sync data between Cassandra and Elastic Search.
  */
 @ActorConfig(
   tasks = {"sync"},
@@ -21,23 +19,31 @@ public class EsSyncActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    String requestedOperation = request.getOperation();
-    if (requestedOperation.equalsIgnoreCase(ActorOperations.SYNC.getValue())) {
-      // return SUCCESS to controller and run the sync process in background
+    String operation = request.getOperation();
+
+    switch (operation) {
+      case "sync":
+        triggerBackgroundSync(request);
+        break;
+      default:
+        onReceiveUnsupportedOperation("EsSyncActor");
+    }
+  }
+  
+  private void triggerBackgroundSync(Request request) {
       Response response = new Response();
       response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
       sender().tell(response, self());
 
-      Request syncESRequest = new Request();
-      syncESRequest.setOperation(ActorOperations.SYNC_ELASTIC_SEARCH.getValue());
-      syncESRequest.getRequest().put(JsonKey.DATA, request.getRequest().get(JsonKey.DATA));
+      Request backgroundSyncRequest = new Request();
+      backgroundSyncRequest.setOperation(ActorOperations.BACKGROUND_SYNC.getValue());
+      backgroundSyncRequest.getRequest().put(JsonKey.DATA, request.getRequest().get(JsonKey.DATA));
+    
       try {
         tellToAnother(syncESRequest);
-      } catch (Exception ex) {
-        ProjectLogger.log("Exception Occurred while syncing data to elastic search : ", ex);
-      }
-    } else {
-      onReceiveUnsupportedOperation(request.getOperation());
-    }
-  }
+      } catch (Exception e) {
+        ProjectLogger.log("EsSyncActor:triggerBackgroundSync: Exception occurred with error message = " + e.getMessage(), e);
+      }    
+  }  
+  
 }

@@ -28,41 +28,47 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
 /**
- * This class is used to sync the ElasticSearch and DB.
+ * Background sync of data between Cassandra and Elastic Search.
  *
  * @author Amit Kumar
  */
 @ActorConfig(
   tasks = {},
-  asyncTasks = {"syncElasticSearch"}
+  asyncTasks = {"backgroundSync"}
 )
 public class EsSyncBackgroundActor extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   @Override
-  public void onReceive(Request request) throws Throwable {
-    String requestedOperation = request.getOperation();
-    if (requestedOperation.equalsIgnoreCase(ActorOperations.SYNC_ELASTIC_SEARCH.getValue())) {
-      syncData(request);
-    } else {
-      onReceiveUnsupportedOperation(request.getOperation());
+  public void onReceive(Request request) throws Throwable {    
+    String operation = request.getOperation();
+
+    switch (operation) {
+      case "backgroundSync":
+        sync(request);
+        break;
+      default:
+        onReceiveUnsupportedOperation("EsSyncBackgroundActor");
     }
   }
 
-  private void syncData(Request message) {
-    ProjectLogger.log("DB data sync operation to elastic search started ", LoggerEnum.INFO);
+  private void sync(Request message) {
+    ProjectLogger.log("EsSyncBackgroundActor: sync called", LoggerEnum.INFO);
+    
     long startTime = System.currentTimeMillis();
     Map<String, Object> req = message.getRequest();
     Map<String, Object> responseMap = new HashMap<>();
     List<Map<String, Object>> reponseList = null;
     List<Map<String, Object>> result = new ArrayList<>();
     Map<String, Object> dataMap = (Map<String, Object>) req.get(JsonKey.DATA);
+    
     String objectType = (String) dataMap.get(JsonKey.OBJECT_TYPE);
     List<Object> objectIds = null;
     if (dataMap.containsKey(JsonKey.OBJECT_IDS) && null != dataMap.get(JsonKey.OBJECT_IDS)) {
       objectIds = (List<Object>) dataMap.get(JsonKey.OBJECT_IDS);
     }
+    
     Util.DbInfo dbInfo = getDbInfoObj(objectType);
     if (null == dbInfo) {
       throw new ProjectCommonException(
@@ -70,24 +76,21 @@ public class EsSyncBackgroundActor extends BaseActor {
           ResponseCode.invalidObjectType.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
+    
+    String requestLogMsg = "";
+    
     if (null != objectIds && !objectIds.isEmpty()) {
+      requestLogMsg = MessageFormat.format("type = {0} and IDs = {1}", objectType, Arrays.toString(objectIds.toArray()));
+    
       ProjectLogger.log(
-          "fetching data for "
-              + objectType
-              + " for these ids "
-              + Arrays.toString(objectIds.toArray())
-              + " started",
+          "EsSyncBackgroundActor:sync: Fetching data for " + requestLogMsg + " started",
           LoggerEnum.INFO);
       Response response =
           cassandraOperation.getRecordsByProperty(
               dbInfo.getKeySpace(), dbInfo.getTableName(), JsonKey.ID, objectIds);
       reponseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
       ProjectLogger.log(
-          "fetching data for "
-              + objectType
-              + " for these ids "
-              + Arrays.toString(objectIds.toArray())
-              + " done",
+          "EsSyncBackgroundActor:sync: Fetching data for " + requestLogMsg + " completed",
           LoggerEnum.INFO);
     }
     if (null != reponseList && !reponseList.isEmpty()) {
@@ -97,24 +100,30 @@ public class EsSyncBackgroundActor extends BaseActor {
     } else {
       if (objectIds.size() > 0) {
         ProjectLogger.log(
-            "Sync to Elastic Search failed since all object ids passed were invalid",
+            "EsSyncBackgroundActor:sync: Skip sync for " + requestLogMsg + " as all IDs are invalid",
             LoggerEnum.ERROR);
         return;
       }
-      ProjectLogger.log("fetching all data for " + objectType + " started", LoggerEnum.INFO);
+
+      ProjectLogger.log("EsSyncBackgroundActor:sync: Sync all data for type = " + objectType + " as no IDs provided", LoggerEnum.INFO);
+      
       Response response =
           cassandraOperation.getAllRecords(dbInfo.getKeySpace(), dbInfo.getTableName());
       reponseList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-      ProjectLogger.log("fetching all data for " + objectType + " done", LoggerEnum.INFO);
+      
+      ProjectLogger.log("EsSyncBackgroundActor:sync: Fetching all data for type = " + objectType + " completed", LoggerEnum.INFO);
+      
       ProjectLogger.log(
-          "total db data to sync for " + objectType + " to Elastic search " + reponseList.size(),
+          "EsSyncBackgroundActor:sync: Number of entries to sync for type = " + objectType + " is " + reponseList.size(),
           LoggerEnum.INFO);
+      
       if (null != reponseList) {
         for (Map<String, Object> map : reponseList) {
           responseMap.put((String) map.get(JsonKey.ID), map);
         }
       }
     }
+    
     Iterator<Entry<String, Object>> itr = responseMap.entrySet().iterator();
     while (itr.hasNext()) {
       if (objectType.equals(JsonKey.USER)) {
@@ -138,12 +147,13 @@ public class EsSyncBackgroundActor extends BaseActor {
         ProjectUtil.EsIndex.sunbird.getIndexName(), getType(objectType), result);
     long stopTime = System.currentTimeMillis();
     long elapsedTime = stopTime - startTime;
+    
     ProjectLogger.log(
-        "total time taken to sync db data for "
+        "EsSyncBackgroundActor:sync: Total time taken to sync for type = "
             + objectType
-            + " to Elastic search "
+            + " is "
             + elapsedTime
-            + " ms.",
+            + " ms",
         LoggerEnum.INFO);
   }
 
@@ -162,7 +172,7 @@ public class EsSyncBackgroundActor extends BaseActor {
   }
 
   private Map<String, Object> getOrgDetails(Entry<String, Object> entry) {
-    ProjectLogger.log("fetching org data started", LoggerEnum.INFO);
+    ProjectLogger.log("EsSyncBackgroundActor: getOrgDetails called", LoggerEnum.INFO);
     Map<String, Object> orgMap = (Map<String, Object>) entry.getValue();
     orgMap.remove(JsonKey.ORG_TYPE);
     if (orgMap.containsKey(JsonKey.ADDRESS_ID)
@@ -172,14 +182,15 @@ public class EsSyncBackgroundActor extends BaseActor {
           getDetailsById(
               Util.dbInfoMap.get(JsonKey.ADDRESS_DB), (String) orgMap.get(JsonKey.ADDRESS_ID)));
     }
-    ProjectLogger.log("fetching org data completed", LoggerEnum.INFO);
+    ProjectLogger.log("EsSyncBackgroundActor: getOrgDetails returned", LoggerEnum.INFO);
     return orgMap;
   }
 
   @SuppressWarnings("unchecked")
   private Map<String, Object> getUserDetails(Entry<String, Object> entry) {
+    ProjectLogger.log("EsSyncBackgroundActor: getUserDetails called", LoggerEnum.INFO);
+    
     String userId = entry.getKey();
-    ProjectLogger.log("fetching user data started", LoggerEnum.INFO);
     Map<String, Object> userMap = (Map<String, Object>) entry.getValue();
     Util.removeAttributes(userMap, Arrays.asList(JsonKey.PASSWORD, JsonKey.UPDATED_BY));
     if (StringUtils.isBlank((String) userMap.get(JsonKey.COUNTRY_CODE))) {
@@ -187,27 +198,27 @@ public class EsSyncBackgroundActor extends BaseActor {
           JsonKey.COUNTRY_CODE,
           PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_DEFAULT_COUNTRY_CODE));
     }
-    ProjectLogger.log("fetching user address data started", LoggerEnum.INFO);
     userMap.put(JsonKey.ADDRESS, Util.getAddressDetails(userId, null));
-    ProjectLogger.log("fetching user education data started", LoggerEnum.INFO);
     userMap.put(JsonKey.EDUCATION, Util.getUserEducationDetails(userId));
-    ProjectLogger.log("fetching user job profile data started", LoggerEnum.INFO);
     userMap.put(JsonKey.JOB_PROFILE, Util.getJobProfileDetails(userId));
-    ProjectLogger.log("fetching user org data started", LoggerEnum.INFO);
     userMap.put(JsonKey.ORGANISATIONS, Util.getUserOrgDetails(userId));
-    ProjectLogger.log("fetching user Badge data  started", LoggerEnum.INFO);
     userMap.put(BadgingJsonKey.BADGE_ASSERTIONS, Util.getUserBadge(userId));
+    
     // save masked email and phone number
     Util.addMaskEmailAndPhone(userMap);
+    
     // add the skills column into ES
     Util.getUserSkills(userId);
+    
     // compute profile completeness and error field.
     Util.checkProfileCompleteness(userMap);
+
     // handle user profile visibility
     Util.checkUserProfileVisibility(
         userMap, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
     userMap = Util.getUserDetailsFromRegistry(userMap);
-    ProjectLogger.log("fetching user data completed", LoggerEnum.INFO);
+    
+    ProjectLogger.log("EsSyncBackgroundActor: getUserDetails returned", LoggerEnum.INFO);
     return userMap;
   }
 

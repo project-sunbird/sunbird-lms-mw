@@ -15,6 +15,7 @@ import org.sunbird.actorutil.email.EmailServiceClient;
 import org.sunbird.actorutil.email.impl.EmailServiceClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -42,13 +43,13 @@ public class CourseBatchNotificationActor extends BaseActor {
   public void onReceive(Request request) throws Throwable {
 
     String requestedOperation = request.getOperation();
-    switch (requestedOperation) {
-      case "courseBatchNotification":
-        courseBatchNotication(request);
-        break;
-      default:
-        onReceiveUnsupportedOperation(request.getOperation());
-        break;
+    if (requestedOperation.equals(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue())) {
+      courseBatchNotication(request);
+    } else {
+      ProjectLogger.log(
+          "CourseBatchNotificationActor : onReceive, No suitable Operation found for the request "
+              + request.getOperation(),
+          LoggerEnum.ERROR);
     }
   }
 

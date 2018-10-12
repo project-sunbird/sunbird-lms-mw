@@ -204,31 +204,12 @@ public class CourseBatchNotificationActor extends BaseActor {
    */
   private void batchUpdateOperationNotifier(
       CourseBatch courseBatchPrev, CourseBatch courseBatchNew) {
-    List<String> prevMentors = courseBatchPrev.getMentors();
-    List<String> newMentors = courseBatchNew.getMentors();
-    List<String> removedMentors = courseBatchPrev.getMentors();
-    if (prevMentors == null) {
-      prevMentors = new ArrayList<>();
-      removedMentors = new ArrayList<>();
-    }
-    if (newMentors == null) {
-      newMentors = new ArrayList<>();
-    }
-    removedMentors.removeAll(newMentors);
-    newMentors.removeAll(prevMentors);
-    courseBatchPrev.setMentors(removedMentors);
-    courseBatchNew.setMentors(newMentors);
+
     Map<String, Boolean> oldParticipants = courseBatchPrev.getParticipant();
     Map<String, Boolean> newParticipants = courseBatchNew.getParticipant();
     Map<String, Boolean> removedParticipants = courseBatchPrev.getParticipant();
-    courseBatchPrev.setParticipant(new HashMap<String, Boolean>());
-    courseBatchNew.setParticipant(new HashMap<String, Boolean>());
-    if (!removedMentors.isEmpty()) {
-      batchCreateOperationNotifier(courseBatchPrev, JsonKey.REMOVE);
-    }
-    if (!newMentors.isEmpty()) {
-      batchCreateOperationNotifier(courseBatchNew, JsonKey.ADD);
-    }
+    updateMentor(courseBatchPrev, courseBatchNew);
+
     if (oldParticipants == null) {
       oldParticipants = new HashMap<>();
       removedParticipants = new HashMap<>();
@@ -249,6 +230,31 @@ public class CourseBatchNotificationActor extends BaseActor {
     if (!removedParticipants.isEmpty())
       batchCreateOperationNotifier(courseBatchPrev, JsonKey.REMOVE);
     if (!newParticipants.isEmpty()) batchCreateOperationNotifier(courseBatchNew, JsonKey.ADD);
+  }
+
+  private void updateMentor(CourseBatch courseBatchPrev, CourseBatch courseBatchNew) {
+    List<String> prevMentors = courseBatchPrev.getMentors();
+    List<String> newMentors = courseBatchNew.getMentors();
+    List<String> removedMentors = courseBatchPrev.getMentors();
+    if (prevMentors == null) {
+      prevMentors = new ArrayList<>();
+      removedMentors = new ArrayList<>();
+    }
+    if (newMentors == null) {
+      newMentors = new ArrayList<>();
+    }
+    removedMentors.removeAll(newMentors);
+    newMentors.removeAll(prevMentors);
+    courseBatchPrev.setMentors(removedMentors);
+    courseBatchNew.setMentors(newMentors);
+    courseBatchPrev.setParticipant(new HashMap<String, Boolean>());
+    courseBatchNew.setParticipant(new HashMap<String, Boolean>());
+    if (!removedMentors.isEmpty()) {
+      batchCreateOperationNotifier(courseBatchPrev, JsonKey.REMOVE);
+    }
+    if (!newMentors.isEmpty()) {
+      batchCreateOperationNotifier(courseBatchNew, JsonKey.ADD);
+    }
   }
 
   /*

@@ -1,5 +1,6 @@
 package org.sunbird.learner.actors.coursemanagement;
 
+import static akka.testkit.JavaTestKit.duration;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 
@@ -22,8 +23,11 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+import org.sunbird.actorutil.InterServiceCommunication;
+import org.sunbird.actorutil.impl.InterServiceCommunicationImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -32,6 +36,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.coursebatch.CourseBatchNotificationActor;
 import org.sunbird.learner.util.EkStepRequestUtil;
+import org.sunbird.learner.util.Util;
 import org.sunbird.models.course.batch.CourseBatch;
 
 /*
@@ -40,12 +45,9 @@ import org.sunbird.models.course.batch.CourseBatch;
  */
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ServiceFactory.class})
-@PowerMockIgnore("javax.management.*")
+@PrepareForTest({ServiceFactory.class, EkStepRequestUtil.class, Util.class})
+@PowerMockIgnore({"javax.management.*", "javax.crypto.*"})
 public class CourseBatchNotificationActorTest {
-
-  private TestKit probe;
-  private ActorRef subject;
 
   private static final String FIRST_NAME = "Test User";
   private static final String USER_ID = "testUserId";
@@ -61,6 +63,8 @@ public class CourseBatchNotificationActorTest {
   private static final Props props = Props.create(CourseBatchNotificationActor.class);
   private static CassandraOperation cassandraOperation;
 
+  private static InterServiceCommunication interServiceCommunication;
+
   SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 
   @BeforeClass
@@ -73,14 +77,17 @@ public class CourseBatchNotificationActorTest {
   public void beforeEachTest() {
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
+    interServiceCommunication = mock(InterServiceCommunicationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     Mockito.reset(cassandraOperation);
+    Mockito.reset(interServiceCommunication);
   }
 
   @Test // Needs to test run
   public void testCourseBatchEnrollForLearnerFailure() {
-    mockCassandraRequestForReadRecordById();
-    mockCassandraRequestForReadTemplate();
+
+    mockInterServiceOperation();
+
     Response response = getEnrollFailureEmailNotificationForLearnerTestResponse();
     Assert.assertTrue(null != response && response.getResponseCode() != ResponseCode.OK);
   }
@@ -89,13 +96,17 @@ public class CourseBatchNotificationActorTest {
   public void testCourseBatchEnrollForLearnerSucess() {
     mockCassandraRequestForReadRecordById();
     mockCassandraRequestForReadTemplate();
-    Response response = getEnrollSucessEmailNotificationForLearnerTestResponse();
-    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
+    mockInterServiceOperation();
+
+    ProjectCommonException exception = getEnrollSucessEmailNotificationForLearnerTestResponse();
+    Assert.assertTrue(exception == null);
   }
 
   @Test
   public void testCourseBatchEnrollForMentorFailure() {
     mockCassandraRequestForReadRecordById();
+    mockInterServiceOperation();
+
     Response response = getEnrollFailureEmailNotificationForMentorTestResponse();
     Assert.assertTrue(null != response && response.getResponseCode() != ResponseCode.OK);
   }
@@ -224,15 +235,17 @@ public class CourseBatchNotificationActorTest {
     return response;
   }
 
-  private Response getEnrollSucessEmailNotificationForLearnerTestResponse() {
+  private ProjectCommonException getEnrollSucessEmailNotificationForLearnerTestResponse() {
     Request request =
         createRequestObjectForEnrollOperation(
             createCourseBatchObject(true), createCourseMap(), JsonKey.BATCH_LEARNER_ENROL);
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     subject.tell(request, probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
-    return response;
+    //  Response response = probe.expectMsgClass(duration("20 second"),Response.class);
+    ProjectCommonException exception =
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    return exception;
   }
 
   private Response getEnrollFailureEmailNotificationForLearnerTestResponse() {
@@ -241,8 +254,10 @@ public class CourseBatchNotificationActorTest {
             createCourseBatchObject(false), createCourseMap(), JsonKey.BATCH_LEARNER_ENROL);
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
+    mockCassandraRequestForReadRecordById();
+    mockCassandraRequestForReadTemplate();
     subject.tell(request, probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
+    Response response = probe.expectMsgClass(duration("20 second"), Response.class);
     return response;
   }
 
@@ -295,7 +310,10 @@ public class CourseBatchNotificationActorTest {
       participants.put(USER_ID, true);
     }
     courseBatch.setMentors(mentors);
+    courseBatch.setCountDecrementStatus(false);
+    courseBatch.setCountIncrementStatus(false);
     courseBatch.setParticipant(participants);
+    courseBatch.setStatus(0);
     Map<String, String> courseAdditionalInfo = new HashMap<>();
     courseAdditionalInfo.put(JsonKey.ORG_NAME, orgName);
     courseBatch.setCourseAdditionalInfo(courseAdditionalInfo);
@@ -319,6 +337,9 @@ public class CourseBatchNotificationActorTest {
         participants.put(USER_ID_NEW, true);
       }
     }
+    courseBatch.setStatus(0);
+    courseBatch.setCountDecrementStatus(false);
+    courseBatch.setCountIncrementStatus(false);
     courseBatch.setMentors(mentors);
     courseBatch.setParticipant(participants);
     Map<String, String> courseAdditionalInfo = new HashMap<>();
@@ -355,9 +376,22 @@ public class CourseBatchNotificationActorTest {
         .thenReturn(createUser());
   }
 
+  private void mockUtil() {
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    when(Util.dbInfoMap.get(Mockito.anyString())).thenReturn(usrDbInfo);
+  }
+
   private void mockCassandraRequestForReadTemplate() {
     when(cassandraOperation.getRecordsByPrimaryKeys(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyList(), Mockito.anyString()))
         .thenReturn(StringTemplateResponse());
+  }
+
+  private void mockInterServiceOperation() {
+    Response res = new Response();
+    res.setResponseCode(ResponseCode.OK);
+
+    when(interServiceCommunication.getResponse((ActorRef) Mockito.any(), (Request) Mockito.any()))
+        .thenReturn(res);
   }
 }

@@ -182,9 +182,9 @@ public class CourseEnrollmentActor extends BaseActor {
   private void batchOperationNotifier(
       Map<String, Object> request, CourseBatch courseBatchResult, String operationType) {
     Request batchNotification = new Request();
-    batchNotification.setOperation(ActorOperations.BATCH_OPERATION.getValue());
+    batchNotification.setOperation(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue());
     Map<String, Object> batchNotificationMap = new HashMap<>();
-    batchNotificationMap.put(JsonKey.COURSE_MAP, request);
+    batchNotificationMap.put(JsonKey.USER_ID, request.get(JsonKey.USER_ID));
     batchNotificationMap.put(JsonKey.COURSE_BATCH, courseBatchResult);
     batchNotificationMap.put(JsonKey.OPERATION_TYPE, operationType);
     batchNotification.setRequest(batchNotificationMap);

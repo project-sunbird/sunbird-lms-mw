@@ -53,8 +53,6 @@ public class CourseBatchNotificationActorTest {
   private static final String USER_ID = "testUserId";
   private static final String USER_ID_OLD = "testUserIdOld";
   private static final String USER_ID_NEW = "testUserIdNew";
-  private List<String> recipentEmails;
-  private List<String> recipentUserIds;
   private static final String emailId = "user@test.com";
   private static final String orgName = "testOrg";
   private static final String TEMPLATE = "template";
@@ -87,7 +85,7 @@ public class CourseBatchNotificationActorTest {
   public void testCourseBatchEnrollForLearnerFailure() {
 
     mockInterServiceOperation();
-
+    mockUtil();
     Response response = getEnrollFailureEmailNotificationForLearnerTestResponse();
     Assert.assertTrue(null != response && response.getResponseCode() != ResponseCode.OK);
   }
@@ -265,9 +263,9 @@ public class CourseBatchNotificationActorTest {
       CourseBatch courseBatch, Map<String, Object> courseMap, String operationType) {
     Request request = new Request();
     Map<String, Object> requestMap = new HashMap<>();
-    request.setOperation(ActorOperations.BATCH_OPERATION.getValue());
+    request.setOperation(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue());
     requestMap.put(JsonKey.COURSE_BATCH, courseBatch);
-    requestMap.put(JsonKey.COURSE_MAP, courseMap);
+    requestMap.put(JsonKey.USER_ID, (String) courseMap.get(JsonKey.USER_ID));
     requestMap.put(JsonKey.OPERATION_TYPE, operationType);
     request.setRequest(requestMap);
     return request;
@@ -277,8 +275,8 @@ public class CourseBatchNotificationActorTest {
       CourseBatch CourseBatchOld, CourseBatch courseBatchNew) {
     Request request = new Request();
     Map<String, Object> requestMap = new HashMap<>();
-    request.setOperation(ActorOperations.BATCH_UPDATE.getValue());
-    requestMap.put(JsonKey.OLD, CourseBatchOld);
+    request.setOperation(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue());
+    requestMap.put(JsonKey.COURSE_BATCH, CourseBatchOld);
     requestMap.put(JsonKey.NEW, courseBatchNew);
     request.setRequest(requestMap);
     return request;
@@ -288,7 +286,7 @@ public class CourseBatchNotificationActorTest {
       CourseBatch courseBatch, String OperationType) {
     Request request = new Request();
     Map<String, Object> requestMap = new HashMap<>();
-    request.setOperation(ActorOperations.BATCH_BULK.getValue());
+    request.setOperation(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue());
     requestMap.put(JsonKey.COURSE_BATCH, courseBatch);
     requestMap.put(JsonKey.OPERATION_TYPE, OperationType);
     request.setRequest(requestMap);
@@ -348,11 +346,11 @@ public class CourseBatchNotificationActorTest {
     return courseBatch;
   }
 
-  private Response StringTemplateResponse() {
+  private Response stringTemplateResponse() {
     Response response = new Response();
     List<Map<String, Object>> result = new ArrayList<>();
     Map<String, Object> map = new HashMap<>();
-    map.put(TEMPLATE, new String());
+    map.put(TEMPLATE, "");
     result.add(map);
     response.put(JsonKey.RESPONSE, result);
     return response;
@@ -384,7 +382,7 @@ public class CourseBatchNotificationActorTest {
   private void mockCassandraRequestForReadTemplate() {
     when(cassandraOperation.getRecordsByPrimaryKeys(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyList(), Mockito.anyString()))
-        .thenReturn(StringTemplateResponse());
+        .thenReturn(stringTemplateResponse());
   }
 
   private void mockInterServiceOperation() {

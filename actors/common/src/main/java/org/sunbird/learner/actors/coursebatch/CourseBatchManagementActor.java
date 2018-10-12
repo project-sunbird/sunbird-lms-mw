@@ -144,10 +144,9 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private void batchOperationNotifier(CourseBatch courseBatch) {
     Request batchNotification = new Request();
-    batchNotification.setOperation(ActorOperations.BATCH_BULK.getValue());
+    batchNotification.setOperation(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue());
     Map<String, Object> batchNotificationMap = new HashMap<>();
     batchNotificationMap.put(JsonKey.COURSE_BATCH, courseBatch);
-    batchNotificationMap.put(JsonKey.USER_TYPE, JsonKey.MENTOR);
     batchNotificationMap.put(JsonKey.OPERATION_TYPE, JsonKey.ADD);
     batchNotification.setRequest(batchNotificationMap);
     tellToAnother(batchNotification);
@@ -199,16 +198,16 @@ public class CourseBatchManagementActor extends BaseActor {
         && (Boolean.parseBoolean(
             PropertiesCache.getInstance()
                 .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
-      batchOperationUpdateNotifier(courseBatch, courseBatch);
+      batchOperationUpdateNotifier(courseBatch, oldBatch);
     }
   }
 
   private void batchOperationUpdateNotifier(CourseBatch courseBatch, CourseBatch oldBatch) {
     Request batchNotification = new Request();
-    batchNotification.setOperation(ActorOperations.BATCH_UPDATE.getValue());
+    batchNotification.setOperation(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue());
     Map<String, Object> batchNotificationMap = new HashMap<>();
     batchNotificationMap.put(JsonKey.NEW, courseBatch);
-    batchNotificationMap.put(JsonKey.OLD, oldBatch);
+    batchNotificationMap.put(JsonKey.COURSE_BATCH, oldBatch);
     batchNotification.setRequest(batchNotificationMap);
     tellToAnother(batchNotification);
   }
@@ -345,7 +344,7 @@ public class CourseBatchManagementActor extends BaseActor {
         && (Boolean.parseBoolean(
             PropertiesCache.getInstance()
                 .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
-      batchOperationNotifierForUsers(courseBatch);
+      batchOperationNotifier(courseBatch);
     }
     try {
       ProjectLogger.log(
@@ -357,17 +356,6 @@ public class CourseBatchManagementActor extends BaseActor {
               + ex.getMessage(),
           ex);
     }
-  }
-
-  private void batchOperationNotifierForUsers(CourseBatch courseBatch) {
-    Request batchNotification = new Request();
-    batchNotification.setOperation(ActorOperations.BATCH_BULK.getValue());
-    Map<String, Object> batchNotificationMap = new HashMap<>();
-    batchNotificationMap.put(JsonKey.COURSE_BATCH, courseBatch);
-    batchNotificationMap.put(JsonKey.USER_TYPE, JsonKey.PARTICIPANTS);
-    batchNotificationMap.put(JsonKey.OPERATION_TYPE, JsonKey.ADD);
-    batchNotification.setRequest(batchNotificationMap);
-    tellToAnother(batchNotification);
   }
 
   private void getCourseBatch(Request actorMessage) {

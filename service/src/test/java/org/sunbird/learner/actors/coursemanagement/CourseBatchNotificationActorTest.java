@@ -8,7 +8,6 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -56,14 +55,10 @@ public class CourseBatchNotificationActorTest {
   private static final String emailId = "user@test.com";
   private static final String orgName = "testOrg";
   private static final String TEMPLATE = "template";
-
   private static ActorSystem system;
   private static final Props props = Props.create(CourseBatchNotificationActor.class);
   private static CassandraOperation cassandraOperation;
-
   private static InterServiceCommunication interServiceCommunication;
-
-  SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 
   @BeforeClass
   public static void setUp() {

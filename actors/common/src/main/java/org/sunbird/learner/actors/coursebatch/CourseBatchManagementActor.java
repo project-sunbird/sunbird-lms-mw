@@ -156,6 +156,12 @@ public class CourseBatchManagementActor extends BaseActor {
     Response result = courseBatchDao.update(courseBatchMap);
     sender().tell(result, self());
 
+    if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      syncCourseBatchForeground((String) courseBatchMap.get(JsonKey.ID), courseBatchMap);
+    } else {
+      ProjectLogger.log(
+          "CourseBatchManagementActor:updateCourseBatch: Course batch not synced to ES as response is not successful");
+    }
     targetObject =
         TelemetryUtil.generateTargetObject(
             (String) request.get(JsonKey.ID), JsonKey.BATCH, JsonKey.UPDATE, null);
@@ -164,13 +170,6 @@ public class CourseBatchManagementActor extends BaseActor {
     Map<String, String> rollUp = new HashMap<>();
     rollUp.put("l1", courseBatch.getCourseId());
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
-
-    if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      syncCourseBatchBackground(courseBatchMap, ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
-    } else {
-      ProjectLogger.log(
-          "CourseBatchManagementActor:updateCourseBatch: Course batch not synced to ES are response is not successful");
-    }
   }
 
   private void checkBatchStatus(CourseBatch courseBatch) {
@@ -208,8 +207,7 @@ public class CourseBatchManagementActor extends BaseActor {
     if (request.containsKey(JsonKey.DESCRIPTION))
       courseBatch.setDescription((String) request.get(JsonKey.DESCRIPTION));
 
-    if (request.containsKey(JsonKey.MENTORS)
-        && !((List<String>) request.get(JsonKey.MENTORS)).isEmpty())
+    if (request.containsKey(JsonKey.MENTORS))
       courseBatch.setMentors((List<String>) request.get(JsonKey.MENTORS));
 
     updateCourseBatchDate(courseBatch, request);
@@ -386,22 +384,6 @@ public class CourseBatchManagementActor extends BaseActor {
           e);
     }
     return ProgressStatus.NOT_STARTED.getValue();
-  }
-
-  private void syncCourseBatchBackground(Map<String, Object> req, String operation) {
-    ProjectLogger.log(
-        "CourseBatchManagementActor: syncCourseBatchBackground called", LoggerEnum.INFO.name());
-    Request request = new Request();
-    request.setOperation(operation);
-    request.getRequest().put(JsonKey.BATCH, req);
-    try {
-      tellToAnother(request);
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "CourseBatchManagementActor:syncCourseBatchBackground: Exception occurred with error message = "
-              + ex.getMessage(),
-          ex);
-    }
   }
 
   private void validateMentors(CourseBatch courseBatch) {

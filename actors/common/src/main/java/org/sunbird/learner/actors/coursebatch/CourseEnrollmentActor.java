@@ -8,6 +8,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -120,10 +121,10 @@ public class CourseEnrollmentActor extends BaseActor {
       String addedBy = (String) courseMap.get(JsonKey.REQUESTED_BY);
       courseMap.put(
           JsonKey.COURSE_LOGO_URL,
-          courseBatchResult.getCourseAdditionalInfo().get(JsonKey.APP_ICON));
+          courseBatchResult.getCourseAdditionalInfo().get(JsonKey.COURSE_LOGO_URL));
       courseMap.put(JsonKey.CONTENT_ID, (String) courseMap.get(JsonKey.COURSE_ID));
       courseMap.put(
-          JsonKey.COURSE_NAME, courseBatchResult.getCourseAdditionalInfo().get(JsonKey.NAME));
+          JsonKey.COURSE_NAME, courseBatchResult.getCourseAdditionalInfo().get(JsonKey.COURSE_NAME));
       courseMap.put(
           JsonKey.DESCRIPTION,
           courseBatchResult.getCourseAdditionalInfo().get(JsonKey.DESCRIPTION));

@@ -36,8 +36,6 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.coursebatch.CourseEnrollmentActor;
 import org.sunbird.learner.util.EkStepRequestUtil;
 
-/** @author arvind */
-/** @author sudhirgiri */
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({EkStepRequestUtil.class, ServiceFactory.class})
 @PowerMockIgnore("javax.management.*")
@@ -70,16 +68,16 @@ public class CourseEnrollmentActorTest {
   }
 
   @Test
-  public void testEnrollCourseSuccessForStartedBatch() {
+  public void testEnrollCourseSuccessForNotStartedBatch() {
     Response response =
-        getEnrollSuccessTestResponse(true, false, ProgressStatus.STARTED.getValue());
+        getEnrollSuccessTestResponse(true, false, ProgressStatus.NOT_STARTED.getValue());
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
   }
 
   @Test
-  public void testEnrollCourseSuccessForNotStartedBatch() {
+  public void testEnrollCourseSuccessForStartedBatch() {
     Response response =
-        getEnrollSuccessTestResponse(true, false, ProgressStatus.NOT_STARTED.getValue());
+        getEnrollSuccessTestResponse(true, false, ProgressStatus.STARTED.getValue());
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
   }
 
@@ -91,18 +89,18 @@ public class CourseEnrollmentActorTest {
   }
 
   @Test
-  public void testEnrollCourseFailureWithAlreadyEnrolled() {
+  public void testEnrollCourseFailureForAlreadyCompletedBatch() {
     ProjectCommonException exception =
-        getEnrollFailureTestResponse(false, true, ProgressStatus.STARTED.getValue());
+        getEnrollFailureTestResponse(true, false, ProgressStatus.COMPLETED.getValue());
     Assert.assertTrue(
         null != exception
             && exception.getResponseCode() == ResponseCode.CLIENT_ERROR.getResponseCode());
   }
 
   @Test
-  public void testEnrollCourseFailureWithBatchAlreadyCompleted() {
+  public void testEnrollCourseFailureForAlreadyEnrolledBatch() {
     ProjectCommonException exception =
-        getEnrollFailureTestResponse(true, false, ProgressStatus.COMPLETED.getValue());
+        getEnrollFailureTestResponse(false, true, ProgressStatus.STARTED.getValue());
     Assert.assertTrue(
         null != exception
             && exception.getResponseCode() == ResponseCode.CLIENT_ERROR.getResponseCode());
@@ -125,7 +123,7 @@ public class CourseEnrollmentActorTest {
   }
 
   @Test
-  public void testUnenrollCourseFailureWithAlreadyUnenrolled() {
+  public void testUnenrollCourseFailureForAlreadyUnenrolledBatch() {
     ProjectCommonException exception =
         getUnenrollFailureTestResponse(false, false, ProgressStatus.STARTED.getValue());
     Assert.assertTrue(
@@ -134,7 +132,7 @@ public class CourseEnrollmentActorTest {
   }
 
   @Test
-  public void testUnenrollCourseFailureWithCourseAlreadyCompleted() {
+  public void testUnenrollCourseFailureForAlreadyCompletedBatch() {
     ProjectCommonException exception =
         getUnenrollFailureTestResponse(false, false, ProgressStatus.COMPLETED.getValue());
     Assert.assertTrue(

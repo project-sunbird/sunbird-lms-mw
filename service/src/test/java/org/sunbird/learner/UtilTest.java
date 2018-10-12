@@ -2,7 +2,9 @@ package org.sunbird.learner;
 
 import static org.powermock.api.mockito.PowerMockito.when;
 
+import com.datastax.driver.core.ColumnDefinitions;
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
@@ -20,10 +22,7 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-import org.sunbird.common.CassandraUtil;
-import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.helper.CassandraConnectionManager;
 import org.sunbird.helper.CassandraConnectionManagerImpl;
@@ -40,7 +39,6 @@ import org.sunbird.learner.util.Util;
   CassandraConnectionManagerImpl.class,
   Select.Selection.class,
   Select.Builder.class,
-  CassandraUtil.class,
   QueryBuilder.class,
   Select.Where.class,
   Session.class,
@@ -58,10 +56,20 @@ public class UtilTest {
   private static Select selectQuery;
   private static ResultSet result;
   private static Select.Where where;
+  private static Map<String, Object> userMap;
 
   @BeforeClass
   public static void Init() {
 
+    userMap = new HashMap<>();
+    userMap = new HashMap<>();
+    userMap.put(JsonKey.ID, "qwerty123");
+    userMap.put(JsonKey.LAST_NAME, "xyz");
+    userMap.put(JsonKey.FIRST_NAME, "abc");
+    userMap.put(JsonKey.ORGANISATION_ID, "12345");
+    userMap.put(JsonKey.PHONE, "1234567891");
+    userMap.put(JsonKey.EMAIL, "abc@gmail.com");
+    userMap.put(JsonKey.ROOT_ORG_ID, "123");
     cassandraConnectionManager = PowerMockito.mock(CassandraConnectionManagerImpl.class);
   }
 
@@ -72,51 +80,40 @@ public class UtilTest {
     map.put(JsonKey.PHONE_UNIQUE, "TRUE");
     PowerMockito.mockStatic(DataCacheHandler.class);
     when(DataCacheHandler.getConfigSettings()).thenReturn(map);
-
     PowerMockito.mockStatic(QueryBuilder.class);
     selectQuery = PowerMockito.mock(Select.class);
     selectSelection = PowerMockito.mock(Select.Selection.class);
     when(QueryBuilder.select()).thenReturn(selectSelection);
     result = PowerMockito.mock(ResultSet.class);
-
     selectBuilder = PowerMockito.mock(Select.Builder.class);
     when(selectSelection.all()).thenReturn(selectBuilder);
     when(selectBuilder.from(Mockito.anyString(), Mockito.anyString())).thenReturn(selectQuery);
     QueryBuilder.select().all().from(cassandraKeySpace, "user");
-
     PowerMockito.mockStatic(CassandraConnectionMngrFactory.class);
     when(CassandraConnectionMngrFactory.getObject(Mockito.anyString()))
         .thenReturn(cassandraConnectionManager);
-
     when(cassandraConnectionManager.getSession("sunbird")).thenReturn(session);
-    PowerMockito.mockStatic(CassandraUtil.class);
-
     where = PowerMockito.mock(Select.Where.class);
     when(selectQuery.where()).thenReturn(where);
     where.and(QueryBuilder.eq("phone", "1234567890"));
-
     when(selectQuery.allowFiltering()).thenReturn(selectQuery);
     when(session.execute(selectQuery)).thenReturn(result);
+    ColumnDefinitions cd = PowerMockito.mock(ColumnDefinitions.class);
+    when(result.getColumnDefinitions()).thenReturn(cd);
+    String str = "qkeytypoid(king";
+    when(cd.toString()).thenReturn(str);
+    when(str.substring(8, result.getColumnDefinitions().toString().length() - 1)).thenReturn(str);
   }
 
   @Test
   public void testCheckPhoneUniqnessFailureCreate() {
 
-    Map<String, Object> userMap = new HashMap<>();
-
-    userMap = new HashMap<>();
-    userMap.put(JsonKey.ID, "123xyz");
-    userMap.put(JsonKey.LAST_NAME, "xyz");
-    userMap.put(JsonKey.FIRST_NAME, "abc");
-    userMap.put(JsonKey.ORGANISATION_ID, "12345");
-    userMap.put(JsonKey.PHONE, "1234567890");
-    userMap.put(JsonKey.EMAIL, "abc@gmail.com");
-    userMap.put(JsonKey.ROOT_ORG_ID, "123");
+    List<Row> rows = new ArrayList<>();
+    Row row = Mockito.mock(Row.class);
+    rows.add(row);
+    when(result.all()).thenReturn(rows);
 
     String opType = "CREATE";
-    Response response = createCassandraResponse();
-    when(CassandraUtil.createResponse(result)).thenReturn(response);
-
     Exception exp = null;
     try {
       Util.checkPhoneUniqueness(userMap, opType);
@@ -130,20 +127,12 @@ public class UtilTest {
   @Test
   public void testCheckPhoneUniqnessFailureUpdate() {
 
-    Map<String, Object> userMap = new HashMap<>();
-
-    userMap = new HashMap<>();
-    userMap.put(JsonKey.ID, "123xyz");
-    userMap.put(JsonKey.LAST_NAME, "xyz");
-    userMap.put(JsonKey.FIRST_NAME, "abc");
-    userMap.put(JsonKey.ORGANISATION_ID, "12345");
-    userMap.put(JsonKey.PHONE, "1234567890");
-    userMap.put(JsonKey.EMAIL, "abc@gmail.com");
-    userMap.put(JsonKey.ROOT_ORG_ID, "123");
-
     String opType = "UPDATE";
-    Response response = createCassandraResponse();
-    when(CassandraUtil.createResponse(result)).thenReturn(response);
+    List<Row> rows = new ArrayList<>();
+    Row row = Mockito.mock(Row.class);
+    rows.add(row);
+    when(result.all()).thenReturn(rows);
+    when(row.getObject("id")).thenReturn("123xyz");
 
     Exception exp = null;
     try {
@@ -158,20 +147,11 @@ public class UtilTest {
   @Test
   public void testCheckPhoneUniqnessSuccessCreate() {
 
-    Map<String, Object> userMap = new HashMap<>();
-
-    userMap = new HashMap<>();
-    userMap.put(JsonKey.ID, "123xyz");
-    userMap.put(JsonKey.LAST_NAME, "xyz");
-    userMap.put(JsonKey.FIRST_NAME, "abc");
-    userMap.put(JsonKey.ORGANISATION_ID, "12345");
-    userMap.put(JsonKey.PHONE, "1234567890");
-    userMap.put(JsonKey.EMAIL, "abc@gmail.com");
-    userMap.put(JsonKey.ROOT_ORG_ID, "123");
-
     String opType = "CREATE";
-    Response response = createCassandraNullResponse();
-    when(CassandraUtil.createResponse(result)).thenReturn(response);
+    List<Row> rows = new ArrayList<>();
+    Row row = Mockito.mock(Row.class);
+    when(result.all()).thenReturn(rows);
+    when(row.getObject("id")).thenReturn("123xyz");
 
     Exception exp = null;
     try {
@@ -185,20 +165,12 @@ public class UtilTest {
   @Test
   public void testCheckPhoneUniqnessSuccessUpdate() {
 
-    Map<String, Object> userMap = new HashMap<>();
-
-    userMap = new HashMap<>();
-    userMap.put(JsonKey.ID, "qwerty123");
-    userMap.put(JsonKey.LAST_NAME, "xyz");
-    userMap.put(JsonKey.FIRST_NAME, "abc");
-    userMap.put(JsonKey.ORGANISATION_ID, "12345");
-    userMap.put(JsonKey.PHONE, "1234567891");
-    userMap.put(JsonKey.EMAIL, "abc@gmail.com");
-    userMap.put(JsonKey.ROOT_ORG_ID, "123");
-
     String opType = "UPDATE";
-    Response response = createCassandraResponse();
-    when(CassandraUtil.createResponse(result)).thenReturn(response);
+    List<Row> rows = new ArrayList<>();
+    Row row = Mockito.mock(Row.class);
+    rows.add(row);
+    when(result.all()).thenReturn(rows);
+    when(row.getObject("id")).thenReturn("qwerty123");
 
     Exception exp = null;
     try {
@@ -207,32 +179,5 @@ public class UtilTest {
       exp = ex;
     }
     Assert.assertTrue(exp == null);
-  }
-
-  private Response createCassandraNullResponse() {
-
-    Response response = new Response();
-    List<Map<String, Object>> responseList = new ArrayList();
-    response.put(JsonKey.RESPONSE, responseList);
-    return response;
-  }
-
-  private Response createCassandraResponse() {
-
-    Response response = new Response();
-    List<Map<String, Object>> list = new ArrayList<>();
-    Map<String, Object> bulkUploadProcessMap = new HashMap<>();
-    bulkUploadProcessMap.put(JsonKey.ID, "qwerty123");
-    bulkUploadProcessMap.put(JsonKey.LAST_NAME, "singh");
-    bulkUploadProcessMap.put(JsonKey.CHANNEL, "abc");
-    bulkUploadProcessMap.put(JsonKey.PASSWORD, "qwerty");
-    bulkUploadProcessMap.put(JsonKey.EMAIL, "abc123@gmail.com");
-    bulkUploadProcessMap.put(JsonKey.FIRST_NAME, "rajiv");
-    bulkUploadProcessMap.put(JsonKey.PHONE, "1234567890");
-    bulkUploadProcessMap.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
-
-    list.add(bulkUploadProcessMap);
-    response.put(JsonKey.RESPONSE, list);
-    return response;
   }
 }

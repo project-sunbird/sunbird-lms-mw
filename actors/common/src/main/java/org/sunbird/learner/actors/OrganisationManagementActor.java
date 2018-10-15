@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -256,14 +255,13 @@ public class OrganisationManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void createOrg(Request actorMessage) {
     ProjectLogger.log("Create org method call start");
+    actorMessage.toLower();
     // object of telemetry event...
     Map<String, Object> targetObject = null;
+    actorMessage.toLower();
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     try {
-      Request.toLower(
-          actorMessage,
-          Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
       Map<String, Object> request = actorMessage.getRequest();
       if (request.containsKey(JsonKey.LOCATION_CODE)
           && !CollectionUtils.isEmpty((List<String>) request.get(JsonKey.LOCATION_CODE))) {
@@ -585,10 +583,8 @@ public class OrganisationManagementActor extends BaseActor {
     Map<String, Object> targetObject = null;
 
     try {
+      actorMessage.toLower();
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-      Request.toLower(
-          actorMessage,
-          Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
       Map<String, Object> request = actorMessage.getRequest();
       if (!(validateOrgRequest(request))) {
         ProjectLogger.log("REQUESTED DATA IS NOT VALID");
@@ -672,9 +668,7 @@ public class OrganisationManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     try {
-      Request.toLower(
-          actorMessage,
-          Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
+      actorMessage.toLower();
       Map<String, Object> request = actorMessage.getRequest();
 
       if (request.containsKey(JsonKey.LOCATION_CODE)
@@ -982,12 +976,9 @@ public class OrganisationManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     Response response = null;
-
+    actorMessage.toLower();
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-    Request.toLower(
-        actorMessage,
-        Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
     Map<String, Object> usrOrgData = actorMessage.getRequest();
     if (!(validateOrgRequestForMembers(usrOrgData))) {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
@@ -1140,12 +1131,9 @@ public class OrganisationManagementActor extends BaseActor {
     Response response = null;
     // object of telemetry event...
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
-
+    actorMessage.toLower();
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-    Request.toLower(
-        actorMessage,
-        Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
     Map<String, Object> usrOrgData = actorMessage.getRequest();
     if (!(validateUsrRequest(usrOrgData))) {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
@@ -1258,9 +1246,7 @@ public class OrganisationManagementActor extends BaseActor {
 
   /** Provides the details of the organization */
   private void getOrgDetails(Request actorMessage) {
-    Request.toLower(
-        actorMessage,
-        Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
+    actorMessage.toLower();
     Map<String, Object> request = actorMessage.getRequest();
     if (!(validateOrgRequest(request))) {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");

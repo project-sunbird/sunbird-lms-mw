@@ -348,6 +348,7 @@ public class UserManagementActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private void getUserDetailsByLoginId(Request actorMessage) {
+    actorMessage.toLower();
     Map<String, Object> userMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
     if (null != userMap.get(JsonKey.LOGIN_ID)) {
       String loginId = (String) userMap.get(JsonKey.LOGIN_ID);
@@ -771,6 +772,7 @@ public class UserManagementActor extends BaseActor {
   /** Method to update the user profile. */
   @SuppressWarnings("unchecked")
   private void updateUser(Request actorMessage) {
+    actorMessage.toLower();
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
@@ -1347,6 +1349,7 @@ public class UserManagementActor extends BaseActor {
    */
   @SuppressWarnings("unchecked")
   private void createUser(Request actorMessage) {
+    actorMessage.toLower();
     Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
     // remove these fields from req

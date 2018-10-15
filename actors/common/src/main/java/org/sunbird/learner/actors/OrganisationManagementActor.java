@@ -261,7 +261,7 @@ public class OrganisationManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     try {
-      ProjectUtil.toLower(
+      Request.toLower(
           actorMessage,
           Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
       Map<String, Object> request = actorMessage.getRequest();
@@ -586,7 +586,7 @@ public class OrganisationManagementActor extends BaseActor {
 
     try {
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-      ProjectUtil.toLower(
+      Request.toLower(
           actorMessage,
           Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
       Map<String, Object> request = actorMessage.getRequest();
@@ -672,7 +672,7 @@ public class OrganisationManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     try {
-      ProjectUtil.toLower(
+      Request.toLower(
           actorMessage,
           Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
       Map<String, Object> request = actorMessage.getRequest();
@@ -985,7 +985,7 @@ public class OrganisationManagementActor extends BaseActor {
 
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-    ProjectUtil.toLower(
+    Request.toLower(
         actorMessage,
         Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
     Map<String, Object> usrOrgData = actorMessage.getRequest();
@@ -1143,7 +1143,7 @@ public class OrganisationManagementActor extends BaseActor {
 
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-    ProjectUtil.toLower(
+    Request.toLower(
         actorMessage,
         Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
     Map<String, Object> usrOrgData = actorMessage.getRequest();
@@ -1258,7 +1258,7 @@ public class OrganisationManagementActor extends BaseActor {
 
   /** Provides the details of the organization */
   private void getOrgDetails(Request actorMessage) {
-    ProjectUtil.toLower(
+    Request.toLower(
         actorMessage,
         Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
     Map<String, Object> request = actorMessage.getRequest();

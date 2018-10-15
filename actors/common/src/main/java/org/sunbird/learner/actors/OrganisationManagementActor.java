@@ -278,7 +278,7 @@ public class OrganisationManagementActor extends BaseActor {
 
       Map<String, Object> addressReq = null;
       if (null != request.get(JsonKey.ADDRESS)) {
-        addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
+        addressReq = (Map<String, Object>) request.get(JsonKey.ADDRESS);
         request.remove(JsonKey.ADDRESS);
       }
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);

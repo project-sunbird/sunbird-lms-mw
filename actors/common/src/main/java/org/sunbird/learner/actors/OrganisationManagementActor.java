@@ -261,9 +261,10 @@ public class OrganisationManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     try {
-      Map<String, Object> request = actorMessage.getRequest();
       ProjectUtil.toLower(
-          request, Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
+          actorMessage,
+          Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
+      Map<String, Object> request = actorMessage.getRequest();
       if (request.containsKey(JsonKey.LOCATION_CODE)
           && !CollectionUtils.isEmpty((List<String>) request.get(JsonKey.LOCATION_CODE))) {
         validateCodeAndAddLocationIds(request);
@@ -585,10 +586,10 @@ public class OrganisationManagementActor extends BaseActor {
 
     try {
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-
-      Map<String, Object> request = actorMessage.getRequest();
       ProjectUtil.toLower(
-          request, Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
+          actorMessage,
+          Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
+      Map<String, Object> request = actorMessage.getRequest();
       if (!(validateOrgRequest(request))) {
         ProjectLogger.log("REQUESTED DATA IS NOT VALID");
         return;
@@ -671,9 +672,11 @@ public class OrganisationManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     try {
-      Map<String, Object> request = actorMessage.getRequest();
       ProjectUtil.toLower(
-          request, Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
+          actorMessage,
+          Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
+      Map<String, Object> request = actorMessage.getRequest();
+
       if (request.containsKey(JsonKey.LOCATION_CODE)
           && !CollectionUtils.isEmpty((List<String>) request.get(JsonKey.LOCATION_CODE))) {
         validateCodeAndAddLocationIds(request);
@@ -982,11 +985,10 @@ public class OrganisationManagementActor extends BaseActor {
 
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-
-    Map<String, Object> usrOrgData = actorMessage.getRequest();
     ProjectUtil.toLower(
-        usrOrgData,
+        actorMessage,
         Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
+    Map<String, Object> usrOrgData = actorMessage.getRequest();
     if (!(validateOrgRequestForMembers(usrOrgData))) {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
@@ -1141,11 +1143,10 @@ public class OrganisationManagementActor extends BaseActor {
 
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-
-    Map<String, Object> usrOrgData = actorMessage.getRequest();
     ProjectUtil.toLower(
-        usrOrgData,
+        actorMessage,
         Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
+    Map<String, Object> usrOrgData = actorMessage.getRequest();
     if (!(validateUsrRequest(usrOrgData))) {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
@@ -1257,10 +1258,10 @@ public class OrganisationManagementActor extends BaseActor {
 
   /** Provides the details of the organization */
   private void getOrgDetails(Request actorMessage) {
-
-    Map<String, Object> request = actorMessage.getRequest();
     ProjectUtil.toLower(
-        request, Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
+        actorMessage,
+        Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
+    Map<String, Object> request = actorMessage.getRequest();
     if (!(validateOrgRequest(request))) {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;

@@ -255,13 +255,12 @@ public class OrganisationManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void createOrg(Request actorMessage) {
     ProjectLogger.log("Create org method call start");
-    actorMessage.toLower();
     // object of telemetry event...
     Map<String, Object> targetObject = null;
-    actorMessage.toLower();
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     try {
+      actorMessage.toLower();
       Map<String, Object> request = actorMessage.getRequest();
       if (request.containsKey(JsonKey.LOCATION_CODE)
           && !CollectionUtils.isEmpty((List<String>) request.get(JsonKey.LOCATION_CODE))) {

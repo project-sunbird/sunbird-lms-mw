@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -260,51 +261,53 @@ public class OrganisationManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     try {
-      Map<String, Object> req = actorMessage.getRequest();
-      if (req.containsKey(JsonKey.LOCATION_CODE)
-          && !CollectionUtils.isEmpty((List<String>) req.get(JsonKey.LOCATION_CODE))) {
-        validateCodeAndAddLocationIds(req);
+      Map<String, Object> request = actorMessage.getRequest();
+      ProjectUtil.toLower(
+          request, Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
+      if (request.containsKey(JsonKey.LOCATION_CODE)
+          && !CollectionUtils.isEmpty((List<String>) request.get(JsonKey.LOCATION_CODE))) {
+        validateCodeAndAddLocationIds(request);
       }
-      if (req.containsKey(JsonKey.ORG_TYPE)
-          && !StringUtils.isBlank((String) req.get(JsonKey.ORG_TYPE))) {
-        req.put(JsonKey.ORG_TYPE_ID, validateOrgType((String) req.get(JsonKey.ORG_TYPE)));
+      if (request.containsKey(JsonKey.ORG_TYPE)
+          && !StringUtils.isBlank((String) request.get(JsonKey.ORG_TYPE))) {
+        request.put(JsonKey.ORG_TYPE_ID, validateOrgType((String) request.get(JsonKey.ORG_TYPE)));
       }
 
-      if (req.containsKey(JsonKey.LOC_ID)
-          && !StringUtils.isBlank((String) req.get(JsonKey.LOC_ID))) {
-        req.put(JsonKey.LOC_ID, validateLocationId((String) req.get(JsonKey.LOC_ID)));
+      if (request.containsKey(JsonKey.LOC_ID)
+          && !StringUtils.isBlank((String) request.get(JsonKey.LOC_ID))) {
+        request.put(JsonKey.LOC_ID, validateLocationId((String) request.get(JsonKey.LOC_ID)));
       }
 
       Map<String, Object> addressReq = null;
-      if (null != req.get(JsonKey.ADDRESS)) {
+      if (null != request.get(JsonKey.ADDRESS)) {
         addressReq = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ADDRESS);
-        req.remove(JsonKey.ADDRESS);
+        request.remove(JsonKey.ADDRESS);
       }
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
       boolean isChannelVerified = false;
       // combination of source and external id should be unique ...
-      if (req.containsKey(JsonKey.PROVIDER) || req.containsKey(JsonKey.EXTERNAL_ID)) {
+      if (request.containsKey(JsonKey.PROVIDER) || request.containsKey(JsonKey.EXTERNAL_ID)) {
         validateExternalIdAndProvider(
-            (String) req.get(JsonKey.PROVIDER), (String) req.get(JsonKey.EXTERNAL_ID));
-        validateChannelIdForRootOrg(req);
-        if (req.containsKey(JsonKey.CHANNEL)) {
+            (String) request.get(JsonKey.PROVIDER), (String) request.get(JsonKey.EXTERNAL_ID));
+        validateChannelIdForRootOrg(request);
+        if (request.containsKey(JsonKey.CHANNEL)) {
           isChannelVerified = true;
-          validateChannel(req);
+          validateChannel(request);
         } else {
           // if Channel value is not coming then check for provider
           // now if any org has same channel value as provider and that
           // org is rootOrg then set that root orgid with current orgId.
-          if (req.containsKey(JsonKey.PROVIDER)) {
-            String rootOrgId = getRootOrgIdFromChannel((String) req.get(JsonKey.PROVIDER));
+          if (request.containsKey(JsonKey.PROVIDER)) {
+            String rootOrgId = getRootOrgIdFromChannel((String) request.get(JsonKey.PROVIDER));
             if (!StringUtils.isBlank(rootOrgId)) {
-              req.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+              request.put(JsonKey.ROOT_ORG_ID, rootOrgId);
             }
           }
         }
 
         Map<String, Object> dbMap = new HashMap<>();
-        dbMap.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
-        dbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
+        dbMap.put(JsonKey.PROVIDER, request.get(JsonKey.PROVIDER));
+        dbMap.put(JsonKey.EXTERNAL_ID, request.get(JsonKey.EXTERNAL_ID));
         Response result =
             cassandraOperation.getRecordsByProperties(
                 orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), dbMap);
@@ -312,9 +315,9 @@ public class OrganisationManagementActor extends BaseActor {
         if (!(list.isEmpty())) {
           ProjectLogger.log(
               "Org exist with Source "
-                  + req.get(JsonKey.PROVIDER)
+                  + request.get(JsonKey.PROVIDER)
                   + " , External Id "
-                  + req.get(JsonKey.EXTERNAL_ID));
+                  + request.get(JsonKey.EXTERNAL_ID));
           ProjectCommonException exception =
               new ProjectCommonException(
                   ResponseCode.sourceAndExternalIdAlreadyExist.getErrorCode(),
@@ -324,36 +327,36 @@ public class OrganisationManagementActor extends BaseActor {
           return;
         }
       }
-      if (req.containsKey(JsonKey.CHANNEL) && !isChannelVerified) {
-        validateChannel(req);
+      if (request.containsKey(JsonKey.CHANNEL) && !isChannelVerified) {
+        validateChannel(request);
       }
 
-      String relation = (String) req.get(JsonKey.RELATION);
-      req.remove(JsonKey.RELATION);
+      String relation = (String) request.get(JsonKey.RELATION);
+      request.remove(JsonKey.RELATION);
 
-      String parentOrg = (String) req.get(JsonKey.PARENT_ORG_ID);
+      String parentOrg = (String) request.get(JsonKey.PARENT_ORG_ID);
 
       Boolean isValidParent = false;
       if (!StringUtils.isBlank(parentOrg) && isValidParent(parentOrg)) {
-        validateRootOrg(req);
+        validateRootOrg(request);
         isValidParent = true;
       }
       String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
       if (!(StringUtils.isBlank(updatedBy))) {
-        req.put(JsonKey.CREATED_BY, updatedBy);
+        request.put(JsonKey.CREATED_BY, updatedBy);
       }
       String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
-      req.put(JsonKey.ID, uniqueId);
-      req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-      req.put(JsonKey.STATUS, ProjectUtil.OrgStatus.ACTIVE.getValue());
+      request.put(JsonKey.ID, uniqueId);
+      request.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+      request.put(JsonKey.STATUS, ProjectUtil.OrgStatus.ACTIVE.getValue());
       // removing default from request, not allowing user to create default org.
-      req.remove(JsonKey.IS_DEFAULT);
+      request.remove(JsonKey.IS_DEFAULT);
       // allow lower case values for source and externalId to the database
-      if (req.get(JsonKey.PROVIDER) != null) {
-        req.put(JsonKey.PROVIDER, ((String) req.get(JsonKey.PROVIDER)).toLowerCase());
+      if (request.get(JsonKey.PROVIDER) != null) {
+        request.put(JsonKey.PROVIDER, ((String) request.get(JsonKey.PROVIDER)).toLowerCase());
       }
-      if (req.get(JsonKey.EXTERNAL_ID) != null) {
-        req.put(JsonKey.EXTERNAL_ID, ((String) req.get(JsonKey.EXTERNAL_ID)).toLowerCase());
+      if (request.get(JsonKey.EXTERNAL_ID) != null) {
+        request.put(JsonKey.EXTERNAL_ID, ((String) request.get(JsonKey.EXTERNAL_ID)).toLowerCase());
       }
       // update address if present in request
       if (null != addressReq && addressReq.size() > 0) {
@@ -365,36 +368,36 @@ public class OrganisationManagementActor extends BaseActor {
           addressReq.put(JsonKey.CREATED_BY, updatedBy);
         }
         upsertAddress(addressReq);
-        req.put(JsonKey.ADDRESS_ID, addressId);
-        telemetryGenerationForOrgAddress(addressReq, req, false);
+        request.put(JsonKey.ADDRESS_ID, addressId);
+        telemetryGenerationForOrgAddress(addressReq, request, false);
       }
 
-      Boolean isRootOrg = (Boolean) req.get(JsonKey.IS_ROOT_ORG);
+      Boolean isRootOrg = (Boolean) request.get(JsonKey.IS_ROOT_ORG);
       // set root org on basis of whether the org itself is root org or not ...
       if (null != isRootOrg && isRootOrg) {
-        req.put(JsonKey.ROOT_ORG_ID, uniqueId);
-      } else if (StringUtils.isBlank((String) req.get(JsonKey.ROOT_ORG_ID))) {
-        req.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
+        request.put(JsonKey.ROOT_ORG_ID, uniqueId);
+      } else if (StringUtils.isBlank((String) request.get(JsonKey.ROOT_ORG_ID))) {
+        request.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
       }
 
       // adding one extra filed for tag.
-      if (!StringUtils.isBlank(((String) req.get(JsonKey.HASHTAGID)))) {
-        req.put(
+      if (!StringUtils.isBlank(((String) request.get(JsonKey.HASHTAGID)))) {
+        request.put(
             JsonKey.HASHTAGID,
-            validateHashTagId(((String) req.get(JsonKey.HASHTAGID)), JsonKey.CREATE, ""));
+            validateHashTagId(((String) request.get(JsonKey.HASHTAGID)), JsonKey.CREATE, ""));
       } else {
-        req.put(JsonKey.HASHTAGID, uniqueId);
+        request.put(JsonKey.HASHTAGID, uniqueId);
       }
 
       // if channel is available then make slug for channel.
       // remove the slug key if coming from user input
-      req.remove(JsonKey.SLUG);
-      if (req.containsKey(JsonKey.CHANNEL)) {
-        String slug = Slug.makeSlug((String) req.getOrDefault(JsonKey.CHANNEL, ""), true);
+      request.remove(JsonKey.SLUG);
+      if (request.containsKey(JsonKey.CHANNEL)) {
+        String slug = Slug.makeSlug((String) request.getOrDefault(JsonKey.CHANNEL, ""), true);
         if (null != isRootOrg && isRootOrg) {
           boolean bool = isSlugUnique(slug);
           if (bool) {
-            req.put(JsonKey.SLUG, slug);
+            request.put(JsonKey.SLUG, slug);
           } else {
             ProjectCommonException exception =
                 new ProjectCommonException(
@@ -405,17 +408,17 @@ public class OrganisationManagementActor extends BaseActor {
             return;
           }
         } else {
-          req.put(JsonKey.SLUG, slug);
+          request.put(JsonKey.SLUG, slug);
         }
       }
       // check contactDetail filed is coming or not. it will always come as list of
       // map
       List<Map<String, Object>> listOfMap = null;
-      if (req.containsKey(JsonKey.CONTACT_DETAILS)) {
-        listOfMap = (List<Map<String, Object>>) req.get(JsonKey.CONTACT_DETAILS);
+      if (request.containsKey(JsonKey.CONTACT_DETAILS)) {
+        listOfMap = (List<Map<String, Object>>) request.get(JsonKey.CONTACT_DETAILS);
         if (listOfMap != null && !listOfMap.isEmpty()) {
           try {
-            req.put(JsonKey.CONTACT_DETAILS, mapper.writeValueAsString(listOfMap));
+            request.put(JsonKey.CONTACT_DETAILS, mapper.writeValueAsString(listOfMap));
           } catch (IOException e) {
             ProjectLogger.log(e.getMessage(), e);
           }
@@ -423,7 +426,7 @@ public class OrganisationManagementActor extends BaseActor {
       }
 
       if (null != isRootOrg && isRootOrg) {
-        boolean bool = Util.registerChannel(req);
+        boolean bool = Util.registerChannel(request);
         if (!bool) {
           ProjectCommonException exception =
               new ProjectCommonException(
@@ -434,21 +437,22 @@ public class OrganisationManagementActor extends BaseActor {
           return;
         }
       } else {
-        req.put(JsonKey.IS_ROOT_ORG, false);
+        request.put(JsonKey.IS_ROOT_ORG, false);
       }
 
       // This will remove all extra unnecessary parameter from request
-      Organization org = mapper.convertValue(req, Organization.class);
-      req = mapper.convertValue(org, Map.class);
+      Organization org = mapper.convertValue(request, Organization.class);
+      request = mapper.convertValue(org, Map.class);
       Response result =
-          cassandraOperation.insertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), req);
+          cassandraOperation.insertRecord(
+              orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), request);
       ProjectLogger.log("Org data saved into cassandra.");
       // create org_map if parentOrgId is present in request
       if (isValidParent) {
         upsertOrgMap(
             uniqueId,
             parentOrg,
-            (String) req.get(JsonKey.ROOT_ORG_ID),
+            (String) request.get(JsonKey.ROOT_ORG_ID),
             actorMessage.getEnv(),
             relation);
       }
@@ -466,16 +470,16 @@ public class OrganisationManagementActor extends BaseActor {
           targetObject,
           correlatedObject);
       if (null != addressReq) {
-        req.put(JsonKey.ADDRESS, addressReq);
+        request.put(JsonKey.ADDRESS, addressReq);
       }
       if (listOfMap != null) {
-        req.put(JsonKey.CONTACT_DETAILS, listOfMap);
+        request.put(JsonKey.CONTACT_DETAILS, listOfMap);
       } else {
         listOfMap = new ArrayList<>();
-        req.put(JsonKey.CONTACT_DETAILS, listOfMap);
+        request.put(JsonKey.CONTACT_DETAILS, listOfMap);
       }
       Request orgReq = new Request();
-      orgReq.getRequest().put(JsonKey.ORGANISATION, req);
+      orgReq.getRequest().put(JsonKey.ORGANISATION, request);
       orgReq.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
       ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
       tellToAnother(orgReq);
@@ -582,17 +586,18 @@ public class OrganisationManagementActor extends BaseActor {
     try {
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
-      Map<String, Object> req = actorMessage.getRequest();
-
-      if (!(validateOrgRequest(req))) {
+      Map<String, Object> request = actorMessage.getRequest();
+      ProjectUtil.toLower(
+          request, Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
+      if (!(validateOrgRequest(request))) {
         ProjectLogger.log("REQUESTED DATA IS NOT VALID");
         return;
       }
       Map<String, Object> orgDBO;
       Map<String, Object> updateOrgDBO = new HashMap<>();
-      String updatedBy = (String) req.get(JsonKey.REQUESTED_BY);
+      String updatedBy = (String) request.get(JsonKey.REQUESTED_BY);
 
-      String orgId = (String) req.get(JsonKey.ORGANISATION_ID);
+      String orgId = (String) request.get(JsonKey.ORGANISATION_ID);
       Response result =
           cassandraOperation.getRecordById(
               orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), orgId);
@@ -611,7 +616,7 @@ public class OrganisationManagementActor extends BaseActor {
       }
 
       Integer currentStatus = (Integer) orgDBO.get(JsonKey.STATUS);
-      Integer nextStatus = ((BigInteger) req.get(JsonKey.STATUS)).intValue();
+      Integer nextStatus = ((BigInteger) request.get(JsonKey.STATUS)).intValue();
       if (!(Util.checkOrgStatusTransition(currentStatus, nextStatus))) {
 
         ProjectLogger.log("Invalid Org State transation");
@@ -638,10 +643,10 @@ public class OrganisationManagementActor extends BaseActor {
       sender().tell(response, self());
 
       // update the ES --
-      Request request = new Request();
-      request.getRequest().put(JsonKey.ORGANISATION, updateOrgDBO);
-      request.setOperation(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-      tellToAnother(request);
+      Request orgRequest = new Request();
+      orgRequest.getRequest().put(JsonKey.ORGANISATION, updateOrgDBO);
+      orgRequest.setOperation(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
+      tellToAnother(orgRequest);
 
       targetObject =
           TelemetryUtil.generateTargetObject(orgId, JsonKey.ORGANISATION, JsonKey.UPDATE, null);
@@ -666,32 +671,34 @@ public class OrganisationManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     try {
-      Map<String, Object> req = actorMessage.getRequest();
-      if (req.containsKey(JsonKey.LOCATION_CODE)
-          && !CollectionUtils.isEmpty((List<String>) req.get(JsonKey.LOCATION_CODE))) {
-        validateCodeAndAddLocationIds(req);
+      Map<String, Object> request = actorMessage.getRequest();
+      ProjectUtil.toLower(
+          request, Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
+      if (request.containsKey(JsonKey.LOCATION_CODE)
+          && !CollectionUtils.isEmpty((List<String>) request.get(JsonKey.LOCATION_CODE))) {
+        validateCodeAndAddLocationIds(request);
       }
-      if (req.containsKey(JsonKey.ORG_TYPE)
-          && !StringUtils.isBlank((String) req.get(JsonKey.ORG_TYPE))) {
-        req.put(JsonKey.ORG_TYPE_ID, validateOrgType((String) req.get(JsonKey.ORG_TYPE)));
+      if (request.containsKey(JsonKey.ORG_TYPE)
+          && !StringUtils.isBlank((String) request.get(JsonKey.ORG_TYPE))) {
+        request.put(JsonKey.ORG_TYPE_ID, validateOrgType((String) request.get(JsonKey.ORG_TYPE)));
       }
-      if (req.containsKey(JsonKey.LOC_ID)
-          && !StringUtils.isBlank((String) req.get(JsonKey.LOC_ID))) {
-        req.put(JsonKey.LOC_ID, validateLocationId((String) req.get(JsonKey.LOC_ID)));
+      if (request.containsKey(JsonKey.LOC_ID)
+          && !StringUtils.isBlank((String) request.get(JsonKey.LOC_ID))) {
+        request.put(JsonKey.LOC_ID, validateLocationId((String) request.get(JsonKey.LOC_ID)));
       }
-      if (!(validateOrgRequest(req))) {
+      if (!(validateOrgRequest(request))) {
         ProjectLogger.log("REQUESTED DATA IS NOT VALID");
         return;
       }
       // validate if Source and external id is in request , it should not already
       // exist in DataBase
       // .....
-      if (req.containsKey(JsonKey.PROVIDER) || req.containsKey(JsonKey.EXTERNAL_ID)) {
+      if (request.containsKey(JsonKey.PROVIDER) || request.containsKey(JsonKey.EXTERNAL_ID)) {
         validateExternalIdAndProvider(
-            (String) req.get(JsonKey.EXTERNAL_ID), (String) req.get(JsonKey.PROVIDER));
+            (String) request.get(JsonKey.EXTERNAL_ID), (String) request.get(JsonKey.PROVIDER));
         Map<String, Object> dbMap = new HashMap<>();
-        dbMap.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
-        dbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
+        dbMap.put(JsonKey.PROVIDER, request.get(JsonKey.PROVIDER));
+        dbMap.put(JsonKey.EXTERNAL_ID, request.get(JsonKey.EXTERNAL_ID));
         Response result =
             cassandraOperation.getRecordsByProperties(
                 orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), dbMap);
@@ -699,12 +706,12 @@ public class OrganisationManagementActor extends BaseActor {
         if (!(list.isEmpty())) {
           String organisationId = (String) list.get(0).get(JsonKey.ID);
 
-          if (!(req.get(JsonKey.ORGANISATION_ID).equals(organisationId))) {
+          if (!(request.get(JsonKey.ORGANISATION_ID).equals(organisationId))) {
             ProjectLogger.log(
                 "Org exist with Source "
-                    + req.get(JsonKey.PROVIDER)
+                    + request.get(JsonKey.PROVIDER)
                     + " , External Id "
-                    + req.get(JsonKey.EXTERNAL_ID));
+                    + request.get(JsonKey.EXTERNAL_ID));
             ProjectCommonException exception =
                 new ProjectCommonException(
                     ResponseCode.sourceAndExternalIdAlreadyExist.getErrorCode(),
@@ -715,19 +722,20 @@ public class OrganisationManagementActor extends BaseActor {
           }
         }
       }
-      validateChannelIdForRootOrg(req);
+      validateChannelIdForRootOrg(request);
       //
       boolean channelAdded = false;
-      if ((!req.containsKey(JsonKey.CHANNEL)) && req.containsKey(JsonKey.PROVIDER)) {
+      if ((!request.containsKey(JsonKey.CHANNEL)) && request.containsKey(JsonKey.PROVIDER)) {
         // then make provider as channel to fetch root org id.
-        req.put(JsonKey.CHANNEL, req.get(JsonKey.PROVIDER));
+        request.put(JsonKey.CHANNEL, request.get(JsonKey.PROVIDER));
         channelAdded = true;
       }
-      if (req.containsKey(JsonKey.CHANNEL)) {
-        if (!req.containsKey(JsonKey.IS_ROOT_ORG) || !(Boolean) req.get(JsonKey.IS_ROOT_ORG)) {
-          String rootOrgId = getRootOrgIdFromChannel((String) req.get(JsonKey.CHANNEL));
+      if (request.containsKey(JsonKey.CHANNEL)) {
+        if (!request.containsKey(JsonKey.IS_ROOT_ORG)
+            || !(Boolean) request.get(JsonKey.IS_ROOT_ORG)) {
+          String rootOrgId = getRootOrgIdFromChannel((String) request.get(JsonKey.CHANNEL));
           if (!StringUtils.isBlank(rootOrgId) || channelAdded) {
-            req.put(
+            request.put(
                 JsonKey.ROOT_ORG_ID,
                 "".equals(rootOrgId) ? JsonKey.DEFAULT_ROOT_ORG_ID : rootOrgId);
           } else {
@@ -742,7 +750,8 @@ public class OrganisationManagementActor extends BaseActor {
           }
         } else if (!channelAdded
             && !validateChannelForUniquenessForUpdate(
-                (String) req.get(JsonKey.CHANNEL), (String) req.get(JsonKey.ORGANISATION_ID))) {
+                (String) request.get(JsonKey.CHANNEL),
+                (String) request.get(JsonKey.ORGANISATION_ID))) {
           ProjectLogger.log("Channel validation failed");
           ProjectCommonException exception =
               new ProjectCommonException(
@@ -757,35 +766,35 @@ public class OrganisationManagementActor extends BaseActor {
       // rootOrgId then
       // remove channel
       if (channelAdded) {
-        req.remove(JsonKey.CHANNEL);
+        request.remove(JsonKey.CHANNEL);
       }
       Map<String, Object> addressReq = null;
-      if (null != req.get(JsonKey.ADDRESS)) {
-        addressReq = (Map<String, Object>) req.get(JsonKey.ADDRESS);
-        req.remove(JsonKey.ADDRESS);
+      if (null != request.get(JsonKey.ADDRESS)) {
+        addressReq = (Map<String, Object>) request.get(JsonKey.ADDRESS);
+        request.remove(JsonKey.ADDRESS);
       }
-      String relation = (String) req.get(JsonKey.RELATION);
+      String relation = (String) request.get(JsonKey.RELATION);
       // removing default from request, not allowing user to create default org.
-      req.remove(JsonKey.IS_DEFAULT);
-      req.remove(JsonKey.RELATION);
+      request.remove(JsonKey.IS_DEFAULT);
+      request.remove(JsonKey.RELATION);
       // allow lower case values for source and externalId to the database
-      if (req.get(JsonKey.PROVIDER) != null) {
-        req.put(JsonKey.PROVIDER, ((String) req.get(JsonKey.PROVIDER)).toLowerCase());
+      if (request.get(JsonKey.PROVIDER) != null) {
+        request.put(JsonKey.PROVIDER, ((String) request.get(JsonKey.PROVIDER)).toLowerCase());
       }
-      if (req.get(JsonKey.EXTERNAL_ID) != null) {
-        req.put(JsonKey.EXTERNAL_ID, ((String) req.get(JsonKey.EXTERNAL_ID)).toLowerCase());
+      if (request.get(JsonKey.EXTERNAL_ID) != null) {
+        request.put(JsonKey.EXTERNAL_ID, ((String) request.get(JsonKey.EXTERNAL_ID)).toLowerCase());
       }
-      String parentOrg = (String) req.get(JsonKey.PARENT_ORG_ID);
+      String parentOrg = (String) request.get(JsonKey.PARENT_ORG_ID);
       Boolean isValidParent = false;
       ProjectLogger.log("Parent Org Id:" + parentOrg);
       if (!StringUtils.isBlank(parentOrg) && isValidParent(parentOrg)) {
-        validateCyclicRelationForOrganisation(req);
-        validateRootOrg(req);
+        validateCyclicRelationForOrganisation(request);
+        validateRootOrg(request);
         isValidParent = true;
       }
       Map<String, Object> orgDBO;
       Map<String, Object> updateOrgDBO = new HashMap<>();
-      updateOrgDBO.putAll(req);
+      updateOrgDBO.putAll(request);
       updateOrgDBO.remove(JsonKey.ORGANISATION_ID);
       updateOrgDBO.remove(JsonKey.IS_APPROVED);
       updateOrgDBO.remove(JsonKey.APPROVED_BY);
@@ -793,7 +802,7 @@ public class OrganisationManagementActor extends BaseActor {
       updateOrgDBO.remove(JsonKey.STATUS);
       String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
 
-      String orgId = (String) req.get(JsonKey.ORGANISATION_ID);
+      String orgId = (String) request.get(JsonKey.ORGANISATION_ID);
       Response result =
           cassandraOperation.getRecordById(
               orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), orgId);
@@ -831,10 +840,10 @@ public class OrganisationManagementActor extends BaseActor {
         upsertAddress(addressReq);
         telemetryGenerationForOrgAddress(addressReq, orgDBO, isAddressUpdated);
       }
-      if (!StringUtils.isBlank(((String) req.get(JsonKey.HASHTAGID)))) {
-        req.put(
+      if (!StringUtils.isBlank(((String) request.get(JsonKey.HASHTAGID)))) {
+        request.put(
             JsonKey.HASHTAGID,
-            validateHashTagId(((String) req.get(JsonKey.HASHTAGID)), JsonKey.UPDATE, orgId));
+            validateHashTagId(((String) request.get(JsonKey.HASHTAGID)), JsonKey.UPDATE, orgId));
       }
       if (!(StringUtils.isBlank(updatedBy))) {
         updateOrgDBO.put(JsonKey.UPDATED_BY, updatedBy);
@@ -846,7 +855,7 @@ public class OrganisationManagementActor extends BaseActor {
         upsertOrgMap(
             (String) orgDBO.get(JsonKey.ID),
             parentOrg,
-            (String) req.get(JsonKey.ROOT_ORG_ID),
+            (String) request.get(JsonKey.ROOT_ORG_ID),
             actorMessage.getEnv(),
             relation);
       }
@@ -936,10 +945,10 @@ public class OrganisationManagementActor extends BaseActor {
         listOfMap = new ArrayList<>();
         updateOrgDBO.put(JsonKey.CONTACT_DETAILS, listOfMap);
       }
-      Request request = new Request();
-      request.getRequest().put(JsonKey.ORGANISATION, updateOrgDBO);
-      request.setOperation(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-      tellToAnother(request);
+      Request orgRequest = new Request();
+      orgRequest.getRequest().put(JsonKey.ORGANISATION, updateOrgDBO);
+      orgRequest.setOperation(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
+      tellToAnother(orgRequest);
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
       return;
@@ -975,6 +984,9 @@ public class OrganisationManagementActor extends BaseActor {
     Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
     Map<String, Object> usrOrgData = actorMessage.getRequest();
+    ProjectUtil.toLower(
+        usrOrgData,
+        Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
     if (!(validateOrgRequestForMembers(usrOrgData))) {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
@@ -1131,6 +1143,9 @@ public class OrganisationManagementActor extends BaseActor {
     Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
     Map<String, Object> usrOrgData = actorMessage.getRequest();
+    ProjectUtil.toLower(
+        usrOrgData,
+        Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
     if (!(validateUsrRequest(usrOrgData))) {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
@@ -1243,12 +1258,14 @@ public class OrganisationManagementActor extends BaseActor {
   /** Provides the details of the organization */
   private void getOrgDetails(Request actorMessage) {
 
-    Map<String, Object> req = actorMessage.getRequest();
-    if (!(validateOrgRequest(req))) {
+    Map<String, Object> request = actorMessage.getRequest();
+    ProjectUtil.toLower(
+        request, Arrays.asList(ProjectUtil.getConfigValue(JsonKey.LOWER_CASE_FIELDS).split(",")));
+    if (!(validateOrgRequest(request))) {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
     }
-    String orgId = (String) req.get(JsonKey.ORGANISATION_ID);
+    String orgId = (String) request.get(JsonKey.ORGANISATION_ID);
     Map<String, Object> result =
         ElasticSearchUtil.getDataByIdentifier(
             ProjectUtil.EsIndex.sunbird.getIndexName(),

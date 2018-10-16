@@ -344,4 +344,17 @@ public abstract class BaseBulkUploadActor extends BaseActor {
       IOUtils.closeQuietly(csvReader);
     }
   }
+
+  public BulkUploadProcess getBulkUploadProcess(
+          String processId, String objectType, String requestedBy, Integer taskCount) {
+    BulkUploadProcess bulkUploadProcess = new BulkUploadProcess();
+    bulkUploadProcess.setId(processId);
+    bulkUploadProcess.setObjectType(objectType);
+    bulkUploadProcess.setUploadedBy(requestedBy);
+    bulkUploadProcess.setUploadedDate(ProjectUtil.getFormattedDate());
+    bulkUploadProcess.setProcessStartTime(ProjectUtil.getFormattedDate());
+    bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.NEW.getValue());
+    bulkUploadProcess.setTaskCount(taskCount);
+    return bulkUploadProcess;
+  }
 }

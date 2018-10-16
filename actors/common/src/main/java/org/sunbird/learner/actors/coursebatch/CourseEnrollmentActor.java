@@ -21,6 +21,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EnrolmentType;
 import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
+import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -108,6 +109,13 @@ public class CourseEnrollmentActor extends BaseActor {
           LoggerEnum.INFO.name());
       UserCoursesService.sync(courseMap, (String) courseMap.get(JsonKey.ID));
     }
+    if (PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)
+            != null
+        && (Boolean.parseBoolean(
+            PropertiesCache.getInstance()
+                .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
+      batchOperationNotifier(courseMap, courseBatchResult, JsonKey.REMOVE);
+    }
     generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
   }
 
@@ -161,6 +169,27 @@ public class CourseEnrollmentActor extends BaseActor {
     sender().tell(result, self());
     UserCoursesService.sync(updateAttributes, userCourseResult.getId());
     generateAndProcessTelemetryEvent(request, "user.batch.course.unenroll");
+
+    if (PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)
+            != null
+        && (Boolean.parseBoolean(
+            PropertiesCache.getInstance()
+                .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
+
+      batchOperationNotifier(request, courseBatchResult, JsonKey.REMOVE);
+    }
+  }
+
+  private void batchOperationNotifier(
+      Map<String, Object> request, CourseBatch courseBatchResult, String operationType) {
+    Request batchNotification = new Request();
+    batchNotification.setOperation(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue());
+    Map<String, Object> batchNotificationMap = new HashMap<>();
+    batchNotificationMap.put(JsonKey.USER_ID, request.get(JsonKey.USER_ID));
+    batchNotificationMap.put(JsonKey.COURSE_BATCH, courseBatchResult);
+    batchNotificationMap.put(JsonKey.OPERATION_TYPE, operationType);
+    batchNotification.setRequest(batchNotificationMap);
+    tellToAnother(batchNotification);
   }
 
   private void generateAndProcessTelemetryEvent(Map<String, Object> request, String corelation) {
@@ -198,7 +227,7 @@ public class CourseEnrollmentActor extends BaseActor {
         Map<String, Object> result = EkStepRequestUtil.searchContent(query, headers);
         if (null != result && !result.isEmpty()) {
           return ((List<Map<String, Object>>) result.get(JsonKey.CONTENTS)).get(0);
-          //  return (Map<String, Object>) contentObject;
+          // return (Map<String, Object>) contentObject;
         }
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);
@@ -208,7 +237,8 @@ public class CourseEnrollmentActor extends BaseActor {
   }
 
   /*
-   * This method will validate courseBatch details before enrolling and unenrolling
+   * This method will validate courseBatch details before enrolling and
+   * unenrolling
    *
    * @Params
    */

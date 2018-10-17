@@ -2,8 +2,6 @@ package org.sunbird.metrics.actors;
 
 import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
@@ -31,6 +30,9 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ActorConfig(
   tasks = {},
@@ -94,7 +96,7 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
     requestMap.put(JsonKey.PERIOD, periodStr);
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.BATCH_ID, batchId);
-
+    filter.put(JsonKey.ACTIVE, true);
     if (!("fromBegining".equalsIgnoreCase(periodStr))) {
       Map<String, Object> dateRange = getStartAndEndDate(periodStr);
       dateRangeFilter.put(GTE, (String) dateRange.get(STARTDATE));

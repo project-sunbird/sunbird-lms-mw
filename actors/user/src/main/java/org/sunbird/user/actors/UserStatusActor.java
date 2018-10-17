@@ -63,13 +63,7 @@ public class UserStatusActor extends BaseActor {
         break;
 
       default:
-        ProjectLogger.log("UNSUPPORTED OPERATION");
-        ProjectCommonException exception =
-            new ProjectCommonException(
-                ResponseCode.invalidOperationName.getErrorCode(),
-                ResponseCode.invalidOperationName.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-        sender().tell(exception, self());
+        onReceiveUnsupportedOperation("UserStatusActor");
     }
   }
 

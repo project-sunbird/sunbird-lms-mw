@@ -2,14 +2,12 @@ package org.sunbird.user.actors;
 
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.Util;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
@@ -41,13 +39,7 @@ public class UserLoginActor extends BaseActor {
         break;
 
       default:
-        ProjectLogger.log("UNSUPPORTED OPERATION");
-        ProjectCommonException exception =
-            new ProjectCommonException(
-                ResponseCode.invalidOperationName.getErrorCode(),
-                ResponseCode.invalidOperationName.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-        sender().tell(exception, self());
+        onReceiveUnsupportedOperation("UserLoginActor");
     }
   }
 

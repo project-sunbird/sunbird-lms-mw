@@ -1,5 +1,8 @@
 package org.sunbird.learner.actors.coursebatch;
 
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,7 +15,7 @@ import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.email.EmailServiceClient;
-import org.sunbird.actorutil.email.impl.EmailServiceClientImpl;
+import org.sunbird.actorutil.email.EmailServiceFactory;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -20,7 +23,9 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.notificationservice.EmailServiceActor;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.course.batch.CourseBatch;
 
@@ -37,7 +42,9 @@ import org.sunbird.models.course.batch.CourseBatch;
 public class CourseBatchNotificationActor extends BaseActor {
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
-  private EmailServiceClient emailServiceClient = EmailServiceClientImpl.getInstance();
+  private static EmailServiceClient emailServiceClient = EmailServiceFactory.getInstance();
+  private static final Props props = Props.create(EmailServiceActor.class);
+  private static ActorSystem system = ActorSystem.create("system");
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -97,7 +104,6 @@ public class CourseBatchNotificationActor extends BaseActor {
   @SuppressWarnings("unchecked")
   public void batchEnrollOperationNotifier(
       String userId, CourseBatch courseBatch, String operationType) {
-    System.out.print(" in batch Enroll Operation");
     Map<String, Object> requestMap = createRequestMap(courseBatch);
     List<String> userIds = new ArrayList<>();
     userIds.add(userId);
@@ -205,7 +211,6 @@ public class CourseBatchNotificationActor extends BaseActor {
    */
   private void batchUpdateOperationNotifier(
       CourseBatch courseBatchPrev, CourseBatch courseBatchNew) {
-
     Map<String, Boolean> oldParticipants = courseBatchPrev.getParticipant();
     Map<String, Boolean> newParticipants = courseBatchNew.getParticipant();
     Map<String, Boolean> removedParticipants = courseBatchPrev.getParticipant();
@@ -226,11 +231,14 @@ public class CourseBatchNotificationActor extends BaseActor {
     }
     courseBatchPrev.setParticipant(removedParticipants);
     courseBatchNew.setParticipant(newParticipants);
-    courseBatchPrev.setMentors(new ArrayList<String>());
-    courseBatchNew.setMentors(new ArrayList<String>());
-    if (!removedParticipants.isEmpty())
+    courseBatchPrev.setMentors(null);
+    courseBatchNew.setMentors(null);
+    if (!removedParticipants.isEmpty()) {
       batchCreateOperationNotifier(courseBatchPrev, JsonKey.REMOVE);
-    if (!newParticipants.isEmpty()) batchCreateOperationNotifier(courseBatchNew, JsonKey.ADD);
+    }
+    if (!newParticipants.isEmpty()) {
+      batchCreateOperationNotifier(courseBatchNew, JsonKey.ADD);
+    }
   }
 
   private void updateMentor(CourseBatch courseBatchPrev, CourseBatch courseBatchNew) {
@@ -244,12 +252,17 @@ public class CourseBatchNotificationActor extends BaseActor {
     if (newMentors == null) {
       newMentors = new ArrayList<>();
     }
-    removedMentors.removeAll(newMentors);
-    newMentors.removeAll(prevMentors);
+    if (removedMentors != null) {
+      removedMentors.removeAll(newMentors);
+    }
+    if (newMentors != null) {
+      newMentors.removeAll(prevMentors);
+    }
     courseBatchPrev.setMentors(removedMentors);
     courseBatchNew.setMentors(newMentors);
-    courseBatchPrev.setParticipant(new HashMap<String, Boolean>());
-    courseBatchNew.setParticipant(new HashMap<String, Boolean>());
+    courseBatchPrev.setParticipant(null);
+    courseBatchNew.setParticipant(null);
+
     if (!removedMentors.isEmpty()) {
       batchCreateOperationNotifier(courseBatchPrev, JsonKey.REMOVE);
     }
@@ -278,7 +291,6 @@ public class CourseBatchNotificationActor extends BaseActor {
     requestMap.put(JsonKey.END_DATE, courseBatchObject.get(JsonKey.END_DATE));
     requestMap.put(JsonKey.COURSE_ID, courseBatchObject.get(JsonKey.COURSE_ID));
     requestMap.put(JsonKey.NAME, courseBatch.getName());
-    System.out.println("Create Request Map Done");
     return requestMap;
   }
 
@@ -291,7 +303,6 @@ public class CourseBatchNotificationActor extends BaseActor {
    */
   private Map<String, String> getUserData(Map<String, Object> data, String operationType) {
     Map<String, String> user = new HashMap<String, String>();
-    System.out.println("In get User Data");
     user.put(JsonKey.FIRST_NAME, data.get(JsonKey.FIRST_NAME).toString());
     user.put(JsonKey.EMAIL, data.get(JsonKey.EMAIL).toString());
     if (operationType.equalsIgnoreCase(JsonKey.ADD)) {
@@ -299,7 +310,6 @@ public class CourseBatchNotificationActor extends BaseActor {
     } else if (operationType.equalsIgnoreCase(JsonKey.REMOVE)) {
       user.put(JsonKey.SUBJECT, JsonKey.UNENROLL_FROM_COURSE_BATCH);
     }
-    System.out.println("Get User Data Done");
     return user;
   }
 
@@ -317,16 +327,18 @@ public class CourseBatchNotificationActor extends BaseActor {
     requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, user.get(JsonKey.EMAIL_TEMPLATE_TYPE));
     requestMap.put(JsonKey.RECIPIENT_EMAILS, new String[] {user.get(JsonKey.EMAIL)});
     requestMap.put(JsonKey.SUBJECT, user.get(JsonKey.SUBJECT));
+    requestMap.put(JsonKey.REQUEST, BackgroundOperations.emailService.name());
+    ActorRef ref = system.actorOf(props);
     try {
-      Response response =
-          emailServiceClient.sendMail(
-              getActorRef(BackgroundOperations.emailService.name()), requestMap);
+      Response response = emailServiceClient.sendMail(ref, requestMap);
       sender().tell(response, self());
-      System.out.println("Send Mail Done");
+      Response res = new Response();
+      res.setResponseCode(ResponseCode.OK);
+      sender().tell(res, self());
     } catch (Exception e) {
       sender().tell(e, self());
       ProjectLogger.log(
-          "CourseBatchNotificationActor: sendMail using emailService client failed ****",
+          "CourseBatchNotificationActor: sendMail using emailService client failed **** " + e,
           LoggerEnum.ERROR);
     }
   }
@@ -362,20 +374,22 @@ public class CourseBatchNotificationActor extends BaseActor {
    * @return List<Map<String, Object>> map of user related data.
    */
   private List<Map<String, Object>> getUsersFromDB(List<String> userIds) {
-    System.out.println("In getUsers From Db");
-    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    List<String> userIdList = new ArrayList<>(userIds);
-    List<String> fields = new ArrayList<>();
-    fields.add(JsonKey.FIRST_NAME);
-    fields.add(JsonKey.EMAIL);
-    Response response =
-        cassandraOperation.getRecordsByIdsWithSpecifiedColumns(
-            usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), fields, userIdList);
-    if (response == null) {
-      ProjectLogger.log("No data from cassandra , check connection  ", LoggerEnum.ERROR.name());
+    if (userIds != null) {
+      Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+      List<String> userIdList = new ArrayList<>(userIds);
+      List<String> fields = new ArrayList<>();
+      fields.add(JsonKey.FIRST_NAME);
+      fields.add(JsonKey.EMAIL);
+      Response response =
+          cassandraOperation.getRecordsByIdsWithSpecifiedColumns(
+              usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), fields, userIdList);
+      if (response == null) {
+        ProjectLogger.log("No data from cassandra , check connection  ", LoggerEnum.ERROR.name());
+      }
+      List<Map<String, Object>> userList =
+          (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+      return userList;
     }
-    List<Map<String, Object>> userList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    System.out.println("Get Users From Db Done");
-    return userList;
+    return null;
   }
 }

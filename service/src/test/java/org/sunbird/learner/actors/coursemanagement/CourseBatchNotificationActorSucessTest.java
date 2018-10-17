@@ -22,11 +22,11 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-import org.sunbird.actorutil.InterServiceCommunication;
-import org.sunbird.actorutil.impl.InterServiceCommunicationImpl;
+import org.sunbird.actorutil.email.EmailServiceClient;
+import org.sunbird.actorutil.email.EmailServiceFactory;
+import org.sunbird.actorutil.email.impl.EmailServiceClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -44,9 +44,16 @@ import org.sunbird.models.course.batch.CourseBatch;
  */
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ServiceFactory.class, EkStepRequestUtil.class, Util.class})
-@PowerMockIgnore({"javax.management.*", "javax.crypto.*"})
-public class CourseBatchNotificationActorTest {
+@PrepareForTest({
+  ServiceFactory.class,
+  EkStepRequestUtil.class,
+  Util.class,
+  EmailServiceClientImpl.class,
+  EmailServiceClient.class,
+  EmailServiceFactory.class
+})
+@PowerMockIgnore({"javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*"})
+public class CourseBatchNotificationActorSucessTest {
 
   private static final String FIRST_NAME = "Test User";
   private static final String USER_ID = "testUserId";
@@ -58,7 +65,7 @@ public class CourseBatchNotificationActorTest {
   private static ActorSystem system;
   private static final Props props = Props.create(CourseBatchNotificationActor.class);
   private static CassandraOperation cassandraOperation;
-  private static InterServiceCommunication interServiceCommunication;
+  private static EmailServiceClient emailServiceClient;
 
   @BeforeClass
   public static void setUp() {
@@ -70,61 +77,43 @@ public class CourseBatchNotificationActorTest {
   public void beforeEachTest() {
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
-    interServiceCommunication = mock(InterServiceCommunicationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     Mockito.reset(cassandraOperation);
-    Mockito.reset(interServiceCommunication);
-  }
-
-  @Test // Needs to test run
-  public void testCourseBatchEnrollForLearnerFailure() {
-
-    mockInterServiceOperation();
-    mockUtil();
-    Response response = getEnrollFailureEmailNotificationForLearnerTestResponse();
-    Assert.assertTrue(null != response && response.getResponseCode() != ResponseCode.OK);
-  }
-
-  @Test
-  public void testCourseBatchEnrollForLearnerSucess() {
-    mockCassandraRequestForReadRecordById();
-    mockCassandraRequestForReadTemplate();
-    mockInterServiceOperation();
-
-    ProjectCommonException exception = getEnrollSucessEmailNotificationForLearnerTestResponse();
-    Assert.assertTrue(exception == null);
-  }
-
-  @Test
-  public void testCourseBatchEnrollForMentorFailure() {
-    mockCassandraRequestForReadRecordById();
-    mockInterServiceOperation();
-
-    Response response = getEnrollFailureEmailNotificationForMentorTestResponse();
-    Assert.assertTrue(null != response && response.getResponseCode() != ResponseCode.OK);
-  }
-
-  @Test
-  public void testCourseBatchEnrollForMentorSucess() {
-    mockCassandraRequestForReadRecordById();
-    mockCassandraRequestForReadTemplate();
-    Response response = getEnrollSucessEmailNotificationForMentorTestResponse();
-    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
+    PowerMockito.mockStatic(EmailServiceFactory.class);
+    emailServiceClient = PowerMockito.mock(EmailServiceClientImpl.class);
+    PowerMockito.when(EmailServiceFactory.getInstance()).thenReturn(emailServiceClient);
+    Mockito.reset(emailServiceClient);
   }
 
   @Test
   public void testCourseBatchUpdateSucess() {
     mockCassandraRequestForReadRecordById();
     mockCassandraRequestForReadTemplate();
+    mockEmailServiceSuccess();
     Response response = getUpdateSucessEmailNotificationTestResponse();
+    System.out.println("response for testCourseBatchUpdateSucess " + response.getResponseCode());
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
   }
 
   @Test
-  public void testCourseBatchUpdateFailure() {
+  public void testCourseBatchEnrollForLearnerSucess() {
     mockCassandraRequestForReadRecordById();
     mockCassandraRequestForReadTemplate();
-    Response response = getUpdateFailureEmailNotificationTestResponse();
+    mockEmailServiceSuccess();
+    Response res = getEnrollSucessEmailNotificationForLearnerTestResponse();
+    System.out.println(
+        "response for testCourseBatchEnrollForLearnerSucess " + res.getResponseCode());
+    Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
+  }
+
+  @Test
+  public void testCourseBatchBulkRemoveSucess() {
+    mockCassandraRequestForReadRecordById();
+    mockCassandraRequestForReadTemplate();
+    mockEmailServiceSuccess();
+    Response response = getBulkSucessEmailNotificationTestResponse(JsonKey.REMOVE);
+    System.out.println(
+        "response for testCourseBatchBulkRemoveSucess " + response.getResponseCode());
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
   }
 
@@ -132,43 +121,10 @@ public class CourseBatchNotificationActorTest {
   public void testCourseBatchBulkAddSucess() {
     mockCassandraRequestForReadRecordById();
     mockCassandraRequestForReadTemplate();
+    mockEmailServiceSuccess();
     Response response = getBulkSucessEmailNotificationTestResponse(JsonKey.ADD);
+    System.out.println("response for testCourseBatchBulkAddSucess " + response.getResponseCode());
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
-  }
-
-  @Test
-  public void testCourseBatchBulkRemoveSucess() {
-    mockCassandraRequestForReadRecordById();
-    mockCassandraRequestForReadTemplate();
-    Response response = getBulkSucessEmailNotificationTestResponse(JsonKey.REMOVE);
-    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
-  }
-
-  @Test
-  public void testCourseBatchBulkAddFailure() {
-    mockCassandraRequestForReadRecordById();
-    mockCassandraRequestForReadTemplate();
-    Response response = getBulkFailureEmailNotificationTestResponse(JsonKey.ADD);
-    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
-  }
-
-  @Test
-  public void testCourseBatchBulkRemoveFailure() {
-    mockCassandraRequestForReadRecordById();
-    mockCassandraRequestForReadTemplate();
-    Response response = getBulkFailureEmailNotificationTestResponse(JsonKey.REMOVE);
-    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
-  }
-
-  private Response getBulkFailureEmailNotificationTestResponse(String operationType) {
-    Request request =
-        createRequestObjectForBulkOperation(
-            createCourseBatchObject(false, JsonKey.SUNBIRD), operationType);
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    subject.tell(request, probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
-    return response;
   }
 
   private Response getBulkSucessEmailNotificationTestResponse(String operationType) {
@@ -179,19 +135,7 @@ public class CourseBatchNotificationActorTest {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     subject.tell(request, probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
-    return response;
-  }
-
-  private Response getUpdateFailureEmailNotificationTestResponse() {
-    Request request =
-        createRequestObjectForUpdateOperation(
-            createCourseBatchObject(false, JsonKey.OLD),
-            createCourseBatchObject(false, JsonKey.NEW));
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    subject.tell(request, probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
+    Response response = probe.expectMsgClass(duration("10 second"), Response.class);
     return response;
   }
 
@@ -202,56 +146,19 @@ public class CourseBatchNotificationActorTest {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     subject.tell(request, probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
-    return response;
-  }
-
-  private Response getEnrollFailureEmailNotificationForMentorTestResponse() {
-    Request request =
-        createRequestObjectForEnrollOperation(
-            createCourseBatchObject(false), createCourseMap(), JsonKey.BATCH_MENTOR_UNENROL);
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    subject.tell(request, probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
-    return response;
-  }
-
-  private Response getEnrollSucessEmailNotificationForMentorTestResponse() {
-    Request request =
-        createRequestObjectForEnrollOperation(
-            createCourseBatchObject(true), createCourseMap(), JsonKey.BATCH_MENTOR_ENROL);
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    subject.tell(request, probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
-    return response;
-  }
-
-  private ProjectCommonException getEnrollSucessEmailNotificationForLearnerTestResponse() {
-    Request request =
-        createRequestObjectForEnrollOperation(
-            createCourseBatchObject(true), createCourseMap(), JsonKey.BATCH_LEARNER_ENROL);
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    subject.tell(request, probe.getRef());
-    //  Response response = probe.expectMsgClass(duration("20 second"),Response.class);
-    ProjectCommonException exception =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    return exception;
-  }
-
-  private Response getEnrollFailureEmailNotificationForLearnerTestResponse() {
-    Request request =
-        createRequestObjectForEnrollOperation(
-            createCourseBatchObject(false), createCourseMap(), JsonKey.BATCH_LEARNER_ENROL);
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    mockCassandraRequestForReadRecordById();
-    mockCassandraRequestForReadTemplate();
-    subject.tell(request, probe.getRef());
     Response response = probe.expectMsgClass(duration("20 second"), Response.class);
     return response;
+  }
+
+  private Response getEnrollSucessEmailNotificationForLearnerTestResponse() {
+    Request request =
+        createRequestObjectForEnrollOperation(
+            createCourseBatchObject(), createCourseMap(), JsonKey.BATCH_LEARNER_ENROL);
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    subject.tell(request, probe.getRef());
+    Response exception = probe.expectMsgClass(duration("10 second"), Response.class);
+    return exception;
   }
 
   private Request createRequestObjectForEnrollOperation(
@@ -294,14 +201,12 @@ public class CourseBatchNotificationActorTest {
     return map;
   }
 
-  private CourseBatch createCourseBatchObject(boolean testType) {
+  private CourseBatch createCourseBatchObject() {
     CourseBatch courseBatch = new CourseBatch();
     List<String> mentors = new ArrayList<>();
     Map<String, Boolean> participants = new HashMap<>();
-    if (testType) {
-      mentors.add(USER_ID);
-      participants.put(USER_ID, true);
-    }
+    mentors.add(USER_ID);
+    participants.put(USER_ID, true);
     courseBatch.setMentors(mentors);
     courseBatch.setCountDecrementStatus(false);
     courseBatch.setCountIncrementStatus(false);
@@ -369,22 +274,17 @@ public class CourseBatchNotificationActorTest {
         .thenReturn(createUser());
   }
 
-  private void mockUtil() {
-    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    when(Util.dbInfoMap.get(Mockito.anyString())).thenReturn(usrDbInfo);
-  }
-
   private void mockCassandraRequestForReadTemplate() {
     when(cassandraOperation.getRecordsByPrimaryKeys(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyList(), Mockito.anyString()))
         .thenReturn(stringTemplateResponse());
   }
 
-  private void mockInterServiceOperation() {
+  private void mockEmailServiceSuccess() {
     Response res = new Response();
     res.setResponseCode(ResponseCode.OK);
-
-    when(interServiceCommunication.getResponse((ActorRef) Mockito.any(), (Request) Mockito.any()))
+    when(emailServiceClient.sendMail(
+            (ActorRef) Mockito.any(), Mockito.anyMapOf(String.class, Object.class)))
         .thenReturn(res);
   }
 }

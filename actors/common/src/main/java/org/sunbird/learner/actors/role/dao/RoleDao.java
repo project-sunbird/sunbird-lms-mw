@@ -10,5 +10,5 @@ public interface RoleDao {
    *
    * @return List of all Roles from Role Table
    */
-  List<Role> getAllRecords();
+  List<Role> getRoles();
 }

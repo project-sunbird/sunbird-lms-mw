@@ -29,7 +29,7 @@ public class RoleDaoImpl implements RoleDao {
 
   @SuppressWarnings("unchecked")
   @Override
-  public List<Role> getAllRecords() {
+  public List<Role> getRoles() {
 
     Response roleResults = cassandraOperation.getAllRecords(KEYSPACE_NAME, TABLE_NAME);
     List<Map<String, Object>> roleMapList =

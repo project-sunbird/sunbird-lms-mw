@@ -28,7 +28,7 @@ public class UserDaoImpl implements UserDao {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
-  static UserDao userDao;
+  private static UserDao userDao;
   private static final String KEYSPACE_NAME = "sunbird";
   private static final String USER_TABLE_NAME = "user";
 

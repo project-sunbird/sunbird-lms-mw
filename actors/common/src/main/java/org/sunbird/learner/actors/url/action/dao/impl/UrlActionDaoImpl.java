@@ -1,7 +1,7 @@
 package org.sunbird.learner.actors.url.action.dao.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
@@ -31,12 +31,10 @@ public class UrlActionDaoImpl implements UrlActionDao {
   public List<UrlAction> getUrlActions() {
 
     Response urlActionResults = cassandraOperation.getAllRecords(KEYSPACE_NAME, TABLE_NAME);
+    TypeReference<List<UrlAction>> urlActionType = new TypeReference<List<UrlAction>>() {};
     List<Map<String, Object>> urlActionMapList =
         (List<Map<String, Object>>) urlActionResults.get(JsonKey.RESPONSE);
-    List<UrlAction> urlActionList = new ArrayList<>();
-    for (Map<String, Object> urlAction : urlActionMapList) {
-      urlActionList.add(mapper.convertValue(urlAction, UrlAction.class));
-    }
+    List<UrlAction> urlActionList = mapper.convertValue(urlActionMapList, urlActionType);
     return urlActionList;
   }
 }

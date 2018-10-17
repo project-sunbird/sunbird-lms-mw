@@ -1,7 +1,7 @@
 package org.sunbird.learner.actors.role.group.dao.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
@@ -31,12 +31,10 @@ public class RoleGroupDaoImpl implements RoleGroupDao {
   public List<RoleGroup> getRoleGroups() {
 
     Response roleGroupResults = cassandraOperation.getAllRecords(KEYSPACE_NAME, TABLE_NAME);
+    TypeReference<List<RoleGroup>> roleGroupType = new TypeReference<List<RoleGroup>>() {};
     List<Map<String, Object>> roleGroupMapList =
         (List<Map<String, Object>>) roleGroupResults.get(JsonKey.RESPONSE);
-    List<RoleGroup> roleGroupList = new ArrayList<>();
-    for (Map<String, Object> roleGroup : roleGroupMapList) {
-      roleGroupList.add(mapper.convertValue(roleGroup, RoleGroup.class));
-    }
+    List<RoleGroup> roleGroupList = mapper.convertValue(roleGroupMapList, roleGroupType);
     return roleGroupList;
   }
 }

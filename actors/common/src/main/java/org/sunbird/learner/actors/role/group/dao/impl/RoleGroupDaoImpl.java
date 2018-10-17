@@ -9,7 +9,6 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.role.group.dao.RoleGroupDao;
-import org.sunbird.learner.util.Util;
 import org.sunbird.models.role.group.RoleGroup;
 
 public class RoleGroupDaoImpl implements RoleGroupDao {
@@ -17,8 +16,8 @@ public class RoleGroupDaoImpl implements RoleGroupDao {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
   private static RoleGroupDao roleGroupDao;
-  private static final String KEYSPACE_NAME = Util.dbInfoMap.get(JsonKey.ROLE_GROUP).getKeySpace();
-  private static final String TABLE_NAME = Util.dbInfoMap.get(JsonKey.ROLE_GROUP).getTableName();
+  private static final String KEYSPACE_NAME = "sunbird";
+  private static final String TABLE_NAME = "role_group";
 
   public static RoleGroupDao getInstance() {
     if (roleGroupDao == null) {

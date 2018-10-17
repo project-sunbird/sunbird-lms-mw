@@ -9,7 +9,6 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.role.dao.RoleDao;
-import org.sunbird.learner.util.Util;
 import org.sunbird.models.role.Role;
 
 public class RoleDaoImpl implements RoleDao {
@@ -17,8 +16,8 @@ public class RoleDaoImpl implements RoleDao {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
   private static RoleDao roleDao;
-  private static final String KEYSPACE_NAME = Util.dbInfoMap.get(JsonKey.ROLE).getKeySpace();
-  private static final String TABLE_NAME = Util.dbInfoMap.get(JsonKey.ROLE).getTableName();
+  private static final String KEYSPACE_NAME = "sunbird";
+  private static final String TABLE_NAME = "role";
 
   public static RoleDao getInstance() {
     if (roleDao == null) {

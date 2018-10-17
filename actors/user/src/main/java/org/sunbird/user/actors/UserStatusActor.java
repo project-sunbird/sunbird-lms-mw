@@ -105,7 +105,10 @@ public class UserStatusActor extends BaseActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     Map<String, Object> userMapES =
-        createUserMap(userId, (String) request.getContext().get(JsonKey.REQUESTED_BY), canBlocked);
+        createUserMapES(
+            userId, (String) request.getContext().get(JsonKey.REQUESTED_BY), canBlocked);
+    User updatedUser =
+        createUpdatedUser(user, (String) request.getContext().get(JsonKey.REQUESTED_BY));
     if (isSSOEnabled) {
       if (canBlocked) {
         ssoManager.deactivateUser(userMapES);
@@ -113,7 +116,7 @@ public class UserStatusActor extends BaseActor {
         ssoManager.activateUser(userMapES);
       }
     }
-    Response response = userDao.updateUser(user);
+    Response response = userDao.updateUser(updatedUser);
     ProjectLogger.log(operation + " completed for " + userId);
     sender().tell(response, self());
     // update record in elasticsearch ......
@@ -133,7 +136,7 @@ public class UserStatusActor extends BaseActor {
     generateTeleEventForUser(null, userId, operation);
   }
 
-  private Map<String, Object> createUserMap(String userId, String updatedBy, boolean isDeleted) {
+  private Map<String, Object> createUserMapES(String userId, String updatedBy, boolean isDeleted) {
     Map<String, Object> dbMap = new HashMap<>();
     dbMap.put(JsonKey.IS_DELETED, isDeleted);
     if (isDeleted) {
@@ -147,6 +150,19 @@ public class UserStatusActor extends BaseActor {
     dbMap.put(JsonKey.UPDATED_BY, updatedBy);
 
     return dbMap;
+  }
+
+  private User createUpdatedUser(User user, String updatedBy) {
+    if (user.getIsDeleted()) {
+      user.setStatus(Status.ACTIVE.getValue());
+    } else {
+      user.setStatus(Status.INACTIVE.getValue());
+    }
+    user.setIsDeleted(!user.getIsDeleted());
+    user.setId(user.getUserId());
+    user.setUpdatedDate(ProjectUtil.getFormattedDate());
+    user.setUpdatedBy(updatedBy);
+    return user;
   }
 
   private void generateTeleEventForUser(

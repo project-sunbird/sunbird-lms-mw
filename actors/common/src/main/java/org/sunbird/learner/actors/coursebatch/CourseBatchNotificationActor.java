@@ -322,7 +322,6 @@ public class CourseBatchNotificationActor extends BaseActor {
    * @param Map<String, Object> RequestMap for email data.
    */
   private void sendMail(Map<String, String> user, Map<String, Object> requestMap) {
-    System.out.println("In Send Mail");
     requestMap.put(JsonKey.FIRST_NAME, user.get(JsonKey.FIRST_NAME));
     requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, user.get(JsonKey.EMAIL_TEMPLATE_TYPE));
     requestMap.put(JsonKey.RECIPIENT_EMAILS, new String[] {user.get(JsonKey.EMAIL)});

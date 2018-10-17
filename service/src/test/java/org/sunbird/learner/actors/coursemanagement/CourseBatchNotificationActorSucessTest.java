@@ -91,7 +91,6 @@ public class CourseBatchNotificationActorSucessTest {
     mockCassandraRequestForReadTemplate();
     mockEmailServiceSuccess();
     Response response = getUpdateSucessEmailNotificationTestResponse();
-    System.out.println("response for testCourseBatchUpdateSucess " + response.getResponseCode());
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
   }
 
@@ -101,8 +100,6 @@ public class CourseBatchNotificationActorSucessTest {
     mockCassandraRequestForReadTemplate();
     mockEmailServiceSuccess();
     Response res = getEnrollSucessEmailNotificationForLearnerTestResponse();
-    System.out.println(
-        "response for testCourseBatchEnrollForLearnerSucess " + res.getResponseCode());
     Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
   }
 
@@ -112,8 +109,6 @@ public class CourseBatchNotificationActorSucessTest {
     mockCassandraRequestForReadTemplate();
     mockEmailServiceSuccess();
     Response response = getBulkSucessEmailNotificationTestResponse(JsonKey.REMOVE);
-    System.out.println(
-        "response for testCourseBatchBulkRemoveSucess " + response.getResponseCode());
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
   }
 
@@ -123,7 +118,6 @@ public class CourseBatchNotificationActorSucessTest {
     mockCassandraRequestForReadTemplate();
     mockEmailServiceSuccess();
     Response response = getBulkSucessEmailNotificationTestResponse(JsonKey.ADD);
-    System.out.println("response for testCourseBatchBulkAddSucess " + response.getResponseCode());
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
   }
 

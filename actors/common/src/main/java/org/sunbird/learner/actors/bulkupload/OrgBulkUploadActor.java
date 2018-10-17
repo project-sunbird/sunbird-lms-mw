@@ -60,7 +60,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
         String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
         Response response = new Response();
         response.getResult().put(JsonKey.PROCESS_ID, processId);
-        Map<String, Object> req = request.getRequest();
+        Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
         validateFileHeaderFields(req, bulkOrgAllowedFields, true);
         BulkUploadProcess bulkUploadProcess =
                 getBulkUploadProcess(processId, JsonKey.ORGANISATION, (String) req.get(JsonKey.CREATED_BY), 0);

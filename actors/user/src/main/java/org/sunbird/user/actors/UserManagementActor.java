@@ -52,6 +52,7 @@ import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.user.actors.util.AuthenticationHelper;
 
 /**
  * This actor will handle course enrollment operation .
@@ -60,21 +61,20 @@ import org.sunbird.telemetry.util.TelemetryUtil;
  * @author Amit Kumar
  */
 @ActorConfig(
-  tasks = {
-    "createUser",
-    "updateUser",
-    "getUserProfile",
-    "getRoles",
-    "getUserDetailsByLoginId",
-    "profileVisibility",
-    "unblockUser",
-    "blockUser",
-    "assignRoles",
-    "userCurrentLogin",
-    "getMediaTypes"
-  },
-  asyncTasks = {}
-)
+    tasks = {
+      "createUser",
+      "updateUser",
+      "getUserProfile",
+      "getRoles",
+      "getUserDetailsByLoginId",
+      "profileVisibility",
+      "unblockUser",
+      "blockUser",
+      "assignRoles",
+      "userCurrentLogin",
+      "getMediaTypes"
+    },
+    asyncTasks = {})
 public class UserManagementActor extends BaseActor {
   private ObjectMapper mapper = new ObjectMapper();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -146,7 +146,7 @@ public class UserManagementActor extends BaseActor {
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
   private void profileVisibility(Request actorMessage) {
-    Map<String, Object> map = (Map) actorMessage.getRequest().get(JsonKey.USER);
+    Map<String, Object> map = (Map) actorMessage.getRequest();
     String userId = (String) map.get(JsonKey.USER_ID);
     List<String> privateList = (List) map.get(JsonKey.PRIVATE);
     List<String> publicList = (List) map.get(JsonKey.PUBLIC);
@@ -349,7 +349,7 @@ public class UserManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void getUserDetailsByLoginId(Request actorMessage) {
     actorMessage.toLower();
-    Map<String, Object> userMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
+    Map<String, Object> userMap = (Map<String, Object>) actorMessage.getRequest();
     if (null != userMap.get(JsonKey.LOGIN_ID)) {
       String loginId = (String) userMap.get(JsonKey.LOGIN_ID);
       try {
@@ -449,8 +449,8 @@ public class UserManagementActor extends BaseActor {
         // remove email and phone no from response
         result.remove(JsonKey.ENC_EMAIL);
         result.remove(JsonKey.ENC_PHONE);
-        if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
-          List<String> requestFields = (List<String>) actorMessage.getRequest().get(JsonKey.FIELDS);
+        if (null != actorMessage.getContext().get(JsonKey.FIELDS)) {
+          List<String> requestFields = (List<String>) actorMessage.getContext().get(JsonKey.FIELDS);
           if (requestFields != null) {
             if (!requestFields.contains(JsonKey.COMPLETENESS)) {
               result.remove(JsonKey.COMPLETENESS);
@@ -525,7 +525,7 @@ public class UserManagementActor extends BaseActor {
    */
   @SuppressWarnings("unchecked")
   private void getUserProfile(Request actorMessage) {
-    Map<String, Object> userMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
+    Map<String, Object> userMap = (Map<String, Object>) actorMessage.getRequest();
     Map<String, Object> result =
         ElasticSearchUtil.getDataByIdentifier(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
@@ -590,8 +590,8 @@ public class UserManagementActor extends BaseActor {
       sender().tell(exception, self());
       return;
     }
-    if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
-      String requestFields = (String) actorMessage.getRequest().get(JsonKey.FIELDS);
+    if (null != actorMessage.getContext().get(JsonKey.FIELDS)) {
+      String requestFields = (String) actorMessage.getContext().get(JsonKey.FIELDS);
       if (!StringUtils.isBlank(requestFields)) {
         if (!requestFields.contains(JsonKey.COMPLETENESS)) {
           result.remove(JsonKey.COMPLETENESS);
@@ -774,16 +774,17 @@ public class UserManagementActor extends BaseActor {
   private void updateUser(Request actorMessage) {
     actorMessage.toLower();
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
-    Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
+    Map<String, Object> userMap = actorMessage.getRequest();
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
-    UserRequestValidator.validateUpdateUser(actorMessage);
+    UserRequestValidator.validateUpdateUserRequest(actorMessage);
     Map<String, Object> userDbRecord = null;
     String extId = (String) userMap.get(JsonKey.EXTERNAL_ID);
     String provider = (String) userMap.get(JsonKey.EXTERNAL_ID_PROVIDER);
     String idType = (String) userMap.get(JsonKey.EXTERNAL_ID_TYPE);
+
+    AuthenticationHelper.validateWithUserId(actorMessage);
 
     if ((StringUtils.isBlank((String) userMap.get(JsonKey.USER_ID))
             && StringUtils.isBlank((String) userMap.get(JsonKey.ID)))
@@ -873,7 +874,7 @@ public class UserManagementActor extends BaseActor {
       updateKeyCloakUserBase(userMap);
     }
     userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-    userMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+    userMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     try {
       UserUtility.encryptUserData(userMap);
     } catch (Exception e1) {
@@ -901,13 +902,13 @@ public class UserManagementActor extends BaseActor {
     }
     // update user address
     if (userMap.containsKey(JsonKey.ADDRESS)) {
-      updateUserAddress(req, userMap);
+      updateUserAddress(actorMessage, userMap);
     }
     if (userMap.containsKey(JsonKey.EDUCATION)) {
-      updateUserEducation(req, userMap);
+      updateUserEducation(actorMessage, userMap);
     }
     if (userMap.containsKey(JsonKey.JOB_PROFILE)) {
-      updateUserJobProfile(req, userMap);
+      updateUserJobProfile(actorMessage, userMap);
     }
 
     // update the user external identity data
@@ -923,7 +924,7 @@ public class UserManagementActor extends BaseActor {
         TelemetryUtil.generateTargetObject(
             (String) userMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
     TelemetryUtil.telemetryProcessingCall(
-        (Map<String, Object>) req.get(JsonKey.USER), targetObject, correlatedObject);
+        (Map<String, Object>) userMap, targetObject, correlatedObject);
 
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       Request userRequest = new Request();
@@ -974,7 +975,7 @@ public class UserManagementActor extends BaseActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void updateUserJobProfile(Map<String, Object> req, Map<String, Object> userMap) {
+  private void updateUserJobProfile(Request actorMessage, Map<String, Object> userMap) {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
     List<Map<String, Object>> reqList =
@@ -1013,12 +1014,12 @@ public class UserManagementActor extends BaseActor {
             reqMap, userMap, JsonKey.JOB_PROFILE, JsonKey.USER);
         continue;
       }
-      processJobProfileInfo(reqMap, userMap, req, addrDbInfo, jobProDbInfo);
+      processJobProfileInfo(reqMap, userMap, actorMessage, addrDbInfo, jobProDbInfo);
     }
   }
 
   @SuppressWarnings("unchecked")
-  private void updateUserEducation(Map<String, Object> req, Map<String, Object> userMap) {
+  private void updateUserEducation(Request actorMessage, Map<String, Object> userMap) {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
     List<Map<String, Object>> reqList = (List<Map<String, Object>>) userMap.get(JsonKey.EDUCATION);
@@ -1054,12 +1055,12 @@ public class UserManagementActor extends BaseActor {
             reqMap, userMap, JsonKey.EDUCATION, JsonKey.USER);
         continue;
       }
-      processEducationInfo(reqMap, userMap, req, addrDbInfo, eduDbInfo);
+      processEducationInfo(reqMap, userMap, actorMessage, addrDbInfo, eduDbInfo);
     }
   }
 
   @SuppressWarnings("unchecked")
-  private void updateUserAddress(Map<String, Object> req, Map<String, Object> userMap) {
+  private void updateUserAddress(Request actorMessage, Map<String, Object> userMap) {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     List<Map<String, Object>> reqList = (List<Map<String, Object>>) userMap.get(JsonKey.ADDRESS);
     for (int i = 0; i < reqList.size(); i++) {
@@ -1073,7 +1074,7 @@ public class UserManagementActor extends BaseActor {
         telemetryGenerationForUserSubFieldsDeletion(reqMap, userMap, JsonKey.ADDRESS, JsonKey.USER);
         continue;
       }
-      processUserAddress(reqMap, req, userMap, addrDbInfo);
+      processUserAddress(reqMap, actorMessage, userMap, addrDbInfo);
     }
   }
 
@@ -1100,7 +1101,7 @@ public class UserManagementActor extends BaseActor {
 
   private void processUserAddress(
       Map<String, Object> reqMap,
-      Map<String, Object> req,
+      Request actorMessage,
       Map<String, Object> userMap,
       DbInfo addrDbInfo) {
     Boolean isAddressUpdated = true;
@@ -1108,7 +1109,9 @@ public class UserManagementActor extends BaseActor {
     String encreqById = "";
     try {
       encUserId = encryptionService.encryptData((String) userMap.get(JsonKey.ID));
-      encreqById = encryptionService.encryptData((String) req.get(JsonKey.REQUESTED_BY));
+      encreqById =
+          encryptionService.encryptData(
+              (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     } catch (Exception e1) {
       ProjectCommonException exception =
           new ProjectCommonException(
@@ -1168,7 +1171,7 @@ public class UserManagementActor extends BaseActor {
   private void processJobProfileInfo(
       Map<String, Object> reqMap,
       Map<String, Object> userMap,
-      Map<String, Object> req,
+      Request actorMessage,
       DbInfo addrDbInfo,
       DbInfo jobProDbInfo) {
     String addrId = null;
@@ -1192,7 +1195,7 @@ public class UserManagementActor extends BaseActor {
       } else {
         addrId = (String) address.get(JsonKey.ID);
         address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-        address.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+        address.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
         address.remove(JsonKey.USER_ID);
       }
       try {
@@ -1213,7 +1216,7 @@ public class UserManagementActor extends BaseActor {
 
     if (isProfileUpdated) {
       reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-      reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+      reqMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
       reqMap.remove(JsonKey.USER_ID);
     } else {
       reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
@@ -1233,7 +1236,7 @@ public class UserManagementActor extends BaseActor {
   private void processEducationInfo(
       Map<String, Object> reqMap,
       Map<String, Object> userMap,
-      Map<String, Object> req,
+      Request actorMessage,
       DbInfo addrDbInfo,
       DbInfo eduDbInfo) {
 
@@ -1258,7 +1261,7 @@ public class UserManagementActor extends BaseActor {
       } else {
         addrId = (String) address.get(JsonKey.ID);
         address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-        address.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+        address.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
         address.remove(JsonKey.USER_ID);
       }
       try {
@@ -1301,7 +1304,7 @@ public class UserManagementActor extends BaseActor {
 
     if (isEducationUpdated) {
       reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-      reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+      reqMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
       reqMap.remove(JsonKey.USER_ID);
     } else {
       reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
@@ -1350,13 +1353,22 @@ public class UserManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void createUser(Request actorMessage) {
     actorMessage.toLower();
-    Map<String, Object> req = actorMessage.getRequest();
-    Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
+    Map<String, Object> userMap = actorMessage.getRequest();
+    String version = (String) actorMessage.getContext().get(JsonKey.VERSION);
+    if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
+      UserRequestValidator.validateCreateUserV2Request(actorMessage);
+      validateChannelAndOrganisationId(userMap);
+    } else {
+      // For V1
+      UserRequestValidator.fieldsNotAllowed(Arrays.asList(JsonKey.ORGANISATION_ID), actorMessage);
+      UserRequestValidator.validateCreateUserRequest(actorMessage);
+    }
+
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
     userMap.remove(JsonKey.EMAIL_VERIFIED);
-    userMap.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
+    userMap.put(JsonKey.CREATED_BY, userMap.remove(JsonKey.REQUESTED_BY));
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
     try {
@@ -1368,15 +1380,7 @@ public class UserManagementActor extends BaseActor {
       sender().tell(ex, self());
       return;
     }
-    String version = (String) actorMessage.getRequest().get(JsonKey.VERSION);
-    if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
-      UserRequestValidator.validateCreateUserV2(actorMessage);
-      validateChannelAndOrganisationId(userMap);
-    } else {
-      // For V1
-      UserRequestValidator.fieldsNotAllowed(Arrays.asList(JsonKey.ORGANISATION_ID), actorMessage);
-      UserRequestValidator.validateCreateUser(actorMessage);
-    }
+
     processUserRequest(userMap);
   }
 

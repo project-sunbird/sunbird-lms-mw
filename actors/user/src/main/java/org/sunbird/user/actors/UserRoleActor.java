@@ -25,11 +25,18 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.role.dao.RoleDao;
 import org.sunbird.learner.actors.role.dao.impl.RoleDaoImpl;
+import org.sunbird.learner.actors.role.group.dao.RoleGroupDao;
+import org.sunbird.learner.actors.role.group.dao.impl.RoleGroupDaoImpl;
+import org.sunbird.learner.actors.url.action.dao.UrlActionDao;
+import org.sunbird.learner.actors.url.action.dao.impl.UrlActionDaoImpl;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.role.Role;
-import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.models.role.group.RoleGroup;
+import org.sunbird.models.url.action.UrlAction;
 import org.sunbird.user.dao.UserDao;
 import org.sunbird.user.dao.impl.UserDaoImpl;
+import org.sunbird.user.service.UserService;
+import org.sunbird.user.service.impl.UserServiceImpl;
 
 /**
  * This actor will handle course enrollment operation .
@@ -46,6 +53,9 @@ public class UserRoleActor extends BaseActor {
 
   private UserDao userDao = UserDaoImpl.getInstance();
   private RoleDao roleDao = RoleDaoImpl.getInstance();
+  private RoleGroupDao roleGroupDao = RoleGroupDaoImpl.getInstance();
+  private UrlActionDao urlActionDao = UrlActionDaoImpl.getInstance();
+  private UserService userService = UserServiceImpl.getInstance();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   /** Receives the actor message and perform the user status operation . */
@@ -78,7 +88,9 @@ public class UserRoleActor extends BaseActor {
     Response mergeResponse = new Response();
     List<Map<String, Object>> resposnemap = new ArrayList<>();
     List<Map<String, Object>> list = null;
-    List<Role> roleList = roleDao.getAllRecords();
+    List<Role> roleList = roleDao.getRoles();
+    List<RoleGroup> roleGroupList = roleGroupDao.getRoleGroups();
+    List<UrlAction> urlActionList = urlActionDao.getUrlActions();
     Response response =
         cassandraOperation.getAllRecords(roleDbInfo.getKeySpace(), roleDbInfo.getTableName());
     Response rolegroup =
@@ -92,41 +104,43 @@ public class UserRoleActor extends BaseActor {
     List<Map<String, Object>> roleGroupMap =
         (List<Map<String, Object>>) rolegroup.getResult().get(JsonKey.RESPONSE);
     list = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
-    if (list != null && !(list.isEmpty())) {
+    if (roleList != null && !(roleList.isEmpty())) {
       // This map will have all the master roles
       for (Map<String, Object> map : list) {
-        Map<String, Object> roleResponseMap = new HashMap<>();
-        roleResponseMap.put(JsonKey.ID, map.get(JsonKey.ID));
-        roleResponseMap.put(JsonKey.NAME, map.get(JsonKey.NAME));
-        List<String> roleGroup = (List) map.get(JsonKey.ROLE_GROUP_ID);
-        List<Map<String, Object>> actionGroupListMap = new ArrayList<>();
-        roleResponseMap.put(JsonKey.ACTION_GROUPS, actionGroupListMap);
-        Map<String, Object> subRoleResponseMap = null;
-        for (String val : roleGroup) {
-          subRoleResponseMap = new HashMap<>();
-          Map<String, Object> subRoleMap = getSubRoleListMap(roleGroupMap, val);
-          List<String> subRole = (List) subRoleMap.get(JsonKey.URL_ACTION_ID);
-          List<Map<String, Object>> roleUrlResponList = new ArrayList<>();
-          subRoleResponseMap.put(JsonKey.ID, subRoleMap.get(JsonKey.ID));
-          subRoleResponseMap.put(JsonKey.NAME, subRoleMap.get(JsonKey.NAME));
-          for (String rolemap : subRole) {
-            roleUrlResponList.add(getRoleAction(urlActionListMap, rolemap));
+        for (Role role : roleList) {
+          Map<String, Object> roleResponseMap = new HashMap<>();
+          roleResponseMap.put(JsonKey.ID, map.get(JsonKey.ID));
+          roleResponseMap.put(JsonKey.NAME, map.get(JsonKey.NAME));
+          List<String> roleGroup = (List) map.get(JsonKey.ROLE_GROUP_ID);
+          List<Map<String, Object>> actionGroupListMap = new ArrayList<>();
+          roleResponseMap.put(JsonKey.ACTION_GROUPS, actionGroupListMap);
+          Map<String, Object> subRoleResponseMap = null;
+          for (String val : roleGroup) {
+            subRoleResponseMap = new HashMap<>();
+            Map<String, Object> subRoleMap = getSubRoleListMap(roleGroupMap, val);
+            List<String> subRole = (List) subRoleMap.get(JsonKey.URL_ACTION_ID);
+            List<Map<String, Object>> roleUrlResponList = new ArrayList<>();
+            subRoleResponseMap.put(JsonKey.ID, subRoleMap.get(JsonKey.ID));
+            subRoleResponseMap.put(JsonKey.NAME, subRoleMap.get(JsonKey.NAME));
+            for (String rolemap : subRole) {
+              roleUrlResponList.add(getRoleAction(urlActionListMap, rolemap));
+            }
+            if (subRoleResponseMap.containsKey(JsonKey.ACTIONS)) {
+              List<Map<String, Object>> listOfMap =
+                  (List<Map<String, Object>>) subRoleResponseMap.get(JsonKey.ACTIONS);
+              listOfMap.addAll(roleUrlResponList);
+            } else {
+              subRoleResponseMap.put(JsonKey.ACTIONS, roleUrlResponList);
+            }
+            actionGroupListMap.add(subRoleResponseMap);
           }
-          if (subRoleResponseMap.containsKey(JsonKey.ACTIONS)) {
-            List<Map<String, Object>> listOfMap =
-                (List<Map<String, Object>>) subRoleResponseMap.get(JsonKey.ACTIONS);
-            listOfMap.addAll(roleUrlResponList);
-          } else {
-            subRoleResponseMap.put(JsonKey.ACTIONS, roleUrlResponList);
-          }
-          actionGroupListMap.add(subRoleResponseMap);
-        }
 
-        resposnemap.add(roleResponseMap);
+          resposnemap.add(roleResponseMap);
+        }
       }
+      mergeResponse.getResult().put(JsonKey.ROLES, resposnemap);
+      sender().tell(mergeResponse, self());
     }
-    mergeResponse.getResult().put(JsonKey.ROLES, resposnemap);
-    sender().tell(mergeResponse, self());
   }
 
   /**
@@ -249,7 +263,7 @@ public class UserRoleActor extends BaseActor {
     } else {
       ProjectLogger.log("no call for ES to save user");
     }
-    generateTeleEventForUser(requestMap, userId, "userLevel");
+    userService.generateTeleEventForUser(requestMap, userId, "userLevel");
   }
 
   /**
@@ -322,34 +336,5 @@ public class UserRoleActor extends BaseActor {
       ProjectLogger.log(
           "Exception Occurred during saving user to Es while joinUserOrganisation : ", ex);
     }
-  }
-
-  private void generateTeleEventForUser(
-      Map<String, Object> requestMap, String userId, String objectType) {
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    Map<String, Object> targetObject =
-        TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-    Map<String, Object> telemetryAction = new HashMap<>();
-    if (objectType.equalsIgnoreCase("orgLevel")) {
-      telemetryAction.put("AssignRole", "role assigned at org level");
-      if (null != requestMap) {
-        TelemetryUtil.generateCorrelatedObject(
-            (String) requestMap.get(JsonKey.ORGANISATION_ID),
-            JsonKey.ORGANISATION,
-            null,
-            correlatedObject);
-      }
-    } else {
-      if (objectType.equalsIgnoreCase("userLevel")) {
-        telemetryAction.put("AssignRole", "role assigned at user level");
-      } else if (objectType.equalsIgnoreCase("blockUser")) {
-        telemetryAction.put("BlockUser", "user blocked");
-      } else if (objectType.equalsIgnoreCase("unBlockUser")) {
-        telemetryAction.put("UnBlockUser", "user unblocked");
-      } else if (objectType.equalsIgnoreCase("profileVisibility")) {
-        telemetryAction.put("ProfileVisibility", "profile Visibility setting changed");
-      }
-    }
-    TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
   }
 }

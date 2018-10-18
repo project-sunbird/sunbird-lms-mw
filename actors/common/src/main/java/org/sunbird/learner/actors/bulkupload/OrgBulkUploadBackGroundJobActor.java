@@ -33,13 +33,10 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadActor {
     String operation = request.getOperation();
     Util.initializeContext(request, TelemetryEnvKey.ORGANISATION);
     ExecutionContext.setRequestId(request.getRequestId());
-
-    switch (operation) {
-      case "orgBulkUploadBackground":
-        bulkOrgUpload(request);
-        break;
-      default:
-        ProjectLogger.log(operation + ": unsupported message");
+    if (operation.equalsIgnoreCase("orgBulkUploadBackground")) {
+      bulkOrgUpload(request);
+    } else {
+      ProjectLogger.log(operation + ": unsupported message");
     }
   }
 

@@ -8,4 +8,7 @@ public interface UserService {
   public Map<String, Object> getUserByUserIdAndOrgId(String userId, String orgId);
 
   public User validateUserId(String userId);
+
+  public void generateTeleEventForUser(
+      Map<String, Object> requestMap, String userId, String objectType);
 }

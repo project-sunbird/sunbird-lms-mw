@@ -1,9 +1,8 @@
 package org.sunbird.user.actors;
 
 import akka.actor.ActorRef;
-import java.util.ArrayList;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -22,7 +21,6 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.dao.UserDao;
 import org.sunbird.user.dao.impl.UserDaoImpl;
 import org.sunbird.user.service.UserService;
@@ -43,6 +41,7 @@ public class UserStatusActor extends BaseActor {
   private UserDao userDao = UserDaoImpl.getInstance();
   private UserService userService = UserServiceImpl.getInstance();
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
+  private ObjectMapper mapper = new ObjectMapper();
   private boolean isSSOEnabled =
       Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
   private ActorRef systemSettingActorRef =
@@ -107,8 +106,7 @@ public class UserStatusActor extends BaseActor {
     Map<String, Object> userMapES =
         createUserMapES(
             userId, (String) request.getContext().get(JsonKey.REQUESTED_BY), canBlocked);
-    User updatedUser =
-        createUpdatedUser(user, (String) request.getContext().get(JsonKey.REQUESTED_BY));
+    User updatedUser = mapper.convertValue(userMapES, User.class);
     if (isSSOEnabled) {
       if (canBlocked) {
         ssoManager.deactivateUser(userMapES);
@@ -133,7 +131,7 @@ public class UserStatusActor extends BaseActor {
     } else {
       ProjectLogger.log("UserStatusActor:" + operation + " : no call for ES to save user");
     }
-    generateTeleEventForUser(null, userId, operation);
+    userService.generateTeleEventForUser(null, userId, operation);
   }
 
   private Map<String, Object> createUserMapES(String userId, String updatedBy, boolean isDeleted) {
@@ -150,32 +148,5 @@ public class UserStatusActor extends BaseActor {
     dbMap.put(JsonKey.UPDATED_BY, updatedBy);
 
     return dbMap;
-  }
-
-  private User createUpdatedUser(User user, String updatedBy) {
-    if (user.getIsDeleted()) {
-      user.setStatus(Status.ACTIVE.getValue());
-    } else {
-      user.setStatus(Status.INACTIVE.getValue());
-    }
-    user.setIsDeleted(!user.getIsDeleted());
-    user.setId(user.getUserId());
-    user.setUpdatedDate(ProjectUtil.getFormattedDate());
-    user.setUpdatedBy(updatedBy);
-    return user;
-  }
-
-  private void generateTeleEventForUser(
-      Map<String, Object> requestMap, String userId, String objectType) {
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    Map<String, Object> targetObject =
-        TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-    Map<String, Object> telemetryAction = new HashMap<>();
-    if (objectType.equalsIgnoreCase("blockUser")) {
-      telemetryAction.put("BlockUser", "user blocked");
-    } else {
-      telemetryAction.put("UnblockUser", "user unblocked");
-    }
-    TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
   }
 }

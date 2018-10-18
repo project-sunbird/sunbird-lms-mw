@@ -14,9 +14,10 @@ public class UserServiceImpl implements UserService {
   private UserExternalIdentityDao userExtIdentityDao = new UserExternalIdentityDaoImpl();
 
   @Override
-  public void validateUserId(Request reqObj) {
-    String ctxtUserId = (String) reqObj.getContext().get(JsonKey.USER_ID);
-    String userId = userExtIdentityDao.getUserId(reqObj);
+  public void validateUserId(Request request) {
+    String ctxtUserId = (String) request.getContext().get(JsonKey.USER_ID);
+    String userId = userExtIdentityDao.getUserId(request);
+
     if ((!StringUtils.isBlank(userId)) && (!userId.equals(ctxtUserId))) {
       throw new ProjectCommonException(
           ResponseCode.unAuthorized.getErrorCode(),
@@ -24,4 +25,5 @@ public class UserServiceImpl implements UserService {
           ResponseCode.UNAUTHORIZED.getResponseCode());
     }
   }
+
 }

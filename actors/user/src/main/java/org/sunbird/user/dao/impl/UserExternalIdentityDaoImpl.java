@@ -28,16 +28,19 @@ public class UserExternalIdentityDaoImpl implements UserExternalIdentityDao {
 
   @Override
   public String getUserId(Request reqObj) {
-    String userId = "";
+    String userId;
+
     if (null != reqObj.getRequest().get(JsonKey.USER_ID)) {
       userId = (String) reqObj.getRequest().get(JsonKey.USER_ID);
     } else {
       userId = (String) reqObj.getRequest().get(JsonKey.ID);
     }
+
     if (StringUtils.isBlank(userId)) {
       String extId = (String) reqObj.getRequest().get(JsonKey.EXTERNAL_ID);
       String provider = (String) reqObj.getRequest().get(JsonKey.EXTERNAL_ID_PROVIDER);
       String idType = (String) reqObj.getRequest().get(JsonKey.EXTERNAL_ID_TYPE);
+
       Map<String, Object> user = getUserByExternalId(extId, provider, idType);
 
       if (user != null && !user.isEmpty()) {
@@ -53,6 +56,7 @@ public class UserExternalIdentityDaoImpl implements UserExternalIdentityDao {
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
     }
+
     return userId;
   }
 
@@ -78,11 +82,12 @@ public class UserExternalIdentityDaoImpl implements UserExternalIdentityDao {
               usrDbInfo.getKeySpace(),
               usrDbInfo.getTableName(),
               (String) userExtIdRecord.get(JsonKey.USER_ID));
+
       if (CollectionUtils.isNotEmpty((List<Map<String, Object>>) res.get(JsonKey.RESPONSE))) {
-        // user exist
         user = ((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).get(0);
       }
     }
+
     return user;
   }
 

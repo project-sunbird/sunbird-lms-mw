@@ -123,8 +123,6 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadActor {
 
   private void callCreateOrg(Map<String, Object> row, BulkUploadProcessTask task)
       throws JsonProcessingException {
-    Request request = new Request();
-    request.getRequest().putAll(row);
 
     String orgId;
     try {

@@ -4,12 +4,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.util.Util;
 
@@ -40,7 +37,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    Util.initializeContext(request, TelemetryEnvKey.GEO_LOCATION);
+    Util.initializeContext(request, TelemetryEnvKey.ORGANISATION);
     ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();
 
@@ -54,26 +51,11 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
   }
 
   private void upload(Request request) throws IOException {
-    String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
-    Response response = new Response();
-    response.getResult().put(JsonKey.PROCESS_ID, processId);
     Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
     validateFileHeaderFields(req, bulkOrgAllowedFields, true);
     BulkUploadProcess bulkUploadProcess =
-        getBulkUploadProcess(
-            processId, JsonKey.ORGANISATION, (String) req.get(JsonKey.CREATED_BY), 0);
-    Response res = bulkUploadDao.create(bulkUploadProcess);
-    if (((String) res.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      sender().tell(response, self());
-    } else {
-      ProjectLogger.log("Exception occurred while inserting record in bulk_upload_process.");
-      throw new ProjectCommonException(
-          ResponseCode.SERVER_ERROR.getErrorCode(),
-          ResponseCode.SERVER_ERROR.getErrorMessage(),
-          ResponseCode.SERVER_ERROR.getResponseCode());
-    }
-
-    processOrgBulkUpload(req, processId, bulkUploadProcess);
+        handleUpload(JsonKey.ORGANISATION, (String) req.get(JsonKey.CREATED_BY));
+    processOrgBulkUpload(req, bulkUploadProcess.getId(), bulkUploadProcess);
   }
 
   private void processOrgBulkUpload(
@@ -84,17 +66,10 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
       fileByteArray = (byte[]) req.get(JsonKey.FILE);
     }
     Integer recordCount = validateAndParseRecords(fileByteArray, processId, new HashMap<>());
-
-    // Update process ID in DB with actual task / record count
-    bulkUploadProcess.setTaskCount(recordCount);
-    bulkUploadDao.update(bulkUploadProcess);
-
-    Request request = new Request();
-    request.put(JsonKey.PROCESS_ID, processId);
-    request.setOperation(BulkUploadActorOperation.ORG_BULK_UPLOAD_BACKGROUND_JOB.getValue());
-    ProjectLogger.log(
-        "LocationBulkUploadActor : calling action"
-            + BulkUploadActorOperation.ORG_BULK_UPLOAD_BACKGROUND_JOB.getValue());
-    tellToAnother(request);
+    processBulkUpload(
+        recordCount,
+        processId,
+        bulkUploadProcess,
+        BulkUploadActorOperation.LOCATION_BULK_UPLOAD_BACKGROUND_JOB.getValue());
   }
 }

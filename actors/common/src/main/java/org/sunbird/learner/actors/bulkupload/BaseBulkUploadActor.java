@@ -18,11 +18,10 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
+import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessDao;
 import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessTaskDao;
@@ -345,8 +344,39 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     }
   }
 
+  public BulkUploadProcess handleUpload(String objectType, String createdBy) throws IOException {
+    String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
+    Response response = new Response();
+    response.getResult().put(JsonKey.PROCESS_ID, processId);
+    BulkUploadProcess bulkUploadProcess = getBulkUploadProcess(processId, objectType, createdBy, 0);
+    Response res = bulkUploadDao.create(bulkUploadProcess);
+    if (((String) res.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      sender().tell(response, self());
+    } else {
+      ProjectLogger.log("Exception occurred while inserting record in bulk_upload_process.");
+      throw new ProjectCommonException(
+          ResponseCode.SERVER_ERROR.getErrorCode(),
+          ResponseCode.SERVER_ERROR.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
+    return bulkUploadProcess;
+  }
+
+  public void processBulkUpload(
+      int recordCount, String processId, BulkUploadProcess bulkUploadProcess, String operation)
+      throws IOException {
+    bulkUploadProcess.setTaskCount(recordCount);
+    bulkUploadDao.update(bulkUploadProcess);
+
+    Request request = new Request();
+    request.put(JsonKey.PROCESS_ID, processId);
+    request.setOperation(operation);
+    ProjectLogger.log("LocationBulkUploadActor : calling action" + operation);
+    tellToAnother(request);
+  }
+
   public BulkUploadProcess getBulkUploadProcess(
-          String processId, String objectType, String requestedBy, Integer taskCount) {
+      String processId, String objectType, String requestedBy, Integer taskCount) {
     BulkUploadProcess bulkUploadProcess = new BulkUploadProcess();
     bulkUploadProcess.setId(processId);
     bulkUploadProcess.setObjectType(objectType);

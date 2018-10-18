@@ -37,7 +37,7 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
-import org.sunbird.models.organization.Organization;
+import org.sunbird.models.organisation.Organisation;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.validator.location.LocationRequestValidator;
 
@@ -439,7 +439,7 @@ public class OrganisationManagementActor extends BaseActor {
       }
 
       // This will remove all extra unnecessary parameter from request
-      Organization org = mapper.convertValue(request, Organization.class);
+      Organisation org = mapper.convertValue(request, Organisation.class);
       request = mapper.convertValue(org, Map.class);
       Response result =
           cassandraOperation.insertRecord(
@@ -919,7 +919,7 @@ public class OrganisationManagementActor extends BaseActor {
         }
       }
       // This will remove all extra unnecessary parameter from request
-      Organization org = mapper.convertValue(updateOrgDBO, Organization.class);
+      Organisation org = mapper.convertValue(updateOrgDBO, Organisation.class);
       updateOrgDBO = mapper.convertValue(org, Map.class);
       Response response =
           cassandraOperation.updateRecord(
@@ -1295,7 +1295,7 @@ public class OrganisationManagementActor extends BaseActor {
         orgMapDbInfo.getKeySpace(), orgMapDbInfo.getTableName(), orgMap);
   }
 
-  /** Checks whether the parent Organization exists */
+  /** Checks whether the parent Organisation exists */
   @SuppressWarnings("unchecked")
   public Boolean isValidParent(String parentId) {
     Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);

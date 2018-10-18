@@ -67,6 +67,6 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
         recordCount,
         processId,
         bulkUploadProcess,
-        BulkUploadActorOperation.LOCATION_BULK_UPLOAD_BACKGROUND_JOB.getValue());
+        BulkUploadActorOperation.ORG_BULK_UPLOAD_BACKGROUND_JOB.getValue());
   }
 }

@@ -1,4 +1,4 @@
-package org.sunbird.user.actors.util;
+package org.sunbird.user.dao.impl;
 
 import java.util.HashMap;
 import java.util.List;
@@ -10,7 +10,6 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
@@ -18,29 +17,16 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+import org.sunbird.user.dao.UserExternalIdentityDao;
 
-public class AuthenticationHelper {
+public class UserExternalIdentityDaoImpl implements UserExternalIdentityDao {
 
-  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static EncryptionService encryptionService =
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
           null);
 
-  public static void validateWithUserId(Request reqObj) {
-    if (null != reqObj.getContext().get(JsonKey.IS_AUTH_REQ)
-        && Boolean.parseBoolean((String) reqObj.getContext().get(JsonKey.IS_AUTH_REQ))) {
-      String ctxtUserId = (String) reqObj.getContext().get(JsonKey.USER_ID);
-      String userId = getUserIdFromExtIdAndProvider(reqObj);
-      if ((!StringUtils.isBlank(userId)) && (!userId.equals(ctxtUserId))) {
-        throw new ProjectCommonException(
-            ResponseCode.unAuthorized.getErrorCode(),
-            ResponseCode.unAuthorized.getErrorMessage(),
-            ResponseCode.UNAUTHORIZED.getResponseCode());
-      }
-    }
-  }
-
-  private static String getUserIdFromExtIdAndProvider(Request reqObj) {
+  public String getUserIdFromExtIdAndProvider(Request reqObj) {
     String userId = "";
     if (null != reqObj.getRequest().get(JsonKey.USER_ID)) {
       userId = (String) reqObj.getRequest().get(JsonKey.USER_ID);
@@ -70,8 +56,7 @@ public class AuthenticationHelper {
   }
 
   @SuppressWarnings({"unchecked"})
-  public static Map<String, Object> getUserFromExternalId(
-      String extId, String provider, String idType) {
+  private Map<String, Object> getUserFromExternalId(String extId, String provider, String idType) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> user = null;
     Map<String, Object> externalIdReq = new HashMap<>();
@@ -100,7 +85,7 @@ public class AuthenticationHelper {
     return user;
   }
 
-  public static String getEncryptedData(String value) {
+  private String getEncryptedData(String value) {
     try {
       return encryptionService.encryptData(value);
     } catch (Exception e) {
@@ -109,61 +94,5 @@ public class AuthenticationHelper {
           ResponseCode.userDataEncryptionError.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
-  }
-
-  public static Map<String, Object> getClientAccessTokenDetail(String clientId) {
-    Util.DbInfo clientDbInfo = Util.dbInfoMap.get(JsonKey.CLIENT_INFO_DB);
-    Map<String, Object> response = null;
-    Map<String, Object> propertyMap = new HashMap<>();
-    propertyMap.put(JsonKey.ID, clientId);
-    try {
-      Response clientResponse =
-          cassandraOperation.getRecordById(
-              clientDbInfo.getKeySpace(), clientDbInfo.getTableName(), clientId);
-      if (null != clientResponse && !clientResponse.getResult().isEmpty()) {
-        List<Map<String, Object>> dataList =
-            (List<Map<String, Object>>) clientResponse.getResult().get(JsonKey.RESPONSE);
-        response = dataList.get(0);
-      }
-    } catch (Exception e) {
-      ProjectLogger.log("Validating client token failed due to : ", e);
-    }
-    return response;
-  }
-
-  public static Map<String, Object> getUserDetail(String userId) {
-    Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Map<String, Object> response = null;
-    try {
-      Response userResponse =
-          cassandraOperation.getRecordById(
-              userDbInfo.getKeySpace(), userDbInfo.getTableName(), userId);
-      if (null != userResponse && !userResponse.getResult().isEmpty()) {
-        List<Map<String, Object>> dataList =
-            (List<Map<String, Object>>) userResponse.getResult().get(JsonKey.RESPONSE);
-        response = dataList.get(0);
-      }
-    } catch (Exception e) {
-      ProjectLogger.log("fetching user for id " + userId + " failed due to : ", e);
-    }
-    return response;
-  }
-
-  public static Map<String, Object> getOrgDetail(String orgId) {
-    Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-    Map<String, Object> response = null;
-    try {
-      Response userResponse =
-          cassandraOperation.getRecordById(
-              userDbInfo.getKeySpace(), userDbInfo.getTableName(), orgId);
-      if (null != userResponse && !userResponse.getResult().isEmpty()) {
-        List<Map<String, Object>> dataList =
-            (List<Map<String, Object>>) userResponse.getResult().get(JsonKey.RESPONSE);
-        response = dataList.get(0);
-      }
-    } catch (Exception e) {
-      ProjectLogger.log("fetching user for id " + orgId + " failed due to : ", e);
-    }
-    return response;
   }
 }

@@ -2,18 +2,16 @@ package org.sunbird.user.actors;
 
 import static org.sunbird.learner.util.Util.isNotNull;
 
-import akka.actor.ActorRef;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigInteger;
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -52,7 +50,12 @@ import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
-import org.sunbird.user.actors.util.AuthenticationHelper;
+import org.sunbird.user.service.UserService;
+import org.sunbird.user.service.impl.UserServiceImpl;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import akka.actor.ActorRef;
 
 /**
  * This actor will handle course enrollment operation .
@@ -94,7 +97,8 @@ public class UserManagementActor extends BaseActor {
       Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE));
   private ActorRef systemSettingActorRef =
       getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
-
+  private UserRequestValidator userRequestValidator = new UserRequestValidator();
+  private UserService userService = new UserServiceImpl();
   /** Receives the actor message and perform the course enrollment operation . */
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -778,13 +782,13 @@ public class UserManagementActor extends BaseActor {
     Map<String, Object> userMap = actorMessage.getRequest();
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
-    UserRequestValidator.validateUpdateUserRequest(actorMessage);
+    userRequestValidator.validateUpdateUserRequest(actorMessage);
     Map<String, Object> userDbRecord = null;
     String extId = (String) userMap.get(JsonKey.EXTERNAL_ID);
     String provider = (String) userMap.get(JsonKey.EXTERNAL_ID_PROVIDER);
     String idType = (String) userMap.get(JsonKey.EXTERNAL_ID_TYPE);
 
-    AuthenticationHelper.validateWithUserId(actorMessage);
+    userService.validateWithUserId(actorMessage);
 
     if ((StringUtils.isBlank((String) userMap.get(JsonKey.USER_ID))
             && StringUtils.isBlank((String) userMap.get(JsonKey.ID)))
@@ -1356,10 +1360,10 @@ public class UserManagementActor extends BaseActor {
     Map<String, Object> userMap = actorMessage.getRequest();
     String version = (String) actorMessage.getContext().get(JsonKey.VERSION);
     if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
-      UserRequestValidator.validateCreateUserV2Request(actorMessage);
+    	userRequestValidator.validateCreateUserV2Request(actorMessage);
       validateChannelAndOrganisationId(userMap);
     } else {
-      UserRequestValidator.validateCreateUserV1Request(actorMessage);
+    	userRequestValidator.validateCreateUserV1Request(actorMessage);
     }
 
     // remove these fields from req
@@ -2020,7 +2024,7 @@ public class UserManagementActor extends BaseActor {
    */
   @SuppressWarnings("unchecked")
   private void assignRoles(Request actorMessage) {
-    UserRequestValidator.validateAssignRole(actorMessage);
+	userRequestValidator.validateAssignRole(actorMessage);
     Map<String, Object> requestMap = actorMessage.getRequest();
 
     if (null != requestMap.get(JsonKey.ROLES)

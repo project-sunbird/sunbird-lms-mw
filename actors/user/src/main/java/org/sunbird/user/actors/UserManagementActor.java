@@ -1359,9 +1359,7 @@ public class UserManagementActor extends BaseActor {
       UserRequestValidator.validateCreateUserV2Request(actorMessage);
       validateChannelAndOrganisationId(userMap);
     } else {
-      // For V1
-      UserRequestValidator.fieldsNotAllowed(Arrays.asList(JsonKey.ORGANISATION_ID), actorMessage);
-      UserRequestValidator.validateCreateUserRequest(actorMessage);
+      UserRequestValidator.validateCreateUserV1Request(actorMessage);
     }
 
     // remove these fields from req

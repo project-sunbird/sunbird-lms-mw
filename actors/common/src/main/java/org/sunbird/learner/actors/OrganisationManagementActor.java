@@ -37,7 +37,7 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
-import org.sunbird.models.organization.Organization;
+import org.sunbird.models.organisation.Organisation;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.validator.location.LocationRequestValidator;
 
@@ -251,7 +251,7 @@ public class OrganisationManagementActor extends BaseActor {
     }
   }
 
-  /** Method to create an organization . */
+  /** Method to create an Organisation . */
   @SuppressWarnings("unchecked")
   private void createOrg(Request actorMessage) {
     ProjectLogger.log("Create org method call start");
@@ -439,7 +439,7 @@ public class OrganisationManagementActor extends BaseActor {
       }
 
       // This will remove all extra unnecessary parameter from request
-      Organization org = mapper.convertValue(request, Organization.class);
+      Organisation org = mapper.convertValue(request, Organisation.class);
       request = mapper.convertValue(org, Map.class);
       Response result =
           cassandraOperation.insertRecord(
@@ -574,7 +574,7 @@ public class OrganisationManagementActor extends BaseActor {
     return orgTypeId;
   }
 
-  /** Updates the status of the organization */
+  /** Updates the status of the Organisation */
   @SuppressWarnings("unchecked")
   private void updateOrgStatus(Request actorMessage) {
 
@@ -657,7 +657,7 @@ public class OrganisationManagementActor extends BaseActor {
     }
   }
 
-  /** Update the organization data */
+  /** Update the Organisation data */
   @SuppressWarnings("unchecked")
   private void updateOrgData(Request actorMessage) {
 
@@ -919,7 +919,7 @@ public class OrganisationManagementActor extends BaseActor {
         }
       }
       // This will remove all extra unnecessary parameter from request
-      Organization org = mapper.convertValue(updateOrgDBO, Organization.class);
+      Organisation org = mapper.convertValue(updateOrgDBO, Organisation.class);
       updateOrgDBO = mapper.convertValue(org, Map.class);
       Response response =
           cassandraOperation.updateRecord(
@@ -1243,7 +1243,7 @@ public class OrganisationManagementActor extends BaseActor {
     }
   }
 
-  /** Provides the details of the organization */
+  /** Provides the details of the Organisation */
   private void getOrgDetails(Request actorMessage) {
     actorMessage.toLower();
     Map<String, Object> request = actorMessage.getRequest();
@@ -1278,8 +1278,8 @@ public class OrganisationManagementActor extends BaseActor {
   }
 
   /**
-   * Inserts the organization to organization relation is not exists, else Updates the organization
-   * to organization relation
+   * Inserts the Organisation to Organisation relation is not exists, else Updates the Organisation
+   * to Organisation relation
    */
   public void upsertOrgMap(
       String orgId, String parentOrgId, String rootOrgId, int env, String relation) {
@@ -1295,7 +1295,7 @@ public class OrganisationManagementActor extends BaseActor {
         orgMapDbInfo.getKeySpace(), orgMapDbInfo.getTableName(), orgMap);
   }
 
-  /** Checks whether the parent Organization exists */
+  /** Checks whether the parent Organisation exists */
   @SuppressWarnings("unchecked")
   public Boolean isValidParent(String parentId) {
     Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
@@ -1327,7 +1327,7 @@ public class OrganisationManagementActor extends BaseActor {
   }
 
   /**
-   * validates if the organization and parent organization has the same root organization else
+   * validates if the Organisation and parent Organisation has the same root Organisation else
    * throws error
    */
   @SuppressWarnings("unchecked")
@@ -1362,7 +1362,7 @@ public class OrganisationManagementActor extends BaseActor {
     ProjectLogger.log("Validating Root org ended successfully---");
   }
 
-  /** validates whether the channelId is present for the parent organization */
+  /** validates whether the channelId is present for the parent Organisation */
   public boolean validateChannelIdForRootOrg(Map<String, Object> request) {
     ProjectLogger.log("Doing relation check");
     if (null != request.get(JsonKey.IS_ROOT_ORG) && (Boolean) request.get(JsonKey.IS_ROOT_ORG)) {

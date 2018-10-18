@@ -80,8 +80,8 @@ public class CourseBatchNotificationActorFailureTest {
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     Mockito.reset(cassandraOperation);
     PowerMockito.mockStatic(EmailServiceFactory.class);
-    emailServiceClient = PowerMockito.mock(EmailServiceClientImpl.class);
-    PowerMockito.when(EmailServiceFactory.getInstance()).thenReturn(emailServiceClient);
+    emailServiceClient = mock(EmailServiceClientImpl.class);
+    when(EmailServiceFactory.getInstance()).thenReturn(emailServiceClient);
     Mockito.reset(emailServiceClient);
   }
 

@@ -26,7 +26,8 @@ public class UserExternalIdentityDaoImpl implements UserExternalIdentityDao {
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
           null);
 
-  public String getUserIdFromExtIdAndProvider(Request reqObj) {
+  @Override
+  public String getUserId(Request reqObj) {
     String userId = "";
     if (null != reqObj.getRequest().get(JsonKey.USER_ID)) {
       userId = (String) reqObj.getRequest().get(JsonKey.USER_ID);
@@ -37,7 +38,7 @@ public class UserExternalIdentityDaoImpl implements UserExternalIdentityDao {
       String extId = (String) reqObj.getRequest().get(JsonKey.EXTERNAL_ID);
       String provider = (String) reqObj.getRequest().get(JsonKey.EXTERNAL_ID_PROVIDER);
       String idType = (String) reqObj.getRequest().get(JsonKey.EXTERNAL_ID_TYPE);
-      Map<String, Object> user = getUserFromExternalId(extId, provider, idType);
+      Map<String, Object> user = getUserByExternalId(extId, provider, idType);
 
       if (user != null && !user.isEmpty()) {
         userId = (String) user.get(JsonKey.ID);
@@ -56,7 +57,7 @@ public class UserExternalIdentityDaoImpl implements UserExternalIdentityDao {
   }
 
   @SuppressWarnings({"unchecked"})
-  private Map<String, Object> getUserFromExternalId(String extId, String provider, String idType) {
+  private Map<String, Object> getUserByExternalId(String extId, String provider, String idType) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> user = null;
     Map<String, Object> externalIdReq = new HashMap<>();

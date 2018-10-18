@@ -4,5 +4,5 @@ import org.sunbird.common.request.Request;
 
 public interface UserExternalIdentityDao {
 
-  public String getUserIdFromExtIdAndProvider(Request reqObj);
+  String getUserId(Request reqObj);
 }

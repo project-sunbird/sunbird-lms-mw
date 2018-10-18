@@ -788,7 +788,7 @@ public class UserManagementActor extends BaseActor {
     String provider = (String) userMap.get(JsonKey.EXTERNAL_ID_PROVIDER);
     String idType = (String) userMap.get(JsonKey.EXTERNAL_ID_TYPE);
 
-    userService.validateWithUserId(actorMessage);
+    userService.validateUserId(actorMessage);
 
     if ((StringUtils.isBlank((String) userMap.get(JsonKey.USER_ID))
             && StringUtils.isBlank((String) userMap.get(JsonKey.ID)))

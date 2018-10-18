@@ -10,9 +10,9 @@ import org.sunbird.learner.actors.role.dao.RoleDao;
 import org.sunbird.learner.actors.role.dao.impl.RoleDaoImpl;
 import org.sunbird.learner.actors.role.group.dao.RoleGroupDao;
 import org.sunbird.learner.actors.role.group.dao.impl.RoleGroupDaoImpl;
+import org.sunbird.learner.actors.role.group.service.RoleGroupService;
 import org.sunbird.learner.actors.url.action.dao.UrlActionDao;
 import org.sunbird.learner.actors.url.action.dao.impl.UrlActionDaoImpl;
-import org.sunbird.learner.util.Util;
 import org.sunbird.models.role.Role;
 import org.sunbird.models.role.group.RoleGroup;
 import org.sunbird.models.url.action.UrlAction;
@@ -25,9 +25,6 @@ public class RoleService {
 
   @SuppressWarnings("unchecked")
   private Response getUserRoles() {
-    Util.DbInfo roleDbInfo = Util.dbInfoMap.get(JsonKey.ROLE);
-    Util.DbInfo roleGroupDbInfo = Util.dbInfoMap.get(JsonKey.ROLE_GROUP);
-    Util.DbInfo urlActionDbInfo = Util.dbInfoMap.get(JsonKey.URL_ACTION);
     Response mergeResponse = new Response();
     List<Map<String, Object>> resposnemap = new ArrayList<>();
     List<Map<String, Object>> list = null;
@@ -44,9 +41,9 @@ public class RoleService {
         List<Map<String, Object>> actionGroupListMap = new ArrayList<>();
         roleResponseMap.put(JsonKey.ACTION_GROUPS, actionGroupListMap);
         Map<String, Object> subRoleResponseMap = null;
-        for (String val : roleGroup) {
+        for (String roleGroupId : roleGroup) {
           subRoleResponseMap = new HashMap<>();
-          Map<String, Object> subRoleMap = getSubRoleListMap(roleGroupMap, val);
+          Map<String, Object> subRoleMap = RoleGroupService.getRoleGroupMap(roleGroupId);
           List<String> subRole = (List) subRoleMap.get(JsonKey.URL_ACTION_ID);
           List<Map<String, Object>> roleUrlResponList = new ArrayList<>();
           subRoleResponseMap.put(JsonKey.ID, subRoleMap.get(JsonKey.ID));

@@ -4,5 +4,6 @@ import org.sunbird.common.request.Request;
 
 public interface UserService {
 
-  void validateUserId(Request reqObj);
+  void validateUserId(Request request);
+
 }

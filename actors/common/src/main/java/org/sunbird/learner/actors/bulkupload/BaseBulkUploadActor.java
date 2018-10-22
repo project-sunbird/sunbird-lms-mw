@@ -9,11 +9,7 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.sunbird.actor.core.BaseActor;
@@ -29,6 +25,7 @@ import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
 import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessTaskDaoImpl;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
+import org.sunbird.learner.util.Util;
 
 /**
  * Actor contains the common functionality for bulk upload.
@@ -381,10 +378,14 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     bulkUploadProcess.setId(processId);
     bulkUploadProcess.setObjectType(objectType);
     bulkUploadProcess.setUploadedBy(requestedBy);
-    bulkUploadProcess.setUploadedDate(ProjectUtil.getFormattedDate());
+    bulkUploadProcess.setUploadedDate(new Timestamp(Calendar.getInstance().getTime().getTime()));
     bulkUploadProcess.setProcessStartTime(ProjectUtil.getFormattedDate());
     bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.NEW.getValue());
     bulkUploadProcess.setTaskCount(taskCount);
+    Map<String, Object> user = Util.getUserbyUserId(requestedBy);
+    if (user != null) {
+      bulkUploadProcess.setOrganisationId((String) user.get(JsonKey.ROOT_ORG_ID));
+    }
     return bulkUploadProcess;
   }
 }

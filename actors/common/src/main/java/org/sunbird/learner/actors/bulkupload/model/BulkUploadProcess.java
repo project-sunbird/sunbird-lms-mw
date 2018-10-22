@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import java.io.Serializable;
+import java.sql.Timestamp;
 
 /** @author arvind. */
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -23,7 +24,7 @@ public class BulkUploadProcess implements Serializable {
   private Integer status;
   private String successResult;
   private String uploadedBy;
-  private String uploadedDate;
+  private Timestamp uploadedDate;
   private Integer taskCount;
 
   public String getId() {
@@ -98,11 +99,11 @@ public class BulkUploadProcess implements Serializable {
     this.uploadedBy = uploadedBy;
   }
 
-  public String getUploadedDate() {
+  public Timestamp getUploadedDate() {
     return uploadedDate;
   }
 
-  public void setUploadedDate(String uploadedDate) {
+  public void setUploadedDate(Timestamp uploadedDate) {
     this.uploadedDate = uploadedDate;
   }
 

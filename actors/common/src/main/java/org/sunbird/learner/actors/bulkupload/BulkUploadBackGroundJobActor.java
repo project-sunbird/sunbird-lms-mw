@@ -50,7 +50,7 @@ import org.sunbird.learner.util.AuditOperation;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
-import org.sunbird.models.organization.Organization;
+import org.sunbird.models.organisation.Organisation;
 import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
@@ -568,7 +568,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
         try {
           // This will remove all extra unnecessary parameter from request
-          Organization org = mapper.convertValue(concurrentHashMap, Organization.class);
+          Organisation org = mapper.convertValue(concurrentHashMap, Organisation.class);
           concurrentHashMap = mapper.convertValue(org, Map.class);
           cassandraOperation.upsertRecord(
               orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), concurrentHashMap);
@@ -664,7 +664,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
         try {
           // This will remove all extra unnecessary parameter from request
-          Organization org = mapper.convertValue(concurrentHashMap, Organization.class);
+          Organisation org = mapper.convertValue(concurrentHashMap, Organisation.class);
           concurrentHashMap = mapper.convertValue(org, Map.class);
           cassandraOperation.upsertRecord(
               orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), concurrentHashMap);
@@ -831,7 +831,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
 
     try {
       // This will remove all extra unnecessary parameter from request
-      Organization org = mapper.convertValue(concurrentHashMap, Organization.class);
+      Organisation org = mapper.convertValue(concurrentHashMap, Organisation.class);
       concurrentHashMap = mapper.convertValue(org, Map.class);
       cassandraOperation.upsertRecord(
           orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), concurrentHashMap);
@@ -1565,7 +1565,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     Request request = new Request();
     request.getRequest().putAll(userMap);
     try {
-      UserRequestValidator.validateBulkUserData(request);
+      new UserRequestValidator().validateBulkUserData(request);
       List<String> roles = (List<String>) userMap.get(JsonKey.ROLES);
       if (CollectionUtils.isNotEmpty(roles)) {
         String response = Util.validateRoles(roles);

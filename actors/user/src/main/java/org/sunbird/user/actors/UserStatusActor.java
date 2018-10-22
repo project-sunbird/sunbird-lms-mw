@@ -90,7 +90,7 @@ public class UserStatusActor extends BaseActor {
     ProjectLogger.log("Method call  " + operation);
     Util.getUserProfileConfig(systemSettingActorRef);
     String userId = (String) request.getRequest().get(JsonKey.USER_ID);
-    User user = userService.validateUserId(userId);
+    User user = userService.validateUserIdAndGetUserIfPresent(userId);
     if (operation.equals(ActorOperations.BLOCK_USER.getValue()) && user.getIsDeleted()) {
       throw new ProjectCommonException(
           ResponseCode.userAlreadyInactive.getErrorCode(),

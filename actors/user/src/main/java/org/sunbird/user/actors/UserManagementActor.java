@@ -409,7 +409,7 @@ public class UserManagementActor extends BaseActor {
       // having check for removing private filed from user , if call user and response
       // user data id is not same.
       String requestedById =
-          (String) actorMessage.getRequest().getOrDefault(JsonKey.REQUESTED_BY, "");
+          (String) actorMessage.getContext().getOrDefault(JsonKey.REQUESTED_BY, "");
       ProjectLogger.log(
           "requested By and requested user id == "
               + requestedById
@@ -556,7 +556,7 @@ public class UserManagementActor extends BaseActor {
     // having check for removing private filed from user , if call user and response
     // user data id is not same.
     String requestedById =
-        (String) actorMessage.getRequest().getOrDefault(JsonKey.REQUESTED_BY, "");
+        (String) actorMessage.getContext().getOrDefault(JsonKey.REQUESTED_BY, "");
     ProjectLogger.log(
         "requested By and requested user id == "
             + requestedById
@@ -1370,7 +1370,7 @@ public class UserManagementActor extends BaseActor {
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
     userMap.remove(JsonKey.EMAIL_VERIFIED);
-    userMap.put(JsonKey.CREATED_BY, userMap.remove(JsonKey.REQUESTED_BY));
+    userMap.put(JsonKey.CREATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
     try {
@@ -1987,7 +1987,7 @@ public class UserManagementActor extends BaseActor {
     dbMap.put(JsonKey.ID, userId);
     dbMap.put(JsonKey.USER_ID, userId);
     dbMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-    dbMap.put(JsonKey.UPDATED_BY, actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
+    dbMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
 
     // deactivate from keycloak -- softdelete
     if (isSSOEnabled) {
@@ -2128,7 +2128,7 @@ public class UserManagementActor extends BaseActor {
       userOrgDBMap.put(JsonKey.HASHTAGID, hashTagId);
     }
     userOrgDBMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-    userOrgDBMap.put(JsonKey.UPDATED_BY, requestMap.get(JsonKey.REQUESTED_BY));
+    userOrgDBMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     userOrgDBMap.put(JsonKey.ROLES, roles);
     response =
         cassandraOperation.updateRecord(
@@ -2244,7 +2244,7 @@ public class UserManagementActor extends BaseActor {
     dbMap.put(JsonKey.ID, userId);
     dbMap.put(JsonKey.USER_ID, userId);
     dbMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-    dbMap.put(JsonKey.UPDATED_BY, actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
+    dbMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
 
     // Activate user from keycloak
     if (isSSOEnabled) {

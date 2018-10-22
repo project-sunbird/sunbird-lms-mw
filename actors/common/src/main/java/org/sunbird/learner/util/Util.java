@@ -99,7 +99,6 @@ public final class Util {
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(
           null);
   private static ObjectMapper mapper = new ObjectMapper();
-  private static final String SUNBIRD_APP_URL = "sunbird_app_url";
 
   static {
     loadPropertiesFile();

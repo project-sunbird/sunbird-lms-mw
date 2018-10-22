@@ -53,6 +53,7 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
+import org.sunbird.user.util.UserUtil;
 
 /**
  * This actor will handle course enrollment operation .
@@ -86,7 +87,6 @@ public class UserManagementActor extends BaseActor {
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
-  private PropertiesCache propertiesCache = PropertiesCache.getInstance();
   private boolean isSSOEnabled =
       Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
   private Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
@@ -97,6 +97,7 @@ public class UserManagementActor extends BaseActor {
       getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
   private UserRequestValidator userRequestValidator = new UserRequestValidator();
   private UserService userService = new UserServiceImpl();
+
   /** Receives the actor message and perform the course enrollment operation . */
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -263,9 +264,8 @@ public class UserManagementActor extends BaseActor {
     if (fields != null && !fields.isEmpty()) {
       for (String field : fields) {
         /*
-         * now if field contains
-         * {address.someField,education.someField,jobprofile.someField} then we need to
-         * remove those filed
+         * now if field contains {address.someField,education.someField,jobprofile.someField} then
+         * we need to remove those filed
          */
         if (field.contains(JsonKey.ADDRESS + ".")) {
           privateMap.put(JsonKey.ADDRESS, map.get(JsonKey.ADDRESS));
@@ -1352,7 +1352,6 @@ public class UserManagementActor extends BaseActor {
    *
    * @param actorMessage Request
    */
-  @SuppressWarnings("unchecked")
   private void createUser(Request actorMessage) {
     actorMessage.toLower();
     Map<String, Object> userMap = actorMessage.getRequest();
@@ -1363,12 +1362,11 @@ public class UserManagementActor extends BaseActor {
     } else {
       userRequestValidator.validateCreateUserV1Request(actorMessage);
     }
-
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
     userMap.remove(JsonKey.EMAIL_VERIFIED);
-    userMap.put(JsonKey.CREATED_BY, userMap.remove(JsonKey.REQUESTED_BY));
+    userMap.put(JsonKey.CREATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
     try {
@@ -1408,43 +1406,21 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private void processUserRequest(Map<String, Object> userMap) {
     ProjectLogger.log("processUserRequest method started..");
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> requestMap = null;
-    Util.checkPhoneUniqueness(userMap, JsonKey.CREATE);
-    Util.checkEmailUniqueness(userMap, JsonKey.CREATE);
-    Map<String, Object> emailTemplateMap = new HashMap<>(userMap);
-    if (userMap.containsKey(JsonKey.WEB_PAGES)) {
-      SocialMediaType.validateSocialMedia(
-          (List<Map<String, String>>) userMap.get(JsonKey.WEB_PAGES));
+    UserUtil.setUserDefaultValue(userMap);
+    User user = mapper.convertValue(userMap, User.class);
+    UserUtil.checkUserExistOrNot(user);
+    if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
+      List<Map<String, String>> list =
+          UserUtil.copyAndConvertExternalIdsToLower(user.getExternalIds());
+      user.setExternalIds(list);
+      userMap.put(JsonKey.EXTERNAL_IDS, list);
     }
-    // create loginId to ensure uniqueness for combination of userName and channel
-    String loginId = Util.getLoginId(userMap);
-    userMap.put(JsonKey.LOGIN_ID, loginId);
-    emailTemplateMap.put(JsonKey.USERNAME, loginId);
-    try {
-      User user = mapper.convertValue(userMap, User.class);
-      Util.checkUserExistOrNot(user);
-      if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
-        List<Map<String, String>> list =
-            Util.copyAndConvertExternalIdsToLower(user.getExternalIds());
-        user.setExternalIds(list);
-        userMap.put(JsonKey.EXTERNAL_IDS, list);
-      }
-      Util.checkExternalIdUniqueness(user, JsonKey.CREATE);
-    } catch (Exception ex) {
-      sender().tell(ex, self());
-      return;
-    }
-
-    /** will ignore roles coming from req, Only public role is applicable for user by default */
-    userMap.remove(JsonKey.ROLES);
-    List<String> roles = new ArrayList<>();
-    roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
-    userMap.put(JsonKey.ROLES, roles);
-
+    UserUtil.checkExternalIdUniqueness(user, JsonKey.CREATE);
+    UserUtil.validateUserPhoneEmailAndWebPages(user, JsonKey.CREATE);
     /*
      * Create User Entity in Registry
      */
@@ -1453,95 +1429,36 @@ public class UserManagementActor extends BaseActor {
       userExtension.create(userMap);
     }
 
-    String accessToken = "";
     if (isSSOEnabled) {
-      try {
-        String userId = "";
-        Map<String, String> responseMap = ssoManager.createUser(userMap);
-        userId = responseMap.get(JsonKey.USER_ID);
-        accessToken = responseMap.get(JsonKey.ACCESSTOKEN);
-        if (!StringUtils.isBlank(userId)) {
-          userMap.put(JsonKey.USER_ID, userId);
-          userMap.put(JsonKey.ID, userId);
-        } else {
-          ProjectCommonException exception =
-              new ProjectCommonException(
-                  ResponseCode.userRegUnSuccessfull.getErrorCode(),
-                  ResponseCode.userRegUnSuccessfull.getErrorMessage(),
-                  ResponseCode.SERVER_ERROR.getResponseCode());
-          sender().tell(exception, self());
-          return;
-        }
-      } catch (Exception exception) {
-        ProjectLogger.log(exception.getMessage(), exception);
-        sender().tell(exception, self());
-        return;
-      }
+      UserUtil.createUserInKeycloak(userMap);
     } else {
       userMap.put(
           JsonKey.USER_ID, OneWayHashing.encryptVal((String) userMap.get(JsonKey.USERNAME)));
       userMap.put(JsonKey.ID, OneWayHashing.encryptVal((String) userMap.get(JsonKey.USERNAME)));
     }
 
-    userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-    userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
-    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
-      userMap.put(
-          JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
-    }
-    try {
-      UserUtility.encryptUserData(userMap);
-    } catch (Exception e1) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.userDataEncryptionError.getErrorCode(),
-              ResponseCode.userDataEncryptionError.getErrorMessage(),
-              ResponseCode.SERVER_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-    requestMap = new HashMap<>();
-    User cassandraUser = mapper.convertValue(userMap, User.class);
-    requestMap.putAll(mapper.convertValue(cassandraUser, Map.class));
+    UserUtil.encryptUserData(userMap);
+    requestMap = UserUtil.encryptUserData(userMap);
     removeUnwanted(requestMap);
-    // update db with emailVerified as false (default)
-    requestMap.put(JsonKey.EMAIL_VERIFIED, false);
 
-    // Since global settings are introduced, profile visibility map should be empty during user
-    // creation
-    requestMap.put(JsonKey.PROFILE_VISIBILITY, new HashMap<String, String>());
-
-    if (!StringUtils.isBlank((String) requestMap.get(JsonKey.COUNTRY_CODE))) {
-      requestMap.put(
-          JsonKey.COUNTRY_CODE, propertiesCache.getProperty(JsonKey.SUNBIRD_DEFAULT_COUNTRY_CODE));
+    Response response =
+        cassandraOperation.insertRecord(
+            usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
+    if (null == response && isSSOEnabled) {
+      ssoManager.removeUser(userMap);
     }
-    requestMap.put(JsonKey.IS_DELETED, false);
-    Response response = null;
-    try {
-      response =
-          cassandraOperation.insertRecord(
-              usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
-    } catch (ProjectCommonException exception) {
-      sender().tell(exception, self());
-      return;
-    } finally {
-      if (null == response && isSSOEnabled) {
-        ssoManager.removeUser(userMap);
-      }
-      /*
-       * Delete User Entity in Registry if cassandra insert fails
-       */
-      if (null == response && IS_REGISTRY_ENABLED) {
-        UserExtension userExtension = new UserProviderRegistryImpl();
-        userExtension.delete(userMap);
-      }
+    /*
+     * Delete User Entity in Registry if cassandra insert fails
+     */
+    if (null == response && IS_REGISTRY_ENABLED) {
+      UserExtension userExtension = new UserProviderRegistryImpl();
+      userExtension.delete(userMap);
     }
     response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       saveUserAttributes(userMap);
     }
 
-    response.put(JsonKey.ACCESSTOKEN, accessToken);
     sender().tell(response, self());
 
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
@@ -1579,6 +1496,7 @@ public class UserManagementActor extends BaseActor {
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
+  @SuppressWarnings("unchecked")
   private void saveUserAttributes(Map<String, Object> userMap) {
     try {
       if (userMap.containsKey(JsonKey.ADDRESS)
@@ -1589,6 +1507,12 @@ public class UserManagementActor extends BaseActor {
         addressRequest.setOperation(UserActorOperations.UPSERT_USER_ADDRESS.getValue());
         tellToAnother(addressRequest);
       }
+    } catch (Exception ex) {
+      ProjectLogger.log(
+          "UserManagementActor:saveUserAttributes: Exception occurred while saving user address details.",
+          ex);
+    }
+    try {
       if (userMap.containsKey(JsonKey.EDUCATION)) {
         Request educationRequest = new Request();
         educationRequest.getRequest().putAll(userMap);
@@ -1596,6 +1520,12 @@ public class UserManagementActor extends BaseActor {
         educationRequest.setOperation(UserActorOperations.UPSERT_USER_EDUCATION.getValue());
         tellToAnother(educationRequest);
       }
+    } catch (Exception ex) {
+      ProjectLogger.log(
+          "UserManagementActor:saveUserAttributes: Exception occurred while saving user education details.",
+          ex);
+    }
+    try {
       if (userMap.containsKey(JsonKey.JOB_PROFILE)) {
         Request jobProfileRequest = new Request();
         jobProfileRequest.getRequest().putAll(userMap);
@@ -1603,6 +1533,12 @@ public class UserManagementActor extends BaseActor {
         jobProfileRequest.setOperation(UserActorOperations.UPSERT_USER_JOB_PROFILE.getValue());
         tellToAnother(jobProfileRequest);
       }
+    } catch (Exception ex) {
+      ProjectLogger.log(
+          "UserManagementActor:saveUserAttributes: Exception occurred while saving user job profile details.",
+          ex);
+    }
+    try {
       if (StringUtils.isNotBlank((String) userMap.get(JsonKey.ORGANISATION_ID))
           || StringUtils.isNotBlank((String) userMap.get(JsonKey.ROOT_ORG_ID))) {
         Request userOrgRequest = new Request();
@@ -1610,6 +1546,12 @@ public class UserManagementActor extends BaseActor {
         userOrgRequest.setOperation(UserActorOperations.UPSERT_USER_ORG_DETAILS.getValue());
         tellToAnother(userOrgRequest);
       }
+    } catch (Exception ex) {
+      ProjectLogger.log(
+          "UserManagementActor:saveUserAttributes: Exception occurred while saving user org details.",
+          ex);
+    }
+    try {
       if (CollectionUtils.isNotEmpty(
           (List<Map<String, String>>) userMap.get(JsonKey.EXTERNAL_IDS))) {
         Request userExternalIdsRequest = new Request();
@@ -1621,7 +1563,7 @@ public class UserManagementActor extends BaseActor {
       }
     } catch (Exception ex) {
       ProjectLogger.log(
-          "UserManagementActor:processUserRequest: Exception occurred while saving user attributes.",
+          "UserManagementActor:saveUserAttributes: Exception occurred while saving user externalIds.",
           ex);
     }
   }
@@ -1839,12 +1781,11 @@ public class UserManagementActor extends BaseActor {
       ssoManager.deactivateUser(dbMap);
     }
     // delete from registry
-    /*if (IS_REGISTRY_ENABLED) {
-      Map<String, Object> regMap = new HashMap<>();
-      regMap.put(JsonKey.REGISTRY_ID, userDbRecord.get(JsonKey.REGISTRY_ID));
-      UserExtension userExtension = new UserProviderRegistryImpl();
-      userExtension.delete(regMap);
-    }*/
+    /*
+     * if (IS_REGISTRY_ENABLED) { Map<String, Object> regMap = new HashMap<>();
+     * regMap.put(JsonKey.REGISTRY_ID, userDbRecord.get(JsonKey.REGISTRY_ID)); UserExtension
+     * userExtension = new UserProviderRegistryImpl(); userExtension.delete(regMap); }
+     */
     // soft delete from cassandra--
     Response response =
         cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), dbMap);

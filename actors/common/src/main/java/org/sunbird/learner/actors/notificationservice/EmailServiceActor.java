@@ -84,9 +84,7 @@ public class EmailServiceActor extends BaseActor {
     }
 
     String name = "";
-    if (emails.size() > 1) {
-      name = "All";
-    } else if (emails.size() == 1) {
+    if (emails.size() == 1) {
       name = StringUtils.capitalize((String) user.get(JsonKey.FIRST_NAME));
     }
 

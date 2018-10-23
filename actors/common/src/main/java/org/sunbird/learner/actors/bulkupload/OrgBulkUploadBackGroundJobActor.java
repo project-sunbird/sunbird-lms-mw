@@ -16,6 +16,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 import org.sunbird.learner.util.Util;
+import org.sunbird.models.organisation.Organisation;
 
 @ActorConfig(
   tasks = {},
@@ -81,11 +82,12 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
         "LocationBulkUploadBackGroundJobActor : processLocation method called", LoggerEnum.INFO);
     String data = task.getData();
     try {
-      Map<String, Object> row = mapper.readValue(data, Map.class);
-      if (StringUtils.isEmpty((String) row.get(JsonKey.ORG_ID))) {
-        callCreateOrg(row, task);
+      Organisation organisation = mapper.readValue(data, Organisation.class);
+
+      if (StringUtils.isEmpty(organisation.getId())) {
+        callCreateOrg(organisation, task);
       } else {
-        callUpdateOrg(row, task);
+        callUpdateOrg(organisation, task);
       }
     } catch (IOException e) {
       ProjectCommonException.throwClientErrorException(
@@ -93,9 +95,9 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
     }
   }
 
-  private void callCreateOrg(Map<String, Object> row, BulkUploadProcessTask task)
+  private void callCreateOrg(Organisation org, BulkUploadProcessTask task)
       throws JsonProcessingException {
-
+    Map<String, Object> row = mapper.convertValue(org, Map.class);
     String orgId;
     try {
       orgId = orgClient.createOrg(getActorRef(ActorOperations.CREATE_ORG.getValue()), row);
@@ -129,8 +131,9 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
     }
   }
 
-  private void callUpdateOrg(Map<String, Object> row, BulkUploadProcessTask task)
+  private void callUpdateOrg(Organisation org, BulkUploadProcessTask task)
       throws JsonProcessingException {
+    Map<String, Object> row = mapper.convertValue(org, Map.class);
     try {
       orgClient.updateOrg(getActorRef(ActorOperations.UPDATE_ORG.getValue()), row);
     } catch (Exception ex) {

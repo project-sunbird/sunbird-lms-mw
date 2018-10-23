@@ -40,27 +40,29 @@ public abstract class BaseBulkUploadBackGroundJobActor extends BaseBulkUploadAct
 
   public void handleBulkUploadBackround(Request request, Function function) {
     String processId = (String) request.get(JsonKey.PROCESS_ID);
-    ProjectLogger.log(
-        "OrgBulkUploadBackGroundJobActor: bulkOrgUpload called with process ID " + processId,
-        LoggerEnum.INFO);
+    String logMessagePrefix = MessageFormat("BaseBulkUploadBackGroundJobActor:handleBulkUploadBackround:{0}: ", processId);
+    
+    ProjectLogger.log(logMessagePrefix + "called", LoggerEnum.INFO);
+    
     BulkUploadProcess bulkUploadProcess = bulkUploadDao.read(processId);
     if (null == bulkUploadProcess) {
-      ProjectLogger.log("Process Id does not exist : " + processId, LoggerEnum.ERROR);
+      ProjectLogger.log(logMessagePrefix + "Invalid process ID.", LoggerEnum.ERROR);
       return;
     }
+
     Integer status = bulkUploadProcess.getStatus();
     if (!(status == (ProjectUtil.BulkProcessStatus.COMPLETED.getValue())
         || status == (ProjectUtil.BulkProcessStatus.INTERRUPT.getValue()))) {
       try {
         function.apply(bulkUploadProcess);
-        //                processOrgBulkUpload(bulkUploadProcess);
-      } catch (Exception ex) {
+      } catch (Exception e) {
         bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
         bulkUploadProcess.setFailureResult(ex.getMessage());
         bulkUploadDao.update(bulkUploadProcess);
-        ProjectLogger.log("Org Bulk BackGroundJob failed processId - " + processId, ex);
+        ProjectLogger.log(logMessagePrefix + "Exception occurred with error message = " + e.getMessage(), e);
       }
     }
+    
     bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
     bulkUploadDao.update(bulkUploadProcess);
   }
@@ -94,8 +96,9 @@ public abstract class BaseBulkUploadBackGroundJobActor extends BaseBulkUploadAct
       performBatchUpdate(tasks);
       sequence = nextSequence;
     }
-    ProjectLogger.log(
-        "BaseBulkUploadBackGroundJobActor : processBulkUpload process finished", LoggerEnum.INFO);
+    
+    ProjectLogger.log("BaseBulkUploadBackgroundJobActor:processBulkUpload: completed.", LoggerEnum.INFO);
+    
     bulkUploadProcess.setSuccessResult(ProjectUtil.convertMapToJsonString(successList));
     bulkUploadProcess.setFailureResult(ProjectUtil.convertMapToJsonString(failureList));
     bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.COMPLETED.getValue());

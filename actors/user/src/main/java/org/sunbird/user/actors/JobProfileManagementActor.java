@@ -74,6 +74,14 @@ public class JobProfileManagementActor extends BaseActor {
         updateJobProfileDetails(requestMap, jobProfileMap, addrResponse, createdBy);
       }
     }
+    // saveUserJobProfileToEs(requestMap);
+  }
+
+  private void saveUserJobProfileToEs(Map<String, Object> requestMap) {
+    Request userRequest = new Request();
+    userRequest.setOperation(UserActorOperations.UPSERT_USER_JOB_PROFILE_TO_ES.getValue());
+    userRequest.getRequest().putAll(requestMap);
+    tellToAnother(userRequest);
   }
 
   private void updateJobProfileDetails(

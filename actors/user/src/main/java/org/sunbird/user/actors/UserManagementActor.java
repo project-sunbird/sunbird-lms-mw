@@ -1413,13 +1413,8 @@ public class UserManagementActor extends BaseActor {
     UserUtil.setUserDefaultValue(userMap);
     User user = mapper.convertValue(userMap, User.class);
     UserUtil.checkUserExistOrNot(user);
-    if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
-      List<Map<String, String>> list =
-          UserUtil.copyAndConvertExternalIdsToLower(user.getExternalIds());
-      user.setExternalIds(list);
-      userMap.put(JsonKey.EXTERNAL_IDS, list);
-    }
-    UserUtil.checkExternalIdUniqueness(user, JsonKey.CREATE);
+    UserUtil.validateExternalIds(user);
+    userMap.put(JsonKey.EXTERNAL_IDS, user.getExternalIds());
     UserUtil.validateUserPhoneEmailAndWebPages(user, JsonKey.CREATE);
     /*
      * Create User Entity in Registry
@@ -1436,56 +1431,43 @@ public class UserManagementActor extends BaseActor {
           JsonKey.USER_ID, OneWayHashing.encryptVal((String) userMap.get(JsonKey.USERNAME)));
       userMap.put(JsonKey.ID, OneWayHashing.encryptVal((String) userMap.get(JsonKey.USERNAME)));
     }
-
+    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
+      userMap.put(JsonKey.PASSWORD, null);
+    }
     UserUtil.encryptUserData(userMap);
     requestMap = UserUtil.encryptUserData(userMap);
     removeUnwanted(requestMap);
-
-    Response response =
-        cassandraOperation.insertRecord(
-            usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
-    if (null == response && isSSOEnabled) {
-      ssoManager.removeUser(userMap);
+    Response response = null;
+    try {
+      response =
+          cassandraOperation.insertRecord(
+              usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
+    } catch (Exception ex) {
+      throw ex;
+    } finally {
+      if (null == response && isSSOEnabled) {
+        ssoManager.removeUser(userMap);
+      }
+      /*
+       * Delete User Entity in Registry if cassandra insert fails
+       */
+      if (null == response && IS_REGISTRY_ENABLED) {
+        UserExtension userExtension = new UserProviderRegistryImpl();
+        userExtension.delete(userMap);
+      }
+      response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+      if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+        saveUserAttributes(userMap);
+      }
     }
-    /*
-     * Delete User Entity in Registry if cassandra insert fails
-     */
-    if (null == response && IS_REGISTRY_ENABLED) {
-      UserExtension userExtension = new UserProviderRegistryImpl();
-      userExtension.delete(userMap);
-    }
-    response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-    if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      saveUserAttributes(userMap);
-    }
-
     sender().tell(response, self());
 
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      ProjectLogger.log("UserManagementActor:processUserRequest: User creation success");
-      Request userRequest = new Request();
-      userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-      userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
-      ProjectLogger.log(
-          "UserManagementActor:processUserRequest: Trigger sync of user details to ES");
-      try {
-        tellToAnother(userRequest);
-      } catch (Exception ex) {
-        ProjectLogger.log(
-            "UserManagementActor:processUserRequest: Exception occurred with error message = "
-                + ex.getMessage(),
-            ex);
-      }
+      saveUserDetailsToEs(requestMap);
     } else {
       ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
     }
-
-    // sendEmailAndSms
-    Request EmailAndSmsRequest = new Request();
-    EmailAndSmsRequest.getRequest().putAll(userMap);
-    EmailAndSmsRequest.setOperation(UserActorOperations.PROCESS_ONBOARDING_MAIL_AND_SMS.getValue());
-    tellToAnother(EmailAndSmsRequest);
-
+    sendEmailAndSms(userMap);
     // object of telemetry event...
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
@@ -1496,76 +1478,26 @@ public class UserManagementActor extends BaseActor {
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
-  @SuppressWarnings("unchecked")
+  private void sendEmailAndSms(Map<String, Object> userMap) {
+    // sendEmailAndSms
+    Request EmailAndSmsRequest = new Request();
+    EmailAndSmsRequest.getRequest().putAll(userMap);
+    EmailAndSmsRequest.setOperation(UserActorOperations.PROCESS_ONBOARDING_MAIL_AND_SMS.getValue());
+    tellToAnother(EmailAndSmsRequest);
+  }
+
+  private void saveUserDetailsToEs(Map<String, Object> requestMap) {
+    Request userRequest = new Request();
+    userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+    userRequest.getRequest().putAll(requestMap);
+    tellToAnother(userRequest);
+  }
+
   private void saveUserAttributes(Map<String, Object> userMap) {
-    try {
-      if (userMap.containsKey(JsonKey.ADDRESS)
-          && CollectionUtils.isNotEmpty((List<Map<String, Object>>) userMap.get(JsonKey.ADDRESS))) {
-        Request addressRequest = new Request();
-        addressRequest.getRequest().putAll(userMap);
-        addressRequest.getRequest().put(JsonKey.OPERATION_TYPE, JsonKey.CREATE);
-        addressRequest.setOperation(UserActorOperations.UPSERT_USER_ADDRESS.getValue());
-        tellToAnother(addressRequest);
-      }
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "UserManagementActor:saveUserAttributes: Exception occurred while saving user address details.",
-          ex);
-    }
-    try {
-      if (userMap.containsKey(JsonKey.EDUCATION)) {
-        Request educationRequest = new Request();
-        educationRequest.getRequest().putAll(userMap);
-        educationRequest.getRequest().put(JsonKey.OPERATION_TYPE, JsonKey.CREATE);
-        educationRequest.setOperation(UserActorOperations.UPSERT_USER_EDUCATION.getValue());
-        tellToAnother(educationRequest);
-      }
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "UserManagementActor:saveUserAttributes: Exception occurred while saving user education details.",
-          ex);
-    }
-    try {
-      if (userMap.containsKey(JsonKey.JOB_PROFILE)) {
-        Request jobProfileRequest = new Request();
-        jobProfileRequest.getRequest().putAll(userMap);
-        jobProfileRequest.getRequest().put(JsonKey.OPERATION_TYPE, JsonKey.CREATE);
-        jobProfileRequest.setOperation(UserActorOperations.UPSERT_USER_JOB_PROFILE.getValue());
-        tellToAnother(jobProfileRequest);
-      }
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "UserManagementActor:saveUserAttributes: Exception occurred while saving user job profile details.",
-          ex);
-    }
-    try {
-      if (StringUtils.isNotBlank((String) userMap.get(JsonKey.ORGANISATION_ID))
-          || StringUtils.isNotBlank((String) userMap.get(JsonKey.ROOT_ORG_ID))) {
-        Request userOrgRequest = new Request();
-        userOrgRequest.getRequest().putAll(userMap);
-        userOrgRequest.setOperation(UserActorOperations.UPSERT_USER_ORG_DETAILS.getValue());
-        tellToAnother(userOrgRequest);
-      }
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "UserManagementActor:saveUserAttributes: Exception occurred while saving user org details.",
-          ex);
-    }
-    try {
-      if (CollectionUtils.isNotEmpty(
-          (List<Map<String, String>>) userMap.get(JsonKey.EXTERNAL_IDS))) {
-        Request userExternalIdsRequest = new Request();
-        userExternalIdsRequest.getRequest().putAll(userMap);
-        userExternalIdsRequest.getRequest().put(JsonKey.OPERATION_TYPE, JsonKey.CREATE);
-        userExternalIdsRequest.setOperation(
-            UserActorOperations.UPSERT_USER_EXTERNAL_IDENTITY_DETAILS.getValue());
-        tellToAnother(userExternalIdsRequest);
-      }
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "UserManagementActor:saveUserAttributes: Exception occurred while saving user externalIds.",
-          ex);
-    }
+    Request request = new Request();
+    request.setOperation(UserActorOperations.SAVE_USER_ATTRIBUTES.getValue());
+    request.getRequest().putAll(userMap);
+    tellToAnother(request);
   }
 
   private void telemetryGenerationForUserSubFields(

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -18,7 +19,6 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
-import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.dto.SearchDTO;
@@ -355,10 +355,63 @@ public class UserUtil {
     userMap.put(JsonKey.LOGIN_ID, loginId);
     userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
-    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
-      userMap.put(
-          JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
+  }
+
+  public static void validateExternalIds(User user) {
+    if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
+      List<Map<String, String>> list =
+          UserUtil.copyAndConvertExternalIdsToLower(user.getExternalIds());
+      user.setExternalIds(list);
     }
+    UserUtil.checkExternalIdUniqueness(user, JsonKey.CREATE);
+  }
+
+  public static List<Map<String, Object>> getAddressDetails(String userId, String addressId) {
+    Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
+    List<Map<String, Object>> userAddressList = new ArrayList<>();
+    Response addrResponse = null;
+    try {
+      if (StringUtils.isNotBlank(userId)) {
+        ProjectLogger.log("collecting user address operation user Id : " + userId);
+        String encUserId = encryptData(userId);
+        addrResponse =
+            cassandraOperation.getRecordsByIndexedProperty(
+                addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), JsonKey.USER_ID, encUserId);
+      } else {
+        addrResponse =
+            cassandraOperation.getRecordById(
+                addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addressId);
+      }
+      userAddressList = (List<Map<String, Object>>) addrResponse.getResult().get(JsonKey.RESPONSE);
+      ProjectLogger.log("collecting user address operation completed user Id : " + userId);
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    return userAddressList;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static List<Map<String, Object>> getUserOrgDetails(String userId) {
+    List<Map<String, Object>> userOrgList = null;
+    List<Map<String, Object>> organisations = new ArrayList<>();
+    try {
+      Map<String, Object> reqMap = new WeakHashMap<>();
+      reqMap.put(JsonKey.USER_ID, userId);
+      reqMap.put(JsonKey.IS_DELETED, false);
+      Util.DbInfo orgUsrDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+      Response result =
+          cassandraOperation.getRecordsByProperties(
+              orgUsrDbInfo.getKeySpace(), orgUsrDbInfo.getTableName(), reqMap);
+      userOrgList = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      if (CollectionUtils.isNotEmpty(userOrgList)) {
+        for (Map<String, Object> tempMap : userOrgList) {
+          organisations.add(tempMap);
+        }
+      }
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    return organisations;
   }
 }
 

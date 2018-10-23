@@ -52,5 +52,13 @@ public class UserOrgManagementActor extends BaseActor {
       requestMap.put(JsonKey.HASHTAGID, hashTagId);
       Util.registerUserToOrg(requestMap);
     }
+    // saveUserOrgDetailsToEs(requestMap);
+  }
+
+  private void saveUserOrgDetailsToEs(Map<String, Object> requestMap) {
+    Request userRequest = new Request();
+    userRequest.setOperation(UserActorOperations.UPSERT_USER_ORG_DETAILS_TO_ES.getValue());
+    userRequest.getRequest().putAll(requestMap);
+    tellToAnother(userRequest);
   }
 }

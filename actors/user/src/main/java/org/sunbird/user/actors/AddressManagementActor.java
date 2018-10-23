@@ -79,9 +79,18 @@ public class AddressManagementActor extends BaseActor {
           }
         }
       }
+      // save Address to ES
+      // saveUserAddressToEs(requestMap);
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
+  }
+
+  private void saveUserAddressToEs(Map<String, Object> requestMap) {
+    Request userRequest = new Request();
+    userRequest.setOperation(UserActorOperations.UPSERT_USER_ADDRESS_TO_ES.getValue());
+    userRequest.getRequest().putAll(requestMap);
+    tellToAnother(userRequest);
   }
 
   private void updateAddressDetails(String encCreatedById, Map<String, Object> address) {

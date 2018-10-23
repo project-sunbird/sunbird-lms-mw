@@ -1565,7 +1565,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     Request request = new Request();
     request.getRequest().putAll(userMap);
     try {
-      UserRequestValidator.validateBulkUserData(request);
+      new UserRequestValidator().validateBulkUserData(request);
       List<String> roles = (List<String>) userMap.get(JsonKey.ROLES);
       if (CollectionUtils.isNotEmpty(roles)) {
         String response = Util.validateRoles(roles);

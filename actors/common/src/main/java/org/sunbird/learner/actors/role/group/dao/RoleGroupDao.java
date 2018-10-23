@@ -6,7 +6,7 @@ import org.sunbird.models.role.group.RoleGroup;
 public interface RoleGroupDao {
 
   /**
-   *  Get list of role groups.
+   * Get list of role groups.
    *
    * @return List of role groups.
    */

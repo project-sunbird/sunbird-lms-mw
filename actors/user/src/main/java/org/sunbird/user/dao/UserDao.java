@@ -2,6 +2,8 @@ package org.sunbird.user.dao;
 
 import java.util.List;
 import java.util.Map;
+
+import org.sunbird.common.models.response.Response;
 import org.sunbird.models.user.User;
 
 /**
@@ -24,8 +26,9 @@ public interface UserDao {
    * This method will update existing user info or throw ProjectCommonException.
    *
    * @param user User Details.
+ * @return 
    */
-  void updateUser(User user);
+  Response updateUser(User user);
 
   /**
    * This method will search user from ES and return list of user details matching filter criteria.
@@ -49,4 +52,6 @@ public interface UserDao {
    * @return List<User> List of user.
    */
   List<User> getUsersByProperties(Map<String, Object> propertyMap);
+  
+  
 }

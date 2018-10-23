@@ -1,11 +1,11 @@
 package org.sunbird.user.dao.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.sunbird.cassandra.CassandraOperation;
@@ -18,6 +18,8 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
 import org.sunbird.user.dao.UserDao;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Implementation class of UserDao interface.
@@ -39,9 +41,9 @@ public class UserDaoImpl implements UserDao {
   }
 
   @Override
-  public void updateUser(User user) {
+  public Response updateUser(User user) {
     Map<String, Object> map = mapper.convertValue(user, Map.class);
-    cassandraOperation.updateRecord(KEYSPACE_NAME, USER_TABLE_NAME, map);
+    return cassandraOperation.updateRecord(KEYSPACE_NAME, USER_TABLE_NAME, map);
   }
 
   @Override

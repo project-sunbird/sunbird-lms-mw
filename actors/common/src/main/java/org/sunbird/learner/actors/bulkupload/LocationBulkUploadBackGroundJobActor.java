@@ -3,6 +3,7 @@ package org.sunbird.learner.actors.bulkupload;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -46,7 +47,7 @@ import org.sunbird.models.location.apirequest.UpsertLocationRequest;
   tasks = {},
   asyncTasks = {"locationBulkUploadBackground"}
 )
-public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackGroundJobActor {
+public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJobActor {
 
   private LocationClient locationClient = new LocationClientImpl();
   BulkUploadProcessDao bulkUploadDao = new BulkUploadProcessDaoImpl();
@@ -64,13 +65,13 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackGrou
 
     switch (operation) {
       case "locationBulkUploadBackground":
-        handleBulkUploadBackround(
+        handleBulkUploadBackground(
             request,
             (bulkUploadProcess) -> {
               processBulkUpload(
                   (BulkUploadProcess) bulkUploadProcess,
-                  (task) -> {
-                    processLocation((BulkUploadProcessTask) task);
+                  (tasks) -> {
+                    processTasks((List<BulkUploadProcessTask>) tasks);
                     return null;
                   });
               return null;
@@ -213,6 +214,21 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackGrou
     } else {
       row.put(JsonKey.ID, locationId);
       setSuccessTaskStatus(task, ProgressStatus.COMPLETED.getValue(), row, JsonKey.CREATE);
+    }
+  }
+
+  private void processTasks(List<BulkUploadProcessTask> tasks) {
+    for (BulkUploadProcessTask task : tasks) {
+      try {
+        if (task.getStatus() != null
+            && task.getStatus() != ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
+          processLocation(task);
+          task.setLastUpdatedOn(new Timestamp(System.currentTimeMillis()));
+          task.setIterationId(task.getIterationId() + 1);
+        }
+      } catch (Exception ex) {
+        task.setFailureResult(ex.getMessage());
+      }
     }
   }
 

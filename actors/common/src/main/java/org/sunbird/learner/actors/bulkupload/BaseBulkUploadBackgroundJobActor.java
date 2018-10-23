@@ -1,7 +1,6 @@
 package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import java.sql.Timestamp;
 import java.util.*;
 import java.util.function.Function;
 import org.sunbird.common.Constants;
@@ -10,7 +9,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 
-public abstract class BaseBulkUploadBackGroundJobActor extends BaseBulkUploadActor {
+public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadActor {
 
   public void setSuccessTaskStatus(
       BulkUploadProcessTask task, Integer status, Map<String, Object> row, String action)
@@ -38,7 +37,7 @@ public abstract class BaseBulkUploadBackGroundJobActor extends BaseBulkUploadAct
     }
   }
 
-  public void handleBulkUploadBackround(Request request, Function function) {
+  public void handleBulkUploadBackground(Request request, Function function) {
     String processId = (String) request.get(JsonKey.PROCESS_ID);
     ProjectLogger.log(
         "OrgBulkUploadBackGroundJobActor: bulkOrgUpload called with process ID " + processId,
@@ -53,7 +52,6 @@ public abstract class BaseBulkUploadBackGroundJobActor extends BaseBulkUploadAct
         || status == (ProjectUtil.BulkProcessStatus.INTERRUPT.getValue()))) {
       try {
         function.apply(bulkUploadProcess);
-        //                processOrgBulkUpload(bulkUploadProcess);
       } catch (Exception ex) {
         bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
         bulkUploadProcess.setFailureResult(ex.getMessage());
@@ -79,27 +77,15 @@ public abstract class BaseBulkUploadBackGroundJobActor extends BaseBulkUploadAct
       sequenceRange.put(Constants.LTE, nextSequence);
       queryMap.put(BulkUploadJsonKey.SEQUENCE_ID, sequenceRange);
       List<BulkUploadProcessTask> tasks = bulkUploadProcessTaskDao.readByPrimaryKeys(queryMap);
-      for (BulkUploadProcessTask task : tasks) {
-        try {
-          if (task.getStatus() != null
-              && task.getStatus() != ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
-            function.apply(task);
-            task.setLastUpdatedOn(new Timestamp(System.currentTimeMillis()));
-            task.setIterationId(task.getIterationId() + 1);
-          }
-        } catch (Exception ex) {
-          task.setFailureResult(ex.getMessage());
-        }
-      }
+      function.apply(tasks);
       performBatchUpdate(tasks);
       sequence = nextSequence;
     }
     ProjectLogger.log(
-        "BaseBulkUploadBackGroundJobActor : processBulkUpload process finished", LoggerEnum.INFO);
+        "BaseBulkUploadBackgroundJobActor : processBulkUpload process finished", LoggerEnum.INFO);
     bulkUploadProcess.setSuccessResult(ProjectUtil.convertMapToJsonString(successList));
     bulkUploadProcess.setFailureResult(ProjectUtil.convertMapToJsonString(failureList));
     bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
-    bulkUploadProcess.setLastupdatedOn(new Timestamp(Calendar.getInstance().getTime().getTime()));
     bulkUploadDao.update(bulkUploadProcess);
   }
 }

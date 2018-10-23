@@ -4,13 +4,14 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.BulkUploadActorOperation;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.util.Util;
 
-/** Created by rajatgupta on 15/10/18. */
 @ActorConfig(
   tasks = {"orgBulkUpload"},
   asyncTasks = {}
@@ -18,6 +19,7 @@ import org.sunbird.learner.util.Util;
 public class OrgBulkUploadActor extends BaseBulkUploadActor {
 
   private String[] bulkOrgAllowedFields = {
+    JsonKey.ORG_ID,
     JsonKey.ORGANISATION_NAME,
     JsonKey.CHANNEL,
     JsonKey.IS_ROOT_ORG,
@@ -29,10 +31,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
     JsonKey.ORG_TYPE,
     JsonKey.PREFERRED_LANGUAGE,
     JsonKey.THEME,
-    JsonKey.CONTACT_DETAILS,
-    JsonKey.LOC_ID,
-    JsonKey.HASHTAGID,
-    JsonKey.LOCATION_CODE
+    JsonKey.CONTACT_DETAILS
   };
 
   @Override

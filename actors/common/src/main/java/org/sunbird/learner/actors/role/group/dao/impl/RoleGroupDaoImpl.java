@@ -29,7 +29,6 @@ public class RoleGroupDaoImpl implements RoleGroupDao {
   @SuppressWarnings("unchecked")
   @Override
   public List<RoleGroup> getRoleGroups() {
-
     Response roleGroupResults = cassandraOperation.getAllRecords(KEYSPACE_NAME, TABLE_NAME);
     TypeReference<List<RoleGroup>> roleGroupType = new TypeReference<List<RoleGroup>>() {};
     List<Map<String, Object>> roleGroupMapList =
@@ -37,4 +36,5 @@ public class RoleGroupDaoImpl implements RoleGroupDao {
     List<RoleGroup> roleGroupList = mapper.convertValue(roleGroupMapList, roleGroupType);
     return roleGroupList;
   }
+
 }

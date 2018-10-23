@@ -6,9 +6,10 @@ import org.sunbird.models.url.action.UrlAction;
 public interface UrlActionDao {
 
   /**
-   * Get All UrlActions
+   * Get list of URL actions.
    *
-   * @return List of all UrlActions from Url_action Table
+   * @return List of URL actions.
    */
   List<UrlAction> getUrlActions();
+
 }

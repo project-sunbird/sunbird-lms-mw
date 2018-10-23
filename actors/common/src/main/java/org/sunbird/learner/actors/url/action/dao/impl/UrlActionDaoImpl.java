@@ -29,7 +29,6 @@ public class UrlActionDaoImpl implements UrlActionDao {
   @SuppressWarnings("unchecked")
   @Override
   public List<UrlAction> getUrlActions() {
-
     Response urlActionResults = cassandraOperation.getAllRecords(KEYSPACE_NAME, TABLE_NAME);
     TypeReference<List<UrlAction>> urlActionType = new TypeReference<List<UrlAction>>() {};
     List<Map<String, Object>> urlActionMapList =
@@ -37,4 +36,5 @@ public class UrlActionDaoImpl implements UrlActionDao {
     List<UrlAction> urlActionList = mapper.convertValue(urlActionMapList, urlActionType);
     return urlActionList;
   }
+  
 }

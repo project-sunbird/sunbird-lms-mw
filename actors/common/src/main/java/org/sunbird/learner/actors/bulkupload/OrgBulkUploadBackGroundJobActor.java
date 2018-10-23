@@ -46,7 +46,7 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
     }
   }
 
-  void processTasks(List<BulkUploadProcessTask> bulkUploadProcessTasks) {
+  private void processTasks(List<BulkUploadProcessTask> bulkUploadProcessTasks) {
     List<BulkUploadProcessTask> nonRootOrg = new ArrayList<>();
     for (BulkUploadProcessTask task : bulkUploadProcessTasks) {
       try {

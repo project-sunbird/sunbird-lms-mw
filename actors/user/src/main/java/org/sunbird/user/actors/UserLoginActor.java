@@ -12,13 +12,6 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 
-/**
- * This actor will handle user login operation .
- *
- * @author Manzarul
- * @author Amit Kumar
- * @author sudhirgiri
- */
 @ActorConfig(
   tasks = {"userCurrentLogin"},
   asyncTasks = {}
@@ -44,9 +37,9 @@ public class UserLoginActor extends BaseActor {
   }
 
   /**
-   * This method will update user current login time in keycloak
+   * Updates user's current login time in Keycloak.
    *
-   * @param actorMessage Request
+   * @param actorMessage Request containing user ID.
    */
   private void updateUserLoginTime(Request actorMessage) {
     String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
@@ -54,8 +47,9 @@ public class UserLoginActor extends BaseActor {
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
     if (Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED))) {
-      boolean addedResponse = ssoManager.addUserLoginTime(userId);
-      ProjectLogger.log("user login time added response is ==" + addedResponse);
+      boolean loginTimeResponse = ssoManager.addUserLoginTime(userId);
+      ProjectLogger.log("UserLoginActor:updateUserLoginTime: keycloak response = " + loginTimeResponse);
     }
   }
+
 }

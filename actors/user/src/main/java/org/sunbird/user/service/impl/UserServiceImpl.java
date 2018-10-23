@@ -1,6 +1,5 @@
 package org.sunbird.user.service.impl;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -19,7 +18,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.dao.UserDao;
 import org.sunbird.user.dao.UserExternalIdentityDao;
 import org.sunbird.user.dao.impl.UserDaoImpl;
@@ -31,6 +29,7 @@ public class UserServiceImpl implements UserService {
   private static DecryptionService decryptionService = new DefaultDecryptionServiceImpl();
   private static UserDao userDao = UserDaoImpl.getInstance();
   private static UserService userService = null;
+  private UserExternalIdentityDao userExtIdentityDao = new UserExternalIdentityDaoImpl();
 
   public static UserService getInstance() {
     if (userService == null) {
@@ -73,37 +72,6 @@ public class UserServiceImpl implements UserService {
     }
     return user;
   }
-
-  public void generateTeleEventForUser(
-      Map<String, Object> requestMap, String userId, String objectType) {
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    Map<String, Object> targetObject =
-        TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-    Map<String, Object> telemetryAction = new HashMap<>();
-    if (objectType.equalsIgnoreCase("orgLevel")) {
-      telemetryAction.put("AssignRole", "role assigned at org level");
-      if (null != requestMap) {
-        TelemetryUtil.generateCorrelatedObject(
-            (String) requestMap.get(JsonKey.ORGANISATION_ID),
-            JsonKey.ORGANISATION,
-            null,
-            correlatedObject);
-      }
-    } else {
-      if (objectType.equalsIgnoreCase("userLevel")) {
-        telemetryAction.put("AssignRole", "role assigned at user level");
-      } else if (objectType.equalsIgnoreCase("blockUser")) {
-        telemetryAction.put("BlockUser", "user blocked");
-      } else if (objectType.equalsIgnoreCase("unBlockUser")) {
-        telemetryAction.put("UnBlockUser", "user unblocked");
-      } else if (objectType.equalsIgnoreCase("profileVisibility")) {
-        telemetryAction.put("ProfileVisibility", "profile Visibility setting changed");
-      }
-    }
-    TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
-  }
-
-  private UserExternalIdentityDao userExtIdentityDao = new UserExternalIdentityDaoImpl();
 
   @Override
   public void validateUserId(Request request) {

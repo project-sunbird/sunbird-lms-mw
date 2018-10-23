@@ -80,7 +80,7 @@ public class AddressManagementActor extends BaseActor {
         }
       }
       // save Address to ES
-      // saveUserAddressToEs(requestMap);
+      saveUserAddressToEs(requestMap);
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }

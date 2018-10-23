@@ -68,7 +68,9 @@ public class UserAttributesProcessingActor extends BaseActor {
 
   private void saveJobProfile(Map<String, Object> userMap) {
     try {
-      if (userMap.containsKey(JsonKey.JOB_PROFILE)) {
+      if (userMap.containsKey(JsonKey.JOB_PROFILE)
+          && CollectionUtils.isNotEmpty(
+              (List<Map<String, Object>>) userMap.get(JsonKey.JOB_PROFILE))) {
         Request jobProfileRequest = new Request();
         jobProfileRequest.getRequest().putAll(userMap);
         jobProfileRequest.getRequest().put(JsonKey.OPERATION_TYPE, JsonKey.CREATE);
@@ -84,7 +86,9 @@ public class UserAttributesProcessingActor extends BaseActor {
 
   private void saveEducation(Map<String, Object> userMap) {
     try {
-      if (userMap.containsKey(JsonKey.EDUCATION)) {
+      if (userMap.containsKey(JsonKey.EDUCATION)
+          && CollectionUtils.isNotEmpty(
+              (List<Map<String, Object>>) userMap.get(JsonKey.EDUCATION))) {
         Request educationRequest = new Request();
         educationRequest.getRequest().putAll(userMap);
         educationRequest.getRequest().put(JsonKey.OPERATION_TYPE, JsonKey.CREATE);

@@ -15,8 +15,6 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.services.ProfileCompletenessService;
-import org.sunbird.common.services.impl.ProfileCompletenessFactory;
 import org.sunbird.extension.user.UserExtension;
 import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.learner.util.Util;
@@ -113,7 +111,6 @@ public class UserBackgroundJobActor extends BaseActor {
 
   private void saveUserDataToES(Map<String, Object> userDetails) {
     addMaskEmailAndPhone(userDetails);
-    checkProfileCompleteness(userDetails);
     Util.checkUserProfileVisibility(
         userDetails, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
     userDetails.remove(JsonKey.PASSWORD);
@@ -156,12 +153,6 @@ public class UserBackgroundJobActor extends BaseActor {
     } else {
       return userMap;
     }
-  }
-
-  private void checkProfileCompleteness(Map<String, Object> userMap) {
-    ProfileCompletenessService profileService = ProfileCompletenessFactory.getInstance();
-    Map<String, Object> profileResponse = profileService.computeProfile(userMap);
-    userMap.putAll(profileResponse);
   }
 
   private void addMaskEmailAndPhone(Map<String, Object> userMap) {

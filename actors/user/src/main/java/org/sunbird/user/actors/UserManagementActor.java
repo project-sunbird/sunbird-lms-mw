@@ -1462,7 +1462,7 @@ public class UserManagementActor extends BaseActor {
     sender().tell(response, self());
 
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      saveUserDetailsToEs(requestMap);
+      saveUserDetailsToEs(requestMap, userMap);
     } else {
       ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
     }
@@ -1485,9 +1485,14 @@ public class UserManagementActor extends BaseActor {
     tellToAnother(EmailAndSmsRequest);
   }
 
-  private void saveUserDetailsToEs(Map<String, Object> requestMap) {
+  private void saveUserDetailsToEs(
+      Map<String, Object> requestMap, Map<String, Object> completeUserMap) {
     Request userRequest = new Request();
-    userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+    userRequest.setOperation(UserActorOperations.UPSERT_USER_DETAILS_TO_ES.getValue());
+    Map<String, Object> userDetails = new HashMap<>(completeUserMap);
+    requestMap.putAll(UserUtil.checkProfileCompleteness(userDetails));
+    Util.checkUserProfileVisibility(
+        userDetails, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
     userRequest.getRequest().putAll(requestMap);
     tellToAnother(userRequest);
   }

@@ -21,6 +21,8 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
+import org.sunbird.common.services.ProfileCompletenessService;
+import org.sunbird.common.services.impl.ProfileCompletenessFactory;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
@@ -333,6 +335,11 @@ public class UserUtil {
     User user = mapper.convertValue(userMap, User.class);
     requestMap.putAll(mapper.convertValue(user, Map.class));
     return requestMap;
+  }
+
+  public static Map<String, Object> checkProfileCompleteness(Map<String, Object> userMap) {
+    ProfileCompletenessService profileService = ProfileCompletenessFactory.getInstance();
+    return profileService.computeProfile(userMap);
   }
 
   public static void setUserDefaultValue(Map<String, Object> userMap) {

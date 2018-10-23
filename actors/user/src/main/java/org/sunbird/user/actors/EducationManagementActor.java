@@ -76,7 +76,7 @@ public class EducationManagementActor extends BaseActor {
         updateEducationDetails(requestMap, educationDetailsMap, addrResponse, createdBy);
       }
     }
-    // saveUserEducationToEs(requestMap);
+    saveUserEducationToEs(requestMap);
   }
 
   private void saveUserEducationToEs(Map<String, Object> requestMap) {

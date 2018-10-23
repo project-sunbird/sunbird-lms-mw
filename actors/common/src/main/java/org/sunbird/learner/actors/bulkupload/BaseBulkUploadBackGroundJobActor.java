@@ -2,10 +2,7 @@ package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.sql.Timestamp;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import org.sunbird.common.Constants;
 import org.sunbird.common.models.util.*;
@@ -102,6 +99,7 @@ public abstract class BaseBulkUploadBackGroundJobActor extends BaseBulkUploadAct
     bulkUploadProcess.setSuccessResult(ProjectUtil.convertMapToJsonString(successList));
     bulkUploadProcess.setFailureResult(ProjectUtil.convertMapToJsonString(failureList));
     bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
+    bulkUploadProcess.setLastupdatedOn(new Timestamp(Calendar.getInstance().getTime().getTime()));
     bulkUploadDao.update(bulkUploadProcess);
   }
 }

@@ -378,7 +378,9 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     bulkUploadProcess.setId(processId);
     bulkUploadProcess.setObjectType(objectType);
     bulkUploadProcess.setUploadedBy(requestedBy);
-    bulkUploadProcess.setUploadedDate(new Timestamp(Calendar.getInstance().getTime().getTime()));
+    bulkUploadProcess.setUploadedDate(ProjectUtil.getFormattedDate());
+    bulkUploadProcess.setCreatedBy(requestedBy);
+    bulkUploadProcess.setCreatedOn(new Timestamp(Calendar.getInstance().getTime().getTime()));
     bulkUploadProcess.setProcessStartTime(ProjectUtil.getFormattedDate());
     bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.NEW.getValue());
     bulkUploadProcess.setTaskCount(taskCount);

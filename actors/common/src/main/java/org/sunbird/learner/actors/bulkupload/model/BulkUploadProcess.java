@@ -24,8 +24,11 @@ public class BulkUploadProcess implements Serializable {
   private Integer status;
   private String successResult;
   private String uploadedBy;
-  private Timestamp uploadedDate;
+  private String uploadedDate;
   private Integer taskCount;
+  private String createdBy;
+  private Timestamp createdOn;
+  private Timestamp lastupdatedOn;
 
   public String getId() {
     return id;
@@ -99,12 +102,36 @@ public class BulkUploadProcess implements Serializable {
     this.uploadedBy = uploadedBy;
   }
 
-  public Timestamp getUploadedDate() {
+  public String getUploadedDate() {
     return uploadedDate;
   }
 
-  public void setUploadedDate(Timestamp uploadedDate) {
+  public void setUploadedDate(String uploadedDate) {
     this.uploadedDate = uploadedDate;
+  }
+
+  public String getCreatedBy() {
+    return createdBy;
+  }
+
+  public void setCreatedBy(String createdBy) {
+    this.createdBy = createdBy;
+  }
+
+  public Timestamp getCreatedOn() {
+    return createdOn;
+  }
+
+  public void setCreatedOn(Timestamp createdOn) {
+    this.createdOn = createdOn;
+  }
+
+  public Timestamp getLastupdatedOn() {
+    return lastupdatedOn;
+  }
+
+  public void setLastupdatedOn(Timestamp lastupdatedOn) {
+    this.lastupdatedOn = lastupdatedOn;
   }
 
   public String getProcessEndTime() {

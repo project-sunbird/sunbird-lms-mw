@@ -99,6 +99,7 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackGroundJob
     bulkUploadProcess.setSuccessResult(ProjectUtil.convertMapToJsonString(successList));
     bulkUploadProcess.setFailureResult(ProjectUtil.convertMapToJsonString(failureList));
     bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
+    bulkUploadProcess.setLastupdatedOn(new Timestamp(Calendar.getInstance().getTime().getTime()));
     bulkUploadDao.update(bulkUploadProcess);
   }
 

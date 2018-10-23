@@ -23,18 +23,9 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.role.dao.RoleDao;
-import org.sunbird.learner.actors.role.dao.impl.RoleDaoImpl;
-import org.sunbird.learner.actors.role.group.dao.RoleGroupDao;
-import org.sunbird.learner.actors.role.group.dao.impl.RoleGroupDaoImpl;
-import org.sunbird.learner.actors.url.action.dao.UrlActionDao;
-import org.sunbird.learner.actors.url.action.dao.impl.UrlActionDaoImpl;
+import org.sunbird.learner.actors.role.service.RoleService;
 import org.sunbird.learner.util.Util;
-import org.sunbird.models.role.Role;
-import org.sunbird.models.role.group.RoleGroup;
-import org.sunbird.models.url.action.UrlAction;
-import org.sunbird.user.dao.UserDao;
-import org.sunbird.user.dao.impl.UserDaoImpl;
+import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 
@@ -51,10 +42,6 @@ import org.sunbird.user.service.impl.UserServiceImpl;
 )
 public class UserRoleActor extends BaseActor {
 
-  private UserDao userDao = UserDaoImpl.getInstance();
-  private RoleDao roleDao = RoleDaoImpl.getInstance();
-  private RoleGroupDao roleGroupDao = RoleGroupDaoImpl.getInstance();
-  private UrlActionDao urlActionDao = UrlActionDaoImpl.getInstance();
   private UserService userService = UserServiceImpl.getInstance();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
@@ -80,67 +67,10 @@ public class UserRoleActor extends BaseActor {
   }
 
   /** This method will provide the complete role structure.. */
-  @SuppressWarnings({"unchecked", "rawtypes"})
   private void getRoles() {
-    Util.DbInfo roleDbInfo = Util.dbInfoMap.get(JsonKey.ROLE);
-    Util.DbInfo roleGroupDbInfo = Util.dbInfoMap.get(JsonKey.ROLE_GROUP);
-    Util.DbInfo urlActionDbInfo = Util.dbInfoMap.get(JsonKey.URL_ACTION);
-    Response mergeResponse = new Response();
-    List<Map<String, Object>> resposnemap = new ArrayList<>();
-    List<Map<String, Object>> list = null;
-    List<Role> roleList = roleDao.getRoles();
-    List<RoleGroup> roleGroupList = roleGroupDao.getRoleGroups();
-    List<UrlAction> urlActionList = urlActionDao.getUrlActions();
-    Response response =
-        cassandraOperation.getAllRecords(roleDbInfo.getKeySpace(), roleDbInfo.getTableName());
-    Response rolegroup =
-        cassandraOperation.getAllRecords(
-            roleGroupDbInfo.getKeySpace(), roleGroupDbInfo.getTableName());
-    Response urlAction =
-        cassandraOperation.getAllRecords(
-            urlActionDbInfo.getKeySpace(), urlActionDbInfo.getTableName());
-    List<Map<String, Object>> urlActionListMap =
-        (List<Map<String, Object>>) urlAction.getResult().get(JsonKey.RESPONSE);
-    List<Map<String, Object>> roleGroupMap =
-        (List<Map<String, Object>>) rolegroup.getResult().get(JsonKey.RESPONSE);
-    list = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
-    if (roleList != null && !(roleList.isEmpty())) {
-      // This map will have all the master roles
-      for (Map<String, Object> map : list) {
-        for (Role role : roleList) {
-          Map<String, Object> roleResponseMap = new HashMap<>();
-          roleResponseMap.put(JsonKey.ID, map.get(JsonKey.ID));
-          roleResponseMap.put(JsonKey.NAME, map.get(JsonKey.NAME));
-          List<String> roleGroup = (List) map.get(JsonKey.ROLE_GROUP_ID);
-          List<Map<String, Object>> actionGroupListMap = new ArrayList<>();
-          roleResponseMap.put(JsonKey.ACTION_GROUPS, actionGroupListMap);
-          Map<String, Object> subRoleResponseMap = null;
-          for (String val : roleGroup) {
-            subRoleResponseMap = new HashMap<>();
-            Map<String, Object> subRoleMap = getSubRoleListMap(roleGroupMap, val);
-            List<String> subRole = (List) subRoleMap.get(JsonKey.URL_ACTION_ID);
-            List<Map<String, Object>> roleUrlResponList = new ArrayList<>();
-            subRoleResponseMap.put(JsonKey.ID, subRoleMap.get(JsonKey.ID));
-            subRoleResponseMap.put(JsonKey.NAME, subRoleMap.get(JsonKey.NAME));
-            for (String rolemap : subRole) {
-              roleUrlResponList.add(getRoleAction(urlActionListMap, rolemap));
-            }
-            if (subRoleResponseMap.containsKey(JsonKey.ACTIONS)) {
-              List<Map<String, Object>> listOfMap =
-                  (List<Map<String, Object>>) subRoleResponseMap.get(JsonKey.ACTIONS);
-              listOfMap.addAll(roleUrlResponList);
-            } else {
-              subRoleResponseMap.put(JsonKey.ACTIONS, roleUrlResponList);
-            }
-            actionGroupListMap.add(subRoleResponseMap);
-          }
-
-          resposnemap.add(roleResponseMap);
-        }
-      }
-      mergeResponse.getResult().put(JsonKey.ROLES, resposnemap);
-      sender().tell(mergeResponse, self());
-    }
+    ProjectLogger.log("getRoles  called");
+    Response response = RoleService.getUserRoles();
+    sender().tell(response, self());
   }
 
   /**
@@ -150,18 +80,9 @@ public class UserRoleActor extends BaseActor {
    */
   @SuppressWarnings("unchecked")
   private void assignRoles(Request actorMessage) {
+    ProjectLogger.log("assignRoles called");
     Map<String, Object> requestMap = actorMessage.getRequest();
-
-    if (null != requestMap.get(JsonKey.ROLES)
-        && !((List<String>) requestMap.get(JsonKey.ROLES)).isEmpty()) {
-      String msg = Util.validateRoles((List<String>) requestMap.get(JsonKey.ROLES));
-      if (!msg.equalsIgnoreCase(JsonKey.SUCCESS)) {
-        throw new ProjectCommonException(
-            ResponseCode.invalidRole.getErrorCode(),
-            ResponseCode.invalidRole.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-      }
-    }
+    RoleService.validateRoles((List<String>) requestMap.get(JsonKey.ROLES));
     // object of telemetry event...
     String userId = (String) requestMap.get(JsonKey.USER_ID);
     String externalId = (String) requestMap.get(JsonKey.EXTERNAL_ID);
@@ -202,7 +123,6 @@ public class UserRoleActor extends BaseActor {
         requestMap.put(JsonKey.HASHTAGID, hashTagId);
       }
     }
-
     // throw error if provided orgId or ExtenralId with Provider is not valid
     if (MapUtils.isEmpty(map)) {
       String errorMsg =
@@ -223,17 +143,10 @@ public class UserRoleActor extends BaseActor {
       sender().tell(exception, self());
       return;
     }
-
     // update userOrg role with requested roles.
-    Map<String, Object> userOrgDBMap = new HashMap<>();
-    userOrgDBMap.put(JsonKey.ORGANISATION_ID, organisationId);
-    userOrgDBMap.put(JsonKey.USER_ID, userId);
+    Map<String, Object> userOrgDBMap = userService.getUserByUserIdAndOrgId(userId, organisationId);
     Util.DbInfo userOrgDb = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
-    Response response =
-        cassandraOperation.getRecordsByProperties(
-            userOrgDb.getKeySpace(), userOrgDb.getTableName(), userOrgDBMap);
-    List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    if (list.isEmpty()) {
+    if (MapUtils.isEmpty(userOrgDBMap)) {
       ProjectCommonException exception =
           new ProjectCommonException(
               ResponseCode.invalidUsrOrgData.getErrorCode(),
@@ -247,14 +160,13 @@ public class UserRoleActor extends BaseActor {
     if (!roles.contains(ProjectUtil.UserRole.PUBLIC.name()))
       roles.add(ProjectUtil.UserRole.PUBLIC.name());
     userOrgDBMap.put(JsonKey.ROLES, roles);
-    userOrgDBMap.put(JsonKey.ID, list.get(0).get(JsonKey.ID));
     if (StringUtils.isNotBlank(hashTagId)) {
       userOrgDBMap.put(JsonKey.HASHTAGID, hashTagId);
     }
     userOrgDBMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     userOrgDBMap.put(JsonKey.UPDATED_BY, requestMap.get(JsonKey.REQUESTED_BY));
     userOrgDBMap.put(JsonKey.ROLES, roles);
-    response =
+    Response response =
         cassandraOperation.updateRecord(
             userOrgDb.getKeySpace(), userOrgDb.getTableName(), userOrgDBMap);
     sender().tell(response, self());
@@ -263,60 +175,7 @@ public class UserRoleActor extends BaseActor {
     } else {
       ProjectLogger.log("no call for ES to save user");
     }
-    userService.generateTeleEventForUser(requestMap, userId, "userLevel");
-  }
-
-  /**
-   * This method will provide sub role mapping details.
-   *
-   * @param urlActionListMap List<Map<String, Object>>
-   * @param roleName String
-   * @return Map< String, Object>
-   */
-  private Map<String, Object> getSubRoleListMap(
-      List<Map<String, Object>> urlActionListMap, String roleName) {
-    Map<String, Object> response = new HashMap<>();
-    if (urlActionListMap != null && !(urlActionListMap.isEmpty())) {
-      for (Map<String, Object> map : urlActionListMap) {
-        if (map.get(JsonKey.ID).equals(roleName)) {
-          response.put(JsonKey.ID, map.get(JsonKey.ID));
-          response.put(JsonKey.NAME, map.get(JsonKey.NAME));
-          response.put(
-              JsonKey.URL_ACTION_ID,
-              map.get(JsonKey.URL_ACTION_ID) != null
-                  ? map.get(JsonKey.URL_ACTION_ID)
-                  : new ArrayList<>());
-          return response;
-        }
-      }
-    }
-    return response;
-  }
-
-  /**
-   * This method will find the action from role action mapping it will return action id, action name
-   * and list of urls.
-   *
-   * @param urlActionListMap List<Map<String,Object>>
-   * @param actionName String
-   * @return Map<String,Object>
-   */
-  private Map<String, Object> getRoleAction(
-      List<Map<String, Object>> urlActionListMap, String actionName) {
-    Map<String, Object> response = new HashMap<>();
-    if (urlActionListMap != null && !(urlActionListMap.isEmpty())) {
-      for (Map<String, Object> map : urlActionListMap) {
-        if (map.get(JsonKey.ID).equals(actionName)) {
-          response.put(JsonKey.ID, map.get(JsonKey.ID));
-          response.put(JsonKey.NAME, map.get(JsonKey.NAME));
-          response.put(
-              JsonKey.URLS,
-              map.get(JsonKey.URL) != null ? map.get(JsonKey.URL) : new ArrayList<String>());
-          return response;
-        }
-      }
-    }
-    return response;
+    generateTeleEventForUser(requestMap, userId, "userLevel");
   }
 
   private void updateRoleToEs(
@@ -336,5 +195,28 @@ public class UserRoleActor extends BaseActor {
       ProjectLogger.log(
           "Exception Occurred during saving user to Es while joinUserOrganisation : ", ex);
     }
+  }
+
+  private void generateTeleEventForUser(
+      Map<String, Object> requestMap, String userId, String objectType) {
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+    Map<String, Object> targetObject =
+        TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+    Map<String, Object> telemetryAction = new HashMap<>();
+    if (objectType.equalsIgnoreCase("orgLevel")) {
+      telemetryAction.put("AssignRole", "role assigned at org level");
+      if (null != requestMap) {
+        TelemetryUtil.generateCorrelatedObject(
+            (String) requestMap.get(JsonKey.ORGANISATION_ID),
+            JsonKey.ORGANISATION,
+            null,
+            correlatedObject);
+      }
+    } else {
+      if (objectType.equalsIgnoreCase("userLevel")) {
+        telemetryAction.put("AssignRole", "role assigned at user level");
+      }
+    }
+    TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
   }
 }

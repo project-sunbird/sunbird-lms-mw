@@ -74,7 +74,6 @@ public class UserServiceImpl implements UserService {
     return user;
   }
 
-  @Override
   public void generateTeleEventForUser(
       Map<String, Object> requestMap, String userId, String objectType) {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();

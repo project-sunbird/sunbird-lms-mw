@@ -2,7 +2,9 @@ package org.sunbird.user.actors;
 
 import akka.actor.ActorRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -21,6 +23,7 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
+import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.dao.UserDao;
 import org.sunbird.user.dao.impl.UserDaoImpl;
 import org.sunbird.user.service.UserService;
@@ -131,7 +134,7 @@ public class UserStatusActor extends BaseActor {
     } else {
       ProjectLogger.log("UserStatusActor:" + operation + " : no call for ES to save user");
     }
-    userService.generateTeleEventForUser(null, userId, operation);
+    generateTeleEventForUser(userId, operation);
   }
 
   private Map<String, Object> createUserMapES(String userId, String updatedBy, boolean isDeleted) {
@@ -148,5 +151,18 @@ public class UserStatusActor extends BaseActor {
     dbMap.put(JsonKey.UPDATED_BY, updatedBy);
 
     return dbMap;
+  }
+
+  private void generateTeleEventForUser(String userId, String objectType) {
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+    Map<String, Object> targetObject =
+        TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+    Map<String, Object> telemetryAction = new HashMap<>();
+    if (objectType.equalsIgnoreCase("blockUser")) {
+      telemetryAction.put("BlockUser", "user blocked");
+    } else {
+      telemetryAction.put("UnBlockUser", "user unblocked");
+    }
+    TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
   }
 }

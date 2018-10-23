@@ -10,8 +10,5 @@ public interface UserService {
 
   public User validateUserIdAndGetUserIfPresent(String userId);
 
-  public void generateTeleEventForUser(
-      Map<String, Object> requestMap, String userId, String objectType);
-
   void validateUserId(Request request);
 }

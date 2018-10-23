@@ -122,7 +122,7 @@ public class UserStatusActor extends BaseActor {
       ProjectLogger.log(logMsgPrefix + "Update user data to ES is skipped.");
     }
 
-    generateTelemetry(null, userId, operation);
+    generateTelemetry(userId, operation);
   }
 
   private Map<String, Object> getUserMapES(String userId, String updatedBy, boolean isDeleted) {

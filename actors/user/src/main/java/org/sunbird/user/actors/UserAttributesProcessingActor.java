@@ -6,9 +6,11 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.user.util.UserActorOperations;
 
 @ActorConfig(
@@ -19,7 +21,18 @@ public class UserAttributesProcessingActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    saveUserAttributes(request);
+    if (UserActorOperations.UPSERT_USER_JOB_PROFILE
+        .getValue()
+        .equalsIgnoreCase(request.getOperation())) {
+      saveUserAttributes(request);
+    } else {
+      ProjectCommonException exception =
+          new ProjectCommonException(
+              ResponseCode.invalidOperationName.getErrorCode(),
+              ResponseCode.invalidOperationName.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+      sender().tell(exception, self());
+    }
   }
 
   private void saveUserAttributes(Request request) {

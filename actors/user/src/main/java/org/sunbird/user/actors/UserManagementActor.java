@@ -1434,7 +1434,6 @@ public class UserManagementActor extends BaseActor {
     if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
       userMap.put(JsonKey.PASSWORD, null);
     }
-    UserUtil.encryptUserData(userMap);
     requestMap = UserUtil.encryptUserData(userMap);
     removeUnwanted(requestMap);
     Response response = null;

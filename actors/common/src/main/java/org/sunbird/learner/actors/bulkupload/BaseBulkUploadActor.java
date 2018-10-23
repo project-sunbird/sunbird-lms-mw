@@ -350,7 +350,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     if (((String) res.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       sender().tell(response, self());
     } else {
-      ProjectLogger.log("Exception occurred while inserting record in bulk_upload_process.");
+      ProjectLogger.log("BaseBulkUploadActor:handleUpload: Error in creating record in bulk_upload_process.");
       throw new ProjectCommonException(
           ResponseCode.SERVER_ERROR.getErrorCode(),
           ResponseCode.SERVER_ERROR.getErrorMessage(),
@@ -362,13 +362,15 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   public void processBulkUpload(
       int recordCount, String processId, BulkUploadProcess bulkUploadProcess, String operation)
       throws IOException {
+    ProjectLogger.log("BaseBulkUploadActor: processBulkUpload called with operation = " + operation);
+
     bulkUploadProcess.setTaskCount(recordCount);
     bulkUploadDao.update(bulkUploadProcess);
 
     Request request = new Request();
     request.put(JsonKey.PROCESS_ID, processId);
     request.setOperation(operation);
-    ProjectLogger.log("LocationBulkUploadActor : calling action" + operation);
+    
     tellToAnother(request);
   }
 
@@ -384,10 +386,12 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     bulkUploadProcess.setProcessStartTime(ProjectUtil.getFormattedDate());
     bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.NEW.getValue());
     bulkUploadProcess.setTaskCount(taskCount);
+
     Map<String, Object> user = Util.getUserbyUserId(requestedBy);
     if (user != null) {
       bulkUploadProcess.setOrganisationId((String) user.get(JsonKey.ROOT_ORG_ID));
     }
+
     return bulkUploadProcess;
   }
 }

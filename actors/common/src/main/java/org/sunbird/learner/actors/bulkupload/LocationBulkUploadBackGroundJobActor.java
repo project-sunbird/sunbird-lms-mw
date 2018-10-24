@@ -24,7 +24,6 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
-import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
 import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -168,7 +167,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
 
     row.put(GeoLocationJsonKey.LOCATION_TYPE, locationType);
     task.setData(mapper.writeValueAsString(row));
-    setSuccessTaskStatus(task, ProgressStatus.COMPLETED.getValue(), row, JsonKey.UPDATE);
+    setSuccessTaskStatus(task, BulkProcessStatus.COMPLETED.getValue(), row, JsonKey.UPDATE);
   }
 
   private Boolean areLocationTypesEqual(String locationType, String responseType) {
@@ -209,7 +208,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
           JsonKey.CREATE);
     } else {
       row.put(JsonKey.ID, locationId);
-      setSuccessTaskStatus(task, ProgressStatus.COMPLETED.getValue(), row, JsonKey.CREATE);
+      setSuccessTaskStatus(task, BulkProcessStatus.COMPLETED.getValue(), row, JsonKey.CREATE);
     }
   }
 

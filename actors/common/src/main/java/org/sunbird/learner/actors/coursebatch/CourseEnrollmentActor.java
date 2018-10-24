@@ -29,8 +29,8 @@ import org.sunbird.learner.actors.coursebatch.dao.CourseBatchDao;
 import org.sunbird.learner.actors.coursebatch.dao.UserCoursesDao;
 import org.sunbird.learner.actors.coursebatch.dao.impl.CourseBatchDaoImpl;
 import org.sunbird.learner.actors.coursebatch.dao.impl.UserCoursesDaoImpl;
-import org.sunbird.learner.actors.coursebatch.service.CourseBatchService;
 import org.sunbird.learner.actors.coursebatch.service.UserCoursesService;
+import org.sunbird.learner.util.CourseBatchUtil;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.course.batch.CourseBatch;
@@ -301,7 +301,8 @@ public class CourseEnrollmentActor extends BaseActor {
       UserCoursesService.sync(UserCourseUpdateAttributes, userCourses.getId());
     } else {
       ProjectLogger.log(
-          "CourseEnrollmentActor:updateUserCourses: User Courses not synced to ES as response is not successful");
+          "CourseEnrollmentActor:updateUserCourses: User Courses not synced to ES as response is not successful",
+          LoggerEnum.INFO.name());
     }
     return result;
   }
@@ -314,10 +315,11 @@ public class CourseEnrollmentActor extends BaseActor {
     Response response = courseBatchDao.update(CourseBatchUpdatedAttributes);
     Map<String, Object> courseBatchMap = mapper.convertValue(courseBatch, Map.class);
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      CourseBatchService.syncCourseBatchForeground((String) courseBatch.getId(), courseBatchMap);
+      CourseBatchUtil.syncCourseBatchForeground((String) courseBatch.getId(), courseBatchMap);
     } else {
       ProjectLogger.log(
-          "CourseBatchManagementActor:updateCourseBatch: Course batch not synced to ES as response is not successful");
+          "CourseBatchManagementActor:updateCourseBatch: Course batch not synced to ES as response is not successful",
+          LoggerEnum.INFO.name());
     }
   }
 

@@ -30,9 +30,9 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.actors.coursebatch.dao.CourseBatchDao;
 import org.sunbird.learner.actors.coursebatch.dao.impl.CourseBatchDaoImpl;
-import org.sunbird.learner.actors.coursebatch.service.CourseBatchService;
 import org.sunbird.learner.actors.coursebatch.service.UserCoursesService;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
+import org.sunbird.learner.util.CourseBatchUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.course.batch.CourseBatch;
 import org.sunbird.telemetry.util.TelemetryUtil;
@@ -116,7 +116,7 @@ public class CourseBatchManagementActor extends BaseActor {
     Response result = courseBatchDao.create(courseBatch);
     result.put(JsonKey.BATCH_ID, courseBatchId);
 
-    CourseBatchService.syncCourseBatchForeground(
+    CourseBatchUtil.syncCourseBatchForeground(
         courseBatchId, new ObjectMapper().convertValue(courseBatch, Map.class));
     sender().tell(result, self());
 
@@ -158,11 +158,12 @@ public class CourseBatchManagementActor extends BaseActor {
     sender().tell(result, self());
 
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      CourseBatchService.syncCourseBatchForeground(
+      CourseBatchUtil.syncCourseBatchForeground(
           (String) courseBatchMap.get(JsonKey.ID), courseBatchMap);
     } else {
       ProjectLogger.log(
-          "CourseBatchManagementActor:updateCourseBatch: Course batch not synced to ES as response is not successful",LoggerEnum.INFO.name());
+          "CourseBatchManagementActor:updateCourseBatch: Course batch not synced to ES as response is not successful",
+          LoggerEnum.INFO.name());
     }
     targetObject =
         TelemetryUtil.generateTargetObject(
@@ -488,13 +489,11 @@ public class CourseBatchManagementActor extends BaseActor {
       List<String> createdFor, String enrolmentType, List<String> dbValueCreatedFor) {
     if (createdFor != null) {
       for (String orgId : createdFor) {
-        if (!dbValueCreatedFor.contains(orgId)) {
-          if (!isOrgValid(orgId)) {
-            throw new ProjectCommonException(
-                ResponseCode.invalidOrgId.getErrorCode(),
-                ResponseCode.invalidOrgId.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-          }
+        if (!dbValueCreatedFor.contains(orgId) && !isOrgValid(orgId)) {
+          throw new ProjectCommonException(
+              ResponseCode.invalidOrgId.getErrorCode(),
+              ResponseCode.invalidOrgId.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
         }
       }
       return createdFor;

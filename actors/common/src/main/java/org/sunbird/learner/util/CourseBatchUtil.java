@@ -1,4 +1,4 @@
-package org.sunbird.learner.actors.coursebatch.service;
+package org.sunbird.learner.util;
 
 import java.util.Map;
 import org.sunbird.common.ElasticSearchUtil;
@@ -6,7 +6,9 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 
-public class CourseBatchService {
+public class CourseBatchUtil {
+
+  private CourseBatchUtil() {}
 
   public static void syncCourseBatchForeground(String uniqueId, Map<String, Object> req) {
     ProjectLogger.log(

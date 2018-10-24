@@ -6,9 +6,9 @@ import org.sunbird.models.user.User;
 
 public interface UserService {
 
-  public Map<String, Object> getUserByUserIdAndOrgId(String userId, String orgId);
+  Map<String, Object> getUserByUserIdAndOrgId(String userId, String orgId);
 
-  public User validateUserIdAndGetUserIfPresent(String userId);
+  User getUserById(String userId);
 
   void validateUserId(Request request);
 }

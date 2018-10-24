@@ -62,7 +62,7 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
-  public User validateUserIdAndGetUserIfPresent(String userId) {
+  public User getUserById(String userId) {
     User user = userDao.getUserById(userId);
     if (null == user) {
       throw new ProjectCommonException(

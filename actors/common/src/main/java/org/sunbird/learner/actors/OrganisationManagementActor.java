@@ -1600,39 +1600,31 @@ public class OrganisationManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private boolean validateChannelForUniqueness(String channel) {
     if (!StringUtils.isBlank(channel)) {
-      Map<String, Object> filters = new HashMap<>();
-      filters.put(JsonKey.CHANNEL, channel);
-      filters.put(JsonKey.IS_ROOT_ORG, true);
-      Map<String, Object> esResult =
-          elasticSearchComplexSearch(
-              filters, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
-      if (isNotNull(esResult)
-          && esResult.containsKey(JsonKey.CONTENT)
-          && isNotNull(esResult.get(JsonKey.CONTENT))
-          && ((List) esResult.get(JsonKey.CONTENT)).size() > 0) {
+      List<Map<String, Object>> list = getOrg(channel);
+      if (!list.isEmpty()) {
         return false;
       }
     }
     return true;
   }
 
+  private List<Map<String, Object>> getOrg(String channel) {
+    Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+    Map<String, Object> requestData = new HashMap<>();
+    requestData.put(JsonKey.CHANNEL, channel);
+    requestData.put(JsonKey.IS_ROOT_ORG, true);
+    Response result =
+        cassandraOperation.getRecordsByProperties(
+            orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), requestData);
+    return (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+  }
+
   private String getRootOrgIdFromChannel(String channel) {
     if (!StringUtils.isBlank(channel)) {
-      Map<String, Object> filters = new HashMap<>();
-      filters.put(JsonKey.CHANNEL, channel);
-      filters.put(JsonKey.IS_ROOT_ORG, true);
-      Map<String, Object> esResult =
-          elasticSearchComplexSearch(
-              filters, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
-      if (isNotNull(esResult)
-          && esResult.containsKey(JsonKey.CONTENT)
-          && isNotNull(esResult.get(JsonKey.CONTENT))
-          && ((List) esResult.get(JsonKey.CONTENT)).size() > 0) {
-        Map<String, Object> esContent =
-            ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
-        return (String) esContent.getOrDefault(JsonKey.ID, "");
-      }
+      List<Map<String, Object>> list = getOrg(channel);
+      if (!list.isEmpty()) return (String) list.get(0).getOrDefault(JsonKey.ID, "");
     }
+
     return "";
   }
 

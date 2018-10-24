@@ -29,13 +29,6 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 
-/**
- * This actor will handle course enrollment operation .
- *
- * @author Manzarul
- * @author Amit Kumar
- * @author sudhirgiri
- */
 @ActorConfig(
   tasks = {"getRoles", "assignRoles"},
   asyncTasks = {}
@@ -45,7 +38,6 @@ public class UserRoleActor extends BaseActor {
   private UserService userService = UserServiceImpl.getInstance();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
-  /** Receives the actor message and perform the user status operation . */
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.USER);
@@ -66,18 +58,12 @@ public class UserRoleActor extends BaseActor {
     }
   }
 
-  /** This method will provide the complete role structure.. */
   private void getRoles() {
-    ProjectLogger.log("getRoles  called");
+    ProjectLogger.log("UserRoleActor: getRoles called");
     Response response = RoleService.getUserRoles();
     sender().tell(response, self());
   }
 
-  /**
-   * This method will assign roles to users or user organizations.
-   *
-   * @param actorMessage
-   */
   @SuppressWarnings("unchecked")
   private void assignRoles(Request actorMessage) {
     ProjectLogger.log("assignRoles called");

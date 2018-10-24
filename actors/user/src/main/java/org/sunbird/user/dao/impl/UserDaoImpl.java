@@ -28,8 +28,16 @@ public class UserDaoImpl implements UserDao {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
+  private static UserDao userDao = null;
   private static final String KEYSPACE_NAME = "sunbird";
   private static final String USER_TABLE_NAME = "user";
+
+  public static UserDao getInstance() {
+    if (userDao == null) {
+      userDao = new UserDaoImpl();
+    }
+    return userDao;
+  }
 
   @Override
   public String createUser(User user) {
@@ -39,9 +47,9 @@ public class UserDaoImpl implements UserDao {
   }
 
   @Override
-  public void updateUser(User user) {
+  public Response updateUser(User user) {
     Map<String, Object> map = mapper.convertValue(user, Map.class);
-    cassandraOperation.updateRecord(KEYSPACE_NAME, USER_TABLE_NAME, map);
+    return cassandraOperation.updateRecord(KEYSPACE_NAME, USER_TABLE_NAME, map);
   }
 
   @Override

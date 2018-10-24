@@ -2,7 +2,11 @@ package org.sunbird.user.actors;
 
 import akka.actor.ActorRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -75,7 +79,7 @@ public class UserStatusActor extends BaseActor {
     Util.getUserProfileConfig(systemSettingActorRef);
     String userId = (String) request.getRequest().get(JsonKey.USER_ID);
     String logMsgPrefix = MessageFormat.format("UserStatusActor:updateUserStatus:{0}:{1}: ", operation, userId);
-    User user = userService.validateUserId(userId);
+    User user = userService.getUserById(userId);
 
     if (operation.equals(ActorOperations.BLOCK_USER.getValue()) && user.getIsDeleted()) {
       throw new ProjectCommonException(

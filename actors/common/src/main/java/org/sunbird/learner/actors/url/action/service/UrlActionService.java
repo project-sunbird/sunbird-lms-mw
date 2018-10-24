@@ -14,19 +14,21 @@ public class UrlActionService {
   private static UrlActionDao urlActionDao = UrlActionDaoImpl.getInstance();
 
   public static Map<String, Object> getUrlActionMap(String urlId) {
-    List<UrlAction> urlActionList = urlActionDao.getUrlActions();
     Map<String, Object> response = new HashMap<>();
-    if (urlActionList != null && !(urlActionList.isEmpty())) {
+    List<UrlAction> urlActionList = urlActionDao.getUrlActions();
+    
+    if (CollectionUtils.isNotEmpty(urlActionList)) {
       for (UrlAction urlAction : urlActionList) {
         if (urlAction.getId().equals(urlId)) {
           response.put(JsonKey.ID, urlAction.getId());
-          response.put(JsonKey.NAME, urlAction.getId());
+          response.put(JsonKey.NAME, urlAction.getName());
           response.put(
               JsonKey.URL, urlAction.getUrl() != null ? urlAction.getUrl() : new ArrayList<>());
           return response;
         }
       }
     }
+
     return response;
   }
 }

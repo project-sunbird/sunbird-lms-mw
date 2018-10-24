@@ -79,7 +79,7 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
 
   private void processOrg(BulkUploadProcessTask task) {
     ProjectLogger.log(
-        "LocationBulkUploadBackGroundJobActor : processLocation method called", LoggerEnum.INFO);
+        "OrgBulkUploadBackGroundJobActor: processOrg called", LoggerEnum.INFO);
     String data = task.getData();
     try {
       Organisation organisation = mapper.readValue(data, Organisation.class);
@@ -103,7 +103,7 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
       orgId = orgClient.createOrg(getActorRef(ActorOperations.CREATE_ORG.getValue()), row);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "OrgBulkUploadBackGroundJobActor : callCreateLocation - got exception " + ex.getMessage(),
+          "OrgBulkUploadBackGroundJobActor:callCreateOrg: Exception occurred with error message = " + ex.getMessage(),
           LoggerEnum.INFO);
       setTaskStatus(
           task,
@@ -116,7 +116,7 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
 
     if (StringUtils.isEmpty(orgId)) {
       ProjectLogger.log(
-          "OrgBulkUploadBackGroundJobActor : Null receive from interservice communication",
+          "OrgBulkUploadBackGroundJobActor:callCreateOrg: Org ID is null !",
           LoggerEnum.ERROR);
       setTaskStatus(
           task,
@@ -138,7 +138,7 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
       orgClient.updateOrg(getActorRef(ActorOperations.UPDATE_ORG.getValue()), row);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "OrgBulkUploadBackGroundJobActor : callUpdateLocation - got exception " + ex.getMessage(),
+          "OrgBulkUploadBackGroundJobActor:callUpdateOrg: Exception occurred with error message = " + ex.getMessage(),
           LoggerEnum.INFO);
       row.put(JsonKey.ERROR_MSG, ex.getMessage());
       setTaskStatus(

@@ -39,10 +39,6 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.location.Location;
 import org.sunbird.models.location.apirequest.UpsertLocationRequest;
 
-/**
- * @desc This class will do the bulk processing of Location.
- * @author Arvind
- */
 @ActorConfig(
   tasks = {},
   asyncTasks = {"locationBulkUploadBackground"}
@@ -85,7 +81,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
   private void processLocation(BulkUploadProcessTask task) {
 
     ProjectLogger.log(
-        "LocationBulkUploadBackGroundJobActor : processLocation method called", LoggerEnum.INFO);
+        "LocationBulkUploadBackGroundJobActor: processLocation called", LoggerEnum.INFO);
     String data = task.getData();
     try {
 

@@ -74,6 +74,8 @@ public class SchedularActor extends BaseActor {
             LoggerEnum.INFO);
         if (JsonKey.LOCATION.equalsIgnoreCase((String) map.get(JsonKey.OBJECT_TYPE))) {
           req.setOperation(BulkUploadActorOperation.LOCATION_BULK_UPLOAD_BACKGROUND_JOB.getValue());
+        } else if (JsonKey.ORGANISATION.equalsIgnoreCase((String) map.get(JsonKey.OBJECT_TYPE))) {
+          req.setOperation(BulkUploadActorOperation.ORG_BULK_UPLOAD_BACKGROUND_JOB.getValue());
         } else {
           req.setOperation(ActorOperations.PROCESS_BULK_UPLOAD.getValue());
         }

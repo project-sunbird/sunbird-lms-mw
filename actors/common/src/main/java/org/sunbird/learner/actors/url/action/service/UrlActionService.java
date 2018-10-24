@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections4.CollectionUtils;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.learner.actors.url.action.dao.UrlActionDao;
 import org.sunbird.learner.actors.url.action.dao.impl.UrlActionDaoImpl;

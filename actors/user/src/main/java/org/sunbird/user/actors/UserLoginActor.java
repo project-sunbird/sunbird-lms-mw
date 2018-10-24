@@ -26,13 +26,10 @@ public class UserLoginActor extends BaseActor {
     ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();
 
-    switch (operation) {
-      case "userCurrentLogin":
-        updateUserLoginTime(request);
-        break;
-
-      default:
-        onReceiveUnsupportedOperation("UserLoginActor");
+    if (operation.equalsIgnoreCase("userCurrentLogin")) {
+      updateUserLoginTime(request);
+    } else {
+      onReceiveUnsupportedOperation("UserLoginActor");
     }
   }
 

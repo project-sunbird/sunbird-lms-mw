@@ -1475,7 +1475,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       email = (String) userMap.get(JsonKey.EMAIL);
       userMap.remove(JsonKey.EMAIL);
     }
-    // check user is active for this organization or not
+    // check user is active for this Organisation or not
     isUserDeletedFromOrg(userMap, (String) userMap.get(JsonKey.UPDATED_BY));
     updateKeyCloakUserBase(userMap);
     email = decryptionService.decryptData(email);

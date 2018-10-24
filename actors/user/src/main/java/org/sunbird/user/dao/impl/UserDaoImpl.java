@@ -29,8 +29,7 @@ public class UserDaoImpl implements UserDao {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
   private static UserDao userDao = null;
-  private static final String KEYSPACE_NAME = "sunbird";
-  private static final String USER_TABLE_NAME = "user";
+  private final Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
 
   public static UserDao getInstance() {
     if (userDao == null) {
@@ -42,14 +41,15 @@ public class UserDaoImpl implements UserDao {
   @Override
   public String createUser(User user) {
     Map<String, Object> map = mapper.convertValue(user, Map.class);
-    cassandraOperation.insertRecord(KEYSPACE_NAME, USER_TABLE_NAME, map);
+    cassandraOperation.insertRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(), map);
     return (String) map.get(JsonKey.ID);
   }
 
   @Override
   public Response updateUser(User user) {
     Map<String, Object> map = mapper.convertValue(user, Map.class);
-    return cassandraOperation.updateRecord(KEYSPACE_NAME, USER_TABLE_NAME, map);
+    return cassandraOperation.updateRecord(
+        userDbInfo.getKeySpace(), userDbInfo.getTableName(), map);
   }
 
   @Override
@@ -78,7 +78,9 @@ public class UserDaoImpl implements UserDao {
 
   @Override
   public User getUserById(String userId) {
-    Response response = cassandraOperation.getRecordById(KEYSPACE_NAME, USER_TABLE_NAME, userId);
+    Response response =
+        cassandraOperation.getRecordById(
+            userDbInfo.getKeySpace(), userDbInfo.getTableName(), userId);
     List<Map<String, Object>> responseList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (CollectionUtils.isNotEmpty(responseList)) {
@@ -92,7 +94,8 @@ public class UserDaoImpl implements UserDao {
   public List<User> getUsersByProperties(Map<String, Object> propertyMap) {
     List<User> userList = new ArrayList<>();
     Response response =
-        cassandraOperation.getRecordsByProperties(KEYSPACE_NAME, USER_TABLE_NAME, propertyMap);
+        cassandraOperation.getRecordsByProperties(
+            userDbInfo.getKeySpace(), userDbInfo.getTableName(), propertyMap);
     List<Map<String, Object>> responseList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (CollectionUtils.isNotEmpty(responseList)) {

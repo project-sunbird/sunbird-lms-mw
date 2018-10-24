@@ -37,4 +37,5 @@ public class RoleDaoImpl implements RoleDao {
     List<Role> roleList = mapper.convertValue(roleMapList, roleMapType);
     return roleList;
   }
+
 }

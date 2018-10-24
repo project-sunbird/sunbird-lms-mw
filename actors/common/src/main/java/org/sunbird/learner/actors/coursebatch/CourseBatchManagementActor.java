@@ -132,21 +132,34 @@ public class CourseBatchManagementActor extends BaseActor {
     rollUp.put("l1", (String) request.get(JsonKey.COURSE_ID));
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
 
+    if (courseNotificationActive()) {
+
+      batchOperationNotifier(courseBatch, null);
+    }
+  }
+
+  private boolean courseNotificationActive() {
     if (PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)
             != null
         && (Boolean.parseBoolean(
             PropertiesCache.getInstance()
                 .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
-
-      batchOperationNotifier(courseBatch);
+      return true;
     }
+
+    return false;
   }
 
-  private void batchOperationNotifier(CourseBatch courseBatch) {
+  private void batchOperationNotifier(CourseBatch courseBatch, CourseBatch currentBatch) {
     Request batchNotification = new Request();
     batchNotification.setOperation(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue());
     Map<String, Object> batchNotificationMap = new HashMap<>();
-    batchNotificationMap.put(JsonKey.COURSE_BATCH, courseBatch);
+    if (currentBatch != null) {
+      batchNotificationMap.put(JsonKey.NEW, courseBatch);
+      batchNotificationMap.put(JsonKey.COURSE_BATCH, currentBatch);
+    } else {
+      batchNotificationMap.put(JsonKey.COURSE_BATCH, courseBatch);
+    }
     batchNotificationMap.put(JsonKey.OPERATION_TYPE, JsonKey.ADD);
     batchNotification.setRequest(batchNotificationMap);
     tellToAnother(batchNotification);
@@ -193,23 +206,9 @@ public class CourseBatchManagementActor extends BaseActor {
     rollUp.put("l1", courseBatch.getCourseId());
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
 
-    if (PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)
-            != null
-        && (Boolean.parseBoolean(
-            PropertiesCache.getInstance()
-                .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
-      batchOperationUpdateNotifier(courseBatch, oldBatch);
+    if (courseNotificationActive()) {
+      batchOperationNotifier(courseBatch, oldBatch);
     }
-  }
-
-  private void batchOperationUpdateNotifier(CourseBatch courseBatch, CourseBatch oldBatch) {
-    Request batchNotification = new Request();
-    batchNotification.setOperation(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue());
-    Map<String, Object> batchNotificationMap = new HashMap<>();
-    batchNotificationMap.put(JsonKey.NEW, courseBatch);
-    batchNotificationMap.put(JsonKey.COURSE_BATCH, oldBatch);
-    batchNotification.setRequest(batchNotificationMap);
-    tellToAnother(batchNotification);
   }
 
   private void checkBatchStatus(CourseBatch courseBatch) {
@@ -338,12 +337,8 @@ public class CourseBatchManagementActor extends BaseActor {
     Request request = new Request();
     request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
     request.getRequest().put(JsonKey.BATCH, courseBatchObject);
-    if (PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)
-            != null
-        && (Boolean.parseBoolean(
-            PropertiesCache.getInstance()
-                .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
-      batchOperationNotifier(courseBatch);
+    if (courseNotificationActive()) {
+      batchOperationNotifier(courseBatch, null);
     }
     try {
       ProjectLogger.log(

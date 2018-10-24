@@ -1,9 +1,14 @@
 package org.sunbird.user.service;
 
+import java.util.Map;
 import org.sunbird.common.request.Request;
+import org.sunbird.models.user.User;
 
 public interface UserService {
 
-  void validateUserId(Request request);
+  Map<String, Object> getUserByUserIdAndOrgId(String userId, String orgId);
 
+  User getUserById(String userId);
+
+  void validateUserId(Request request);
 }

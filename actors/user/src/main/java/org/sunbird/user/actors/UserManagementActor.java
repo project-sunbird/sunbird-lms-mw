@@ -1408,6 +1408,7 @@ public class UserManagementActor extends BaseActor {
           cassandraOperation.insertRecord(
               usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
     } catch (Exception ex) {
+      ProjectLogger.log("Exception occurred while inserting user to db: " + ex);
       throw ex;
     } finally {
       if (null == response && isSSOEnabled) {

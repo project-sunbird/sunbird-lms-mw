@@ -71,7 +71,7 @@ public class JobProfileManagementActor extends BaseActor {
         if (jobProfileMap.containsKey(JsonKey.ADDRESS)) {
           addrResponse = upsertJobProfileAddressDetails(jobProfileMap, createdBy);
         }
-        updateJobProfileDetails(requestMap, jobProfileMap, addrResponse, createdBy);
+        updateJobProfileDetails(jobProfileMap, addrResponse, createdBy);
       }
     }
     saveUserJobProfileToEs(requestMap);
@@ -85,10 +85,7 @@ public class JobProfileManagementActor extends BaseActor {
   }
 
   private void updateJobProfileDetails(
-      Map<String, Object> requestMap,
-      Map<String, Object> jobProfileMap,
-      Response addrResponse,
-      String createdBy) {
+      Map<String, Object> jobProfileMap, Response addrResponse, String createdBy) {
     if (null != addrResponse
         && ((String) addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       jobProfileMap.put(JsonKey.ADDRESS_ID, addrResponse.get(JsonKey.ADDRESS_ID));

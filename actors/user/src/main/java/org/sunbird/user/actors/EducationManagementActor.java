@@ -73,7 +73,7 @@ public class EducationManagementActor extends BaseActor {
         if (educationDetailsMap.containsKey(JsonKey.ADDRESS)) {
           addrResponse = upsertEducationAddressDetails(educationDetailsMap, createdBy);
         }
-        updateEducationDetails(requestMap, educationDetailsMap, addrResponse, createdBy);
+        updateEducationDetails(educationDetailsMap, addrResponse, createdBy);
       }
     }
     saveUserEducationToEs(requestMap);
@@ -87,10 +87,7 @@ public class EducationManagementActor extends BaseActor {
   }
 
   private void updateEducationDetails(
-      Map<String, Object> requestMap,
-      Map<String, Object> educationDetailsMap,
-      Response addrResponse,
-      String createdBy) {
+      Map<String, Object> educationDetailsMap, Response addrResponse, String createdBy) {
     if (null != addrResponse
         && ((String) addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       educationDetailsMap.put(JsonKey.ADDRESS_ID, addrResponse.get(JsonKey.ADDRESS_ID));

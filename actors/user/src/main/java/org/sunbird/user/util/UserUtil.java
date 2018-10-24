@@ -45,6 +45,8 @@ public class UserUtil {
   private static SSOManager ssoManager = SSOServiceFactory.getInstance();
   private static PropertiesCache propertiesCache = PropertiesCache.getInstance();
 
+  private UserUtil() {}
+
   @SuppressWarnings("unchecked")
   public static void checkPhoneUniqueness(User user, String opType) {
     // Get Phone configuration if not found , by default phone will be unique across

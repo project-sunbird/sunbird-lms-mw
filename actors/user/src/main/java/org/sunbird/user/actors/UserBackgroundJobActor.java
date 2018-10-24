@@ -61,6 +61,7 @@ public class UserBackgroundJobActor extends BaseActor {
         break;
       default:
         onReceiveUnsupportedOperation("UserBackgroundJobActor");
+        break;
     }
   }
 

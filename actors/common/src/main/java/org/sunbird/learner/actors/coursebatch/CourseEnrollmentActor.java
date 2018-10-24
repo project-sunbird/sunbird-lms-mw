@@ -8,7 +8,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -109,14 +108,22 @@ public class CourseEnrollmentActor extends BaseActor {
           LoggerEnum.INFO.name());
       UserCoursesService.sync(courseMap, (String) courseMap.get(JsonKey.ID));
     }
+    if (courseNotificationActive()) {
+      batchOperationNotifier(courseMap, courseBatchResult, JsonKey.REMOVE);
+    }
+    generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
+  }
+
+  private boolean courseNotificationActive() {
     if (PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)
             != null
         && (Boolean.parseBoolean(
             PropertiesCache.getInstance()
                 .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
-      batchOperationNotifier(courseMap, courseBatchResult, JsonKey.REMOVE);
+      return true;
     }
-    generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
+
+    return false;
   }
 
   private Map<String, Object> createUserCourseMap(
@@ -132,7 +139,8 @@ public class CourseEnrollmentActor extends BaseActor {
           courseBatchResult.getCourseAdditionalInfo().get(JsonKey.COURSE_LOGO_URL));
       courseMap.put(JsonKey.CONTENT_ID, (String) courseMap.get(JsonKey.COURSE_ID));
       courseMap.put(
-          JsonKey.COURSE_NAME, courseBatchResult.getCourseAdditionalInfo().get(JsonKey.COURSE_NAME));
+          JsonKey.COURSE_NAME,
+          courseBatchResult.getCourseAdditionalInfo().get(JsonKey.COURSE_NAME));
       courseMap.put(
           JsonKey.DESCRIPTION,
           courseBatchResult.getCourseAdditionalInfo().get(JsonKey.DESCRIPTION));
@@ -170,12 +178,7 @@ public class CourseEnrollmentActor extends BaseActor {
     UserCoursesService.sync(updateAttributes, userCourseResult.getId());
     generateAndProcessTelemetryEvent(request, "user.batch.course.unenroll");
 
-    if (PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)
-            != null
-        && (Boolean.parseBoolean(
-            PropertiesCache.getInstance()
-                .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE)))) {
-
+    if (courseNotificationActive()) {
       batchOperationNotifier(request, courseBatchResult, JsonKey.REMOVE);
     }
   }

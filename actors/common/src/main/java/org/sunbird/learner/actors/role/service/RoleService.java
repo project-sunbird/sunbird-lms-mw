@@ -14,6 +14,8 @@ import org.sunbird.learner.actors.role.group.service.RoleGroupService;
 import org.sunbird.learner.actors.url.action.service.UrlActionService;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.models.role.Role;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 
 public class RoleService {
 
@@ -21,49 +23,60 @@ public class RoleService {
 
   @SuppressWarnings("unchecked")
   public static Response getUserRoles() {
-    Response mergeResponse = new Response();
-    List<Map<String, Object>> resposnemap = new ArrayList<>();
+    Response response = new Response();
+    List<Map<String, Object>> roleMapList = new ArrayList<>();
     List<Role> roleList = roleDao.getRoles();
-    if (roleList != null && !(roleList.isEmpty())) {
-      // This map will have all the master roles
+    
+    if (CollectionUtils.isNotEmpty(roleList)) {
+      
       for (Role role : roleList) {
-        Map<String, Object> roleResponseMap = new HashMap<>();
-        roleResponseMap.put(JsonKey.ID, role.getId());
-        roleResponseMap.put(JsonKey.NAME, role.getName());
+        Map<String, Object> roleMap = new HashMap<>();
+        roleMap.put(JsonKey.ID, role.getId());
+        roleMap.put(JsonKey.NAME, role.getName());
         List<String> roleGroupIdList = role.getRoleGroupId();
-        List<Map<String, Object>> actionGroupListMap = new ArrayList<>();
-        roleResponseMap.put(JsonKey.ACTION_GROUPS, actionGroupListMap);
-        Map<String, Object> subRoleResponseMap = null;
+        
+        List<Map<String, Object>> actionGroupMapList = new ArrayList<>();
+        roleMap.put(JsonKey.ACTION_GROUPS, actionGroupMapList);
+        
+        Map<String, Object> actionGroupMap = null;
         for (String roleGroupId : roleGroupIdList) {
-          subRoleResponseMap = new HashMap<>();
-          Map<String, Object> subRoleMap = RoleGroupService.getRoleGroupMap(roleGroupId);
-          List<String> subRole = (List) subRoleMap.get(JsonKey.URL_ACTION_ID);
-          List<Map<String, Object>> roleUrlResponList = new ArrayList<>();
-          subRoleResponseMap.put(JsonKey.ID, subRoleMap.get(JsonKey.ID));
-          subRoleResponseMap.put(JsonKey.NAME, subRoleMap.get(JsonKey.NAME));
+          Map<String, Object> roleGroupMap = RoleGroupService.getRoleGroupMap(roleGroupId);
 
-          for (String rolemap : subRole) {
-            roleUrlResponList.add(UrlActionService.getUrlActionMap(rolemap));
+          actionGroupMap = new HashMap<>();
+          actionGroupMap.put(JsonKey.ID, roleGroupMap.get(JsonKey.ID));
+          actionGroupMap.put(JsonKey.NAME, roleGroupMap.get(JsonKey.NAME));
+
+          List<Map<String, Object>> urlActionMapList = new ArrayList<>();
+          List<String> urlActionIds = (List) roleGroupMap.get(JsonKey.URL_ACTION_ID);
+          
+          for (String urlActionId : urlActionIds) {
+            urlActionMapList.add(UrlActionService.getUrlActionMap(urlActionId));
           }
-          if (subRoleResponseMap.containsKey(JsonKey.ACTIONS)) {
-            List<Map<String, Object>> listOfMap =
-                (List<Map<String, Object>>) subRoleResponseMap.get(JsonKey.ACTIONS);
-            listOfMap.addAll(roleUrlResponList);
+          
+          if (actionGroupMap.containsKey(JsonKey.ACTIONS)) {
+            List<Map<String, Object>> actionsMap =
+                (List<Map<String, Object>>) actionGroupMap.get(JsonKey.ACTIONS);
+            actionsMap.addAll(urlActionMapList);
           } else {
-            subRoleResponseMap.put(JsonKey.ACTIONS, roleUrlResponList);
+            actionGroupMap.put(JsonKey.ACTIONS, urlActionMapList);
           }
-          actionGroupListMap.add(subRoleResponseMap);
+          
+          actionGroupMapList.add(actionGroupMap);
         }
-        resposnemap.add(roleResponseMap);
+        
+        roleMapList.add(roleMap);
       }
+      
     }
-    mergeResponse.getResult().put(JsonKey.ROLES, resposnemap);
-    return mergeResponse;
+    
+    response.getResult().put(JsonKey.ROLES, roleMapList);
+    return response;
   }
 
   public static void validateRoles(List<String> roleList) {
     Map<String, Object> roleMap = DataCacheHandler.getRoleMap();
-    if (null != roleMap && !roleMap.isEmpty()) {
+    
+    if (MapUtils.isNotEmpty(roleMap)) {
       for (String role : roleList) {
         if (null == roleMap.get(role.trim())) {
           throw new ProjectCommonException(
@@ -74,4 +87,5 @@ public class RoleService {
       }
     }
   }
+
 }

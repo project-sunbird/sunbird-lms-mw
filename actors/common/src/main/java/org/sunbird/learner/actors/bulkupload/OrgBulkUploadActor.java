@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.util.BulkUploadActorOperation;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -19,7 +21,7 @@ import org.sunbird.learner.util.Util;
 public class OrgBulkUploadActor extends BaseBulkUploadActor {
 
   private String[] bulkOrgAllowedFields = {
-    JsonKey.ORG_ID,
+    JsonKey.ID,
     JsonKey.ORGANISATION_NAME,
     JsonKey.EXTERNAL_ID,
     JsonKey.DESCRIPTION,
@@ -55,9 +57,13 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
       fileByteArray = (byte[]) req.get(JsonKey.FILE);
     }
     HashMap<String, Object> additionalInfo = new HashMap<>();
-    Map<String, Object> user = Util.getUserbyUserId((String) req.get(JsonKey.CREATED_BY));
+    Map<String, Object> user = getUser((String) req.get(JsonKey.CREATED_BY));
     if (user != null) {
-      additionalInfo.put(JsonKey.CHANNEL, user.get(JsonKey.CHANNEL));
+      String rootOrgId = (String) user.get(JsonKey.ROOT_ORG_ID);
+      Map<String, Object> org = getOrg(rootOrgId);
+      if (org != null) {
+        additionalInfo.put(JsonKey.CHANNEL, org.get(JsonKey.CHANNEL));
+      }
     }
     Integer recordCount = validateAndParseRecords(fileByteArray, processId, additionalInfo);
     processBulkUpload(
@@ -65,5 +71,29 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
         processId,
         bulkUploadProcess,
         BulkUploadActorOperation.ORG_BULK_UPLOAD_BACKGROUND_JOB.getValue());
+  }
+
+  Map<String, Object> getUser(String userId) {
+    Map<String, Object> result =
+        ElasticSearchUtil.getDataByIdentifier(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(),
+            userId);
+    if (result != null || result.size() > 0) {
+      return result;
+    }
+    return null;
+  }
+
+  Map<String, Object> getOrg(String orgId) {
+    Map<String, Object> result =
+        ElasticSearchUtil.getDataByIdentifier(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.organisation.getTypeName(),
+            orgId);
+    if (result != null || result.size() > 0) {
+      return result;
+    }
+    return null;
   }
 }

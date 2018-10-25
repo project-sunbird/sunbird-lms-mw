@@ -48,31 +48,16 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
   }
 
   private void processTasks(List<BulkUploadProcessTask> bulkUploadProcessTasks) {
-    List<BulkUploadProcessTask> nonRootOrg = new ArrayList<>();
     for (BulkUploadProcessTask task : bulkUploadProcessTasks) {
       try {
         if (task.getStatus() != null
             && task.getStatus() != ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
-          Map<String, Object> row = mapper.readValue(task.getData(), Map.class);
-          if (row.containsKey(JsonKey.IS_ROOT_ORG)
-              && row.get(JsonKey.IS_ROOT_ORG) != null
-              && Boolean.valueOf((String) row.get(JsonKey.IS_ROOT_ORG))) {
-            processOrg(task);
-            task.setLastUpdatedOn(new Timestamp(System.currentTimeMillis()));
-            task.setIterationId(task.getIterationId() + 1);
-          } else {
-            nonRootOrg.add(task);
-          }
+          processOrg(task);
+          task.setLastUpdatedOn(new Timestamp(System.currentTimeMillis()));
+          task.setIterationId(task.getIterationId() + 1);
         }
       } catch (Exception ex) {
         task.setFailureResult(ex.getMessage());
-      }
-    }
-    if (!nonRootOrg.isEmpty()) {
-      for (BulkUploadProcessTask task : nonRootOrg) {
-        processOrg(task);
-        task.setLastUpdatedOn(new Timestamp(System.currentTimeMillis()));
-        task.setIterationId(task.getIterationId() + 1);
       }
     }
   }
@@ -81,8 +66,9 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
     ProjectLogger.log("OrgBulkUploadBackGroundJobActor: processOrg called", LoggerEnum.INFO);
     String data = task.getData();
     try {
-      Organisation organisation = mapper.readValue(data, Organisation.class);
-
+      Map<String, Object> orgMap = mapper.readValue(data, Map.class);
+      Organisation organisation = mapper.convertValue(orgMap, Organisation.class);
+      organisation.setId((String) orgMap.get(JsonKey.ORGANISATION_ID));
       if (StringUtils.isEmpty(organisation.getId())) {
         callCreateOrg(organisation, task);
       } else {
@@ -129,6 +115,7 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
       throws JsonProcessingException {
     Map<String, Object> row = mapper.convertValue(org, Map.class);
     try {
+      row.put(JsonKey.ORGANISATION_ID, org.getId());
       orgClient.updateOrg(getActorRef(ActorOperations.UPDATE_ORG.getValue()), row);
     } catch (Exception ex) {
       ProjectLogger.log(

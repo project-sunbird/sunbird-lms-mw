@@ -60,9 +60,9 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       return;
     }
 
-    Integer status = bulkUploadProcess.getStatus();
-    if (!(status.equals(ProjectUtil.BulkProcessStatus.COMPLETED.getValue())
-        || status.equals(ProjectUtil.BulkProcessStatus.INTERRUPT.getValue()))) {
+    int status = bulkUploadProcess.getStatus();
+    if (!(ProjectUtil.BulkProcessStatus.COMPLETED.getValue() == status)
+        || ProjectUtil.BulkProcessStatus.INTERRUPT.getValue() == status) {
       try {
         function.apply(bulkUploadProcess);
       } catch (Exception e) {

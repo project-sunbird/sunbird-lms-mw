@@ -21,7 +21,7 @@ import org.sunbird.learner.util.Util;
 public class OrgBulkUploadActor extends BaseBulkUploadActor {
 
   private String[] bulkOrgAllowedFields = {
-    JsonKey.ID,
+    JsonKey.ORGANISATION_ID,
     JsonKey.ORGANISATION_NAME,
     JsonKey.EXTERNAL_ID,
     JsonKey.DESCRIPTION,

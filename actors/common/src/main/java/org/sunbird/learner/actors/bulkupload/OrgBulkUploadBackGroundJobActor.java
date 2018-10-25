@@ -66,7 +66,9 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
     ProjectLogger.log("OrgBulkUploadBackGroundJobActor: processOrg called", LoggerEnum.INFO);
     String data = task.getData();
     try {
-      Organisation organisation = mapper.readValue(data, Organisation.class);
+      Map<String, Object> orgMap = mapper.readValue(data, Map.class);
+      Organisation organisation = mapper.convertValue(orgMap, Organisation.class);
+      organisation.setId((String) orgMap.get(JsonKey.ORGANISATION_ID));
       if (StringUtils.isEmpty(organisation.getId())) {
         callCreateOrg(organisation, task);
       } else {

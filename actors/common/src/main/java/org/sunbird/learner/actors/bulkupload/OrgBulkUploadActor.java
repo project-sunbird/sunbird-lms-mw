@@ -21,20 +21,10 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
   private String[] bulkOrgAllowedFields = {
     JsonKey.ORG_ID,
     JsonKey.ORGANISATION_NAME,
-    JsonKey.CHANNEL,
-    JsonKey.IS_ROOT_ORG,
-    JsonKey.PROVIDER,
     JsonKey.EXTERNAL_ID,
     JsonKey.DESCRIPTION,
-    JsonKey.HOME_URL,
-    JsonKey.ORG_CODE,
-    JsonKey.ORG_TYPE,
-    JsonKey.PREFERRED_LANGUAGE,
-    JsonKey.THEME,
-    JsonKey.CONTACT_DETAILS,
-    JsonKey.LOC_ID,
-    JsonKey.HASHTAGID,
-    JsonKey.LOCATION_CODE
+    JsonKey.LOCATION_CODE,
+    JsonKey.STATUS
   };
 
   @Override
@@ -64,7 +54,12 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
     if (null != req.get(JsonKey.FILE)) {
       fileByteArray = (byte[]) req.get(JsonKey.FILE);
     }
-    Integer recordCount = validateAndParseRecords(fileByteArray, processId, new HashMap<>());
+    HashMap<String, Object> additionalInfo = new HashMap<>();
+    Map<String, Object> user = Util.getUserbyUserId((String) req.get(JsonKey.CREATED_BY));
+    if (user != null) {
+      additionalInfo.put(JsonKey.CHANNEL, user.get(JsonKey.CHANNEL));
+    }
+    Integer recordCount = validateAndParseRecords(fileByteArray, processId, additionalInfo);
     processBulkUpload(
         recordCount,
         processId,

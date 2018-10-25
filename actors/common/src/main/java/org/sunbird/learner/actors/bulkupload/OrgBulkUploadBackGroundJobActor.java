@@ -113,6 +113,7 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
       throws JsonProcessingException {
     Map<String, Object> row = mapper.convertValue(org, Map.class);
     try {
+      row.put(JsonKey.ORGANISATION_ID, org.getId());
       orgClient.updateOrg(getActorRef(ActorOperations.UPDATE_ORG.getValue()), row);
     } catch (Exception ex) {
       ProjectLogger.log(

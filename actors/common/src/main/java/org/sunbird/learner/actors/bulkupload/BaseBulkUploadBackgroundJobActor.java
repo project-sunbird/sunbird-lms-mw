@@ -2,7 +2,10 @@ package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.text.MessageFormat;
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import org.sunbird.common.Constants;
 import org.sunbird.common.models.util.*;
@@ -12,28 +15,31 @@ import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 
 public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadActor {
 
-  public void setSuccessTaskStatus(
-      BulkUploadProcessTask task, Integer status, Map<String, Object> row, String action)
+  protected void setSuccessTaskStatus(
+      BulkUploadProcessTask task,
+      ProjectUtil.BulkProcessStatus status,
+      Map<String, Object> row,
+      String action)
       throws JsonProcessingException {
     row.put(JsonKey.OPERATION, action);
     task.setSuccessResult(mapper.writeValueAsString(row));
-    task.setStatus(status);
+    task.setStatus(status.getValue());
   }
 
-  public void setTaskStatus(
+  protected void setTaskStatus(
       BulkUploadProcessTask task,
-      Integer status,
+      ProjectUtil.BulkProcessStatus status,
       String failureMessage,
       Map<String, Object> row,
       String action)
       throws JsonProcessingException {
     row.put(JsonKey.OPERATION, action);
-    if (ProjectUtil.BulkProcessStatus.COMPLETED.getValue() == status) {
+    if (ProjectUtil.BulkProcessStatus.COMPLETED.getValue() == status.getValue()) {
       task.setSuccessResult(mapper.writeValueAsString(row));
-      task.setStatus(status);
-    } else if (ProjectUtil.BulkProcessStatus.FAILED.getValue() == status) {
+      task.setStatus(status.getValue());
+    } else if (ProjectUtil.BulkProcessStatus.FAILED.getValue() == status.getValue()) {
       row.put(JsonKey.ERROR_MSG, failureMessage);
-      task.setStatus(status);
+      task.setStatus(status.getValue());
       task.setFailureResult(mapper.writeValueAsString(row));
     }
   }
@@ -42,7 +48,7 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
     String processId = (String) request.get(JsonKey.PROCESS_ID);
     String logMessagePrefix =
         MessageFormat.format(
-            "BaseBulkUploadBackGroundJobActor:handleBulkUploadBackround:{0}: ", processId);
+            "BaseBulkUploadBackGroundJobActor:handleBulkUploadBackground:{0}: ", processId);
 
     ProjectLogger.log(logMessagePrefix + "called", LoggerEnum.INFO);
 
@@ -86,9 +92,9 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       List<BulkUploadProcessTask> tasks = bulkUploadProcessTaskDao.readByPrimaryKeys(queryMap);
       function.apply(tasks);
       for (BulkUploadProcessTask task : tasks) {
-        if (task.getStatus() == ProjectUtil.BulkProcessStatus.FAILED.getValue()) {
+        if (task.getStatus().equals(ProjectUtil.BulkProcessStatus.FAILED.getValue())) {
           failureList.add(mapper.convertValue(task.getData(), Map.class));
-        } else if (task.getStatus() == ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
+        } else if (task.getStatus().equals(ProjectUtil.BulkProcessStatus.COMPLETED.getValue())) {
           successList.add(mapper.convertValue(task.getData(), Map.class));
         }
       }

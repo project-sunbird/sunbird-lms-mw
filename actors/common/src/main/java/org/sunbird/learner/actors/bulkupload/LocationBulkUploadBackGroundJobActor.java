@@ -17,14 +17,8 @@ import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.actorutil.location.LocationClient;
 import org.sunbird.actorutil.location.impl.LocationClientImpl;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.util.GeoLocationJsonKey;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LocationActorOperation;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
-import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -94,7 +88,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
                   getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
                   (String) row.get(GeoLocationJsonKey.CODE));
         } catch (Exception ex) {
-          setTaskStatus(task, BulkProcessStatus.FAILED.getValue(), ex.getMessage(), row, null);
+          setTaskStatus(task, BulkProcessStatus.FAILED, ex.getMessage(), row, null);
         }
         if (null == location) {
           callCreateLocation(row, task);
@@ -104,7 +98,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
       } else {
         setTaskStatus(
             task,
-            BulkProcessStatus.FAILED.getValue(),
+            BulkProcessStatus.FAILED,
             MessageFormat.format(
                 ResponseCode.mandatoryParamsMissing.getErrorMessage(), GeoLocationJsonKey.CODE),
             row,
@@ -143,7 +137,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
       row.put(GeoLocationJsonKey.LOCATION_TYPE, response.get(GeoLocationJsonKey.LOCATION_TYPE));
       setTaskStatus(
           task,
-          BulkProcessStatus.FAILED.getValue(),
+          BulkProcessStatus.FAILED,
           MessageFormat.format(
               ResponseCode.unupdatableField.getErrorMessage(), GeoLocationJsonKey.LOCATION_TYPE),
           row,
@@ -161,13 +155,12 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
               + ex.getMessage(),
           LoggerEnum.INFO);
       row.put(JsonKey.ERROR_MSG, ex.getMessage());
-      setTaskStatus(
-          task, BulkProcessStatus.FAILED.getValue(), ex.getMessage(), row, JsonKey.UPDATE);
+      setTaskStatus(task, BulkProcessStatus.FAILED, ex.getMessage(), row, JsonKey.UPDATE);
     }
 
     row.put(GeoLocationJsonKey.LOCATION_TYPE, locationType);
     task.setData(mapper.writeValueAsString(row));
-    setSuccessTaskStatus(task, BulkProcessStatus.COMPLETED.getValue(), row, JsonKey.UPDATE);
+    setSuccessTaskStatus(task, BulkProcessStatus.COMPLETED, row, JsonKey.UPDATE);
   }
 
   private Boolean areLocationTypesEqual(String locationType, String responseType) {
@@ -191,8 +184,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
           "LocationBulkUploadBackGroundJobActor : callCreateLocation - got exception "
               + ex.getMessage(),
           LoggerEnum.INFO);
-      setTaskStatus(
-          task, BulkProcessStatus.FAILED.getValue(), ex.getMessage(), row, JsonKey.CREATE);
+      setTaskStatus(task, BulkProcessStatus.FAILED, ex.getMessage(), row, JsonKey.CREATE);
       return;
     }
 
@@ -202,13 +194,13 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
           LoggerEnum.ERROR);
       setTaskStatus(
           task,
-          BulkProcessStatus.FAILED.getValue(),
+          BulkProcessStatus.FAILED,
           ResponseCode.internalError.getErrorMessage(),
           row,
           JsonKey.CREATE);
     } else {
       row.put(JsonKey.ID, locationId);
-      setSuccessTaskStatus(task, BulkProcessStatus.COMPLETED.getValue(), row, JsonKey.CREATE);
+      setSuccessTaskStatus(task, BulkProcessStatus.COMPLETED, row, JsonKey.CREATE);
     }
   }
 

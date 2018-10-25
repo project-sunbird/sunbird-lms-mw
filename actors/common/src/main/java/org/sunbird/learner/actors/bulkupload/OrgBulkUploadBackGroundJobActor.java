@@ -106,11 +106,7 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
               + ex.getMessage(),
           LoggerEnum.INFO);
       setTaskStatus(
-          task,
-          ProjectUtil.BulkProcessStatus.FAILED.getValue(),
-          ex.getMessage(),
-          row,
-          JsonKey.CREATE);
+          task, ProjectUtil.BulkProcessStatus.FAILED, ex.getMessage(), row, JsonKey.CREATE);
       return;
     }
 
@@ -119,14 +115,13 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
           "OrgBulkUploadBackGroundJobActor:callCreateOrg: Org ID is null !", LoggerEnum.ERROR);
       setTaskStatus(
           task,
-          ProjectUtil.BulkProcessStatus.FAILED.getValue(),
+          ProjectUtil.BulkProcessStatus.FAILED,
           ResponseCode.internalError.getErrorMessage(),
           row,
           JsonKey.CREATE);
     } else {
       row.put(JsonKey.ID, orgId);
-      setSuccessTaskStatus(
-          task, ProjectUtil.BulkProcessStatus.COMPLETED.getValue(), row, JsonKey.CREATE);
+      setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, row, JsonKey.CREATE);
     }
   }
 
@@ -142,15 +137,10 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
           LoggerEnum.INFO);
       row.put(JsonKey.ERROR_MSG, ex.getMessage());
       setTaskStatus(
-          task,
-          ProjectUtil.BulkProcessStatus.FAILED.getValue(),
-          ex.getMessage(),
-          row,
-          JsonKey.UPDATE);
+          task, ProjectUtil.BulkProcessStatus.FAILED, ex.getMessage(), row, JsonKey.UPDATE);
     }
 
     task.setData(mapper.writeValueAsString(row));
-    setSuccessTaskStatus(
-        task, ProjectUtil.BulkProcessStatus.COMPLETED.getValue(), row, JsonKey.UPDATE);
+    setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, row, JsonKey.UPDATE);
   }
 }

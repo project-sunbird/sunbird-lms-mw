@@ -5,12 +5,14 @@ import java.util.HashMap;
 import java.util.Map;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.BulkUploadActorOperation;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.util.Util;
 
@@ -64,6 +66,11 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
       if (org != null) {
         additionalInfo.put(JsonKey.CHANNEL, org.get(JsonKey.CHANNEL));
       }
+    }
+    if (!additionalInfo.containsKey(JsonKey.CHANNEL)) {
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.errorNoRootOrgAssociated,
+          ResponseCode.errorNoRootOrgAssociated.getErrorMessage());
     }
     Integer recordCount = validateAndParseRecords(fileByteArray, processId, additionalInfo);
     processBulkUpload(

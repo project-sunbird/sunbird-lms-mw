@@ -78,8 +78,7 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
   }
 
   private void processOrg(BulkUploadProcessTask task) {
-    ProjectLogger.log(
-        "OrgBulkUploadBackGroundJobActor: processOrg called", LoggerEnum.INFO);
+    ProjectLogger.log("OrgBulkUploadBackGroundJobActor: processOrg called", LoggerEnum.INFO);
     String data = task.getData();
     try {
       Organisation organisation = mapper.readValue(data, Organisation.class);
@@ -103,31 +102,26 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
       orgId = orgClient.createOrg(getActorRef(ActorOperations.CREATE_ORG.getValue()), row);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "OrgBulkUploadBackGroundJobActor:callCreateOrg: Exception occurred with error message = " + ex.getMessage(),
+          "OrgBulkUploadBackGroundJobActor:callCreateOrg: Exception occurred with error message = "
+              + ex.getMessage(),
           LoggerEnum.INFO);
       setTaskStatus(
-          task,
-          ProjectUtil.BulkProcessStatus.FAILED.getValue(),
-          ex.getMessage(),
-          row,
-          JsonKey.CREATE);
+          task, ProjectUtil.BulkProcessStatus.FAILED, ex.getMessage(), row, JsonKey.CREATE);
       return;
     }
 
     if (StringUtils.isEmpty(orgId)) {
       ProjectLogger.log(
-          "OrgBulkUploadBackGroundJobActor:callCreateOrg: Org ID is null !",
-          LoggerEnum.ERROR);
+          "OrgBulkUploadBackGroundJobActor:callCreateOrg: Org ID is null !", LoggerEnum.ERROR);
       setTaskStatus(
           task,
-          ProjectUtil.BulkProcessStatus.FAILED.getValue(),
+          ProjectUtil.BulkProcessStatus.FAILED,
           ResponseCode.internalError.getErrorMessage(),
           row,
           JsonKey.CREATE);
     } else {
       row.put(JsonKey.ID, orgId);
-      setSuccessTaskStatus(
-          task, ProjectUtil.ProgressStatus.COMPLETED.getValue(), row, JsonKey.CREATE);
+      setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, row, JsonKey.CREATE);
     }
   }
 
@@ -138,19 +132,15 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
       orgClient.updateOrg(getActorRef(ActorOperations.UPDATE_ORG.getValue()), row);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "OrgBulkUploadBackGroundJobActor:callUpdateOrg: Exception occurred with error message = " + ex.getMessage(),
+          "OrgBulkUploadBackGroundJobActor:callUpdateOrg: Exception occurred with error message = "
+              + ex.getMessage(),
           LoggerEnum.INFO);
       row.put(JsonKey.ERROR_MSG, ex.getMessage());
       setTaskStatus(
-          task,
-          ProjectUtil.BulkProcessStatus.FAILED.getValue(),
-          ex.getMessage(),
-          row,
-          JsonKey.UPDATE);
+          task, ProjectUtil.BulkProcessStatus.FAILED, ex.getMessage(), row, JsonKey.UPDATE);
     }
 
     task.setData(mapper.writeValueAsString(row));
-    setSuccessTaskStatus(
-        task, ProjectUtil.ProgressStatus.COMPLETED.getValue(), row, JsonKey.UPDATE);
+    setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, row, JsonKey.UPDATE);
   }
 }

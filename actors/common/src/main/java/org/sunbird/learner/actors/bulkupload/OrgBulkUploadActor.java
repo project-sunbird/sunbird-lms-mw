@@ -31,7 +31,10 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
     JsonKey.ORG_TYPE,
     JsonKey.PREFERRED_LANGUAGE,
     JsonKey.THEME,
-    JsonKey.CONTACT_DETAILS
+    JsonKey.CONTACT_DETAILS,
+    JsonKey.LOC_ID,
+    JsonKey.HASHTAGID,
+    JsonKey.LOCATION_CODE
   };
 
   @Override

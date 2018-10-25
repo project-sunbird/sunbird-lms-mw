@@ -85,11 +85,13 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       queryMap.put(BulkUploadJsonKey.SEQUENCE_ID, sequenceRange);
       List<BulkUploadProcessTask> tasks = bulkUploadProcessTaskDao.readByPrimaryKeys(queryMap);
       function.apply(tasks);
-      for (BulkUploadProcessTask task : tasks)
-        if (task.getStatus() == ProjectUtil.BulkProcessStatus.FAILED.getValue())
+      for (BulkUploadProcessTask task : tasks) {
+        if (task.getStatus() == ProjectUtil.BulkProcessStatus.FAILED.getValue()) {
           failureList.add(mapper.convertValue(task.getData(), Map.class));
-        else if (task.getStatus() == ProjectUtil.BulkProcessStatus.COMPLETED.getValue())
+        } else if (task.getStatus() == ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
           successList.add(mapper.convertValue(task.getData(), Map.class));
+        }
+      }
       performBatchUpdate(tasks);
       sequence = nextSequence;
     }

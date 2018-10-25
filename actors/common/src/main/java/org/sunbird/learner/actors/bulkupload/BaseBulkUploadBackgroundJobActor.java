@@ -1,6 +1,8 @@
 package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -58,9 +60,9 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       return;
     }
 
-    Integer status = bulkUploadProcess.getStatus();
-    if (!(status == (ProjectUtil.BulkProcessStatus.COMPLETED.getValue())
-        || status == (ProjectUtil.BulkProcessStatus.INTERRUPT.getValue()))) {
+    int status = bulkUploadProcess.getStatus();
+    if (!(ProjectUtil.BulkProcessStatus.COMPLETED.getValue() == status)
+        || ProjectUtil.BulkProcessStatus.INTERRUPT.getValue() == status) {
       try {
         function.apply(bulkUploadProcess);
       } catch (Exception e) {
@@ -92,10 +94,17 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       List<BulkUploadProcessTask> tasks = bulkUploadProcessTaskDao.readByPrimaryKeys(queryMap);
       function.apply(tasks);
       for (BulkUploadProcessTask task : tasks) {
-        if (task.getStatus().equals(ProjectUtil.BulkProcessStatus.FAILED.getValue())) {
-          failureList.add(mapper.convertValue(task.getData(), Map.class));
-        } else if (task.getStatus().equals(ProjectUtil.BulkProcessStatus.COMPLETED.getValue())) {
-          successList.add(mapper.convertValue(task.getData(), Map.class));
+        try {
+          if (task.getStatus().equals(ProjectUtil.BulkProcessStatus.FAILED.getValue())) {
+            failureList.add(
+                mapper.readValue(task.getData(), new TypeReference<Map<String, Object>>() {}));
+          } else if (task.getStatus().equals(ProjectUtil.BulkProcessStatus.COMPLETED.getValue())) {
+            successList.add(
+                mapper.readValue(task.getData(), new TypeReference<Map<String, Object>>() {}));
+          }
+        } catch (IOException e) {
+          ProjectLogger.log(
+              "BaseBulkUploadBackgroundJobActor:processBulkUpload: exception." + e.getMessage(), e);
         }
       }
       performBatchUpdate(tasks);

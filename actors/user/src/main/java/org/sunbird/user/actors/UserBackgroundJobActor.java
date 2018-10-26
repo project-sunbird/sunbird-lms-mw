@@ -19,7 +19,13 @@ import org.sunbird.models.user.User;
 import org.sunbird.user.util.UserUtil;
 
 @ActorConfig(
-  tasks = {},
+  tasks = {
+    "upsertUserDetailsToES",
+    "upsertUserAddressToES",
+    "upsertUserEducationToES",
+    "upsertUserJobProfileToES",
+    "upsertUserOrgDetailsToES"
+  },
   asyncTasks = {
     "upsertUserDetailsToES",
     "upsertUserAddressToES",

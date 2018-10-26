@@ -4,12 +4,10 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.user.util.UserActorOperations;
@@ -27,12 +25,7 @@ public class ProcessOnBoardingMailAndSmsActor extends BaseActor {
         .equalsIgnoreCase(request.getOperation())) {
       sendEmailAndSms(request);
     } else {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.invalidOperationName.getErrorCode(),
-              ResponseCode.invalidOperationName.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+      onReceiveUnsupportedOperation("ProcessOnBoardingMailAndSmsActor");
     }
   }
 

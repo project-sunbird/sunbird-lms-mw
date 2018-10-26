@@ -7,20 +7,18 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.user.util.UserActorOperations;
 
 @ActorConfig(
-  tasks = {},
+  tasks = {"upsertUserEducation"},
   asyncTasks = {"upsertUserEducation"}
 )
 public class EducationManagementActor extends BaseActor {
@@ -36,12 +34,7 @@ public class EducationManagementActor extends BaseActor {
         .equalsIgnoreCase(request.getOperation())) {
       upsertEducationDetails(request);
     } else {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.invalidOperationName.getErrorCode(),
-              ResponseCode.invalidOperationName.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+      onReceiveUnsupportedOperation("EducationManagementActor");
     }
   }
 
@@ -57,7 +50,6 @@ public class EducationManagementActor extends BaseActor {
       String createdBy = (String) requestMap.get(JsonKey.ID);
       Response addrResponse = null;
       if (JsonKey.CREATE.equalsIgnoreCase(operationtype)) {
-        ProjectLogger.log("upsertEducationDetails called");
         educationDetailsMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
         if (educationDetailsMap.containsKey(JsonKey.ADDRESS)) {
           addrResponse = upsertEducationAddressDetails(educationDetailsMap, createdBy);
@@ -81,14 +73,6 @@ public class EducationManagementActor extends BaseActor {
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
-    // saveUserEducationToEs(requestMap);
-  }
-
-  private void saveUserEducationToEs(Map<String, Object> requestMap) {
-    Request userRequest = new Request();
-    userRequest.setOperation(UserActorOperations.UPSERT_USER_EDUCATION_TO_ES.getValue());
-    userRequest.getRequest().putAll(requestMap);
-    tellToAnother(userRequest);
   }
 
   private void updateEducationDetails(

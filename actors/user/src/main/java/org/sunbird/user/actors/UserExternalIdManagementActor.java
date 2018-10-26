@@ -21,7 +21,7 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.user.util.UserActorOperations;
 
 @ActorConfig(
-  tasks = {},
+  tasks = {"upsertUserExternalIdentityDetails"},
   asyncTasks = {"upsertUserExternalIdentityDetails"}
 )
 public class UserExternalIdManagementActor extends BaseActor {

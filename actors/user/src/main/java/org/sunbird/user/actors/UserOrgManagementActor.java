@@ -4,17 +4,15 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.Util;
 import org.sunbird.user.util.UserActorOperations;
 
 @ActorConfig(
-  tasks = {},
+  tasks = {"upsertUserOrgDetails"},
   asyncTasks = {"upsertUserOrgDetails"}
 )
 public class UserOrgManagementActor extends BaseActor {
@@ -26,12 +24,7 @@ public class UserOrgManagementActor extends BaseActor {
         .equalsIgnoreCase(request.getOperation())) {
       upsertUserOrgDetails(request);
     } else {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.invalidOperationName.getErrorCode(),
-              ResponseCode.invalidOperationName.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+      onReceiveUnsupportedOperation("UserOrgManagementActor");
     }
   }
 
@@ -58,13 +51,5 @@ public class UserOrgManagementActor extends BaseActor {
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
-    // saveUserOrgDetailsToEs(requestMap);
-  }
-
-  private void saveUserOrgDetailsToEs(Map<String, Object> requestMap) {
-    Request userRequest = new Request();
-    userRequest.setOperation(UserActorOperations.UPSERT_USER_ORG_DETAILS_TO_ES.getValue());
-    userRequest.getRequest().putAll(requestMap);
-    tellToAnother(userRequest);
   }
 }

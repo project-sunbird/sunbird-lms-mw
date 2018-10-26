@@ -6,20 +6,18 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.user.util.UserActorOperations;
 
 @ActorConfig(
-  tasks = {},
+  tasks = {"upsertUserJobProfile"},
   asyncTasks = {"upsertUserJobProfile"}
 )
 public class JobProfileManagementActor extends BaseActor {
@@ -35,12 +33,7 @@ public class JobProfileManagementActor extends BaseActor {
         .equalsIgnoreCase(request.getOperation())) {
       upsertJobProfileDetails(request);
     } else {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.invalidOperationName.getErrorCode(),
-              ResponseCode.invalidOperationName.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+      onReceiveUnsupportedOperation("JobProfileManagementActor");
     }
   }
 
@@ -55,7 +48,6 @@ public class JobProfileManagementActor extends BaseActor {
       String createdBy = (String) requestMap.get(JsonKey.CREATED_BY);
       Response addrResponse = null;
       if (JsonKey.CREATE.equalsIgnoreCase(operationtype)) {
-        ProjectLogger.log("upsertJobProfileDetails called");
         jobProfileMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
         if (jobProfileMap.containsKey(JsonKey.ADDRESS)) {
           addrResponse = upsertJobProfileAddressDetails(jobProfileMap, createdBy);
@@ -78,14 +70,6 @@ public class JobProfileManagementActor extends BaseActor {
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
-    // saveUserJobProfileToEs(requestMap);
-  }
-
-  private void saveUserJobProfileToEs(Map<String, Object> requestMap) {
-    Request userRequest = new Request();
-    userRequest.setOperation(UserActorOperations.UPSERT_USER_JOB_PROFILE_TO_ES.getValue());
-    userRequest.getRequest().putAll(requestMap);
-    tellToAnother(userRequest);
   }
 
   private void updateJobProfileDetails(
@@ -150,6 +134,7 @@ public class JobProfileManagementActor extends BaseActor {
     return addressId;
   }
 
+  @SuppressWarnings("unchecked")
   private void insertJobProfileDetails(
       Map<String, Object> requestMap,
       Map<String, Object> jobProfileMap,

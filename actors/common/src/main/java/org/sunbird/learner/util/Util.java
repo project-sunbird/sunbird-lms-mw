@@ -1073,27 +1073,6 @@ public final class Util {
     }
   }
 
-  public static Map<String, Object> getUserByUserIdAndOrgId(String userId, String orgId) {
-    Map<String, Object> filters = new HashMap<>();
-    filters.put(StringFormatter.joinByDot(JsonKey.ORGANISATIONS, JsonKey.ORGANISATION_ID), orgId);
-    filters.put(StringFormatter.joinByDot(JsonKey.ORGANISATIONS, JsonKey.USER_ID), userId);
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.FILTERS, filters);
-    SearchDTO searchDto = Util.createSearchDto(map);
-    Map<String, Object> result =
-        ElasticSearchUtil.complexSearch(
-            searchDto,
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName());
-    List<Map<String, Object>> userMapList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-    if (CollectionUtils.isNotEmpty(userMapList)) {
-      Map<String, Object> userMap = userMapList.get(0);
-      return decService.decryptData(userMap);
-    } else {
-      return Collections.EMPTY_MAP;
-    }
-  }
-
   public static String encryptData(String value) {
     try {
       return encryptionService.encryptData(value);

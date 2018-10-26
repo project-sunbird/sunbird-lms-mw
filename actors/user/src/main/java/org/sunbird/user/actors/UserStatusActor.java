@@ -41,13 +41,14 @@ public class UserStatusActor extends BaseActor {
   private ObjectMapper mapper = new ObjectMapper();
   private boolean isSSOEnabled =
       Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
-  private ActorRef systemSettingActorRef =
-      getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
+  private ActorRef systemSettingActorRef = null;
 
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.USER);
     ExecutionContext.setRequestId(request.getRequestId());
+
+    systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
     String operation = request.getOperation();
 
     switch (operation) {

@@ -1,38 +1,27 @@
 package org.sunbird.user.actors;
 
-import static akka.pattern.PatternsCS.ask;
-
-import akka.util.Timeout;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.actor.router.BackgroundRequestRouter;
 import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.user.util.UserActorOperations;
-import scala.concurrent.duration.Duration;
 
 @ActorConfig(
-  tasks = {},
+  tasks = {"saveUserAttributes"},
   asyncTasks = {"saveUserAttributes"}
 )
 public class UserAttributesProcessingActor extends BaseActor {
 
   private static InterServiceCommunication interServiceCommunication =
       InterServiceCommunicationFactory.getInstance();
-  private static Timeout t = new Timeout(Duration.create(10, TimeUnit.SECONDS));
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -41,50 +30,21 @@ public class UserAttributesProcessingActor extends BaseActor {
         .equalsIgnoreCase(request.getOperation())) {
       saveUserAttributes(request);
     } else {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.invalidOperationName.getErrorCode(),
-              ResponseCode.invalidOperationName.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+      onReceiveUnsupportedOperation("UserAttributesProcessingActor");
     }
   }
 
   private void saveUserAttributes(Request request) {
-    ProjectLogger.log("saveUserAttributes called");
-    Response response = null;
+    Response response = new Response();
     Map<String, Object> userMap = request.getRequest();
     String operationType = (String) userMap.get(JsonKey.OPERATION_TYPE);
     userMap.remove(JsonKey.OPERATION_TYPE);
-    response = saveAddress(userMap, operationType);
-    if (!JsonKey.SUCCESS.equalsIgnoreCase((String) response.get(JsonKey.RESPONSE))) {
-      userMap.remove(JsonKey.ADDRESS);
-      response = null;
-    }
-    response = saveEducation(userMap, operationType);
-    if (!JsonKey.SUCCESS.equalsIgnoreCase((String) response.get(JsonKey.RESPONSE))) {
-      userMap.remove(JsonKey.ADDRESS);
-      response = null;
-    }
-    response = saveJobProfile(userMap, operationType);
-    if (!JsonKey.SUCCESS.equalsIgnoreCase((String) response.get(JsonKey.RESPONSE))) {
-      userMap.remove(JsonKey.ADDRESS);
-      response = null;
-    }
-    response = saveUserExternalIds(userMap, operationType);
-    if (!JsonKey.SUCCESS.equalsIgnoreCase((String) response.get(JsonKey.RESPONSE))) {
-      userMap.remove(JsonKey.ADDRESS);
-      response = null;
-    }
-    response = saveUserOrgDetails(userMap, operationType);
-    if (!JsonKey.SUCCESS.equalsIgnoreCase((String) response.get(JsonKey.RESPONSE))) {
-      userMap.remove(JsonKey.ADDRESS);
-      response = null;
-    }
-    Request userRequest = new Request();
-    userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-    userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
-    tellToAnother(request);
+    response.put(JsonKey.ADDRESS, saveAddress(userMap, operationType));
+    response.put(JsonKey.EDUCATION, saveEducation(userMap, operationType));
+    response.put(JsonKey.JOB_PROFILE, saveJobProfile(userMap, operationType));
+    response.put(JsonKey.EXTERNAL_IDS, saveUserExternalIds(userMap, operationType));
+    response.put(JsonKey.USER_ORG, saveUserOrgDetails(userMap, operationType));
+    sender().tell(response, self());
   }
 
   @SuppressWarnings("unchecked")
@@ -97,19 +57,10 @@ public class UserAttributesProcessingActor extends BaseActor {
         userExternalIdsRequest.getRequest().put(JsonKey.OPERATION_TYPE, operationType);
         userExternalIdsRequest.setOperation(
             UserActorOperations.UPSERT_USER_EXTERNAL_IDENTITY_DETAILS.getValue());
-        CompletableFuture<Object> future =
-            ask(
-                    BackgroundRequestRouter.getActor(
-                        UserActorOperations.UPSERT_USER_EXTERNAL_IDENTITY_DETAILS.getValue()),
-                    userExternalIdsRequest,
-                    t)
-                .toCompletableFuture();
-        return (Response) future.get(12, TimeUnit.SECONDS);
-        // return (Response)
-        // interServiceCommunication.getResponse(BackgroundRequestRouter.getActor(UserActorOperations.UPSERT_USER_EXTERNAL_IDENTITY_DETAILS.getValue()), userExternalIdsRequest);
-
-        // tellToAnother(userExternalIdsRequest);
-        // ProjectLogger.log("tellToAnother(userExternalIdsRequest)");
+        return (Response)
+            interServiceCommunication.getResponse(
+                getActorRef(UserActorOperations.UPSERT_USER_EXTERNAL_IDENTITY_DETAILS.getValue()),
+                userExternalIdsRequest);
       }
     } catch (Exception ex) {
       ProjectLogger.log(
@@ -127,19 +78,10 @@ public class UserAttributesProcessingActor extends BaseActor {
         userOrgRequest.getRequest().putAll(userMap);
         userOrgRequest.getRequest().put(JsonKey.OPERATION_TYPE, operationType);
         userOrgRequest.setOperation(UserActorOperations.UPSERT_USER_ORG_DETAILS.getValue());
-        CompletableFuture<Object> future =
-            ask(
-                    BackgroundRequestRouter.getActor(
-                        UserActorOperations.UPSERT_USER_ORG_DETAILS.getValue()),
-                    userOrgRequest,
-                    t)
-                .toCompletableFuture();
-        return (Response) future.get(12, TimeUnit.SECONDS);
-        // return (Response)
-        // interServiceCommunication.getResponse(BackgroundRequestRouter.getActor(UserActorOperations.UPSERT_USER_ORG_DETAILS.getValue()), userOrgRequest);
-
-        // tellToAnother(userOrgRequest);
-        // ProjectLogger.log("tellToAnother(userOrgRequest)");
+        return (Response)
+            interServiceCommunication.getResponse(
+                getActorRef(UserActorOperations.UPSERT_USER_ORG_DETAILS.getValue()),
+                userOrgRequest);
       }
     } catch (Exception ex) {
       ProjectLogger.log(
@@ -159,19 +101,10 @@ public class UserAttributesProcessingActor extends BaseActor {
         jobProfileRequest.getRequest().putAll(userMap);
         jobProfileRequest.getRequest().put(JsonKey.OPERATION_TYPE, operationType);
         jobProfileRequest.setOperation(UserActorOperations.UPSERT_USER_JOB_PROFILE.getValue());
-        CompletableFuture<Object> future =
-            ask(
-                    BackgroundRequestRouter.getActor(
-                        UserActorOperations.UPSERT_USER_JOB_PROFILE.getValue()),
-                    jobProfileRequest,
-                    t)
-                .toCompletableFuture();
-        return (Response) future.get(12, TimeUnit.SECONDS);
-        // return (Response)
-        // interServiceCommunication.getResponse(BackgroundRequestRouter.getActor(UserActorOperations.UPSERT_USER_JOB_PROFILE.getValue()), jobProfileRequest);
-
-        // tellToAnother(jobProfileRequest);
-        // ProjectLogger.log("tellToAnother(jobProfileRequest)");
+        return (Response)
+            interServiceCommunication.getResponse(
+                getActorRef(UserActorOperations.UPSERT_USER_JOB_PROFILE.getValue()),
+                jobProfileRequest);
       }
     } catch (Exception ex) {
       ProjectLogger.log(
@@ -191,19 +124,10 @@ public class UserAttributesProcessingActor extends BaseActor {
         educationRequest.getRequest().putAll(userMap);
         educationRequest.getRequest().put(JsonKey.OPERATION_TYPE, operationType);
         educationRequest.setOperation(UserActorOperations.UPSERT_USER_EDUCATION.getValue());
-        CompletableFuture<Object> future =
-            ask(
-                    BackgroundRequestRouter.getActor(
-                        UserActorOperations.UPSERT_USER_EDUCATION.getValue()),
-                    educationRequest,
-                    t)
-                .toCompletableFuture();
-        return (Response) future.get(12, TimeUnit.SECONDS);
-        // return (Response)
-        // interServiceCommunication.getResponse(BackgroundRequestRouter.getActor(UserActorOperations.UPSERT_USER_EDUCATION.getValue()), educationRequest);
-
-        // tellToAnother(educationRequest);
-        // ProjectLogger.log("tellToAnother(educationRequest)");
+        return (Response)
+            interServiceCommunication.getResponse(
+                getActorRef(UserActorOperations.UPSERT_USER_EDUCATION.getValue()),
+                educationRequest);
       }
     } catch (Exception ex) {
       ProjectLogger.log(
@@ -222,18 +146,9 @@ public class UserAttributesProcessingActor extends BaseActor {
         addressRequest.getRequest().putAll(userMap);
         addressRequest.getRequest().put(JsonKey.OPERATION_TYPE, operationType);
         addressRequest.setOperation(UserActorOperations.UPSERT_USER_ADDRESS.getValue());
-        CompletableFuture<Object> future =
-            ask(
-                    BackgroundRequestRouter.getActor(
-                        UserActorOperations.UPSERT_USER_ADDRESS.getValue()),
-                    addressRequest,
-                    t)
-                .toCompletableFuture();
-        return (Response) future.get(12, TimeUnit.SECONDS);
-        // return (Response)
-        // interServiceCommunication.getResponse(BackgroundRequestRouter.getActor(UserActorOperations.UPSERT_USER_ADDRESS.getValue()), addressRequest);
-        // tellToAnother(addressRequest);
-        // ProjectLogger.log("tellToAnother(saveAddress)");
+        return (Response)
+            interServiceCommunication.getResponse(
+                getActorRef(UserActorOperations.UPSERT_USER_ADDRESS.getValue()), addressRequest);
       }
     } catch (Exception ex) {
       ProjectLogger.log(

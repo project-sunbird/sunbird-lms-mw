@@ -17,6 +17,8 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.actorutil.InterServiceCommunication;
+import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -84,16 +86,18 @@ public class UserManagementActor extends BaseActor {
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private static final boolean IS_REGISTRY_ENABLED =
       Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE));
-  private ActorRef systemSettingActorRef =
-      getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
   private UserRequestValidator userRequestValidator = new UserRequestValidator();
   private UserService userService = new UserServiceImpl();
   private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+  private static InterServiceCommunication interServiceCommunication =
+      InterServiceCommunicationFactory.getInstance();
+  private ActorRef systemSettingActorRef = null;
 
   /** Receives the actor message and perform the course enrollment operation . */
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.USER);
+    systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
     // set request id fto thread loacl...
     ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();
@@ -923,17 +927,25 @@ public class UserManagementActor extends BaseActor {
       }
       response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
     }
-    sender().tell(response, self());
-
+    Response resp = null;
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      saveUserDetailsToEs(requestMap, userMap);
-
+      // saveUserDetailsToEs(requestMap, userMap);
       Map<String, Object> userRequest = new HashMap<>();
       userRequest.putAll(userMap);
       userRequest.put(JsonKey.OPERATION_TYPE, JsonKey.CREATE);
-      saveUserAttributes(userRequest);
+      resp = saveUserAttributes(userRequest);
+      System.out.println(resp);
     } else {
       ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
+    }
+    sender().tell(response, self());
+    if (null != resp) {
+      Request userRequest = new Request();
+      userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+      userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
+      ProjectLogger.log(
+          "UserManagementActor:processUserRequest: Trigger sync of user details to ES");
+      tellToAnother(userRequest);
     }
     sendEmailAndSms(requestMap);
     // object of telemetry event...
@@ -968,12 +980,19 @@ public class UserManagementActor extends BaseActor {
     tellToAnother(userRequest);
   }
 
-  private void saveUserAttributes(Map<String, Object> userMap) {
+  private Response saveUserAttributes(Map<String, Object> userMap) {
     Request request = new Request();
     request.setOperation(UserActorOperations.SAVE_USER_ATTRIBUTES.getValue());
     request.getRequest().putAll(userMap);
     ProjectLogger.log("UserManagementActor:saveUserAttributes");
-    tellToAnother(request);
+    try {
+      return (Response)
+          interServiceCommunication.getResponse(
+              getActorRef(UserActorOperations.SAVE_USER_ATTRIBUTES.getValue()), request);
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    return null;
   }
 
   private void removeUnwanted(Map<String, Object> reqMap) {

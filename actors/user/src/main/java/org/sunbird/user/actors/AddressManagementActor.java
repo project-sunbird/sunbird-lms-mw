@@ -6,20 +6,18 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.user.util.UserActorOperations;
 
 @ActorConfig(
-  tasks = {},
+  tasks = {"upsertUserAddress"},
   asyncTasks = {"upsertUserAddress"}
 )
 public class AddressManagementActor extends BaseActor {
@@ -37,12 +35,7 @@ public class AddressManagementActor extends BaseActor {
         .equalsIgnoreCase(request.getOperation())) {
       upsertAddress(request);
     } else {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.invalidOperationName.getErrorCode(),
-              ResponseCode.invalidOperationName.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+      onReceiveUnsupportedOperation("AddressManagementActor");
     }
   }
 
@@ -84,18 +77,9 @@ public class AddressManagementActor extends BaseActor {
       Response response = new Response();
       response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
       sender().tell(response, self());
-      // save Address to ES
-      // saveUserAddressToEs(requestMap);
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
-  }
-
-  private void saveUserAddressToEs(Map<String, Object> requestMap) {
-    Request userRequest = new Request();
-    userRequest.setOperation(UserActorOperations.UPSERT_USER_ADDRESS_TO_ES.getValue());
-    userRequest.getRequest().putAll(requestMap);
-    tellToAnother(userRequest);
   }
 
   private void updateAddressDetails(String encCreatedById, Map<String, Object> address) {

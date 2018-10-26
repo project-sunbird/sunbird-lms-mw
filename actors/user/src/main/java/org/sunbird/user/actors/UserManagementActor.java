@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigInteger;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -469,21 +470,95 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
-  private void fetchUserOrganisations(List<Map<String, Object>> userOrgs) {
+  private void updateUserOrgInfo(List<Map<String, Object>> userOrgs) {
+    Map<String, Map<String, Object>> orgInfoMap = fetchAllOrgsById(userOrgs);
+    Map<String, Map<String, Object>> locationInfoMap = fetchAllLocationsById(orgInfoMap);
+    prepUserOrgInfoWithAdditionalData(userOrgs, orgInfoMap, locationInfoMap);
+  }
 
-    for (Map usrOrg : userOrgs) {
-      String id = (String) usrOrg.get(JsonKey.ORGANISATION_ID);
-      Map<String, Object> esResult =
-          ElasticSearchUtil.getDataByIdentifier(
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.organisation.getTypeName(),
-              id);
-
-      usrOrg.put(JsonKey.ORG_NAME, esResult.get(JsonKey.ORG_NAME));
-      usrOrg.put(JsonKey.CHANNEL, esResult.get(JsonKey.CHANNEL));
-      usrOrg.put(JsonKey.HASHTAGID, esResult.get(JsonKey.HASHTAGID));
-      usrOrg.put(JsonKey.LOCATION_IDS, esResult.get(JsonKey.LOCATION_IDS));
+  private void prepUserOrgInfoWithAdditionalData(
+      List<Map<String, Object>> userOrgs,
+      Map<String, Map<String, Object>> orgInfoMap,
+      Map<String, Map<String, Object>> locationInfoMap) {
+    for (Map<String, Object> usrOrg : userOrgs) {
+      Map<String, Object> orgInfo = orgInfoMap.get((String) usrOrg.get(JsonKey.ORGANISATION_ID));
+      usrOrg.put(JsonKey.ORG_NAME, orgInfo.get(JsonKey.ORG_NAME));
+      usrOrg.put(JsonKey.CHANNEL, orgInfo.get(JsonKey.CHANNEL));
+      usrOrg.put(JsonKey.HASHTAGID, orgInfo.get(JsonKey.HASHTAGID));
+      usrOrg.put(JsonKey.LOCATION_IDS, orgInfo.get(JsonKey.LOCATION_IDS));
+      usrOrg.put(
+          JsonKey.LOCATIONS,
+          prepLocationFields((List<String>) orgInfo.get(JsonKey.LOCATION_IDS), locationInfoMap));
     }
+  }
+
+  private Map<String, Map<String, Object>> fetchAllOrgsById(List<Map<String, Object>> userOrgs) {
+    List<String> orgIds =
+        userOrgs
+            .stream()
+            .map(m -> (String) m.get(JsonKey.ORGANISATION_ID))
+            .distinct()
+            .collect(Collectors.toList());
+    List<String> fields =
+        Arrays.asList(
+            JsonKey.ORG_NAME, JsonKey.CHANNEL, JsonKey.HASHTAGID, JsonKey.LOCATION_IDS, JsonKey.ID);
+
+    Map<String, Map<String, Object>> orgInfoMap =
+        getEsResultByListOfIds(orgIds, fields, EsType.organisation);
+    return orgInfoMap;
+  }
+
+  private Map<String, Map<String, Object>> fetchAllLocationsById(
+      Map<String, Map<String, Object>> orgInfoMap) {
+    List<String> searchLocations = new ArrayList<>();
+    for (Map<String, Object> org : orgInfoMap.values()) {
+      List<String> locations = (List<String>) org.get(JsonKey.LOCATION_IDS);
+      for (String location : locations) {
+        if (!searchLocations.contains(location)) {
+          searchLocations.add(location);
+        }
+      }
+    }
+    List<String> locationFields =
+        Arrays.asList(JsonKey.CODE, JsonKey.NAME, JsonKey.TYPE, JsonKey.PARENT_ID, JsonKey.ID);
+    Map<String, Map<String, Object>> locationInfoMap =
+        getEsResultByListOfIds(searchLocations, locationFields, EsType.location);
+    return locationInfoMap;
+  }
+
+  private List<Map<String, Object>> prepLocationFields(
+      List<String> locationIds, Map<String, Map<String, Object>> locationInfoMap) {
+    List<Map<String, Object>> retList = new ArrayList<>();
+    for (String locationId : locationIds) {
+      retList.add(locationInfoMap.get(locationId));
+    }
+    return retList;
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Map<String, Object>> getEsResultByListOfIds(
+      List<String> orgIds, List<String> fields, EsType typeToSearch) {
+
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(JsonKey.ID, orgIds);
+
+    SearchDTO searchDTO = new SearchDTO();
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
+    searchDTO.setFields(fields);
+
+    Map<String, Object> result =
+        ElasticSearchUtil.complexSearch(
+            searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), typeToSearch.getTypeName());
+
+    List<Map<String, Object>> esContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+    return esContent
+        .stream()
+        .collect(
+            Collectors.toMap(
+                obj -> {
+                  return (String) obj.get("id");
+                },
+                val -> val));
   }
 
   private void fetchRootAndRegisterOrganisation(Map<String, Object> result) {
@@ -599,7 +674,7 @@ public class UserManagementActor extends BaseActor {
           fetchTopicOfAssociatedOrgs(result);
         }
         if (requestFields.contains(JsonKey.ORGANISATIONS)) {
-          fetchUserOrganisations((List) result.get(JsonKey.ORGANISATIONS));
+          updateUserOrgInfo((List) result.get(JsonKey.ORGANISATIONS));
         }
       }
     } else {

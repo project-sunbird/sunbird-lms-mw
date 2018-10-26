@@ -92,13 +92,13 @@ public class UserManagementActor extends BaseActor {
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private static final boolean IS_REGISTRY_ENABLED =
       Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE));
-  private ActorRef systemSettingActorRef =
-      getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
+  private ActorRef systemSettingActorRef = null;
 
   /** Receives the actor message and perform the course enrollment operation . */
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.USER);
+    systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
     // set request id fto thread loacl...
     ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();

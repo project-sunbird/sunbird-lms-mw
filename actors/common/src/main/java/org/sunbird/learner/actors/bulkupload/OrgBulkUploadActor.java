@@ -28,7 +28,18 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
     JsonKey.EXTERNAL_ID,
     JsonKey.DESCRIPTION,
     JsonKey.LOCATION_CODE,
-    JsonKey.STATUS
+    JsonKey.STATUS,
+    JsonKey.CHANNEL,
+    JsonKey.IS_ROOT_ORG,
+    JsonKey.PROVIDER,
+    JsonKey.HOME_URL,
+    JsonKey.ORG_CODE,
+    JsonKey.ORG_TYPE,
+    JsonKey.PREFERRED_LANGUAGE,
+    JsonKey.THEME,
+    JsonKey.CONTACT_DETAILS,
+    JsonKey.LOC_ID,
+    JsonKey.HASHTAGID,
   };
 
   @Override
@@ -45,7 +56,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
 
   private void upload(Request request) throws IOException {
     Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
-    validateFileHeaderFields(req, bulkOrgAllowedFields, true);
+    validateFileHeaderFields(req, bulkOrgAllowedFields, false);
     BulkUploadProcess bulkUploadProcess =
         handleUpload(JsonKey.ORGANISATION, (String) req.get(JsonKey.CREATED_BY));
     processOrgBulkUpload(req, bulkUploadProcess.getId(), bulkUploadProcess);

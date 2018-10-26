@@ -22,7 +22,7 @@ public final class UserOrgDaoImpl implements UserOrgDao {
   private UserOrgDaoImpl() {}
 
   private static class LazyInitializer {
-    static UserOrgDao INSTACE = new UserOrgDaoImpl();
+    private static UserOrgDao INSTACE = new UserOrgDaoImpl();
   }
 
   public static UserOrgDao getInstance() {

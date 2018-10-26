@@ -1,10 +1,13 @@
 package org.sunbird.user.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.WeakHashMap;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
@@ -18,12 +21,16 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.datasecurity.DataMaskingService;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.common.services.ProfileCompletenessService;
 import org.sunbird.common.services.impl.ProfileCompletenessFactory;
 import org.sunbird.dto.SearchDTO;
+import org.sunbird.extension.user.UserExtension;
+import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.SocialMediaType;
@@ -44,6 +51,12 @@ public class UserUtil {
   private static ObjectMapper mapper = new ObjectMapper();
   private static SSOManager ssoManager = SSOServiceFactory.getInstance();
   private static PropertiesCache propertiesCache = PropertiesCache.getInstance();
+  private static DataMaskingService maskingService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(
+          null);
+  private static DecryptionService decService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+          null);
 
   private UserUtil() {}
 
@@ -83,6 +96,73 @@ public class UserUtil {
         }
       }
     }
+  }
+
+  public static Map<String, Object> validateExternalIdsAndReturnActiveUser(
+      Map<String, Object> userMap) {
+    String extId = (String) userMap.get(JsonKey.EXTERNAL_ID);
+    String provider = (String) userMap.get(JsonKey.EXTERNAL_ID_PROVIDER);
+    String idType = (String) userMap.get(JsonKey.EXTERNAL_ID_TYPE);
+    Map<String, Object> user = null;
+    if ((StringUtils.isBlank((String) userMap.get(JsonKey.USER_ID))
+            && StringUtils.isBlank((String) userMap.get(JsonKey.ID)))
+        && StringUtils.isNotEmpty(extId)
+        && StringUtils.isNotEmpty(provider)
+        && StringUtils.isNotEmpty(idType)) {
+      user = getUserFromExternalId(userMap);
+      if (MapUtils.isEmpty(user)) {
+        throw new ProjectCommonException(
+            ResponseCode.externalIdNotFound.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.externalIdNotFound.getErrorMessage(), extId, idType, provider),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      } else {
+        if (null != user.get(JsonKey.IS_DELETED) && (boolean) (user.get(JsonKey.IS_DELETED))) {
+          throw new ProjectCommonException(
+              ResponseCode.inactiveUser.getErrorCode(),
+              ResponseCode.inactiveUser.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
+      }
+    }
+    return user;
+  }
+
+  public static void updateUserToRegistry(Map<String, Object> userMap, String registryId) {
+    UserExtension userExtension = new UserProviderRegistryImpl();
+    if (StringUtils.isNotBlank(registryId)) {
+      userMap.put(JsonKey.REGISTRY_ID, registryId);
+      userExtension.update(userMap);
+    } else {
+      userExtension.create(userMap);
+    }
+  }
+
+  public static Map<String, Object> getUserFromExternalId(Map<String, Object> userMap) {
+    Map<String, Object> user = null;
+    Map<String, Object> externalIdReq = new WeakHashMap<>();
+    externalIdReq.put(
+        JsonKey.PROVIDER, ((String) userMap.get(JsonKey.EXTERNAL_ID_PROVIDER)).toLowerCase());
+    externalIdReq.put(
+        JsonKey.ID_TYPE, ((String) userMap.get(JsonKey.EXTERNAL_ID_TYPE)).toLowerCase());
+    externalIdReq.put(
+        JsonKey.EXTERNAL_ID,
+        encryptData(((String) userMap.get(JsonKey.EXTERNAL_ID)).toLowerCase()));
+    Response response =
+        cassandraOperation.getRecordsByCompositeKey(
+            JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, externalIdReq);
+    List<Map<String, Object>> userRecordList =
+        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+
+    if (CollectionUtils.isNotEmpty(userRecordList)) {
+      Map<String, Object> userExtIdRecord = userRecordList.get(0);
+      user =
+          ElasticSearchUtil.getDataByIdentifier(
+              ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.user.getTypeName(),
+              (String) userExtIdRecord.get(JsonKey.USER_ID));
+    }
+    return user;
   }
 
   @SuppressWarnings("unchecked")
@@ -308,19 +388,131 @@ public class UserUtil {
     }
   }
 
-  public static void createUserInKeycloak(Map<String, Object> userMap) {
-    String userId = "";
-    Map<String, String> responseMap = ssoManager.createUser(userMap);
-    userId = responseMap.get(JsonKey.USER_ID);
-    if (!StringUtils.isBlank(userId)) {
-      userMap.put(JsonKey.USER_ID, userId);
-      userMap.put(JsonKey.ID, userId);
+  public static void upsertUserInKeycloak(Map<String, Object> userMap, String operationType) {
+    if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
+      String userId = "";
+      Map<String, String> responseMap = ssoManager.createUser(userMap);
+      userId = responseMap.get(JsonKey.USER_ID);
+      if (!StringUtils.isBlank(userId)) {
+        userMap.put(JsonKey.USER_ID, userId);
+        userMap.put(JsonKey.ID, userId);
+      } else {
+        throw new ProjectCommonException(
+            ResponseCode.userRegUnSuccessfull.getErrorCode(),
+            ResponseCode.userRegUnSuccessfull.getErrorMessage(),
+            ResponseCode.SERVER_ERROR.getResponseCode());
+      }
     } else {
-      throw new ProjectCommonException(
-          ResponseCode.userRegUnSuccessfull.getErrorCode(),
-          ResponseCode.userRegUnSuccessfull.getErrorMessage(),
-          ResponseCode.SERVER_ERROR.getResponseCode());
+      String response = ssoManager.updateUser(userMap);
+      if (!(!StringUtils.isBlank(response) && response.equalsIgnoreCase(JsonKey.SUCCESS))) {
+        throw new ProjectCommonException(
+            ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
+            ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
+            ResponseCode.SERVER_ERROR.getResponseCode());
+      }
     }
+  }
+
+  public static void addMaskEmailAndPhone(Map<String, Object> userMap) {
+    String phone = (String) userMap.get(JsonKey.PHONE);
+    String email = (String) userMap.get(JsonKey.EMAIL);
+    if (!StringUtils.isBlank(phone)) {
+      userMap.put(JsonKey.ENC_PHONE, phone);
+      userMap.put(JsonKey.PHONE, maskingService.maskPhone(decService.decryptData(phone)));
+    }
+    if (!StringUtils.isBlank(email)) {
+      userMap.put(JsonKey.ENC_EMAIL, email);
+      userMap.put(JsonKey.EMAIL, maskingService.maskEmail(decService.decryptData(email)));
+    }
+  }
+
+  public static void updateUserExtId(Map<String, Object> requestMap) {
+    List<Map<String, String>> dbResExternalIds =
+        getUserExternalIds((String) requestMap.get(JsonKey.USER_ID));
+    List<Map<String, String>> externalIds =
+        (List<Map<String, String>>) requestMap.get(JsonKey.EXTERNAL_IDS);
+    if (CollectionUtils.isNotEmpty(externalIds)) {
+      // will not allow user to update idType value, if user will try to update idType will
+      // ignore
+      // user will have only one entry for a idType for given provider so get extId based on idType
+      // List of idType values for a user will distinct and unique
+      for (Map<String, String> extIdMap : externalIds) {
+        Optional<Map<String, String>> extMap = checkExternalID(dbResExternalIds, extIdMap);
+        Map<String, String> map = extMap.orElse(null);
+        // Allowed operation type for externalIds ("add", "remove", "edit")
+        if (JsonKey.ADD.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))
+            || StringUtils.isBlank(extIdMap.get(JsonKey.OPERATION))) {
+          if (MapUtils.isEmpty(map)) {
+            upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.CREATE);
+          } else {
+            // if external Id with same provider and idType exist then delete first then update
+            // to update user externalId first we need to delete the record as externalId is the
+            // part of composite key
+            deleteUserExternalId(requestMap, map);
+            upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.UPDATE);
+          }
+        } else {
+          // operation is either edit or remove
+          if (MapUtils.isNotEmpty(map)) {
+            if (JsonKey.REMOVE.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))) {
+              if (StringUtils.isNotBlank(map.get(JsonKey.ID_TYPE))
+                  && StringUtils.isNotBlank((String) requestMap.get(JsonKey.USER_ID))
+                  && StringUtils.isNotBlank(map.get(JsonKey.PROVIDER))) {
+                deleteUserExternalId(requestMap, map);
+              }
+            } else if (JsonKey.EDIT.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))) {
+              // to update user externalId first we need to delete the record as externalId is the
+              // part of composite key
+              deleteUserExternalId(requestMap, map);
+              upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.UPDATE);
+            }
+          } else {
+            throwExternalIDNotFoundException(
+                extIdMap.get(JsonKey.ID),
+                extIdMap.get(JsonKey.ID_TYPE),
+                extIdMap.get(JsonKey.PROVIDER));
+          }
+        }
+      }
+    }
+  }
+
+  private static void upsertUserExternalIdentityData(
+      Map<String, String> extIdsMap, Map<String, Object> requestMap, String operation) {
+    try {
+      Map<String, Object> map = new HashMap<>();
+      map.put(JsonKey.EXTERNAL_ID, encryptData(extIdsMap.get(JsonKey.ID)));
+      map.put(
+          JsonKey.ORIGINAL_EXTERNAL_ID, encryptData(extIdsMap.get(JsonKey.ORIGINAL_EXTERNAL_ID)));
+      map.put(JsonKey.PROVIDER, extIdsMap.get(JsonKey.PROVIDER));
+      map.put(JsonKey.ORIGINAL_PROVIDER, extIdsMap.get(JsonKey.ORIGINAL_PROVIDER));
+      map.put(JsonKey.ID_TYPE, extIdsMap.get(JsonKey.ID_TYPE));
+      map.put(JsonKey.ORIGINAL_ID_TYPE, extIdsMap.get(JsonKey.ORIGINAL_ID_TYPE));
+      map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
+      if (JsonKey.CREATE.equalsIgnoreCase(operation)) {
+        map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
+        map.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
+      } else {
+        map.put(JsonKey.LAST_UPDATED_BY, requestMap.get(JsonKey.UPDATED_BY));
+        map.put(JsonKey.LAST_UPDATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
+      }
+      cassandraOperation.upsertRecord(JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, map);
+    } catch (Exception ex) {
+      ProjectLogger.log("Util:upsertUserExternalIdentityData : Exception occurred", ex);
+    }
+  }
+
+  private static void deleteUserExternalId(
+      Map<String, Object> requestMap, Map<String, String> map) {
+    map.remove(JsonKey.LAST_UPDATED_BY);
+    map.remove(JsonKey.CREATED_BY);
+    map.remove(JsonKey.LAST_UPDATED_ON);
+    map.remove(JsonKey.CREATED_ON);
+    map.remove(JsonKey.USER_ID);
+    map.remove(JsonKey.ORIGINAL_EXTERNAL_ID);
+    map.remove(JsonKey.ORIGINAL_ID_TYPE);
+    map.remove(JsonKey.ORIGINAL_PROVIDER);
+    cassandraOperation.deleteRecord(JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, map);
   }
 
   @SuppressWarnings("unchecked")
@@ -366,13 +558,88 @@ public class UserUtil {
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
   }
 
-  public static void validateExternalIds(User user) {
+  public static void validateExternalIds(User user, String operationType) {
     if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
-      List<Map<String, String>> list =
-          UserUtil.copyAndConvertExternalIdsToLower(user.getExternalIds());
+      List<Map<String, String>> list = copyAndConvertExternalIdsToLower(user.getExternalIds());
       user.setExternalIds(list);
     }
-    UserUtil.checkExternalIdUniqueness(user, JsonKey.CREATE);
+    checkExternalIdUniqueness(user, operationType);
+    if (JsonKey.UPDATE.equalsIgnoreCase(operationType)) {
+      validateUserExternalIds(user);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  public static void checkEmailSameOrDiff(Map<String, Object> userMap) {
+    Response response =
+        cassandraOperation.getRecordById(
+            userDb.getKeySpace(), userDb.getTableName(), (String) userMap.get(JsonKey.ID));
+    List<Map<String, Object>> resList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if (!resList.isEmpty()) {
+      Map<String, Object> res = resList.get(0);
+      String email = (String) res.get(JsonKey.EMAIL);
+      String encEmail = (String) userMap.get(JsonKey.EMAIL);
+      try {
+        encEmail = encryptionService.encryptData((String) userMap.get(JsonKey.EMAIL));
+      } catch (Exception ex) {
+        ProjectLogger.log("Exception occurred while encrypting user email.");
+      }
+      if ((encEmail).equalsIgnoreCase(email)) {
+        userMap.remove(JsonKey.EMAIL);
+      }
+    }
+  }
+
+  private static Optional<Map<String, String>> checkExternalID(
+      List<Map<String, String>> dbResExternalIds, Map<String, String> extIdMap) {
+    Optional<Map<String, String>> extMap =
+        dbResExternalIds
+            .stream()
+            .filter(
+                s -> {
+                  if (((s.get(JsonKey.ID_TYPE)).equalsIgnoreCase(extIdMap.get(JsonKey.ID_TYPE)))
+                      && ((s.get(JsonKey.PROVIDER))
+                          .equalsIgnoreCase(extIdMap.get(JsonKey.PROVIDER)))) {
+                    return true;
+                  } else {
+                    return false;
+                  }
+                })
+            .findFirst();
+    return extMap;
+  }
+
+  public static void validateUserExternalIds(User user) {
+    List<Map<String, String>> dbResExternalIds = getUserExternalIds(user.getUserId());
+    List<Map<String, String>> externalIds = user.getExternalIds();
+    if (CollectionUtils.isNotEmpty(externalIds)) {
+      for (Map<String, String> extIdMap : externalIds) {
+        Optional<Map<String, String>> extMap = checkExternalID(dbResExternalIds, extIdMap);
+        Map<String, String> map = extMap.orElse(null);
+        // Allowed operation type for externalIds ("add", "remove", "edit")
+        if (!(JsonKey.ADD.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))
+            || StringUtils.isBlank(extIdMap.get(JsonKey.OPERATION)))) {
+          // operation is either edit or remove
+          if (MapUtils.isEmpty(map)) {
+            throwExternalIDNotFoundException(
+                extIdMap.get(JsonKey.ID),
+                extIdMap.get(JsonKey.ID_TYPE),
+                extIdMap.get(JsonKey.PROVIDER));
+          }
+        }
+      }
+    }
+  }
+
+  private static List<Map<String, String>> getUserExternalIds(String userId) {
+    List<Map<String, String>> dbResExternalIds = new ArrayList<>();
+    Response response =
+        cassandraOperation.getRecordsByIndexedProperty(
+            JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, JsonKey.USER_ID, userId);
+    if (null != response && null != response.getResult()) {
+      dbResExternalIds = (List<Map<String, String>>) response.getResult().get(JsonKey.RESPONSE);
+    }
+    return dbResExternalIds;
   }
 
   public static List<Map<String, Object>> getAddressDetails(String userId, String addressId) {

@@ -1,5 +1,6 @@
 package org.sunbird.user.actors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.commons.collections.MapUtils;
@@ -7,17 +8,14 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.ElasticSearchUtil;
-import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.datasecurity.DataMaskingService;
-import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.extension.user.UserExtension;
 import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
-import org.sunbird.learner.util.Util;
+import org.sunbird.models.user.User;
 import org.sunbird.user.util.UserUtil;
 
 @ActorConfig(
@@ -32,12 +30,7 @@ import org.sunbird.user.util.UserUtil;
 )
 public class UserBackgroundJobActor extends BaseActor {
 
-  private static DataMaskingService maskingService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(
-          null);
-  private static DecryptionService decService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
-          null);
+  private static ObjectMapper mapper = new ObjectMapper();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -70,6 +63,7 @@ public class UserBackgroundJobActor extends BaseActor {
     userOrgMap.put(JsonKey.ID, userDetails.get(JsonKey.ID));
     userOrgMap.put(
         JsonKey.ORGANISATIONS, UserUtil.getUserOrgDetails((String) userDetails.get(JsonKey.ID)));
+    ProjectLogger.log("Updating saveUserOrgDetailsToES");
     upsertDataToElastic(
         ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.user.getTypeName(),
@@ -78,6 +72,7 @@ public class UserBackgroundJobActor extends BaseActor {
   }
 
   private void saveUserJobProfileToES(Map<String, Object> userDetails) {
+    ProjectLogger.log("Updating saveUserJobProfileToES");
     Map<String, Object> jobProfileMap = new HashMap<>();
     jobProfileMap.put(JsonKey.ID, userDetails.get(JsonKey.ID));
     jobProfileMap.put(JsonKey.JOB_PROFILE, userDetails.get(JsonKey.JOB_PROFILE));
@@ -89,6 +84,7 @@ public class UserBackgroundJobActor extends BaseActor {
   }
 
   private void saveUserEducationToES(Map<String, Object> userDetails) {
+    ProjectLogger.log("Updating saveUserEducationToES");
     Map<String, Object> educationMap = new HashMap<>();
     educationMap.put(JsonKey.ID, userDetails.get(JsonKey.ID));
     educationMap.put(JsonKey.EDUCATION, userDetails.get(JsonKey.EDUCATION));
@@ -100,6 +96,7 @@ public class UserBackgroundJobActor extends BaseActor {
   }
 
   private void saveUserAddressToES(Map<String, Object> userDetails) {
+    ProjectLogger.log("Updating saveUserAddressToES");
     Map<String, Object> addressMap = new HashMap<>();
     addressMap.put(JsonKey.ID, userDetails.get(JsonKey.ID));
     addressMap.put(JsonKey.ADDRESS, userDetails.get(JsonKey.ADDRESS));
@@ -111,10 +108,10 @@ public class UserBackgroundJobActor extends BaseActor {
   }
 
   private void saveUserDataToES(Map<String, Object> userDetails) {
-    addMaskEmailAndPhone(userDetails);
-    Util.checkUserProfileVisibility(
-        userDetails, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+    ProjectLogger.log("Updating saveUserDataToES");
     userDetails.remove(JsonKey.PASSWORD);
+    User user = mapper.convertValue(userDetails, User.class);
+    userDetails = mapper.convertValue(user, Map.class);
     userDetails = getUserDetailsFromRegistry(userDetails);
     upsertDataToElastic(
         ProjectUtil.EsIndex.sunbird.getIndexName(),
@@ -153,19 +150,6 @@ public class UserBackgroundJobActor extends BaseActor {
       return MapUtils.isNotEmpty(reqMap) ? reqMap : userMap;
     } else {
       return userMap;
-    }
-  }
-
-  private void addMaskEmailAndPhone(Map<String, Object> userMap) {
-    String phone = (String) userMap.get(JsonKey.PHONE);
-    String email = (String) userMap.get(JsonKey.EMAIL);
-    if (!StringUtils.isBlank(phone)) {
-      userMap.put(JsonKey.ENC_PHONE, phone);
-      userMap.put(JsonKey.PHONE, maskingService.maskPhone(decService.decryptData(phone)));
-    }
-    if (!StringUtils.isBlank(email)) {
-      userMap.put(JsonKey.ENC_EMAIL, email);
-      userMap.put(JsonKey.EMAIL, maskingService.maskEmail(decService.decryptData(email)));
     }
   }
 }

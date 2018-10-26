@@ -7,6 +7,7 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
@@ -58,6 +59,7 @@ public class AddressManagementActor extends BaseActor {
       for (int i = 0; i < addressList.size(); i++) {
         Map<String, Object> address = addressList.get(i);
         if (JsonKey.CREATE.equalsIgnoreCase(operationtype)) {
+          ProjectLogger.log("upsertAddress called");
           insertAddressDetails(encUserId, encCreatedById, address);
         } else {
           // update
@@ -79,8 +81,11 @@ public class AddressManagementActor extends BaseActor {
           }
         }
       }
+      Response response = new Response();
+      response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+      sender().tell(response, self());
       // save Address to ES
-      saveUserAddressToEs(requestMap);
+      // saveUserAddressToEs(requestMap);
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
@@ -102,6 +107,7 @@ public class AddressManagementActor extends BaseActor {
 
   private void insertAddressDetails(
       String encUserId, String encCreatedById, Map<String, Object> reqMap) {
+    ProjectLogger.log("insertAddressDetails called");
     reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
     reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     reqMap.put(JsonKey.CREATED_BY, encCreatedById);

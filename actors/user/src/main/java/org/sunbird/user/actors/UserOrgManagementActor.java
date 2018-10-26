@@ -5,7 +5,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.Util;
@@ -34,6 +36,7 @@ public class UserOrgManagementActor extends BaseActor {
   }
 
   private void upsertUserOrgDetails(Request request) {
+    ProjectLogger.log("upsertUserOrgDetails called");
     Map<String, Object> requestMap = request.getRequest();
     // Register user to given orgId(not root orgId)
     String organisationId = (String) requestMap.get(JsonKey.ORGANISATION_ID);
@@ -52,7 +55,10 @@ public class UserOrgManagementActor extends BaseActor {
       requestMap.put(JsonKey.HASHTAGID, hashTagId);
       Util.registerUserToOrg(requestMap);
     }
-    saveUserOrgDetailsToEs(requestMap);
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    sender().tell(response, self());
+    // saveUserOrgDetailsToEs(requestMap);
   }
 
   private void saveUserOrgDetailsToEs(Map<String, Object> requestMap) {

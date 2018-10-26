@@ -55,6 +55,7 @@ public class JobProfileManagementActor extends BaseActor {
       String createdBy = (String) requestMap.get(JsonKey.CREATED_BY);
       Response addrResponse = null;
       if (JsonKey.CREATE.equalsIgnoreCase(operationtype)) {
+        ProjectLogger.log("upsertJobProfileDetails called");
         jobProfileMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
         if (jobProfileMap.containsKey(JsonKey.ADDRESS)) {
           addrResponse = upsertJobProfileAddressDetails(jobProfileMap, createdBy);
@@ -74,7 +75,10 @@ public class JobProfileManagementActor extends BaseActor {
         updateJobProfileDetails(jobProfileMap, addrResponse, createdBy);
       }
     }
-    saveUserJobProfileToEs(requestMap);
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    sender().tell(response, self());
+    // saveUserJobProfileToEs(requestMap);
   }
 
   private void saveUserJobProfileToEs(Map<String, Object> requestMap) {
@@ -151,9 +155,11 @@ public class JobProfileManagementActor extends BaseActor {
       Map<String, Object> jobProfileMap,
       Response addrResponse,
       String createdBy) {
+    Map<String, Object> address = null;
     if (null != addrResponse
         && ((String) addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       jobProfileMap.put(JsonKey.ADDRESS_ID, addrResponse.get(JsonKey.ADDRESS_ID));
+      address = (Map<String, Object>) jobProfileMap.get(JsonKey.ADDRESS);
       jobProfileMap.remove(JsonKey.ADDRESS);
     }
     jobProfileMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
@@ -165,6 +171,7 @@ public class JobProfileManagementActor extends BaseActor {
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
+    jobProfileMap.put(JsonKey.ADDRESS, address);
   }
 
   @SuppressWarnings("unchecked")
@@ -174,7 +181,7 @@ public class JobProfileManagementActor extends BaseActor {
     String addrId = null;
     Map<String, Object> address = (Map<String, Object>) jobProfileDetailsMap.get(JsonKey.ADDRESS);
     if (!address.containsKey(JsonKey.ID)) {
-      addrId = ProjectUtil.getUniqueIdFromTimestamp(1);
+      addrId = ProjectUtil.getUniqueIdFromTimestamp(2);
       address.put(JsonKey.ID, addrId);
       address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
       address.put(JsonKey.CREATED_BY, createdBy);

@@ -57,6 +57,7 @@ public class EducationManagementActor extends BaseActor {
       String createdBy = (String) requestMap.get(JsonKey.ID);
       Response addrResponse = null;
       if (JsonKey.CREATE.equalsIgnoreCase(operationtype)) {
+        ProjectLogger.log("upsertEducationDetails called");
         educationDetailsMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
         if (educationDetailsMap.containsKey(JsonKey.ADDRESS)) {
           addrResponse = upsertEducationAddressDetails(educationDetailsMap, createdBy);
@@ -76,7 +77,11 @@ public class EducationManagementActor extends BaseActor {
         updateEducationDetails(educationDetailsMap, addrResponse, createdBy);
       }
     }
-    saveUserEducationToEs(requestMap);
+
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    sender().tell(response, self());
+    // saveUserEducationToEs(requestMap);
   }
 
   private void saveUserEducationToEs(Map<String, Object> requestMap) {
@@ -152,14 +157,18 @@ public class EducationManagementActor extends BaseActor {
     return addressId;
   }
 
+  @SuppressWarnings("unchecked")
   private void insertEducationDetails(
       Map<String, Object> requestMap,
       Map<String, Object> educationDetailsMap,
       Response addrResponse,
       String createdBy) {
+
+    Map<String, Object> address = null;
     if (null != addrResponse
         && ((String) addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       educationDetailsMap.put(JsonKey.ADDRESS_ID, addrResponse.get(JsonKey.ADDRESS_ID));
+      address = (Map<String, Object>) educationDetailsMap.get(JsonKey.ADDRESS);
       educationDetailsMap.remove(JsonKey.ADDRESS);
     }
     validateYearOfPassingAndPercentageDetails(educationDetailsMap);
@@ -174,6 +183,7 @@ public class EducationManagementActor extends BaseActor {
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
+    educationDetailsMap.put(JsonKey.ADDRESS, address);
   }
 
   private void validateYearOfPassingAndPercentageDetails(Map<String, Object> educationDetailsMap) {
@@ -210,7 +220,7 @@ public class EducationManagementActor extends BaseActor {
     String addrId = null;
     Map<String, Object> address = (Map<String, Object>) educationDetailsMap.get(JsonKey.ADDRESS);
     if (!address.containsKey(JsonKey.ID)) {
-      addrId = ProjectUtil.getUniqueIdFromTimestamp(1);
+      addrId = ProjectUtil.getUniqueIdFromTimestamp(3);
       address.put(JsonKey.ID, addrId);
       address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
       address.put(JsonKey.CREATED_BY, createdBy);

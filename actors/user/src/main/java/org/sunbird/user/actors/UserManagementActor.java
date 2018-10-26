@@ -2,6 +2,8 @@ package org.sunbird.user.actors;
 
 import static org.sunbird.learner.util.Util.isNotNull;
 
+import akka.actor.ActorRef;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigInteger;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -10,7 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
+import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -50,10 +52,6 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import akka.actor.ActorRef;
-
 /**
  * This actor will handle course enrollment operation .
  *
@@ -61,7 +59,14 @@ import akka.actor.ActorRef;
  * @author Amit Kumar
  */
 @ActorConfig(
-    tasks = {"createUser", "updateUser", "getUserProfile", "getUserDetailsByLoginId"},
+    tasks = {
+      "createUser",
+      "updateUser",
+      "getUserProfile",
+      "getUserDetailsByLoginId",
+      "profileVisibility",
+      "getMediaTypes"
+    },
     asyncTasks = {})
 public class UserManagementActor extends BaseActor {
   private ObjectMapper mapper = new ObjectMapper();
@@ -99,6 +104,10 @@ public class UserManagementActor extends BaseActor {
       getUserProfile(request);
     } else if (operation.equalsIgnoreCase(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue())) {
       getUserDetailsByLoginId(request);
+    } else if (operation.equalsIgnoreCase(ActorOperations.GET_MEDIA_TYPES.getValue())) {
+      getMediaTypes();
+    } else if (operation.equalsIgnoreCase(ActorOperations.PROFILE_VISIBILITY.getValue())) {
+      profileVisibility(request);
     } else {
       ProjectLogger.log("UNSUPPORTED OPERATION");
       ProjectCommonException exception =
@@ -108,6 +117,120 @@ public class UserManagementActor extends BaseActor {
               ResponseCode.CLIENT_ERROR.getResponseCode());
       sender().tell(exception, self());
     }
+  }
+
+  /**
+   * This method will first check user exist with us or not. after that it will create private filed
+   * Map, for creating private field map it will take store value from ES and then a separate map
+   * for private field and remove those field from original map. if will user is sending some public
+   * field list as well then it will take private field values from another ES index and update
+   * values under original data.
+   *
+   * @param actorMessage
+   */
+  @SuppressWarnings({"unchecked", "rawtypes"})
+  private void profileVisibility(Request actorMessage) {
+    Map<String, Object> map = (Map) actorMessage.getRequest();
+    String userId = (String) map.get(JsonKey.USER_ID);
+    List<String> privateList = (List) map.get(JsonKey.PRIVATE);
+    List<String> publicList = (List) map.get(JsonKey.PUBLIC);
+
+    // Remove duplicate entries from the list
+    // Visibility of permanent fields cannot be changed
+    if (CollectionUtils.isNotEmpty(privateList)) {
+      privateList = privateList.stream().distinct().collect(Collectors.toList());
+      Util.validateProfileVisibilityFields(
+          privateList, JsonKey.PUBLIC_FIELDS, systemSettingActorRef);
+    }
+
+    if (CollectionUtils.isNotEmpty(publicList)) {
+      publicList = publicList.stream().distinct().collect(Collectors.toList());
+      Util.validateProfileVisibilityFields(
+          publicList, JsonKey.PRIVATE_FIELDS, systemSettingActorRef);
+    }
+
+    Map<String, Object> esResult =
+        ElasticSearchUtil.getDataByIdentifier(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(),
+            userId);
+    if (esResult == null || esResult.size() == 0) {
+      throw new ProjectCommonException(
+          ResponseCode.userNotFound.getErrorCode(),
+          ResponseCode.userNotFound.getErrorMessage(),
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+    }
+    Map<String, Object> esPrivateResult =
+        ElasticSearchUtil.getDataByIdentifier(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.userprofilevisibility.getTypeName(),
+            userId);
+    Map<String, Object> responseMap = new HashMap<>();
+    if (privateList != null && !privateList.isEmpty()) {
+      responseMap = handlePrivateVisibility(privateList, esResult, esPrivateResult);
+    }
+    if (responseMap != null && !responseMap.isEmpty()) {
+      Map<String, Object> privateDataMap = (Map<String, Object>) responseMap.get(JsonKey.DATA);
+      if (privateDataMap != null && privateDataMap.size() >= esPrivateResult.size()) {
+        // this will indicate some extra private data is added
+        esPrivateResult = privateDataMap;
+        UserUtility.updateProfileVisibilityFields(privateDataMap, esResult);
+      }
+    }
+    // now have a check for public field.
+    if (publicList != null && !publicList.isEmpty()) {
+      // this estype will hold all private data of user.
+      // now collecting values from private filed and it will update
+      // under original index with public field.
+      for (String field : publicList) {
+        if (esPrivateResult.containsKey(field)) {
+          esResult.put(field, esPrivateResult.get(field));
+          esPrivateResult.remove(field);
+        } else {
+          ProjectLogger.log("field value not found inside private index ==" + field);
+        }
+      }
+    }
+    Map<String, String> profileVisibilityMap =
+        (Map<String, String>) esResult.get(JsonKey.PROFILE_VISIBILITY);
+    if (null == profileVisibilityMap) {
+      profileVisibilityMap = new HashMap<>();
+    }
+    if (privateList != null) {
+      for (String key : privateList) {
+        profileVisibilityMap.put(key, JsonKey.PRIVATE);
+      }
+    }
+    if (publicList != null) {
+      for (String key : publicList) {
+        profileVisibilityMap.put(key, JsonKey.PUBLIC);
+      }
+      updateCassandraWithPrivateFiled(userId, profileVisibilityMap);
+      esResult.put(JsonKey.PROFILE_VISIBILITY, profileVisibilityMap);
+    }
+    if (profileVisibilityMap.size() > 0) {
+      updateCassandraWithPrivateFiled(userId, profileVisibilityMap);
+      esResult.put(JsonKey.PROFILE_VISIBILITY, profileVisibilityMap);
+    }
+    boolean updateResponse = true;
+    updateResponse = updateDataInES(esResult, esPrivateResult, userId);
+    Response response = new Response();
+    if (updateResponse) {
+      response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    } else {
+      response.put(JsonKey.RESPONSE, JsonKey.FAILURE);
+    }
+    sender().tell(response, self());
+    generateTeleEventForUser(null, userId, "profileVisibility");
+  }
+
+  private Map<String, Object> handlePrivateVisibility(
+      List<String> privateFieldList, Map<String, Object> data, Map<String, Object> oldPrivateData) {
+    Map<String, Object> privateFiledMap = createPrivateFiledMap(data, privateFieldList);
+    privateFiledMap.putAll(oldPrivateData);
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.DATA, privateFiledMap);
+    return map;
   }
 
   /**
@@ -346,24 +469,24 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
-  private void fetchUserOrganisations(List<Map<String, Object>> userOrgs){
-	  
-	  for(Map usrOrg:userOrgs) {
-		  String id  = (String)usrOrg.get(JsonKey.ORGANISATION_ID);
-		  Map<String, Object> esResult =
-		  ElasticSearchUtil.getDataByIdentifier(ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName(), id);
-		  
-		  Map<String, Object> orgMap = new HashMap<>();
-		  usrOrg.put(JsonKey.ORGANISATION_ID, id);
-		  usrOrg.put(JsonKey.ORG_NAME, esResult.get(JsonKey.ORG_NAME));
-		  usrOrg.put(JsonKey.CHANNEL, esResult.get(JsonKey.CHANNEL));
-		  usrOrg.put(JsonKey.HASHTAGID, esResult.get(JsonKey.HASHTAGID));
-		  usrOrg.put(JsonKey.LOCATION_IDS, esResult.get(JsonKey.LOCATION_IDS));
-		  
-	  }
+  private void fetchUserOrganisations(List<Map<String, Object>> userOrgs) {
+
+    for (Map usrOrg : userOrgs) {
+      String id = (String) usrOrg.get(JsonKey.ORGANISATION_ID);
+      Map<String, Object> esResult =
+          ElasticSearchUtil.getDataByIdentifier(
+              ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.organisation.getTypeName(),
+              id);
+
+      usrOrg.put(JsonKey.ORG_NAME, esResult.get(JsonKey.ORG_NAME));
+      usrOrg.put(JsonKey.CHANNEL, esResult.get(JsonKey.CHANNEL));
+      usrOrg.put(JsonKey.HASHTAGID, esResult.get(JsonKey.HASHTAGID));
+      usrOrg.put(JsonKey.LOCATION_IDS, esResult.get(JsonKey.LOCATION_IDS));
+    }
   }
 
-private void fetchRootAndRegisterOrganisation(Map<String, Object> result) {
+  private void fetchRootAndRegisterOrganisation(Map<String, Object> result) {
     try {
       if (isNotNull(result.get(JsonKey.ROOT_ORG_ID))) {
 
@@ -475,8 +598,8 @@ private void fetchRootAndRegisterOrganisation(Map<String, Object> result) {
           // fetch the topic details of all user associated orgs and append in the result
           fetchTopicOfAssociatedOrgs(result);
         }
-        if(requestFields.contains(JsonKey.ORGANISATIONS)) {
-        	fetchUserOrganisations((List)result.get(JsonKey.ORGANISATIONS));
+        if (requestFields.contains(JsonKey.ORGANISATIONS)) {
+          fetchUserOrganisations((List) result.get(JsonKey.ORGANISATIONS));
         }
       }
     } else {
@@ -1696,6 +1819,31 @@ private void fetchRootAndRegisterOrganisation(Map<String, Object> result) {
     reqMap.remove(JsonKey.ORGANISATION_ID);
   }
 
+  private void generateTeleEventForUser(
+      Map<String, Object> requestMap, String userId, String objectType) {
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+    Map<String, Object> targetObject =
+        TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+    Map<String, Object> telemetryAction = new HashMap<>();
+    if (objectType.equalsIgnoreCase("orgLevel")) {
+      telemetryAction.put("AssignRole", "role assigned at org level");
+      if (null != requestMap) {
+        TelemetryUtil.generateCorrelatedObject(
+            (String) requestMap.get(JsonKey.ORGANISATION_ID),
+            JsonKey.ORGANISATION,
+            null,
+            correlatedObject);
+      }
+    } else {
+      if (objectType.equalsIgnoreCase("userLevel")) {
+        telemetryAction.put("AssignRole", "role assigned at user level");
+      } else if (objectType.equalsIgnoreCase("profileVisibility")) {
+        telemetryAction.put("ProfileVisibility", "profile Visibility setting changed");
+      }
+    }
+    TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
+  }
+
   /**
    * This method will remove user private field from response map
    *
@@ -1708,6 +1856,11 @@ private void fetchRootAndRegisterOrganisation(Map<String, Object> result) {
     }
     ProjectLogger.log("All private filed removed=");
     return responseMap;
+  }
+
+  private void getMediaTypes() {
+    Response response = SocialMediaType.getMediaTypeFromDB();
+    sender().tell(response, self());
   }
 
   private String getLastLoginTime(String userId, String time) {

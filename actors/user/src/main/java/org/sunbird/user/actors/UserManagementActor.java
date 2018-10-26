@@ -418,8 +418,8 @@ public class UserManagementActor extends BaseActor {
         // remove email and phone no from response
         result.remove(JsonKey.ENC_EMAIL);
         result.remove(JsonKey.ENC_PHONE);
-        if (null != actorMessage.getContext().get(JsonKey.FIELDS)) {
-          List<String> requestFields = (List<String>) actorMessage.getContext().get(JsonKey.FIELDS);
+        if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
+          List<String> requestFields = (List<String>) actorMessage.getRequest().get(JsonKey.FIELDS);
           if (requestFields != null) {
             if (!requestFields.contains(JsonKey.COMPLETENESS)) {
               result.remove(JsonKey.COMPLETENESS);
@@ -443,6 +443,9 @@ public class UserManagementActor extends BaseActor {
               // result
               fetchTopicOfAssociatedOrgs(result);
             }
+            if (requestFields.contains(JsonKey.ORGANISATIONS)) {
+                updateUserOrgInfo((List) result.get(JsonKey.ORGANISATIONS));
+              }
           } else {
             result.remove(JsonKey.MISSING_FIELDS);
             result.remove(JsonKey.COMPLETENESS);

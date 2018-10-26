@@ -21,7 +21,6 @@ import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
 
-
 @ActorConfig(
     tasks = {"profileVisibility", "getMediaTypes"},
     asyncTasks = {})
@@ -42,6 +41,7 @@ public class UserProfileActor extends UserBaseActor {
         break;
       default:
         onReceiveUnsupportedMessage("UserProfileActor");
+        break;
     }
   }
 
@@ -70,10 +70,9 @@ public class UserProfileActor extends UserBaseActor {
 
     Map<String, Object> esResult = getUserByIdFromES(userId);
     Map<String, Object> esProfileVisibility = getProfileVisibilityByUserIdFromES(userId);
-    Map<String, Object> privateDataMap = new HashMap<>();
 
     esProfileVisibility =
-        handlePublicToPrivateConversion(privateList, esResult, esProfileVisibility, privateDataMap);
+        handlePublicToPrivateConversion(privateList, esResult, esProfileVisibility);
 
     handlePrivateToPublicConversion(publicList, esResult, esProfileVisibility);
     updaeProfileVisibility(userId, privateList, publicList, esResult);
@@ -135,14 +134,13 @@ public class UserProfileActor extends UserBaseActor {
   private Map<String, Object> handlePublicToPrivateConversion(
       List<String> privateList,
       Map<String, Object> esResult,
-      Map<String, Object> esProfileVisibility,
-      Map<String, Object> privateDataMap) {
+      Map<String, Object> esProfileVisibility) {
+    Map<String, Object> privateDataMap = null;
     if (privateList != null && !privateList.isEmpty()) {
       privateDataMap = handlePrivateVisibility(privateList, esResult, esProfileVisibility);
     }
     if (privateDataMap != null && privateDataMap.size() >= esProfileVisibility.size()) {
       // this will indicate some extra private data is added
-      esProfileVisibility = privateDataMap;
       UserUtility.updateProfileVisibilityFields(privateDataMap, esResult);
     }
     return esProfileVisibility;
@@ -174,8 +172,8 @@ public class UserProfileActor extends UserBaseActor {
     // Remove duplicate entries from the list
     // Visibility of permanent fields cannot be changed
     if (CollectionUtils.isNotEmpty(values)) {
-      values = values.stream().distinct().collect(Collectors.toList());
-      Util.validateProfileVisibilityFields(values, listType, getSystemSettingActorRef());
+      List<String> distValues = values.stream().distinct().collect(Collectors.toList());
+      Util.validateProfileVisibilityFields(distValues, listType, getSystemSettingActorRef());
     }
   }
 
@@ -210,9 +208,9 @@ public class UserProfileActor extends UserBaseActor {
    */
   private void updateCassandraWithPrivateFiled(String userId, Map<String, String> privateFieldMap) {
 
-	User updateUserObj  = new User();
-	updateUserObj.setId(userId);
-	updateUserObj.setProfileVisibility(privateFieldMap);
+    User updateUserObj = new User();
+    updateUserObj.setId(userId);
+    updateUserObj.setProfileVisibility(privateFieldMap);
     Response response = getUserDao().updateUser(updateUserObj);
     String val = (String) response.get(JsonKey.RESPONSE);
     ProjectLogger.log("Private field updated under cassandra==" + val);

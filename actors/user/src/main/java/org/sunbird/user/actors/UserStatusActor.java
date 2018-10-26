@@ -1,9 +1,7 @@
 package org.sunbird.user.actors;
 
 import java.text.MessageFormat;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.sunbird.actor.router.ActorConfig;
@@ -19,7 +17,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 
@@ -30,7 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
     asyncTasks = {})
 public class UserStatusActor extends UserBaseActor {
   private UserService userService = UserServiceImpl.getInstance();
-
 
   @Override
   public void onReceive(Request request) throws Throwable {

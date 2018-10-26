@@ -12,24 +12,28 @@ import org.sunbird.user.dao.UserOrgDao;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class UserOrgDaoImpl implements UserOrgDao {
+public final class UserOrgDaoImpl implements UserOrgDao {
 
   private final Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static UserOrgDao userOrgDao = null;
+
   private ObjectMapper mapper = new ObjectMapper();
+
   private UserOrgDaoImpl() {}
 
+  private static class LazyInitializer {
+    static UserOrgDao INSTACE = new UserOrgDaoImpl();
+  }
+
   public static UserOrgDao getInstance() {
-    if (userOrgDao == null) {
-      userOrgDao = new UserOrgDaoImpl();
-    }
-    return userOrgDao;
+    return LazyInitializer.INSTACE;
   }
 
   @Override
   public Response updateUserOrg(UserOrg userOrg) {
     return cassandraOperation.updateRecord(
-        userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName(), mapper.convertValue(userOrg, Map.class));
+        userOrgDbInfo.getKeySpace(),
+        userOrgDbInfo.getTableName(),
+        mapper.convertValue(userOrg, Map.class));
   }
 }

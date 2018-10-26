@@ -2,8 +2,6 @@ package org.sunbird.user.actors;
 
 import static org.sunbird.learner.util.Util.isNotNull;
 
-import akka.actor.ActorRef;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigInteger;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -12,7 +10,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -52,6 +50,10 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import akka.actor.ActorRef;
+
 /**
  * This actor will handle course enrollment operation .
  *
@@ -59,14 +61,8 @@ import org.sunbird.user.service.impl.UserServiceImpl;
  * @author Amit Kumar
  */
 @ActorConfig(
-  tasks = {
-    "createUser",
-    "updateUser",
-    "getUserProfile",
-    "getUserDetailsByLoginId"
-   },
-  asyncTasks = {}
-)
+    tasks = {"createUser", "updateUser", "getUserProfile", "getUserDetailsByLoginId"},
+    asyncTasks = {})
 public class UserManagementActor extends BaseActor {
   private ObjectMapper mapper = new ObjectMapper();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -113,8 +109,6 @@ public class UserManagementActor extends BaseActor {
       sender().tell(exception, self());
     }
   }
-
- 
 
   /**
    * This method will create a private field map and remove those filed from original map.
@@ -1682,8 +1676,6 @@ public class UserManagementActor extends BaseActor {
     reqMap.remove(JsonKey.ORGANISATION_ID);
   }
 
- 
-
   /**
    * This method will remove user private field from response map
    *
@@ -1697,7 +1689,6 @@ public class UserManagementActor extends BaseActor {
     ProjectLogger.log("All private filed removed=");
     return responseMap;
   }
-
 
   private String getLastLoginTime(String userId, String time) {
     String lastLoginTime = "";

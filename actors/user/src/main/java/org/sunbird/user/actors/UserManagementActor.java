@@ -444,8 +444,8 @@ public class UserManagementActor extends BaseActor {
               fetchTopicOfAssociatedOrgs(result);
             }
             if (requestFields.contains(JsonKey.ORGANISATIONS)) {
-                updateUserOrgInfo((List) result.get(JsonKey.ORGANISATIONS));
-              }
+              updateUserOrgInfo((List) result.get(JsonKey.ORGANISATIONS));
+            }
           } else {
             result.remove(JsonKey.MISSING_FIELDS);
             result.remove(JsonKey.COMPLETENESS);
@@ -516,9 +516,11 @@ public class UserManagementActor extends BaseActor {
     List<String> searchLocations = new ArrayList<>();
     for (Map<String, Object> org : orgInfoMap.values()) {
       List<String> locations = (List<String>) org.get(JsonKey.LOCATION_IDS);
-      for (String location : locations) {
-        if (!searchLocations.contains(location)) {
-          searchLocations.add(location);
+      if (locations != null) {
+        for (String location : locations) {
+          if (!searchLocations.contains(location)) {
+            searchLocations.add(location);
+          }
         }
       }
     }
@@ -532,8 +534,10 @@ public class UserManagementActor extends BaseActor {
   private List<Map<String, Object>> prepLocationFields(
       List<String> locationIds, Map<String, Map<String, Object>> locationInfoMap) {
     List<Map<String, Object>> retList = new ArrayList<>();
-    for (String locationId : locationIds) {
-      retList.add(locationInfoMap.get(locationId));
+    if (locationIds != null) {
+      for (String locationId : locationIds) {
+        retList.add(locationInfoMap.get(locationId));
+      }
     }
     return retList;
   }

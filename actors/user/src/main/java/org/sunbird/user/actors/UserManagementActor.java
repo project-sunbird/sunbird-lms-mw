@@ -749,12 +749,7 @@ public class UserManagementActor extends BaseActor {
     Map<String, Object> userMap = actorMessage.getRequest();
     userRequestValidator.validateUpdateUserRequest(actorMessage);
     Map<String, Object> userDbRecord = UserUtil.validateExternalIdsAndReturnActiveUser(userMap);
-    userMap.put(JsonKey.USER_ID, userDbRecord.get(JsonKey.USER_ID));
-    if (null != userMap.get(JsonKey.USER_ID)) {
-      userMap.put(JsonKey.ID, userMap.get(JsonKey.USER_ID));
-    } else {
-      userMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-    }
+
     User user = mapper.convertValue(userMap, User.class);
     UserUtil.validateExternalIds(user, JsonKey.UPDATE);
     userMap.put(JsonKey.EXTERNAL_IDS, user.getExternalIds());

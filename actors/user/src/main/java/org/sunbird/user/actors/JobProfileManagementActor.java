@@ -54,17 +54,22 @@ public class JobProfileManagementActor extends BaseActor {
         }
         insertJobProfileDetails(requestMap, jobProfileMap, addrResponse, createdBy);
       } else {
-        if (requestMap.containsKey(JsonKey.IS_DELETED)
-            && null != requestMap.get(JsonKey.IS_DELETED)
-            && ((boolean) requestMap.get(JsonKey.IS_DELETED))
-            && !StringUtils.isBlank((String) requestMap.get(JsonKey.ID))) {
-          deleteJobProfileDetails(requestMap);
+        if (jobProfileMap.containsKey(JsonKey.IS_DELETED)
+            && null != jobProfileMap.get(JsonKey.IS_DELETED)
+            && ((boolean) jobProfileMap.get(JsonKey.IS_DELETED))
+            && !StringUtils.isBlank((String) jobProfileMap.get(JsonKey.ID))) {
+          deleteJobProfileDetails(jobProfileMap);
           continue;
         }
         if (jobProfileMap.containsKey(JsonKey.ADDRESS)) {
           addrResponse = upsertJobProfileAddressDetails(jobProfileMap, createdBy);
         }
-        updateJobProfileDetails(jobProfileMap, addrResponse, createdBy);
+        if (StringUtils.isBlank((String) jobProfileMap.get(JsonKey.ID))) {
+          jobProfileMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
+          insertJobProfileDetails(requestMap, jobProfileMap, addrResponse, createdBy);
+        } else {
+          updateJobProfileDetails(jobProfileMap, addrResponse, createdBy);
+        }
       }
     }
     Response response = new Response();
@@ -165,6 +170,7 @@ public class JobProfileManagementActor extends BaseActor {
     Response addrResponse = null;
     String addrId = null;
     Map<String, Object> address = (Map<String, Object>) jobProfileDetailsMap.get(JsonKey.ADDRESS);
+    address.remove(JsonKey.IS_DELETED);
     if (!address.containsKey(JsonKey.ID)) {
       addrId = ProjectUtil.getUniqueIdFromTimestamp(2);
       address.put(JsonKey.ID, addrId);

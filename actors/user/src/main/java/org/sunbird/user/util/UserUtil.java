@@ -116,13 +116,36 @@ public class UserUtil {
             ProjectUtil.formatMessage(
                 ResponseCode.externalIdNotFound.getErrorMessage(), extId, idType, provider),
             ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    } else if (StringUtils.isNotBlank((String) userMap.get(JsonKey.USER_ID))
+        || StringUtils.isNotBlank((String) userMap.get(JsonKey.ID))) {
+      String userId =
+          (StringUtils.isNotBlank((String) userMap.get(JsonKey.USER_ID)))
+              ? ((String) userMap.get(JsonKey.USER_ID))
+              : ((String) userMap.get(JsonKey.ID));
+      user =
+          ElasticSearchUtil.getDataByIdentifier(
+              ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.user.getTypeName(),
+              userId);
+      if (MapUtils.isEmpty(user)) {
+        throw new ProjectCommonException(
+            ResponseCode.userNotFound.getErrorCode(),
+            ResponseCode.userNotFound.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
+    if (MapUtils.isNotEmpty(user)) {
+      if (null != user.get(JsonKey.IS_DELETED) && (boolean) (user.get(JsonKey.IS_DELETED))) {
+        throw new ProjectCommonException(
+            ResponseCode.inactiveUser.getErrorCode(),
+            ResponseCode.inactiveUser.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+      if (StringUtils.isNotBlank((String) userMap.get(JsonKey.USER_ID))) {
+        userMap.put(JsonKey.ID, user.get(JsonKey.USER_ID));
       } else {
-        if (null != user.get(JsonKey.IS_DELETED) && (boolean) (user.get(JsonKey.IS_DELETED))) {
-          throw new ProjectCommonException(
-              ResponseCode.inactiveUser.getErrorCode(),
-              ResponseCode.inactiveUser.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-        }
+        userMap.put(JsonKey.USER_ID, user.get(JsonKey.ID));
       }
     }
     return user;
@@ -564,28 +587,32 @@ public class UserUtil {
       user.setExternalIds(list);
     }
     checkExternalIdUniqueness(user, operationType);
-    if (JsonKey.UPDATE.equalsIgnoreCase(operationType)) {
+    if (JsonKey.UPDATE.equalsIgnoreCase(operationType)
+        && CollectionUtils.isNotEmpty(user.getExternalIds())) {
       validateUserExternalIds(user);
     }
   }
 
   @SuppressWarnings("unchecked")
   public static void checkEmailSameOrDiff(Map<String, Object> userMap) {
-    Response response =
-        cassandraOperation.getRecordById(
-            userDb.getKeySpace(), userDb.getTableName(), (String) userMap.get(JsonKey.ID));
-    List<Map<String, Object>> resList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    if (!resList.isEmpty()) {
-      Map<String, Object> res = resList.get(0);
-      String email = (String) res.get(JsonKey.EMAIL);
-      String encEmail = (String) userMap.get(JsonKey.EMAIL);
-      try {
-        encEmail = encryptionService.encryptData((String) userMap.get(JsonKey.EMAIL));
-      } catch (Exception ex) {
-        ProjectLogger.log("Exception occurred while encrypting user email.");
-      }
-      if ((encEmail).equalsIgnoreCase(email)) {
-        userMap.remove(JsonKey.EMAIL);
+    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.EMAIL))) {
+      Response response =
+          cassandraOperation.getRecordById(
+              userDb.getKeySpace(), userDb.getTableName(), (String) userMap.get(JsonKey.ID));
+      List<Map<String, Object>> resList =
+          (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+      if (!resList.isEmpty()) {
+        Map<String, Object> res = resList.get(0);
+        String email = (String) res.get(JsonKey.EMAIL);
+        String encEmail = (String) userMap.get(JsonKey.EMAIL);
+        try {
+          encEmail = encryptionService.encryptData((String) userMap.get(JsonKey.EMAIL));
+        } catch (Exception ex) {
+          ProjectLogger.log("Exception occurred while encrypting user email.");
+        }
+        if ((encEmail).equalsIgnoreCase(email)) {
+          userMap.remove(JsonKey.EMAIL);
+        }
       }
     }
   }

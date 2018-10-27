@@ -66,7 +66,12 @@ public class EducationManagementActor extends BaseActor {
         if (educationDetailsMap.containsKey(JsonKey.ADDRESS)) {
           addrResponse = upsertEducationAddressDetails(educationDetailsMap, createdBy);
         }
-        updateEducationDetails(educationDetailsMap, addrResponse, createdBy);
+        if (StringUtils.isBlank((String) educationDetailsMap.get(JsonKey.ID))) {
+          educationDetailsMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
+          insertEducationDetails(requestMap, educationDetailsMap, addrResponse, createdBy);
+        } else {
+          updateEducationDetails(educationDetailsMap, addrResponse, createdBy);
+        }
       }
     }
 
@@ -203,6 +208,7 @@ public class EducationManagementActor extends BaseActor {
     Response addrResponse = null;
     String addrId = null;
     Map<String, Object> address = (Map<String, Object>) educationDetailsMap.get(JsonKey.ADDRESS);
+    address.remove(JsonKey.IS_DELETED);
     if (!address.containsKey(JsonKey.ID)) {
       addrId = ProjectUtil.getUniqueIdFromTimestamp(3);
       address.put(JsonKey.ID, addrId);

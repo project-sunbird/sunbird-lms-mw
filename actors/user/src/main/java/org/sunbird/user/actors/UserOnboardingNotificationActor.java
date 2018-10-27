@@ -16,7 +16,7 @@ import org.sunbird.user.util.UserActorOperations;
   tasks = {},
   asyncTasks = {"processOnBoardingMailAndSms"}
 )
-public class ProcessOnBoardingMailAndSmsActor extends BaseActor {
+public class UserOnboardingNotificationActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {

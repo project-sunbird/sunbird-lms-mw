@@ -10,12 +10,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.user.util.UserActorOperations;
@@ -35,15 +33,11 @@ public class UserExternalIdManagementActor extends BaseActor {
         .equalsIgnoreCase(request.getOperation())) {
       upsertUserExternalIdentityDetails(request);
     } else {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.invalidOperationName.getErrorCode(),
-              ResponseCode.invalidOperationName.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+      onReceiveUnsupportedOperation("UserExternalIdManagementActor");
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void upsertUserExternalIdentityDetails(Request request) {
     Map<String, Object> requestMap = request.getRequest();
     List<Map<String, String>> externalIds =
@@ -83,7 +77,8 @@ public class UserExternalIdManagementActor extends BaseActor {
       }
       cassandraOperation.upsertRecord(JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, map);
     } catch (Exception ex) {
-      ProjectLogger.log("Util:upsertUserExternalIdentityData : Exception occurred", ex);
+      ProjectLogger.log(
+          "UserExternalIdManagementActor:upsertUserExternalIdentityData : Exception occurred", ex);
     }
   }
 }

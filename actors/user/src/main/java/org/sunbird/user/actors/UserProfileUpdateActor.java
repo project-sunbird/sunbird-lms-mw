@@ -18,7 +18,7 @@ import org.sunbird.user.util.UserActorOperations;
   tasks = {"saveUserAttributes"},
   asyncTasks = {"saveUserAttributes"}
 )
-public class UserAttributesProcessingActor extends BaseActor {
+public class UserProfileUpdateActor extends BaseActor {
 
   private static InterServiceCommunication interServiceCommunication =
       InterServiceCommunicationFactory.getInstance();
@@ -64,7 +64,7 @@ public class UserAttributesProcessingActor extends BaseActor {
       }
     } catch (Exception ex) {
       ProjectLogger.log(
-          "UserAttributesProcessingActor:saveUserExternalIds: Exception occurred while saving user externalIds.",
+          "UserProfileUpdateActor:saveUserExternalIds: Exception occurred while saving user externalIds.",
           ex);
     }
     return null;
@@ -85,7 +85,7 @@ public class UserAttributesProcessingActor extends BaseActor {
       }
     } catch (Exception ex) {
       ProjectLogger.log(
-          "UserAttributesProcessingActor:saveUserOrgDetails: Exception occurred while saving user org details.",
+          "UserProfileUpdateActor:saveUserOrgDetails: Exception occurred while saving user org details.",
           ex);
     }
     return null;
@@ -108,7 +108,7 @@ public class UserAttributesProcessingActor extends BaseActor {
       }
     } catch (Exception ex) {
       ProjectLogger.log(
-          "UserAttributesProcessingActor:saveJobProfile: Exception occurred while saving user job profile details.",
+          "UserProfileUpdateActor:saveJobProfile: Exception occurred while saving user job profile details.",
           ex);
     }
     return null;
@@ -131,7 +131,7 @@ public class UserAttributesProcessingActor extends BaseActor {
       }
     } catch (Exception ex) {
       ProjectLogger.log(
-          "UserAttributesProcessingActor:saveEducation: Exception occurred while saving user education details.",
+          "UserProfileUpdateActor:saveEducation: Exception occurred while saving user education details.",
           ex);
     }
     return null;
@@ -152,7 +152,7 @@ public class UserAttributesProcessingActor extends BaseActor {
       }
     } catch (Exception ex) {
       ProjectLogger.log(
-          "UserAttributesProcessingActor:saveAddress: Exception occurred while saving user address details.",
+          "UserProfileUpdateActor:saveAddress: Exception occurred while saving user address details.",
           ex);
     }
     return null;

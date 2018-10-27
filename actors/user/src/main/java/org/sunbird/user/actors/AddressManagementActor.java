@@ -91,7 +91,6 @@ public class AddressManagementActor extends BaseActor {
 
   private void insertAddressDetails(
       String encUserId, String encCreatedById, Map<String, Object> reqMap) {
-    ProjectLogger.log("insertAddressDetails called");
     reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
     reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     reqMap.put(JsonKey.CREATED_BY, encCreatedById);

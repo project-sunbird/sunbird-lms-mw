@@ -790,7 +790,7 @@ public class UserManagementActor extends BaseActor {
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       Map<String, Object> completeUserDetails = new HashMap<>(userDbRecord);
       completeUserDetails.putAll(requestMap);
-      saveUserDetailsToEs(requestMap, completeUserDetails);
+      saveUserDetailsToEs(completeUserDetails);
     } else {
       ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
     }
@@ -929,23 +929,16 @@ public class UserManagementActor extends BaseActor {
     }
     Response resp = null;
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      // saveUserDetailsToEs(requestMap, userMap);
       Map<String, Object> userRequest = new HashMap<>();
       userRequest.putAll(userMap);
       userRequest.put(JsonKey.OPERATION_TYPE, JsonKey.CREATE);
       resp = saveUserAttributes(userRequest);
-      System.out.println(resp);
     } else {
       ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
     }
     sender().tell(response, self());
     if (null != resp) {
-      Request userRequest = new Request();
-      userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-      userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
-      ProjectLogger.log(
-          "UserManagementActor:processUserRequest: Trigger sync of user details to ES");
-      tellToAnother(userRequest);
+      saveUserDetailsToEs(userMap);
     }
     sendEmailAndSms(requestMap);
     // object of telemetry event...
@@ -966,17 +959,12 @@ public class UserManagementActor extends BaseActor {
     tellToAnother(EmailAndSmsRequest);
   }
 
-  private void saveUserDetailsToEs(
-      Map<String, Object> requestMap, Map<String, Object> completeUserMap) {
+  private void saveUserDetailsToEs(Map<String, Object> completeUserMap) {
     Request userRequest = new Request();
-    userRequest.setOperation(UserActorOperations.UPSERT_USER_DETAILS_TO_ES.getValue());
-    Map<String, Object> userDetails = new HashMap<>();
-    userDetails.putAll(completeUserMap);
-    UserUtil.addMaskEmailAndPhone(userDetails);
-    requestMap.putAll(UserUtil.checkProfileCompleteness(userDetails));
-    Util.checkUserProfileVisibility(
-        userDetails, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
-    userRequest.getRequest().putAll(userDetails);
+    userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+    userRequest.getRequest().put(JsonKey.ID, completeUserMap.get(JsonKey.ID));
+    ProjectLogger.log(
+        "UserManagementActor:saveUserDetailsToEs: Trigger sync of user details to ES");
     tellToAnother(userRequest);
   }
 

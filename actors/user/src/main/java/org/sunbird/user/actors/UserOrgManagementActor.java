@@ -6,7 +6,6 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.util.Util;
 import org.sunbird.user.util.UserActorOperations;
@@ -29,7 +28,6 @@ public class UserOrgManagementActor extends BaseActor {
   }
 
   private void upsertUserOrgDetails(Request request) {
-    ProjectLogger.log("upsertUserOrgDetails called");
     Map<String, Object> requestMap = request.getRequest();
     // Register user to given orgId(not root orgId)
     String organisationId = (String) requestMap.get(JsonKey.ORGANISATION_ID);

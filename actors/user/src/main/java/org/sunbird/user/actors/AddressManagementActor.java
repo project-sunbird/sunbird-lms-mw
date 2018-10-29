@@ -10,6 +10,7 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.user.dao.AddressDao;
@@ -55,6 +56,8 @@ public class AddressManagementActor extends BaseActor {
         if (JsonKey.CREATE.equalsIgnoreCase(operationtype)) {
           address.put(JsonKey.CREATED_BY, encCreatedById);
           address.put(JsonKey.USER_ID, encUserId);
+          address.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+          address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
           addressDao.createAddress(address);
         } else {
           // update
@@ -69,9 +72,13 @@ public class AddressManagementActor extends BaseActor {
           if (!address.containsKey(JsonKey.ID)) {
             address.put(JsonKey.CREATED_BY, encCreatedById);
             address.put(JsonKey.USER_ID, encUserId);
+            address.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+            address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
             addressDao.createAddress(address);
           } else {
             address.put(JsonKey.UPDATED_BY, encCreatedById);
+            address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+            address.remove(JsonKey.USER_ID);
             addressDao.updateAddress(address);
           }
         }

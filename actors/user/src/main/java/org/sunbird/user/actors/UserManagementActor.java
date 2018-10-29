@@ -98,7 +98,12 @@ public class UserManagementActor extends BaseActor {
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.USER);
+    if(systemSettingActorRef == null) {
     systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
+     ProjectLogger.log("UserManagementActor onReceive systemsettingsActorRef  " + systemSettingActorRef, LoggerEnum.INFO.name());
+    } else {
+      ProjectLogger.log("UserManagementActor onReceive systemsettingsActorRef is not null " + systemSettingActorRef, LoggerEnum.INFO.name());
+    }
     // set request id fto thread loacl...
     ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();

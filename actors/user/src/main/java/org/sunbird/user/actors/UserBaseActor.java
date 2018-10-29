@@ -48,7 +48,7 @@ public abstract class UserBaseActor extends BaseActor {
         telemetryAction.put("UnblockUser", "user unblocked");
         break;
       case "profileVisibility":
-        telemetryAction.put("ProfileVisibility", "profile Visibility setting changed");
+        telemetryAction.put("ProfileVisibility", "profile visibility setting changed");
         break;
       default: // Do Nothing
     }

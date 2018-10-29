@@ -14,6 +14,9 @@ public interface UserService {
   void validateUserId(Request request);
 
   Map<String, Object> esGetUserById(String userId);
+  
+  Map<String, Object> esGetProfileVisibilityByUserId(String userId);
+ 
 
   void syncProfileVisibility(
       String userId, Map<String, Object> userDataMap, Map<String, Object> userPrivateDataMap);

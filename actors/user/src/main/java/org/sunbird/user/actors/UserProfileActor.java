@@ -1,5 +1,6 @@
 package org.sunbird.user.actors;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -7,19 +8,22 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.SocialMediaType;
-import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
+
+import com.typesafe.config.Config;
+
+import akka.actor.ActorRef;
 
 @ActorConfig(
     tasks = {"profileVisibility", "getMediaTypes"},
@@ -69,10 +73,10 @@ public class UserProfileActor extends UserBaseActor {
     validateFields(publicList, JsonKey.PRIVATE_FIELDS);
 
     Map<String, Object> esUserDataMap = getUserService().esGetUserById(userId);
-    Map<String, Object> esProfileVisibility = getProfileVisibilityByUserIdFromES(userId);
+    Map<String, Object> esProfileVisibility =
+        getUserService().esGetProfileVisibilityByUserId(userId);
 
-    esProfileVisibility =
-        handlePublicToPrivateConversion(privateList, esUserDataMap, esProfileVisibility);
+    handlePublicToPrivateConversion(privateList, esUserDataMap, esProfileVisibility);
 
     handlePrivateToPublicConversion(publicList, esUserDataMap, esProfileVisibility);
     updaeProfileVisibility(userId, privateList, publicList, esUserDataMap);
@@ -116,7 +120,7 @@ public class UserProfileActor extends UserBaseActor {
       List<String> publicList,
       Map<String, Object> esResult,
       Map<String, Object> esProfileVisibility) { // now have a check for public field.
-    if (publicList != null && !publicList.isEmpty()) {
+    if (CollectionUtils.isNotEmpty(publicList)) {
       // this estype will hold all private data of user.
       // now collecting values from private filed and it will update
       // under original index with public field.
@@ -131,26 +135,17 @@ public class UserProfileActor extends UserBaseActor {
     }
   }
 
-  private Map<String, Object> handlePublicToPrivateConversion(
+  private void handlePublicToPrivateConversion(
       List<String> privateList,
       Map<String, Object> esResult,
       Map<String, Object> esProfileVisibility) {
     Map<String, Object> privateDataMap = null;
-    if (privateList != null && !privateList.isEmpty()) {
+    if (CollectionUtils.isNotEmpty(privateList)) {
       privateDataMap = handlePrivateVisibility(privateList, esResult, esProfileVisibility);
     }
-    if (privateDataMap != null && privateDataMap.size() >= esProfileVisibility.size()) {
-      // this will indicate some extra private data is added
-      UserUtility.updateProfileVisibilityFields(privateDataMap, esResult);
+    if (privateDataMap != null && privateDataMap.size() > 0) {
+      updateProfileVisibilityFields(privateDataMap, esResult);
     }
-    return esProfileVisibility;
-  }
-
-  private Map<String, Object> getProfileVisibilityByUserIdFromES(String userId) {
-    return ElasticSearchUtil.getDataByIdentifier(
-        ProjectUtil.EsIndex.sunbird.getIndexName(),
-        ProjectUtil.EsType.userprofilevisibility.getTypeName(),
-        userId);
   }
 
   private void validateFields(List<String> values, String listType) {
@@ -158,7 +153,7 @@ public class UserProfileActor extends UserBaseActor {
     // Visibility of permanent fields cannot be changed
     if (CollectionUtils.isNotEmpty(values)) {
       List<String> distValues = values.stream().distinct().collect(Collectors.toList());
-      Util.validateProfileVisibilityFields(distValues, listType, getSystemSettingActorRef());
+      validateProfileVisibilityFields(distValues, listType, getSystemSettingActorRef());
     }
   }
 
@@ -223,5 +218,44 @@ public class UserProfileActor extends UserBaseActor {
       }
     }
     return privateMap;
+  }
+
+  private Map<String, Object> updateProfileVisibilityFields(
+      Map<String, Object> profileVisibility, Map<String, Object> mapToBeUpdated) {
+    for (String field : profileVisibility.keySet()) {
+      if ("dob".equalsIgnoreCase(field)) {
+        mapToBeUpdated.put(field, null);
+      } else if (profileVisibility.get(field) instanceof List) {
+        mapToBeUpdated.put(field, new ArrayList<>());
+      } else if (profileVisibility.get(field) instanceof Map) {
+        mapToBeUpdated.put(field, new HashMap<>());
+      } else if (profileVisibility.get(field) instanceof String) {
+        mapToBeUpdated.put(field, "");
+      } else {
+        mapToBeUpdated.put(field, null);
+      }
+    }
+    return mapToBeUpdated;
+  }
+
+  public void validateProfileVisibilityFields(
+      List<String> fieldList, String fieldTypeKey, ActorRef actorRef) {
+    String conflictingFieldTypeKey =
+        JsonKey.PUBLIC_FIELDS.equalsIgnoreCase(fieldTypeKey) ? JsonKey.PRIVATE : JsonKey.PUBLIC;
+
+    Config userProfileConfig = Util.getUserProfileConfig(actorRef);
+
+    List<String> fields = userProfileConfig.getStringList(fieldTypeKey);
+    List<String> fieldsCopy = new ArrayList<String>(fields);
+    fieldsCopy.retainAll(fieldList);
+
+    if (!fieldsCopy.isEmpty()) {
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.invalidParameterValue,
+          ProjectUtil.formatMessage(
+              ResponseCode.invalidParameterValue.getErrorMessage(),
+              fieldsCopy.toString(),
+              StringFormatter.joinByDot(JsonKey.PROFILE_VISIBILITY, conflictingFieldTypeKey)));
+    }
   }
 }

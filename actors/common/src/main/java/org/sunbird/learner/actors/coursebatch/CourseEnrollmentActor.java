@@ -83,13 +83,8 @@ public class CourseEnrollmentActor extends BaseActor {
 
     if (!ProjectUtil.isNull(userCourseResult) && userCourseResult.isActive()) {
       ProjectLogger.log("User Already Enrolled Course ");
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.userAlreadyEnrolledCourse,
-                  ResponseCode.CLIENT_ERROR.getResponseCode()),
-              self());
-      return;
+      createExceptionObject(
+          ResponseCode.userAlreadyEnrolledCourse, ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     courseBatchResult.setParticipant(
         addUserToParticipant(
@@ -222,33 +217,20 @@ public class CourseEnrollmentActor extends BaseActor {
       CourseBatch courseBatchDetails, Map<String, Object> request, String requestedBy) {
 
     if (ProjectUtil.isNull(courseBatchDetails)) {
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.invalidCourseBatchId, ResponseCode.CLIENT_ERROR.getResponseCode()),
-              self());
-      return;
+      createExceptionObject(
+          ResponseCode.invalidCourseBatchId, ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     verifyRequestedByAndThrowErrorIfNotMatch((String) request.get(JsonKey.USER_ID), requestedBy);
     if (EnrolmentType.inviteOnly.getVal().equals(courseBatchDetails.getEnrollmentType())) {
       ProjectLogger.log(
           "CourseEnrollmentActor validateCourseBatch self enrollment or unenrollment is not applicable for invite only batch.",
           LoggerEnum.INFO.name());
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.enrollmentTypeValidation,
-                  ResponseCode.CLIENT_ERROR.getResponseCode()),
-              self());
-      return;
+      createExceptionObject(
+          ResponseCode.enrollmentTypeValidation, ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     if (!((String) request.get(JsonKey.COURSE_ID)).equals(courseBatchDetails.getCourseId())) {
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.invalidCourseBatchId, ResponseCode.CLIENT_ERROR.getResponseCode()),
-              self());
-      return;
+      createExceptionObject(
+          ResponseCode.invalidCourseBatchId, ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     try {
@@ -263,13 +245,8 @@ public class CourseEnrollmentActor extends BaseActor {
         ProjectLogger.log(
             "CourseEnrollmentActor validateCourseBatch Course is completed already.",
             LoggerEnum.INFO.name());
-        sender()
-            .tell(
-                createExceptionObject(
-                    ResponseCode.courseBatchAlreadyCompleted,
-                    ResponseCode.CLIENT_ERROR.getResponseCode()),
-                self());
-        return;
+        createExceptionObject(
+            ResponseCode.courseBatchAlreadyCompleted, ResponseCode.CLIENT_ERROR.getResponseCode());
       }
     } catch (ParseException e) {
       ProjectLogger.log("CourseEnrollmentActor validateCourseBatch ", e);
@@ -278,12 +255,7 @@ public class CourseEnrollmentActor extends BaseActor {
 
   private void verifyRequestedByAndThrowErrorIfNotMatch(String userId, String requestedBy) {
     if (!(userId.equals(requestedBy))) {
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.UNAUTHORIZED, ResponseCode.UNAUTHORIZED.getResponseCode()),
-              self());
-      return;
+      createExceptionObject(ResponseCode.UNAUTHORIZED, ResponseCode.UNAUTHORIZED.getResponseCode());
     }
   }
 

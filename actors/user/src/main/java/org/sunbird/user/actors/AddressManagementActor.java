@@ -14,7 +14,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.user.dao.AddressDao;
-import org.sunbird.user.dao.AddressFactory;
+import org.sunbird.user.dao.impl.AddressDaoImpl;
 import org.sunbird.user.util.UserActorOperations;
 
 @ActorConfig(
@@ -26,7 +26,7 @@ public class AddressManagementActor extends BaseActor {
   private EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
           null);
-  private AddressDao addressDao = AddressFactory.getInstance();
+  private AddressDao addressDao = AddressDaoImpl.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {

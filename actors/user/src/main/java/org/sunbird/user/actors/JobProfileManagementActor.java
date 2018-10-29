@@ -7,15 +7,15 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
-import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.Util;
-import org.sunbird.learner.util.Util.DbInfo;
+import org.sunbird.user.dao.AddressDao;
+import org.sunbird.user.dao.JobProfileDao;
+import org.sunbird.user.dao.impl.AddressDaoImpl;
+import org.sunbird.user.dao.impl.JobProfileDaoImpl;
 import org.sunbird.user.util.UserActorOperations;
 
 @ActorConfig(
@@ -24,9 +24,8 @@ import org.sunbird.user.util.UserActorOperations;
 )
 public class JobProfileManagementActor extends BaseActor {
 
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-  private Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
+  private AddressDao addressDao = AddressDaoImpl.getInstance();
+  private JobProfileDao jobProfileDao = JobProfileDaoImpl.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -99,12 +98,7 @@ public class JobProfileManagementActor extends BaseActor {
     jobProfileMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     jobProfileMap.put(JsonKey.UPDATED_BY, createdBy);
     jobProfileMap.remove(JsonKey.USER_ID);
-    try {
-      cassandraOperation.upsertRecord(
-          jobProDbInfo.getKeySpace(), jobProDbInfo.getTableName(), jobProfileMap);
-    } catch (Exception ex) {
-      ProjectLogger.log(ex.getMessage(), ex);
-    }
+    jobProfileDao.upsertJobProfile(jobProfileMap);
   }
 
   @SuppressWarnings("unchecked")
@@ -113,32 +107,19 @@ public class JobProfileManagementActor extends BaseActor {
     if (requestMap.containsKey(JsonKey.ADDRESS) && null != requestMap.get(JsonKey.ADDRESS)) {
       addrsId = (String) ((Map<String, Object>) requestMap.get(JsonKey.ADDRESS)).get(JsonKey.ID);
     } else {
-      addrsId = getAddressId((String) requestMap.get(JsonKey.ID), jobProDbInfo);
+      addrsId = getAddressId((String) requestMap.get(JsonKey.ID));
     }
     if (null != addrsId) {
-      deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
+      addressDao.deleteAddress(addrsId);
     }
-    deleteRecord(
-        jobProDbInfo.getKeySpace(),
-        jobProDbInfo.getTableName(),
-        (String) requestMap.get(JsonKey.ID));
-  }
-
-  private void deleteRecord(String keyspaceName, String tableName, String id) {
-    try {
-      cassandraOperation.deleteRecord(keyspaceName, tableName, id);
-    } catch (Exception ex) {
-      ProjectLogger.log(ex.getMessage(), ex);
-    }
+    jobProfileDao.deleteJobProfile((String) requestMap.get(JsonKey.ID));
   }
 
   @SuppressWarnings("unchecked")
-  private String getAddressId(String id, DbInfo dbInfo) {
+  private String getAddressId(String id) {
     String addressId = null;
     try {
-      Response res =
-          cassandraOperation.getPropertiesValueById(
-              dbInfo.getKeySpace(), dbInfo.getTableName(), id, JsonKey.ADDRESS_ID);
+      Response res = jobProfileDao.getPropertiesValueById(JsonKey.ADDRESS_ID, id);
       if (!((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).isEmpty()) {
         addressId =
             (String)
@@ -167,8 +148,7 @@ public class JobProfileManagementActor extends BaseActor {
     jobProfileMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     jobProfileMap.put(JsonKey.CREATED_BY, createdBy);
     jobProfileMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.ID));
-    cassandraOperation.insertRecord(
-        jobProDbInfo.getKeySpace(), jobProDbInfo.getTableName(), jobProfileMap);
+    jobProfileDao.createJobProfile(jobProfileMap);
     jobProfileMap.put(JsonKey.ADDRESS, address);
   }
 
@@ -190,9 +170,7 @@ public class JobProfileManagementActor extends BaseActor {
       address.put(JsonKey.UPDATED_BY, createdBy);
       address.remove(JsonKey.USER_ID);
     }
-    addrResponse =
-        cassandraOperation.upsertRecord(
-            addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), address);
+    addrResponse = addressDao.upsertAddress(address);
     addrResponse.put(JsonKey.ADDRESS_ID, addrId);
     return addrResponse;
   }

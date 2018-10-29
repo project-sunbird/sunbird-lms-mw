@@ -14,9 +14,9 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.user.dao.AddressDao;
-import org.sunbird.user.dao.AddressFactory;
 import org.sunbird.user.dao.EducationDao;
-import org.sunbird.user.dao.EducationFactory;
+import org.sunbird.user.dao.impl.AddressDaoImpl;
+import org.sunbird.user.dao.impl.EducationDaoImpl;
 import org.sunbird.user.util.UserActorOperations;
 
 @ActorConfig(
@@ -25,8 +25,8 @@ import org.sunbird.user.util.UserActorOperations;
 )
 public class EducationManagementActor extends BaseActor {
 
-  private EducationDao educationDao = EducationFactory.getInstance();
-  private AddressDao addressDao = AddressFactory.getInstance();
+  private EducationDao educationDao = EducationDaoImpl.getInstance();
+  private AddressDao addressDao = AddressDaoImpl.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {

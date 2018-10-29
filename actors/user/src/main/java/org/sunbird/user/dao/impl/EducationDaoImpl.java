@@ -13,6 +13,17 @@ public class EducationDaoImpl implements EducationDao {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
 
+  private EducationDaoImpl() {}
+
+  private static EducationDao educationDao = null;
+
+  public static EducationDao getInstance() {
+    if (null == educationDao) {
+      educationDao = new EducationDaoImpl();
+    }
+    return educationDao;
+  }
+
   @Override
   public void createEducation(Map<String, Object> education) {
     cassandraOperation.insertRecord(eduDbInfo.getKeySpace(), eduDbInfo.getTableName(), education);

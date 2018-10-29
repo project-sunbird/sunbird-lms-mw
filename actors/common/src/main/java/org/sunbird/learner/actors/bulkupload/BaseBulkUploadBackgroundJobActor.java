@@ -97,10 +97,12 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
         try {
           if (task.getStatus().equals(ProjectUtil.BulkProcessStatus.FAILED.getValue())) {
             failureList.add(
-                mapper.readValue(task.getData(), new TypeReference<Map<String, Object>>() {}));
+                mapper.readValue(
+                    task.getFailureResult(), new TypeReference<Map<String, Object>>() {}));
           } else if (task.getStatus().equals(ProjectUtil.BulkProcessStatus.COMPLETED.getValue())) {
             successList.add(
-                mapper.readValue(task.getData(), new TypeReference<Map<String, Object>>() {}));
+                mapper.readValue(
+                    task.getSuccessResult(), new TypeReference<Map<String, Object>>() {}));
           }
         } catch (IOException e) {
           ProjectLogger.log(

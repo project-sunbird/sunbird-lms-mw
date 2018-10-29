@@ -72,38 +72,37 @@ public class UserProfileActor extends UserBaseActor {
     validateFields(privateList, JsonKey.PUBLIC_FIELDS);
     validateFields(publicList, JsonKey.PRIVATE_FIELDS);
 
-    Map<String, Object> esUserDataMap = getUserService().esGetUserById(userId);
-    Map<String, Object> esProfileVisibility =
+    Map<String, Object> esPublicUserProfile = getUserService().esGetUserById(userId);
+    Map<String, Object> esPrivateUserProfile =
         getUserService().esGetProfileVisibilityByUserId(userId);
 
-    handlePublicToPrivateConversion(privateList, esUserDataMap, esProfileVisibility);
+    updateUserProfile(publicList, privateList, esPublicUserProfile, esPrivateUserProfile);
+    updateProfileVisibility(userId, publicList, privateList, esPublicUserProfile);
 
-    handlePrivateToPublicConversion(publicList, esUserDataMap, esProfileVisibility);
-    updaeProfileVisibility(userId, privateList, publicList, esUserDataMap);
-
-    getUserService().syncProfileVisibility(userId, esUserDataMap, esProfileVisibility);
+    getUserService().syncProfileVisibility(userId, esPublicUserProfile, esPrivateUserProfile);
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
     generateTelemetryEvent(null, userId, "profileVisibility");
   }
 
-  private void updaeProfileVisibility(
+  private void updateProfileVisibility(
       String userId,
-      List<String> privateList,
       List<String> publicList,
-      Map<String, Object> esResult) {
+      List<String> privateList,
+      Map<String, Object> esPublicUserProfile) {
     Map<String, String> profileVisibilityMap =
-        (Map<String, String>) esResult.get(JsonKey.PROFILE_VISIBILITY);
+        (Map<String, String>) esPublicUserProfile.get(JsonKey.PROFILE_VISIBILITY);
     if (null == profileVisibilityMap) {
       profileVisibilityMap = new HashMap<>();
     }
-    prepareProfileVisibilityMap(profileVisibilityMap, privateList, JsonKey.PRIVATE);
+
     prepareProfileVisibilityMap(profileVisibilityMap, publicList, JsonKey.PUBLIC);
+    prepareProfileVisibilityMap(profileVisibilityMap, privateList, JsonKey.PRIVATE);
 
     if (profileVisibilityMap.size() > 0) {
       updateCassandraWithPrivateFiled(userId, profileVisibilityMap);
-      esResult.put(JsonKey.PROFILE_VISIBILITY, profileVisibilityMap);
+      esPublicUserProfile.put(JsonKey.PROFILE_VISIBILITY, profileVisibilityMap);
     }
   }
 
@@ -116,18 +115,18 @@ public class UserProfileActor extends UserBaseActor {
     }
   }
 
-  private void handlePrivateToPublicConversion(
+  private void addRemovedPrivateFieldsInPublicUserProfile(
       List<String> publicList,
-      Map<String, Object> esResult,
-      Map<String, Object> esProfileVisibility) { // now have a check for public field.
+      Map<String, Object> esPublicUserProfile,
+      Map<String, Object> esPrivateUserProfile) { // now have a check for public field.
     if (CollectionUtils.isNotEmpty(publicList)) {
       // this estype will hold all private data of user.
       // now collecting values from private filed and it will update
       // under original index with public field.
       for (String field : publicList) {
-        if (esProfileVisibility.containsKey(field)) {
-          esResult.put(field, esProfileVisibility.get(field));
-          esProfileVisibility.remove(field);
+        if (esPrivateUserProfile.containsKey(field)) {
+          esPublicUserProfile.put(field, esPrivateUserProfile.get(field));
+          esPrivateUserProfile.remove(field);
         } else {
           ProjectLogger.log("field value not found inside private index ==" + field);
         }
@@ -135,17 +134,20 @@ public class UserProfileActor extends UserBaseActor {
     }
   }
 
-  private void handlePublicToPrivateConversion(
+  private void updateUserProfile(
+      List<String> publicList,
       List<String> privateList,
-      Map<String, Object> esResult,
-      Map<String, Object> esProfileVisibility) {
+      Map<String, Object> esPublicUserProfile,
+      Map<String, Object> esPrivateUserProfile) {
     Map<String, Object> privateDataMap = null;
     if (CollectionUtils.isNotEmpty(privateList)) {
-      privateDataMap = handlePrivateVisibility(privateList, esResult, esProfileVisibility);
+      privateDataMap = getPrivateFieldMap(privateList, esPublicUserProfile, esPrivateUserProfile);
     }
     if (privateDataMap != null && privateDataMap.size() > 0) {
-      updateProfileVisibilityFields(privateDataMap, esResult);
+      resetPrivateFieldsInPublicUserProfile(privateDataMap, esPublicUserProfile);
     }
+    addRemovedPrivateFieldsInPublicUserProfile(
+        publicList, esPublicUserProfile, esPrivateUserProfile);
   }
 
   private void validateFields(List<String> values, String listType) {
@@ -173,7 +175,7 @@ public class UserProfileActor extends UserBaseActor {
     ProjectLogger.log("Private field updated under cassandra==" + val);
   }
 
-  private Map<String, Object> handlePrivateVisibility(
+  private Map<String, Object> getPrivateFieldMap(
       List<String> privateFieldList, Map<String, Object> data, Map<String, Object> oldPrivateData) {
     Map<String, Object> privateFiledMap = createPrivateFieldMap(data, privateFieldList);
     privateFiledMap.putAll(oldPrivateData);
@@ -220,22 +222,22 @@ public class UserProfileActor extends UserBaseActor {
     return privateMap;
   }
 
-  private Map<String, Object> updateProfileVisibilityFields(
-      Map<String, Object> profileVisibility, Map<String, Object> mapToBeUpdated) {
-    for (String field : profileVisibility.keySet()) {
+  private Map<String, Object> resetPrivateFieldsInPublicUserProfile(
+      Map<String, Object> privateDataMap, Map<String, Object> esPublicUserProfile) {
+    for (String field : privateDataMap.keySet()) {
       if ("dob".equalsIgnoreCase(field)) {
-        mapToBeUpdated.put(field, null);
-      } else if (profileVisibility.get(field) instanceof List) {
-        mapToBeUpdated.put(field, new ArrayList<>());
-      } else if (profileVisibility.get(field) instanceof Map) {
-        mapToBeUpdated.put(field, new HashMap<>());
-      } else if (profileVisibility.get(field) instanceof String) {
-        mapToBeUpdated.put(field, "");
+        esPublicUserProfile.put(field, null);
+      } else if (privateDataMap.get(field) instanceof List) {
+        esPublicUserProfile.put(field, new ArrayList<>());
+      } else if (privateDataMap.get(field) instanceof Map) {
+        esPublicUserProfile.put(field, new HashMap<>());
+      } else if (privateDataMap.get(field) instanceof String) {
+        esPublicUserProfile.put(field, "");
       } else {
-        mapToBeUpdated.put(field, null);
+        esPublicUserProfile.put(field, null);
       }
     }
-    return mapToBeUpdated;
+    return esPublicUserProfile;
   }
 
   public void validateProfileVisibilityFields(

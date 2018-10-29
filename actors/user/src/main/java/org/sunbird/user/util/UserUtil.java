@@ -142,10 +142,13 @@ public class UserUtil {
             ResponseCode.inactiveUser.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
-      if (StringUtils.isNotBlank((String) userMap.get(JsonKey.USER_ID))) {
-        userMap.put(JsonKey.ID, user.get(JsonKey.USER_ID));
-      } else {
+      // In request if userId or id not present (when you are sending only externalIds to verify the
+      // user)
+      if (StringUtils.isBlank((String) userMap.get(JsonKey.USER_ID))) {
         userMap.put(JsonKey.USER_ID, user.get(JsonKey.ID));
+      }
+      if (StringUtils.isBlank((String) userMap.get(JsonKey.ID))) {
+        userMap.put(JsonKey.ID, user.get(JsonKey.ID));
       }
     }
     return user;

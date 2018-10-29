@@ -9,20 +9,15 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
+import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessDao;
 import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessTaskDao;
@@ -30,6 +25,7 @@ import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
 import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessTaskDaoImpl;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
+import org.sunbird.learner.util.Util;
 
 /**
  * Actor contains the common functionality for bulk upload.
@@ -343,5 +339,61 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     } finally {
       IOUtils.closeQuietly(csvReader);
     }
+  }
+
+  public BulkUploadProcess handleUpload(String objectType, String createdBy) throws IOException {
+    String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
+    Response response = new Response();
+    response.getResult().put(JsonKey.PROCESS_ID, processId);
+    BulkUploadProcess bulkUploadProcess = getBulkUploadProcess(processId, objectType, createdBy, 0);
+    Response res = bulkUploadDao.create(bulkUploadProcess);
+    if (((String) res.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      sender().tell(response, self());
+    } else {
+      ProjectLogger.log(
+          "BaseBulkUploadActor:handleUpload: Error in creating record in bulk_upload_process.");
+      throw new ProjectCommonException(
+          ResponseCode.SERVER_ERROR.getErrorCode(),
+          ResponseCode.SERVER_ERROR.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
+    return bulkUploadProcess;
+  }
+
+  public void processBulkUpload(
+      int recordCount, String processId, BulkUploadProcess bulkUploadProcess, String operation)
+      throws IOException {
+    ProjectLogger.log(
+        "BaseBulkUploadActor: processBulkUpload called with operation = " + operation);
+
+    bulkUploadProcess.setTaskCount(recordCount);
+    bulkUploadDao.update(bulkUploadProcess);
+
+    Request request = new Request();
+    request.put(JsonKey.PROCESS_ID, processId);
+    request.setOperation(operation);
+
+    tellToAnother(request);
+  }
+
+  public BulkUploadProcess getBulkUploadProcess(
+      String processId, String objectType, String requestedBy, Integer taskCount) {
+    BulkUploadProcess bulkUploadProcess = new BulkUploadProcess();
+    bulkUploadProcess.setId(processId);
+    bulkUploadProcess.setObjectType(objectType);
+    bulkUploadProcess.setUploadedBy(requestedBy);
+    bulkUploadProcess.setUploadedDate(ProjectUtil.getFormattedDate());
+    bulkUploadProcess.setCreatedBy(requestedBy);
+    bulkUploadProcess.setCreatedOn(new Timestamp(Calendar.getInstance().getTime().getTime()));
+    bulkUploadProcess.setProcessStartTime(ProjectUtil.getFormattedDate());
+    bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.NEW.getValue());
+    bulkUploadProcess.setTaskCount(taskCount);
+
+    Map<String, Object> user = Util.getUserbyUserId(requestedBy);
+    if (user != null) {
+      bulkUploadProcess.setOrganisationId((String) user.get(JsonKey.ROOT_ORG_ID));
+    }
+
+    return bulkUploadProcess;
   }
 }

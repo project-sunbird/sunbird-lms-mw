@@ -29,7 +29,6 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
-import org.sunbird.common.models.util.ProjectUtil.Status;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
@@ -39,7 +38,6 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.request.UserRequestValidator;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.extension.user.UserExtension;
 import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
@@ -52,6 +50,8 @@ import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.user.service.UserService;
+import org.sunbird.user.service.impl.UserServiceImpl;
 
 /**
  * This actor will handle course enrollment operation .
@@ -64,13 +64,8 @@ import org.sunbird.telemetry.util.TelemetryUtil;
     "createUser",
     "updateUser",
     "getUserProfile",
-    "getRoles",
     "getUserDetailsByLoginId",
     "profileVisibility",
-    "unblockUser",
-    "blockUser",
-    "assignRoles",
-    "userCurrentLogin",
     "getMediaTypes"
   },
   asyncTasks = {}
@@ -94,7 +89,8 @@ public class UserManagementActor extends BaseActor {
       Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE));
   private ActorRef systemSettingActorRef =
       getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
-
+  private UserRequestValidator userRequestValidator = new UserRequestValidator();
+  private UserService userService = new UserServiceImpl();
   /** Receives the actor message and perform the course enrollment operation . */
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -108,18 +104,8 @@ public class UserManagementActor extends BaseActor {
       updateUser(request);
     } else if (operation.equalsIgnoreCase(ActorOperations.GET_PROFILE.getValue())) {
       getUserProfile(request);
-    } else if (operation.equalsIgnoreCase(ActorOperations.GET_ROLES.getValue())) {
-      getRoles();
     } else if (operation.equalsIgnoreCase(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue())) {
       getUserDetailsByLoginId(request);
-    } else if (operation.equalsIgnoreCase(ActorOperations.BLOCK_USER.getValue())) {
-      blockUser(request);
-    } else if (operation.equalsIgnoreCase(ActorOperations.ASSIGN_ROLES.getValue())) {
-      assignRoles(request);
-    } else if (operation.equalsIgnoreCase(ActorOperations.UNBLOCK_USER.getValue())) {
-      unBlockUser(request);
-    } else if (operation.equalsIgnoreCase(ActorOperations.USER_CURRENT_LOGIN.getValue())) {
-      updateUserLoginTime(request);
     } else if (operation.equalsIgnoreCase(ActorOperations.GET_MEDIA_TYPES.getValue())) {
       getMediaTypes();
     } else if (operation.equalsIgnoreCase(ActorOperations.PROFILE_VISIBILITY.getValue())) {
@@ -146,7 +132,7 @@ public class UserManagementActor extends BaseActor {
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
   private void profileVisibility(Request actorMessage) {
-    Map<String, Object> map = (Map) actorMessage.getRequest().get(JsonKey.USER);
+    Map<String, Object> map = (Map) actorMessage.getRequest();
     String userId = (String) map.get(JsonKey.USER_ID);
     List<String> privateList = (List) map.get(JsonKey.PRIVATE);
     List<String> publicList = (List) map.get(JsonKey.PUBLIC);
@@ -330,25 +316,10 @@ public class UserManagementActor extends BaseActor {
     return true;
   }
 
-  /**
-   * This method will update user current login time in keycloak
-   *
-   * @param actorMessage Request
-   */
-  private void updateUserLoginTime(Request actorMessage) {
-    String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
-    Response response = new Response();
-    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    sender().tell(response, self());
-    if (Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED))) {
-      boolean addedResponse = ssoManager.addUserLoginTime(userId);
-      ProjectLogger.log("user login time added response is ==" + addedResponse);
-    }
-  }
-
   @SuppressWarnings("unchecked")
   private void getUserDetailsByLoginId(Request actorMessage) {
-    Map<String, Object> userMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
+    actorMessage.toLower();
+    Map<String, Object> userMap = (Map<String, Object>) actorMessage.getRequest();
     if (null != userMap.get(JsonKey.LOGIN_ID)) {
       String loginId = (String) userMap.get(JsonKey.LOGIN_ID);
       try {
@@ -404,7 +375,7 @@ public class UserManagementActor extends BaseActor {
       // having check for removing private filed from user , if call user and response
       // user data id is not same.
       String requestedById =
-          (String) actorMessage.getRequest().getOrDefault(JsonKey.REQUESTED_BY, "");
+          (String) actorMessage.getContext().getOrDefault(JsonKey.REQUESTED_BY, "");
       ProjectLogger.log(
           "requested By and requested user id == "
               + requestedById
@@ -473,6 +444,9 @@ public class UserManagementActor extends BaseActor {
               // result
               fetchTopicOfAssociatedOrgs(result);
             }
+            if (requestFields.contains(JsonKey.ORGANISATIONS)) {
+              updateUserOrgInfo((List) result.get(JsonKey.ORGANISATIONS));
+            }
           } else {
             result.remove(JsonKey.MISSING_FIELDS);
             result.remove(JsonKey.COMPLETENESS);
@@ -500,6 +474,101 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
+  private void updateUserOrgInfo(List<Map<String, Object>> userOrgs) {
+    Map<String, Map<String, Object>> orgInfoMap = fetchAllOrgsById(userOrgs);
+    Map<String, Map<String, Object>> locationInfoMap = fetchAllLocationsById(orgInfoMap);
+    prepUserOrgInfoWithAdditionalData(userOrgs, orgInfoMap, locationInfoMap);
+  }
+
+  private void prepUserOrgInfoWithAdditionalData(
+      List<Map<String, Object>> userOrgs,
+      Map<String, Map<String, Object>> orgInfoMap,
+      Map<String, Map<String, Object>> locationInfoMap) {
+    for (Map<String, Object> usrOrg : userOrgs) {
+      Map<String, Object> orgInfo = orgInfoMap.get((String) usrOrg.get(JsonKey.ORGANISATION_ID));
+      usrOrg.put(JsonKey.ORG_NAME, orgInfo.get(JsonKey.ORG_NAME));
+      usrOrg.put(JsonKey.CHANNEL, orgInfo.get(JsonKey.CHANNEL));
+      usrOrg.put(JsonKey.HASHTAGID, orgInfo.get(JsonKey.HASHTAGID));
+      usrOrg.put(JsonKey.LOCATION_IDS, orgInfo.get(JsonKey.LOCATION_IDS));
+      usrOrg.put(
+          JsonKey.LOCATIONS,
+          prepLocationFields((List<String>) orgInfo.get(JsonKey.LOCATION_IDS), locationInfoMap));
+    }
+  }
+
+  private Map<String, Map<String, Object>> fetchAllOrgsById(List<Map<String, Object>> userOrgs) {
+    List<String> orgIds =
+        userOrgs
+            .stream()
+            .map(m -> (String) m.get(JsonKey.ORGANISATION_ID))
+            .distinct()
+            .collect(Collectors.toList());
+    List<String> fields =
+        Arrays.asList(
+            JsonKey.ORG_NAME, JsonKey.CHANNEL, JsonKey.HASHTAGID, JsonKey.LOCATION_IDS, JsonKey.ID);
+
+    Map<String, Map<String, Object>> orgInfoMap =
+        getEsResultByListOfIds(orgIds, fields, EsType.organisation);
+    return orgInfoMap;
+  }
+
+  private Map<String, Map<String, Object>> fetchAllLocationsById(
+      Map<String, Map<String, Object>> orgInfoMap) {
+    List<String> searchLocations = new ArrayList<>();
+    for (Map<String, Object> org : orgInfoMap.values()) {
+      List<String> locations = (List<String>) org.get(JsonKey.LOCATION_IDS);
+      if (locations != null) {
+        for (String location : locations) {
+          if (!searchLocations.contains(location)) {
+            searchLocations.add(location);
+          }
+        }
+      }
+    }
+    List<String> locationFields =
+        Arrays.asList(JsonKey.CODE, JsonKey.NAME, JsonKey.TYPE, JsonKey.PARENT_ID, JsonKey.ID);
+    Map<String, Map<String, Object>> locationInfoMap =
+        getEsResultByListOfIds(searchLocations, locationFields, EsType.location);
+    return locationInfoMap;
+  }
+
+  private List<Map<String, Object>> prepLocationFields(
+      List<String> locationIds, Map<String, Map<String, Object>> locationInfoMap) {
+    List<Map<String, Object>> retList = new ArrayList<>();
+    if (locationIds != null) {
+      for (String locationId : locationIds) {
+        retList.add(locationInfoMap.get(locationId));
+      }
+    }
+    return retList;
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Map<String, Object>> getEsResultByListOfIds(
+      List<String> orgIds, List<String> fields, EsType typeToSearch) {
+
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(JsonKey.ID, orgIds);
+
+    SearchDTO searchDTO = new SearchDTO();
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
+    searchDTO.setFields(fields);
+
+    Map<String, Object> result =
+        ElasticSearchUtil.complexSearch(
+            searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), typeToSearch.getTypeName());
+
+    List<Map<String, Object>> esContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+    return esContent
+        .stream()
+        .collect(
+            Collectors.toMap(
+                obj -> {
+                  return (String) obj.get("id");
+                },
+                val -> val));
+  }
+
   private void fetchRootAndRegisterOrganisation(Map<String, Object> result) {
     try {
       if (isNotNull(result.get(JsonKey.ROOT_ORG_ID))) {
@@ -522,9 +591,8 @@ public class UserManagementActor extends BaseActor {
    *
    * @param actorMessage Request
    */
-  @SuppressWarnings("unchecked")
   private void getUserProfile(Request actorMessage) {
-    Map<String, Object> userMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
+    Map<String, Object> userMap = (Map<String, Object>) actorMessage.getRequest();
     Map<String, Object> result =
         ElasticSearchUtil.getDataByIdentifier(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
@@ -551,7 +619,7 @@ public class UserManagementActor extends BaseActor {
     // having check for removing private filed from user , if call user and response
     // user data id is not same.
     String requestedById =
-        (String) actorMessage.getRequest().getOrDefault(JsonKey.REQUESTED_BY, "");
+        (String) actorMessage.getContext().getOrDefault(JsonKey.REQUESTED_BY, "");
     ProjectLogger.log(
         "requested By and requested user id == "
             + requestedById
@@ -589,8 +657,8 @@ public class UserManagementActor extends BaseActor {
       sender().tell(exception, self());
       return;
     }
-    if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
-      String requestFields = (String) actorMessage.getRequest().get(JsonKey.FIELDS);
+    if (null != actorMessage.getContext().get(JsonKey.FIELDS)) {
+      String requestFields = (String) actorMessage.getContext().get(JsonKey.FIELDS);
       if (!StringUtils.isBlank(requestFields)) {
         if (!requestFields.contains(JsonKey.COMPLETENESS)) {
           result.remove(JsonKey.COMPLETENESS);
@@ -612,6 +680,9 @@ public class UserManagementActor extends BaseActor {
         if (requestFields.contains(JsonKey.TOPIC)) {
           // fetch the topic details of all user associated orgs and append in the result
           fetchTopicOfAssociatedOrgs(result);
+        }
+        if (requestFields.contains(JsonKey.ORGANISATIONS)) {
+          updateUserOrgInfo((List) result.get(JsonKey.ORGANISATIONS));
         }
       }
     } else {
@@ -771,17 +842,19 @@ public class UserManagementActor extends BaseActor {
   /** Method to update the user profile. */
   @SuppressWarnings("unchecked")
   private void updateUser(Request actorMessage) {
+    actorMessage.toLower();
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Map<String, Object> req = actorMessage.getRequest();
     Map<String, Object> requestMap = null;
-    Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
+    Map<String, Object> userMap = actorMessage.getRequest();
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
-    UserRequestValidator.validateUpdateUser(actorMessage);
+    userRequestValidator.validateUpdateUserRequest(actorMessage);
     Map<String, Object> userDbRecord = null;
     String extId = (String) userMap.get(JsonKey.EXTERNAL_ID);
     String provider = (String) userMap.get(JsonKey.EXTERNAL_ID_PROVIDER);
     String idType = (String) userMap.get(JsonKey.EXTERNAL_ID_TYPE);
+
+    userService.validateUserId(actorMessage);
 
     if ((StringUtils.isBlank((String) userMap.get(JsonKey.USER_ID))
             && StringUtils.isBlank((String) userMap.get(JsonKey.ID)))
@@ -871,7 +944,7 @@ public class UserManagementActor extends BaseActor {
       updateKeyCloakUserBase(userMap);
     }
     userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-    userMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+    userMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     try {
       UserUtility.encryptUserData(userMap);
     } catch (Exception e1) {
@@ -899,13 +972,13 @@ public class UserManagementActor extends BaseActor {
     }
     // update user address
     if (userMap.containsKey(JsonKey.ADDRESS)) {
-      updateUserAddress(req, userMap);
+      updateUserAddress(actorMessage, userMap);
     }
     if (userMap.containsKey(JsonKey.EDUCATION)) {
-      updateUserEducation(req, userMap);
+      updateUserEducation(actorMessage, userMap);
     }
     if (userMap.containsKey(JsonKey.JOB_PROFILE)) {
-      updateUserJobProfile(req, userMap);
+      updateUserJobProfile(actorMessage, userMap);
     }
 
     // update the user external identity data
@@ -921,7 +994,7 @@ public class UserManagementActor extends BaseActor {
         TelemetryUtil.generateTargetObject(
             (String) userMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
     TelemetryUtil.telemetryProcessingCall(
-        (Map<String, Object>) req.get(JsonKey.USER), targetObject, correlatedObject);
+        (Map<String, Object>) userMap, targetObject, correlatedObject);
 
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       Request userRequest = new Request();
@@ -972,7 +1045,7 @@ public class UserManagementActor extends BaseActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void updateUserJobProfile(Map<String, Object> req, Map<String, Object> userMap) {
+  private void updateUserJobProfile(Request actorMessage, Map<String, Object> userMap) {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
     List<Map<String, Object>> reqList =
@@ -1011,12 +1084,12 @@ public class UserManagementActor extends BaseActor {
             reqMap, userMap, JsonKey.JOB_PROFILE, JsonKey.USER);
         continue;
       }
-      processJobProfileInfo(reqMap, userMap, req, addrDbInfo, jobProDbInfo);
+      processJobProfileInfo(reqMap, userMap, actorMessage, addrDbInfo, jobProDbInfo);
     }
   }
 
   @SuppressWarnings("unchecked")
-  private void updateUserEducation(Map<String, Object> req, Map<String, Object> userMap) {
+  private void updateUserEducation(Request actorMessage, Map<String, Object> userMap) {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
     List<Map<String, Object>> reqList = (List<Map<String, Object>>) userMap.get(JsonKey.EDUCATION);
@@ -1052,12 +1125,12 @@ public class UserManagementActor extends BaseActor {
             reqMap, userMap, JsonKey.EDUCATION, JsonKey.USER);
         continue;
       }
-      processEducationInfo(reqMap, userMap, req, addrDbInfo, eduDbInfo);
+      processEducationInfo(reqMap, userMap, actorMessage, addrDbInfo, eduDbInfo);
     }
   }
 
   @SuppressWarnings("unchecked")
-  private void updateUserAddress(Map<String, Object> req, Map<String, Object> userMap) {
+  private void updateUserAddress(Request actorMessage, Map<String, Object> userMap) {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     List<Map<String, Object>> reqList = (List<Map<String, Object>>) userMap.get(JsonKey.ADDRESS);
     for (int i = 0; i < reqList.size(); i++) {
@@ -1071,7 +1144,7 @@ public class UserManagementActor extends BaseActor {
         telemetryGenerationForUserSubFieldsDeletion(reqMap, userMap, JsonKey.ADDRESS, JsonKey.USER);
         continue;
       }
-      processUserAddress(reqMap, req, userMap, addrDbInfo);
+      processUserAddress(reqMap, actorMessage, userMap, addrDbInfo);
     }
   }
 
@@ -1098,7 +1171,7 @@ public class UserManagementActor extends BaseActor {
 
   private void processUserAddress(
       Map<String, Object> reqMap,
-      Map<String, Object> req,
+      Request actorMessage,
       Map<String, Object> userMap,
       DbInfo addrDbInfo) {
     Boolean isAddressUpdated = true;
@@ -1106,7 +1179,9 @@ public class UserManagementActor extends BaseActor {
     String encreqById = "";
     try {
       encUserId = encryptionService.encryptData((String) userMap.get(JsonKey.ID));
-      encreqById = encryptionService.encryptData((String) req.get(JsonKey.REQUESTED_BY));
+      encreqById =
+          encryptionService.encryptData(
+              (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     } catch (Exception e1) {
       ProjectCommonException exception =
           new ProjectCommonException(
@@ -1166,7 +1241,7 @@ public class UserManagementActor extends BaseActor {
   private void processJobProfileInfo(
       Map<String, Object> reqMap,
       Map<String, Object> userMap,
-      Map<String, Object> req,
+      Request actorMessage,
       DbInfo addrDbInfo,
       DbInfo jobProDbInfo) {
     String addrId = null;
@@ -1190,7 +1265,7 @@ public class UserManagementActor extends BaseActor {
       } else {
         addrId = (String) address.get(JsonKey.ID);
         address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-        address.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+        address.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
         address.remove(JsonKey.USER_ID);
       }
       try {
@@ -1211,7 +1286,7 @@ public class UserManagementActor extends BaseActor {
 
     if (isProfileUpdated) {
       reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-      reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+      reqMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
       reqMap.remove(JsonKey.USER_ID);
     } else {
       reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
@@ -1231,7 +1306,7 @@ public class UserManagementActor extends BaseActor {
   private void processEducationInfo(
       Map<String, Object> reqMap,
       Map<String, Object> userMap,
-      Map<String, Object> req,
+      Request actorMessage,
       DbInfo addrDbInfo,
       DbInfo eduDbInfo) {
 
@@ -1256,7 +1331,7 @@ public class UserManagementActor extends BaseActor {
       } else {
         addrId = (String) address.get(JsonKey.ID);
         address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-        address.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+        address.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
         address.remove(JsonKey.USER_ID);
       }
       try {
@@ -1299,7 +1374,7 @@ public class UserManagementActor extends BaseActor {
 
     if (isEducationUpdated) {
       reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-      reqMap.put(JsonKey.UPDATED_BY, req.get(JsonKey.REQUESTED_BY));
+      reqMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
       reqMap.remove(JsonKey.USER_ID);
     } else {
       reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
@@ -1345,15 +1420,22 @@ public class UserManagementActor extends BaseActor {
    *
    * @param actorMessage Request
    */
-  @SuppressWarnings("unchecked")
   private void createUser(Request actorMessage) {
-    Map<String, Object> req = actorMessage.getRequest();
-    Map<String, Object> userMap = (Map<String, Object>) req.get(JsonKey.USER);
+    actorMessage.toLower();
+    Map<String, Object> userMap = actorMessage.getRequest();
+    String version = (String) actorMessage.getContext().get(JsonKey.VERSION);
+    if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
+      userRequestValidator.validateCreateUserV2Request(actorMessage);
+      validateChannelAndOrganisationId(userMap);
+    } else {
+      userRequestValidator.validateCreateUserV1Request(actorMessage);
+    }
+
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
     userMap.remove(JsonKey.EMAIL_VERIFIED);
-    userMap.put(JsonKey.CREATED_BY, req.get(JsonKey.REQUESTED_BY));
+    userMap.put(JsonKey.CREATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
     try {
@@ -1365,15 +1447,7 @@ public class UserManagementActor extends BaseActor {
       sender().tell(ex, self());
       return;
     }
-    String version = (String) actorMessage.getRequest().get(JsonKey.VERSION);
-    if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
-      UserRequestValidator.validateCreateUserV2(actorMessage);
-      validateChannelAndOrganisationId(userMap);
-    } else {
-      // For V1
-      UserRequestValidator.fieldsNotAllowed(Arrays.asList(JsonKey.ORGANISATION_ID), actorMessage);
-      UserRequestValidator.validateCreateUser(actorMessage);
-    }
+
     processUserRequest(userMap);
   }
 
@@ -1828,311 +1902,6 @@ public class UserManagementActor extends BaseActor {
     reqMap.remove(JsonKey.ORGANISATION_ID);
   }
 
-  /** This method will provide the complete role structure.. */
-  @SuppressWarnings({"unchecked", "rawtypes"})
-  private void getRoles() {
-    Util.DbInfo roleDbInfo = Util.dbInfoMap.get(JsonKey.ROLE);
-    Util.DbInfo roleGroupDbInfo = Util.dbInfoMap.get(JsonKey.ROLE_GROUP);
-    Util.DbInfo urlActionDbInfo = Util.dbInfoMap.get(JsonKey.URL_ACTION);
-    Response mergeResponse = new Response();
-    List<Map<String, Object>> resposnemap = new ArrayList<>();
-    List<Map<String, Object>> list = null;
-    Response response =
-        cassandraOperation.getAllRecords(roleDbInfo.getKeySpace(), roleDbInfo.getTableName());
-    Response rolegroup =
-        cassandraOperation.getAllRecords(
-            roleGroupDbInfo.getKeySpace(), roleGroupDbInfo.getTableName());
-    Response urlAction =
-        cassandraOperation.getAllRecords(
-            urlActionDbInfo.getKeySpace(), urlActionDbInfo.getTableName());
-    List<Map<String, Object>> urlActionListMap =
-        (List<Map<String, Object>>) urlAction.getResult().get(JsonKey.RESPONSE);
-    List<Map<String, Object>> roleGroupMap =
-        (List<Map<String, Object>>) rolegroup.getResult().get(JsonKey.RESPONSE);
-    list = (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
-    if (list != null && !(list.isEmpty())) {
-      // This map will have all the master roles
-      for (Map<String, Object> map : list) {
-        Map<String, Object> roleResponseMap = new HashMap<>();
-        roleResponseMap.put(JsonKey.ID, map.get(JsonKey.ID));
-        roleResponseMap.put(JsonKey.NAME, map.get(JsonKey.NAME));
-        List<String> roleGroup = (List) map.get(JsonKey.ROLE_GROUP_ID);
-        List<Map<String, Object>> actionGroupListMap = new ArrayList<>();
-        roleResponseMap.put(JsonKey.ACTION_GROUPS, actionGroupListMap);
-        Map<String, Object> subRoleResponseMap = null;
-        for (String val : roleGroup) {
-          subRoleResponseMap = new HashMap<>();
-          Map<String, Object> subRoleMap = getSubRoleListMap(roleGroupMap, val);
-          List<String> subRole = (List) subRoleMap.get(JsonKey.URL_ACTION_ID);
-          List<Map<String, Object>> roleUrlResponList = new ArrayList<>();
-          subRoleResponseMap.put(JsonKey.ID, subRoleMap.get(JsonKey.ID));
-          subRoleResponseMap.put(JsonKey.NAME, subRoleMap.get(JsonKey.NAME));
-          for (String rolemap : subRole) {
-            roleUrlResponList.add(getRoleAction(urlActionListMap, rolemap));
-          }
-          if (subRoleResponseMap.containsKey(JsonKey.ACTIONS)) {
-            List<Map<String, Object>> listOfMap =
-                (List<Map<String, Object>>) subRoleResponseMap.get(JsonKey.ACTIONS);
-            listOfMap.addAll(roleUrlResponList);
-          } else {
-            subRoleResponseMap.put(JsonKey.ACTIONS, roleUrlResponList);
-          }
-          actionGroupListMap.add(subRoleResponseMap);
-        }
-
-        resposnemap.add(roleResponseMap);
-      }
-    }
-    mergeResponse.getResult().put(JsonKey.ROLES, resposnemap);
-    sender().tell(mergeResponse, self());
-  }
-
-  /**
-   * This method will find the action from role action mapping it will return action id, action name
-   * and list of urls.
-   *
-   * @param urlActionListMap List<Map<String,Object>>
-   * @param actionName String
-   * @return Map<String,Object>
-   */
-  private Map<String, Object> getRoleAction(
-      List<Map<String, Object>> urlActionListMap, String actionName) {
-    Map<String, Object> response = new HashMap<>();
-    if (urlActionListMap != null && !(urlActionListMap.isEmpty())) {
-      for (Map<String, Object> map : urlActionListMap) {
-        if (map.get(JsonKey.ID).equals(actionName)) {
-          response.put(JsonKey.ID, map.get(JsonKey.ID));
-          response.put(JsonKey.NAME, map.get(JsonKey.NAME));
-          response.put(
-              JsonKey.URLS,
-              map.get(JsonKey.URL) != null ? map.get(JsonKey.URL) : new ArrayList<String>());
-          return response;
-        }
-      }
-    }
-    return response;
-  }
-
-  /**
-   * This method will provide sub role mapping details.
-   *
-   * @param urlActionListMap List<Map<String, Object>>
-   * @param roleName String
-   * @return Map< String, Object>
-   */
-  private Map<String, Object> getSubRoleListMap(
-      List<Map<String, Object>> urlActionListMap, String roleName) {
-    Map<String, Object> response = new HashMap<>();
-    if (urlActionListMap != null && !(urlActionListMap.isEmpty())) {
-      for (Map<String, Object> map : urlActionListMap) {
-        if (map.get(JsonKey.ID).equals(roleName)) {
-          response.put(JsonKey.ID, map.get(JsonKey.ID));
-          response.put(JsonKey.NAME, map.get(JsonKey.NAME));
-          response.put(
-              JsonKey.URL_ACTION_ID,
-              map.get(JsonKey.URL_ACTION_ID) != null
-                  ? map.get(JsonKey.URL_ACTION_ID)
-                  : new ArrayList<>());
-          return response;
-        }
-      }
-    }
-    return response;
-  }
-
-  /**
-   * Method to block the user , it performs only soft delete from Cassandra , ES , Keycloak
-   *
-   * @param actorMessage
-   */
-  @SuppressWarnings("unchecked")
-  private void blockUser(Request actorMessage) {
-
-    ProjectLogger.log("Method call  " + "deleteUser");
-    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Map<String, Object> userMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
-    if (ProjectUtil.isNull(userMap.get(JsonKey.USER_ID))) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-    String userId = (String) userMap.get(JsonKey.USER_ID);
-    Map<String, Object> userDbRecord = Util.getUserbyUserId(userId);
-    if (null == userDbRecord) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.userNotFound.getErrorCode(),
-              ResponseCode.userNotFound.getErrorMessage(),
-              ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-
-    Map<String, Object> dbMap = new HashMap<>();
-    dbMap.put(JsonKey.IS_DELETED, true);
-    dbMap.put(JsonKey.STATUS, Status.INACTIVE.getValue());
-    dbMap.put(JsonKey.ID, userId);
-    dbMap.put(JsonKey.USER_ID, userId);
-    dbMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-    dbMap.put(JsonKey.UPDATED_BY, actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
-
-    // deactivate from keycloak -- softdelete
-    if (isSSOEnabled) {
-      ssoManager.deactivateUser(dbMap);
-    }
-    // delete from registry
-    /*if (IS_REGISTRY_ENABLED) {
-      Map<String, Object> regMap = new HashMap<>();
-      regMap.put(JsonKey.REGISTRY_ID, userDbRecord.get(JsonKey.REGISTRY_ID));
-      UserExtension userExtension = new UserProviderRegistryImpl();
-      userExtension.delete(regMap);
-    }*/
-    // soft delete from cassandra--
-    Response response =
-        cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), dbMap);
-    ProjectLogger.log("USER DELETED " + userId);
-    sender().tell(response, self());
-
-    // update record in elasticsearch ......
-    dbMap.remove(JsonKey.ID);
-    dbMap.remove(JsonKey.USER_ID);
-    ElasticSearchUtil.updateData(
-        ProjectUtil.EsIndex.sunbird.getIndexName(),
-        ProjectUtil.EsType.user.getTypeName(),
-        userId,
-        dbMap);
-    generateTeleEventForUser(null, userId, "blockUser");
-  }
-
-  /**
-   * This method will assign roles to users or user organizations.
-   *
-   * @param actorMessage
-   */
-  @SuppressWarnings("unchecked")
-  private void assignRoles(Request actorMessage) {
-    UserRequestValidator.validateAssignRole(actorMessage);
-    Map<String, Object> requestMap = actorMessage.getRequest();
-
-    if (null != requestMap.get(JsonKey.ROLES)
-        && !((List<String>) requestMap.get(JsonKey.ROLES)).isEmpty()) {
-      String msg = Util.validateRoles((List<String>) requestMap.get(JsonKey.ROLES));
-      if (!msg.equalsIgnoreCase(JsonKey.SUCCESS)) {
-        throw new ProjectCommonException(
-            ResponseCode.invalidRole.getErrorCode(),
-            ResponseCode.invalidRole.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-      }
-    }
-
-    // object of telemetry event...
-    String userId = (String) requestMap.get(JsonKey.USER_ID);
-    String externalId = (String) requestMap.get(JsonKey.EXTERNAL_ID);
-    String provider = (String) requestMap.get(JsonKey.PROVIDER);
-    String organisationId = (String) requestMap.get(JsonKey.ORGANISATION_ID);
-    String hashTagId = null;
-    Map<String, Object> map = null;
-    // have a check if organisation id is provided then need to get hashtagId
-    if (StringUtils.isNotBlank(organisationId)) {
-      map =
-          ElasticSearchUtil.getDataByIdentifier(
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.organisation.getTypeName(),
-              organisationId);
-      if (MapUtils.isNotEmpty(map)) {
-        hashTagId = (String) map.get(JsonKey.HASHTAGID);
-        requestMap.put(JsonKey.HASHTAGID, hashTagId);
-      }
-    } else {
-      SearchDTO searchDto = new SearchDTO();
-      Map<String, Object> filter = new HashMap<>();
-      filter.put(JsonKey.EXTERNAL_ID, externalId);
-      filter.put(JsonKey.PROVIDER, provider);
-      searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
-      Map<String, Object> esResponse =
-          ElasticSearchUtil.complexSearch(
-              searchDto,
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.organisation.getTypeName());
-      List<Map<String, Object>> list = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
-
-      if (!list.isEmpty()) {
-        map = list.get(0);
-        organisationId = (String) map.get(JsonKey.ID);
-        requestMap.put(JsonKey.ORGANISATION_ID, organisationId);
-        // get org hashTagId and keep inside request map.
-        hashTagId = (String) map.get(JsonKey.HASHTAGID);
-        requestMap.put(JsonKey.HASHTAGID, hashTagId);
-      }
-    }
-
-    // throw error if provided orgId or ExtenralId with Provider is not valid
-    if (MapUtils.isEmpty(map)) {
-      String errorMsg =
-          StringUtils.isNotEmpty(organisationId)
-              ? ProjectUtil.formatMessage(
-                  ResponseMessage.Message.INVALID_PARAMETER_VALUE,
-                  organisationId,
-                  JsonKey.ORGANISATION_ID)
-              : ProjectUtil.formatMessage(
-                  ResponseMessage.Message.INVALID_PARAMETER_VALUE,
-                  StringFormatter.joinByComma(externalId, provider),
-                  StringFormatter.joinByAnd(JsonKey.EXTERNAL_ID, JsonKey.PROVIDER));
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.invalidParameterValue.getErrorCode(),
-              errorMsg,
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-
-    // update userOrg role with requested roles.
-    Map<String, Object> userOrgDBMap = new HashMap<>();
-    userOrgDBMap.put(JsonKey.ORGANISATION_ID, organisationId);
-    userOrgDBMap.put(JsonKey.USER_ID, userId);
-    Util.DbInfo userOrgDb = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
-    Response response =
-        cassandraOperation.getRecordsByProperties(
-            userOrgDb.getKeySpace(), userOrgDb.getTableName(), userOrgDBMap);
-    List<Map<String, Object>> list = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    if (list.isEmpty()) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.invalidUsrOrgData.getErrorCode(),
-              ResponseCode.invalidUsrOrgData.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-    // Add default role into Requested Roles if it is not provided and then update into DB
-    List<String> roles = (List<String>) requestMap.get(JsonKey.ROLES);
-    if (!roles.contains(ProjectUtil.UserRole.PUBLIC.name()))
-      roles.add(ProjectUtil.UserRole.PUBLIC.name());
-    userOrgDBMap.put(JsonKey.ROLES, roles);
-    userOrgDBMap.put(JsonKey.ID, list.get(0).get(JsonKey.ID));
-    if (StringUtils.isNotBlank(hashTagId)) {
-      userOrgDBMap.put(JsonKey.HASHTAGID, hashTagId);
-    }
-    userOrgDBMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-    userOrgDBMap.put(JsonKey.UPDATED_BY, requestMap.get(JsonKey.REQUESTED_BY));
-    userOrgDBMap.put(JsonKey.ROLES, roles);
-    response =
-        cassandraOperation.updateRecord(
-            userOrgDb.getKeySpace(), userOrgDb.getTableName(), userOrgDBMap);
-    sender().tell(response, self());
-    if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      updateRoleToEs(userOrgDBMap, JsonKey.ORGANISATION, userId, organisationId);
-    } else {
-      ProjectLogger.log("no call for ES to save user");
-    }
-    generateTeleEventForUser(requestMap, userId, "userLevel");
-  }
-
   private void generateTeleEventForUser(
       Map<String, Object> requestMap, String userId, String objectType) {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
@@ -2151,118 +1920,11 @@ public class UserManagementActor extends BaseActor {
     } else {
       if (objectType.equalsIgnoreCase("userLevel")) {
         telemetryAction.put("AssignRole", "role assigned at user level");
-      } else if (objectType.equalsIgnoreCase("blockUser")) {
-        telemetryAction.put("BlockUser", "user blocked");
-      } else if (objectType.equalsIgnoreCase("unBlockUser")) {
-        telemetryAction.put("UnBlockUser", "user unblocked");
       } else if (objectType.equalsIgnoreCase("profileVisibility")) {
         telemetryAction.put("ProfileVisibility", "profile Visibility setting changed");
       }
     }
     TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
-  }
-
-  private void updateRoleToEs(
-      Map<String, Object> tempMap, String type, String userid, String orgId) {
-
-    ProjectLogger.log("method call going to satrt for ES--.....");
-    Request request = new Request();
-    request.setOperation(ActorOperations.UPDATE_USER_ROLES_ES.getValue());
-    request.getRequest().put(JsonKey.ROLES, tempMap.get(JsonKey.ROLES));
-    request.getRequest().put(JsonKey.TYPE, type);
-    request.getRequest().put(JsonKey.USER_ID, userid);
-    request.getRequest().put(JsonKey.ORGANISATION_ID, orgId);
-    ProjectLogger.log("making a call to save user data to ES");
-    try {
-      tellToAnother(request);
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "Exception Occurred during saving user to Es while joinUserOrganisation : ", ex);
-    }
-  }
-
-  /**
-   * Method to un block the user
-   *
-   * @param actorMessage
-   */
-  @SuppressWarnings("unchecked")
-  private void unBlockUser(Request actorMessage) {
-
-    ProjectLogger.log("Method call  " + "UnblockeUser");
-    Util.getUserProfileConfig(systemSettingActorRef);
-    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Map<String, Object> userMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
-    if (ProjectUtil.isNull(userMap.get(JsonKey.USER_ID))) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.invalidRequestData.getErrorCode(),
-              ResponseCode.invalidRequestData.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-    String userId = (String) userMap.get(JsonKey.USER_ID);
-    Response resultFrUserId =
-        cassandraOperation.getRecordById(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userId);
-    List<Map<String, Object>> dbResult =
-        (List<Map<String, Object>>) resultFrUserId.get(JsonKey.RESPONSE);
-    if (dbResult.isEmpty()) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.userNotFound.getErrorCode(),
-              ResponseCode.userNotFound.getErrorMessage(),
-              ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-    Map<String, Object> dbUser = dbResult.get(0);
-    if (dbUser.containsKey(JsonKey.IS_DELETED)
-        && isNotNull(dbUser.get(JsonKey.IS_DELETED))
-        && !((Boolean) dbUser.get(JsonKey.IS_DELETED))) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.userAlreadyActive.getErrorCode(),
-              ResponseCode.userAlreadyActive.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-
-    Map<String, Object> dbMap = new HashMap<>();
-    dbMap.put(JsonKey.IS_DELETED, false);
-    dbMap.put(JsonKey.STATUS, Status.ACTIVE.getValue());
-    dbMap.put(JsonKey.ID, userId);
-    dbMap.put(JsonKey.USER_ID, userId);
-    dbMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-    dbMap.put(JsonKey.UPDATED_BY, actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
-
-    // Activate user from keycloak
-    if (isSSOEnabled) {
-      ssoManager.activateUser(dbMap);
-    }
-    // Activate user from cassandra-
-    Response response =
-        cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), dbMap);
-    ProjectLogger.log("USER UNLOCKED " + userId);
-    sender().tell(response, self());
-
-    // update record in elasticsearch ......
-    if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      ProjectLogger.log("UserManagementActor:unBlockUser : updating user data to ES.");
-      Request userRequest = new Request();
-      userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-      userRequest.getRequest().put(JsonKey.ID, userId);
-      try {
-        tellToAnother(userRequest);
-      } catch (Exception ex) {
-        ProjectLogger.log(
-            "UserManagementActor:unBlockUser : Exception occurred while unblocking user : ", ex);
-      }
-    } else {
-      ProjectLogger.log("UserManagementActor:unBlockUser : no call for ES to save user");
-    }
-    generateTeleEventForUser(null, userId, "unBlockUser");
   }
 
   /**
@@ -2298,6 +1960,7 @@ public class UserManagementActor extends BaseActor {
     return lastLoginTime;
   }
 
+  @SuppressWarnings("unchecked")
   private void setCompleteProfileVisibilityMap(Map<String, Object> userMap) {
     Map<String, String> profileVisibilityMap =
         (Map<String, String>) userMap.get(JsonKey.PROFILE_VISIBILITY);

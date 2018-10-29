@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import java.io.Serializable;
+import java.sql.Timestamp;
 
 /** @author arvind. */
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -25,6 +26,9 @@ public class BulkUploadProcess implements Serializable {
   private String uploadedBy;
   private String uploadedDate;
   private Integer taskCount;
+  private String createdBy;
+  private Timestamp createdOn;
+  private Timestamp lastUpdatedOn;
 
   public String getId() {
     return id;
@@ -104,6 +108,30 @@ public class BulkUploadProcess implements Serializable {
 
   public void setUploadedDate(String uploadedDate) {
     this.uploadedDate = uploadedDate;
+  }
+
+  public String getCreatedBy() {
+    return createdBy;
+  }
+
+  public void setCreatedBy(String createdBy) {
+    this.createdBy = createdBy;
+  }
+
+  public Timestamp getCreatedOn() {
+    return createdOn;
+  }
+
+  public void setCreatedOn(Timestamp createdOn) {
+    this.createdOn = createdOn;
+  }
+
+  public Timestamp getLastUpdatedOn() {
+    return lastUpdatedOn;
+  }
+
+  public void setLastUpdatedOn(Timestamp lastUpdatedOn) {
+    this.lastUpdatedOn = lastUpdatedOn;
   }
 
   public String getProcessEndTime() {

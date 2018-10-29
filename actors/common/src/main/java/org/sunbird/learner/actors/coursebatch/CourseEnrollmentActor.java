@@ -1,5 +1,6 @@
 package org.sunbird.learner.actors.coursebatch;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -30,6 +31,7 @@ import org.sunbird.learner.actors.coursebatch.dao.UserCoursesDao;
 import org.sunbird.learner.actors.coursebatch.dao.impl.CourseBatchDaoImpl;
 import org.sunbird.learner.actors.coursebatch.dao.impl.UserCoursesDaoImpl;
 import org.sunbird.learner.actors.coursebatch.service.UserCoursesService;
+import org.sunbird.learner.util.CourseBatchUtil;
 import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.course.batch.CourseBatch;
@@ -47,6 +49,7 @@ public class CourseEnrollmentActor extends BaseActor {
 
   private CourseBatchDao courseBatchDao = new CourseBatchDaoImpl();
   private UserCoursesDao userCourseDao = UserCoursesDaoImpl.getInstance();
+  private ObjectMapper mapper = new ObjectMapper();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -81,14 +84,13 @@ public class CourseEnrollmentActor extends BaseActor {
 
     if (!ProjectUtil.isNull(userCourseResult) && userCourseResult.isActive()) {
       ProjectLogger.log("User Already Enrolled Course ");
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.userAlreadyEnrolledCourse,
-                  ResponseCode.CLIENT_ERROR.getResponseCode()),
-              self());
-      return;
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.userAlreadyEnrolledCourse,
+          ResponseCode.userAlreadyEnrolledCourse.getErrorMessage());
     }
+    courseBatchResult.setParticipant(
+        addUserToParticipant(
+            courseBatchResult, (String) actorMessage.getRequest().get(JsonKey.USER_ID)));
     courseMap = createUserCourseMap(courseMap, courseBatchResult, userCourseResult);
     Response result = null;
     if (userCourseResult == null) {
@@ -111,6 +113,7 @@ public class CourseEnrollmentActor extends BaseActor {
     if (courseNotificationActive()) {
       batchOperationNotifier(courseMap, courseBatchResult, JsonKey.REMOVE);
     }
+    updateCourseBatch(courseBatchResult);
     generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
   }
 
@@ -170,12 +173,11 @@ public class CourseEnrollmentActor extends BaseActor {
         courseBatchResult, request, (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     UserCourses userCourseResult = userCourseDao.read(UserCoursesService.getPrimaryKey(request));
     UserCoursesService.validateUserUnenroll(userCourseResult);
-    Map<String, Object> updateAttributes = new HashMap<>();
-    updateAttributes.put(JsonKey.ACTIVE, false);
-    updateAttributes.put(JsonKey.ID, userCourseResult.getId());
-    Response result = userCourseDao.update(updateAttributes);
+    Response result = updateUserCourses(userCourseResult);
     sender().tell(result, self());
-    UserCoursesService.sync(updateAttributes, userCourseResult.getId());
+    courseBatchResult.setParticipant(
+        removeUserFromParticipant(courseBatchResult, (String) request.get(JsonKey.USER_ID)));
+    updateCourseBatch(courseBatchResult);
     generateAndProcessTelemetryEvent(request, "user.batch.course.unenroll");
 
     if (courseNotificationActive()) {
@@ -249,33 +251,21 @@ public class CourseEnrollmentActor extends BaseActor {
       CourseBatch courseBatchDetails, Map<String, Object> request, String requestedBy) {
 
     if (ProjectUtil.isNull(courseBatchDetails)) {
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.invalidCourseBatchId, ResponseCode.CLIENT_ERROR.getResponseCode()),
-              self());
-      return;
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.invalidCourseBatchId, ResponseCode.invalidCourseBatchId.getErrorMessage());
     }
     verifyRequestedByAndThrowErrorIfNotMatch((String) request.get(JsonKey.USER_ID), requestedBy);
     if (EnrolmentType.inviteOnly.getVal().equals(courseBatchDetails.getEnrollmentType())) {
       ProjectLogger.log(
           "CourseEnrollmentActor validateCourseBatch self enrollment or unenrollment is not applicable for invite only batch.",
           LoggerEnum.INFO.name());
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.enrollmentTypeValidation,
-                  ResponseCode.CLIENT_ERROR.getResponseCode()),
-              self());
-      return;
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.enrollmentTypeValidation,
+          ResponseCode.enrollmentTypeValidation.getErrorMessage());
     }
     if (!((String) request.get(JsonKey.COURSE_ID)).equals(courseBatchDetails.getCourseId())) {
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.invalidCourseBatchId, ResponseCode.CLIENT_ERROR.getResponseCode()),
-              self());
-      return;
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.invalidCourseBatchId, ResponseCode.invalidCourseBatchId.getErrorMessage());
     }
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     try {
@@ -290,13 +280,9 @@ public class CourseEnrollmentActor extends BaseActor {
         ProjectLogger.log(
             "CourseEnrollmentActor validateCourseBatch Course is completed already.",
             LoggerEnum.INFO.name());
-        sender()
-            .tell(
-                createExceptionObject(
-                    ResponseCode.courseBatchAlreadyCompleted,
-                    ResponseCode.CLIENT_ERROR.getResponseCode()),
-                self());
-        return;
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.courseBatchAlreadyCompleted,
+            ResponseCode.courseBatchAlreadyCompleted.getErrorMessage());
       }
     } catch (ParseException e) {
       ProjectLogger.log("CourseEnrollmentActor validateCourseBatch ", e);
@@ -305,17 +291,50 @@ public class CourseEnrollmentActor extends BaseActor {
 
   private void verifyRequestedByAndThrowErrorIfNotMatch(String userId, String requestedBy) {
     if (!(userId.equals(requestedBy))) {
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.UNAUTHORIZED, ResponseCode.UNAUTHORIZED.getResponseCode()),
-              self());
-      return;
+      ProjectCommonException.throwUnauthorizedErrorException();
     }
   }
 
-  private ProjectCommonException createExceptionObject(ResponseCode responseCode, int statusCode) {
-    return new ProjectCommonException(
-        responseCode.getErrorCode(), responseCode.getErrorMessage(), statusCode);
+  private Response updateUserCourses(UserCourses userCourses) {
+    Map<String, Object> UserCourseUpdateAttributes = new HashMap<>();
+    UserCourseUpdateAttributes.put(JsonKey.ACTIVE, false);
+    UserCourseUpdateAttributes.put(JsonKey.ID, userCourses.getId());
+    Response result = userCourseDao.update(UserCourseUpdateAttributes);
+    if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      UserCoursesService.sync(UserCourseUpdateAttributes, userCourses.getId());
+    } else {
+      ProjectLogger.log(
+          "CourseEnrollmentActor:updateUserCourses: User Courses not synced to ES as response is not successful",
+          LoggerEnum.INFO.name());
+    }
+    return result;
+  }
+
+  @SuppressWarnings("unchecked")
+  private void updateCourseBatch(CourseBatch courseBatch) {
+    Map<String, Object> CourseBatchUpdatedAttributes = new HashMap<>();
+    CourseBatchUpdatedAttributes.put(JsonKey.PARTICIPANT, courseBatch.getParticipant());
+    CourseBatchUpdatedAttributes.put(JsonKey.ID, (String) courseBatch.getId());
+    Response response = courseBatchDao.update(CourseBatchUpdatedAttributes);
+    Map<String, Object> courseBatchMap = mapper.convertValue(courseBatch, Map.class);
+    if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      CourseBatchUtil.syncCourseBatchForeground((String) courseBatch.getId(), courseBatchMap);
+    } else {
+      ProjectLogger.log(
+          "CourseBatchManagementActor:updateCourseBatch: Course batch not synced to ES as response is not successful",
+          LoggerEnum.INFO.name());
+    }
+  }
+
+  private Map<String, Boolean> removeUserFromParticipant(CourseBatch courseBatch, String userId) {
+    Map<String, Boolean> participantMap = courseBatch.getParticipant();
+    participantMap.remove(userId);
+    return participantMap;
+  }
+
+  private Map<String, Boolean> addUserToParticipant(CourseBatch courseBatch, String userId) {
+    Map<String, Boolean> participantMap = courseBatch.getParticipant();
+    participantMap.put(userId, true);
+    return participantMap;
   }
 }

@@ -33,6 +33,7 @@ import org.sunbird.learner.actors.coursebatch.dao.CourseBatchDao;
 import org.sunbird.learner.actors.coursebatch.dao.impl.CourseBatchDaoImpl;
 import org.sunbird.learner.actors.coursebatch.service.UserCoursesService;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
+import org.sunbird.learner.util.CourseBatchUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.course.batch.CourseBatch;
 import org.sunbird.telemetry.util.TelemetryUtil;
@@ -117,7 +118,7 @@ public class CourseBatchManagementActor extends BaseActor {
     Response result = courseBatchDao.create(courseBatch);
     result.put(JsonKey.BATCH_ID, courseBatchId);
 
-    syncCourseBatchForeground(
+    CourseBatchUtil.syncCourseBatchForeground(
         courseBatchId, new ObjectMapper().convertValue(courseBatch, Map.class));
     sender().tell(result, self());
 
@@ -191,10 +192,12 @@ public class CourseBatchManagementActor extends BaseActor {
     sender().tell(result, self());
 
     if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      syncCourseBatchForeground((String) courseBatchMap.get(JsonKey.ID), courseBatchMap);
+      CourseBatchUtil.syncCourseBatchForeground(
+          (String) courseBatchMap.get(JsonKey.ID), courseBatchMap);
     } else {
       ProjectLogger.log(
-          "CourseBatchManagementActor:updateCourseBatch: Course batch not synced to ES as response is not successful");
+          "CourseBatchManagementActor:updateCourseBatch: Course batch not synced to ES as response is not successful",
+          LoggerEnum.INFO.name());
     }
     targetObject =
         TelemetryUtil.generateTargetObject(
@@ -223,6 +226,7 @@ public class CourseBatchManagementActor extends BaseActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private CourseBatch getUpdateCourseBatch(Map<String, Object> request) {
     CourseBatch courseBatch = courseBatchDao.readById((String) request.get(JsonKey.ID));
 
@@ -259,6 +263,7 @@ public class CourseBatchManagementActor extends BaseActor {
     return dbEnrollmentType;
   }
 
+  @SuppressWarnings("unchecked")
   private void addUserCourseBatch(Request actorMessage) {
     Map<String, Object> req = actorMessage.getRequest();
     Response response = new Response();
@@ -368,6 +373,7 @@ public class CourseBatchManagementActor extends BaseActor {
     sender().tell(response, self());
   }
 
+  @SuppressWarnings("unchecked")
   private void getCourseBatchDetails(Request actorMessage) {
     String batchId = (String) actorMessage.getContext().get(JsonKey.BATCH_ID);
     CourseBatch courseBatch = courseBatchDao.readById(batchId);
@@ -378,25 +384,6 @@ public class CourseBatchManagementActor extends BaseActor {
     result.getResult().put(JsonKey.RESPONSE, courseBatchList);
 
     sender().tell(result, self());
-  }
-
-  private void syncCourseBatchForeground(String uniqueId, Map<String, Object> req) {
-    ProjectLogger.log(
-        "CourseBatchManagementActor: syncCourseBatchForeground called for course batch ID = "
-            + uniqueId,
-        LoggerEnum.INFO.name());
-    String esResponse =
-        ElasticSearchUtil.createData(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.course.getTypeName(),
-            uniqueId,
-            req);
-    ProjectLogger.log(
-        "CourseBatchManagementActor::syncCourseBatchForeground: Sync response for course batch ID = "
-            + uniqueId
-            + " received response = "
-            + esResponse,
-        LoggerEnum.INFO.name());
   }
 
   private int setCourseBatchStatus(String startDate) {
@@ -533,30 +520,20 @@ public class CourseBatchManagementActor extends BaseActor {
   private List<String> getUpdatedCreatedFor(
       List<String> createdFor, String enrolmentType, List<String> dbValueCreatedFor) {
     if (createdFor != null) {
-      if (ProjectUtil.EnrolmentType.inviteOnly.getVal().equalsIgnoreCase(enrolmentType)) {
-        for (String orgId : createdFor) {
-          if (!dbValueCreatedFor.contains(orgId)) {
-            if (!isOrgValid(orgId)) {
-              throw new ProjectCommonException(
-                  ResponseCode.invalidOrgId.getErrorCode(),
-                  ResponseCode.invalidOrgId.getErrorMessage(),
-                  ResponseCode.CLIENT_ERROR.getResponseCode());
-            } else {
-              dbValueCreatedFor.add(orgId);
-            }
-          }
-        }
-      } else {
-        for (String orgId : createdFor) {
-          if (!dbValueCreatedFor.contains(orgId)) {
-            dbValueCreatedFor.add(orgId);
-          }
+      for (String orgId : createdFor) {
+        if (!dbValueCreatedFor.contains(orgId) && !isOrgValid(orgId)) {
+          throw new ProjectCommonException(
+              ResponseCode.invalidOrgId.getErrorCode(),
+              ResponseCode.invalidOrgId.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
         }
       }
+      return createdFor;
     }
     return dbValueCreatedFor;
   }
 
+  @SuppressWarnings("unchecked")
   private void updateCourseBatchDate(CourseBatch courseBatch, Map<String, Object> req) {
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     Map<String, Object> courseBatchMap = new ObjectMapper().convertValue(courseBatch, Map.class);
@@ -591,6 +568,7 @@ public class CourseBatchManagementActor extends BaseActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private Map<String, String> getRootOrgForMultipleUsers(List<String> userIds) {
 
     Map<String, String> userWithRootOrgs = new HashMap<>();
@@ -625,6 +603,7 @@ public class CourseBatchManagementActor extends BaseActor {
     return getRootOrgFromUserMap(userInfo);
   }
 
+  @SuppressWarnings("unchecked")
   private String getRootOrgFromUserMap(Map<String, Object> userInfo) {
     String rootOrg = (String) userInfo.get(JsonKey.ROOT_ORG_ID);
     Map<String, Object> registeredOrgInfo =
@@ -643,6 +622,7 @@ public class CourseBatchManagementActor extends BaseActor {
     return uniqueId;
   }
 
+  @SuppressWarnings("unchecked")
   private String validateHashTagId(String hashTagId, String opType, String id) {
     Map<String, Object> filters = new HashMap<>();
     filters.put(JsonKey.HASHTAGID, hashTagId);

@@ -2,6 +2,8 @@ package org.sunbird.learner.actors.bulkupload.dao.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.sql.Timestamp;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
@@ -24,6 +26,7 @@ public class BulkUploadProcessDaoImpl implements BulkUploadProcessDao {
   @Override
   public Response create(BulkUploadProcess bulkUploadProcess) {
     Map<String, Object> map = mapper.convertValue(bulkUploadProcess, Map.class);
+    map.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTimeInMillis()));
     Response response = cassandraOperation.insertRecord(KEYSPACE_NAME, TABLE_NAME, map);
     // need to send ID along with success msg
     response.put(JsonKey.ID, map.get(JsonKey.ID));
@@ -33,6 +36,10 @@ public class BulkUploadProcessDaoImpl implements BulkUploadProcessDao {
   @Override
   public Response update(BulkUploadProcess bulkUploadProcess) {
     Map<String, Object> map = mapper.convertValue(bulkUploadProcess, Map.class);
+    if (map.containsKey(JsonKey.CREATED_ON)) {
+      map.remove(JsonKey.CREATED_ON);
+    }
+    map.put(JsonKey.LAST_UPDATED_ON, new Timestamp(Calendar.getInstance().getTimeInMillis()));
     return cassandraOperation.updateRecord(KEYSPACE_NAME, TABLE_NAME, map);
   }
 

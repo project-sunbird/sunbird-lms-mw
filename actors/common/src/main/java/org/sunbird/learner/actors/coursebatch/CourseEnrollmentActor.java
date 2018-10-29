@@ -83,13 +83,9 @@ public class CourseEnrollmentActor extends BaseActor {
 
     if (!ProjectUtil.isNull(userCourseResult) && userCourseResult.isActive()) {
       ProjectLogger.log("User Already Enrolled Course ");
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.userAlreadyEnrolledCourse,
-                  ResponseCode.CLIENT_ERROR.getResponseCode()),
-              self());
-      return;
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.userAlreadyEnrolledCourse,
+          ResponseCode.userAlreadyEnrolledCourse.getErrorMessage());
     }
     courseBatchResult.setParticipant(
         addUserToParticipant(
@@ -222,33 +218,21 @@ public class CourseEnrollmentActor extends BaseActor {
       CourseBatch courseBatchDetails, Map<String, Object> request, String requestedBy) {
 
     if (ProjectUtil.isNull(courseBatchDetails)) {
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.invalidCourseBatchId, ResponseCode.CLIENT_ERROR.getResponseCode()),
-              self());
-      return;
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.invalidCourseBatchId, ResponseCode.invalidCourseBatchId.getErrorMessage());
     }
     verifyRequestedByAndThrowErrorIfNotMatch((String) request.get(JsonKey.USER_ID), requestedBy);
     if (EnrolmentType.inviteOnly.getVal().equals(courseBatchDetails.getEnrollmentType())) {
       ProjectLogger.log(
           "CourseEnrollmentActor validateCourseBatch self enrollment or unenrollment is not applicable for invite only batch.",
           LoggerEnum.INFO.name());
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.enrollmentTypeValidation,
-                  ResponseCode.CLIENT_ERROR.getResponseCode()),
-              self());
-      return;
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.enrollmentTypeValidation,
+          ResponseCode.enrollmentTypeValidation.getErrorMessage());
     }
     if (!((String) request.get(JsonKey.COURSE_ID)).equals(courseBatchDetails.getCourseId())) {
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.invalidCourseBatchId, ResponseCode.CLIENT_ERROR.getResponseCode()),
-              self());
-      return;
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.invalidCourseBatchId, ResponseCode.invalidCourseBatchId.getErrorMessage());
     }
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     try {
@@ -263,13 +247,9 @@ public class CourseEnrollmentActor extends BaseActor {
         ProjectLogger.log(
             "CourseEnrollmentActor validateCourseBatch Course is completed already.",
             LoggerEnum.INFO.name());
-        sender()
-            .tell(
-                createExceptionObject(
-                    ResponseCode.courseBatchAlreadyCompleted,
-                    ResponseCode.CLIENT_ERROR.getResponseCode()),
-                self());
-        return;
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.courseBatchAlreadyCompleted,
+            ResponseCode.courseBatchAlreadyCompleted.getErrorMessage());
       }
     } catch (ParseException e) {
       ProjectLogger.log("CourseEnrollmentActor validateCourseBatch ", e);
@@ -278,18 +258,8 @@ public class CourseEnrollmentActor extends BaseActor {
 
   private void verifyRequestedByAndThrowErrorIfNotMatch(String userId, String requestedBy) {
     if (!(userId.equals(requestedBy))) {
-      sender()
-          .tell(
-              createExceptionObject(
-                  ResponseCode.UNAUTHORIZED, ResponseCode.UNAUTHORIZED.getResponseCode()),
-              self());
-      return;
+      ProjectCommonException.throwUnauthorizedErrorException();
     }
-  }
-
-  private ProjectCommonException createExceptionObject(ResponseCode responseCode, int statusCode) {
-    return new ProjectCommonException(
-        responseCode.getErrorCode(), responseCode.getErrorMessage(), statusCode);
   }
 
   private Response updateUserCourses(UserCourses userCourses) {

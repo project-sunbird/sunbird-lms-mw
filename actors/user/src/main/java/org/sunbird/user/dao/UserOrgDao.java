@@ -4,5 +4,5 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.models.user.org.UserOrg;
 
 public interface UserOrgDao {
-	Response updateUserOrg(UserOrg userOrg);
+  Response updateUserOrg(UserOrg userOrg);
 }

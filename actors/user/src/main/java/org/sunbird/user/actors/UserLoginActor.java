@@ -38,7 +38,7 @@ public class UserLoginActor extends UserBaseActor {
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
     if (Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED))) {
-      boolean loginTimeResponse = getSsoManager().addUserLoginTime(userId);
+      boolean loginTimeResponse = getSSOManager().addUserLoginTime(userId);
       ProjectLogger.log(
           "UserLoginActor:updateUserLoginTime: keycloak response = " + loginTimeResponse);
     }

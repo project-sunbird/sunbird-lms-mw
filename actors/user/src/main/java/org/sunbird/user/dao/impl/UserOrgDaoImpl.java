@@ -14,7 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public final class UserOrgDaoImpl implements UserOrgDao {
 
-  private final Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+  private static final String TABLE_NAME = "user_org";
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   private ObjectMapper mapper = new ObjectMapper();
@@ -22,18 +22,16 @@ public final class UserOrgDaoImpl implements UserOrgDao {
   private UserOrgDaoImpl() {}
 
   private static class LazyInitializer {
-    private static UserOrgDao INSTACE = new UserOrgDaoImpl();
+    private static UserOrgDao INSTANCE = new UserOrgDaoImpl();
   }
 
   public static UserOrgDao getInstance() {
-    return LazyInitializer.INSTACE;
+    return LazyInitializer.INSTANCE;
   }
 
   @Override
   public Response updateUserOrg(UserOrg userOrg) {
     return cassandraOperation.updateRecord(
-        userOrgDbInfo.getKeySpace(),
-        userOrgDbInfo.getTableName(),
-        mapper.convertValue(userOrg, Map.class));
+        Util.KEY_SPACE_NAME, TABLE_NAME, mapper.convertValue(userOrg, Map.class));
   }
 }

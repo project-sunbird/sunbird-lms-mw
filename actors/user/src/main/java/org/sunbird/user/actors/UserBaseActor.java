@@ -31,7 +31,7 @@ public abstract class UserBaseActor extends BaseActor {
   private UserDao userDao = UserDaoImpl.getInstance();
   private UserService userService = UserServiceImpl.getInstance();
 
-  protected void generateTeleEventForUser(
+  protected void generateTelemetryEvent(
       Map<String, Object> requestMap, String userId, String objectType) {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     Map<String, Object> targetObject =
@@ -44,13 +44,13 @@ public abstract class UserBaseActor extends BaseActor {
       case "blockUser":
         telemetryAction.put("BlockUser", "user blocked");
         break;
-      case "unBlockUser":
-        telemetryAction.put("UnBlockUser", "user unblocked");
+      case "unblockUser":
+        telemetryAction.put("UnblockUser", "user unblocked");
         break;
       case "profileVisibility":
         telemetryAction.put("ProfileVisibility", "profile Visibility setting changed");
         break;
-      default://Do Nothing
+      default: // Do Nothing
     }
     TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
   }
@@ -59,7 +59,7 @@ public abstract class UserBaseActor extends BaseActor {
     return systemSettingActorRef;
   }
 
-  protected SSOManager getSsoManager() {
+  protected SSOManager getSSOManager() {
     return ssoManager;
   }
 

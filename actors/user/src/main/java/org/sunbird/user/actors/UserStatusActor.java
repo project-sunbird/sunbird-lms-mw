@@ -58,8 +58,6 @@ public class UserStatusActor extends UserBaseActor {
 
   private void updateUserStatus(Request request, boolean isBlocked) {
     String operation = request.getOperation();
-
-    Util.getUserProfileConfig(getSystemSettingActorRef());
     String userId = (String) request.getRequest().get(JsonKey.USER_ID);
     String logMsgPrefix =
         MessageFormat.format("UserStatusActor:updateUserStatus:{0}:{1}: ", operation, userId);
@@ -86,9 +84,9 @@ public class UserStatusActor extends UserBaseActor {
 
     if (isSSOEnabled()) {
       if (isBlocked) {
-        getSsoManager().deactivateUser(userMapES);
+        getSSOManager().deactivateUser(userMapES);
       } else {
-        getSsoManager().activateUser(userMapES);
+        getSSOManager().activateUser(userMapES);
       }
     }
 
@@ -113,7 +111,7 @@ public class UserStatusActor extends UserBaseActor {
       ProjectLogger.log(logMsgPrefix + "Update user data to ES is skipped.");
     }
 
-    generateTeleEventForUser(request.getRequest(), userId, operation);
+    generateTelemetryEvent(request.getRequest(), userId, operation);
   }
 
   private Map<String, Object> getUserMapES(String userId, String updatedBy, boolean isDeleted) {

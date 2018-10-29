@@ -68,20 +68,20 @@ public class UserProfileActor extends UserBaseActor {
     validateFields(privateList, JsonKey.PUBLIC_FIELDS);
     validateFields(publicList, JsonKey.PRIVATE_FIELDS);
 
-    Map<String, Object> esResult = getUserByIdFromES(userId);
+    Map<String, Object> esUserDataMap = getUserService().esGetUserById(userId);
     Map<String, Object> esProfileVisibility = getProfileVisibilityByUserIdFromES(userId);
 
     esProfileVisibility =
-        handlePublicToPrivateConversion(privateList, esResult, esProfileVisibility);
+        handlePublicToPrivateConversion(privateList, esUserDataMap, esProfileVisibility);
 
-    handlePrivateToPublicConversion(publicList, esResult, esProfileVisibility);
-    updaeProfileVisibility(userId, privateList, publicList, esResult);
+    handlePrivateToPublicConversion(publicList, esUserDataMap, esProfileVisibility);
+    updaeProfileVisibility(userId, privateList, publicList, esUserDataMap);
 
-    updateDataInES(esResult, esProfileVisibility, userId);
+    getUserService().syncProfileVisibility(userId, esUserDataMap, esProfileVisibility);
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
-    generateTeleEventForUser(null, userId, "profileVisibility");
+    generateTelemetryEvent(null, userId, "profileVisibility");
   }
 
   private void updaeProfileVisibility(
@@ -153,21 +153,6 @@ public class UserProfileActor extends UserBaseActor {
         userId);
   }
 
-  private Map<String, Object> getUserByIdFromES(String userId) {
-    Map<String, Object> esResult =
-        ElasticSearchUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            userId);
-    if (esResult == null || esResult.size() == 0) {
-      throw new ProjectCommonException(
-          ResponseCode.userNotFound.getErrorCode(),
-          ResponseCode.userNotFound.getErrorMessage(),
-          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
-    }
-    return esResult;
-  }
-
   private void validateFields(List<String> values, String listType) {
     // Remove duplicate entries from the list
     // Visibility of permanent fields cannot be changed
@@ -175,29 +160,6 @@ public class UserProfileActor extends UserBaseActor {
       List<String> distValues = values.stream().distinct().collect(Collectors.toList());
       Util.validateProfileVisibilityFields(distValues, listType, getSystemSettingActorRef());
     }
-  }
-
-  /**
-   * This method will first removed the remove the saved private data for the user and then it will
-   * create new private data for that user.
-   *
-   * @param dataMap Map<String, Object> allData
-   * @param privateDataMap Map<String, Object> only private data.
-   * @param userId String
-   * @return boolean
-   */
-  private void updateDataInES(
-      Map<String, Object> dataMap, Map<String, Object> privateDataMap, String userId) {
-    ElasticSearchUtil.createData(
-        ProjectUtil.EsIndex.sunbird.getIndexName(),
-        ProjectUtil.EsType.userprofilevisibility.getTypeName(),
-        userId,
-        privateDataMap);
-    ElasticSearchUtil.createData(
-        ProjectUtil.EsIndex.sunbird.getIndexName(),
-        ProjectUtil.EsType.user.getTypeName(),
-        userId,
-        dataMap);
   }
 
   /**
@@ -218,7 +180,7 @@ public class UserProfileActor extends UserBaseActor {
 
   private Map<String, Object> handlePrivateVisibility(
       List<String> privateFieldList, Map<String, Object> data, Map<String, Object> oldPrivateData) {
-    Map<String, Object> privateFiledMap = createPrivateFiledMap(data, privateFieldList);
+    Map<String, Object> privateFiledMap = createPrivateFieldMap(data, privateFieldList);
     privateFiledMap.putAll(oldPrivateData);
     return privateFiledMap;
   }
@@ -230,7 +192,7 @@ public class UserProfileActor extends UserBaseActor {
    * @param fields List<String> list of private fields
    * @return Map<String, Object> map of private field with their original values.
    */
-  private Map<String, Object> createPrivateFiledMap(Map<String, Object> map, List<String> fields) {
+  private Map<String, Object> createPrivateFieldMap(Map<String, Object> map, List<String> fields) {
     Map<String, Object> privateMap = new HashMap<>();
     if (fields != null && !fields.isEmpty()) {
       for (String field : fields) {

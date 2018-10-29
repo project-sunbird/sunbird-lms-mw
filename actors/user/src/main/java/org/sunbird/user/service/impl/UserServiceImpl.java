@@ -85,4 +85,44 @@ public class UserServiceImpl implements UserService {
           ResponseCode.UNAUTHORIZED.getResponseCode());
     }
   }
+
+  @Override
+  public Map<String, Object> esGetUserById(String userId) {
+    Map<String, Object> esResult =
+        ElasticSearchUtil.getDataByIdentifier(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(),
+            userId);
+    if (esResult == null || esResult.size() == 0) {
+      throw new ProjectCommonException(
+          ResponseCode.userNotFound.getErrorCode(),
+          ResponseCode.userNotFound.getErrorMessage(),
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+    }
+    return esResult;
+  }
+
+  /**
+   * This method will first removed the remove the saved private data for the user and then it will
+   * create new private data for that user.
+   *
+   * @param userDataMap Map<String, Object> allData
+   * @param userPrivateDataMap Map<String, Object> only private data.
+   * @param userId String
+   * @return boolean
+   */
+  @Override
+  public void syncProfileVisibility(
+      String userId, Map<String, Object> userDataMap, Map<String, Object> userPrivateDataMap) {
+    ElasticSearchUtil.createData(
+        ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.userprofilevisibility.getTypeName(),
+        userId,
+        userPrivateDataMap);
+    ElasticSearchUtil.createData(
+        ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.user.getTypeName(),
+        userId,
+        userDataMap);
+  }
 }

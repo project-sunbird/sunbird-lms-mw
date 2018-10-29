@@ -1,9 +1,7 @@
 package org.sunbird.user.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -164,6 +162,7 @@ public class UserUtil {
     }
   }
 
+  @SuppressWarnings("unchecked")
   public static Map<String, Object> getUserFromExternalId(Map<String, Object> userMap) {
     Map<String, Object> user = null;
     Map<String, Object> externalIdReq = new WeakHashMap<>();
@@ -452,95 +451,6 @@ public class UserUtil {
     }
   }
 
-  public static void updateUserExtId(Map<String, Object> requestMap) {
-    List<Map<String, String>> dbResExternalIds =
-        getUserExternalIds((String) requestMap.get(JsonKey.USER_ID));
-    List<Map<String, String>> externalIds =
-        (List<Map<String, String>>) requestMap.get(JsonKey.EXTERNAL_IDS);
-    if (CollectionUtils.isNotEmpty(externalIds)) {
-      // will not allow user to update idType value, if user will try to update idType will
-      // ignore
-      // user will have only one entry for a idType for given provider so get extId based on idType
-      // List of idType values for a user will distinct and unique
-      for (Map<String, String> extIdMap : externalIds) {
-        Optional<Map<String, String>> extMap = checkExternalID(dbResExternalIds, extIdMap);
-        Map<String, String> map = extMap.orElse(null);
-        // Allowed operation type for externalIds ("add", "remove", "edit")
-        if (JsonKey.ADD.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))
-            || StringUtils.isBlank(extIdMap.get(JsonKey.OPERATION))) {
-          if (MapUtils.isEmpty(map)) {
-            upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.CREATE);
-          } else {
-            // if external Id with same provider and idType exist then delete first then update
-            // to update user externalId first we need to delete the record as externalId is the
-            // part of composite key
-            deleteUserExternalId(requestMap, map);
-            upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.UPDATE);
-          }
-        } else {
-          // operation is either edit or remove
-          if (MapUtils.isNotEmpty(map)) {
-            if (JsonKey.REMOVE.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))) {
-              if (StringUtils.isNotBlank(map.get(JsonKey.ID_TYPE))
-                  && StringUtils.isNotBlank((String) requestMap.get(JsonKey.USER_ID))
-                  && StringUtils.isNotBlank(map.get(JsonKey.PROVIDER))) {
-                deleteUserExternalId(requestMap, map);
-              }
-            } else if (JsonKey.EDIT.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))) {
-              // to update user externalId first we need to delete the record as externalId is the
-              // part of composite key
-              deleteUserExternalId(requestMap, map);
-              upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.UPDATE);
-            }
-          } else {
-            throwExternalIDNotFoundException(
-                extIdMap.get(JsonKey.ID),
-                extIdMap.get(JsonKey.ID_TYPE),
-                extIdMap.get(JsonKey.PROVIDER));
-          }
-        }
-      }
-    }
-  }
-
-  private static void upsertUserExternalIdentityData(
-      Map<String, String> extIdsMap, Map<String, Object> requestMap, String operation) {
-    try {
-      Map<String, Object> map = new HashMap<>();
-      map.put(JsonKey.EXTERNAL_ID, encryptData(extIdsMap.get(JsonKey.ID)));
-      map.put(
-          JsonKey.ORIGINAL_EXTERNAL_ID, encryptData(extIdsMap.get(JsonKey.ORIGINAL_EXTERNAL_ID)));
-      map.put(JsonKey.PROVIDER, extIdsMap.get(JsonKey.PROVIDER));
-      map.put(JsonKey.ORIGINAL_PROVIDER, extIdsMap.get(JsonKey.ORIGINAL_PROVIDER));
-      map.put(JsonKey.ID_TYPE, extIdsMap.get(JsonKey.ID_TYPE));
-      map.put(JsonKey.ORIGINAL_ID_TYPE, extIdsMap.get(JsonKey.ORIGINAL_ID_TYPE));
-      map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
-      if (JsonKey.CREATE.equalsIgnoreCase(operation)) {
-        map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
-        map.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
-      } else {
-        map.put(JsonKey.LAST_UPDATED_BY, requestMap.get(JsonKey.UPDATED_BY));
-        map.put(JsonKey.LAST_UPDATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
-      }
-      cassandraOperation.upsertRecord(JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, map);
-    } catch (Exception ex) {
-      ProjectLogger.log("Util:upsertUserExternalIdentityData : Exception occurred", ex);
-    }
-  }
-
-  private static void deleteUserExternalId(
-      Map<String, Object> requestMap, Map<String, String> map) {
-    map.remove(JsonKey.LAST_UPDATED_BY);
-    map.remove(JsonKey.CREATED_BY);
-    map.remove(JsonKey.LAST_UPDATED_ON);
-    map.remove(JsonKey.CREATED_ON);
-    map.remove(JsonKey.USER_ID);
-    map.remove(JsonKey.ORIGINAL_EXTERNAL_ID);
-    map.remove(JsonKey.ORIGINAL_ID_TYPE);
-    map.remove(JsonKey.ORIGINAL_PROVIDER);
-    cassandraOperation.deleteRecord(JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, map);
-  }
-
   @SuppressWarnings("unchecked")
   public static Map<String, Object> encryptUserData(Map<String, Object> userMap) {
     try {
@@ -648,19 +558,19 @@ public class UserUtil {
         Map<String, String> map = extMap.orElse(null);
         // Allowed operation type for externalIds ("add", "remove", "edit")
         if (!(JsonKey.ADD.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))
-            || StringUtils.isBlank(extIdMap.get(JsonKey.OPERATION)))) {
+                || StringUtils.isBlank(extIdMap.get(JsonKey.OPERATION)))
+            && MapUtils.isEmpty(map)) {
           // operation is either edit or remove
-          if (MapUtils.isEmpty(map)) {
-            throwExternalIDNotFoundException(
-                extIdMap.get(JsonKey.ID),
-                extIdMap.get(JsonKey.ID_TYPE),
-                extIdMap.get(JsonKey.PROVIDER));
-          }
+          throwExternalIDNotFoundException(
+              extIdMap.get(JsonKey.ID),
+              extIdMap.get(JsonKey.ID_TYPE),
+              extIdMap.get(JsonKey.PROVIDER));
         }
       }
     }
   }
 
+  @SuppressWarnings("unchecked")
   private static List<Map<String, String>> getUserExternalIds(String userId) {
     List<Map<String, String>> dbResExternalIds = new ArrayList<>();
     Response response =
@@ -672,6 +582,7 @@ public class UserUtil {
     return dbResExternalIds;
   }
 
+  @SuppressWarnings("unchecked")
   public static List<Map<String, Object>> getAddressDetails(String userId, String addressId) {
     Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     List<Map<String, Object>> userAddressList = new ArrayList<>();

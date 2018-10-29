@@ -89,7 +89,7 @@ public class UserExternalIdManagementActor extends BaseActor {
             // if external Id with same provider and idType exist then delete first then update
             // to update user externalId first we need to delete the record as externalId is the
             // part of composite key
-            deleteUserExternalId(requestMap, map);
+            deleteUserExternalId(map);
             upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.UPDATE);
           }
         } else {
@@ -99,12 +99,12 @@ public class UserExternalIdManagementActor extends BaseActor {
               if (StringUtils.isNotBlank(map.get(JsonKey.ID_TYPE))
                   && StringUtils.isNotBlank((String) requestMap.get(JsonKey.USER_ID))
                   && StringUtils.isNotBlank(map.get(JsonKey.PROVIDER))) {
-                deleteUserExternalId(requestMap, map);
+                deleteUserExternalId(map);
               }
             } else if (JsonKey.EDIT.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))) {
               // to update user externalId first we need to delete the record as externalId is the
               // part of composite key
-              deleteUserExternalId(requestMap, map);
+              deleteUserExternalId(map);
               upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.UPDATE);
             }
           } else {
@@ -137,6 +137,7 @@ public class UserExternalIdManagementActor extends BaseActor {
     return extMap;
   }
 
+  @SuppressWarnings("unchecked")
   private static List<Map<String, String>> getUserExternalIds(Map<String, Object> requestMap) {
     List<Map<String, String>> dbResExternalIds = new ArrayList<>();
     Response response =
@@ -151,8 +152,7 @@ public class UserExternalIdManagementActor extends BaseActor {
     return dbResExternalIds;
   }
 
-  private static void deleteUserExternalId(
-      Map<String, Object> requestMap, Map<String, String> map) {
+  private static void deleteUserExternalId(Map<String, String> map) {
     map.remove(JsonKey.LAST_UPDATED_BY);
     map.remove(JsonKey.CREATED_BY);
     map.remove(JsonKey.LAST_UPDATED_ON);

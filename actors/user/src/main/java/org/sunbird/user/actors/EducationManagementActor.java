@@ -1,8 +1,10 @@
 package org.sunbird.user.actors;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -44,39 +46,47 @@ public class EducationManagementActor extends BaseActor {
     String operationtype = (String) requestMap.get(JsonKey.OPERATION_TYPE);
     List<Map<String, Object>> reqList =
         (List<Map<String, Object>>) requestMap.get(JsonKey.EDUCATION);
-
-    for (int i = 0; i < reqList.size(); i++) {
-      Map<String, Object> educationDetailsMap = reqList.get(i);
-      String createdBy = (String) requestMap.get(JsonKey.ID);
-      Response addrResponse = null;
-      if (JsonKey.CREATE.equalsIgnoreCase(operationtype)) {
-        educationDetailsMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
-        if (educationDetailsMap.containsKey(JsonKey.ADDRESS)) {
-          addrResponse = upsertEducationAddressDetails(educationDetailsMap, createdBy);
-        }
-        insertEducationDetails(requestMap, educationDetailsMap, addrResponse, createdBy);
-      } else {
-        if (educationDetailsMap.containsKey(JsonKey.IS_DELETED)
-            && null != educationDetailsMap.get(JsonKey.IS_DELETED)
-            && ((boolean) educationDetailsMap.get(JsonKey.IS_DELETED))
-            && !StringUtils.isBlank((String) educationDetailsMap.get(JsonKey.ID))) {
-          deleteEducationDetails(educationDetailsMap);
-          continue;
-        }
-        if (educationDetailsMap.containsKey(JsonKey.ADDRESS)) {
-          addrResponse = upsertEducationAddressDetails(educationDetailsMap, createdBy);
-        }
-        if (StringUtils.isBlank((String) educationDetailsMap.get(JsonKey.ID))) {
+    Response response = new Response();
+    List<String> errMsgs = new ArrayList<>();
+    try {
+      for (int i = 0; i < reqList.size(); i++) {
+        Map<String, Object> educationDetailsMap = reqList.get(i);
+        String createdBy = (String) requestMap.get(JsonKey.ID);
+        Response addrResponse = null;
+        if (JsonKey.CREATE.equalsIgnoreCase(operationtype)) {
           educationDetailsMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
+          if (educationDetailsMap.containsKey(JsonKey.ADDRESS)) {
+            addrResponse = upsertEducationAddressDetails(educationDetailsMap, createdBy);
+          }
           insertEducationDetails(requestMap, educationDetailsMap, addrResponse, createdBy);
         } else {
-          updateEducationDetails(educationDetailsMap, addrResponse, createdBy);
+          if (educationDetailsMap.containsKey(JsonKey.IS_DELETED)
+              && null != educationDetailsMap.get(JsonKey.IS_DELETED)
+              && ((boolean) educationDetailsMap.get(JsonKey.IS_DELETED))
+              && !StringUtils.isBlank((String) educationDetailsMap.get(JsonKey.ID))) {
+            deleteEducationDetails(educationDetailsMap);
+            continue;
+          }
+          if (educationDetailsMap.containsKey(JsonKey.ADDRESS)) {
+            addrResponse = upsertEducationAddressDetails(educationDetailsMap, createdBy);
+          }
+          if (StringUtils.isBlank((String) educationDetailsMap.get(JsonKey.ID))) {
+            educationDetailsMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
+            insertEducationDetails(requestMap, educationDetailsMap, addrResponse, createdBy);
+          } else {
+            updateEducationDetails(educationDetailsMap, addrResponse, createdBy);
+          }
         }
       }
+    } catch (Exception e) {
+      errMsgs.add(e.getMessage());
+      ProjectLogger.log(e.getMessage(), e);
     }
-
-    Response response = new Response();
-    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    if (CollectionUtils.isNotEmpty(errMsgs)) {
+      response.put(JsonKey.EDUCATION + ":" + JsonKey.ERROR_MSG, errMsgs);
+    } else {
+      response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    }
     sender().tell(response, self());
   }
 
@@ -91,12 +101,8 @@ public class EducationManagementActor extends BaseActor {
     educationDetailsMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     educationDetailsMap.put(JsonKey.UPDATED_BY, createdBy);
     educationDetailsMap.remove(JsonKey.USER_ID);
-    try {
-      cassandraOperation.upsertRecord(
-          eduDbInfo.getKeySpace(), eduDbInfo.getTableName(), educationDetailsMap);
-    } catch (Exception ex) {
-      ProjectLogger.log(ex.getMessage(), ex);
-    }
+    cassandraOperation.upsertRecord(
+        eduDbInfo.getKeySpace(), eduDbInfo.getTableName(), educationDetailsMap);
   }
 
   @SuppressWarnings("unchecked")
@@ -164,14 +170,10 @@ public class EducationManagementActor extends BaseActor {
     educationDetailsMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     educationDetailsMap.put(JsonKey.CREATED_BY, createdBy);
     educationDetailsMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.ID));
-    try {
-      cassandraOperation.insertRecord(
-          eduDbInfo.getKeySpace(), eduDbInfo.getTableName(), educationDetailsMap);
-      // telemetryGenerationForUserSubFields(
-      // reqMap, userMap, false, JsonKey.EDUCATION, JsonKey.USER);
-    } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
+    cassandraOperation.insertRecord(
+        eduDbInfo.getKeySpace(), eduDbInfo.getTableName(), educationDetailsMap);
+    // telemetryGenerationForUserSubFields(
+    // reqMap, userMap, false, JsonKey.EDUCATION, JsonKey.USER);
     educationDetailsMap.put(JsonKey.ADDRESS, address);
   }
 
@@ -220,14 +222,10 @@ public class EducationManagementActor extends BaseActor {
       address.put(JsonKey.UPDATED_BY, createdBy);
       address.remove(JsonKey.USER_ID);
     }
-    try {
-      addrResponse =
-          cassandraOperation.upsertRecord(
-              addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), address);
-      addrResponse.put(JsonKey.ADDRESS_ID, addrId);
-    } catch (Exception ex) {
-      ProjectLogger.log(ex.getMessage(), ex);
-    }
+    addrResponse =
+        cassandraOperation.upsertRecord(
+            addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), address);
+    addrResponse.put(JsonKey.ADDRESS_ID, addrId);
     return addrResponse;
   }
 }

@@ -787,7 +787,7 @@ public class UserManagementActor extends BaseActor {
       completeUserDetails.putAll(requestMap);
       saveUserDetailsToEs(completeUserDetails);
     } else {
-      ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
+      ProjectLogger.log("UserManagementActor:updateUser: User update fail");
     }
     targetObject =
         TelemetryUtil.generateTargetObject(
@@ -906,9 +906,6 @@ public class UserManagementActor extends BaseActor {
       response =
           cassandraOperation.insertRecord(
               usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
-    } catch (Exception ex) {
-      ProjectLogger.log("Exception occurred while inserting user to db: " + ex);
-      throw ex;
     } finally {
       if (null == response && isSSOEnabled) {
         ssoManager.removeUser(userMap);
@@ -931,6 +928,7 @@ public class UserManagementActor extends BaseActor {
     } else {
       ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
     }
+    response.putAll(resp.getResult());
     sender().tell(response, self());
     if (null != resp) {
       saveUserDetailsToEs(userMap);

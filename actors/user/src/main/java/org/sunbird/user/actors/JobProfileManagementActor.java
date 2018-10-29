@@ -1,7 +1,9 @@
 package org.sunbird.user.actors;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -43,37 +45,47 @@ public class JobProfileManagementActor extends BaseActor {
     String operationtype = (String) requestMap.get(JsonKey.OPERATION_TYPE);
     List<Map<String, Object>> reqList =
         (List<Map<String, Object>>) requestMap.get(JsonKey.JOB_PROFILE);
-    for (int i = 0; i < reqList.size(); i++) {
-      Map<String, Object> jobProfileMap = reqList.get(i);
-      String createdBy = (String) requestMap.get(JsonKey.CREATED_BY);
-      Response addrResponse = null;
-      if (JsonKey.CREATE.equalsIgnoreCase(operationtype)) {
-        jobProfileMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
-        if (jobProfileMap.containsKey(JsonKey.ADDRESS)) {
-          addrResponse = upsertJobProfileAddressDetails(jobProfileMap, createdBy);
-        }
-        insertJobProfileDetails(requestMap, jobProfileMap, addrResponse, createdBy);
-      } else {
-        if (jobProfileMap.containsKey(JsonKey.IS_DELETED)
-            && null != jobProfileMap.get(JsonKey.IS_DELETED)
-            && ((boolean) jobProfileMap.get(JsonKey.IS_DELETED))
-            && !StringUtils.isBlank((String) jobProfileMap.get(JsonKey.ID))) {
-          deleteJobProfileDetails(jobProfileMap);
-          continue;
-        }
-        if (jobProfileMap.containsKey(JsonKey.ADDRESS)) {
-          addrResponse = upsertJobProfileAddressDetails(jobProfileMap, createdBy);
-        }
-        if (StringUtils.isBlank((String) jobProfileMap.get(JsonKey.ID))) {
+    Response response = new Response();
+    List<String> errMsgs = new ArrayList<>();
+    try {
+      for (int i = 0; i < reqList.size(); i++) {
+        Map<String, Object> jobProfileMap = reqList.get(i);
+        String createdBy = (String) requestMap.get(JsonKey.CREATED_BY);
+        Response addrResponse = null;
+        if (JsonKey.CREATE.equalsIgnoreCase(operationtype)) {
           jobProfileMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
+          if (jobProfileMap.containsKey(JsonKey.ADDRESS)) {
+            addrResponse = upsertJobProfileAddressDetails(jobProfileMap, createdBy);
+          }
           insertJobProfileDetails(requestMap, jobProfileMap, addrResponse, createdBy);
         } else {
-          updateJobProfileDetails(jobProfileMap, addrResponse, createdBy);
+          if (jobProfileMap.containsKey(JsonKey.IS_DELETED)
+              && null != jobProfileMap.get(JsonKey.IS_DELETED)
+              && ((boolean) jobProfileMap.get(JsonKey.IS_DELETED))
+              && !StringUtils.isBlank((String) jobProfileMap.get(JsonKey.ID))) {
+            deleteJobProfileDetails(jobProfileMap);
+            continue;
+          }
+          if (jobProfileMap.containsKey(JsonKey.ADDRESS)) {
+            addrResponse = upsertJobProfileAddressDetails(jobProfileMap, createdBy);
+          }
+          if (StringUtils.isBlank((String) jobProfileMap.get(JsonKey.ID))) {
+            jobProfileMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
+            insertJobProfileDetails(requestMap, jobProfileMap, addrResponse, createdBy);
+          } else {
+            updateJobProfileDetails(jobProfileMap, addrResponse, createdBy);
+          }
         }
       }
+    } catch (Exception e) {
+      errMsgs.add(e.getMessage());
+      ProjectLogger.log(e.getMessage(), e);
     }
-    Response response = new Response();
-    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    if (CollectionUtils.isNotEmpty(errMsgs)) {
+      response.put(JsonKey.JOB_PROFILE + ":" + JsonKey.ERROR_MSG, errMsgs);
+    } else {
+      response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    }
     sender().tell(response, self());
   }
 
@@ -155,12 +167,8 @@ public class JobProfileManagementActor extends BaseActor {
     jobProfileMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     jobProfileMap.put(JsonKey.CREATED_BY, createdBy);
     jobProfileMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.ID));
-    try {
-      cassandraOperation.insertRecord(
-          jobProDbInfo.getKeySpace(), jobProDbInfo.getTableName(), jobProfileMap);
-    } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
+    cassandraOperation.insertRecord(
+        jobProDbInfo.getKeySpace(), jobProDbInfo.getTableName(), jobProfileMap);
     jobProfileMap.put(JsonKey.ADDRESS, address);
   }
 
@@ -182,14 +190,10 @@ public class JobProfileManagementActor extends BaseActor {
       address.put(JsonKey.UPDATED_BY, createdBy);
       address.remove(JsonKey.USER_ID);
     }
-    try {
-      addrResponse =
-          cassandraOperation.upsertRecord(
-              addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), address);
-      addrResponse.put(JsonKey.ADDRESS_ID, addrId);
-    } catch (Exception ex) {
-      ProjectLogger.log(ex.getMessage(), ex);
-    }
+    addrResponse =
+        cassandraOperation.upsertRecord(
+            addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), address);
+    addrResponse.put(JsonKey.ADDRESS_ID, addrId);
     return addrResponse;
   }
 }

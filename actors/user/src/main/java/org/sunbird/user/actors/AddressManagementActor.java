@@ -1,7 +1,9 @@
 package org.sunbird.user.actors;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -45,6 +47,8 @@ public class AddressManagementActor extends BaseActor {
     String operationtype = (String) requestMap.get(JsonKey.OPERATION_TYPE);
     List<Map<String, Object>> addressList =
         (List<Map<String, Object>>) requestMap.get(JsonKey.ADDRESS);
+    Response response = new Response();
+    List<String> errMsgs = new ArrayList<>();
     try {
       String encUserId = encryptionService.encryptData((String) requestMap.get(JsonKey.ID));
       String encCreatedById =
@@ -74,12 +78,16 @@ public class AddressManagementActor extends BaseActor {
           }
         }
       }
-      Response response = new Response();
-      response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-      sender().tell(response, self());
     } catch (Exception e) {
+      errMsgs.add(e.getMessage());
       ProjectLogger.log(e.getMessage(), e);
     }
+    if (CollectionUtils.isNotEmpty(errMsgs)) {
+      response.put(JsonKey.ADDRESS + ":" + JsonKey.ERROR_MSG, errMsgs);
+    } else {
+      response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    }
+    sender().tell(response, self());
   }
 
   private void updateAddressDetails(String encCreatedById, Map<String, Object> address) {

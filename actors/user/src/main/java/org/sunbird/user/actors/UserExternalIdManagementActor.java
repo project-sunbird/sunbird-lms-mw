@@ -51,15 +51,28 @@ public class UserExternalIdManagementActor extends BaseActor {
     List<Map<String, String>> externalIds =
         (List<Map<String, String>>) requestMap.get(JsonKey.EXTERNAL_IDS);
     if (CollectionUtils.isNotEmpty(externalIds)) {
+      Response response = new Response();
+      List<String> errMsgs = new ArrayList<>();
       for (Map<String, String> extIdsMap : externalIds) {
-        if (JsonKey.CREATE.equalsIgnoreCase(operationtype)) {
-          if (StringUtils.isBlank(extIdsMap.get(JsonKey.OPERATION))
-              || JsonKey.ADD.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))) {
-            upsertUserExternalIdentityData(extIdsMap, requestMap, JsonKey.CREATE);
+        try {
+          if (JsonKey.CREATE.equalsIgnoreCase(operationtype)) {
+            if (StringUtils.isBlank(extIdsMap.get(JsonKey.OPERATION))
+                || JsonKey.ADD.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))) {
+              upsertUserExternalIdentityData(extIdsMap, requestMap, JsonKey.CREATE);
+            }
+          } else {
+            updateUserExtId(requestMap);
           }
-        } else {
-          updateUserExtId(requestMap);
+        } catch (Exception e) {
+          errMsgs.add(e.getMessage());
+          ProjectLogger.log(e.getMessage(), e);
         }
+        if (CollectionUtils.isNotEmpty(errMsgs)) {
+          response.put(JsonKey.EXTERNAL_IDS + ":" + JsonKey.ERROR_MSG, errMsgs);
+        } else {
+          response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+        }
+        sender().tell(response, self());
       }
     }
     Response response = new Response();
@@ -175,28 +188,23 @@ public class UserExternalIdManagementActor extends BaseActor {
 
   private static void upsertUserExternalIdentityData(
       Map<String, String> extIdsMap, Map<String, Object> requestMap, String operation) {
-    try {
-      Map<String, Object> map = new HashMap<>();
-      map.put(JsonKey.EXTERNAL_ID, Util.encryptData(extIdsMap.get(JsonKey.ID)));
-      map.put(
-          JsonKey.ORIGINAL_EXTERNAL_ID,
-          Util.encryptData(extIdsMap.get(JsonKey.ORIGINAL_EXTERNAL_ID)));
-      map.put(JsonKey.PROVIDER, extIdsMap.get(JsonKey.PROVIDER));
-      map.put(JsonKey.ORIGINAL_PROVIDER, extIdsMap.get(JsonKey.ORIGINAL_PROVIDER));
-      map.put(JsonKey.ID_TYPE, extIdsMap.get(JsonKey.ID_TYPE));
-      map.put(JsonKey.ORIGINAL_ID_TYPE, extIdsMap.get(JsonKey.ORIGINAL_ID_TYPE));
-      map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
-      if (JsonKey.CREATE.equalsIgnoreCase(operation)) {
-        map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
-        map.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
-      } else {
-        map.put(JsonKey.LAST_UPDATED_BY, requestMap.get(JsonKey.UPDATED_BY));
-        map.put(JsonKey.LAST_UPDATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
-      }
-      cassandraOperation.upsertRecord(JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, map);
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "UserExternalIdManagementActor:upsertUserExternalIdentityData : Exception occurred", ex);
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.EXTERNAL_ID, Util.encryptData(extIdsMap.get(JsonKey.ID)));
+    map.put(
+        JsonKey.ORIGINAL_EXTERNAL_ID,
+        Util.encryptData(extIdsMap.get(JsonKey.ORIGINAL_EXTERNAL_ID)));
+    map.put(JsonKey.PROVIDER, extIdsMap.get(JsonKey.PROVIDER));
+    map.put(JsonKey.ORIGINAL_PROVIDER, extIdsMap.get(JsonKey.ORIGINAL_PROVIDER));
+    map.put(JsonKey.ID_TYPE, extIdsMap.get(JsonKey.ID_TYPE));
+    map.put(JsonKey.ORIGINAL_ID_TYPE, extIdsMap.get(JsonKey.ORIGINAL_ID_TYPE));
+    map.put(JsonKey.USER_ID, requestMap.get(JsonKey.USER_ID));
+    if (JsonKey.CREATE.equalsIgnoreCase(operation)) {
+      map.put(JsonKey.CREATED_BY, requestMap.get(JsonKey.CREATED_BY));
+      map.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
+    } else {
+      map.put(JsonKey.LAST_UPDATED_BY, requestMap.get(JsonKey.UPDATED_BY));
+      map.put(JsonKey.LAST_UPDATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
     }
+    cassandraOperation.upsertRecord(JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, map);
   }
 }

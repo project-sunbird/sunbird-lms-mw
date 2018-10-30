@@ -116,12 +116,12 @@ public class UserServiceImpl implements UserService {
     }
     return esResult;
   }
-	
+
   @Override
   public Map<String, Object> esGetPrivateUserProfileById(String userId) {
-	    return ElasticSearchUtil.getDataByIdentifier(
-	        ProjectUtil.EsIndex.sunbird.getIndexName(),
-	        ProjectUtil.EsType.userprofilevisibility.getTypeName(),
-	        userId);
-	  }
+    return ElasticSearchUtil.getDataByIdentifier(
+        ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.userprofilevisibility.getTypeName(),
+        userId);
+  }
 }

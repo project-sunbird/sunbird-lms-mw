@@ -106,7 +106,7 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
           row,
           JsonKey.CREATE);
     } else {
-      row.put(JsonKey.ID, orgId);
+      row.put(JsonKey.ORGANISATION_ID, orgId);
       setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, row, JsonKey.CREATE);
     }
   }

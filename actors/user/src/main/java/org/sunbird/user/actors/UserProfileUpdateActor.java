@@ -54,7 +54,6 @@ public class UserProfileUpdateActor extends BaseActor {
           (List<Map<String, String>>) userMap.get(JsonKey.EXTERNAL_IDS))) {
         Request userExternalIdsRequest = new Request();
         userExternalIdsRequest.getRequest().putAll(userMap);
-        userExternalIdsRequest.getRequest().put(JsonKey.OPERATION_TYPE, operationType);
         userExternalIdsRequest.setOperation(
             UserActorOperations.UPSERT_USER_EXTERNAL_IDENTITY_DETAILS.getValue());
         return (Response)
@@ -76,12 +75,16 @@ public class UserProfileUpdateActor extends BaseActor {
           || StringUtils.isNotBlank((String) userMap.get(JsonKey.ROOT_ORG_ID))) {
         Request userOrgRequest = new Request();
         userOrgRequest.getRequest().putAll(userMap);
-        userOrgRequest.getRequest().put(JsonKey.OPERATION_TYPE, operationType);
-        userOrgRequest.setOperation(UserActorOperations.UPSERT_USER_ORG_DETAILS.getValue());
+        String actorOperation = "";
+        if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
+          actorOperation = UserActorOperations.INSERT_USER_ORG_DETAILS.getValue();
+          userOrgRequest.setOperation(actorOperation);
+        } else {
+          actorOperation = UserActorOperations.UPDATE_USER_ORG_DETAILS.getValue();
+          userOrgRequest.setOperation(actorOperation);
+        }
         return (Response)
-            interServiceCommunication.getResponse(
-                getActorRef(UserActorOperations.UPSERT_USER_ORG_DETAILS.getValue()),
-                userOrgRequest);
+            interServiceCommunication.getResponse(getActorRef(actorOperation), userOrgRequest);
       }
     } catch (Exception ex) {
       ProjectLogger.log(

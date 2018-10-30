@@ -8,26 +8,27 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.util.Util;
-import org.sunbird.user.util.UserActorOperations;
 
 @ActorConfig(
-  tasks = {"upsertUserOrgDetails"},
-  asyncTasks = {"upsertUserOrgDetails"}
+  tasks = {"insertUserOrgDetails", "updateUserOrgDetails"},
+  asyncTasks = {"insertUserOrgDetails", "updateUserOrgDetails"}
 )
 public class UserOrgManagementActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    if (UserActorOperations.UPSERT_USER_ORG_DETAILS
-        .getValue()
-        .equalsIgnoreCase(request.getOperation())) {
-      upsertUserOrgDetails(request);
-    } else {
-      onReceiveUnsupportedOperation("UserOrgManagementActor");
+    String operation = request.getOperation();
+    switch (operation) {
+      case "insertUserOrgDetails":
+        insertUserOrgDetails(request);
+        break;
+
+      default:
+        onReceiveUnsupportedOperation("UserOrgManagementActor");
     }
   }
 
-  private void upsertUserOrgDetails(Request request) {
+  private void insertUserOrgDetails(Request request) {
     Map<String, Object> requestMap = request.getRequest();
     // Register user to given orgId(not root orgId)
     String organisationId = (String) requestMap.get(JsonKey.ORGANISATION_ID);

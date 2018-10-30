@@ -16,11 +16,10 @@ import org.sunbird.user.dao.AddressDao;
 import org.sunbird.user.dao.JobProfileDao;
 import org.sunbird.user.dao.impl.AddressDaoImpl;
 import org.sunbird.user.dao.impl.JobProfileDaoImpl;
-import org.sunbird.user.util.UserActorOperations;
 
 @ActorConfig(
-  tasks = {"upsertUserJobProfile"},
-  asyncTasks = {"upsertUserJobProfile"}
+  tasks = {"insertUserJobProfile", "updateUserJobProfile"},
+  asyncTasks = {"insertUserJobProfile", "updateUserJobProfile"}
 )
 public class JobProfileManagementActor extends BaseActor {
 
@@ -29,19 +28,24 @@ public class JobProfileManagementActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    if (UserActorOperations.UPSERT_USER_JOB_PROFILE
-        .getValue()
-        .equalsIgnoreCase(request.getOperation())) {
-      upsertJobProfileDetails(request);
-    } else {
-      onReceiveUnsupportedOperation("JobProfileManagementActor");
+    String operation = request.getOperation();
+    switch (operation) {
+      case "insertUserJobProfile":
+        insertJobProfile(request);
+        break;
+
+      case "updateUserJobProfile":
+        updateJobProfile(request);
+        break;
+
+      default:
+        onReceiveUnsupportedOperation("JobProfileManagementActor");
     }
   }
 
   @SuppressWarnings("unchecked")
-  private void upsertJobProfileDetails(Request request) {
+  private void insertJobProfile(Request request) {
     Map<String, Object> requestMap = request.getRequest();
-    String operationtype = (String) requestMap.get(JsonKey.OPERATION_TYPE);
     List<Map<String, Object>> reqList =
         (List<Map<String, Object>>) requestMap.get(JsonKey.JOB_PROFILE);
     Response response = new Response();
@@ -51,29 +55,51 @@ public class JobProfileManagementActor extends BaseActor {
         Map<String, Object> jobProfileMap = reqList.get(i);
         String createdBy = (String) requestMap.get(JsonKey.CREATED_BY);
         Response addrResponse = null;
-        if (JsonKey.CREATE.equalsIgnoreCase(operationtype)) {
+        jobProfileMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
+        if (jobProfileMap.containsKey(JsonKey.ADDRESS)) {
+          addrResponse = upsertJobProfileAddressDetails(jobProfileMap, createdBy);
+        }
+        insertJobProfileDetails(requestMap, jobProfileMap, addrResponse, createdBy);
+      }
+    } catch (Exception e) {
+      errMsgs.add(e.getMessage());
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    if (CollectionUtils.isNotEmpty(errMsgs)) {
+      response.put(JsonKey.JOB_PROFILE + ":" + JsonKey.ERROR_MSG, errMsgs);
+    } else {
+      response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    }
+    sender().tell(response, self());
+  }
+
+  @SuppressWarnings("unchecked")
+  private void updateJobProfile(Request request) {
+    Map<String, Object> requestMap = request.getRequest();
+    List<Map<String, Object>> reqList =
+        (List<Map<String, Object>>) requestMap.get(JsonKey.JOB_PROFILE);
+    Response response = new Response();
+    List<String> errMsgs = new ArrayList<>();
+    try {
+      for (int i = 0; i < reqList.size(); i++) {
+        Map<String, Object> jobProfileMap = reqList.get(i);
+        String createdBy = (String) requestMap.get(JsonKey.CREATED_BY);
+        Response addrResponse = null;
+        if (jobProfileMap.containsKey(JsonKey.IS_DELETED)
+            && null != jobProfileMap.get(JsonKey.IS_DELETED)
+            && ((boolean) jobProfileMap.get(JsonKey.IS_DELETED))
+            && !StringUtils.isBlank((String) jobProfileMap.get(JsonKey.ID))) {
+          deleteJobProfileDetails(jobProfileMap);
+          continue;
+        }
+        if (jobProfileMap.containsKey(JsonKey.ADDRESS)) {
+          addrResponse = upsertJobProfileAddressDetails(jobProfileMap, createdBy);
+        }
+        if (StringUtils.isBlank((String) jobProfileMap.get(JsonKey.ID))) {
           jobProfileMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
-          if (jobProfileMap.containsKey(JsonKey.ADDRESS)) {
-            addrResponse = upsertJobProfileAddressDetails(jobProfileMap, createdBy);
-          }
           insertJobProfileDetails(requestMap, jobProfileMap, addrResponse, createdBy);
         } else {
-          if (jobProfileMap.containsKey(JsonKey.IS_DELETED)
-              && null != jobProfileMap.get(JsonKey.IS_DELETED)
-              && ((boolean) jobProfileMap.get(JsonKey.IS_DELETED))
-              && !StringUtils.isBlank((String) jobProfileMap.get(JsonKey.ID))) {
-            deleteJobProfileDetails(jobProfileMap);
-            continue;
-          }
-          if (jobProfileMap.containsKey(JsonKey.ADDRESS)) {
-            addrResponse = upsertJobProfileAddressDetails(jobProfileMap, createdBy);
-          }
-          if (StringUtils.isBlank((String) jobProfileMap.get(JsonKey.ID))) {
-            jobProfileMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
-            insertJobProfileDetails(requestMap, jobProfileMap, addrResponse, createdBy);
-          } else {
-            updateJobProfileDetails(jobProfileMap, addrResponse, createdBy);
-          }
+          updateJobProfileDetails(jobProfileMap, addrResponse, createdBy);
         }
       }
     } catch (Exception e) {

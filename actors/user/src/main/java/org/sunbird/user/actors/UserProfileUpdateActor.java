@@ -99,12 +99,16 @@ public class UserProfileUpdateActor extends BaseActor {
               (List<Map<String, Object>>) userMap.get(JsonKey.JOB_PROFILE))) {
         Request jobProfileRequest = new Request();
         jobProfileRequest.getRequest().putAll(userMap);
-        jobProfileRequest.getRequest().put(JsonKey.OPERATION_TYPE, operationType);
-        jobProfileRequest.setOperation(UserActorOperations.UPSERT_USER_JOB_PROFILE.getValue());
+        String actorOperation = "";
+        if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
+          actorOperation = UserActorOperations.INSERT_USER_JOB_PROFILE.getValue();
+          jobProfileRequest.setOperation(actorOperation);
+        } else {
+          actorOperation = UserActorOperations.UPDATE_USER_JOB_PROFILE.getValue();
+          jobProfileRequest.setOperation(actorOperation);
+        }
         return (Response)
-            interServiceCommunication.getResponse(
-                getActorRef(UserActorOperations.UPSERT_USER_JOB_PROFILE.getValue()),
-                jobProfileRequest);
+            interServiceCommunication.getResponse(getActorRef(actorOperation), jobProfileRequest);
       }
     } catch (Exception ex) {
       ProjectLogger.log(
@@ -122,12 +126,16 @@ public class UserProfileUpdateActor extends BaseActor {
               (List<Map<String, Object>>) userMap.get(JsonKey.EDUCATION))) {
         Request educationRequest = new Request();
         educationRequest.getRequest().putAll(userMap);
-        educationRequest.getRequest().put(JsonKey.OPERATION_TYPE, operationType);
-        educationRequest.setOperation(UserActorOperations.UPSERT_USER_EDUCATION.getValue());
+        String actorOperation = "";
+        if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
+          actorOperation = UserActorOperations.INSERT_USER_EDUCATION.getValue();
+          educationRequest.setOperation(actorOperation);
+        } else {
+          actorOperation = UserActorOperations.UPDATE_USER_EDUCATION.getValue();
+          educationRequest.setOperation(actorOperation);
+        }
         return (Response)
-            interServiceCommunication.getResponse(
-                getActorRef(UserActorOperations.UPSERT_USER_EDUCATION.getValue()),
-                educationRequest);
+            interServiceCommunication.getResponse(getActorRef(actorOperation), educationRequest);
       }
     } catch (Exception ex) {
       ProjectLogger.log(
@@ -144,11 +152,16 @@ public class UserProfileUpdateActor extends BaseActor {
           && CollectionUtils.isNotEmpty((List<Map<String, Object>>) userMap.get(JsonKey.ADDRESS))) {
         Request addressRequest = new Request();
         addressRequest.getRequest().putAll(userMap);
-        addressRequest.getRequest().put(JsonKey.OPERATION_TYPE, operationType);
-        addressRequest.setOperation(UserActorOperations.UPSERT_USER_ADDRESS.getValue());
+        String actorOperation = "";
+        if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
+          actorOperation = UserActorOperations.INSERT_USER_ADDRESS.getValue();
+          addressRequest.setOperation(actorOperation);
+        } else {
+          actorOperation = UserActorOperations.UPDATE_USER_ADDRESS.getValue();
+          addressRequest.setOperation(actorOperation);
+        }
         return (Response)
-            interServiceCommunication.getResponse(
-                getActorRef(UserActorOperations.UPSERT_USER_ADDRESS.getValue()), addressRequest);
+            interServiceCommunication.getResponse(getActorRef(actorOperation), addressRequest);
       }
     } catch (Exception ex) {
       ProjectLogger.log(

@@ -17,11 +17,10 @@ import org.sunbird.user.dao.AddressDao;
 import org.sunbird.user.dao.EducationDao;
 import org.sunbird.user.dao.impl.AddressDaoImpl;
 import org.sunbird.user.dao.impl.EducationDaoImpl;
-import org.sunbird.user.util.UserActorOperations;
 
 @ActorConfig(
-  tasks = {"upsertUserEducation"},
-  asyncTasks = {"upsertUserEducation"}
+  tasks = {"insertUserEducation", "updateUserEducation"},
+  asyncTasks = {"insertUserEducation", "updateUserEducation"}
 )
 public class EducationManagementActor extends BaseActor {
 
@@ -30,19 +29,24 @@ public class EducationManagementActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    if (UserActorOperations.UPSERT_USER_EDUCATION
-        .getValue()
-        .equalsIgnoreCase(request.getOperation())) {
-      upsertEducationDetails(request);
-    } else {
-      onReceiveUnsupportedOperation("EducationManagementActor");
+    String operation = request.getOperation();
+    switch (operation) {
+      case "insertUserEducation":
+        insertEducation(request);
+        break;
+
+      case "updateUserEducation":
+        updateEducation(request);
+        break;
+
+      default:
+        onReceiveUnsupportedOperation("EducationManagementActor");
     }
   }
 
   @SuppressWarnings("unchecked")
-  private void upsertEducationDetails(Request request) {
+  private void insertEducation(Request request) {
     Map<String, Object> requestMap = request.getRequest();
-    String operationtype = (String) requestMap.get(JsonKey.OPERATION_TYPE);
     List<Map<String, Object>> reqList =
         (List<Map<String, Object>>) requestMap.get(JsonKey.EDUCATION);
     Response response = new Response();
@@ -52,29 +56,51 @@ public class EducationManagementActor extends BaseActor {
         Map<String, Object> educationDetailsMap = reqList.get(i);
         String createdBy = (String) requestMap.get(JsonKey.ID);
         Response addrResponse = null;
-        if (JsonKey.CREATE.equalsIgnoreCase(operationtype)) {
+        educationDetailsMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
+        if (educationDetailsMap.containsKey(JsonKey.ADDRESS)) {
+          addrResponse = upsertEducationAddressDetails(educationDetailsMap, createdBy);
+        }
+        insertEducationDetails(requestMap, educationDetailsMap, addrResponse, createdBy);
+      }
+    } catch (Exception e) {
+      errMsgs.add(e.getMessage());
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    if (CollectionUtils.isNotEmpty(errMsgs)) {
+      response.put(JsonKey.EDUCATION + ":" + JsonKey.ERROR_MSG, errMsgs);
+    } else {
+      response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    }
+    sender().tell(response, self());
+  }
+
+  @SuppressWarnings("unchecked")
+  private void updateEducation(Request request) {
+    Map<String, Object> requestMap = request.getRequest();
+    List<Map<String, Object>> reqList =
+        (List<Map<String, Object>>) requestMap.get(JsonKey.EDUCATION);
+    Response response = new Response();
+    List<String> errMsgs = new ArrayList<>();
+    try {
+      for (int i = 0; i < reqList.size(); i++) {
+        Map<String, Object> educationDetailsMap = reqList.get(i);
+        String createdBy = (String) requestMap.get(JsonKey.ID);
+        Response addrResponse = null;
+        if (educationDetailsMap.containsKey(JsonKey.IS_DELETED)
+            && null != educationDetailsMap.get(JsonKey.IS_DELETED)
+            && ((boolean) educationDetailsMap.get(JsonKey.IS_DELETED))
+            && !StringUtils.isBlank((String) educationDetailsMap.get(JsonKey.ID))) {
+          deleteEducationDetails(educationDetailsMap);
+          continue;
+        }
+        if (educationDetailsMap.containsKey(JsonKey.ADDRESS)) {
+          addrResponse = upsertEducationAddressDetails(educationDetailsMap, createdBy);
+        }
+        if (StringUtils.isBlank((String) educationDetailsMap.get(JsonKey.ID))) {
           educationDetailsMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
-          if (educationDetailsMap.containsKey(JsonKey.ADDRESS)) {
-            addrResponse = upsertEducationAddressDetails(educationDetailsMap, createdBy);
-          }
           insertEducationDetails(requestMap, educationDetailsMap, addrResponse, createdBy);
         } else {
-          if (educationDetailsMap.containsKey(JsonKey.IS_DELETED)
-              && null != educationDetailsMap.get(JsonKey.IS_DELETED)
-              && ((boolean) educationDetailsMap.get(JsonKey.IS_DELETED))
-              && !StringUtils.isBlank((String) educationDetailsMap.get(JsonKey.ID))) {
-            deleteEducationDetails(educationDetailsMap);
-            continue;
-          }
-          if (educationDetailsMap.containsKey(JsonKey.ADDRESS)) {
-            addrResponse = upsertEducationAddressDetails(educationDetailsMap, createdBy);
-          }
-          if (StringUtils.isBlank((String) educationDetailsMap.get(JsonKey.ID))) {
-            educationDetailsMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
-            insertEducationDetails(requestMap, educationDetailsMap, addrResponse, createdBy);
-          } else {
-            updateEducationDetails(educationDetailsMap, addrResponse, createdBy);
-          }
+          updateEducationDetails(educationDetailsMap, addrResponse, createdBy);
         }
       }
     } catch (Exception e) {

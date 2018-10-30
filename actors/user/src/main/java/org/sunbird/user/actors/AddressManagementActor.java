@@ -15,11 +15,10 @@ import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.user.dao.AddressDao;
 import org.sunbird.user.dao.impl.AddressDaoImpl;
-import org.sunbird.user.util.UserActorOperations;
 
 @ActorConfig(
-  tasks = {"upsertUserAddress"},
-  asyncTasks = {"upsertUserAddress"}
+  tasks = {"insertUserAddress", "updateUserAddress"},
+  asyncTasks = {"insertUserAddress", "updateUserAddress"}
 )
 public class AddressManagementActor extends BaseActor {
 
@@ -30,19 +29,24 @@ public class AddressManagementActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    if (UserActorOperations.UPSERT_USER_ADDRESS
-        .getValue()
-        .equalsIgnoreCase(request.getOperation())) {
-      upsertAddress(request);
-    } else {
-      onReceiveUnsupportedOperation("AddressManagementActor");
+    String operation = request.getOperation();
+    switch (operation) {
+      case "insertUserAddress":
+        insertAddress(request);
+        break;
+
+      case "updateUserAddress":
+        updateAddress(request);
+        break;
+
+      default:
+        onReceiveUnsupportedOperation("AddressManagementActor");
     }
   }
 
   @SuppressWarnings("unchecked")
-  private void upsertAddress(Request request) {
+  private void insertAddress(Request request) {
     Map<String, Object> requestMap = request.getRequest();
-    String operationtype = (String) requestMap.get(JsonKey.OPERATION_TYPE);
     List<Map<String, Object>> addressList =
         (List<Map<String, Object>>) requestMap.get(JsonKey.ADDRESS);
     Response response = new Response();
@@ -53,34 +57,48 @@ public class AddressManagementActor extends BaseActor {
           encryptionService.encryptData((String) requestMap.get(JsonKey.CREATED_BY));
       for (int i = 0; i < addressList.size(); i++) {
         Map<String, Object> address = addressList.get(i);
-        if (JsonKey.CREATE.equalsIgnoreCase(operationtype)) {
-          address.put(JsonKey.CREATED_BY, encCreatedById);
-          address.put(JsonKey.USER_ID, encUserId);
-          address.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-          address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-          addressDao.createAddress(address);
-        } else {
-          // update
-          if (address.containsKey(JsonKey.IS_DELETED)
-              && null != address.get(JsonKey.IS_DELETED)
-              && ((boolean) address.get(JsonKey.IS_DELETED))
-              && !StringUtils.isBlank((String) address.get(JsonKey.ID))) {
-            addressDao.deleteAddress((String) address.get(JsonKey.ID));
-            continue;
-          }
+        createAddress(encUserId, encCreatedById, address);
+      }
+    } catch (Exception e) {
+      errMsgs.add(e.getMessage());
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    if (CollectionUtils.isNotEmpty(errMsgs)) {
+      response.put(JsonKey.ADDRESS + ":" + JsonKey.ERROR_MSG, errMsgs);
+    } else {
+      response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    }
+    sender().tell(response, self());
+  }
 
-          if (!address.containsKey(JsonKey.ID)) {
-            address.put(JsonKey.CREATED_BY, encCreatedById);
-            address.put(JsonKey.USER_ID, encUserId);
-            address.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-            address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-            addressDao.createAddress(address);
-          } else {
-            address.put(JsonKey.UPDATED_BY, encCreatedById);
-            address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-            address.remove(JsonKey.USER_ID);
-            addressDao.updateAddress(address);
-          }
+  @SuppressWarnings("unchecked")
+  private void updateAddress(Request request) {
+    Map<String, Object> requestMap = request.getRequest();
+    List<Map<String, Object>> addressList =
+        (List<Map<String, Object>>) requestMap.get(JsonKey.ADDRESS);
+    Response response = new Response();
+    List<String> errMsgs = new ArrayList<>();
+    try {
+      String encUserId = encryptionService.encryptData((String) requestMap.get(JsonKey.ID));
+      String encCreatedById =
+          encryptionService.encryptData((String) requestMap.get(JsonKey.CREATED_BY));
+      for (int i = 0; i < addressList.size(); i++) {
+        Map<String, Object> address = addressList.get(i);
+        if (address.containsKey(JsonKey.IS_DELETED)
+            && null != address.get(JsonKey.IS_DELETED)
+            && ((boolean) address.get(JsonKey.IS_DELETED))
+            && !StringUtils.isBlank((String) address.get(JsonKey.ID))) {
+          addressDao.deleteAddress((String) address.get(JsonKey.ID));
+          continue;
+        }
+
+        if (!address.containsKey(JsonKey.ID)) {
+          createAddress(encUserId, encCreatedById, address);
+        } else {
+          address.put(JsonKey.UPDATED_BY, encCreatedById);
+          address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+          address.remove(JsonKey.USER_ID);
+          addressDao.updateAddress(address);
         }
       }
     } catch (Exception e) {
@@ -93,5 +111,13 @@ public class AddressManagementActor extends BaseActor {
       response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     }
     sender().tell(response, self());
+  }
+
+  private void createAddress(String encUserId, String encCreatedById, Map<String, Object> address) {
+    address.put(JsonKey.CREATED_BY, encCreatedById);
+    address.put(JsonKey.USER_ID, encUserId);
+    address.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+    address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+    addressDao.createAddress(address);
   }
 }

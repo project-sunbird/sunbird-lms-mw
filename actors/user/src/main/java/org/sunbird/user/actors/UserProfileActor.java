@@ -33,7 +33,6 @@ public class UserProfileActor extends UserBaseActor {
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.USER);
-    // set request id fto thread loacl...
     ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();
     switch (operation) {
@@ -41,7 +40,7 @@ public class UserProfileActor extends UserBaseActor {
         getMediaTypes();
         break;
       case "profileVisibility":
-        profileVisibility(request);
+        setProfileVisibility(request);
         break;
       default:
         onReceiveUnsupportedMessage("UserProfileActor");
@@ -54,21 +53,14 @@ public class UserProfileActor extends UserBaseActor {
     sender().tell(response, self());
   }
 
-  /**
-   * This method will first check user exist with us or not. after that it will create private filed
-   * Map, for creating private field map it will take store value from ES and then a separate map
-   * for private field and remove those field from original map. if will user is sending some public
-   * field list as well then it will take private field values from another ES index and update
-   * values under original data.
-   *
-   * @param actorMessage
-   */
   @SuppressWarnings({"unchecked", "rawtypes"})
-  private void profileVisibility(Request actorMessage) {
+  private void setProfileVisibility(Request actorMessage) {
     Map<String, Object> map = (Map) actorMessage.getRequest();
+
     String userId = (String) map.get(JsonKey.USER_ID);
     List<String> privateList = (List) map.get(JsonKey.PRIVATE);
     List<String> publicList = (List) map.get(JsonKey.PUBLIC);
+
     validateFields(privateList, JsonKey.PUBLIC_FIELDS);
     validateFields(publicList, JsonKey.PRIVATE_FIELDS);
 
@@ -76,22 +68,103 @@ public class UserProfileActor extends UserBaseActor {
     Map<String, Object> esPrivateUserProfile = getUserService().esGetPrivateUserProfileById(userId);
 
     updateUserProfile(publicList, privateList, esPublicUserProfile, esPrivateUserProfile);
+
     updateProfileVisibility(userId, publicList, privateList, esPublicUserProfile);
 
     getUserService().syncUserProfile(userId, esPublicUserProfile, esPrivateUserProfile);
+
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
+
     generateTelemetryEvent(null, userId, "profileVisibility");
   }
 
-  private void updateProfileVisibility(
-      String userId,
-      List<String> publicList,
-      List<String> privateList,
-      Map<String, Object> esPublicUserProfile) {
+  private void validateFields(List<String> values, String listType) {
+    // Remove duplicate entries from the list
+    // Visibility of permanent fields cannot be changed
+    if (CollectionUtils.isNotEmpty(values)) {
+      List<String> distValues = values.stream().distinct().collect(Collectors.toList());
+      validateProfileVisibilityFields(distValues, listType, getSystemSettingActorRef());
+    }
+  }
+
+  public void validateProfileVisibilityFields(
+      List<String> fieldList, String fieldTypeKey, ActorRef actorRef) {
+    String conflictingFieldTypeKey =
+        JsonKey.PUBLIC_FIELDS.equalsIgnoreCase(fieldTypeKey) ? JsonKey.PRIVATE : JsonKey.PUBLIC;
+
+    Config userProfileConfig = Util.getUserProfileConfig(actorRef);
+
+    List<String> fields = userProfileConfig.getStringList(fieldTypeKey);
+    List<String> fieldsCopy = new ArrayList<String>(fields);
+    fieldsCopy.retainAll(fieldList);
+
+    if (!fieldsCopy.isEmpty()) {
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.invalidParameterValue,
+          ProjectUtil.formatMessage(
+              ResponseCode.invalidParameterValue.getErrorMessage(),
+              fieldsCopy.toString(),
+              StringFormatter.joinByDot(JsonKey.PROFILE_VISIBILITY, conflictingFieldTypeKey)));
+    }
+  }
+
+  private void updateUserProfile(List<String> publicList, List<String> privateList, Map<String, Object> esPublicUserProfile, Map<String, Object> esPrivateUserProfile) {
+    Map<String, Object> privateDataMap = null;
+    if (CollectionUtils.isNotEmpty(privateList)) {
+      privateDataMap = getPrivateFieldMap(privateList, esPublicUserProfile, esPrivateUserProfile);
+    }
+    if (privateDataMap != null && privateDataMap.size() > 0) {
+      resetPrivateFieldsInPublicUserProfile(privateDataMap, esPublicUserProfile);
+    }
+
+    addRemovedPrivateFieldsInPublicUserProfile(
+        publicList, esPublicUserProfile, esPrivateUserProfile);
+  }
+
+  private Map<String, Object> getPrivateFieldMap(
+      List<String> privateFieldList, Map<String, Object> data, Map<String, Object> oldPrivateData) {
+    Map<String, Object> privateFieldMap = createPrivateFieldMap(data, privateFieldList);
+    privateFieldMap.putAll(oldPrivateData);
+    return privateFieldMap;
+  }
+
+  private Map<String, Object> resetPrivateFieldsInPublicUserProfile(
+      Map<String, Object> privateDataMap, Map<String, Object> esPublicUserProfile) {
+    for (String field : privateDataMap.keySet()) {
+      if ("dob".equalsIgnoreCase(field)) {
+        esPublicUserProfile.put(field, null);
+      } else if (privateDataMap.get(field) instanceof List) {
+        esPublicUserProfile.put(field, new ArrayList<>());
+      } else if (privateDataMap.get(field) instanceof Map) {
+        esPublicUserProfile.put(field, new HashMap<>());
+      } else if (privateDataMap.get(field) instanceof String) {
+        esPublicUserProfile.put(field, "");
+      } else {
+        esPublicUserProfile.put(field, null);
+      }
+    }
+    return esPublicUserProfile;
+  }
+
+  private void addRemovedPrivateFieldsInPublicUserProfile(List<String> publicList, Map<String, Object> esPublicUserProfile, Map<String, Object> esPrivateUserProfile) {
+    if (CollectionUtils.isNotEmpty(publicList)) {
+      for (String field : publicList) {
+        if (esPrivateUserProfile.containsKey(field)) {
+          esPublicUserProfile.put(field, esPrivateUserProfile.get(field));
+          esPrivateUserProfile.remove(field);
+        } else {
+          ProjectLogger.log("UserProfileActor:addRemovedPrivateFieldsInPublicUserProfile: private index does not have field = " + field);
+        }
+      }
+    }
+  }
+
+  private void updateProfileVisibility(String userId, List<String> publicList, List<String> privateList, Map<String, Object> esPublicUserProfile) {
     Map<String, String> profileVisibilityMap =
         (Map<String, String>) esPublicUserProfile.get(JsonKey.PROFILE_VISIBILITY);
+
     if (null == profileVisibilityMap) {
       profileVisibilityMap = new HashMap<>();
     }
@@ -100,7 +173,7 @@ public class UserProfileActor extends UserBaseActor {
     prepareProfileVisibilityMap(profileVisibilityMap, privateList, JsonKey.PRIVATE);
 
     if (profileVisibilityMap.size() > 0) {
-      updateCassandraWithPrivateFiled(userId, profileVisibilityMap);
+      saveUserProfileVisibility(userId, profileVisibilityMap);
       esPublicUserProfile.put(JsonKey.PROFILE_VISIBILITY, profileVisibilityMap);
     }
   }
@@ -114,89 +187,22 @@ public class UserProfileActor extends UserBaseActor {
     }
   }
 
-  private void addRemovedPrivateFieldsInPublicUserProfile(
-      List<String> publicList,
-      Map<String, Object> esPublicUserProfile,
-      Map<String, Object> esPrivateUserProfile) { // now have a check for public field.
-    if (CollectionUtils.isNotEmpty(publicList)) {
-      // this estype will hold all private data of user.
-      // now collecting values from private filed and it will update
-      // under original index with public field.
-      for (String field : publicList) {
-        if (esPrivateUserProfile.containsKey(field)) {
-          esPublicUserProfile.put(field, esPrivateUserProfile.get(field));
-          esPrivateUserProfile.remove(field);
-        } else {
-          ProjectLogger.log("field value not found inside private index ==" + field);
-        }
-      }
-    }
+  private void saveUserProfileVisibility(String userId, Map<String, String> privateFieldMap) {
+    User user = new User();
+    user.setId(userId);
+    user.setProfileVisibility(privateFieldMap);
+
+    Response response = getUserDao().updateUser(user);
+
+    String response = (String) response.get(JsonKey.RESPONSE);
+    ProjectLogger.log("UserProfileActor:saveUserProfileVisibility: response = " + response);
   }
 
-  private void updateUserProfile(
-      List<String> publicList,
-      List<String> privateList,
-      Map<String, Object> esPublicUserProfile,
-      Map<String, Object> esPrivateUserProfile) {
-    Map<String, Object> privateDataMap = null;
-    if (CollectionUtils.isNotEmpty(privateList)) {
-      privateDataMap = getPrivateFieldMap(privateList, esPublicUserProfile, esPrivateUserProfile);
-    }
-    if (privateDataMap != null && privateDataMap.size() > 0) {
-      resetPrivateFieldsInPublicUserProfile(privateDataMap, esPublicUserProfile);
-    }
-    addRemovedPrivateFieldsInPublicUserProfile(
-        publicList, esPublicUserProfile, esPrivateUserProfile);
-  }
-
-  private void validateFields(List<String> values, String listType) {
-    // Remove duplicate entries from the list
-    // Visibility of permanent fields cannot be changed
-    if (CollectionUtils.isNotEmpty(values)) {
-      List<String> distValues = values.stream().distinct().collect(Collectors.toList());
-      validateProfileVisibilityFields(distValues, listType, getSystemSettingActorRef());
-    }
-  }
-
-  /**
-   * THis methods will update user private field under cassandra.
-   *
-   * @param userId Stirng
-   * @param privateFieldMap Map<String,String>
-   */
-  private void updateCassandraWithPrivateFiled(String userId, Map<String, String> privateFieldMap) {
-
-    User updateUserObj = new User();
-    updateUserObj.setId(userId);
-    updateUserObj.setProfileVisibility(privateFieldMap);
-    Response response = getUserDao().updateUser(updateUserObj);
-    String val = (String) response.get(JsonKey.RESPONSE);
-    ProjectLogger.log("Private field updated under cassandra==" + val);
-  }
-
-  private Map<String, Object> getPrivateFieldMap(
-      List<String> privateFieldList, Map<String, Object> data, Map<String, Object> oldPrivateData) {
-    Map<String, Object> privateFiledMap = createPrivateFieldMap(data, privateFieldList);
-    privateFiledMap.putAll(oldPrivateData);
-    return privateFiledMap;
-  }
-
-  /**
-   * This method will create a private field map and remove those filed from original map.
-   *
-   * @param map Map<String, Object> complete save data Map
-   * @param fields List<String> list of private fields
-   * @return Map<String, Object> map of private field with their original values.
-   */
   private Map<String, Object> createPrivateFieldMap(Map<String, Object> map, List<String> fields) {
     Map<String, Object> privateMap = new HashMap<>();
     if (fields != null && !fields.isEmpty()) {
       for (String field : fields) {
-        /*
-         * now if field contains
-         * {address.someField,education.someField,jobprofile.someField} then we need to
-         * remove those filed
-         */
+        // If field is nested (e.g. address.someField) then the parent key is marked as private
         if (field.contains(JsonKey.ADDRESS + ".")) {
           privateMap.put(JsonKey.ADDRESS, map.get(JsonKey.ADDRESS));
         } else if (field.contains(JsonKey.EDUCATION + ".")) {
@@ -221,42 +227,4 @@ public class UserProfileActor extends UserBaseActor {
     return privateMap;
   }
 
-  private Map<String, Object> resetPrivateFieldsInPublicUserProfile(
-      Map<String, Object> privateDataMap, Map<String, Object> esPublicUserProfile) {
-    for (String field : privateDataMap.keySet()) {
-      if ("dob".equalsIgnoreCase(field)) {
-        esPublicUserProfile.put(field, null);
-      } else if (privateDataMap.get(field) instanceof List) {
-        esPublicUserProfile.put(field, new ArrayList<>());
-      } else if (privateDataMap.get(field) instanceof Map) {
-        esPublicUserProfile.put(field, new HashMap<>());
-      } else if (privateDataMap.get(field) instanceof String) {
-        esPublicUserProfile.put(field, "");
-      } else {
-        esPublicUserProfile.put(field, null);
-      }
-    }
-    return esPublicUserProfile;
-  }
-
-  public void validateProfileVisibilityFields(
-      List<String> fieldList, String fieldTypeKey, ActorRef actorRef) {
-    String conflictingFieldTypeKey =
-        JsonKey.PUBLIC_FIELDS.equalsIgnoreCase(fieldTypeKey) ? JsonKey.PRIVATE : JsonKey.PUBLIC;
-
-    Config userProfileConfig = Util.getUserProfileConfig(actorRef);
-
-    List<String> fields = userProfileConfig.getStringList(fieldTypeKey);
-    List<String> fieldsCopy = new ArrayList<String>(fields);
-    fieldsCopy.retainAll(fieldList);
-
-    if (!fieldsCopy.isEmpty()) {
-      ProjectCommonException.throwClientErrorException(
-          ResponseCode.invalidParameterValue,
-          ProjectUtil.formatMessage(
-              ResponseCode.invalidParameterValue.getErrorMessage(),
-              fieldsCopy.toString(),
-              StringFormatter.joinByDot(JsonKey.PROFILE_VISIBILITY, conflictingFieldTypeKey)));
-    }
-  }
 }

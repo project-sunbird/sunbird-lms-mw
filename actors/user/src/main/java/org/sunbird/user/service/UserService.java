@@ -17,6 +17,5 @@ public interface UserService {
   
   Map<String, Object> esGetPrivateUserProfileById(String userId);
 
-  void syncProfileVisibility(
-      String userId, Map<String, Object> userDataMap, Map<String, Object> userPrivateDataMap);
+  void syncUserProfile(String userId, Map<String, Object> userDataMap, Map<String, Object> userPrivateDataMap);
 }

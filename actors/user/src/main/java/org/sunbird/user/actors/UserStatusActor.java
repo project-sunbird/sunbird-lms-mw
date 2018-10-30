@@ -47,7 +47,6 @@ public class UserStatusActor extends BaseActor {
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.USER);
     ExecutionContext.setRequestId(request.getRequestId());
-
     systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
     String operation = request.getOperation();
 

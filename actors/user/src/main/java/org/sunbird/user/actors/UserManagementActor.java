@@ -98,30 +98,31 @@ public class UserManagementActor extends BaseActor {
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.USER);
-    systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
-    // set request id fto thread loacl...
     ExecutionContext.setRequestId(request.getRequestId());
+    systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
     String operation = request.getOperation();
-    if (operation.equalsIgnoreCase(ActorOperations.CREATE_USER.getValue())) {
-      createUser(request);
-    } else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER.getValue())) {
-      updateUser(request);
-    } else if (operation.equalsIgnoreCase(ActorOperations.GET_PROFILE.getValue())) {
-      getUserProfile(request);
-    } else if (operation.equalsIgnoreCase(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue())) {
-      getUserDetailsByLoginId(request);
-    } else if (operation.equalsIgnoreCase(ActorOperations.GET_MEDIA_TYPES.getValue())) {
-      getMediaTypes();
-    } else if (operation.equalsIgnoreCase(ActorOperations.PROFILE_VISIBILITY.getValue())) {
-      profileVisibility(request);
-    } else {
-      ProjectLogger.log("UNSUPPORTED OPERATION");
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.invalidOperationName.getErrorCode(),
-              ResponseCode.invalidOperationName.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+    switch (operation) {
+      case "createUser":
+        createUser(request);
+        break;
+      case "updateUser":
+        updateUser(request);
+        break;
+      case "getUserProfile":
+        getUserProfile(request);
+        break;
+      case "getUserDetailsByLoginId":
+        getUserDetailsByLoginId(request);
+        break;
+      case "profileVisibility":
+        profileVisibility(request);
+        break;
+      case "getMediaTypes":
+        getMediaTypes();
+        break;
+      default:
+        onReceiveUnsupportedOperation("UserManagementActor");
+        break;
     }
   }
 

@@ -25,8 +25,7 @@ public abstract class UserBaseActor extends BaseActor {
   private UserRequestValidator userRequestValidator = new UserRequestValidator();
   private boolean isSSOEnabled =
       Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
-  private ActorRef systemSettingActorRef =
-      getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
+  private ActorRef systemSettingActorRef;
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
   private UserDao userDao = UserDaoImpl.getInstance();
   private UserService userService = UserServiceImpl.getInstance();
@@ -37,6 +36,7 @@ public abstract class UserBaseActor extends BaseActor {
     Map<String, Object> targetObject =
         TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
     Map<String, Object> telemetryAction = new HashMap<>();
+    
     switch (objectType) {
       case "userLevel":
         telemetryAction.put("AssignRole", "role assigned at user level");
@@ -50,12 +50,18 @@ public abstract class UserBaseActor extends BaseActor {
       case "profileVisibility":
         telemetryAction.put("ProfileVisibility", "profile visibility setting changed");
         break;
-      default: // Do Nothing
+      default: 
+        // Do Nothing
     }
+
     TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
   }
 
   protected ActorRef getSystemSettingActorRef() {
+    if (systemSettingActorRef == null) {
+      systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
+    }
+
     return systemSettingActorRef;
   }
 
@@ -78,4 +84,5 @@ public abstract class UserBaseActor extends BaseActor {
   public UserService getUserService() {
     return userService;
   }
+
 }

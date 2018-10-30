@@ -12,10 +12,9 @@ public class EducationDaoImpl implements EducationDao {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
+  private static EducationDao educationDao = null;
 
   private EducationDaoImpl() {}
-
-  private static EducationDao educationDao = null;
 
   public static EducationDao getInstance() {
     if (null == educationDao) {

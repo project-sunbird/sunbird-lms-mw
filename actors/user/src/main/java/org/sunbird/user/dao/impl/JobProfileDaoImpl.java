@@ -12,10 +12,9 @@ public class JobProfileDaoImpl implements JobProfileDao {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
+  private static JobProfileDao jobProfileDao = null;
 
   private JobProfileDaoImpl() {}
-
-  private static JobProfileDao jobProfileDao = null;
 
   public static JobProfileDao getInstance() {
     if (null == jobProfileDao) {

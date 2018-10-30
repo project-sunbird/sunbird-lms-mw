@@ -12,7 +12,6 @@ public class AddressDaoImpl implements AddressDao {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-
   private static AddressDao addressDao = null;
 
   private AddressDaoImpl() {}

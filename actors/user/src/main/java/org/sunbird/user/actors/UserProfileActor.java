@@ -72,14 +72,13 @@ public class UserProfileActor extends UserBaseActor {
     validateFields(privateList, JsonKey.PUBLIC_FIELDS);
     validateFields(publicList, JsonKey.PRIVATE_FIELDS);
 
-    Map<String, Object> esPublicUserProfile = getUserService().esGetUserById(userId);
-    Map<String, Object> esPrivateUserProfile =
-        getUserService().esGetProfileVisibilityByUserId(userId);
+    Map<String, Object> esPublicUserProfile = getUserService().esGetPublicUserProfileById(userId);
+    Map<String, Object> esPrivateUserProfile = getUserService().esGetPrivateUserProfileById(userId);
 
     updateUserProfile(publicList, privateList, esPublicUserProfile, esPrivateUserProfile);
     updateProfileVisibility(userId, publicList, privateList, esPublicUserProfile);
 
-    getUserService().syncProfileVisibility(userId, esPublicUserProfile, esPrivateUserProfile);
+    getUserService().syncUserProfile(userId, esPublicUserProfile, esPrivateUserProfile);
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());

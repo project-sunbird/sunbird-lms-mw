@@ -78,17 +78,11 @@ public class UserUtil {
             (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
         if (!userMapList.isEmpty()) {
           if (opType.equalsIgnoreCase(JsonKey.CREATE)) {
-            throw new ProjectCommonException(
-                ResponseCode.PhoneNumberInUse.getErrorCode(),
-                ResponseCode.PhoneNumberInUse.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
+            ProjectCommonException.throwClientErrorException(ResponseCode.PhoneNumberInUse, null);
           } else {
             Map<String, Object> userMap = userMapList.get(0);
             if (!(((String) userMap.get(JsonKey.ID)).equalsIgnoreCase(user.getId()))) {
-              throw new ProjectCommonException(
-                  ResponseCode.PhoneNumberInUse.getErrorCode(),
-                  ResponseCode.PhoneNumberInUse.getErrorMessage(),
-                  ResponseCode.CLIENT_ERROR.getResponseCode());
+              ProjectCommonException.throwClientErrorException(ResponseCode.PhoneNumberInUse, null);
             }
           }
         }
@@ -109,11 +103,10 @@ public class UserUtil {
         && StringUtils.isNotEmpty(idType)) {
       user = getUserFromExternalId(userMap);
       if (MapUtils.isEmpty(user)) {
-        throw new ProjectCommonException(
-            ResponseCode.externalIdNotFound.getErrorCode(),
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.externalIdNotFound,
             ProjectUtil.formatMessage(
-                ResponseCode.externalIdNotFound.getErrorMessage(), extId, idType, provider),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+                ResponseCode.externalIdNotFound.getErrorMessage(), extId, idType, provider));
       }
     } else if (StringUtils.isNotBlank((String) userMap.get(JsonKey.USER_ID))
         || StringUtils.isNotBlank((String) userMap.get(JsonKey.ID))) {
@@ -127,18 +120,12 @@ public class UserUtil {
               ProjectUtil.EsType.user.getTypeName(),
               userId);
       if (MapUtils.isEmpty(user)) {
-        throw new ProjectCommonException(
-            ResponseCode.userNotFound.getErrorCode(),
-            ResponseCode.userNotFound.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+        ProjectCommonException.throwClientErrorException(ResponseCode.userNotFound, null);
       }
     }
     if (MapUtils.isNotEmpty(user)) {
       if (null != user.get(JsonKey.IS_DELETED) && (boolean) (user.get(JsonKey.IS_DELETED))) {
-        throw new ProjectCommonException(
-            ResponseCode.inactiveUser.getErrorCode(),
-            ResponseCode.inactiveUser.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+        ProjectCommonException.throwClientErrorException(ResponseCode.inactiveUser, null);
       }
       // In request if userId or id not present (when you are sending only externalIds to verify the
       // user)
@@ -218,17 +205,11 @@ public class UserUtil {
             (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
         if (!userMapList.isEmpty()) {
           if (opType.equalsIgnoreCase(JsonKey.CREATE)) {
-            throw new ProjectCommonException(
-                ResponseCode.emailInUse.getErrorCode(),
-                ResponseCode.emailInUse.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
+            ProjectCommonException.throwClientErrorException(ResponseCode.emailInUse, null);
           } else {
             Map<String, Object> userMap = userMapList.get(0);
             if (!(((String) userMap.get(JsonKey.ID)).equalsIgnoreCase(user.getId()))) {
-              throw new ProjectCommonException(
-                  ResponseCode.emailInUse.getErrorCode(),
-                  ResponseCode.emailInUse.getErrorMessage(),
-                  ResponseCode.CLIENT_ERROR.getResponseCode());
+              ProjectCommonException.throwClientErrorException(ResponseCode.emailInUse, null);
             }
           }
         }
@@ -249,11 +230,10 @@ public class UserUtil {
     // loginId is encrypted in our application
     searchQueryMap.put(JsonKey.LOGIN_ID, getEncryptedData(user.getLoginId()));
     if (CollectionUtils.isNotEmpty(searchUser(searchQueryMap))) {
-      throw new ProjectCommonException(
-          ResponseCode.userAlreadyExists.getErrorCode(),
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.userAlreadyExists,
           ProjectUtil.formatMessage(
-              ResponseCode.userAlreadyExists.getErrorMessage(), JsonKey.USERNAME),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
+              ResponseCode.userAlreadyExists.getErrorMessage(), JsonKey.USERNAME));
     }
   }
 
@@ -422,18 +402,13 @@ public class UserUtil {
         userMap.put(JsonKey.USER_ID, userId);
         userMap.put(JsonKey.ID, userId);
       } else {
-        throw new ProjectCommonException(
-            ResponseCode.userRegUnSuccessfull.getErrorCode(),
-            ResponseCode.userRegUnSuccessfull.getErrorMessage(),
-            ResponseCode.SERVER_ERROR.getResponseCode());
+        ProjectCommonException.throwServerErrorException(ResponseCode.userRegUnSuccessfull, null);
       }
     } else {
       String response = ssoManager.updateUser(userMap);
       if (!(!StringUtils.isBlank(response) && response.equalsIgnoreCase(JsonKey.SUCCESS))) {
-        throw new ProjectCommonException(
-            ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
-            ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
-            ResponseCode.SERVER_ERROR.getResponseCode());
+        ProjectCommonException.throwServerErrorException(
+            ResponseCode.userUpdationUnSuccessfull, null);
       }
     }
   }
@@ -456,10 +431,7 @@ public class UserUtil {
     try {
       UserUtility.encryptUserData(userMap);
     } catch (Exception e1) {
-      throw new ProjectCommonException(
-          ResponseCode.userDataEncryptionError.getErrorCode(),
-          ResponseCode.userDataEncryptionError.getErrorMessage(),
-          ResponseCode.SERVER_ERROR.getResponseCode());
+      ProjectCommonException.throwServerErrorException(ResponseCode.userDataEncryptionError, null);
     }
     Map<String, Object> requestMap = new HashMap<>();
     User user = mapper.convertValue(userMap, User.class);
@@ -506,25 +478,19 @@ public class UserUtil {
     }
   }
 
-  @SuppressWarnings("unchecked")
-  public static void checkEmailSameOrDiff(Map<String, Object> userMap) {
-    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.EMAIL))) {
-      Response response =
-          cassandraOperation.getRecordById(
-              userDb.getKeySpace(), userDb.getTableName(), (String) userMap.get(JsonKey.ID));
-      List<Map<String, Object>> resList =
-          (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-      if (!resList.isEmpty()) {
-        Map<String, Object> res = resList.get(0);
-        String email = (String) res.get(JsonKey.EMAIL);
-        String encEmail = (String) userMap.get(JsonKey.EMAIL);
+  public static void checkEmailSameOrDiff(
+      Map<String, Object> userRequestMap, Map<String, Object> userDbRecord) {
+    if (StringUtils.isNotBlank((String) userRequestMap.get(JsonKey.EMAIL))) {
+      String email = (String) userDbRecord.get(JsonKey.EMAIL);
+      String encEmail = (String) userRequestMap.get(JsonKey.EMAIL);
+      if (StringUtils.isNotBlank(email)) {
         try {
-          encEmail = encryptionService.encryptData((String) userMap.get(JsonKey.EMAIL));
+          encEmail = encryptionService.encryptData((String) userRequestMap.get(JsonKey.EMAIL));
         } catch (Exception ex) {
           ProjectLogger.log("Exception occurred while encrypting user email.");
         }
         if ((encEmail).equalsIgnoreCase(email)) {
-          userMap.remove(JsonKey.EMAIL);
+          userRequestMap.remove(JsonKey.EMAIL);
         }
       }
     }
@@ -580,31 +546,6 @@ public class UserUtil {
       dbResExternalIds = (List<Map<String, String>>) response.getResult().get(JsonKey.RESPONSE);
     }
     return dbResExternalIds;
-  }
-
-  @SuppressWarnings("unchecked")
-  public static List<Map<String, Object>> getAddressDetails(String userId, String addressId) {
-    Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-    List<Map<String, Object>> userAddressList = new ArrayList<>();
-    Response addrResponse = null;
-    try {
-      if (StringUtils.isNotBlank(userId)) {
-        ProjectLogger.log("collecting user address operation user Id : " + userId);
-        String encUserId = encryptData(userId);
-        addrResponse =
-            cassandraOperation.getRecordsByIndexedProperty(
-                addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), JsonKey.USER_ID, encUserId);
-      } else {
-        addrResponse =
-            cassandraOperation.getRecordById(
-                addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addressId);
-      }
-      userAddressList = (List<Map<String, Object>>) addrResponse.getResult().get(JsonKey.RESPONSE);
-      ProjectLogger.log("collecting user address operation completed user Id : " + userId);
-    } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-    return userAddressList;
   }
 
   @SuppressWarnings("unchecked")

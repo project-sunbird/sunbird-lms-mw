@@ -61,15 +61,16 @@ import org.sunbird.user.util.UserUtil;
  * @author Amit Kumar
  */
 @ActorConfig(
-    tasks = {
-      "createUser",
-      "updateUser",
-      "getUserProfile",
-      "getUserDetailsByLoginId",
-      "profileVisibility",
-      "getMediaTypes"
-    },
-    asyncTasks = {})
+  tasks = {
+    "createUser",
+    "updateUser",
+    "getUserProfile",
+    "getUserDetailsByLoginId",
+    "profileVisibility",
+    "getMediaTypes"
+  },
+  asyncTasks = {}
+)
 public class UserManagementActor extends BaseActor {
   private ObjectMapper mapper = new ObjectMapper();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -486,7 +487,7 @@ public class UserManagementActor extends BaseActor {
       Map<String, Map<String, Object>> orgInfoMap,
       Map<String, Map<String, Object>> locationInfoMap) {
     for (Map<String, Object> usrOrg : userOrgs) {
-      Map<String, Object> orgInfo = orgInfoMap.get((String) usrOrg.get(JsonKey.ORGANISATION_ID));
+      Map<String, Object> orgInfo = orgInfoMap.get(usrOrg.get(JsonKey.ORGANISATION_ID));
       usrOrg.put(JsonKey.ORG_NAME, orgInfo.get(JsonKey.ORG_NAME));
       usrOrg.put(JsonKey.CHANNEL, orgInfo.get(JsonKey.CHANNEL));
       usrOrg.put(JsonKey.HASHTAGID, orgInfo.get(JsonKey.HASHTAGID));
@@ -841,7 +842,6 @@ public class UserManagementActor extends BaseActor {
   }
 
   private void updateUser(Request actorMessage) {
-    // object of telemetry event...
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     actorMessage.toLower();
@@ -857,10 +857,8 @@ public class UserManagementActor extends BaseActor {
     UserUtil.validateUserPhoneEmailAndWebPages(user, JsonKey.UPDATE);
     // not allowing user to update the status,provider,userName
     removeFieldsFrmReq(userMap);
-    UserUtil.checkEmailSameOrDiff(userMap);
-    /*
-     * Update User Entity in Registry
-     */
+    // if we are updating email then need to update isEmailVerified flag inside keycloak
+    UserUtil.checkEmailSameOrDiff(userMap, userDbRecord);
     if (IS_REGISTRY_ENABLED) {
       UserUtil.updateUserToRegistry(userMap, (String) userDbRecord.get(JsonKey.REGISTRY_ID));
     }
@@ -974,7 +972,6 @@ public class UserManagementActor extends BaseActor {
   }
 
   private void processUserRequest(Map<String, Object> userMap) {
-    ProjectLogger.log("processUserRequest method started..");
     Map<String, Object> requestMap = null;
     UserUtil.setUserDefaultValue(userMap);
     User user = mapper.convertValue(userMap, User.class);
@@ -982,9 +979,6 @@ public class UserManagementActor extends BaseActor {
     UserUtil.validateExternalIds(user, JsonKey.CREATE);
     userMap.put(JsonKey.EXTERNAL_IDS, user.getExternalIds());
     UserUtil.validateUserPhoneEmailAndWebPages(user, JsonKey.CREATE);
-    /*
-     * Create User Entity in Registry
-     */
     if (IS_REGISTRY_ENABLED) {
       UserExtension userExtension = new UserProviderRegistryImpl();
       userExtension.create(userMap);
@@ -1011,9 +1005,6 @@ public class UserManagementActor extends BaseActor {
       if (null == response && isSSOEnabled) {
         ssoManager.removeUser(userMap);
       }
-      /*
-       * Delete User Entity in Registry if cassandra insert fails
-       */
       if (null == response && IS_REGISTRY_ENABLED) {
         UserExtension userExtension = new UserProviderRegistryImpl();
         userExtension.delete(userMap);
@@ -1035,7 +1026,6 @@ public class UserManagementActor extends BaseActor {
       saveUserDetailsToEs(userMap);
     }
     sendEmailAndSms(requestMap);
-    // object of telemetry event...
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 

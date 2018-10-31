@@ -876,15 +876,16 @@ public class UserManagementActor extends BaseActor {
     Response response =
         cassandraOperation.updateRecord(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
-
+    Response resp = null;
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       Map<String, Object> userRequest = new HashMap<>(userMap);
       userRequest.put(JsonKey.OPERATION_TYPE, JsonKey.UPDATE);
-      saveUserAttributes(userRequest);
+      resp = saveUserAttributes(userRequest);
     }
-
+    // Enable this when you want to send full response of user attributes
+    // response.putAll(resp.getResult());
     sender().tell(response, self());
-    if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+    if (null != resp) {
       Map<String, Object> completeUserDetails = new HashMap<>(userDbRecord);
       completeUserDetails.putAll(requestMap);
       saveUserDetailsToEs(completeUserDetails);
@@ -1023,7 +1024,8 @@ public class UserManagementActor extends BaseActor {
     } else {
       ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
     }
-    response.putAll(resp.getResult());
+    // Enable this when you want to send full response of user attributes
+    // response.putAll(resp.getResult());
     sender().tell(response, self());
     if (null != resp) {
       saveUserDetailsToEs(userMap);

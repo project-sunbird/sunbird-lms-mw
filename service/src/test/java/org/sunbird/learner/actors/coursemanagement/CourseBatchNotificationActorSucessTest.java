@@ -136,12 +136,29 @@ public class CourseBatchNotificationActorSucessTest {
   private Response getUpdateSucessEmailNotificationTestResponse() {
     Request request =
         createRequestObjectForUpdateOperation(
-            createCourseBatchObject(true, JsonKey.OLD), createCourseBatchObject(true, JsonKey.NEW));
+            createCourseBatchObject(true, JsonKey.OLD), createMentorParticipantMap());
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     subject.tell(request, probe.getRef());
     Response response = probe.expectMsgClass(duration("20 second"), Response.class);
     return response;
+  }
+
+  private Map<String, Object> createMentorParticipantMap() {
+    Map<String, Object> mentorParticipantMap = new HashMap<>();
+    List<String> prevMentors = new ArrayList<>();
+    Map<String, Boolean> prevParticipants = new HashMap<>();
+    List<String> newMentors = new ArrayList<>();
+    Map<String, Boolean> newParticipants = new HashMap<>();
+    prevMentors.add(USER_ID_OLD);
+    newMentors.add(USER_ID_NEW);
+    prevParticipants.put(USER_ID_OLD, true);
+    newParticipants.put(USER_ID_NEW, true);
+    mentorParticipantMap.put(JsonKey.REMOVED_MENTORS, prevMentors);
+    mentorParticipantMap.put(JsonKey.UPDATED_MENTORS, newMentors);
+    mentorParticipantMap.put(JsonKey.UPDATED_PARTICIPANTS, newParticipants);
+    mentorParticipantMap.put(JsonKey.REMOVED_PARTICIPANTS, prevParticipants);
+    return mentorParticipantMap;
   }
 
   private Response getEnrollSucessEmailNotificationForLearnerTestResponse() {
@@ -168,12 +185,13 @@ public class CourseBatchNotificationActorSucessTest {
   }
 
   private Request createRequestObjectForUpdateOperation(
-      CourseBatch CourseBatchOld, CourseBatch courseBatchNew) {
+      CourseBatch CourseBatchOld, Map<String, Object> mentorParticipantsMap) {
     Request request = new Request();
     Map<String, Object> requestMap = new HashMap<>();
     request.setOperation(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue());
     requestMap.put(JsonKey.COURSE_BATCH, CourseBatchOld);
-    requestMap.put(JsonKey.NEW, courseBatchNew);
+    requestMap.put(JsonKey.UPDATE, true);
+    requestMap.put(JsonKey.USERIDS, mentorParticipantsMap);
     request.setRequest(requestMap);
     return request;
   }

@@ -112,7 +112,9 @@ public class CourseBatchManagementActor extends BaseActor {
     validateMentors(courseBatch);
     if (participants != null) {
       validateParticipants(participants, courseBatch);
-      courseBatch.setParticipant(getParticipantsMap(participants, courseBatch));
+      Map<String, Object> participantsMap = getParticipantsMap(participants, courseBatch);
+
+      courseBatch.setParticipant((Map<String, Boolean>) participantsMap.get(JsonKey.UPDATE));
     }
 
     Response result = courseBatchDao.create(courseBatch);
@@ -145,17 +147,18 @@ public class CourseBatchManagementActor extends BaseActor {
             .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE));
   }
 
-  private void batchOperationNotifier(CourseBatch courseBatch, CourseBatch currentBatch) {
+  private void batchOperationNotifier(
+      CourseBatch courseBatch, Map<String, Object> participantMentorMap) {
     Request batchNotification = new Request();
     batchNotification.setOperation(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue());
     Map<String, Object> batchNotificationMap = new HashMap<>();
-    if (currentBatch != null) {
-      batchNotificationMap.put(JsonKey.NEW, courseBatch);
-      batchNotificationMap.put(JsonKey.COURSE_BATCH, currentBatch);
+    if (participantMentorMap != null) {
+      batchNotificationMap.put(JsonKey.UPDATE, true);
+      batchNotificationMap.put(JsonKey.USERIDS, participantMentorMap);
     } else {
-      batchNotificationMap.put(JsonKey.COURSE_BATCH, courseBatch);
+      batchNotificationMap.put(JsonKey.OPERATION_TYPE, JsonKey.ADD);
     }
-    batchNotificationMap.put(JsonKey.OPERATION_TYPE, JsonKey.ADD);
+    batchNotificationMap.put(JsonKey.COURSE_BATCH, courseBatch);
     batchNotification.setRequest(batchNotificationMap);
     tellToAnother(batchNotification);
   }
@@ -163,6 +166,7 @@ public class CourseBatchManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void updateCourseBatch(Request actorMessage) {
     Map<String, Object> targetObject = null;
+    Map<String, Object> participantsMap = null;
 
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
@@ -179,8 +183,13 @@ public class CourseBatchManagementActor extends BaseActor {
     CourseBatch oldBatch = getUpdateCourseBatch(request);
     if (participants != null) {
       validateParticipants(participants, courseBatch);
-      courseBatch.setParticipant(getParticipantsMap(participants, courseBatch));
+      participantsMap = getParticipantsMap(participants, courseBatch);
+
+      courseBatch.setParticipant((Map<String, Boolean>) participantsMap.get(JsonKey.PARTICIPANTS));
+    } else {
+      participantsMap = new HashMap<>();
     }
+    participantsMap = getMentorLists(participantsMap, oldBatch, courseBatch);
     Map<String, Object> courseBatchMap = new ObjectMapper().convertValue(courseBatch, Map.class);
     Response result = courseBatchDao.update(courseBatchMap);
     sender().tell(result, self());
@@ -204,8 +213,33 @@ public class CourseBatchManagementActor extends BaseActor {
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
 
     if (courseNotificationActive()) {
-      batchOperationNotifier(courseBatch, oldBatch);
+      batchOperationNotifier(courseBatch, participantsMap);
     }
+  }
+
+  private Map<String, Object> getMentorLists(
+      Map<String, Object> participantsMap, CourseBatch prevBatch, CourseBatch newBatch) {
+    List<String> prevMentors = prevBatch.getMentors();
+    List<String> removedMentors = prevBatch.getMentors();
+    List<String> newMentors = newBatch.getMentors();
+    if (newMentors == null) {
+      newMentors = new ArrayList<>();
+    }
+    if (prevMentors == null) {
+      prevMentors = new ArrayList<>();
+      removedMentors = new ArrayList<>();
+    }
+    if (removedMentors != null && newMentors != null) {
+      removedMentors.removeAll(newMentors);
+    }
+    if (newMentors != null) {
+      newMentors.removeAll(prevMentors);
+    }
+    prevBatch.setMentors(removedMentors);
+    participantsMap.put(JsonKey.REMOVED_MENTORS, removedMentors);
+    participantsMap.put(JsonKey.UPDATED_MENTORS, newMentors);
+
+    return participantsMap;
   }
 
   private void checkBatchStatus(CourseBatch courseBatch) {
@@ -434,14 +468,16 @@ public class CourseBatchManagementActor extends BaseActor {
     }
   }
 
-  private Map<String, Boolean> getParticipantsMap(
+  private Map<String, Object> getParticipantsMap(
       List<String> participants, CourseBatch courseBatchObject) {
+    Map<String, Object> participantsList = new HashMap<>();
     String batchId = courseBatchObject.getId();
     Map<String, Boolean> dbParticipants = courseBatchObject.getParticipant();
     if (dbParticipants == null) {
       dbParticipants = new HashMap();
     }
     Map<String, Boolean> finalParticipants = new HashMap<>();
+    Map<String, Boolean> updatedParticipants = new HashMap<>();
     for (String userId : participants) {
       if (!(dbParticipants.containsKey(userId))) {
         finalParticipants.put(
@@ -451,6 +487,7 @@ public class CourseBatchManagementActor extends BaseActor {
                 courseBatchObject.getCourseId(),
                 userId,
                 (courseBatchObject.getCourseAdditionalInfo())));
+        updatedParticipants.put(userId, finalParticipants.get(userId));
       } else {
         finalParticipants.put(userId, dbParticipants.get(userId));
         dbParticipants.remove(userId);
@@ -459,7 +496,10 @@ public class CourseBatchManagementActor extends BaseActor {
     if (!dbParticipants.isEmpty()) {
       removeParticipants(dbParticipants, batchId, courseBatchObject.getCourseId());
     }
-    return finalParticipants;
+    participantsList.put(JsonKey.REMOVED_PARTICIPANTS, dbParticipants);
+    participantsList.put(JsonKey.UPDATED_PARTICIPANTS, updatedParticipants);
+    participantsList.put(JsonKey.PARTICIPANTS, finalParticipants);
+    return participantsList;
   }
 
   private void validateParticipants(List<String> participants, CourseBatch courseBatch) {

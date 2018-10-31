@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
@@ -131,7 +132,6 @@ public class UserRoleActor extends BaseActor {
     }
     // update userOrg role with requested roles.
     Map<String, Object> userOrgDBMap = userService.getUserByUserIdAndOrgId(userId, organisationId);
-    Util.DbInfo userOrgDb = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     if (MapUtils.isEmpty(userOrgDBMap)) {
       ProjectCommonException exception =
           new ProjectCommonException(
@@ -141,20 +141,22 @@ public class UserRoleActor extends BaseActor {
       sender().tell(exception, self());
       return;
     }
+    Util.DbInfo userOrgDb = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     // Add default role into Requested Roles if it is not provided and then update into DB
     List<String> roles = (List<String>) requestMap.get(JsonKey.ROLES);
     if (!roles.contains(ProjectUtil.UserRole.PUBLIC.name()))
       roles.add(ProjectUtil.UserRole.PUBLIC.name());
-    userOrgDBMap.put(JsonKey.ROLES, roles);
+    Map<String, Object> orgDBMap = getUserOrganisation(userOrgDBMap, organisationId);
+    orgDBMap.put(JsonKey.ROLES, roles);
     if (StringUtils.isNotBlank(hashTagId)) {
-      userOrgDBMap.put(JsonKey.HASHTAGID, hashTagId);
+    	orgDBMap.put(JsonKey.HASHTAGID, hashTagId);
     }
-    userOrgDBMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-    userOrgDBMap.put(JsonKey.UPDATED_BY, requestMap.get(JsonKey.REQUESTED_BY));
-    userOrgDBMap.put(JsonKey.ROLES, roles);
+    orgDBMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+    orgDBMap.put(JsonKey.UPDATED_BY, requestMap.get(JsonKey.REQUESTED_BY));
+    orgDBMap.put(JsonKey.ROLES, roles);
     Response response =
         cassandraOperation.updateRecord(
-            userOrgDb.getKeySpace(), userOrgDb.getTableName(), userOrgDBMap);
+            userOrgDb.getKeySpace(), userOrgDb.getTableName(), orgDBMap);
     sender().tell(response, self());
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       updateRoleToEs(userOrgDBMap, JsonKey.ORGANISATION, userId, organisationId);
@@ -162,6 +164,11 @@ public class UserRoleActor extends BaseActor {
       ProjectLogger.log("no call for ES to save user");
     }
     generateTeleEventForUser(requestMap, userId, "userLevel");
+  }
+  
+  private Map<String, Object> getUserOrganisation(Map<String, Object> userOrgDBMap, final String organisationId) {
+	    List<Map<String,Object>>  userOrgs = (List<Map<String,Object>>) userOrgDBMap.get(JsonKey.ORGANISATIONS);
+	    return  userOrgs.stream().filter(o -> organisationId.equals(o.get(JsonKey.ORGANISATION_ID))).findFirst().get();
   }
 
   private void updateRoleToEs(

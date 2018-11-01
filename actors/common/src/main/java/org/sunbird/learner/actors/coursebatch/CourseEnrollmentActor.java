@@ -75,10 +75,9 @@ public class CourseEnrollmentActor extends BaseActor {
   private void enrollCourseBatch(Request actorMessage) {
     ProjectLogger.log("enrollCourseClass called");
     Map<String, Object> courseMap = (Map<String, Object>) actorMessage.getRequest();
-    CourseBatch courseBatchResult =
-        courseBatchDao.readById((String) courseMap.get(JsonKey.BATCH_ID));
+    CourseBatch courseBatch = courseBatchDao.readById((String) courseMap.get(JsonKey.BATCH_ID));
     validateCourseBatch(
-        courseBatchResult, courseMap, (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
+        courseBatch, courseMap, (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
 
     UserCourses userCourseResult = userCourseDao.read(UserCoursesService.getPrimaryKey(courseMap));
 
@@ -88,10 +87,9 @@ public class CourseEnrollmentActor extends BaseActor {
           ResponseCode.userAlreadyEnrolledCourse,
           ResponseCode.userAlreadyEnrolledCourse.getErrorMessage());
     }
-    courseBatchResult.setParticipant(
-        addUserToParticipant(
-            courseBatchResult, (String) actorMessage.getRequest().get(JsonKey.USER_ID)));
-    courseMap = createUserCourseMap(courseMap, courseBatchResult, userCourseResult);
+    courseBatch.setParticipant(
+        addUserToParticipant(courseBatch, (String) actorMessage.getRequest().get(JsonKey.USER_ID)));
+    courseMap = createUserCourseMap(courseMap, courseBatch, userCourseResult);
     Response result = null;
     if (userCourseResult == null) {
       // user is doing enrollment first time
@@ -111,9 +109,9 @@ public class CourseEnrollmentActor extends BaseActor {
       UserCoursesService.sync(courseMap, (String) courseMap.get(JsonKey.ID));
     }
     if (courseNotificationActive()) {
-      batchOperationNotifier(courseMap, courseBatchResult, JsonKey.REMOVE);
+      batchOperationNotifier(courseMap, courseBatch, JsonKey.ADD);
     }
-    updateCourseBatch(courseBatchResult);
+    updateCourseBatch(courseBatch);
     generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
   }
 
@@ -162,20 +160,20 @@ public class CourseEnrollmentActor extends BaseActor {
     ProjectLogger.log("unenrollCourseClass called");
     // objects of telemetry event...
     Map<String, Object> request = actorMessage.getRequest();
-    CourseBatch courseBatchResult = courseBatchDao.readById((String) request.get(JsonKey.BATCH_ID));
+    CourseBatch courseBatch = courseBatchDao.readById((String) request.get(JsonKey.BATCH_ID));
     validateCourseBatch(
-        courseBatchResult, request, (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
+        courseBatch, request, (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     UserCourses userCourseResult = userCourseDao.read(UserCoursesService.getPrimaryKey(request));
     UserCoursesService.validateUserUnenroll(userCourseResult);
     Response result = updateUserCourses(userCourseResult);
     sender().tell(result, self());
-    courseBatchResult.setParticipant(
-        removeUserFromParticipant(courseBatchResult, (String) request.get(JsonKey.USER_ID)));
-    updateCourseBatch(courseBatchResult);
+    courseBatch.setParticipant(
+        removeUserFromParticipant(courseBatch, (String) request.get(JsonKey.USER_ID)));
+    updateCourseBatch(courseBatch);
     generateAndProcessTelemetryEvent(request, "user.batch.course.unenroll");
 
     if (courseNotificationActive()) {
-      batchOperationNotifier(request, courseBatchResult, JsonKey.REMOVE);
+      batchOperationNotifier(request, courseBatch, JsonKey.REMOVE);
     }
   }
 

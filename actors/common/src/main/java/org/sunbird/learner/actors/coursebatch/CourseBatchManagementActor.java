@@ -8,6 +8,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
@@ -154,7 +155,15 @@ public class CourseBatchManagementActor extends BaseActor {
     Map<String, Object> batchNotificationMap = new HashMap<>();
     if (participantMentorMap != null) {
       batchNotificationMap.put(JsonKey.UPDATE, true);
-      batchNotificationMap.put(JsonKey.USERIDS, participantMentorMap);
+      batchNotificationMap.put(
+          JsonKey.ADDED_MENTORS, participantMentorMap.get(JsonKey.ADDED_MENTORS));
+      batchNotificationMap.put(
+          JsonKey.REMOVED_MENTORS, participantMentorMap.get(JsonKey.REMOVED_MENTORS));
+      batchNotificationMap.put(
+          JsonKey.ADDED_PARTICIPANTS, participantMentorMap.get(JsonKey.ADDED_PARTICIPANTS));
+      batchNotificationMap.put(
+          JsonKey.REMOVED_PARTICIPANTS, participantMentorMap.get(JsonKey.REMOVED_PARTICIPANTS));
+
     } else {
       batchNotificationMap.put(JsonKey.OPERATION_TYPE, JsonKey.ADD);
     }
@@ -229,15 +238,10 @@ public class CourseBatchManagementActor extends BaseActor {
       prevMentors = new ArrayList<>();
       removedMentors = new ArrayList<>();
     }
-    if (removedMentors != null && newMentors != null) {
-      removedMentors.removeAll(newMentors);
-    }
-    if (newMentors != null) {
-      newMentors.removeAll(prevMentors);
-    }
-    prevBatch.setMentors(removedMentors);
+    removedMentors.removeAll(newMentors);
+    newMentors.removeAll(prevMentors);
     participantsMap.put(JsonKey.REMOVED_MENTORS, removedMentors);
-    participantsMap.put(JsonKey.UPDATED_MENTORS, newMentors);
+    participantsMap.put(JsonKey.ADDED_MENTORS, newMentors);
 
     return participantsMap;
   }
@@ -477,7 +481,7 @@ public class CourseBatchManagementActor extends BaseActor {
       dbParticipants = new HashMap();
     }
     Map<String, Boolean> finalParticipants = new HashMap<>();
-    Map<String, Boolean> updatedParticipants = new HashMap<>();
+    Map<String, Boolean> addedParticipants = new HashMap<>();
     for (String userId : participants) {
       if (!(dbParticipants.containsKey(userId))) {
         finalParticipants.put(
@@ -487,7 +491,7 @@ public class CourseBatchManagementActor extends BaseActor {
                 courseBatchObject.getCourseId(),
                 userId,
                 (courseBatchObject.getCourseAdditionalInfo())));
-        updatedParticipants.put(userId, finalParticipants.get(userId));
+        addedParticipants.put(userId, finalParticipants.get(userId));
       } else {
         finalParticipants.put(userId, dbParticipants.get(userId));
         dbParticipants.remove(userId);
@@ -496,10 +500,25 @@ public class CourseBatchManagementActor extends BaseActor {
     if (!dbParticipants.isEmpty()) {
       removeParticipants(dbParticipants, batchId, courseBatchObject.getCourseId());
     }
-    participantsList.put(JsonKey.REMOVED_PARTICIPANTS, dbParticipants);
-    participantsList.put(JsonKey.UPDATED_PARTICIPANTS, updatedParticipants);
+    participantsList.put(JsonKey.REMOVED_PARTICIPANTS, getListFromMap(dbParticipants));
+    participantsList.put(JsonKey.ADDED_PARTICIPANTS, getListFromMap(addedParticipants));
     participantsList.put(JsonKey.PARTICIPANTS, finalParticipants);
     return participantsList;
+  }
+
+  private List<String> getListFromMap(Map<String, Boolean> participants) {
+    List<String> usersIds = null;
+
+    if (participants != null) {
+      usersIds = new ArrayList<>();
+      Set<String> keys = participants.keySet();
+      for (String user : keys) {
+        if (participants.get(user)) {
+          usersIds.add(user);
+        }
+      }
+    }
+    return usersIds;
   }
 
   private void validateParticipants(List<String> participants, CourseBatch courseBatch) {

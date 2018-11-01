@@ -147,17 +147,13 @@ public class CourseBatchNotificationActorSucessTest {
   private Map<String, Object> createMentorParticipantMap() {
     Map<String, Object> mentorParticipantMap = new HashMap<>();
     List<String> prevMentors = new ArrayList<>();
-    Map<String, Boolean> prevParticipants = new HashMap<>();
     List<String> newMentors = new ArrayList<>();
-    Map<String, Boolean> newParticipants = new HashMap<>();
     prevMentors.add(USER_ID_OLD);
     newMentors.add(USER_ID_NEW);
-    prevParticipants.put(USER_ID_OLD, true);
-    newParticipants.put(USER_ID_NEW, true);
     mentorParticipantMap.put(JsonKey.REMOVED_MENTORS, prevMentors);
-    mentorParticipantMap.put(JsonKey.UPDATED_MENTORS, newMentors);
-    mentorParticipantMap.put(JsonKey.UPDATED_PARTICIPANTS, newParticipants);
-    mentorParticipantMap.put(JsonKey.REMOVED_PARTICIPANTS, prevParticipants);
+    mentorParticipantMap.put(JsonKey.ADDED_MENTORS, newMentors);
+    mentorParticipantMap.put(JsonKey.ADDED_PARTICIPANTS, newMentors);
+    mentorParticipantMap.put(JsonKey.REMOVED_PARTICIPANTS, prevMentors);
     return mentorParticipantMap;
   }
 
@@ -191,7 +187,12 @@ public class CourseBatchNotificationActorSucessTest {
     request.setOperation(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue());
     requestMap.put(JsonKey.COURSE_BATCH, CourseBatchOld);
     requestMap.put(JsonKey.UPDATE, true);
-    requestMap.put(JsonKey.USERIDS, mentorParticipantsMap);
+    requestMap.put(JsonKey.REMOVED_MENTORS, mentorParticipantsMap.get(JsonKey.REMOVED_MENTORS));
+    requestMap.put(JsonKey.ADDED_MENTORS, mentorParticipantsMap.get(JsonKey.ADDED_MENTORS));
+    requestMap.put(
+        JsonKey.REMOVED_PARTICIPANTS, mentorParticipantsMap.get(JsonKey.REMOVED_PARTICIPANTS));
+    requestMap.put(
+        JsonKey.ADDED_PARTICIPANTS, mentorParticipantsMap.get(JsonKey.ADDED_PARTICIPANTS));
     request.setRequest(requestMap);
     return request;
   }

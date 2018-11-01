@@ -68,29 +68,13 @@ public class CourseBatchNotificationActor extends BaseActor {
           (CourseBatch) requestMap.get(JsonKey.COURSE_BATCH),
           (String) requestMap.get(JsonKey.OPERATION_TYPE));
     } else if (requestMap.get(JsonKey.UPDATE) != null) {
-      batchUpdateOperationNotifier(
-          (CourseBatch) requestMap.get(JsonKey.COURSE_BATCH),
-          (Map<String, Object>) requestMap.get(JsonKey.USERIDS));
-    } else if (requestMap.get(JsonKey.OPERATION_TYPE) != null) {
-      batchCreateOperationNotifier(
-          (CourseBatch) requestMap.get(JsonKey.COURSE_BATCH),
-          (String) requestMap.get(JsonKey.OPERATION_TYPE));
-    }
-  }
-
-  /*
-   * This method process invite-only batch enrol and unenroll operation
-   * notifications mentor and learner add remove Operation
-   *
-   * @param CourseBatch object for getting course and email related data
-   *
-   * @param operationType String for specifying the operation type ie: add/remove
-   */
-  private void batchCreateOperationNotifier(CourseBatch courseBatch, String operationType) {
-    if (operationType.equals(JsonKey.ADD)) {
-      sendEmailNotification(courseBatch, JsonKey.ADD);
+      batchUpdateOperationNotifier((CourseBatch) requestMap.get(JsonKey.COURSE_BATCH), requestMap);
     } else {
-      sendEmailNotification(courseBatch, JsonKey.REMOVE);
+      sendEmailNotification(
+          (CourseBatch) requestMap.get(JsonKey.COURSE_BATCH),
+          null,
+          null,
+          (String) requestMap.get(JsonKey.OPERATION_TYPE));
     }
   }
 
@@ -101,7 +85,6 @@ public class CourseBatchNotificationActor extends BaseActor {
    *
    * @param courseBatch object for getting course and email related data
    */
-  @SuppressWarnings("unchecked")
   public void batchEnrollOperationNotifier(
       String userId, CourseBatch courseBatch, String operationType) {
     Map<String, Object> requestMap = createRequestMap(courseBatch);
@@ -129,12 +112,25 @@ public class CourseBatchNotificationActor extends BaseActor {
    *
    * @param operationType String for specifying the operation type ie: add/remove
    */
-  @SuppressWarnings("unchecked")
-  private void sendEmailNotification(CourseBatch courseBatch, String operationType) {
+
+  private void sendEmailNotification(
+      CourseBatch courseBatch,
+      List<String> mentors,
+      List<String> participants,
+      String operationType) {
     List<Map<String, Object>> mentorList = null;
     List<Map<String, Object>> participantList = null;
-    mentorList = getUsersFromDB(courseBatch.getMentors());
-    List<String> userIds = getParticipants(courseBatch);
+    if (mentors == null) {
+      mentorList = getUsersFromDB(courseBatch.getMentors());
+    } else {
+      mentorList = getUsersFromDB(mentors);
+    }
+    List<String> userIds = null;
+    if (participants == null) {
+      userIds = getParticipants(courseBatch);
+    } else {
+      userIds = participants;
+    }
     if (userIds != null) {
       participantList = getUsersFromDB(userIds);
     }
@@ -155,7 +151,6 @@ public class CourseBatchNotificationActor extends BaseActor {
    *
    * @param operationType String for specifying the operation type ie: add/remove
    */
-  @SuppressWarnings("unchecked")
   private void processUserDataAndSendMail(
       List<Map<String, Object>> userList,
       CourseBatch courseBatch,
@@ -202,39 +197,34 @@ public class CourseBatchNotificationActor extends BaseActor {
   }
 
   /*
-   * This method takes two courseBatch object as parameter and process update
+   * This method takes courseBatch object as parameter and process update
    * batch related operation notifications
    *
-   * @param courseBatchPrev course and email related data before update
+   * @param courseBatch course and email related data before update
    *
    * @param courseBatchNew course and email related data after update
    */
+  @SuppressWarnings("unchecked")
   private void batchUpdateOperationNotifier(
-      CourseBatch courseBatch, Map<String, Object> mentorParticipantMap) {
+      CourseBatch courseBatch, Map<String, Object> requestMap) {
 
-    if (mentorParticipantMap.get(JsonKey.REMOVED_MENTORS) != null
-        && !((List<String>) mentorParticipantMap.get(JsonKey.REMOVED_MENTORS)).isEmpty()) {
-      courseBatch.setMentors((List<String>) mentorParticipantMap.get(JsonKey.REMOVED_MENTORS));
-      batchCreateOperationNotifier(courseBatch, JsonKey.REMOVE);
+    if (requestMap.get(JsonKey.REMOVED_MENTORS) != null
+        || requestMap.get(JsonKey.REMOVED_PARTICIPANTS) != null) {
+
+      sendEmailNotification(
+          courseBatch,
+          (List<String>) requestMap.get(JsonKey.REMOVED_MENTORS),
+          (List<String>) requestMap.get(JsonKey.REMOVED_PARTICIPANTS),
+          JsonKey.REMOVE);
     }
-    if (mentorParticipantMap.get(JsonKey.UPDATED_MENTORS) != null
-        && !((List<String>) mentorParticipantMap.get(JsonKey.UPDATED_MENTORS)).isEmpty()) {
-      courseBatch.setMentors((List<String>) mentorParticipantMap.get(JsonKey.UPDATED_MENTORS));
-      batchCreateOperationNotifier(courseBatch, JsonKey.ADD);
-    }
-    if (mentorParticipantMap.get(JsonKey.UPDATED_PARTICIPANTS) != null
-        && !((Map<String, Boolean>) mentorParticipantMap.get(JsonKey.UPDATED_PARTICIPANTS))
-            .isEmpty()) {
-      courseBatch.setParticipant(
-          (Map<String, Boolean>) mentorParticipantMap.get(JsonKey.UPDATED_PARTICIPANTS));
-      batchCreateOperationNotifier(courseBatch, JsonKey.ADD);
-    }
-    if (mentorParticipantMap.get(JsonKey.REMOVED_PARTICIPANTS) != null
-        && !((Map<String, Boolean>) mentorParticipantMap.get(JsonKey.REMOVED_PARTICIPANTS))
-            .isEmpty()) {
-      courseBatch.setParticipant(
-          (Map<String, Boolean>) mentorParticipantMap.get(JsonKey.REMOVED_PARTICIPANTS));
-      batchCreateOperationNotifier(courseBatch, JsonKey.REMOVE);
+    if (requestMap.get(JsonKey.ADDED_MENTORS) != null
+        || requestMap.get(JsonKey.ADDED_PARTICIPANTS) != null) {
+
+      sendEmailNotification(
+          courseBatch,
+          (List<String>) requestMap.get(JsonKey.ADDED_MENTORS),
+          (List<String>) requestMap.get(JsonKey.ADDED_PARTICIPANTS),
+          JsonKey.ADD);
     }
   }
 
@@ -246,6 +236,7 @@ public class CourseBatchNotificationActor extends BaseActor {
    *
    * @return Map<String, Object> which have required data for email notification
    */
+  @SuppressWarnings("unchecked")
   private Map<String, Object> createRequestMap(CourseBatch courseBatch) {
     Map<String, Object> courseBatchObject = new ObjectMapper().convertValue(courseBatch, Map.class);
     Map<String, String> additionalCourseInfo =
@@ -339,6 +330,7 @@ public class CourseBatchNotificationActor extends BaseActor {
    *
    * @return List<Map<String, Object>> map of user related data.
    */
+  @SuppressWarnings("unchecked")
   private List<Map<String, Object>> getUsersFromDB(List<String> userIds) {
     if (userIds != null) {
       Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);

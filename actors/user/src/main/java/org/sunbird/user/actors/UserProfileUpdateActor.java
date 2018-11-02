@@ -41,12 +41,58 @@ public class UserProfileUpdateActor extends BaseActor {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private void saveUserAttributes(Request request) {
     Map<String, Object> userMap = request.getRequest();
     List<Future<Object>> futures = new ArrayList<>();
     String operationType = (String) userMap.get(JsonKey.OPERATION_TYPE);
     userMap.remove(JsonKey.OPERATION_TYPE);
+    getFutures(userMap, operationType);
+    Future<Iterable<Object>> futuresSequence = Futures.sequence(futures, getContext().dispatcher());
+    Future<Response> futureResponse = getResponseFromFutureResult(futuresSequence);
+    Patterns.pipe(futureResponse, getContext().dispatcher()).to(sender());
+  }
+
+  private Future<Response> getResponseFromFutureResult(Future<Iterable<Object>> futuresSequence) {
+    return futuresSequence.map(
+        new Mapper<Iterable<Object>, Response>() {
+          Map<String, Object> map = new HashMap<>();
+          List<Object> errorList = new ArrayList<>();
+
+          @Override
+          public Response apply(Iterable<Object> futureResult) {
+            for (Object object : futureResult) {
+              if (object instanceof Response) {
+                Response response = (Response) object;
+                Map<String, Object> result = response.getResult();
+                String key = (String) result.get(JsonKey.KEY);
+                @SuppressWarnings("unchecked")
+                List<String> errMsgList = (List<String>) result.get(JsonKey.ERROR_MSG);
+                if (CollectionUtils.isNotEmpty(errMsgList)) {
+                  for (String err : errMsgList) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put(JsonKey.ATTRIBUTE, key);
+                    map.put(JsonKey.MESSAGE, err);
+                    errorList.add(map);
+                  }
+                }
+              } else if (object instanceof ProjectCommonException) {
+                errorList.add(((ProjectCommonException) object).getMessage());
+              } else if (object instanceof Exception) {
+                errorList.add(((Exception) object).getMessage());
+              }
+            }
+            map.put(JsonKey.ERRORS, errorList);
+            Response response = new Response();
+            response.put(JsonKey.RESPONSE, map);
+            return response;
+          }
+        },
+        getContext().dispatcher());
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<Future<Object>> getFutures(Map<String, Object> userMap, String operationType) {
+    List<Future<Object>> futures = new ArrayList<>();
     if (userMap.containsKey(JsonKey.ADDRESS)
         && CollectionUtils.isNotEmpty((List<Map<String, Object>>) userMap.get(JsonKey.ADDRESS))) {
       futures.add(saveAddress(userMap, operationType));
@@ -67,44 +113,7 @@ public class UserProfileUpdateActor extends BaseActor {
         || StringUtils.isNotBlank((String) userMap.get(JsonKey.ROOT_ORG_ID))) {
       futures.add(saveUserOrgDetails(userMap, operationType));
     }
-    Future<Iterable<Object>> futuresSequence = Futures.sequence(futures, getContext().dispatcher());
-    Future<Response> futureResponse =
-        futuresSequence.map(
-            new Mapper<Iterable<Object>, Response>() {
-              Map<String, Object> map = new HashMap<>();
-              List<Object> errorList = new ArrayList<>();
-
-              @Override
-              public Response apply(Iterable<Object> futureResult) {
-                for (Object object : futureResult) {
-                  if (object instanceof Response) {
-                    Response response = (Response) object;
-                    Map<String, Object> result = response.getResult();
-                    String key = (String) result.get(JsonKey.KEY);
-                    List<String> errMsgList = (List<String>) result.get(JsonKey.ERROR_MSG);
-                    if (CollectionUtils.isNotEmpty(errMsgList)) {
-                      for (String err : errMsgList) {
-                        Map<String, Object> map = new HashMap<>();
-                        map.put(JsonKey.ATTRIBUTE, key);
-                        map.put(JsonKey.MESSAGE, err);
-                        errorList.add(map);
-                      }
-                    }
-                  } else if (object instanceof ProjectCommonException) {
-                    errorList.add(((ProjectCommonException) object).getMessage());
-                  } else if (object instanceof Exception) {
-                    errorList.add(((Exception) object).getMessage());
-                  }
-                }
-                map.put(JsonKey.ERRORS, errorList);
-                Response response = new Response();
-                response.put(JsonKey.RESPONSE, map);
-                return response;
-              }
-            },
-            getContext().dispatcher());
-    Patterns.pipe(futureResponse, getContext().dispatcher()).to(sender());
-    // sender().tell(response, self());
+    return futures;
   }
 
   private Future<Object> saveUserExternalIds(Map<String, Object> userMap, String operationType) {

@@ -17,7 +17,7 @@ public class UrlActionService {
   public static Map<String, Object> getUrlActionMap(String urlId) {
     Map<String, Object> response = new HashMap<>();
     List<UrlAction> urlActionList = urlActionDao.getUrlActions();
-    
+
     if (CollectionUtils.isNotEmpty(urlActionList)) {
       for (UrlAction urlAction : urlActionList) {
         if (urlAction.getId().equals(urlId)) {

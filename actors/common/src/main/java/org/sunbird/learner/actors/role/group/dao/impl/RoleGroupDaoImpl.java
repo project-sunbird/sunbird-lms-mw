@@ -36,5 +36,4 @@ public class RoleGroupDaoImpl implements RoleGroupDao {
     List<RoleGroup> roleGroupList = mapper.convertValue(roleGroupMapList, roleGroupType);
     return roleGroupList;
   }
-
 }

@@ -1,11 +1,12 @@
 package org.sunbird.user.actors;
 
+import akka.actor.ActorRef;
+import com.typesafe.config.Config;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -21,13 +22,10 @@ import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
 
-import com.typesafe.config.Config;
-
-import akka.actor.ActorRef;
-
 @ActorConfig(
-    tasks = {"profileVisibility", "getMediaTypes"},
-    asyncTasks = {})
+  tasks = {"profileVisibility", "getMediaTypes"},
+  asyncTasks = {}
+)
 public class UserProfileActor extends UserBaseActor {
 
   @Override
@@ -110,7 +108,11 @@ public class UserProfileActor extends UserBaseActor {
     }
   }
 
-  private void updateUserProfile(List<String> publicList, List<String> privateList, Map<String, Object> esPublicUserProfile, Map<String, Object> esPrivateUserProfile) {
+  private void updateUserProfile(
+      List<String> publicList,
+      List<String> privateList,
+      Map<String, Object> esPublicUserProfile,
+      Map<String, Object> esPrivateUserProfile) {
     Map<String, Object> privateDataMap = null;
     if (CollectionUtils.isNotEmpty(privateList)) {
       privateDataMap = getPrivateFieldMap(privateList, esPublicUserProfile, esPrivateUserProfile);
@@ -148,20 +150,29 @@ public class UserProfileActor extends UserBaseActor {
     return esPublicUserProfile;
   }
 
-  private void addRemovedPrivateFieldsInPublicUserProfile(List<String> publicList, Map<String, Object> esPublicUserProfile, Map<String, Object> esPrivateUserProfile) {
+  private void addRemovedPrivateFieldsInPublicUserProfile(
+      List<String> publicList,
+      Map<String, Object> esPublicUserProfile,
+      Map<String, Object> esPrivateUserProfile) {
     if (CollectionUtils.isNotEmpty(publicList)) {
       for (String field : publicList) {
         if (esPrivateUserProfile.containsKey(field)) {
           esPublicUserProfile.put(field, esPrivateUserProfile.get(field));
           esPrivateUserProfile.remove(field);
         } else {
-          ProjectLogger.log("UserProfileActor:addRemovedPrivateFieldsInPublicUserProfile: private index does not have field = " + field);
+          ProjectLogger.log(
+              "UserProfileActor:addRemovedPrivateFieldsInPublicUserProfile: private index does not have field = "
+                  + field);
         }
       }
     }
   }
 
-  private void updateProfileVisibility(String userId, List<String> publicList, List<String> privateList, Map<String, Object> esPublicUserProfile) {
+  private void updateProfileVisibility(
+      String userId,
+      List<String> publicList,
+      List<String> privateList,
+      Map<String, Object> esPublicUserProfile) {
     Map<String, String> profileVisibilityMap =
         (Map<String, String>) esPublicUserProfile.get(JsonKey.PROFILE_VISIBILITY);
 
@@ -226,5 +237,4 @@ public class UserProfileActor extends UserBaseActor {
     }
     return privateMap;
   }
-
 }

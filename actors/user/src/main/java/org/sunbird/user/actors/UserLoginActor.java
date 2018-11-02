@@ -10,8 +10,9 @@ import org.sunbird.common.request.Request;
 import org.sunbird.learner.util.Util;
 
 @ActorConfig(
-    tasks = {"userCurrentLogin"},
-    asyncTasks = {})
+  tasks = {"userCurrentLogin"},
+  asyncTasks = {}
+)
 public class UserLoginActor extends UserBaseActor {
 
   @Override

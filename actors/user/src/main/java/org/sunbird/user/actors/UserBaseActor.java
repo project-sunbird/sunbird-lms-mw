@@ -8,7 +8,6 @@ import java.util.Map;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.UserRequestValidator;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
@@ -21,8 +20,6 @@ import org.sunbird.user.service.impl.UserServiceImpl;
 public abstract class UserBaseActor extends BaseActor {
 
   private UserRequestValidator userRequestValidator = new UserRequestValidator();
-  private boolean isSSOEnabled =
-      Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
   private ActorRef systemSettingActorRef;
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
   private UserDao userDao = UserDaoImpl.getInstance();
@@ -65,10 +62,6 @@ public abstract class UserBaseActor extends BaseActor {
 
   protected SSOManager getSSOManager() {
     return ssoManager;
-  }
-
-  protected boolean isSSOEnabled() {
-    return isSSOEnabled;
   }
 
   protected UserRequestValidator getUserRequestValidator() {

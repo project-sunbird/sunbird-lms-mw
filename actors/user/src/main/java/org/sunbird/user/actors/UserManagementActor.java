@@ -33,7 +33,6 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
-import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.request.UserRequestValidator;
@@ -73,8 +72,6 @@ public class UserManagementActor extends BaseActor {
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
-  private boolean isSSOEnabled =
-      Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
   private Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private static final boolean IS_REGISTRY_ENABLED =
@@ -86,7 +83,6 @@ public class UserManagementActor extends BaseActor {
       InterServiceCommunicationFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
 
-  /** Receives the actor message and perform the course enrollment operation . */
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.USER);
@@ -110,7 +106,6 @@ public class UserManagementActor extends BaseActor {
         break;
       default:
         onReceiveUnsupportedOperation("UserManagementActor");
-        break;
     }
   }
 
@@ -659,9 +654,7 @@ public class UserManagementActor extends BaseActor {
       UserUtil.updateUserToRegistry(userMap, (String) userDbRecord.get(JsonKey.REGISTRY_ID));
     }
 
-    if (isSSOEnabled) {
-      UserUtil.upsertUserInKeycloak(userMap, JsonKey.UPDATE);
-    }
+    UserUtil.upsertUserInKeycloak(userMap, JsonKey.UPDATE);
     userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     Map<String, Object> requestMap = UserUtil.encryptUserData(userMap);
@@ -782,13 +775,7 @@ public class UserManagementActor extends BaseActor {
       userExtension.create(userMap);
     }
 
-    if (isSSOEnabled) {
-      UserUtil.upsertUserInKeycloak(userMap, JsonKey.CREATE);
-    } else {
-      userMap.put(
-          JsonKey.USER_ID, OneWayHashing.encryptVal((String) userMap.get(JsonKey.USERNAME)));
-      userMap.put(JsonKey.ID, OneWayHashing.encryptVal((String) userMap.get(JsonKey.USERNAME)));
-    }
+    UserUtil.upsertUserInKeycloak(userMap, JsonKey.CREATE);
     if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
       userMap.put(JsonKey.PASSWORD, null);
     }
@@ -800,7 +787,7 @@ public class UserManagementActor extends BaseActor {
           cassandraOperation.insertRecord(
               usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
     } finally {
-      if (null == response && isSSOEnabled) {
+      if (null == response) {
         ssoManager.removeUser(userMap);
       }
       if (null == response && IS_REGISTRY_ENABLED) {

@@ -22,7 +22,7 @@ import org.sunbird.models.systemsetting.SystemSetting;
   asyncTasks = {}
 )
 public class OrgBulkUploadActor extends BaseBulkUploadActor {
-  SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
+  private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
   private int pos = 0;
 
   @Override

@@ -1,10 +1,16 @@
 package org.sunbird.learner.actors.bulkupload.model;
 
+import java.io.Serializable;
+import java.sql.Timestamp;
+
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
+import org.sunbird.common.models.util.datasecurity.EncryptionService;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import java.io.Serializable;
-import java.sql.Timestamp;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /** @author arvind. */
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -12,6 +18,12 @@ import java.sql.Timestamp;
 public class BulkUploadProcess implements Serializable {
 
   private static final long serialVersionUID = 1L;
+  private EncryptionService encryptionService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
+          null);
+  private DecryptionService decryptionService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+          null);
 
   private String id;
   private String data;
@@ -29,6 +41,8 @@ public class BulkUploadProcess implements Serializable {
   private String createdBy;
   private Timestamp createdOn;
   private Timestamp lastUpdatedOn;
+
+  private String cloudStorageData;
 
   public String getId() {
     return id;
@@ -156,5 +170,32 @@ public class BulkUploadProcess implements Serializable {
 
   public void setTaskCount(Integer taskCount) {
     this.taskCount = taskCount;
+  }
+
+  public String getCloudStorageData() {
+    return this.cloudStorageData;
+  }
+
+  public void setCloudStorageData(String cloudStorageData) {
+    this.cloudStorageData = cloudStorageData;
+  }
+
+  @JsonIgnore
+  public void setCloudStorageDataWithPojo(CloudStorageData cloudStorageData) throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    String rawData = mapper.writeValueAsString(cloudStorageData);
+    setCloudStorageData(encryptionService.encryptData(rawData));
+  }
+
+  @JsonIgnore
+  public CloudStorageData getCloudStorgeDataAsPojo() throws Exception {
+    String rawData = getCloudStorageData();
+    if (rawData != null) {
+      ObjectMapper mapper = new ObjectMapper();
+      String decryptedData = decryptionService.decryptData(getCloudStorageData());
+      return mapper.readValue(decryptedData, CloudStorageData.class);
+    } else {
+      return null;
+    }
   }
 }

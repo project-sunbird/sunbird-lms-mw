@@ -1,6 +1,5 @@
 package org.sunbird.learner.actors.bulkupload;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -8,6 +7,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -25,12 +25,19 @@ import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.util.CloudUploadUtil;
+import org.sunbird.common.util.CloudUploadUtil.CloudStorageTypes;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessTaskDao;
+import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
 import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessTaskDaoImpl;
+import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
+import org.sunbird.learner.actors.bulkupload.model.CloudStorageData;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * This actor will handle bulk upload operation .
@@ -38,9 +45,8 @@ import org.sunbird.learner.util.Util.DbInfo;
  * @author Amit Kumar
  */
 @ActorConfig(
-  tasks = {"bulkUpload", "getBulkOpStatus"},
-  asyncTasks = {}
-)
+    tasks = {"bulkUpload", "getBulkOpStatus", "getStatusDownloadLink"},
+    asyncTasks = {})
 public class BulkUploadManagementActor extends BaseBulkUploadActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -105,8 +111,54 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         .getOperation()
         .equalsIgnoreCase(ActorOperations.GET_BULK_OP_STATUS.getValue())) {
       getUploadStatus(request);
+    } else if (request
+        .getOperation()
+        .equalsIgnoreCase(ActorOperations.GET_BULK_STATUS_DOWNLOAD_LINK.getValue())) {
+      getBulkUploadDownloadStatusLink(request);
+
     } else {
       onReceiveUnsupportedOperation(request.getOperation());
+    }
+  }
+
+  private void getBulkUploadDownloadStatusLink(Request actorMessage) {
+    String processId = (String) actorMessage.getRequest().get(JsonKey.PROCESS_ID);
+    BulkUploadProcessDaoImpl bulkuploadDao = new BulkUploadProcessDaoImpl();
+    BulkUploadProcess result = bulkuploadDao.read(processId);
+    if (result != null) {
+      try {
+        CloudStorageData cloudStorageData = result.getCloudStorgeDataAsPojo();
+        if (cloudStorageData == null) {
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.errorDownloadLinkNotAvailable,
+              ProjectUtil.formatMessage(
+                  ResponseCode.errorDownloadLinkNotAvailable.getErrorMessage(), processId));
+        }
+        String signedUrl =
+            CloudUploadUtil.getSignedUrl(
+                CloudStorageTypes.getByName(cloudStorageData.getStorageType()),
+                cloudStorageData.getContainer(),
+                cloudStorageData.getObjectId());
+        Response response = new Response();
+        response.setResponseCode(ResponseCode.OK);
+        response.getResult().put(JsonKey.SIGNED_URL, signedUrl);
+        sender().tell(response, self());
+      } catch (Exception e) {
+        if (e instanceof ProjectCommonException) {
+          throw (ProjectCommonException) e;
+        }
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.errorGeneatingBulkDownloadStatusLinnk,
+            ProjectUtil.formatMessage(
+                ResponseCode.errorGeneatingBulkDownloadStatusLinnk.getErrorMessage(),
+                processId,
+                e.getMessage()));
+      }
+    } else {
+      throw new ProjectCommonException(
+          ResponseCode.invalidProcessId.getErrorCode(),
+          ResponseCode.invalidProcessId.getErrorMessage(),
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
   }
 

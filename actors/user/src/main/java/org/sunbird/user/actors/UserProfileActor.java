@@ -194,8 +194,8 @@ public class UserProfileActor extends UserBaseActor {
 
     Response response = getUserDao().updateUser(user);
 
-    String response = (String) response.get(JsonKey.RESPONSE);
-    ProjectLogger.log("UserProfileActor:saveUserProfileVisibility: response = " + response);
+    String responseStr = (String) response.get(JsonKey.RESPONSE);
+    ProjectLogger.log("UserProfileActor:saveUserProfileVisibility: responseStr = " + responseStr);
   }
 
   private Map<String, Object> createPrivateFieldMap(Map<String, Object> map, List<String> fields) {

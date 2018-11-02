@@ -92,6 +92,12 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
       if (!StringUtils.isEmpty((String) orgMap.get(JsonKey.STATUS))) {
         if (((String) orgMap.get(JsonKey.STATUS)).equalsIgnoreCase(JsonKey.INACTIVE)) {
           status = ProjectUtil.OrgStatus.INACTIVE.getValue();
+        } else if (((String) orgMap.get(JsonKey.STATUS)).equalsIgnoreCase(JsonKey.ACTIVE)) {
+          status = ProjectUtil.OrgStatus.ACTIVE.getValue();
+        } else {
+          task.setFailureResult(ResponseCode.invalidOrgStatus.getErrorMessage());
+          task.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
+          return;
         }
         orgMap.remove(JsonKey.STATUS);
       }
@@ -106,8 +112,12 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
       }
 
     } catch (IOException e) {
-      ProjectCommonException.throwClientErrorException(
-          ResponseCode.SERVER_ERROR, ResponseCode.SERVER_ERROR.getErrorMessage());
+      ProjectLogger.log(
+          "OrgBulkUploadBackGroundJobActor:callCreateOrg: Exception occurred with error message = "
+              + e.getMessage(),
+          LoggerEnum.INFO);
+      task.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
+      task.setFailureResult(e.getMessage());
     }
   }
 

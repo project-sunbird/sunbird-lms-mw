@@ -9,9 +9,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.Constants;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 
@@ -118,5 +121,23 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
     bulkUploadProcess.setFailureResult(ProjectUtil.convertMapToJsonString(failureList));
     bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
     bulkUploadDao.update(bulkUploadProcess);
+  }
+
+  protected void validateMandatoryFields(
+      Map<String, Object> map, BulkUploadProcessTask task, String[] mandatoryFields)
+      throws JsonProcessingException {
+
+    if (mandatoryFields == null || mandatoryFields.length == 0)
+      for (String s : mandatoryFields) {
+        if (StringUtils.isEmpty((String) map.get(s))) {
+          setTaskStatus(
+              task,
+              ProjectUtil.BulkProcessStatus.FAILED,
+              ResponseCode.internalError.getErrorMessage(),
+              map,
+              JsonKey.CREATE);
+          ProjectCommonException.throwClientErrorException(ResponseCode.mandatoryParamsMissing, "");
+        }
+      }
   }
 }

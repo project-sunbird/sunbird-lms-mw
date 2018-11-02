@@ -219,6 +219,15 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   protected Integer validateAndParseRecords(
       byte[] fileByteArray, String processId, Map<String, Object> additionalRowFields)
       throws IOException {
+    return validateAndParseRecords(fileByteArray, processId, additionalRowFields, null);
+  }
+
+  protected Integer validateAndParseRecords(
+      byte[] fileByteArray,
+      String processId,
+      Map<String, Object> additionalRowFields,
+      Map<String, Object> headerMap)
+      throws IOException {
 
     Integer sequence = 0;
     Integer count = 0;
@@ -238,7 +247,11 @@ public abstract class BaseBulkUploadActor extends BaseActor {
         } else {
           for (int j = 0; j < header.length; j++) {
             String value = (csvLine[j].trim().length() == 0 ? null : csvLine[j].trim());
-            record.put(header[j], value);
+            if (headerMap != null) {
+              record.put((String) headerMap.get(header[j]), value);
+            } else {
+              record.put(header[j], value);
+            }
           }
           record.putAll(additionalRowFields);
           BulkUploadProcessTask tasks = new BulkUploadProcessTask();
@@ -350,7 +363,8 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     if (((String) res.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       sender().tell(response, self());
     } else {
-      ProjectLogger.log("BaseBulkUploadActor:handleUpload: Error in creating record in bulk_upload_process.");
+      ProjectLogger.log(
+          "BaseBulkUploadActor:handleUpload: Error in creating record in bulk_upload_process.");
       throw new ProjectCommonException(
           ResponseCode.SERVER_ERROR.getErrorCode(),
           ResponseCode.SERVER_ERROR.getErrorMessage(),
@@ -362,7 +376,8 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   public void processBulkUpload(
       int recordCount, String processId, BulkUploadProcess bulkUploadProcess, String operation)
       throws IOException {
-    ProjectLogger.log("BaseBulkUploadActor: processBulkUpload called with operation = " + operation);
+    ProjectLogger.log(
+        "BaseBulkUploadActor: processBulkUpload called with operation = " + operation);
 
     bulkUploadProcess.setTaskCount(recordCount);
     bulkUploadDao.update(bulkUploadProcess);
@@ -370,7 +385,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     Request request = new Request();
     request.put(JsonKey.PROCESS_ID, processId);
     request.setOperation(operation);
-    
+
     tellToAnother(request);
   }
 

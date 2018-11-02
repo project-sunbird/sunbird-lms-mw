@@ -1,46 +1,29 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.actorutil.systemsettings.SystemSettingClient;
+import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.util.BulkUploadActorOperation;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.TelemetryEnvKey;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.util.Util;
+import org.sunbird.models.systemsetting.SystemSetting;
 
 @ActorConfig(
   tasks = {"orgBulkUpload"},
   asyncTasks = {}
 )
 public class OrgBulkUploadActor extends BaseBulkUploadActor {
-
-  private String[] bulkOrgAllowedFields = {
-    JsonKey.ORGANISATION_ID,
-    JsonKey.ORGANISATION_NAME,
-    JsonKey.EXTERNAL_ID,
-    JsonKey.DESCRIPTION,
-    JsonKey.LOCATION_CODE,
-    JsonKey.STATUS,
-    JsonKey.CHANNEL,
-    JsonKey.IS_ROOT_ORG,
-    JsonKey.PROVIDER,
-    JsonKey.HOME_URL,
-    JsonKey.ORG_CODE,
-    JsonKey.ORG_TYPE,
-    JsonKey.PREFERRED_LANGUAGE,
-    JsonKey.THEME,
-    JsonKey.CONTACT_DETAILS,
-    JsonKey.LOC_ID,
-    JsonKey.HASHTAGID,
-  };
+  SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
+  private int pos = 0;
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -56,14 +39,30 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
 
   private void upload(Request request) throws IOException {
     Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
-    validateFileHeaderFields(req, bulkOrgAllowedFields, false);
+    SystemSetting systemSetting =
+        systemSettingClient.getSystemSettingByField(
+            getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()), "orgProfileConfig");
+    Map<String, Object> mandatoryMap = null;
+    if (systemSetting != null) {
+      ObjectMapper objectMapper = new ObjectMapper();
+      Map<String, Object> valueMap = objectMapper.readValue(systemSetting.getValue(), Map.class);
+      Map<String, Object> csvMap = objectMapper.convertValue(valueMap.get("csv"), Map.class);
+      mandatoryMap = objectMapper.convertValue(csvMap.get("supportedColumns"), Map.class);
+      String[] mandatoryFields = new String[mandatoryMap.size()];
+      pos = 0;
+      mandatoryMap.forEach((key, value) -> mandatoryFields[pos++] = key);
+      validateFileHeaderFields(req, mandatoryFields, false);
+    }
     BulkUploadProcess bulkUploadProcess =
         handleUpload(JsonKey.ORGANISATION, (String) req.get(JsonKey.CREATED_BY));
-    processOrgBulkUpload(req, bulkUploadProcess.getId(), bulkUploadProcess);
+    processOrgBulkUpload(req, bulkUploadProcess.getId(), bulkUploadProcess, mandatoryMap);
   }
 
   private void processOrgBulkUpload(
-      Map<String, Object> req, String processId, BulkUploadProcess bulkUploadProcess)
+      Map<String, Object> req,
+      String processId,
+      BulkUploadProcess bulkUploadProcess,
+      Map<String, Object> mandatoryMap)
       throws IOException {
     byte[] fileByteArray = null;
     if (null != req.get(JsonKey.FILE)) {
@@ -74,7 +73,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
     if (user != null) {
       String rootOrgId = (String) user.get(JsonKey.ROOT_ORG_ID);
       Map<String, Object> org = getOrg(rootOrgId);
-      if (org != null) {
+      if (org != null && (int) org.get(JsonKey.STATUS) == ProjectUtil.OrgStatus.ACTIVE.getValue()) {
         additionalInfo.put(JsonKey.CHANNEL, org.get(JsonKey.CHANNEL));
       }
     }
@@ -83,7 +82,8 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
           ResponseCode.errorNoRootOrgAssociated,
           ResponseCode.errorNoRootOrgAssociated.getErrorMessage());
     }
-    Integer recordCount = validateAndParseRecords(fileByteArray, processId, additionalInfo);
+    Integer recordCount =
+        validateAndParseRecords(fileByteArray, processId, additionalInfo, mandatoryMap);
     processBulkUpload(
         recordCount,
         processId,

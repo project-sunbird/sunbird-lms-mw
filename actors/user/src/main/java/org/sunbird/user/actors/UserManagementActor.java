@@ -768,6 +768,7 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void processUserRequest(Map<String, Object> userMap) {
     Map<String, Object> requestMap = null;
     UserUtil.setUserDefaultValue(userMap);
@@ -818,7 +819,7 @@ public class UserManagementActor extends BaseActor {
       ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
     }
     // Enable this when you want to send full response of user attributes
-    // response.putAll(resp.getResult());
+    response.putAll((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE));
     sender().tell(response, self());
     if (null != resp) {
       saveUserDetailsToEs(userMap);

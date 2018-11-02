@@ -68,7 +68,8 @@ public class UserExternalIdManagementActor extends BaseActor {
           ProjectLogger.log(e.getMessage(), e);
         }
         if (CollectionUtils.isNotEmpty(errMsgs)) {
-          response.put(JsonKey.EXTERNAL_IDS + ":" + JsonKey.ERROR_MSG, errMsgs);
+          response.put(JsonKey.KEY, JsonKey.EXTERNAL_IDS);
+          response.put(JsonKey.ERROR_MSG, errMsgs);
         } else {
           response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
         }

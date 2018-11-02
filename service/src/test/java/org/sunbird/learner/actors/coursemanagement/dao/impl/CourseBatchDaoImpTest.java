@@ -50,7 +50,7 @@ public class CourseBatchDaoImpTest {
   }
 
   @Test
-  public void testCreateCourseBatchSuccess() {
+  public void testCreateSuccess() {
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(new Response());
@@ -63,19 +63,19 @@ public class CourseBatchDaoImpTest {
   }
 
   @Test
-  public void testGetCourseBatchSuccess() {
+  public void testReadByIdSuccess() {
     when(cassandraOperation.getRecordById(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getCourseBatchResponse(false));
+        .thenReturn(getMockCassandraResponse(false));
     CourseBatch courseBatch = courseBatchDaoImpl.readById(COURSE_BATCH_ID);
     Assert.assertTrue(null != courseBatch);
   }
 
   @Test
-  public void testGetCourseBatchFailure() {
+  public void testReadByIdFailure() {
     when(cassandraOperation.getRecordById(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getCourseBatchResponse(true));
+        .thenReturn(getMockCassandraResponse(true));
     try {
       courseBatchDaoImpl.readById(COURSE_BATCH_ID);
     } catch (ProjectCommonException exception) {
@@ -87,7 +87,7 @@ public class CourseBatchDaoImpTest {
   }
 
   @Test
-  public void testUpdateCourseBatchSuccess() {
+  public void testUpdateSuccess() {
     when(cassandraOperation.updateRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(new Response());
@@ -101,7 +101,7 @@ public class CourseBatchDaoImpTest {
     Assert.assertTrue(null != insertResponse);
   }
 
-  private Response getCourseBatchResponse(boolean isEmpty) {
+  private Response getMockCassandraResponse(boolean isEmpty) {
     Response response = new Response();
     if (!isEmpty) {
       response.put(

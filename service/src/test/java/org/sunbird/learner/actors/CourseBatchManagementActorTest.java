@@ -179,7 +179,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.MENTORS, mentors);
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    Response response = probe.expectMsgClass(duration("1000 second"), Response.class);
+    Response response = probe.expectMsgClass(duration("10 second"), Response.class);
     batchId = (String) response.getResult().get(JsonKey.BATCH_ID);
   }
 
@@ -215,7 +215,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.MENTORS, mentors);
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    Response response = probe.expectMsgClass(duration("1000 second"), Response.class);
+    Response response = probe.expectMsgClass(duration("10 second"), Response.class);
     batchId2 = (String) response.getResult().get(JsonKey.BATCH_ID);
   }
 
@@ -250,7 +250,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.END_DATE, (String) format.format(after5Days));
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
+    probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
   }
 
   public void testA1CreateBatchWithInvalidCourseId() {
@@ -270,7 +270,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.END_DATE, (String) format.format(after5Days));
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
+    probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
   }
 
   public void testA1CreateBatchWithInvalidOrgId() {
@@ -294,7 +294,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.COURSE_CREATED_FOR, orgList);
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
+    probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
   }
 
   // @Test
@@ -327,7 +327,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.MENTORS, mentors);
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
+    probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
   }
 
   // @Test
@@ -357,7 +357,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.END_DATE, (String) format.format(after5Days));
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
+    probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
   }
 
   // @Test
@@ -371,7 +371,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.BATCH_ID, batchId);
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    Response response = probe.expectMsgClass(duration("1000 second"), Response.class);
+    Response response = probe.expectMsgClass(duration("10 second"), Response.class);
     String hashtagId =
         (String)
             ((Map<String, Object>) response.getResult().get(JsonKey.RESPONSE))
@@ -389,7 +389,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.BATCH_ID, batchId + "1234");
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     assertEquals(true, ((Map<String, Object>) res.getResult().get(JsonKey.RESPONSE)).isEmpty());
   }
 
@@ -421,7 +421,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.BATCH_ID, batchId + "13456");
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
+    probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
   }
 
   public void testD1addUserToBatch() {
@@ -436,7 +436,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.USERIDS, userids);
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("1000 second"), Response.class);
+    probe.expectMsgClass(duration("10 second"), Response.class);
   }
 
   public void testD2addUserToBatchWithInvalidBatchId() {
@@ -452,7 +452,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.USERIDS, userids);
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
+    probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
   }
 
   public void testE1UpdateBatch() {
@@ -472,7 +472,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.MENTORS, mentors);
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("1000 second"), Response.class);
+    probe.expectMsgClass(duration("10 second"), Response.class);
   }
 
   public void testE2UpdateBatchWithExistingHashTagId() {
@@ -492,7 +492,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.MENTORS, mentors);
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
+    probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
   }
 
   public void testE2UpdateClosedBatch() {
@@ -512,7 +512,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.MENTORS, mentors);
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
+    probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
   }
 
   public void testE2UpdateBatchAsStartDateBeforeTodayDate() {
@@ -529,7 +529,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.END_DATE, (String) format.format(new Date()));
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
+    probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
   }
 
   public void testE3UpdateBatchAsStartDateAfterEndDate() {
@@ -545,7 +545,7 @@ public class CourseBatchManagementActorTest {
     innerMap.put(JsonKey.START_DATE, (String) format.format(after5Days));
     reqObj.getRequest().put(JsonKey.BATCH, innerMap);
     subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
+    probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
   }
 
   public void testE4addUserToBatch() {

@@ -4,9 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.commons.collections.CollectionUtils;
-
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.learner.actors.role.group.dao.RoleGroupDao;
 import org.sunbird.learner.actors.role.group.dao.impl.RoleGroupDaoImpl;
@@ -17,7 +15,7 @@ public class RoleGroupService {
   private static RoleGroupDao roleGroupDao = RoleGroupDaoImpl.getInstance();
 
   public static Map<String, Object> getRoleGroupMap(String roleName) {
-    Map<String, Object> response = new HashMap<>();    
+    Map<String, Object> response = new HashMap<>();
     List<RoleGroup> roleGroupList = roleGroupDao.getRoleGroups();
 
     if (CollectionUtils.isNotEmpty(roleGroupList)) {
@@ -34,8 +32,7 @@ public class RoleGroupService {
         }
       }
     }
-    
+
     return response;
   }
-
 }

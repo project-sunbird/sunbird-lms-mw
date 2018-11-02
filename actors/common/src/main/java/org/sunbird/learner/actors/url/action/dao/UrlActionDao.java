@@ -11,5 +11,4 @@ public interface UrlActionDao {
    * @return List of URL actions.
    */
   List<UrlAction> getUrlActions();
-
 }

@@ -64,7 +64,7 @@ public class UserRoleActor extends UserBaseActor {
 
   @SuppressWarnings("unchecked")
   private void assignRoles(Request actorMessage) {
-    ProjectLogger.log("assignRoles called");
+    ProjectLogger.log("UserRoleActor: assignRoles called");
 
     Map<String, Object> requestMap = actorMessage.getRequest();
     RoleService.validateRoles((List<String>) requestMap.get(JsonKey.ROLES));
@@ -94,9 +94,9 @@ public class UserRoleActor extends UserBaseActor {
     Response response = userOrgDao.updateUserOrg(userOrg);
     sender().tell(response, self());
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      updateRoleToEs(userOrgDBMap, JsonKey.ORGANISATION, userId, organisationId);
+      syncUserRoles(userOrgDBMap, JsonKey.ORGANISATION, userId, organisationId);
     } else {
-      ProjectLogger.log("no call for ES to save user");
+      ProjectLogger.log("UserRoleActor: No ES call to save user roles");
     }
     generateTelemetryEvent(requestMap, userId, "userLevel");
   }
@@ -188,22 +188,22 @@ public class UserRoleActor extends UserBaseActor {
     return userOrg;
   }
 
-  private void updateRoleToEs(
+  private void syncUserRoles(
       Map<String, Object> tempMap, String type, String userid, String orgId) {
+    ProjectLogger.log("UserRoleActor: syncUserRoles called");
 
-    ProjectLogger.log("method call going to satrt for ES--.....");
     Request request = new Request();
     request.setOperation(ActorOperations.UPDATE_USER_ROLES_ES.getValue());
     request.getRequest().put(JsonKey.ROLES, tempMap.get(JsonKey.ROLES));
     request.getRequest().put(JsonKey.TYPE, type);
     request.getRequest().put(JsonKey.USER_ID, userid);
     request.getRequest().put(JsonKey.ORGANISATION_ID, orgId);
-    ProjectLogger.log("making a call to save user data to ES");
+    ProjectLogger.log("UserRoleActor:syncUserRoles: Syncing to ES");
     try {
       tellToAnother(request);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "Exception Occurred during saving user to Es while joinUserOrganisation : ", ex);
+          "UserRoleActor:syncUserRoles: Exception occurred with error message = " + ex.getMessage(), ex);
     }
   }
 }

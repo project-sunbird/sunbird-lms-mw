@@ -1,9 +1,9 @@
 package org.sunbird.user.actors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
@@ -29,11 +29,10 @@ import org.sunbird.models.user.org.UserOrg;
 import org.sunbird.user.dao.UserOrgDao;
 import org.sunbird.user.dao.impl.UserOrgDaoImpl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 @ActorConfig(
-    tasks = {"getRoles", "assignRoles"},
-    asyncTasks = {})
+  tasks = {"getRoles", "assignRoles"},
+  asyncTasks = {}
+)
 public class UserRoleActor extends UserBaseActor {
 
   @Override
@@ -171,28 +170,36 @@ public class UserRoleActor extends UserBaseActor {
     sender().tell(exception, self());
   }
 
-	private UserOrg prepareUserOrg(Map<String, Object> requestMap, String hashTagId, Map<String, Object> userOrgDBMap) {
-		ObjectMapper mapper = new ObjectMapper();
-		List<Map<String, Object>> userOrgs = (List<Map<String, Object>>) userOrgDBMap.get(JsonKey.ORGANISATIONS);
-		final String organisationId = (String) requestMap.get(JsonKey.ORGANISATION_ID);
-		Map<String, Object> userOrgMap = userOrgs.stream().filter(o -> {
-			return organisationId.equals(o.get(JsonKey.ORGANISATION_ID));
-		}).findFirst().get();
-		UserOrg userOrg = mapper.convertValue(userOrgMap, UserOrg.class);
-		// Add default role into Requested Roles if it is not provided and then update
-		// into DB
-		List<String> roles = (List<String>) requestMap.get(JsonKey.ROLES);
-		if (!roles.contains(ProjectUtil.UserRole.PUBLIC.name()))
-			roles.add(ProjectUtil.UserRole.PUBLIC.name());
-		userOrg.setRoles(roles);
-		if (StringUtils.isNotBlank(hashTagId)) {
-			userOrg.setHashTagId(hashTagId);
-		}
-		userOrg.setUpdatedDate(ProjectUtil.getFormattedDate());
-		userOrg.setUpdatedBy((String) requestMap.get(JsonKey.REQUESTED_BY));
-		return userOrg;
-	}
-  
+  private UserOrg prepareUserOrg(
+      Map<String, Object> requestMap, String hashTagId, Map<String, Object> userOrgDBMap) {
+    ObjectMapper mapper = new ObjectMapper();
+    List<Map<String, Object>> userOrgs =
+        (List<Map<String, Object>>) userOrgDBMap.get(JsonKey.ORGANISATIONS);
+    final String organisationId = (String) requestMap.get(JsonKey.ORGANISATION_ID);
+    Map<String, Object> userOrgMap =
+        userOrgs
+            .stream()
+            .filter(
+                o -> {
+                  return organisationId.equals(o.get(JsonKey.ORGANISATION_ID));
+                })
+            .findFirst()
+            .get();
+    UserOrg userOrg = mapper.convertValue(userOrgMap, UserOrg.class);
+    // Add default role into Requested Roles if it is not provided and then update
+    // into DB
+    List<String> roles = (List<String>) requestMap.get(JsonKey.ROLES);
+    if (!roles.contains(ProjectUtil.UserRole.PUBLIC.name()))
+      roles.add(ProjectUtil.UserRole.PUBLIC.name());
+    userOrg.setRoles(roles);
+    if (StringUtils.isNotBlank(hashTagId)) {
+      userOrg.setHashTagId(hashTagId);
+    }
+    userOrg.setUpdatedDate(ProjectUtil.getFormattedDate());
+    userOrg.setUpdatedBy((String) requestMap.get(JsonKey.REQUESTED_BY));
+    return userOrg;
+  }
+
   private void syncUserRoles(
       Map<String, Object> tempMap, String type, String userid, String orgId) {
     ProjectLogger.log("UserRoleActor: syncUserRoles called");
@@ -208,7 +215,8 @@ public class UserRoleActor extends UserBaseActor {
       tellToAnother(request);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "UserRoleActor:syncUserRoles: Exception occurred with error message = " + ex.getMessage(), ex);
+          "UserRoleActor:syncUserRoles: Exception occurred with error message = " + ex.getMessage(),
+          ex);
     }
   }
 }

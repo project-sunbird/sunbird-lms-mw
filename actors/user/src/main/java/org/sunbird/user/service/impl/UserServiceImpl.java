@@ -85,4 +85,43 @@ public class UserServiceImpl implements UserService {
           ResponseCode.UNAUTHORIZED.getResponseCode());
     }
   }
+
+  @Override
+  public void syncUserProfile(
+      String userId, Map<String, Object> userDataMap, Map<String, Object> userPrivateDataMap) {
+    ElasticSearchUtil.createData(
+        ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.userprofilevisibility.getTypeName(),
+        userId,
+        userPrivateDataMap);
+    ElasticSearchUtil.createData(
+        ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.user.getTypeName(),
+        userId,
+        userDataMap);
+  }
+
+  @Override
+  public Map<String, Object> esGetPublicUserProfileById(String userId) {
+    Map<String, Object> esResult =
+        ElasticSearchUtil.getDataByIdentifier(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(),
+            userId);
+    if (esResult == null || esResult.size() == 0) {
+      throw new ProjectCommonException(
+          ResponseCode.userNotFound.getErrorCode(),
+          ResponseCode.userNotFound.getErrorMessage(),
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+    }
+    return esResult;
+  }
+
+  @Override
+  public Map<String, Object> esGetPrivateUserProfileById(String userId) {
+    return ElasticSearchUtil.getDataByIdentifier(
+        ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.userprofilevisibility.getTypeName(),
+        userId);
+  }
 }

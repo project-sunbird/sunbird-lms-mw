@@ -12,15 +12,15 @@ public class AddressDaoImpl implements AddressDao {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-  private static AddressDao addressDao = null;
 
   private AddressDaoImpl() {}
 
+  private static class LazyInitializer {
+    private static AddressDao INSTANCE = new AddressDaoImpl();
+  }
+
   public static AddressDao getInstance() {
-    if (null == addressDao) {
-      addressDao = new AddressDaoImpl();
-    }
-    return addressDao;
+    return LazyInitializer.INSTANCE;
   }
 
   @Override

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -85,9 +86,7 @@ public class JobProfileManagementActor extends BaseActor {
         Map<String, Object> jobProfileMap = reqList.get(i);
         String createdBy = (String) requestMap.get(JsonKey.CREATED_BY);
         Response addrResponse = null;
-        if (jobProfileMap.containsKey(JsonKey.IS_DELETED)
-            && null != jobProfileMap.get(JsonKey.IS_DELETED)
-            && ((boolean) jobProfileMap.get(JsonKey.IS_DELETED))
+        if (BooleanUtils.isTrue((boolean) jobProfileMap.get(JsonKey.IS_DELETED))
             && !StringUtils.isBlank((String) jobProfileMap.get(JsonKey.ID))) {
           deleteJobProfileDetails(jobProfileMap);
           continue;

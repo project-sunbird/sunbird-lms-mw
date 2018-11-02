@@ -12,15 +12,15 @@ public class EducationDaoImpl implements EducationDao {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
-  private static EducationDao educationDao = null;
 
   private EducationDaoImpl() {}
 
+  private static class LazyInitializer {
+    private static EducationDao INSTANCE = new EducationDaoImpl();
+  }
+
   public static EducationDao getInstance() {
-    if (null == educationDao) {
-      educationDao = new EducationDaoImpl();
-    }
-    return educationDao;
+    return LazyInitializer.INSTANCE;
   }
 
   @Override

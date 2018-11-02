@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -84,9 +85,7 @@ public class AddressManagementActor extends BaseActor {
           encryptionService.encryptData((String) requestMap.get(JsonKey.CREATED_BY));
       for (int i = 0; i < addressList.size(); i++) {
         Map<String, Object> address = addressList.get(i);
-        if (address.containsKey(JsonKey.IS_DELETED)
-            && null != address.get(JsonKey.IS_DELETED)
-            && ((boolean) address.get(JsonKey.IS_DELETED))
+        if (BooleanUtils.isTrue((boolean) address.get(JsonKey.IS_DELETED))
             && !StringUtils.isBlank((String) address.get(JsonKey.ID))) {
           addressDao.deleteAddress((String) address.get(JsonKey.ID));
           continue;

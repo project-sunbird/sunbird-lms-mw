@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -86,9 +87,7 @@ public class EducationManagementActor extends BaseActor {
         Map<String, Object> educationDetailsMap = reqList.get(i);
         String createdBy = (String) requestMap.get(JsonKey.ID);
         Response addrResponse = null;
-        if (educationDetailsMap.containsKey(JsonKey.IS_DELETED)
-            && null != educationDetailsMap.get(JsonKey.IS_DELETED)
-            && ((boolean) educationDetailsMap.get(JsonKey.IS_DELETED))
+        if (BooleanUtils.isTrue((boolean) educationDetailsMap.get(JsonKey.IS_DELETED))
             && !StringUtils.isBlank((String) educationDetailsMap.get(JsonKey.ID))) {
           deleteEducationDetails(educationDetailsMap);
           continue;

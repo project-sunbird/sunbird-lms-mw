@@ -12,15 +12,15 @@ public class JobProfileDaoImpl implements JobProfileDao {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
-  private static JobProfileDao jobProfileDao = null;
 
   private JobProfileDaoImpl() {}
 
+  private static class LazyInitializer {
+    private static JobProfileDao INSTANCE = new JobProfileDaoImpl();
+  }
+
   public static JobProfileDao getInstance() {
-    if (null == jobProfileDao) {
-      jobProfileDao = new JobProfileDaoImpl();
-    }
-    return jobProfileDao;
+    return LazyInitializer.INSTANCE;
   }
 
   @Override

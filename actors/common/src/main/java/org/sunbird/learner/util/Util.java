@@ -46,7 +46,6 @@ import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
 import org.sunbird.common.models.util.PropertiesCache;
-import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
@@ -1487,7 +1486,6 @@ public final class Util {
           ProjectUtil.EsType.userprofilevisibility.getTypeName(),
           (String) userMap.get(JsonKey.USER_ID),
           privateFieldsMap);
-      UserUtility.updateProfileVisibilityFields(privateFieldsMap, userMap);
     } else {
       userMap.put(JsonKey.PROFILE_VISIBILITY, new HashMap<String, String>());
     }
@@ -1959,27 +1957,6 @@ public final class Util {
       userMap.put(JsonKey.CHANNEL, channel);
     }
     return channel;
-  }
-
-  public static void validateProfileVisibilityFields(
-      List<String> fieldList, String fieldTypeKey, ActorRef actorRef) {
-    String conflictingFieldTypeKey =
-        JsonKey.PUBLIC_FIELDS.equalsIgnoreCase(fieldTypeKey) ? JsonKey.PRIVATE : JsonKey.PUBLIC;
-
-    Config userProfileConfig = getUserProfileConfig(actorRef);
-
-    List<String> fields = userProfileConfig.getStringList(fieldTypeKey);
-    List<String> fieldsCopy = new ArrayList<String>(fields);
-    fieldsCopy.retainAll(fieldList);
-
-    if (!fieldsCopy.isEmpty()) {
-      ProjectCommonException.throwClientErrorException(
-          ResponseCode.invalidParameterValue,
-          ProjectUtil.formatMessage(
-              ResponseCode.invalidParameterValue.getErrorMessage(),
-              fieldsCopy.toString(),
-              StringFormatter.joinByDot(JsonKey.PROFILE_VISIBILITY, conflictingFieldTypeKey)));
-    }
   }
 
   /*

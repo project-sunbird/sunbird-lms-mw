@@ -181,7 +181,7 @@ public class UserRoleActor extends UserBaseActor {
       roles.add(ProjectUtil.UserRole.PUBLIC.name());
     userOrg.setRoles(roles);
     if (StringUtils.isNotBlank(hashTagId)) {
-      userOrg.setHashtagId(hashTagId);
+      userOrg.setHashTagId(hashTagId);
     }
     userOrg.setUpdatedDate(ProjectUtil.getFormattedDate());
     userOrg.setUpdatedBy((String) requestMap.get(JsonKey.REQUESTED_BY));

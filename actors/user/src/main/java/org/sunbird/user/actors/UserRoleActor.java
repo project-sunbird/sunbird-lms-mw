@@ -180,23 +180,26 @@ public class UserRoleActor extends UserBaseActor {
         userOrgs
             .stream()
             .filter(
-                o -> {
-                  return organisationId.equals(o.get(JsonKey.ORGANISATION_ID));
+                aUserOrg -> {
+                  return organisationId.equals(aUserOrg.get(JsonKey.ORGANISATION_ID));
                 })
             .findFirst()
             .get();
     UserOrg userOrg = mapper.convertValue(userOrgMap, UserOrg.class);
-    // Add default role into Requested Roles if it is not provided and then update
-    // into DB
+
     List<String> roles = (List<String>) requestMap.get(JsonKey.ROLES);
-    if (!roles.contains(ProjectUtil.UserRole.PUBLIC.name()))
+    if (!roles.contains(ProjectUtil.UserRole.PUBLIC.name())) {
       roles.add(ProjectUtil.UserRole.PUBLIC.name());
+    }
     userOrg.setRoles(roles);
+
     if (StringUtils.isNotBlank(hashTagId)) {
       userOrg.setHashTagId(hashTagId);
     }
+
     userOrg.setUpdatedDate(ProjectUtil.getFormattedDate());
     userOrg.setUpdatedBy((String) requestMap.get(JsonKey.REQUESTED_BY));
+
     return userOrg;
   }
 

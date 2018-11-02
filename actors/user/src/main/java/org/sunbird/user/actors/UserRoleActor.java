@@ -76,16 +76,9 @@ public class UserRoleActor extends UserBaseActor {
     String hashTagId = (String) requestMap.get(JsonKey.HASHTAGID);
     String organisationId = (String) requestMap.get(JsonKey.ORGANISATION_ID);
     // update userOrg role with requested roles.
-    Map<String, Object> userOrgDBMap =
-        getUserService().getUserByUserIdAndOrgId(userId, organisationId);
+    Map<String, Object> userOrgDBMap = getUserService().esGetUserOrg(userId, organisationId);
     if (MapUtils.isEmpty(userOrgDBMap)) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.invalidUsrOrgData.getErrorCode(),
-              ResponseCode.invalidUsrOrgData.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
+      ProjectCommonException.throwClientErrorException(ResponseCode.invalidUsrOrgData, null);
     }
 
     UserOrg userOrg = prepareUserOrg(requestMap, hashTagId, userOrgDBMap);
@@ -203,7 +196,8 @@ public class UserRoleActor extends UserBaseActor {
       tellToAnother(request);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "UserRoleActor:syncUserRoles: Exception occurred with error message = " + ex.getMessage(), ex);
+          "UserRoleActor:syncUserRoles: Exception occurred with error message = " + ex.getMessage(),
+          ex);
     }
   }
 }

@@ -11,5 +11,4 @@ public interface RoleGroupDao {
    * @return List of role groups.
    */
   List<RoleGroup> getRoleGroups();
-
 }

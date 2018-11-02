@@ -1,7 +1,6 @@
 package org.sunbird.user.service;
 
 import java.util.Map;
-
 import org.sunbird.common.request.Request;
 import org.sunbird.models.user.User;
 
@@ -14,8 +13,9 @@ public interface UserService {
   void validateUserId(Request request);
 
   Map<String, Object> esGetPublicUserProfileById(String userId);
-  
+
   Map<String, Object> esGetPrivateUserProfileById(String userId);
 
-  void syncUserProfile(String userId, Map<String, Object> userDataMap, Map<String, Object> userPrivateDataMap);
+  void syncUserProfile(
+      String userId, Map<String, Object> userDataMap, Map<String, Object> userPrivateDataMap);
 }

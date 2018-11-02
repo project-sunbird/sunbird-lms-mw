@@ -2,7 +2,8 @@ package org.sunbird.user.actors;
 
 import static org.sunbird.learner.util.Util.isNotNull;
 
-import java.math.BigInteger;
+import akka.actor.ActorRef;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,19 +13,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.actorutil.InterServiceCommunication;
+import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
@@ -41,20 +42,16 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.extension.user.UserExtension;
 import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
-import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import akka.actor.ActorRef;
+import org.sunbird.user.util.UserActorOperations;
+import org.sunbird.user.util.UserUtil;
 
 /**
  * This actor will handle course enrollment operation .
@@ -63,8 +60,9 @@ import akka.actor.ActorRef;
  * @author Amit Kumar
  */
 @ActorConfig(
-    tasks = {"createUser", "updateUser", "getUserProfile", "getUserDetailsByLoginId"},
-    asyncTasks = {})
+  tasks = {"createUser", "updateUser", "getUserProfile", "getUserDetailsByLoginId"},
+  asyncTasks = {}
+)
 public class UserManagementActor extends BaseActor {
   private ObjectMapper mapper = new ObjectMapper();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -75,133 +73,51 @@ public class UserManagementActor extends BaseActor {
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
-  private PropertiesCache propertiesCache = PropertiesCache.getInstance();
   private boolean isSSOEnabled =
       Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
   private Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private static final boolean IS_REGISTRY_ENABLED =
       Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE));
-  private ActorRef systemSettingActorRef = null;
   private UserRequestValidator userRequestValidator = new UserRequestValidator();
   private UserService userService = new UserServiceImpl();
+  private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+  private static InterServiceCommunication interServiceCommunication =
+      InterServiceCommunicationFactory.getInstance();
+  private ActorRef systemSettingActorRef = null;
+
   /** Receives the actor message and perform the course enrollment operation . */
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.USER);
-    if(systemSettingActorRef == null) {
-    systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
-     ProjectLogger.log("UserManagementActor onReceive systemsettingsActorRef  " + systemSettingActorRef, LoggerEnum.INFO.name());
-    } else {
-      ProjectLogger.log("UserManagementActor onReceive systemsettingsActorRef is not null " + systemSettingActorRef, LoggerEnum.INFO.name());
-    }
-    // set request id fto thread loacl...
     ExecutionContext.setRequestId(request.getRequestId());
+    if (systemSettingActorRef == null) {
+      systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
+    }
     String operation = request.getOperation();
-    if (operation.equalsIgnoreCase(ActorOperations.CREATE_USER.getValue())) {
-      createUser(request);
-    } else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER.getValue())) {
-      updateUser(request);
-    } else if (operation.equalsIgnoreCase(ActorOperations.GET_PROFILE.getValue())) {
-      getUserProfile(request);
-    } else if (operation.equalsIgnoreCase(ActorOperations.GET_USER_DETAILS_BY_LOGINID.getValue())) {
-      getUserDetailsByLoginId(request);
-    } else {
-      ProjectLogger.log("UNSUPPORTED OPERATION");
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.invalidOperationName.getErrorCode(),
-              ResponseCode.invalidOperationName.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
+    switch (operation) {
+      case "createUser":
+        createUser(request);
+        break;
+      case "updateUser":
+        updateUser(request);
+        break;
+      case "getUserProfile":
+        getUserProfile(request);
+        break;
+      case "getUserDetailsByLoginId":
+        getUserDetailsByLoginId(request);
+        break;
+      default:
+        onReceiveUnsupportedOperation("UserManagementActor");
+        break;
     }
-  }
-
-  /**
-   * This method will create a private field map and remove those filed from original map.
-   *
-   * @param map Map<String, Object> complete save data Map
-   * @param fields List<String> list of private fields
-   * @return Map<String, Object> map of private field with their original values.
-   */
-  private Map<String, Object> createPrivateFiledMap(Map<String, Object> map, List<String> fields) {
-    Map<String, Object> privateMap = new HashMap<>();
-    if (fields != null && !fields.isEmpty()) {
-      for (String field : fields) {
-        /*
-         * now if field contains
-         * {address.someField,education.someField,jobprofile.someField} then we need to
-         * remove those filed
-         */
-        if (field.contains(JsonKey.ADDRESS + ".")) {
-          privateMap.put(JsonKey.ADDRESS, map.get(JsonKey.ADDRESS));
-        } else if (field.contains(JsonKey.EDUCATION + ".")) {
-          privateMap.put(JsonKey.EDUCATION, map.get(JsonKey.EDUCATION));
-        } else if (field.contains(JsonKey.JOB_PROFILE + ".")) {
-          privateMap.put(JsonKey.JOB_PROFILE, map.get(JsonKey.JOB_PROFILE));
-        } else if (field.contains(JsonKey.SKILLS + ".")) {
-          privateMap.put(JsonKey.SKILLS, map.get(JsonKey.SKILLS));
-        } else if (field.contains(JsonKey.BADGE_ASSERTIONS + ".")) {
-          privateMap.put(JsonKey.BADGE_ASSERTIONS, map.get(JsonKey.BADGE_ASSERTIONS));
-        } else {
-          if (!map.containsKey(field)) {
-            throw new ProjectCommonException(
-                ResponseCode.InvalidColumnError.getErrorCode(),
-                ResponseCode.InvalidColumnError.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-          }
-          privateMap.put(field, map.get(field));
-        }
-      }
-    }
-    return privateMap;
-  }
-
-  /**
-   * THis methods will update user private field under cassandra.
-   *
-   * @param userId Stirng
-   * @param privateFieldMap Map<String,String>
-   */
-  private void updateCassandraWithPrivateFiled(String userId, Map<String, String> privateFieldMap) {
-    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Map<String, Object> reqMap = new HashMap<>();
-    reqMap.put(JsonKey.ID, userId);
-    reqMap.put(JsonKey.PROFILE_VISIBILITY, privateFieldMap);
-    Response response =
-        cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), reqMap);
-    String val = (String) response.get(JsonKey.RESPONSE);
-    ProjectLogger.log("Private field updated under cassandra==" + val);
-  }
-
-  /**
-   * This method will first removed the remove the saved private data for the user and then it will
-   * create new private data for that user.
-   *
-   * @param dataMap Map<String, Object> allData
-   * @param privateDataMap Map<String, Object> only private data.
-   * @param userId String
-   * @return boolean
-   */
-  private boolean updateDataInES(
-      Map<String, Object> dataMap, Map<String, Object> privateDataMap, String userId) {
-    ElasticSearchUtil.createData(
-        ProjectUtil.EsIndex.sunbird.getIndexName(),
-        ProjectUtil.EsType.userprofilevisibility.getTypeName(),
-        userId,
-        privateDataMap);
-    ElasticSearchUtil.createData(
-        ProjectUtil.EsIndex.sunbird.getIndexName(),
-        ProjectUtil.EsType.user.getTypeName(),
-        userId,
-        dataMap);
-    return true;
   }
 
   @SuppressWarnings("unchecked")
   private void getUserDetailsByLoginId(Request actorMessage) {
     actorMessage.toLower();
-    Map<String, Object> userMap = (Map<String, Object>) actorMessage.getRequest();
+    Map<String, Object> userMap = actorMessage.getRequest();
     if (null != userMap.get(JsonKey.LOGIN_ID)) {
       String loginId = (String) userMap.get(JsonKey.LOGIN_ID);
       try {
@@ -367,7 +283,7 @@ public class UserManagementActor extends BaseActor {
       Map<String, Map<String, Object>> orgInfoMap,
       Map<String, Map<String, Object>> locationInfoMap) {
     for (Map<String, Object> usrOrg : userOrgs) {
-      Map<String, Object> orgInfo = orgInfoMap.get((String) usrOrg.get(JsonKey.ORGANISATION_ID));
+      Map<String, Object> orgInfo = orgInfoMap.get(usrOrg.get(JsonKey.ORGANISATION_ID));
       usrOrg.put(JsonKey.ORG_NAME, orgInfo.get(JsonKey.ORG_NAME));
       usrOrg.put(JsonKey.CHANNEL, orgInfo.get(JsonKey.CHANNEL));
       usrOrg.put(JsonKey.HASHTAGID, orgInfo.get(JsonKey.HASHTAGID));
@@ -474,7 +390,7 @@ public class UserManagementActor extends BaseActor {
    * @param actorMessage Request
    */
   private void getUserProfile(Request actorMessage) {
-    Map<String, Object> userMap = (Map<String, Object>) actorMessage.getRequest();
+    Map<String, Object> userMap = actorMessage.getRequest();
     Map<String, Object> result =
         ElasticSearchUtil.getDataByIdentifier(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
@@ -721,191 +637,58 @@ public class UserManagementActor extends BaseActor {
     result.put(JsonKey.TOPICS, topicSet);
   }
 
-  /** Method to update the user profile. */
-  @SuppressWarnings("unchecked")
   private void updateUser(Request actorMessage) {
-    actorMessage.toLower();
-    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Map<String, Object> requestMap = null;
-    Map<String, Object> userMap = actorMessage.getRequest();
-    actorMessage.getRequest().putAll(userMap);
-    Util.getUserProfileConfig(systemSettingActorRef);
-    userRequestValidator.validateUpdateUserRequest(actorMessage);
-    Map<String, Object> userDbRecord = null;
-    String extId = (String) userMap.get(JsonKey.EXTERNAL_ID);
-    String provider = (String) userMap.get(JsonKey.EXTERNAL_ID_PROVIDER);
-    String idType = (String) userMap.get(JsonKey.EXTERNAL_ID_TYPE);
-
-    userService.validateUserId(actorMessage);
-
-    if ((StringUtils.isBlank((String) userMap.get(JsonKey.USER_ID))
-            && StringUtils.isBlank((String) userMap.get(JsonKey.ID)))
-        && StringUtils.isNotEmpty(extId)
-        && StringUtils.isNotEmpty(provider)
-        && StringUtils.isNotEmpty(idType)) {
-      userDbRecord = Util.getUserFromExternalId(userMap);
-      if (MapUtils.isEmpty(userDbRecord)) {
-        throw new ProjectCommonException(
-            ResponseCode.externalIdNotFound.getErrorCode(),
-            ProjectUtil.formatMessage(
-                ResponseCode.externalIdNotFound.getErrorMessage(), extId, idType, provider),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-      }
-      userMap.put(JsonKey.USER_ID, userDbRecord.get(JsonKey.USER_ID));
-    }
-    if (null != userMap.get(JsonKey.USER_ID)) {
-      userMap.put(JsonKey.ID, userMap.get(JsonKey.USER_ID));
-    } else {
-      userMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-    }
-
-    if (isUserDeleted(userMap)) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.inactiveUser.getErrorCode(),
-              ResponseCode.inactiveUser.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-
-    try {
-      User user = mapper.convertValue(userMap, User.class);
-      if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
-        List<Map<String, String>> list =
-            Util.copyAndConvertExternalIdsToLower(user.getExternalIds());
-        user.setExternalIds(list);
-        userMap.put(JsonKey.EXTERNAL_IDS, list);
-      }
-      Util.checkExternalIdUniqueness(user, JsonKey.UPDATE);
-      Util.validateUserExternalIds(userMap);
-    } catch (Exception ex) {
-      sender().tell(ex, self());
-      return;
-    }
-    // object of telemetry event...
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
+    actorMessage.toLower();
+    Util.getUserProfileConfig(systemSettingActorRef);
+    userService.validateUserId(actorMessage);
+    Map<String, Object> userMap = actorMessage.getRequest();
+    userRequestValidator.validateUpdateUserRequest(actorMessage);
+    Map<String, Object> userDbRecord = UserUtil.validateExternalIdsAndReturnActiveUser(userMap);
 
-    if (userMap.containsKey(JsonKey.WEB_PAGES)) {
-      SocialMediaType.validateSocialMedia(
-          (List<Map<String, String>>) userMap.get(JsonKey.WEB_PAGES));
-    }
-
-    Util.checkPhoneUniqueness(userMap, JsonKey.UPDATE);
-    Util.checkEmailUniqueness(userMap, JsonKey.UPDATE);
-
+    User user = mapper.convertValue(userMap, User.class);
+    UserUtil.validateExternalIds(user, JsonKey.UPDATE);
+    userMap.put(JsonKey.EXTERNAL_IDS, user.getExternalIds());
+    UserUtil.validateUserPhoneEmailAndWebPages(user, JsonKey.UPDATE);
     // not allowing user to update the status,provider,userName
     removeFieldsFrmReq(userMap);
-
-    if (!StringUtils.isBlank((String) userMap.get(JsonKey.EMAIL))) {
-      boolean flag = checkEmailSameOrDiff(userMap);
-      if (flag) {
-        userMap.remove(JsonKey.EMAIL);
-      }
-    }
-
-    /*
-     * Update User Entity in Registry
-     */
+    // if we are updating email then need to update isEmailVerified flag inside keycloak
+    UserUtil.checkEmailSameOrDiff(userMap, userDbRecord);
     if (IS_REGISTRY_ENABLED) {
-      if (null == userDbRecord) {
-        userDbRecord = Util.getUserbyUserId((String) userMap.get(JsonKey.USER_ID));
-      }
-      String registryId = (String) userDbRecord.get(JsonKey.REGISTRY_ID);
-      UserExtension userExtension = new UserProviderRegistryImpl();
-      if (StringUtils.isNotBlank(registryId)) {
-        userMap.put(JsonKey.REGISTRY_ID, registryId);
-        userExtension.update(userMap);
-      } else {
-        userExtension.create(userMap);
-      }
+      UserUtil.updateUserToRegistry(userMap, (String) userDbRecord.get(JsonKey.REGISTRY_ID));
     }
 
     if (isSSOEnabled) {
-      updateKeyCloakUserBase(userMap);
+      UserUtil.upsertUserInKeycloak(userMap, JsonKey.UPDATE);
     }
     userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
-    try {
-      UserUtility.encryptUserData(userMap);
-    } catch (Exception e1) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.userDataEncryptionError.getErrorCode(),
-              ResponseCode.userDataEncryptionError.getErrorMessage(),
-              ResponseCode.SERVER_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-    requestMap = new HashMap<>();
-    User cassandraUser = mapper.convertValue(userMap, User.class);
-    requestMap.putAll(mapper.convertValue(cassandraUser, Map.class));
+    Map<String, Object> requestMap = UserUtil.encryptUserData(userMap);
     removeUnwanted(requestMap);
-
-    Response result = null;
-    try {
-      result =
-          cassandraOperation.updateRecord(
-              usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
-    } catch (Exception ex) {
-      sender().tell(ex, self());
-      return;
+    Response response =
+        cassandraOperation.updateRecord(
+            usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
+    Response resp = null;
+    if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      Map<String, Object> userRequest = new HashMap<>(userMap);
+      userRequest.put(JsonKey.OPERATION_TYPE, JsonKey.UPDATE);
+      resp = saveUserAttributes(userRequest);
     }
-    // update user address
-    if (userMap.containsKey(JsonKey.ADDRESS)) {
-      updateUserAddress(actorMessage, userMap);
+    // Enable this when you want to send full response of user attributes
+    // response.putAll(resp.getResult());
+    sender().tell(response, self());
+    if (null != resp) {
+      Map<String, Object> completeUserDetails = new HashMap<>(userDbRecord);
+      completeUserDetails.putAll(requestMap);
+      saveUserDetailsToEs(completeUserDetails);
+    } else {
+      ProjectLogger.log("UserManagementActor:updateUser: User update fail");
     }
-    if (userMap.containsKey(JsonKey.EDUCATION)) {
-      updateUserEducation(actorMessage, userMap);
-    }
-    if (userMap.containsKey(JsonKey.JOB_PROFILE)) {
-      updateUserJobProfile(actorMessage, userMap);
-    }
-
-    // update the user external identity data
-    try {
-      Util.updateUserExtId(userMap);
-    } catch (Exception ex) {
-      result.getResult().put(JsonKey.ERROR_MSG, ex.getMessage());
-    }
-
-    sender().tell(result, self());
-
     targetObject =
         TelemetryUtil.generateTargetObject(
             (String) userMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
-    TelemetryUtil.telemetryProcessingCall(
-        (Map<String, Object>) userMap, targetObject, correlatedObject);
-
-    if (((String) result.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      Request userRequest = new Request();
-      userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-      userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
-      try {
-        tellToAnother(userRequest);
-      } catch (Exception ex) {
-        ProjectLogger.log("Exception Occurred during saving user to Es while updating user : ", ex);
-      }
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  private boolean isUserDeleted(Map<String, Object> userMap) {
-    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Response response =
-        cassandraOperation.getRecordById(
-            usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), (String) userMap.get(JsonKey.ID));
-    List<Map<String, Object>> resList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    if (!resList.isEmpty()) {
-      Map<String, Object> res = resList.get(0);
-      if (null != res.get(JsonKey.IS_DELETED)) {
-        return (boolean) (res.get(JsonKey.IS_DELETED));
-      } else {
-        return false;
-      }
-    }
-    return false;
+    TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
   private void removeFieldsFrmReq(Map<String, Object> userMap) {
@@ -926,377 +709,6 @@ public class UserManagementActor extends BaseActor {
     userMap.remove(JsonKey.CHANNEL);
   }
 
-  @SuppressWarnings("unchecked")
-  private void updateUserJobProfile(Request actorMessage, Map<String, Object> userMap) {
-    Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-    Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
-    List<Map<String, Object>> reqList =
-        (List<Map<String, Object>>) userMap.get(JsonKey.JOB_PROFILE);
-    for (Map<String, Object> reqMap : reqList) {
-      if (reqMap.containsKey(JsonKey.IS_DELETED)
-          && null != reqMap.get(JsonKey.IS_DELETED)
-          && ((boolean) reqMap.get(JsonKey.IS_DELETED))
-          && !StringUtils.isBlank((String) reqMap.get(JsonKey.ID))) {
-        String addrsId = null;
-        if (reqMap.containsKey(JsonKey.ADDRESS) && null != reqMap.get(JsonKey.ADDRESS)) {
-          addrsId = (String) ((Map<String, Object>) reqMap.get(JsonKey.ADDRESS)).get(JsonKey.ID);
-        } else {
-          addrsId = getAddressId((String) reqMap.get(JsonKey.ID), jobProDbInfo);
-        }
-        if (null != addrsId) {
-          deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
-
-          // genarate telemetry for user job profile address
-          Map<String, Object> actions;
-          if (reqMap.containsKey(JsonKey.ADDRESS) && null != reqMap.get(JsonKey.ADDRESS)) {
-            actions = (Map<String, Object>) reqMap.get(JsonKey.ADDRESS);
-          } else {
-            actions = new HashMap<>();
-            actions.put("jobProfileAddressDeleted", "");
-            actions.put(JsonKey.ID, addrsId);
-          }
-          telemetryGenerationForUserSubFieldsDeletion(
-              actions, reqMap, JsonKey.ADDRESS, JsonKey.JOB_PROFILE);
-        }
-        deleteRecord(
-            jobProDbInfo.getKeySpace(),
-            jobProDbInfo.getTableName(),
-            (String) reqMap.get(JsonKey.ID));
-        telemetryGenerationForUserSubFieldsDeletion(
-            reqMap, userMap, JsonKey.JOB_PROFILE, JsonKey.USER);
-        continue;
-      }
-      processJobProfileInfo(reqMap, userMap, actorMessage, addrDbInfo, jobProDbInfo);
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  private void updateUserEducation(Request actorMessage, Map<String, Object> userMap) {
-    Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-    Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
-    List<Map<String, Object>> reqList = (List<Map<String, Object>>) userMap.get(JsonKey.EDUCATION);
-    for (int i = 0; i < reqList.size(); i++) {
-      Map<String, Object> reqMap = reqList.get(i);
-      if (reqMap.containsKey(JsonKey.IS_DELETED)
-          && null != reqMap.get(JsonKey.IS_DELETED)
-          && ((boolean) reqMap.get(JsonKey.IS_DELETED))
-          && !StringUtils.isBlank((String) reqMap.get(JsonKey.ID))) {
-        String addrsId = null;
-        if (reqMap.containsKey(JsonKey.ADDRESS) && null != reqMap.get(JsonKey.ADDRESS)) {
-          addrsId = (String) ((Map<String, Object>) reqMap.get(JsonKey.ADDRESS)).get(JsonKey.ID);
-        } else {
-          addrsId = getAddressId((String) reqMap.get(JsonKey.ID), eduDbInfo);
-        }
-        if (null != addrsId) {
-          // delete eductaion address
-          deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addrsId);
-          Map<String, Object> actions;
-          if (reqMap.containsKey(JsonKey.ADDRESS) && null != reqMap.get(JsonKey.ADDRESS)) {
-            actions = (Map<String, Object>) reqMap.get(JsonKey.ADDRESS);
-          } else {
-            actions = new HashMap<>();
-            actions.put("educationAddressDeleted", "");
-            actions.put(JsonKey.ID, addrsId);
-          }
-          telemetryGenerationForUserSubFieldsDeletion(
-              actions, reqMap, JsonKey.ADDRESS, JsonKey.EDUCATION);
-        }
-        deleteRecord(
-            eduDbInfo.getKeySpace(), eduDbInfo.getTableName(), (String) reqMap.get(JsonKey.ID));
-        telemetryGenerationForUserSubFieldsDeletion(
-            reqMap, userMap, JsonKey.EDUCATION, JsonKey.USER);
-        continue;
-      }
-      processEducationInfo(reqMap, userMap, actorMessage, addrDbInfo, eduDbInfo);
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  private void updateUserAddress(Request actorMessage, Map<String, Object> userMap) {
-    Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-    List<Map<String, Object>> reqList = (List<Map<String, Object>>) userMap.get(JsonKey.ADDRESS);
-    for (int i = 0; i < reqList.size(); i++) {
-      Map<String, Object> reqMap = reqList.get(i);
-      if (reqMap.containsKey(JsonKey.IS_DELETED)
-          && null != reqMap.get(JsonKey.IS_DELETED)
-          && ((boolean) reqMap.get(JsonKey.IS_DELETED))
-          && !StringUtils.isBlank((String) reqMap.get(JsonKey.ID))) {
-        deleteRecord(
-            addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), (String) reqMap.get(JsonKey.ID));
-        telemetryGenerationForUserSubFieldsDeletion(reqMap, userMap, JsonKey.ADDRESS, JsonKey.USER);
-        continue;
-      }
-      processUserAddress(reqMap, actorMessage, userMap, addrDbInfo);
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  private boolean checkEmailSameOrDiff(Map<String, Object> userMap) {
-    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Response response =
-        cassandraOperation.getRecordById(
-            usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), (String) userMap.get(JsonKey.ID));
-    List<Map<String, Object>> resList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    if (!resList.isEmpty()) {
-      Map<String, Object> res = resList.get(0);
-      String email = (String) res.get(JsonKey.EMAIL);
-      String encEmail = (String) userMap.get(JsonKey.EMAIL);
-      try {
-        encEmail = encryptionService.encryptData((String) userMap.get(JsonKey.EMAIL));
-      } catch (Exception ex) {
-        ProjectLogger.log("Exception occurred while encrypting user email.");
-      }
-      return ((encEmail).equalsIgnoreCase(email));
-    }
-    return false;
-  }
-
-  private void processUserAddress(
-      Map<String, Object> reqMap,
-      Request actorMessage,
-      Map<String, Object> userMap,
-      DbInfo addrDbInfo) {
-    Boolean isAddressUpdated = true;
-    String encUserId = "";
-    String encreqById = "";
-    try {
-      encUserId = encryptionService.encryptData((String) userMap.get(JsonKey.ID));
-      encreqById =
-          encryptionService.encryptData(
-              (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
-    } catch (Exception e1) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.userDataEncryptionError.getErrorCode(),
-              ResponseCode.userDataEncryptionError.getErrorMessage(),
-              ResponseCode.SERVER_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-    if (!reqMap.containsKey(JsonKey.ID)) {
-      reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-      reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-      reqMap.put(JsonKey.CREATED_BY, encreqById);
-      reqMap.put(JsonKey.USER_ID, encUserId);
-      isAddressUpdated = false;
-    } else {
-      reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-      reqMap.put(JsonKey.UPDATED_BY, encreqById);
-      reqMap.remove(JsonKey.USER_ID);
-    }
-    try {
-      cassandraOperation.upsertRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), reqMap);
-      telemetryGenerationForUserSubFields(
-          reqMap, userMap, isAddressUpdated, JsonKey.ADDRESS, JsonKey.USER);
-    } catch (Exception ex) {
-      ProjectLogger.log(ex.getMessage(), ex);
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  private String getAddressId(String id, DbInfo dbInfo) {
-    String addressId = null;
-    try {
-      Response res =
-          cassandraOperation.getPropertiesValueById(
-              dbInfo.getKeySpace(), dbInfo.getTableName(), id, JsonKey.ADDRESS_ID);
-      if (!((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).isEmpty()) {
-        addressId =
-            (String)
-                (((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).get(0))
-                    .get(JsonKey.ADDRESS_ID);
-      }
-    } catch (Exception ex) {
-      ProjectLogger.log(ex.getMessage(), ex);
-    }
-    return addressId;
-  }
-
-  private void deleteRecord(String keyspaceName, String tableName, String id) {
-    try {
-      cassandraOperation.deleteRecord(keyspaceName, tableName, id);
-    } catch (Exception ex) {
-      ProjectLogger.log(ex.getMessage(), ex);
-    }
-  }
-
-  private void processJobProfileInfo(
-      Map<String, Object> reqMap,
-      Map<String, Object> userMap,
-      Request actorMessage,
-      DbInfo addrDbInfo,
-      DbInfo jobProDbInfo) {
-    String addrId = null;
-    Boolean isProfileUpdated = true;
-    Response addrResponse = null;
-    if (!(reqMap.containsKey(JsonKey.ID))) {
-      reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-      isProfileUpdated = false;
-    }
-    if (reqMap.containsKey(JsonKey.ADDRESS)) {
-      Boolean isProfileAddressUpdated = true;
-      @SuppressWarnings("unchecked")
-      Map<String, Object> address = (Map<String, Object>) reqMap.get(JsonKey.ADDRESS);
-      if (!address.containsKey(JsonKey.ID)) {
-        addrId = ProjectUtil.getUniqueIdFromTimestamp(1);
-        address.put(JsonKey.ID, addrId);
-        address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-        address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
-        isProfileAddressUpdated = false;
-        isProfileUpdated = false;
-      } else {
-        addrId = (String) address.get(JsonKey.ID);
-        address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-        address.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
-        address.remove(JsonKey.USER_ID);
-      }
-      try {
-        addrResponse =
-            cassandraOperation.upsertRecord(
-                addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), address);
-        telemetryGenerationForUserSubFields(
-            address, reqMap, isProfileAddressUpdated, JsonKey.ADDRESS, JsonKey.JOB_PROFILE);
-      } catch (Exception ex) {
-        ProjectLogger.log(ex.getMessage(), ex);
-      }
-    }
-    if (null != addrResponse
-        && ((String) addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      reqMap.put(JsonKey.ADDRESS_ID, addrId);
-      reqMap.remove(JsonKey.ADDRESS);
-    }
-
-    if (isProfileUpdated) {
-      reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-      reqMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
-      reqMap.remove(JsonKey.USER_ID);
-    } else {
-      reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-      reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
-      reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-    }
-    try {
-      cassandraOperation.upsertRecord(
-          jobProDbInfo.getKeySpace(), jobProDbInfo.getTableName(), reqMap);
-      telemetryGenerationForUserSubFields(
-          reqMap, userMap, isProfileUpdated, JsonKey.JOB_PROFILE, JsonKey.USER);
-    } catch (Exception ex) {
-      ProjectLogger.log(ex.getMessage(), ex);
-    }
-  }
-
-  private void processEducationInfo(
-      Map<String, Object> reqMap,
-      Map<String, Object> userMap,
-      Request actorMessage,
-      DbInfo addrDbInfo,
-      DbInfo eduDbInfo) {
-
-    Boolean isEducationUpdated = true;
-    Boolean isEducationAddressUpdated = true;
-    String addrId = null;
-    Response addrResponse = null;
-    if (!(reqMap.containsKey(JsonKey.ID))) {
-      reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
-      isEducationUpdated = false;
-    }
-    if (reqMap.containsKey(JsonKey.ADDRESS)) {
-      @SuppressWarnings("unchecked")
-      Map<String, Object> address = (Map<String, Object>) reqMap.get(JsonKey.ADDRESS);
-      if (!address.containsKey(JsonKey.ID)) {
-        addrId = ProjectUtil.getUniqueIdFromTimestamp(1);
-        address.put(JsonKey.ID, addrId);
-        address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-        address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
-        isEducationUpdated = false;
-        isEducationAddressUpdated = false;
-      } else {
-        addrId = (String) address.get(JsonKey.ID);
-        address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-        address.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
-        address.remove(JsonKey.USER_ID);
-      }
-      try {
-        addrResponse =
-            cassandraOperation.upsertRecord(
-                addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), address);
-        telemetryGenerationForUserSubFields(
-            address, reqMap, isEducationAddressUpdated, JsonKey.ADDRESS, JsonKey.EDUCATION);
-      } catch (Exception ex) {
-        ProjectLogger.log(ex.getMessage(), ex);
-      }
-    }
-    if (null != addrResponse
-        && ((String) addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      reqMap.put(JsonKey.ADDRESS_ID, addrId);
-      reqMap.remove(JsonKey.ADDRESS);
-    }
-    try {
-      if (null != reqMap.get(JsonKey.YEAR_OF_PASSING)) {
-        reqMap.put(
-            JsonKey.YEAR_OF_PASSING, ((BigInteger) reqMap.get(JsonKey.YEAR_OF_PASSING)).intValue());
-      } else {
-        reqMap.put(JsonKey.YEAR_OF_PASSING, 0);
-      }
-    } catch (Exception ex) {
-      reqMap.put(JsonKey.YEAR_OF_PASSING, 0);
-      ProjectLogger.log(ex.getMessage(), ex);
-    }
-    try {
-      if (null != reqMap.get(JsonKey.PERCENTAGE)) {
-        reqMap.put(
-            JsonKey.PERCENTAGE, Double.parseDouble(String.valueOf(reqMap.get(JsonKey.PERCENTAGE))));
-      } else {
-        reqMap.put(JsonKey.PERCENTAGE, Double.parseDouble(String.valueOf("0")));
-      }
-    } catch (Exception ex) {
-      reqMap.put(JsonKey.PERCENTAGE, Double.parseDouble(String.valueOf("0")));
-      ProjectLogger.log(ex.getMessage(), ex);
-    }
-
-    if (isEducationUpdated) {
-      reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-      reqMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
-      reqMap.remove(JsonKey.USER_ID);
-    } else {
-      reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-      reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
-      reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-    }
-    try {
-      cassandraOperation.upsertRecord(eduDbInfo.getKeySpace(), eduDbInfo.getTableName(), reqMap);
-      telemetryGenerationForUserSubFields(
-          reqMap, userMap, isEducationUpdated, JsonKey.EDUCATION, JsonKey.USER);
-    } catch (Exception ex) {
-      ProjectLogger.log(ex.getMessage(), ex);
-    }
-  }
-
-  private void updateKeyCloakUserBase(Map<String, Object> userMap) {
-    try {
-      String userId = ssoManager.updateUser(userMap);
-      if (!(!StringUtils.isBlank(userId) && userId.equalsIgnoreCase(JsonKey.SUCCESS))) {
-        throw new ProjectCommonException(
-            ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
-            ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
-            ResponseCode.SERVER_ERROR.getResponseCode());
-      } else if (!StringUtils.isBlank((String) userMap.get(JsonKey.EMAIL))) {
-        // if Email is Null or Empty , it means we are not updating email
-        Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-        Map<String, Object> map = new HashMap<>();
-        map.put(JsonKey.ID, userId);
-        map.put(JsonKey.EMAIL_VERIFIED, false);
-        cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), map);
-      }
-    } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
-      throw new ProjectCommonException(
-          ResponseCode.userUpdationUnSuccessfull.getErrorCode(),
-          ResponseCode.userUpdationUnSuccessfull.getErrorMessage(),
-          ResponseCode.SERVER_ERROR.getResponseCode());
-    }
-  }
-
   /**
    * Method to create the new user , Username should be unique .
    *
@@ -1312,7 +724,6 @@ public class UserManagementActor extends BaseActor {
     } else {
       userRequestValidator.validateCreateUserV1Request(actorMessage);
     }
-
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
@@ -1357,212 +768,62 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private void processUserRequest(Map<String, Object> userMap) {
-    ProjectLogger.log("processUserRequest method started..");
-    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     Map<String, Object> requestMap = null;
-    Util.checkPhoneUniqueness(userMap, JsonKey.CREATE);
-    Util.checkEmailUniqueness(userMap, JsonKey.CREATE);
-    Map<String, Object> emailTemplateMap = new HashMap<>(userMap);
-    if (userMap.containsKey(JsonKey.WEB_PAGES)) {
-      SocialMediaType.validateSocialMedia(
-          (List<Map<String, String>>) userMap.get(JsonKey.WEB_PAGES));
-    }
-    // create loginId to ensure uniqueness for combination of userName and channel
-    String loginId = Util.getLoginId(userMap);
-    userMap.put(JsonKey.LOGIN_ID, loginId);
-    emailTemplateMap.put(JsonKey.USERNAME, loginId);
-    try {
-      User user = mapper.convertValue(userMap, User.class);
-      Util.checkUserExistOrNot(user);
-      if (CollectionUtils.isNotEmpty(user.getExternalIds())) {
-        List<Map<String, String>> list =
-            Util.copyAndConvertExternalIdsToLower(user.getExternalIds());
-        user.setExternalIds(list);
-        userMap.put(JsonKey.EXTERNAL_IDS, list);
-      }
-      Util.checkExternalIdUniqueness(user, JsonKey.CREATE);
-    } catch (Exception ex) {
-      sender().tell(ex, self());
-      return;
-    }
-
-    /** will ignore roles coming from req, Only public role is applicable for user by default */
-    userMap.remove(JsonKey.ROLES);
-    List<String> roles = new ArrayList<>();
-    roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
-    userMap.put(JsonKey.ROLES, roles);
-
-    /*
-     * Create User Entity in Registry
-     */
+    UserUtil.setUserDefaultValue(userMap);
+    User user = mapper.convertValue(userMap, User.class);
+    UserUtil.checkUserExistOrNot(user);
+    UserUtil.validateExternalIds(user, JsonKey.CREATE);
+    userMap.put(JsonKey.EXTERNAL_IDS, user.getExternalIds());
+    UserUtil.validateUserPhoneEmailAndWebPages(user, JsonKey.CREATE);
     if (IS_REGISTRY_ENABLED) {
       UserExtension userExtension = new UserProviderRegistryImpl();
       userExtension.create(userMap);
     }
 
-    String accessToken = "";
     if (isSSOEnabled) {
-      try {
-        String userId = "";
-        Map<String, String> responseMap = ssoManager.createUser(userMap);
-        userId = responseMap.get(JsonKey.USER_ID);
-        accessToken = responseMap.get(JsonKey.ACCESSTOKEN);
-        if (!StringUtils.isBlank(userId)) {
-          userMap.put(JsonKey.USER_ID, userId);
-          userMap.put(JsonKey.ID, userId);
-        } else {
-          ProjectCommonException exception =
-              new ProjectCommonException(
-                  ResponseCode.userRegUnSuccessfull.getErrorCode(),
-                  ResponseCode.userRegUnSuccessfull.getErrorMessage(),
-                  ResponseCode.SERVER_ERROR.getResponseCode());
-          sender().tell(exception, self());
-          return;
-        }
-      } catch (Exception exception) {
-        ProjectLogger.log(exception.getMessage(), exception);
-        sender().tell(exception, self());
-        return;
-      }
+      UserUtil.upsertUserInKeycloak(userMap, JsonKey.CREATE);
     } else {
       userMap.put(
           JsonKey.USER_ID, OneWayHashing.encryptVal((String) userMap.get(JsonKey.USERNAME)));
       userMap.put(JsonKey.ID, OneWayHashing.encryptVal((String) userMap.get(JsonKey.USERNAME)));
     }
-
-    userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-    userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
     if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
-      userMap.put(
-          JsonKey.PASSWORD, OneWayHashing.encryptVal((String) userMap.get(JsonKey.PASSWORD)));
+      userMap.put(JsonKey.PASSWORD, null);
     }
-    try {
-      UserUtility.encryptUserData(userMap);
-    } catch (Exception e1) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.userDataEncryptionError.getErrorCode(),
-              ResponseCode.userDataEncryptionError.getErrorMessage(),
-              ResponseCode.SERVER_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-    requestMap = new HashMap<>();
-    User cassandraUser = mapper.convertValue(userMap, User.class);
-    requestMap.putAll(mapper.convertValue(cassandraUser, Map.class));
+    requestMap = UserUtil.encryptUserData(userMap);
     removeUnwanted(requestMap);
-    // update db with emailVerified as false (default)
-    requestMap.put(JsonKey.EMAIL_VERIFIED, false);
-
-    // Since global settings are introduced, profile visibility map should be empty during user
-    // creation
-    requestMap.put(JsonKey.PROFILE_VISIBILITY, new HashMap<String, String>());
-
-    if (!StringUtils.isBlank((String) requestMap.get(JsonKey.COUNTRY_CODE))) {
-      requestMap.put(
-          JsonKey.COUNTRY_CODE, propertiesCache.getProperty(JsonKey.SUNBIRD_DEFAULT_COUNTRY_CODE));
-    }
-    requestMap.put(JsonKey.IS_DELETED, false);
     Response response = null;
     try {
       response =
           cassandraOperation.insertRecord(
               usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
-    } catch (ProjectCommonException exception) {
-      sender().tell(exception, self());
-      return;
     } finally {
       if (null == response && isSSOEnabled) {
         ssoManager.removeUser(userMap);
       }
-      /*
-       * Delete User Entity in Registry if cassandra insert fails
-       */
       if (null == response && IS_REGISTRY_ENABLED) {
         UserExtension userExtension = new UserProviderRegistryImpl();
         userExtension.delete(userMap);
       }
+      response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
     }
-    response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+    Response resp = null;
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      if (userMap.containsKey(JsonKey.ADDRESS)) {
-        List<Map<String, Object>> reqList =
-            (List<Map<String, Object>>) userMap.get(JsonKey.ADDRESS);
-        for (int i = 0; i < reqList.size(); i++) {
-          Map<String, Object> reqMap = reqList.get(i);
-          reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i + 1));
-          reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-          String encUserId = "";
-          String encCreatedById = "";
-          try {
-            encUserId = encryptionService.encryptData((String) userMap.get(JsonKey.ID));
-            encCreatedById =
-                encryptionService.encryptData((String) userMap.get(JsonKey.CREATED_BY));
-          } catch (Exception e) {
-            ProjectCommonException exception =
-                new ProjectCommonException(
-                    ResponseCode.userDataEncryptionError.getErrorCode(),
-                    ResponseCode.userDataEncryptionError.getErrorMessage(),
-                    ResponseCode.SERVER_ERROR.getResponseCode());
-            sender().tell(exception, self());
-            return;
-          }
-          reqMap.put(JsonKey.CREATED_BY, encCreatedById);
-          reqMap.put(JsonKey.USER_ID, encUserId);
-          try {
-            cassandraOperation.insertRecord(
-                addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), reqMap);
-            telemetryGenerationForUserSubFields(
-                reqMap, userMap, false, JsonKey.ADDRESS, JsonKey.USER);
-          } catch (Exception e) {
-            ProjectLogger.log(e.getMessage(), e);
-          }
-        }
-      }
-      if (userMap.containsKey(JsonKey.EDUCATION)) {
-        insertEducationDetails(userMap);
-      }
-      if (userMap.containsKey(JsonKey.JOB_PROFILE)) {
-        insertJobProfileDetails(userMap);
-      }
-      registerUserToOrg(userMap);
-
-      try {
-        // update the user external identity data
-        Util.addUserExtIds(userMap);
-      } catch (Exception ex) {
-        ProjectLogger.log(
-            "UserManagementActor:processUserRequest: Exception occurred while updating user external identity table.",
-            ex);
-      }
-    }
-
-    response.put(JsonKey.ACCESSTOKEN, accessToken);
-    sender().tell(response, self());
-
-    if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      ProjectLogger.log("UserManagementActor:processUserRequest: User creation success");
-      Request userRequest = new Request();
-      userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-      userRequest.getRequest().put(JsonKey.ID, userMap.get(JsonKey.ID));
-      ProjectLogger.log(
-          "UserManagementActor:processUserRequest: Trigger sync of user details to ES");
-      try {
-        tellToAnother(userRequest);
-      } catch (Exception ex) {
-        ProjectLogger.log(
-            "UserManagementActor:processUserRequest: Exception occurred with error message = "
-                + ex.getMessage(),
-            ex);
-      }
+      Map<String, Object> userRequest = new HashMap<>();
+      userRequest.putAll(userMap);
+      userRequest.put(JsonKey.OPERATION_TYPE, JsonKey.CREATE);
+      resp = saveUserAttributes(userRequest);
     } else {
       ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
     }
-
-    // object of telemetry event...
+    // Enable this when you want to send full response of user attributes
+    // response.putAll(resp.getResult());
+    sender().tell(response, self());
+    if (null != resp) {
+      saveUserDetailsToEs(userMap);
+    }
+    sendEmailAndSms(requestMap);
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
@@ -1570,198 +831,38 @@ public class UserManagementActor extends BaseActor {
         TelemetryUtil.generateTargetObject(
             (String) userMap.get(JsonKey.ID), JsonKey.USER, JsonKey.CREATE, null);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
-    sendEmailAndSms(userMap, emailTemplateMap);
   }
 
-  private void sendEmailAndSms(Map<String, Object> userMap, Map<String, Object> emailTemplateMap) {
-    // generate required action link and shorten the url
-    UserUtility.decryptUserData(userMap);
-    userMap.put(JsonKey.USERNAME, userMap.get(JsonKey.LOGIN_ID));
-    userMap.put(JsonKey.REDIRECT_URI, Util.getSunbirdWebUrlPerTenent(userMap));
-    Util.getUserRequiredActionLink(userMap);
-    // user created successfully send the onboarding mail
-    // putting rootOrgId to get web url per tenant while sending mail
-    emailTemplateMap.put(JsonKey.ROOT_ORG_ID, userMap.get(JsonKey.ROOT_ORG_ID));
-    emailTemplateMap.put(JsonKey.SET_PASSWORD_LINK, userMap.get(JsonKey.SET_PASSWORD_LINK));
-    emailTemplateMap.put(JsonKey.VERIFY_EMAIL_LINK, userMap.get(JsonKey.VERIFY_EMAIL_LINK));
-    emailTemplateMap.put(JsonKey.REDIRECT_URI, userMap.get(JsonKey.REDIRECT_URI));
-    Request welcomeMailReqObj = Util.sendOnboardingMail(emailTemplateMap);
-    if (null != welcomeMailReqObj) {
-      tellToAnother(welcomeMailReqObj);
-    }
-    ProjectLogger.log("calling Send SMS method:", LoggerEnum.INFO);
-    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PHONE))) {
-      Util.sendSMS(userMap);
-    }
+  private void sendEmailAndSms(Map<String, Object> userMap) {
+    // sendEmailAndSms
+    Request EmailAndSmsRequest = new Request();
+    EmailAndSmsRequest.getRequest().putAll(userMap);
+    EmailAndSmsRequest.setOperation(UserActorOperations.PROCESS_ONBOARDING_MAIL_AND_SMS.getValue());
+    tellToAnother(EmailAndSmsRequest);
   }
 
-  private void registerUserToOrg(Map<String, Object> userMap) {
-    // Register user to given orgId(not root orgId)
-    String organisationId = (String) userMap.get(JsonKey.ORGANISATION_ID);
-    if (StringUtils.isNotBlank(organisationId)) {
-      String hashTagId = Util.getHashTagIdFromOrgId((String) userMap.get(JsonKey.ORGANISATION_ID));
-      userMap.put(JsonKey.HASHTAGID, hashTagId);
-      Util.registerUserToOrg(userMap);
-    }
-    if ((StringUtils.isNotBlank(organisationId)
-            && !organisationId.equalsIgnoreCase((String) userMap.get(JsonKey.ROOT_ORG_ID)))
-        || StringUtils.isBlank(organisationId)) {
-      // Add user to root org
-      userMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ROOT_ORG_ID));
-      String hashTagId = Util.getHashTagIdFromOrgId((String) userMap.get(JsonKey.ROOT_ORG_ID));
-      userMap.put(JsonKey.HASHTAGID, hashTagId);
-      Util.registerUserToOrg(userMap);
-    }
+  private void saveUserDetailsToEs(Map<String, Object> completeUserMap) {
+    Request userRequest = new Request();
+    userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+    userRequest.getRequest().put(JsonKey.ID, completeUserMap.get(JsonKey.ID));
+    ProjectLogger.log(
+        "UserManagementActor:saveUserDetailsToEs: Trigger sync of user details to ES");
+    tellToAnother(userRequest);
   }
 
-  @SuppressWarnings("unchecked")
-  private void insertJobProfileDetails(Map<String, Object> userMap) {
-    Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-    Util.DbInfo jobProDbInfo = Util.dbInfoMap.get(JsonKey.JOB_PROFILE_DB);
-    List<Map<String, Object>> reqList =
-        (List<Map<String, Object>>) userMap.get(JsonKey.JOB_PROFILE);
-    for (int i = 0; i < reqList.size(); i++) {
-      Map<String, Object> reqMap = reqList.get(i);
-      reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i + 1));
-      String addrId = null;
-      Response addrResponse = null;
-      if (reqMap.containsKey(JsonKey.ADDRESS)) {
-        Map<String, Object> address = (Map<String, Object>) reqMap.get(JsonKey.ADDRESS);
-        addrId = ProjectUtil.getUniqueIdFromTimestamp(i + 1);
-        address.put(JsonKey.ID, addrId);
-        address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-        address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
-        try {
-          addrResponse =
-              cassandraOperation.insertRecord(
-                  addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), address);
-          telemetryGenerationForUserSubFields(
-              address, reqMap, false, JsonKey.ADDRESS, JsonKey.JOB_PROFILE);
-        } catch (Exception e) {
-          ProjectLogger.log(e.getMessage(), e);
-        }
-      }
-      if (null != addrResponse
-          && ((String) addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-        reqMap.put(JsonKey.ADDRESS_ID, addrId);
-        reqMap.remove(JsonKey.ADDRESS);
-      }
-      reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-      reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
-      reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-      try {
-        cassandraOperation.insertRecord(
-            jobProDbInfo.getKeySpace(), jobProDbInfo.getTableName(), reqMap);
-        telemetryGenerationForUserSubFields(
-            reqMap, userMap, false, JsonKey.JOB_PROFILE, JsonKey.USER);
-      } catch (Exception e) {
-        ProjectLogger.log(e.getMessage(), e);
-      }
+  private Response saveUserAttributes(Map<String, Object> userMap) {
+    Request request = new Request();
+    request.setOperation(UserActorOperations.SAVE_USER_ATTRIBUTES.getValue());
+    request.getRequest().putAll(userMap);
+    ProjectLogger.log("UserManagementActor:saveUserAttributes");
+    try {
+      return (Response)
+          interServiceCommunication.getResponse(
+              getActorRef(UserActorOperations.SAVE_USER_ATTRIBUTES.getValue()), request);
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
     }
-  }
-
-  @SuppressWarnings("unchecked")
-  private void insertEducationDetails(Map<String, Object> userMap) {
-    Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-    Util.DbInfo eduDbInfo = Util.dbInfoMap.get(JsonKey.EDUCATION_DB);
-    List<Map<String, Object>> reqList = (List<Map<String, Object>>) userMap.get(JsonKey.EDUCATION);
-    for (int i = 0; i < reqList.size(); i++) {
-      Map<String, Object> reqMap = reqList.get(i);
-      reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i + 1));
-      String addrId = null;
-      Response addrResponse = null;
-      if (reqMap.containsKey(JsonKey.ADDRESS)) {
-        Map<String, Object> address = (Map<String, Object>) reqMap.get(JsonKey.ADDRESS);
-        addrId = ProjectUtil.getUniqueIdFromTimestamp(i + 1);
-        address.put(JsonKey.ID, addrId);
-        address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-        address.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
-        try {
-          addrResponse =
-              cassandraOperation.insertRecord(
-                  addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), address);
-          telemetryGenerationForUserSubFields(
-              address, reqMap, false, JsonKey.ADDRESS, JsonKey.EDUCATION);
-        } catch (Exception e) {
-          ProjectLogger.log(e.getMessage(), e);
-        }
-      }
-      if (null != addrResponse
-          && ((String) addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-        reqMap.put(JsonKey.ADDRESS_ID, addrId);
-        reqMap.remove(JsonKey.ADDRESS);
-      }
-      try {
-        if (null != reqMap.get(JsonKey.YEAR_OF_PASSING)) {
-          reqMap.put(
-              JsonKey.YEAR_OF_PASSING,
-              ((BigInteger) reqMap.get(JsonKey.YEAR_OF_PASSING)).intValue());
-        } else {
-          reqMap.put(JsonKey.YEAR_OF_PASSING, 0);
-        }
-      } catch (Exception ex) {
-        ProjectLogger.log(ex.getMessage(), ex);
-        reqMap.put(JsonKey.YEAR_OF_PASSING, 0);
-      }
-      try {
-        if (null != reqMap.get(JsonKey.PERCENTAGE)) {
-          reqMap.put(
-              JsonKey.PERCENTAGE,
-              Double.parseDouble(String.valueOf(reqMap.get(JsonKey.PERCENTAGE))));
-        } else {
-          reqMap.put(JsonKey.PERCENTAGE, Double.parseDouble(String.valueOf("0")));
-        }
-      } catch (Exception ex) {
-        reqMap.put(JsonKey.PERCENTAGE, Double.parseDouble(String.valueOf("0")));
-        ProjectLogger.log(ex.getMessage(), ex);
-      }
-      reqMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-      reqMap.put(JsonKey.CREATED_BY, userMap.get(JsonKey.ID));
-      reqMap.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-      try {
-        cassandraOperation.insertRecord(eduDbInfo.getKeySpace(), eduDbInfo.getTableName(), reqMap);
-        telemetryGenerationForUserSubFields(
-            reqMap, userMap, false, JsonKey.EDUCATION, JsonKey.USER);
-      } catch (Exception e) {
-        ProjectLogger.log(e.getMessage(), e);
-      }
-    }
-  }
-
-  private void telemetryGenerationForUserSubFields(
-      Map<String, Object> reqMap,
-      Map<String, Object> userMap,
-      boolean isUpdated,
-      String type,
-      String correlatedOjectType) {
-
-    String currentState = JsonKey.CREATE;
-    if (isUpdated) {
-      currentState = JsonKey.UPDATE;
-    }
-    Map<String, Object> targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) reqMap.get(JsonKey.ID), type, currentState, null);
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    TelemetryUtil.generateCorrelatedObject(
-        (String) userMap.get(JsonKey.ID), correlatedOjectType, null, correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(reqMap, targetObject, correlatedObject);
-  }
-
-  private void telemetryGenerationForUserSubFieldsDeletion(
-      Map<String, Object> reqMap,
-      Map<String, Object> userMap,
-      String type,
-      String correlatedObjectType) {
-
-    String currentState = JsonKey.DELETE;
-    Map<String, Object> targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) reqMap.get(JsonKey.ID), type, currentState, null);
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    TelemetryUtil.generateCorrelatedObject(
-        (String) userMap.get(JsonKey.ID), correlatedObjectType, null, correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(reqMap, targetObject, correlatedObject);
+    return null;
   }
 
   private void removeUnwanted(Map<String, Object> reqMap) {

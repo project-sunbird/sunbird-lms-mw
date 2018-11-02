@@ -2,7 +2,6 @@ package org.sunbird.learner.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.sunbird.common.models.util.JsonKey;
@@ -166,5 +165,4 @@ public final class UserUtility {
     EncryptionService service = ServiceFactory.getEncryptionServiceInstance(null);
     return service.encryptData(data);
   }
-
 }

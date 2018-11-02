@@ -36,5 +36,4 @@ public class UrlActionDaoImpl implements UrlActionDao {
     List<UrlAction> urlActionList = mapper.convertValue(urlActionMapList, urlActionType);
     return urlActionList;
   }
-  
 }

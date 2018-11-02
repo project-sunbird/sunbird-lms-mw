@@ -46,7 +46,6 @@ import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
 import org.sunbird.common.models.util.PropertiesCache;
-import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
@@ -99,7 +98,6 @@ public final class Util {
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(
           null);
   private static ObjectMapper mapper = new ObjectMapper();
-  private static final String SUNBIRD_APP_URL = "sunbird_app_url";
 
   static {
     loadPropertiesFile();
@@ -1074,7 +1072,7 @@ public final class Util {
     }
   }
 
-  private static String encryptData(String value) {
+  public static String encryptData(String value) {
     try {
       return encryptionService.encryptData(value);
     } catch (Exception e) {

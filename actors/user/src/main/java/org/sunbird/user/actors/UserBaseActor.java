@@ -1,10 +1,10 @@
 package org.sunbird.user.actors;
 
+import akka.actor.ActorRef;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -17,8 +17,6 @@ import org.sunbird.user.dao.UserDao;
 import org.sunbird.user.dao.impl.UserDaoImpl;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
-
-import akka.actor.ActorRef;
 
 public abstract class UserBaseActor extends BaseActor {
 
@@ -36,7 +34,7 @@ public abstract class UserBaseActor extends BaseActor {
     Map<String, Object> targetObject =
         TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
     Map<String, Object> telemetryAction = new HashMap<>();
-    
+
     switch (objectType) {
       case "userLevel":
         telemetryAction.put("AssignRole", "role assigned at user level");
@@ -50,7 +48,7 @@ public abstract class UserBaseActor extends BaseActor {
       case "profileVisibility":
         telemetryAction.put("ProfileVisibility", "profile visibility setting changed");
         break;
-      default: 
+      default:
         // Do Nothing
     }
 
@@ -84,5 +82,4 @@ public abstract class UserBaseActor extends BaseActor {
   public UserService getUserService() {
     return userService;
   }
-
 }

@@ -59,7 +59,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
   private void upload(Request request) throws IOException {
     Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
     Object dataObject =
-        systemSettingClient.getSystemSettingByFieldKey(
+        systemSettingClient.getSystemSettingByFieldAndKey(
             getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
             "orgProfileConfig",
             "csv.supportedColumns",

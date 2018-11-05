@@ -124,24 +124,24 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
   }
 
   protected void validateMandatoryFields(
-      Map<String, Object> csvHeader, BulkUploadProcessTask task, String[] mandatoryFields)
+      Map<String, Object> csvColumns, BulkUploadProcessTask task, String[] mandatoryFields)
       throws JsonProcessingException {
-
     if (mandatoryFields != null) {
-      for (String s : mandatoryFields) {
-        if (StringUtils.isEmpty((String) csvHeader.get(s))) {
+      for (String field : mandatoryFields) {
+        if (StringUtils.isEmpty((String) csvColumns.get(field))) {
           setTaskStatus(
               task,
               ProjectUtil.BulkProcessStatus.FAILED,
               ResponseCode.mandatoryParamsMissing.getErrorMessage(),
-              csvHeader,
+              csvColumns,
               JsonKey.CREATE);
           ProjectCommonException.throwClientErrorException(
               ResponseCode.mandatoryParamsMissing,
               MessageFormat.format(
-                  ResponseCode.mandatoryParamsMissing.getErrorMessage(), new Object[] {s}));
+                  ResponseCode.mandatoryParamsMissing.getErrorMessage(), new Object[] {field}));
         }
       }
     }
   }
+
 }

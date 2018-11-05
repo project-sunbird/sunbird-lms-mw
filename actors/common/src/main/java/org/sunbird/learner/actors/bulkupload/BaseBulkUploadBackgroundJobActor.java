@@ -128,14 +128,12 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       throws JsonProcessingException {
     if (mandatoryFields != null) {
       for (String field : mandatoryFields) {
-        String message =
-            MessageFormat.format(
-                ResponseCode.mandatoryParamsMissing.getErrorMessage(), new Object[] {field});
         if (StringUtils.isEmpty((String) csvColumns.get(field))) {
-          setTaskStatus(
-              task, ProjectUtil.BulkProcessStatus.FAILED, message, csvColumns, JsonKey.CREATE);
-          ProjectCommonException.throwClientErrorException(
-              ResponseCode.mandatoryParamsMissing, message);
+          String errorMessage = MessageFormat.format(ResponseCode.mandatoryParamsMissing.getErrorMessage(), new Object[] {field});
+          
+          setTaskStatus(task, ProjectUtil.BulkProcessStatus.FAILED, errorMessage, csvColumns, JsonKey.CREATE);
+
+          ProjectCommonException.throwClientErrorException(ResponseCode.mandatoryParamsMissing, errorMessage);
         }
       }
     }

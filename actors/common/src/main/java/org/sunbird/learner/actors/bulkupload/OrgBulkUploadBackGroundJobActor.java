@@ -1,14 +1,18 @@
 package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import java.io.IOException;
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.org.OrganisationClient;
 import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
-import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.actorutil.systemsettings.SystemSettingClient;
+import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -24,6 +28,7 @@ import org.sunbird.models.organisation.Organisation;
 )
 public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJobActor {
   private OrganisationClient orgClient = new OrganisationClientImpl();
+  private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -67,22 +72,69 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
     String data = task.getData();
     try {
       Map<String, Object> orgMap = mapper.readValue(data, Map.class);
-      Organisation organisation = mapper.convertValue(orgMap, Organisation.class);
-      organisation.setId((String) orgMap.get(JsonKey.ORGANISATION_ID));
-      if (StringUtils.isEmpty(organisation.getId())) {
-        callCreateOrg(organisation, task);
-      } else {
-        callUpdateOrg(organisation, task);
+      Object mandatoryColumnsObject =
+          systemSettingClient.getSystemSettingByFieldKey(
+              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+              "orgProfileConfig",
+              "csv.mandatoryColumns",
+              new TypeReference<String[]>() {});
+      if (mandatoryColumnsObject != null) {
+        validateMandatoryFields(orgMap, task, (String[]) mandatoryColumnsObject);
       }
+      int status = getOrgStatus(orgMap);
+      if (status == -1) {
+        task.setFailureResult(ResponseCode.invalidOrgStatus.getErrorMessage());
+        task.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
+        return;
+      }
+
+      List<String> locationCodes = new ArrayList<>();
+      if (orgMap.get(JsonKey.LOCATION_CODE) instanceof String) {
+        locationCodes.add((String) orgMap.get(JsonKey.LOCATION_CODE));
+      } else {
+        locationCodes = (List<String>) orgMap.get(JsonKey.LOCATION_CODE);
+      }
+
+      Organisation organisation = mapper.convertValue(orgMap, Organisation.class);
+      organisation.setStatus(status);
+      organisation.setId((String) orgMap.get(JsonKey.ORGANISATION_ID));
+
+      if (StringUtils.isEmpty(organisation.getId())) {
+        callCreateOrg(organisation, task, locationCodes);
+      } else {
+        callUpdateOrg(organisation, task, locationCodes);
+      }
+
     } catch (IOException e) {
-      ProjectCommonException.throwClientErrorException(
-          ResponseCode.SERVER_ERROR, ResponseCode.SERVER_ERROR.getErrorMessage());
+      ProjectLogger.log(
+          "OrgBulkUploadBackGroundJobActor:callCreateOrg: Exception occurred with error message = "
+              + e.getMessage(),
+          LoggerEnum.INFO);
+      task.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
+      task.setFailureResult(e.getMessage());
     }
   }
 
-  private void callCreateOrg(Organisation org, BulkUploadProcessTask task)
+  private int getOrgStatus(Map<String, Object> orgMap) {
+    int status = ProjectUtil.OrgStatus.ACTIVE.getValue();
+    if (!StringUtils.isEmpty((String) orgMap.get(JsonKey.STATUS))) {
+      if (((String) orgMap.get(JsonKey.STATUS)).equalsIgnoreCase(JsonKey.INACTIVE)) {
+        status = ProjectUtil.OrgStatus.INACTIVE.getValue();
+      } else if (((String) orgMap.get(JsonKey.STATUS)).equalsIgnoreCase(JsonKey.ACTIVE)) {
+        status = ProjectUtil.OrgStatus.ACTIVE.getValue();
+      } else {
+        return -1;
+      }
+      orgMap.remove(JsonKey.STATUS);
+    }
+    return status;
+  }
+
+  private void callCreateOrg(
+      Organisation org, BulkUploadProcessTask task, List<String> locationCodes)
       throws JsonProcessingException {
     Map<String, Object> row = mapper.convertValue(org, Map.class);
+    row.put(JsonKey.LOCATION_CODE, locationCodes);
     String orgId;
     try {
       orgId = orgClient.createOrg(getActorRef(ActorOperations.CREATE_ORG.getValue()), row);
@@ -111,9 +163,11 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
     }
   }
 
-  private void callUpdateOrg(Organisation org, BulkUploadProcessTask task)
+  private void callUpdateOrg(
+      Organisation org, BulkUploadProcessTask task, List<String> locationCodes)
       throws JsonProcessingException {
     Map<String, Object> row = mapper.convertValue(org, Map.class);
+    row.put(JsonKey.LOCATION_CODE, locationCodes);
     try {
       row.put(JsonKey.ORGANISATION_ID, org.getId());
       orgClient.updateOrg(getActorRef(ActorOperations.UPDATE_ORG.getValue()), row);

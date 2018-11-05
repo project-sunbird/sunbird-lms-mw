@@ -66,10 +66,10 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
             new TypeReference<Map>() {});
     Map<String, Object> mandatoryMap = null;
     if (dataObject != null) {
-      mandatoryMap = (Map<String, Object>) dataObject;
-      List<String> madatoryList = new ArrayList<>();
-      mandatoryMap.forEach((key, value) -> madatoryList.add(key));
-      validateFileHeaderFields(req, madatoryList.toArray(new String[madatoryList.size()]), false);
+      mandatoryFieldsMap = (Map<String, Object>) dataObject;
+      List<String> mandatoryFieldsList = new ArrayList<>();
+      mandatoryFieldsMap.forEach((key, value) -> mandatoryFieldsList.add(key));
+      validateFileHeaderFields(req, mandatoryFieldsList.toArray(new String[mandatoryFieldsList.size()]), false);
     } else {
       validateFileHeaderFields(req, bulkOrgAllowedFields, false);
     }

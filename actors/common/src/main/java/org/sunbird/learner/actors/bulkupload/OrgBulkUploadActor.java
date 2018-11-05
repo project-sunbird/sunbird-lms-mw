@@ -64,25 +64,25 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
             "orgProfileConfig",
             "csv.supportedColumns",
             new TypeReference<Map>() {});
-    Map<String, Object> mandatoryFieldsMap = null;
+    Map<String, Object> supportedColumnsMap = null;
     if (dataObject != null) {
-      mandatoryFieldsMap = (Map<String, Object>) dataObject;
-      List<String> mandatoryFieldsList = new ArrayList<>();
-      mandatoryFieldsMap.forEach((key, value) -> mandatoryFieldsList.add(key));
-      validateFileHeaderFields(req, mandatoryFieldsList.toArray(new String[mandatoryFieldsList.size()]), false);
+      supportedColumnsMap = (Map<String, Object>) dataObject;
+      List<String> supportedColumnsList = new ArrayList<>();
+      supportedColumnsMap.forEach((key, value) -> supportedColumnsList.add(key));
+      validateFileHeaderFields(req, supportedColumnsList.toArray(new String[supportedColumnsList.size()]), false);
     } else {
       validateFileHeaderFields(req, bulkOrgAllowedFields, false);
     }
     BulkUploadProcess bulkUploadProcess =
         handleUpload(JsonKey.ORGANISATION, (String) req.get(JsonKey.CREATED_BY));
-    processOrgBulkUpload(req, bulkUploadProcess.getId(), bulkUploadProcess, mandatoryFieldsMap);
+    processOrgBulkUpload(req, bulkUploadProcess.getId(), bulkUploadProcess, supportedColumnsMap);
   }
 
   private void processOrgBulkUpload(
       Map<String, Object> req,
       String processId,
       BulkUploadProcess bulkUploadProcess,
-      Map<String, Object> mandatoryFieldsMap)
+      Map<String, Object> supportedColumnsMap)
       throws IOException {
     byte[] fileByteArray = null;
     if (null != req.get(JsonKey.FILE)) {
@@ -103,7 +103,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
           ResponseCode.errorNoRootOrgAssociated.getErrorMessage());
     }
     Integer recordCount =
-        validateAndParseRecords(fileByteArray, processId, additionalInfo, mandatoryFieldsMap);
+        validateAndParseRecords(fileByteArray, processId, additionalInfo, supportedColumnsMap);
     processBulkUpload(
         recordCount,
         processId,

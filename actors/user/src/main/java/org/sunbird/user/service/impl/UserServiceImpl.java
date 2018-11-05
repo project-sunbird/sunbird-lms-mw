@@ -40,7 +40,7 @@ public class UserServiceImpl implements UserService {
 
   @SuppressWarnings("unchecked")
   @Override
-  public Map<String, Object> getUserByUserIdAndOrgId(String userId, String orgId) {
+  public Map<String, Object> esGetUserOrg(String userId, String orgId) {
     Map<String, Object> filters = new HashMap<>();
     filters.put(StringFormatter.joinByDot(JsonKey.ORGANISATIONS, JsonKey.ORGANISATION_ID), orgId);
     filters.put(StringFormatter.joinByDot(JsonKey.ORGANISATIONS, JsonKey.USER_ID), userId);

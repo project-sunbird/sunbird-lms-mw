@@ -72,15 +72,14 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
     String data = task.getData();
     try {
       Map<String, Object> orgMap = mapper.readValue(data, Map.class);
-      Object mandatoryList =
+      Object mandatoryColumnsObject =
           systemSettingClient.getSystemSettingByFieldKey(
               getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
               "orgProfileConfig",
               "csv.mandatoryColumns",
               new TypeReference<String[]>() {});
-      if (mandatoryList != null) {
-        String[] mandatoryMap = (String[]) mandatoryList;
-        validateMandatoryFields(orgMap, task, mandatoryMap);
+      if (mandatoryColumnsObject != null) {
+        validateMandatoryFields(orgMap, task, (String[]) mandatoryColumnsObject);
       }
       int status = getOrgStatus(orgMap);
       if (status == -1) {
@@ -88,15 +87,18 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
         task.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
         return;
       }
+
       List<String> locationCodes = new ArrayList<>();
       if (orgMap.get(JsonKey.LOCATION_CODE) instanceof String) {
         locationCodes.add((String) orgMap.get(JsonKey.LOCATION_CODE));
       } else {
         locationCodes = (List<String>) orgMap.get(JsonKey.LOCATION_CODE);
       }
+
       Organisation organisation = mapper.convertValue(orgMap, Organisation.class);
       organisation.setStatus(status);
       organisation.setId((String) orgMap.get(JsonKey.ORGANISATION_ID));
+
       if (StringUtils.isEmpty(organisation.getId())) {
         callCreateOrg(organisation, task, locationCodes);
       } else {

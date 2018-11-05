@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
@@ -42,6 +43,7 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.extension.user.UserExtension;
 import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
@@ -60,7 +62,13 @@ import org.sunbird.user.util.UserUtil;
  * @author Amit Kumar
  */
 @ActorConfig(
-  tasks = {"createUser", "updateUser", "getUserProfile", "getUserDetailsByLoginId"},
+  tasks = {
+    "createUser",
+    "updateUser",
+    "getUserProfile",
+    "getUserDetailsByLoginId",
+    "getUserProfileV2"
+  },
   asyncTasks = {}
 )
 public class UserManagementActor extends BaseActor {
@@ -104,6 +112,9 @@ public class UserManagementActor extends BaseActor {
         break;
       case "getUserProfile":
         getUserProfile(request);
+        break;
+      case "getUserProfileV2":
+        getUserProfileV2(request);
         break;
       case "getUserDetailsByLoginId":
         getUserDetailsByLoginId(request);
@@ -220,31 +231,8 @@ public class UserManagementActor extends BaseActor {
         if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
           List<String> requestFields = (List<String>) actorMessage.getRequest().get(JsonKey.FIELDS);
           if (requestFields != null) {
-            if (!requestFields.contains(JsonKey.COMPLETENESS)) {
-              result.remove(JsonKey.COMPLETENESS);
-            }
-            if (!requestFields.contains(JsonKey.MISSING_FIELDS)) {
-              result.remove(JsonKey.MISSING_FIELDS);
-            }
-            if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
-              result.put(
-                  JsonKey.LAST_LOGIN_TIME,
-                  Long.parseLong(
-                      getLastLoginTime(
-                          (String) userMap.get(JsonKey.USER_ID),
-                          (String) result.get(JsonKey.LAST_LOGIN_TIME))));
-            }
-            if (!requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
-              result.remove(JsonKey.LAST_LOGIN_TIME);
-            }
-            if (requestFields.contains(JsonKey.TOPIC)) {
-              // fetch the topic details of all user associated orgs and append in the
-              // result
-              fetchTopicOfAssociatedOrgs(result);
-            }
-            if (requestFields.contains(JsonKey.ORGANISATIONS)) {
-              updateUserOrgInfo((List) result.get(JsonKey.ORGANISATIONS));
-            }
+            calculateUserExtraFields(
+                result, String.join(",", requestFields), (String) userMap.get(JsonKey.USER_ID));
           } else {
             result.remove(JsonKey.MISSING_FIELDS);
             result.remove(JsonKey.COMPLETENESS);
@@ -278,6 +266,21 @@ public class UserManagementActor extends BaseActor {
     prepUserOrgInfoWithAdditionalData(userOrgs, orgInfoMap, locationInfoMap);
   }
 
+  private void updateRoleMasterInfo(Map<String, Object> result) {
+    Set<Entry<String, Object>> entry = DataCacheHandler.getRoleMap().entrySet();
+    List<Map<String, String>> roleList = new ArrayList<>();
+    entry
+        .parallelStream()
+        .forEach(
+            (obj) -> {
+              Map<String, String> roleMap = new HashMap<>();
+              roleMap.put(JsonKey.ID, obj.getKey());
+              roleMap.put(JsonKey.NAME, (String) obj.getValue());
+              roleList.add(roleMap);
+            });
+    result.put(JsonKey.ROLE_LIST, roleList);
+  }
+
   private void prepUserOrgInfoWithAdditionalData(
       List<Map<String, Object>> userOrgs,
       Map<String, Map<String, Object>> orgInfoMap,
@@ -291,6 +294,15 @@ public class UserManagementActor extends BaseActor {
       usrOrg.put(
           JsonKey.LOCATIONS,
           prepLocationFields((List<String>) orgInfo.get(JsonKey.LOCATION_IDS), locationInfoMap));
+    }
+  }
+
+  private void trimDownUserProfileResponse(
+      Map<String, Object> response, List<String> ignoreFieldList) {
+    if (CollectionUtils.isNotEmpty(ignoreFieldList)) {
+      for (String key : ignoreFieldList) {
+        response.remove(key);
+      }
     }
   }
 
@@ -390,6 +402,30 @@ public class UserManagementActor extends BaseActor {
    * @param actorMessage Request
    */
   private void getUserProfile(Request actorMessage) {
+    Response response = getUserProfileData(actorMessage);
+    sender().tell(response, self());
+  }
+
+  /**
+   * Method to get the user profile .
+   *
+   * @param actorMessage Request
+   */
+  private void getUserProfileV2(Request actorMessage) {
+    Response response = getUserProfileData(actorMessage);
+    String ignoreFields = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USER_PROFILE_RESPONSE_EXCLUDE);
+    List<String> ignoreFieldList = Arrays.asList(ignoreFields);
+    trimDownUserProfileResponse(
+        (Map<String, Object>) response.get(JsonKey.RESPONSE), ignoreFieldList);
+    sender().tell(response, self());
+  }
+
+  /**
+   * Method to get the user profile .
+   *
+   * @param actorMessage Request
+   */
+  private Response getUserProfileData(Request actorMessage) {
     Map<String, Object> userMap = actorMessage.getRequest();
     Map<String, Object> result =
         ElasticSearchUtil.getDataByIdentifier(
@@ -447,42 +483,14 @@ public class UserManagementActor extends BaseActor {
         result.putAll(privateResult);
       }
     } catch (Exception e) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.userDataEncryptionError.getErrorCode(),
-              ResponseCode.userDataEncryptionError.getErrorMessage(),
-              ResponseCode.SERVER_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
+      throw new ProjectCommonException(
+          ResponseCode.userDataEncryptionError.getErrorCode(),
+          ResponseCode.userDataEncryptionError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
     }
     if (null != actorMessage.getContext().get(JsonKey.FIELDS)) {
       String requestFields = (String) actorMessage.getContext().get(JsonKey.FIELDS);
-      if (!StringUtils.isBlank(requestFields)) {
-        if (!requestFields.contains(JsonKey.COMPLETENESS)) {
-          result.remove(JsonKey.COMPLETENESS);
-        }
-        if (!requestFields.contains(JsonKey.MISSING_FIELDS)) {
-          result.remove(JsonKey.MISSING_FIELDS);
-        }
-        if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
-          result.put(
-              JsonKey.LAST_LOGIN_TIME,
-              Long.parseLong(
-                  getLastLoginTime(
-                      (String) userMap.get(JsonKey.USER_ID),
-                      (String) result.get(JsonKey.LAST_LOGIN_TIME))));
-        }
-        if (!requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
-          result.remove(JsonKey.LAST_LOGIN_TIME);
-        }
-        if (requestFields.contains(JsonKey.TOPIC)) {
-          // fetch the topic details of all user associated orgs and append in the result
-          fetchTopicOfAssociatedOrgs(result);
-        }
-        if (requestFields.contains(JsonKey.ORGANISATIONS)) {
-          updateUserOrgInfo((List) result.get(JsonKey.ORGANISATIONS));
-        }
-      }
+      calculateUserExtraFields(result, requestFields, (String) userMap.get(JsonKey.USER_ID));
     } else {
       result.remove(JsonKey.MISSING_FIELDS);
       result.remove(JsonKey.COMPLETENESS);
@@ -502,7 +510,36 @@ public class UserManagementActor extends BaseActor {
       result = new HashMap<>();
       response.put(JsonKey.RESPONSE, result);
     }
-    sender().tell(response, self());
+    return response;
+  }
+
+  private void calculateUserExtraFields(Map<String, Object> result, String fields, String userId) {
+    if (!StringUtils.isBlank(fields)) {
+      if (!fields.contains(JsonKey.COMPLETENESS)) {
+        result.remove(JsonKey.COMPLETENESS);
+      }
+      if (!fields.contains(JsonKey.MISSING_FIELDS)) {
+        result.remove(JsonKey.MISSING_FIELDS);
+      }
+      if (fields.contains(JsonKey.LAST_LOGIN_TIME)) {
+        result.put(
+            JsonKey.LAST_LOGIN_TIME,
+            Long.parseLong(getLastLoginTime(userId, (String) result.get(JsonKey.LAST_LOGIN_TIME))));
+      }
+      if (!fields.contains(JsonKey.LAST_LOGIN_TIME)) {
+        result.remove(JsonKey.LAST_LOGIN_TIME);
+      }
+      if (fields.contains(JsonKey.TOPIC)) {
+        // fetch the topic details of all user associated orgs and append in the result
+        fetchTopicOfAssociatedOrgs(result);
+      }
+      if (fields.contains(JsonKey.ORGANISATIONS)) {
+        updateUserOrgInfo((List) result.get(JsonKey.ORGANISATIONS));
+      }
+      if (fields.contains(JsonKey.ROLES)) {
+        updateRoleMasterInfo(result);
+      }
+    }
   }
 
   @SuppressWarnings("unchecked")

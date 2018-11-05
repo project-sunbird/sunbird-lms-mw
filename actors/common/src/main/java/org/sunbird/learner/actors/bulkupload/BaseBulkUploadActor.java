@@ -226,7 +226,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
       byte[] fileByteArray,
       String processId,
       Map<String, Object> additionalRowFields,
-      Map<String, Object> csvHeaderMap)
+      Map<String, Object> csvColumnMap)
       throws IOException {
 
     Integer sequence = 0;
@@ -247,8 +247,8 @@ public abstract class BaseBulkUploadActor extends BaseActor {
         } else {
           for (int j = 0; j < header.length; j++) {
             String value = (csvLine[j].trim().length() == 0 ? null : csvLine[j].trim());
-            if (csvHeaderMap != null) {
-              record.put((String) csvHeaderMap.get(header[j]), value);
+            if (csvColumnMap != null) {
+              record.put((String) csvColumnMap.get(header[j]), value);
             } else {
               record.put(header[j], value);
             }

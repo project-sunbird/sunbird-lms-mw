@@ -11,7 +11,6 @@ import akka.testkit.javadsl.TestKit;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import org.apache.commons.collections.map.HashedMap;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -83,62 +82,6 @@ public class CourseBatchManagementActorTest {
     Calendar calender = Calendar.getInstance();
     calender.add(Calendar.DAY_OF_MONTH, dayOffset);
     return format.format(calender.getTime());
-  }
-
-  private ProjectCommonException performUpdateCourseBatchFailureTest(
-      String startDate, String endDate, Response mockGetRecordByIdResponse) {
-    when(mockCassandraOperation.getRecordById(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(mockGetRecordByIdResponse);
-
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.UPDATE_BATCH.getValue());
-    HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.ID, BATCH_ID);
-    innerMap.put(JsonKey.NAME, BATCH_NAME);
-    innerMap.put(JsonKey.START_DATE, startDate);
-    innerMap.put(JsonKey.END_DATE, endDate);
-    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-
-    subject.tell(reqObj, probe.getRef());
-
-    ProjectCommonException exception =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    return exception;
-  }
-
-  private Response performUpdateCourseBatchSuccessTest(
-      String startDate,
-      String endDate,
-      Response mockGetRecordByIdResponse,
-      Response mockUpdateRecordResponse) {
-
-    when(mockCassandraOperation.getRecordById(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(mockGetRecordByIdResponse);
-
-    when(mockCassandraOperation.updateRecord(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(mockUpdateRecordResponse);
-
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.UPDATE_BATCH.getValue());
-    HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.ID, BATCH_ID);
-    innerMap.put(JsonKey.NAME, BATCH_NAME);
-
-    if (startDate != null) {
-      innerMap.put(JsonKey.START_DATE, startDate);
-    }
-    if (endDate != null) {
-      innerMap.put(JsonKey.END_DATE, endDate);
-    }
-    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-
-    subject.tell(reqObj, probe.getRef());
-
-    Response response = probe.expectMsgClass(duration("10 second"), Response.class);
-    return response;
   }
 
   private Response getMockCassandraResult() {
@@ -364,9 +307,7 @@ public class CourseBatchManagementActorTest {
         performUpdateCourseBatchFailureTest(
             null, getOffsetDate(existingEndDate, 4), mockGetRecordByIdResponse);
     Assert.assertTrue(
-        ((ProjectCommonException) exception)
-            .getCode()
-            .equals(ResponseCode.courseBatchStartDateRequired.getErrorCode()));
+        exception.getCode().equals(ResponseCode.courseBatchStartDateRequired.getErrorCode()));
   }
 
   @Test
@@ -380,82 +321,73 @@ public class CourseBatchManagementActorTest {
             getOffsetDate(existingEndDate, 4),
             mockGetRecordByIdResponse);
     Assert.assertTrue(
-        ((ProjectCommonException) exception)
-            .getCode()
-            .equals(ResponseCode.invalidBatchStartDateError.getErrorCode()));
+        exception.getCode().equals(ResponseCode.invalidBatchStartDateError.getErrorCode()));
   }
 
   @Test
   public void testCreateCourseBatchInviteOnlySuccess() {
-    mockCreateRequest(true);
-    actorMessage.setOperation(ActorOperations.CREATE_BATCH.getValue());
-    actorMessage.getRequest().putAll(getCourseBatchMap(false, false));
-    actorMessage.getContext().put(JsonKey.HEADER, new HashMap<>());
-    subject.tell(actorMessage, probe.getRef());
-    Response response = probe.expectMsgClass(duration("100 second"), Response.class);
+    Response response = performCreateCourseBatchSuccessTest(true, false, false);
     Assert.assertTrue(response != null);
   }
 
   @Test
   public void testCreateCourseBatchInviteOnlySuccessWithMentors() {
-    mockCreateRequest(true);
-    actorMessage.setOperation(ActorOperations.CREATE_BATCH.getValue());
-    actorMessage.getRequest().putAll(getCourseBatchMap(true, false));
-    actorMessage.getContext().put(JsonKey.HEADER, new HashMap<>());
-    subject.tell(actorMessage, probe.getRef());
-    Response response = probe.expectMsgClass(duration("100 second"), Response.class);
+    Response response = performCreateCourseBatchSuccessTest(true, true, false);
     Assert.assertTrue(response != null);
   }
 
   @Test
-  public void testCreateCourseBatchInviteOnlyFailureWithMentorseBelongToDifferentORG() {
-    mockCreateRequest(false);
-    actorMessage.setOperation(ActorOperations.CREATE_BATCH.getValue());
-    actorMessage.getRequest().putAll(getCourseBatchMap(true, false));
-    actorMessage.getContext().put(JsonKey.HEADER, new HashMap<>());
-    subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException exception =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+  public void testCreateCourseBatchInviteOnlyFailureWithMentorsInDifferentRootOrg() {
+    ProjectCommonException exception = performCreateCourseBatchFailureTest(false, true, false);
     Assert.assertTrue(exception != null);
   }
 
   @Test
-  public void testCreateCourseBatchInviteOnlyFailureWithParticipantsBelongToDifferentOrg() {
-    mockCreateRequest(false);
-    actorMessage.setOperation(ActorOperations.CREATE_BATCH.getValue());
-    actorMessage.getRequest().putAll(getCourseBatchMap(true, true));
-    actorMessage.getContext().put(JsonKey.HEADER, new HashMap<>());
-    subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException exception =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+  public void testCreateCourseBatchInviteOnlyFailureWithParticipantsInDifferentRootOrg() {
+    ProjectCommonException exception = performCreateCourseBatchFailureTest(false, true, true);
     Assert.assertTrue(exception != null);
   }
 
   @Test
   public void testCreateCourseBatchInviteOnlySuccessWithValidMentorsAndParticipants() {
-    mockCreateRequest(true);
-    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getElasticSearchResponseForMultipleUser());
-    actorMessage.setOperation(ActorOperations.CREATE_BATCH.getValue());
-    actorMessage.getRequest().putAll(getCourseBatchMap(true, true));
-    actorMessage.getContext().put(JsonKey.HEADER, new HashMap<>());
-    actorMessage.getContext().put(JsonKey.REQUESTED_BY, "someId");
-    subject.tell(actorMessage, probe.getRef());
-    Response response = probe.expectMsgClass(duration("100 second"), Response.class);
+    Response response = performCreateCourseBatchSuccessTest(true, true, true);
     Assert.assertTrue(response != null);
   }
 
-  private void mockCreateRequest(boolean sameOrg) {
+  private Response performCreateCourseBatchSuccessTest(
+      boolean mockCreateBatch, boolean addMentors, boolean addParticipants) {
+    mockCreateCourseBatch(mockCreateBatch);
+    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getMockESResponseForMultipleUser());
+    actorMessage.setOperation(ActorOperations.CREATE_BATCH.getValue());
+    actorMessage.getRequest().putAll(getCourseBatchMap(addMentors, addParticipants));
+    actorMessage.getContext().put(JsonKey.HEADER, new HashMap<>());
+    actorMessage.getContext().put(JsonKey.REQUESTED_BY, "someId");
+    subject.tell(actorMessage, probe.getRef());
+    return probe.expectMsgClass(duration("10 second"), Response.class);
+  }
+
+  private ProjectCommonException performCreateCourseBatchFailureTest(
+      boolean mockCreateBatch, boolean addMentors, boolean addParticipants) {
+    mockCreateCourseBatch(false);
+    actorMessage.setOperation(ActorOperations.CREATE_BATCH.getValue());
+    actorMessage.getRequest().putAll(getCourseBatchMap(true, true));
+    actorMessage.getContext().put(JsonKey.HEADER, new HashMap<>());
+    subject.tell(actorMessage, probe.getRef());
+    return probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+  }
+
+  private void mockCreateCourseBatch(boolean sameOrg) {
     when(mockCassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(new Response());
     when(EkStepRequestUtil.searchContent(Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(getEkStepMockResponse());
+        .thenReturn(getMockContentStoreResponse());
     when(ElasticSearchUtil.getDataByIdentifier(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getElasticSearchResponse(true))
-        .thenReturn(getElasticSearchResponse(true))
-        .thenReturn(getElasticSearchResponse(sameOrg));
+        .thenReturn(getMockESResponse(true))
+        .thenReturn(getMockESResponse(true))
+        .thenReturn(getMockESResponse(sameOrg));
   }
 
   public Map<String, Object> getCourseBatchMap(boolean addMentors, boolean addParticipants) {
@@ -476,7 +408,7 @@ public class CourseBatchManagementActorTest {
     return courseBatchMap;
   }
 
-  private Map getEkStepMockResponse() {
+  private Map getMockContentStoreResponse() {
     Map<String, Object> ekstepResponse = new HashMap<String, Object>();
     ekstepResponse.put(JsonKey.COUNT, VALUE);
 
@@ -486,7 +418,7 @@ public class CourseBatchManagementActorTest {
     return ekstepMockResult;
   }
 
-  private Map getElasticSearchResponse(boolean sameOrg) {
+  private Map getMockESResponse(boolean sameOrg) {
     Map<String, Object> elasticSearchResponse = new HashMap<String, Object>();
     elasticSearchResponse.put(JsonKey.RESPONSE, Arrays.asList(""));
     if (sameOrg) {
@@ -497,13 +429,69 @@ public class CourseBatchManagementActorTest {
     return elasticSearchResponse;
   }
 
-  private Map getElasticSearchResponseForMultipleUser() {
+  private Map getMockESResponseForMultipleUser() {
     Map<String, Object> elasticSearchResponse = new HashMap<String, Object>();
     elasticSearchResponse.put(JsonKey.RESPONSE, Arrays.asList(""));
     elasticSearchResponse.put(JsonKey.ROOT_ORG_ID, ROOT_ORG);
     elasticSearchResponse.put(JsonKey.ID, USER_ID);
-    Map<String, Object> resultResponse = new HashedMap();
+    Map<String, Object> resultResponse = new HashMap();
     resultResponse.put(JsonKey.CONTENT, Arrays.asList(elasticSearchResponse));
     return resultResponse;
+  }
+
+  private ProjectCommonException performUpdateCourseBatchFailureTest(
+      String startDate, String endDate, Response mockGetRecordByIdResponse) {
+    when(mockCassandraOperation.getRecordById(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(mockGetRecordByIdResponse);
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.UPDATE_BATCH.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.ID, BATCH_ID);
+    innerMap.put(JsonKey.NAME, BATCH_NAME);
+    innerMap.put(JsonKey.START_DATE, startDate);
+    innerMap.put(JsonKey.END_DATE, endDate);
+    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
+
+    subject.tell(reqObj, probe.getRef());
+
+    ProjectCommonException exception =
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    return exception;
+  }
+
+  private Response performUpdateCourseBatchSuccessTest(
+      String startDate,
+      String endDate,
+      Response mockGetRecordByIdResponse,
+      Response mockUpdateRecordResponse) {
+
+    when(mockCassandraOperation.getRecordById(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(mockGetRecordByIdResponse);
+
+    when(mockCassandraOperation.updateRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(mockUpdateRecordResponse);
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.UPDATE_BATCH.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.ID, BATCH_ID);
+    innerMap.put(JsonKey.NAME, BATCH_NAME);
+
+    if (startDate != null) {
+      innerMap.put(JsonKey.START_DATE, startDate);
+    }
+    if (endDate != null) {
+      innerMap.put(JsonKey.END_DATE, endDate);
+    }
+    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
+
+    subject.tell(reqObj, probe.getRef());
+
+    Response response = probe.expectMsgClass(duration("10 second"), Response.class);
+    return response;
   }
 }

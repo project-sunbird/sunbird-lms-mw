@@ -73,7 +73,7 @@ public class OrgBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJob
     try {
       Map<String, Object> orgMap = mapper.readValue(data, Map.class);
       Object mandatoryColumnsObject =
-          systemSettingClient.getSystemSettingByFieldKey(
+          systemSettingClient.getSystemSettingByFieldAndKey(
               getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
               "orgProfileConfig",
               "csv.mandatoryColumns",

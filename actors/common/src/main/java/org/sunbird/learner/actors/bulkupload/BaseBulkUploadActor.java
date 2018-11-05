@@ -364,7 +364,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
       sender().tell(response, self());
     } else {
       ProjectLogger.log(
-          "BaseBulkUploadActor:handleUpload: Error in creating record in bulk_upload_process.");
+          "BaseBulkUploadActor:handleUpload: Error creating record in bulk_upload_process.");
       throw new ProjectCommonException(
           ResponseCode.SERVER_ERROR.getErrorCode(),
           ResponseCode.SERVER_ERROR.getErrorMessage(),

@@ -68,10 +68,10 @@ public class EducationManagementActor extends BaseActor {
               insertEducationDetails(requestMap, educationDetailsMap, addrResponse, createdBy));
         } catch (ProjectCommonException e) {
           errMsgs.add(e.getMessage());
-          ProjectLogger.log(e.getMessage(), e);
+          ProjectLogger.log("EducationManagementActor:insertEducation: Exception occurred with error message = " + e.getMessage(), e);
         } catch (Exception e) {
-          errMsgs.add("Error occurred while inserting Education Details.");
-          ProjectLogger.log(e.getMessage(), e);
+          errMsgs.add("Error occurred while inserting education details.");
+          ProjectLogger.log("EducationManagementActor:insertEducation: Generic exception occurred with error message = " + e.getMessage(), e);
         }
       }
     } catch (Exception e) {
@@ -120,10 +120,10 @@ public class EducationManagementActor extends BaseActor {
           }
         } catch (ProjectCommonException e) {
           errMsgs.add(e.getMessage());
-          ProjectLogger.log(e.getMessage(), e);
+          ProjectLogger.log("EducationManagementActor:updateEducation: Exception occurred with error message = " + e.getMessage(), e);
         } catch (Exception e) {
-          errMsgs.add("Error occurred while updating Education Details.");
-          ProjectLogger.log(e.getMessage(), e);
+          errMsgs.add("Error occurred while updating education details.");
+          ProjectLogger.log("EducationManagementActor:updateEducation: Generic exception occurred with error message = " + e.getMessage(), e);
         }
       }
     } catch (Exception e) {

@@ -86,6 +86,7 @@ public class UserExternalIdManagementActor extends BaseActor {
     List<Map<String, String>> dbResExternalIds = getUserExternalIds(requestMap);
     List<Map<String, String>> externalIds =
         (List<Map<String, String>>) requestMap.get(JsonKey.EXTERNAL_IDS);
+    List<Map<String, Object>> responseExternalIdList = new ArrayList<>();
     if (CollectionUtils.isNotEmpty(externalIds)) {
       // will not allow user to update idType value, if user will try to update idType will
       // ignore
@@ -187,7 +188,7 @@ public class UserExternalIdManagementActor extends BaseActor {
         ResponseCode.CLIENT_ERROR.getResponseCode());
   }
 
-  private static void upsertUserExternalIdentityData(
+  private static Map<String, Object> upsertUserExternalIdentityData(
       Map<String, String> extIdsMap, Map<String, Object> requestMap, String operation) {
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.EXTERNAL_ID, Util.encryptData(extIdsMap.get(JsonKey.ID)));
@@ -207,5 +208,6 @@ public class UserExternalIdManagementActor extends BaseActor {
       map.put(JsonKey.LAST_UPDATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
     }
     cassandraOperation.upsertRecord(JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, map);
+    return map;
   }
 }

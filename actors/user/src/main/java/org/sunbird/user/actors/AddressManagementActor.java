@@ -53,6 +53,7 @@ public class AddressManagementActor extends BaseActor {
         (List<Map<String, Object>>) requestMap.get(JsonKey.ADDRESS);
     Response response = new Response();
     List<String> errMsgs = new ArrayList<>();
+    List<Map<String, Object>> responseAddressList = new ArrayList<>();
     try {
       String encUserId = encryptionService.encryptData((String) requestMap.get(JsonKey.ID));
       String encCreatedById =
@@ -60,7 +61,7 @@ public class AddressManagementActor extends BaseActor {
       for (int i = 0; i < addressList.size(); i++) {
         try {
           Map<String, Object> address = addressList.get(i);
-          createAddress(encUserId, encCreatedById, address);
+          responseAddressList.add(createAddress(encUserId, encCreatedById, address));
         } catch (ProjectCommonException e) {
           errMsgs.add(e.getMessage());
           ProjectLogger.log(e.getMessage(), e);
@@ -73,6 +74,7 @@ public class AddressManagementActor extends BaseActor {
       errMsgs.add(e.getMessage());
       ProjectLogger.log(e.getMessage(), e);
     }
+    response.put(JsonKey.ADDRESS, responseAddressList);
     if (CollectionUtils.isNotEmpty(errMsgs)) {
       response.put(JsonKey.KEY, JsonKey.ADDRESS);
       response.put(JsonKey.ERROR_MSG, errMsgs);
@@ -89,6 +91,7 @@ public class AddressManagementActor extends BaseActor {
         (List<Map<String, Object>>) requestMap.get(JsonKey.ADDRESS);
     Response response = new Response();
     List<String> errMsgs = new ArrayList<>();
+    List<Map<String, Object>> responseAddressList = new ArrayList<>();
     try {
       String encUserId = encryptionService.encryptData((String) requestMap.get(JsonKey.ID));
       String encCreatedById =
@@ -102,12 +105,13 @@ public class AddressManagementActor extends BaseActor {
             continue;
           }
           if (!address.containsKey(JsonKey.ID)) {
-            createAddress(encUserId, encCreatedById, address);
+            responseAddressList.add(createAddress(encUserId, encCreatedById, address));
           } else {
             address.put(JsonKey.UPDATED_BY, encCreatedById);
             address.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
             address.remove(JsonKey.USER_ID);
             addressDao.updateAddress(address);
+            responseAddressList.add(address);
           }
         } catch (ProjectCommonException e) {
           errMsgs.add(e.getMessage());
@@ -121,6 +125,7 @@ public class AddressManagementActor extends BaseActor {
       errMsgs.add(e.getMessage());
       ProjectLogger.log(e.getMessage(), e);
     }
+    response.put(JsonKey.ADDRESS, responseAddressList);
     if (CollectionUtils.isNotEmpty(errMsgs)) {
       response.put(JsonKey.KEY, JsonKey.ADDRESS);
       response.put(JsonKey.ERROR_MSG, errMsgs);
@@ -130,11 +135,13 @@ public class AddressManagementActor extends BaseActor {
     sender().tell(response, self());
   }
 
-  private void createAddress(String encUserId, String encCreatedById, Map<String, Object> address) {
+  private Map<String, Object> createAddress(
+      String encUserId, String encCreatedById, Map<String, Object> address) {
     address.put(JsonKey.CREATED_BY, encCreatedById);
     address.put(JsonKey.USER_ID, encUserId);
     address.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
     address.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     addressDao.createAddress(address);
+    return address;
   }
 }

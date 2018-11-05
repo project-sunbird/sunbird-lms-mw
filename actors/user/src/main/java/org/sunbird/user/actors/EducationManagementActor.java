@@ -53,6 +53,7 @@ public class EducationManagementActor extends BaseActor {
         (List<Map<String, Object>>) requestMap.get(JsonKey.EDUCATION);
     Response response = new Response();
     List<String> errMsgs = new ArrayList<>();
+    List<Map<String, Object>> responseEducationList = new ArrayList<>();
     try {
       for (int i = 0; i < reqList.size(); i++) {
         try {
@@ -63,7 +64,8 @@ public class EducationManagementActor extends BaseActor {
           if (educationDetailsMap.containsKey(JsonKey.ADDRESS)) {
             addrResponse = upsertEducationAddressDetails(educationDetailsMap, createdBy);
           }
-          insertEducationDetails(requestMap, educationDetailsMap, addrResponse, createdBy);
+          responseEducationList.add(
+              insertEducationDetails(requestMap, educationDetailsMap, addrResponse, createdBy));
         } catch (ProjectCommonException e) {
           errMsgs.add(e.getMessage());
           ProjectLogger.log(e.getMessage(), e);
@@ -76,6 +78,7 @@ public class EducationManagementActor extends BaseActor {
       errMsgs.add(e.getMessage());
       ProjectLogger.log(e.getMessage(), e);
     }
+    response.put(JsonKey.EDUCATION, responseEducationList);
     if (CollectionUtils.isNotEmpty(errMsgs)) {
       response.put(JsonKey.KEY, JsonKey.EDUCATION);
       response.put(JsonKey.ERROR_MSG, errMsgs);
@@ -92,6 +95,7 @@ public class EducationManagementActor extends BaseActor {
         (List<Map<String, Object>>) requestMap.get(JsonKey.EDUCATION);
     Response response = new Response();
     List<String> errMsgs = new ArrayList<>();
+    List<Map<String, Object>> responseEducationList = new ArrayList<>();
     try {
       for (int i = 0; i < reqList.size(); i++) {
         try {
@@ -108,9 +112,11 @@ public class EducationManagementActor extends BaseActor {
           }
           if (StringUtils.isBlank((String) educationDetailsMap.get(JsonKey.ID))) {
             educationDetailsMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
-            insertEducationDetails(requestMap, educationDetailsMap, addrResponse, createdBy);
+            responseEducationList.add(
+                insertEducationDetails(requestMap, educationDetailsMap, addrResponse, createdBy));
           } else {
-            updateEducationDetails(educationDetailsMap, addrResponse, createdBy);
+            responseEducationList.add(
+                updateEducationDetails(educationDetailsMap, addrResponse, createdBy));
           }
         } catch (ProjectCommonException e) {
           errMsgs.add(e.getMessage());
@@ -124,6 +130,7 @@ public class EducationManagementActor extends BaseActor {
       errMsgs.add(e.getMessage());
       ProjectLogger.log(e.getMessage(), e);
     }
+    response.put(JsonKey.EDUCATION, responseEducationList);
     if (CollectionUtils.isNotEmpty(errMsgs)) {
       response.put(JsonKey.KEY, JsonKey.EDUCATION);
       response.put(JsonKey.ERROR_MSG, errMsgs);
@@ -133,7 +140,7 @@ public class EducationManagementActor extends BaseActor {
     sender().tell(response, self());
   }
 
-  private void updateEducationDetails(
+  private Map<String, Object> updateEducationDetails(
       Map<String, Object> educationDetailsMap, Response addrResponse, String createdBy) {
     if (null != addrResponse
         && ((String) addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
@@ -145,6 +152,8 @@ public class EducationManagementActor extends BaseActor {
     educationDetailsMap.put(JsonKey.UPDATED_BY, createdBy);
     educationDetailsMap.remove(JsonKey.USER_ID);
     educationDao.upsertEducation(educationDetailsMap);
+    educationDetailsMap.put(JsonKey.ADDRESS, addrResponse.get(JsonKey.ADDRESS));
+    return educationDetailsMap;
   }
 
   @SuppressWarnings("unchecked")
@@ -182,18 +191,15 @@ public class EducationManagementActor extends BaseActor {
     return addressId;
   }
 
-  @SuppressWarnings("unchecked")
-  private void insertEducationDetails(
+  private Map<String, Object> insertEducationDetails(
       Map<String, Object> requestMap,
       Map<String, Object> educationDetailsMap,
       Response addrResponse,
       String createdBy) {
 
-    Map<String, Object> address = null;
     if (null != addrResponse
         && ((String) addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       educationDetailsMap.put(JsonKey.ADDRESS_ID, addrResponse.get(JsonKey.ADDRESS_ID));
-      address = (Map<String, Object>) educationDetailsMap.get(JsonKey.ADDRESS);
       educationDetailsMap.remove(JsonKey.ADDRESS);
     }
     validateYearOfPassingAndPercentageDetails(educationDetailsMap);
@@ -201,7 +207,8 @@ public class EducationManagementActor extends BaseActor {
     educationDetailsMap.put(JsonKey.CREATED_BY, createdBy);
     educationDetailsMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.ID));
     educationDao.createEducation(educationDetailsMap);
-    educationDetailsMap.put(JsonKey.ADDRESS, address);
+    educationDetailsMap.put(JsonKey.ADDRESS, addrResponse.get(JsonKey.ADDRESS));
+    return educationDetailsMap;
   }
 
   private void validateYearOfPassingAndPercentageDetails(Map<String, Object> educationDetailsMap) {
@@ -251,6 +258,7 @@ public class EducationManagementActor extends BaseActor {
     }
     addrResponse = addressDao.upsertAddress(address);
     addrResponse.put(JsonKey.ADDRESS_ID, addrId);
+    addrResponse.put(JsonKey.ADDRESS, address);
     return addrResponse;
   }
 }

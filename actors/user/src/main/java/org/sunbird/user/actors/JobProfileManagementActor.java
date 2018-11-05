@@ -52,6 +52,7 @@ public class JobProfileManagementActor extends BaseActor {
         (List<Map<String, Object>>) requestMap.get(JsonKey.JOB_PROFILE);
     Response response = new Response();
     List<String> errMsgs = new ArrayList<>();
+    List<Map<String, Object>> responseJobProfileList = new ArrayList<>();
     try {
       for (int i = 0; i < reqList.size(); i++) {
         try {
@@ -62,7 +63,8 @@ public class JobProfileManagementActor extends BaseActor {
           if (jobProfileMap.containsKey(JsonKey.ADDRESS)) {
             addrResponse = upsertJobProfileAddressDetails(jobProfileMap, createdBy);
           }
-          insertJobProfileDetails(requestMap, jobProfileMap, addrResponse, createdBy);
+          responseJobProfileList.add(
+              insertJobProfileDetails(requestMap, jobProfileMap, addrResponse, createdBy));
         } catch (ProjectCommonException e) {
           errMsgs.add(e.getMessage());
           ProjectLogger.log(e.getMessage(), e);
@@ -75,6 +77,7 @@ public class JobProfileManagementActor extends BaseActor {
       errMsgs.add(e.getMessage());
       ProjectLogger.log(e.getMessage(), e);
     }
+    response.put(JsonKey.JOB_PROFILE, responseJobProfileList);
     if (CollectionUtils.isNotEmpty(errMsgs)) {
       response.put(JsonKey.KEY, JsonKey.JOB_PROFILE);
       response.put(JsonKey.ERROR_MSG, errMsgs);
@@ -91,6 +94,7 @@ public class JobProfileManagementActor extends BaseActor {
         (List<Map<String, Object>>) requestMap.get(JsonKey.JOB_PROFILE);
     Response response = new Response();
     List<String> errMsgs = new ArrayList<>();
+    List<Map<String, Object>> responseJobProfileList = new ArrayList<>();
     try {
       for (int i = 0; i < reqList.size(); i++) {
         try {
@@ -107,9 +111,11 @@ public class JobProfileManagementActor extends BaseActor {
           }
           if (StringUtils.isBlank((String) jobProfileMap.get(JsonKey.ID))) {
             jobProfileMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(i));
-            insertJobProfileDetails(requestMap, jobProfileMap, addrResponse, createdBy);
+            responseJobProfileList.add(
+                insertJobProfileDetails(requestMap, jobProfileMap, addrResponse, createdBy));
           } else {
-            updateJobProfileDetails(jobProfileMap, addrResponse, createdBy);
+            responseJobProfileList.add(
+                updateJobProfileDetails(jobProfileMap, addrResponse, createdBy));
           }
         } catch (ProjectCommonException e) {
           errMsgs.add(e.getMessage());
@@ -123,6 +129,7 @@ public class JobProfileManagementActor extends BaseActor {
       errMsgs.add(e.getMessage());
       ProjectLogger.log(e.getMessage(), e);
     }
+    response.put(JsonKey.JOB_PROFILE, responseJobProfileList);
     if (CollectionUtils.isNotEmpty(errMsgs)) {
       response.put(JsonKey.KEY, JsonKey.JOB_PROFILE);
       response.put(JsonKey.ERROR_MSG, errMsgs);
@@ -132,7 +139,7 @@ public class JobProfileManagementActor extends BaseActor {
     sender().tell(response, self());
   }
 
-  private void updateJobProfileDetails(
+  private Map<String, Object> updateJobProfileDetails(
       Map<String, Object> jobProfileMap, Response addrResponse, String createdBy) {
     if (null != addrResponse
         && ((String) addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
@@ -143,6 +150,8 @@ public class JobProfileManagementActor extends BaseActor {
     jobProfileMap.put(JsonKey.UPDATED_BY, createdBy);
     jobProfileMap.remove(JsonKey.USER_ID);
     jobProfileDao.upsertJobProfile(jobProfileMap);
+    jobProfileMap.put(JsonKey.ADDRESS, addrResponse.get(JsonKey.ADDRESS));
+    return jobProfileMap;
   }
 
   @SuppressWarnings("unchecked")
@@ -176,24 +185,22 @@ public class JobProfileManagementActor extends BaseActor {
     return addressId;
   }
 
-  @SuppressWarnings("unchecked")
-  private void insertJobProfileDetails(
+  private Map<String, Object> insertJobProfileDetails(
       Map<String, Object> requestMap,
       Map<String, Object> jobProfileMap,
       Response addrResponse,
       String createdBy) {
-    Map<String, Object> address = null;
     if (null != addrResponse
         && ((String) addrResponse.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       jobProfileMap.put(JsonKey.ADDRESS_ID, addrResponse.get(JsonKey.ADDRESS_ID));
-      address = (Map<String, Object>) jobProfileMap.get(JsonKey.ADDRESS);
       jobProfileMap.remove(JsonKey.ADDRESS);
     }
     jobProfileMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     jobProfileMap.put(JsonKey.CREATED_BY, createdBy);
     jobProfileMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.ID));
     jobProfileDao.createJobProfile(jobProfileMap);
-    jobProfileMap.put(JsonKey.ADDRESS, address);
+    jobProfileMap.put(JsonKey.ADDRESS, addrResponse.get(JsonKey.ADDRESS));
+    return jobProfileMap;
   }
 
   @SuppressWarnings("unchecked")
@@ -216,6 +223,7 @@ public class JobProfileManagementActor extends BaseActor {
     }
     addrResponse = addressDao.upsertAddress(address);
     addrResponse.put(JsonKey.ADDRESS_ID, addrId);
+    addrResponse.put(JsonKey.ADDRESS, address);
     return addrResponse;
   }
 }

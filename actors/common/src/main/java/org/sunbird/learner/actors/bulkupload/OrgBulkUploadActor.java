@@ -15,7 +15,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.util.Util;
-import org.sunbird.models.systemsetting.SystemSetting;
 
 @ActorConfig(
   tasks = {"orgBulkUpload"},
@@ -23,6 +22,26 @@ import org.sunbird.models.systemsetting.SystemSetting;
 )
 public class OrgBulkUploadActor extends BaseBulkUploadActor {
   private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
+  private String[] bulkOrgAllowedFields = {
+    JsonKey.ORGANISATION_ID,
+    JsonKey.ORGANISATION_NAME,
+    JsonKey.EXTERNAL_ID,
+    JsonKey.DESCRIPTION,
+    JsonKey.LOCATION_CODE,
+    JsonKey.STATUS,
+    JsonKey.CHANNEL,
+    JsonKey.IS_ROOT_ORG,
+    JsonKey.PROVIDER,
+    JsonKey.HOME_URL,
+    JsonKey.ORG_CODE,
+    JsonKey.ORG_TYPE,
+    JsonKey.PREFERRED_LANGUAGE,
+    JsonKey.THEME,
+    JsonKey.CONTACT_DETAILS,
+    JsonKey.LOC_ID,
+    JsonKey.HASHTAGID,
+  };
+
   private int pos = 0;
 
   @Override
@@ -39,19 +58,19 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
 
   private void upload(Request request) throws IOException {
     Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
-    SystemSetting systemSetting =
+    Map<String, Object> csvMap =
         systemSettingClient.getSystemSettingByField(
-            getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()), "orgProfileConfig");
+            getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()), "orgProfileConfig", "csv");
     Map<String, Object> mandatoryMap = null;
-    if (systemSetting != null) {
+    if (csvMap != null) {
       ObjectMapper objectMapper = new ObjectMapper();
-      Map<String, Object> valueMap = objectMapper.readValue(systemSetting.getValue(), Map.class);
-      Map<String, Object> csvMap = objectMapper.convertValue(valueMap.get("csv"), Map.class);
       mandatoryMap = objectMapper.convertValue(csvMap.get("supportedColumns"), Map.class);
       String[] mandatoryFields = new String[mandatoryMap.size()];
       pos = 0;
       mandatoryMap.forEach((key, value) -> mandatoryFields[pos++] = key);
       validateFileHeaderFields(req, mandatoryFields, false);
+    } else {
+      validateFileHeaderFields(req, bulkOrgAllowedFields, false);
     }
     BulkUploadProcess bulkUploadProcess =
         handleUpload(JsonKey.ORGANISATION, (String) req.get(JsonKey.CREATED_BY));

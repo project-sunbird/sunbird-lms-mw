@@ -233,7 +233,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     Integer count = 0;
     CSVReader csvReader = null;
     String[] csvLine;
-    String[] header = null;
+    String[] csvColumns = null;
     Map<String, Object> record = new HashMap<>();
     List<BulkUploadProcessTask> records = new ArrayList<>();
     try {
@@ -243,14 +243,14 @@ public abstract class BaseBulkUploadActor extends BaseActor {
           continue;
         }
         if (sequence == 0) {
-          header = trimColumnAttributes(csvLine);
+          csvColumns = trimColumnAttributes(csvLine);
         } else {
-          for (int j = 0; j < header.length; j++) {
+          for (int j = 0; j < csvColumns.length; j++) {
             String value = (csvLine[j].trim().length() == 0 ? null : csvLine[j].trim());
             if (csvColumnMap != null) {
-              record.put((String) csvColumnMap.get(header[j]), value);
+              record.put((String) csvColumnMap.get(csvColumns[j]), value);
             } else {
-              record.put(header[j], value);
+              record.put(csvColumns[j], value);
             }
           }
           record.putAll(additionalRowFields);

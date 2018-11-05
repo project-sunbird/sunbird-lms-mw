@@ -78,8 +78,8 @@ public class JobProfileManagementActor extends BaseActor {
       ProjectLogger.log(e.getMessage(), e);
     }
     response.put(JsonKey.JOB_PROFILE, responseJobProfileList);
+    response.put(JsonKey.KEY, JsonKey.JOB_PROFILE);
     if (CollectionUtils.isNotEmpty(errMsgs)) {
-      response.put(JsonKey.KEY, JsonKey.JOB_PROFILE);
       response.put(JsonKey.ERROR_MSG, errMsgs);
     } else {
       response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);

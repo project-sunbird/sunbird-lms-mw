@@ -806,10 +806,15 @@ public class UserManagementActor extends BaseActor {
       ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
     }
     // Enable this when you want to send full response of user attributes
-    response.putAll((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE));
+    Map<String, Object> esResponse = new HashMap<>();
+    esResponse.putAll((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE));
+    esResponse.putAll(requestMap);
+    response.put(
+        JsonKey.ERRORS,
+        ((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ERRORS));
     sender().tell(response, self());
     if (null != resp) {
-      saveUserDetailsToEs(userMap);
+      saveUserDetailsToEs(esResponse);
     }
     sendEmailAndSms(requestMap);
     Map<String, Object> targetObject = null;

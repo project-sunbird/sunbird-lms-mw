@@ -43,10 +43,9 @@ public class UserProfileUpdateActor extends BaseActor {
 
   private void saveUserAttributes(Request request) {
     Map<String, Object> userMap = request.getRequest();
-    List<Future<Object>> futures = new ArrayList<>();
     String operationType = (String) userMap.get(JsonKey.OPERATION_TYPE);
     userMap.remove(JsonKey.OPERATION_TYPE);
-    getFutures(userMap, operationType);
+    List<Future<Object>> futures = getFutures(userMap, operationType);
     Future<Iterable<Object>> futuresSequence = Futures.sequence(futures, getContext().dispatcher());
     Future<Response> futureResponse = getResponseFromFutureResult(futuresSequence);
     Patterns.pipe(futureResponse, getContext().dispatcher()).to(sender());
@@ -65,6 +64,9 @@ public class UserProfileUpdateActor extends BaseActor {
                 Response response = (Response) object;
                 Map<String, Object> result = response.getResult();
                 String key = (String) result.get(JsonKey.KEY);
+                if (StringUtils.isNotBlank(key)) {
+                  map.put(key, result.get(key));
+                }
                 @SuppressWarnings("unchecked")
                 List<String> errMsgList = (List<String>) result.get(JsonKey.ERROR_MSG);
                 if (CollectionUtils.isNotEmpty(errMsgList)) {
@@ -107,7 +109,7 @@ public class UserProfileUpdateActor extends BaseActor {
       futures.add(saveJobProfile(userMap, operationType));
     }
     if (CollectionUtils.isNotEmpty((List<Map<String, String>>) userMap.get(JsonKey.EXTERNAL_IDS))) {
-      futures.add(saveUserExternalIds(userMap, operationType));
+      futures.add(saveUserExternalIds(userMap));
     }
     if (StringUtils.isNotBlank((String) userMap.get(JsonKey.ORGANISATION_ID))
         || StringUtils.isNotBlank((String) userMap.get(JsonKey.ROOT_ORG_ID))) {
@@ -116,7 +118,7 @@ public class UserProfileUpdateActor extends BaseActor {
     return futures;
   }
 
-  private Future<Object> saveUserExternalIds(Map<String, Object> userMap, String operationType) {
+  private Future<Object> saveUserExternalIds(Map<String, Object> userMap) {
     try {
       Request userExternalIdsRequest = new Request();
       userExternalIdsRequest.getRequest().putAll(userMap);

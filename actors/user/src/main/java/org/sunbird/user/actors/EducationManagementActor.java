@@ -79,8 +79,8 @@ public class EducationManagementActor extends BaseActor {
       ProjectLogger.log(e.getMessage(), e);
     }
     response.put(JsonKey.EDUCATION, responseEducationList);
+    response.put(JsonKey.KEY, JsonKey.EDUCATION);
     if (CollectionUtils.isNotEmpty(errMsgs)) {
-      response.put(JsonKey.KEY, JsonKey.EDUCATION);
       response.put(JsonKey.ERROR_MSG, errMsgs);
     } else {
       response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);

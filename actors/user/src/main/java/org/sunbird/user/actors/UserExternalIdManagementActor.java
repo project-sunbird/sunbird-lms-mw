@@ -50,6 +50,7 @@ public class UserExternalIdManagementActor extends BaseActor {
     requestMap.remove(JsonKey.OPERATION_TYPE);
     List<Map<String, String>> externalIds =
         (List<Map<String, String>>) requestMap.get(JsonKey.EXTERNAL_IDS);
+    List<Map<String, Object>> responseExternalIdList = new ArrayList<>();
     if (CollectionUtils.isNotEmpty(externalIds)) {
       Response response = new Response();
       List<String> errMsgs = new ArrayList<>();
@@ -58,17 +59,19 @@ public class UserExternalIdManagementActor extends BaseActor {
           if (JsonKey.CREATE.equalsIgnoreCase(operationtype)) {
             if (StringUtils.isBlank(extIdsMap.get(JsonKey.OPERATION))
                 || JsonKey.ADD.equalsIgnoreCase(extIdsMap.get(JsonKey.OPERATION))) {
-              upsertUserExternalIdentityData(extIdsMap, requestMap, JsonKey.CREATE);
+              responseExternalIdList.add(
+                  upsertUserExternalIdentityData(extIdsMap, requestMap, JsonKey.CREATE));
             }
           } else {
-            updateUserExtId(requestMap);
+            updateUserExtId(requestMap, responseExternalIdList);
           }
         } catch (Exception e) {
           errMsgs.add(e.getMessage());
           ProjectLogger.log(e.getMessage(), e);
         }
+        response.put(JsonKey.EXTERNAL_IDS, responseExternalIdList);
+        response.put(JsonKey.KEY, JsonKey.EXTERNAL_IDS);
         if (CollectionUtils.isNotEmpty(errMsgs)) {
-          response.put(JsonKey.KEY, JsonKey.EXTERNAL_IDS);
           response.put(JsonKey.ERROR_MSG, errMsgs);
         } else {
           response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
@@ -82,11 +85,11 @@ public class UserExternalIdManagementActor extends BaseActor {
   }
 
   @SuppressWarnings("unchecked")
-  public static void updateUserExtId(Map<String, Object> requestMap) {
+  public static void updateUserExtId(
+      Map<String, Object> requestMap, List<Map<String, Object>> responseExternalIdList) {
     List<Map<String, String>> dbResExternalIds = getUserExternalIds(requestMap);
     List<Map<String, String>> externalIds =
         (List<Map<String, String>>) requestMap.get(JsonKey.EXTERNAL_IDS);
-    List<Map<String, Object>> responseExternalIdList = new ArrayList<>();
     if (CollectionUtils.isNotEmpty(externalIds)) {
       // will not allow user to update idType value, if user will try to update idType will
       // ignore
@@ -99,13 +102,15 @@ public class UserExternalIdManagementActor extends BaseActor {
         if (JsonKey.ADD.equalsIgnoreCase(extIdMap.get(JsonKey.OPERATION))
             || StringUtils.isBlank(extIdMap.get(JsonKey.OPERATION))) {
           if (MapUtils.isEmpty(map)) {
-            upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.CREATE);
+            responseExternalIdList.add(
+                upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.CREATE));
           } else {
             // if external Id with same provider and idType exist then delete first then update
             // to update user externalId first we need to delete the record as externalId is the
             // part of composite key
             deleteUserExternalId(map);
-            upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.UPDATE);
+            responseExternalIdList.add(
+                upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.UPDATE));
           }
         } else {
           // operation is either edit or remove
@@ -120,7 +125,8 @@ public class UserExternalIdManagementActor extends BaseActor {
               // to update user externalId first we need to delete the record as externalId is the
               // part of composite key
               deleteUserExternalId(map);
-              upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.UPDATE);
+              responseExternalIdList.add(
+                  upsertUserExternalIdentityData(extIdMap, requestMap, JsonKey.UPDATE));
             }
           } else {
             throwExternalIDNotFoundException(

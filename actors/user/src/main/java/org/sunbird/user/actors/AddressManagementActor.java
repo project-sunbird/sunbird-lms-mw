@@ -75,8 +75,8 @@ public class AddressManagementActor extends BaseActor {
       ProjectLogger.log(e.getMessage(), e);
     }
     response.put(JsonKey.ADDRESS, responseAddressList);
+    response.put(JsonKey.KEY, JsonKey.ADDRESS);
     if (CollectionUtils.isNotEmpty(errMsgs)) {
-      response.put(JsonKey.KEY, JsonKey.ADDRESS);
       response.put(JsonKey.ERROR_MSG, errMsgs);
     } else {
       response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);

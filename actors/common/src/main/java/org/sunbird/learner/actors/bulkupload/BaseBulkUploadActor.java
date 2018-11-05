@@ -247,7 +247,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
         } else {
           for (int j = 0; j < header.length; j++) {
             String value = (csvLine[j].trim().length() == 0 ? null : csvLine[j].trim());
-            if (csvHeaderMap != null) {
+            if (csvHeaderMap != null && csvHeaderMap.get(header[j]) != null) {
               record.put((String) csvHeaderMap.get(header[j]), value);
             } else {
               record.put(header[j], value);

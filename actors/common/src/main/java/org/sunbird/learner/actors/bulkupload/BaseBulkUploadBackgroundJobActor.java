@@ -130,16 +130,12 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
     if (mandatoryFields != null) {
       for (String s : mandatoryFields) {
         if (StringUtils.isEmpty((String) csvHeader.get(s))) {
-          setTaskStatus(
-              task,
-              ProjectUtil.BulkProcessStatus.FAILED,
-              ResponseCode.mandatoryParamsMissing.getErrorMessage(),
-              csvHeader,
-              JsonKey.CREATE);
-          ProjectCommonException.throwClientErrorException(
-              ResponseCode.mandatoryParamsMissing,
+          String msg =
               MessageFormat.format(
-                  ResponseCode.mandatoryParamsMissing.getErrorMessage(), new Object[] {s}));
+                  ResponseCode.mandatoryParamsMissing.getErrorMessage(), new Object[] {s});
+          setTaskStatus(task, ProjectUtil.BulkProcessStatus.FAILED, msg, csvHeader, JsonKey.CREATE);
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.mandatoryParamsMissing, msg);
         }
       }
     }

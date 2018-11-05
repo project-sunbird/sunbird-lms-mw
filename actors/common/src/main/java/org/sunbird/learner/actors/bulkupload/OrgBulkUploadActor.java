@@ -1,8 +1,10 @@
 package org.sunbird.learner.actors.bulkupload;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
@@ -42,8 +44,6 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
     JsonKey.HASHTAGID,
   };
 
-  private int pos = 0;
-
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, TelemetryEnvKey.ORGANISATION);
@@ -58,17 +58,18 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
 
   private void upload(Request request) throws IOException {
     Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
-    Map<String, Object> csvMap =
-        systemSettingClient.getSystemSettingByField(
-            getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()), "orgProfileConfig", "csv");
+    Object dataObject =
+        systemSettingClient.getSystemSettingByFieldKey(
+            getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+            "orgProfileConfig",
+            "csv.supportedColumns",
+            new TypeReference<Map>() {});
     Map<String, Object> mandatoryMap = null;
-    if (csvMap != null) {
-      ObjectMapper objectMapper = new ObjectMapper();
-      mandatoryMap = objectMapper.convertValue(csvMap.get("supportedColumns"), Map.class);
-      String[] mandatoryFields = new String[mandatoryMap.size()];
-      pos = 0;
-      mandatoryMap.forEach((key, value) -> mandatoryFields[pos++] = key);
-      validateFileHeaderFields(req, mandatoryFields, false);
+    if (dataObject != null) {
+      mandatoryMap = (Map<String, Object>) dataObject;
+      List<String> madatoryList = new ArrayList<>();
+      mandatoryMap.forEach((key, value) -> madatoryList.add(key));
+      validateFileHeaderFields(req, madatoryList.toArray(new String[madatoryList.size()]), false);
     } else {
       validateFileHeaderFields(req, bulkOrgAllowedFields, false);
     }

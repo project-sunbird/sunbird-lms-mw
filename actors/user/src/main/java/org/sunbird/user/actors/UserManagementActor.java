@@ -63,8 +63,8 @@ import org.sunbird.user.util.UserUtil;
   tasks = {
     "createUser",
     "updateUser",
-    "getUserProfile",
     "getUserDetailsByLoginId",
+    "getUserProfile",
     "getUserProfileV2"
   },
   asyncTasks = {}
@@ -98,12 +98,12 @@ public class UserManagementActor extends BaseActor {
     ExecutionContext.setRequestId(request.getRequestId());
     if (systemSettingActorRef == null) {
       ProjectLogger.log(
-          "UserManagementActor:onReceive systemSettingActorRef is initialised first time.",
+          "UserManagementActor:onReceive: systemSettingActorRef is initialised first time.",
           LoggerEnum.INFO.name());
       systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
     } else {
       ProjectLogger.log(
-          "UserManagementActor:onReceive systemSettingActorRef is already initialised.",
+          "UserManagementActor:onReceive: systemSettingActorRef is already initialised.",
           LoggerEnum.INFO.name());
     }
     String operation = request.getOperation();
@@ -401,9 +401,9 @@ public class UserManagementActor extends BaseActor {
   }
 
   /**
-   * Method to get the user profile .
+   * Method to get user profile (version 1).
    *
-   * @param actorMessage Request
+   * @param actorMessage Request containing user ID
    */
   private void getUserProfile(Request actorMessage) {
     Response response = getUserProfileData(actorMessage);
@@ -411,36 +411,31 @@ public class UserManagementActor extends BaseActor {
   }
 
   /**
-   * Method to get the user profile .
+   * Method to get user profile (version 2).
    *
-   * @param actorMessage Request
+   * @param actorMessage Request containing user ID
    */
   private void getUserProfileV2(Request actorMessage) {
     Response response = getUserProfileData(actorMessage);
     SystemSettingClient systemSetting = new SystemSettingClientImpl();
-    Object excludeFields =
+    Object excludedFields =
         systemSetting.getSystemSettingByFieldAndKey(
             systemSettingActorRef,
             JsonKey.USER_PROFILE_CONFIG,
             JsonKey.SUNBIRD_USER_PROFILE_READ_EXCLUDED_FIELDS,
             new TypeReference<String[]>() {});
-    if (excludeFields != null && excludeFields instanceof String[]) {
-      List<String> excludeFieldList = Arrays.asList((String[]) excludeFields);
+    if (excludedFields != null && excludedFields instanceof String[]) {
+      List<String> excludeFieldList = Arrays.asList((String[]) excludedFields);
       removeExcludedFieldsFromUserProfileResponse(
           (Map<String, Object>) response.get(JsonKey.RESPONSE), excludeFieldList);
     } else {
       ProjectLogger.log(
-          "UserManagementActor:getUserProfileV2 system settings for userProfileConfig.read.excludedFields not found.",
+          "UserManagementActor:getUserProfileV2: System setting userProfileConfig.read.excludedFields not configured.",
           LoggerEnum.INFO.name());
     }
     sender().tell(response, self());
   }
 
-  /**
-   * Method to get the user profile .
-   *
-   * @param actorMessage Request
-   */
   private Response getUserProfileData(Request actorMessage) {
     Map<String, Object> userMap = actorMessage.getRequest();
     Map<String, Object> result =

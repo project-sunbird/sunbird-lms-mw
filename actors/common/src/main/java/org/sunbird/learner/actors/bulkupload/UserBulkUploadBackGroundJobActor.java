@@ -1,12 +1,14 @@
 package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import java.io.IOException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.actorutil.systemsettings.SystemSettingClient;
+import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.actorutil.user.UserClient;
 import org.sunbird.actorutil.user.impl.UserClientImpl;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -25,6 +27,7 @@ import org.sunbird.models.user.User;
 )
 public class UserBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJobActor {
   private UserClient userClient = new UserClientImpl();
+  private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -67,15 +70,24 @@ public class UserBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJo
     ProjectLogger.log("UserBulkUploadBackGroundJobActor: processUser called", LoggerEnum.INFO);
     String data = task.getData();
     try {
-      Map<String, Object> orgMap = mapper.readValue(data, Map.class);
-      User user = mapper.convertValue(orgMap, User.class);
-      user.setId((String) orgMap.get(JsonKey.USER_ID));
+      Map<String, Object> userMap = mapper.readValue(data, Map.class);
+      Object mandatoryColumnsObject =
+          systemSettingClient.getSystemSettingByFieldAndKey(
+              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+              "orgProfileConfig",
+              "csv.mandatoryColumns",
+              new TypeReference<String[]>() {});
+      if (mandatoryColumnsObject != null) {
+        validateMandatoryFields(userMap, task, (String[]) mandatoryColumnsObject);
+      }
+      User user = mapper.convertValue(userMap, User.class);
+      user.setId((String) userMap.get(JsonKey.USER_ID));
       if (StringUtils.isEmpty(user.getId())) {
         callCreateUser(user, task);
       } else {
         callUpdateUser(user, task);
       }
-    } catch (IOException e) {
+    } catch (Exception e) {
       ProjectCommonException.throwClientErrorException(
           ResponseCode.SERVER_ERROR, ResponseCode.SERVER_ERROR.getErrorMessage());
     }

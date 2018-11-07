@@ -1,9 +1,15 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.actorutil.systemsettings.SystemSettingClient;
+import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
+import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.BulkUploadActorOperation;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.TelemetryEnvKey;
@@ -17,6 +23,7 @@ import org.sunbird.learner.util.Util;
   asyncTasks = {}
 )
 public class UserBulkUploadActor extends BaseBulkUploadActor {
+  private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
   private String[] bulkUserAllowedFields = {
     JsonKey.FIRST_NAME,
     JsonKey.LAST_NAME,
@@ -57,7 +64,22 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
 
   private void upload(Request request) throws IOException {
     Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
-    validateFileHeaderFields(req, bulkUserAllowedFields, false);
+    Object dataObject =
+        systemSettingClient.getSystemSettingByFieldAndKey(
+            getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+            "userProfileConfig",
+            "csv.supportedColumns",
+            new TypeReference<Map>() {});
+    Map<String, Object> supportedColumnsMap = null;
+    if (dataObject != null) {
+      supportedColumnsMap = (Map<String, Object>) dataObject;
+      List<String> supportedColumnsList = new ArrayList<>();
+      supportedColumnsMap.forEach((key, value) -> supportedColumnsList.add(key));
+      validateFileHeaderFields(
+          req, supportedColumnsList.toArray(new String[supportedColumnsList.size()]), false);
+    } else {
+      validateFileHeaderFields(req, bulkUserAllowedFields, false);
+    }
     BulkUploadProcess bulkUploadProcess =
         handleUpload(JsonKey.USER, (String) req.get(JsonKey.CREATED_BY));
     processUserBulkUpload(req, bulkUploadProcess.getId(), bulkUploadProcess);

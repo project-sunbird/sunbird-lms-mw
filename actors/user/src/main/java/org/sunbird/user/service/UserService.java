@@ -6,7 +6,7 @@ import org.sunbird.models.user.User;
 
 public interface UserService {
 
-  Map<String, Object> getUserByUserIdAndOrgId(String userId, String orgId);
+  Map<String, Object> esGetUserOrg(String userId, String orgId);
 
   User getUserById(String userId);
 

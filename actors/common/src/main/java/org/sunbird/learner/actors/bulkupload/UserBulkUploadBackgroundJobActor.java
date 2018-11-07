@@ -112,7 +112,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
 
     if (StringUtils.isEmpty(userId)) {
       ProjectLogger.log(
-          "UserBulkUploadBackgroundJobActor:callCreateUser: Org ID is null !", LoggerEnum.ERROR);
+          "UserBulkUploadBackgroundJobActor:callCreateUser: User ID is null !", LoggerEnum.ERROR);
       setTaskStatus(
           task,
           ProjectUtil.BulkProcessStatus.FAILED,

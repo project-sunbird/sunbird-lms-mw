@@ -1,6 +1,5 @@
 package org.sunbird.user.actors;
 
-import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
@@ -9,16 +8,12 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.util.Util;
-import org.sunbird.services.sso.SSOManager;
-import org.sunbird.services.sso.SSOServiceFactory;
 
 @ActorConfig(
   tasks = {"userCurrentLogin"},
   asyncTasks = {}
 )
-public class UserLoginActor extends BaseActor {
-
-  private SSOManager ssoManager = SSOServiceFactory.getInstance();
+public class UserLoginActor extends UserBaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -44,7 +39,7 @@ public class UserLoginActor extends BaseActor {
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
     if (Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED))) {
-      boolean loginTimeResponse = ssoManager.addUserLoginTime(userId);
+      boolean loginTimeResponse = getSSOManager().addUserLoginTime(userId);
       ProjectLogger.log(
           "UserLoginActor:updateUserLoginTime: keycloak response = " + loginTimeResponse);
     }

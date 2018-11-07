@@ -85,7 +85,7 @@ public class DataCacheHandler implements Runnable {
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (null != responseList && !responseList.isEmpty()) {
       for (Map<String, Object> resultMap : responseList) {
-        roleMap.put((String) resultMap.get(JsonKey.ID), resultMap.get(JsonKey.ID));
+        roleMap.put((String) resultMap.get(JsonKey.ID), resultMap.get(JsonKey.NAME));
       }
     }
     Response response2 = cassandraOperation.getAllRecords(KEY_SPACE_NAME, JsonKey.ROLE);
@@ -93,7 +93,7 @@ public class DataCacheHandler implements Runnable {
         (List<Map<String, Object>>) response2.get(JsonKey.RESPONSE);
     if (null != responseList2 && !responseList2.isEmpty()) {
       for (Map<String, Object> resultMap2 : responseList2) {
-        roleMap.put((String) resultMap2.get(JsonKey.ID), resultMap2.get(JsonKey.ID));
+        roleMap.put((String) resultMap2.get(JsonKey.ID), resultMap2.get(JsonKey.NAME));
       }
     }
   }

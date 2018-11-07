@@ -97,9 +97,9 @@ public class UserBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJo
       throws JsonProcessingException {
     ProjectLogger.log("UserBulkUploadBackGroundJobActor: callCreateUser called", LoggerEnum.INFO);
     Map<String, Object> row = mapper.convertValue(user, Map.class);
-    String orgId;
+    String userId;
     try {
-      orgId = userClient.createUser(getActorRef(ActorOperations.CREATE_USER.getValue()), row);
+      userId = userClient.createUser(getActorRef(ActorOperations.CREATE_USER.getValue()), row);
     } catch (Exception ex) {
       ProjectLogger.log(
           "UserBulkUploadBackGroundJobActor:callCreateUser: Exception occurred with error message = "
@@ -110,7 +110,7 @@ public class UserBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJo
       return;
     }
 
-    if (StringUtils.isEmpty(orgId)) {
+    if (StringUtils.isEmpty(userId)) {
       ProjectLogger.log(
           "UserBulkUploadBackGroundJobActor:callCreateUser: Org ID is null !", LoggerEnum.ERROR);
       setTaskStatus(
@@ -120,7 +120,7 @@ public class UserBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJo
           row,
           JsonKey.CREATE);
     } else {
-      row.put(JsonKey.ID, orgId);
+      row.put(JsonKey.ID, userId);
       setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, row, JsonKey.CREATE);
     }
   }

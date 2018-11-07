@@ -47,7 +47,8 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
     JsonKey.EXTERNAL_ID,
     JsonKey.EXTERNAL_ID_TYPE,
     JsonKey.EXTERNAL_IDS,
-    JsonKey.USER_ID
+    JsonKey.USER_ID,
+    JsonKey.ORG_ID
   };
 
   @Override

@@ -418,16 +418,15 @@ public class UserManagementActor extends BaseActor {
   private void getUserProfileV2(Request actorMessage) {
     Response response = getUserProfileData(actorMessage);
     SystemSettingClient systemSetting = new SystemSettingClientImpl();
-    Object excludedFields =
+    Object excludeFieldList =
         systemSetting.getSystemSettingByFieldAndKey(
             systemSettingActorRef,
             JsonKey.USER_PROFILE_CONFIG,
             JsonKey.SUNBIRD_USER_PROFILE_READ_EXCLUDED_FIELDS,
-            new TypeReference<String[]>() {});
-    if (excludedFields != null && excludedFields instanceof String[]) {
-      List<String> excludeFieldList = Arrays.asList((String[]) excludedFields);
+            new TypeReference<List<String>>() {});
+    if (excludeFieldList != null) {
       removeExcludedFieldsFromUserProfileResponse(
-          (Map<String, Object>) response.get(JsonKey.RESPONSE), excludeFieldList);
+          (Map<String, Object>) response.get(JsonKey.RESPONSE), (List<String>) excludeFieldList);
     } else {
       ProjectLogger.log(
           "UserManagementActor:getUserProfileV2: System setting userProfileConfig.read.excludedFields not configured.",

@@ -55,12 +55,6 @@ import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
 import org.sunbird.user.util.UserUtil;
 
-/**
- * This actor will handle course enrollment operation .
- *
- * @author Manzarul
- * @author Amit Kumar
- */
 @ActorConfig(
   tasks = {
     "createUser",
@@ -94,7 +88,6 @@ public class UserManagementActor extends BaseActor {
       InterServiceCommunicationFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
 
-  /** Receives the actor message and perform the course enrollment operation . */
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.USER);

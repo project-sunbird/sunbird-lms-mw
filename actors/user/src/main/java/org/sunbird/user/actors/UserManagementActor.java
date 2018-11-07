@@ -3,6 +3,7 @@ package org.sunbird.user.actors;
 import static org.sunbird.learner.util.Util.isNotNull;
 
 import akka.actor.ActorRef;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -21,12 +22,15 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
+import org.sunbird.actorutil.systemsettings.SystemSettingClient;
+import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
@@ -100,7 +104,14 @@ public class UserManagementActor extends BaseActor {
     Util.initializeContext(request, JsonKey.USER);
     ExecutionContext.setRequestId(request.getRequestId());
     if (systemSettingActorRef == null) {
+      ProjectLogger.log(
+          "UserManagementActor:onReceive systemSettingActorRef is initialised first time.",
+          LoggerEnum.INFO.name());
       systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
+    } else {
+      ProjectLogger.log(
+          "UserManagementActor:onReceive systemSettingActorRef is already initialised.",
+          LoggerEnum.INFO.name());
     }
     String operation = request.getOperation();
     switch (operation) {
@@ -231,7 +242,7 @@ public class UserManagementActor extends BaseActor {
         if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
           List<String> requestFields = (List<String>) actorMessage.getRequest().get(JsonKey.FIELDS);
           if (requestFields != null) {
-            calculateUserExtraFields(
+            addExtraFieldsInUserProfileResponse(
                 result, String.join(",", requestFields), (String) userMap.get(JsonKey.USER_ID));
           } else {
             result.remove(JsonKey.MISSING_FIELDS);
@@ -267,15 +278,15 @@ public class UserManagementActor extends BaseActor {
   }
 
   private void updateRoleMasterInfo(Map<String, Object> result) {
-    Set<Entry<String, Object>> entry = DataCacheHandler.getRoleMap().entrySet();
+    Set<Entry<String, Object>> roleSet = DataCacheHandler.getRoleMap().entrySet();
     List<Map<String, String>> roleList = new ArrayList<>();
-    entry
+    roleSet
         .parallelStream()
         .forEach(
-            (obj) -> {
+            (roleSetItem) -> {
               Map<String, String> roleMap = new HashMap<>();
-              roleMap.put(JsonKey.ID, obj.getKey());
-              roleMap.put(JsonKey.NAME, (String) obj.getValue());
+              roleMap.put(JsonKey.ID, roleSetItem.getKey());
+              roleMap.put(JsonKey.NAME, (String) roleSetItem.getValue());
               roleList.add(roleMap);
             });
     result.put(JsonKey.ROLE_LIST, roleList);
@@ -297,10 +308,10 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
-  private void trimDownUserProfileResponse(
-      Map<String, Object> response, List<String> ignoreFieldList) {
-    if (CollectionUtils.isNotEmpty(ignoreFieldList)) {
-      for (String key : ignoreFieldList) {
+  private void removeExcludedFieldsFromUserProfileResponse(
+      Map<String, Object> response, List<String> excludeFields) {
+    if (CollectionUtils.isNotEmpty(excludeFields)) {
+      for (String key : excludeFields) {
         response.remove(key);
       }
     }
@@ -413,10 +424,22 @@ public class UserManagementActor extends BaseActor {
    */
   private void getUserProfileV2(Request actorMessage) {
     Response response = getUserProfileData(actorMessage);
-    String ignoreFields = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USER_PROFILE_RESPONSE_EXCLUDE);
-    List<String> ignoreFieldList = Arrays.asList(ignoreFields);
-    trimDownUserProfileResponse(
-        (Map<String, Object>) response.get(JsonKey.RESPONSE), ignoreFieldList);
+    SystemSettingClient systemSetting = new SystemSettingClientImpl();
+    Object excludeFields =
+        systemSetting.getSystemSettingByFieldAndKey(
+            systemSettingActorRef,
+            JsonKey.USER_PROFILE_CONFIG,
+            JsonKey.SUNBIRD_USER_PROFILE_READ_EXCLUDED_FIELDS,
+            new TypeReference<String[]>() {});
+    if (excludeFields != null && excludeFields instanceof String[]) {
+      List<String> excludeFieldList = Arrays.asList((String[]) excludeFields);
+      removeExcludedFieldsFromUserProfileResponse(
+          (Map<String, Object>) response.get(JsonKey.RESPONSE), excludeFieldList);
+    } else {
+      ProjectLogger.log(
+          "UserManagementActor:getUserProfileV2 system settings for userProfileConfig.read.excludedFields not found.",
+          LoggerEnum.INFO.name());
+    }
     sender().tell(response, self());
   }
 
@@ -490,7 +513,8 @@ public class UserManagementActor extends BaseActor {
     }
     if (null != actorMessage.getContext().get(JsonKey.FIELDS)) {
       String requestFields = (String) actorMessage.getContext().get(JsonKey.FIELDS);
-      calculateUserExtraFields(result, requestFields, (String) userMap.get(JsonKey.USER_ID));
+      addExtraFieldsInUserProfileResponse(
+          result, requestFields, (String) userMap.get(JsonKey.USER_ID));
     } else {
       result.remove(JsonKey.MISSING_FIELDS);
       result.remove(JsonKey.COMPLETENESS);
@@ -513,7 +537,8 @@ public class UserManagementActor extends BaseActor {
     return response;
   }
 
-  private void calculateUserExtraFields(Map<String, Object> result, String fields, String userId) {
+  private void addExtraFieldsInUserProfileResponse(
+      Map<String, Object> result, String fields, String userId) {
     if (!StringUtils.isBlank(fields)) {
       if (!fields.contains(JsonKey.COMPLETENESS)) {
         result.remove(JsonKey.COMPLETENESS);
@@ -525,8 +550,7 @@ public class UserManagementActor extends BaseActor {
         result.put(
             JsonKey.LAST_LOGIN_TIME,
             Long.parseLong(getLastLoginTime(userId, (String) result.get(JsonKey.LAST_LOGIN_TIME))));
-      }
-      if (!fields.contains(JsonKey.LAST_LOGIN_TIME)) {
+      } else {
         result.remove(JsonKey.LAST_LOGIN_TIME);
       }
       if (fields.contains(JsonKey.TOPIC)) {

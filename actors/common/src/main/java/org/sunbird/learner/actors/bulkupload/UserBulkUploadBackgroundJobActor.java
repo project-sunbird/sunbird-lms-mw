@@ -25,7 +25,7 @@ import org.sunbird.models.user.User;
   tasks = {},
   asyncTasks = {"userBulkUploadBackground"}
 )
-public class UserBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJobActor {
+public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJobActor {
   private UserClient userClient = new UserClientImpl();
   private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
 
@@ -47,7 +47,7 @@ public class UserBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJo
             return null;
           });
     } else {
-      onReceiveUnsupportedOperation("UserBulkUploadBackGroundJobActor");
+      onReceiveUnsupportedOperation("UserBulkUploadBackgroundJobActor");
     }
   }
 
@@ -67,7 +67,7 @@ public class UserBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJo
   }
 
   private void processUser(BulkUploadProcessTask task) {
-    ProjectLogger.log("UserBulkUploadBackGroundJobActor: processUser called", LoggerEnum.INFO);
+    ProjectLogger.log("UserBulkUploadBackgroundJobActor: processUser called", LoggerEnum.INFO);
     String data = task.getData();
     try {
       Map<String, Object> userMap = mapper.readValue(data, Map.class);
@@ -95,14 +95,14 @@ public class UserBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJo
 
   private void callCreateUser(User user, BulkUploadProcessTask task)
       throws JsonProcessingException {
-    ProjectLogger.log("UserBulkUploadBackGroundJobActor: callCreateUser called", LoggerEnum.INFO);
+    ProjectLogger.log("UserBulkUploadBackgroundJobActor: callCreateUser called", LoggerEnum.INFO);
     Map<String, Object> row = mapper.convertValue(user, Map.class);
     String userId;
     try {
       userId = userClient.createUser(getActorRef(ActorOperations.CREATE_USER.getValue()), row);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "UserBulkUploadBackGroundJobActor:callCreateUser: Exception occurred with error message = "
+          "UserBulkUploadBackgroundJobActor:callCreateUser: Exception occurred with error message = "
               + ex.getMessage(),
           LoggerEnum.INFO);
       setTaskStatus(
@@ -112,7 +112,7 @@ public class UserBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJo
 
     if (StringUtils.isEmpty(userId)) {
       ProjectLogger.log(
-          "UserBulkUploadBackGroundJobActor:callCreateUser: Org ID is null !", LoggerEnum.ERROR);
+          "UserBulkUploadBackgroundJobActor:callCreateUser: Org ID is null !", LoggerEnum.ERROR);
       setTaskStatus(
           task,
           ProjectUtil.BulkProcessStatus.FAILED,
@@ -127,14 +127,14 @@ public class UserBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJo
 
   private void callUpdateUser(User user, BulkUploadProcessTask task)
       throws JsonProcessingException {
-    ProjectLogger.log("UserBulkUploadBackGroundJobActor: callUpdateUser called", LoggerEnum.INFO);
+    ProjectLogger.log("UserBulkUploadBackgroundJobActor: callUpdateUser called", LoggerEnum.INFO);
     Map<String, Object> row = mapper.convertValue(user, Map.class);
     try {
       row.put(JsonKey.ORGANISATION_ID, user.getId());
       userClient.updateUser(getActorRef(ActorOperations.UPDATE_USER.getValue()), row);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "UserBulkUploadBackGroundJobActor:callUpdateUser: Exception occurred with error message = "
+          "UserBulkUploadBackgroundJobActor:callUpdateUser: Exception occurred with error message = "
               + ex.getMessage(),
           LoggerEnum.INFO);
       row.put(JsonKey.ERROR_MSG, ex.getMessage());

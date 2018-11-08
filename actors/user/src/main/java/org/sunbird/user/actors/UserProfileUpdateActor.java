@@ -119,101 +119,59 @@ public class UserProfileUpdateActor extends BaseActor {
   }
 
   private Future<Object> saveUserExternalIds(Map<String, Object> userMap) {
-    try {
-      Request userExternalIdsRequest = new Request();
-      userExternalIdsRequest.getRequest().putAll(userMap);
-      userExternalIdsRequest.setOperation(
-          UserActorOperations.UPSERT_USER_EXTERNAL_IDENTITY_DETAILS.getValue());
-      return interServiceCommunication.getFuture(
-          getActorRef(UserActorOperations.UPSERT_USER_EXTERNAL_IDENTITY_DETAILS.getValue()),
-          userExternalIdsRequest);
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "UserProfileUpdateActor:saveUserExternalIds: Exception occurred while saving user externalIds.",
-          ex);
-    }
-    return null;
+    return saveUserAttributes(
+        userMap, UserActorOperations.UPSERT_USER_EXTERNAL_IDENTITY_DETAILS.getValue());
   }
 
   private Future<Object> saveUserOrgDetails(Map<String, Object> userMap, String operationType) {
-    try {
-      Request userOrgRequest = new Request();
-      userOrgRequest.getRequest().putAll(userMap);
-      String actorOperation = "";
-      if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
-        actorOperation = UserActorOperations.INSERT_USER_ORG_DETAILS.getValue();
-        userOrgRequest.setOperation(actorOperation);
-      } else {
-        actorOperation = UserActorOperations.UPDATE_USER_ORG_DETAILS.getValue();
-        userOrgRequest.setOperation(actorOperation);
-      }
-      return interServiceCommunication.getFuture(getActorRef(actorOperation), userOrgRequest);
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "UserProfileUpdateActor:saveUserOrgDetails: Exception occurred while saving user org details.",
-          ex);
+    String actorOperation = null;
+    if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
+      actorOperation = UserActorOperations.INSERT_USER_ORG_DETAILS.getValue();
+    } else {
+      actorOperation = UserActorOperations.UPDATE_USER_ORG_DETAILS.getValue();
     }
-    return null;
+    return saveUserAttributes(userMap, actorOperation);
   }
 
   private Future<Object> saveJobProfile(Map<String, Object> userMap, String operationType) {
-    try {
-      Request jobProfileRequest = new Request();
-      jobProfileRequest.getRequest().putAll(userMap);
-      String actorOperation = "";
-      if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
-        actorOperation = UserActorOperations.INSERT_USER_JOB_PROFILE.getValue();
-        jobProfileRequest.setOperation(actorOperation);
-      } else {
-        actorOperation = UserActorOperations.UPDATE_USER_JOB_PROFILE.getValue();
-        jobProfileRequest.setOperation(actorOperation);
-      }
-      return interServiceCommunication.getFuture(getActorRef(actorOperation), jobProfileRequest);
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "UserProfileUpdateActor:saveJobProfile: Exception occurred while saving user job profile details.",
-          ex);
+    String actorOperation = null;
+    if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
+      actorOperation = UserActorOperations.INSERT_USER_JOB_PROFILE.getValue();
+    } else {
+      actorOperation = UserActorOperations.UPDATE_USER_JOB_PROFILE.getValue();
     }
-    return null;
+    return saveUserAttributes(userMap, actorOperation);
   }
 
   private Future<Object> saveEducation(Map<String, Object> userMap, String operationType) {
-    try {
-      Request educationRequest = new Request();
-      educationRequest.getRequest().putAll(userMap);
-      String actorOperation = "";
-      if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
-        actorOperation = UserActorOperations.INSERT_USER_EDUCATION.getValue();
-        educationRequest.setOperation(actorOperation);
-      } else {
-        actorOperation = UserActorOperations.UPDATE_USER_EDUCATION.getValue();
-        educationRequest.setOperation(actorOperation);
-      }
-      return interServiceCommunication.getFuture(getActorRef(actorOperation), educationRequest);
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "UserProfileUpdateActor:saveEducation: Exception occurred while saving user education details.",
-          ex);
+    String actorOperation = null;
+    if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
+      actorOperation = UserActorOperations.INSERT_USER_EDUCATION.getValue();
+    } else {
+      actorOperation = UserActorOperations.UPDATE_USER_EDUCATION.getValue();
     }
-    return null;
+    return saveUserAttributes(userMap, actorOperation);
   }
 
   private Future<Object> saveAddress(Map<String, Object> userMap, String operationType) {
+    String actorOperation = null;
+    if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
+      actorOperation = UserActorOperations.INSERT_USER_ADDRESS.getValue();
+    } else {
+      actorOperation = UserActorOperations.UPDATE_USER_ADDRESS.getValue();
+    }
+    return saveUserAttributes(userMap, actorOperation);
+  }
+
+  private Future<Object> saveUserAttributes(Map<String, Object> userMap, String actorOperation) {
     try {
-      Request addressRequest = new Request();
-      addressRequest.getRequest().putAll(userMap);
-      String actorOperation = "";
-      if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
-        actorOperation = UserActorOperations.INSERT_USER_ADDRESS.getValue();
-        addressRequest.setOperation(actorOperation);
-      } else {
-        actorOperation = UserActorOperations.UPDATE_USER_ADDRESS.getValue();
-        addressRequest.setOperation(actorOperation);
-      }
-      return interServiceCommunication.getFuture(getActorRef(actorOperation), addressRequest);
+      Request request = new Request();
+      request.getRequest().putAll(userMap);
+      request.setOperation(actorOperation);
+      return interServiceCommunication.getFuture(getActorRef(actorOperation), request);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "UserProfileUpdateActor:saveAddress: Exception occurred while saving user address details.",
+          "UserProfileUpdateActor:saveUserAttributes: Exception occurred while saving user attributes.",
           ex);
     }
     return null;

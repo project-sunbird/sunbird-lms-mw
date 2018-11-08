@@ -230,18 +230,21 @@ public class CourseBatchManagementActor extends BaseActor {
       Map<String, Object> participantsMap, CourseBatch prevBatch, CourseBatch newBatch) {
     List<String> prevMentors = prevBatch.getMentors();
     List<String> removedMentors = prevBatch.getMentors();
-    List<String> newMentors = newBatch.getMentors();
-    if (newMentors == null) {
-      newMentors = new ArrayList<>();
+    List<String> addedMentors = newBatch.getMentors();
+    
+    if (addedMentors == null) {
+      addedMentors = new ArrayList<>();
     }
     if (prevMentors == null) {
       prevMentors = new ArrayList<>();
       removedMentors = new ArrayList<>();
     }
-    removedMentors.removeAll(newMentors);
-    newMentors.removeAll(prevMentors);
+    
+    removedMentors.removeAll(addedMentors);
+    addedMentors.removeAll(prevMentors);
+    
     participantsMap.put(JsonKey.REMOVED_MENTORS, removedMentors);
-    participantsMap.put(JsonKey.ADDED_MENTORS, newMentors);
+    participantsMap.put(JsonKey.ADDED_MENTORS, addedMentors);
 
     return participantsMap;
   }
@@ -500,25 +503,26 @@ public class CourseBatchManagementActor extends BaseActor {
     if (!dbParticipants.isEmpty()) {
       removeParticipants(dbParticipants, batchId, courseBatchObject.getCourseId());
     }
-    participantsList.put(JsonKey.REMOVED_PARTICIPANTS, getListFromMap(dbParticipants));
-    participantsList.put(JsonKey.ADDED_PARTICIPANTS, getListFromMap(addedParticipants));
+    participantsList.put(JsonKey.REMOVED_PARTICIPANTS, getParticipantsList(dbParticipants));
+    participantsList.put(JsonKey.ADDED_PARTICIPANTS, getParticipantsList(addedParticipants));
     participantsList.put(JsonKey.PARTICIPANTS, finalParticipants);
     return participantsList;
   }
 
-  private List<String> getListFromMap(Map<String, Boolean> participants) {
-    List<String> usersIds = null;
+  private List<String> getParticipantsList(Map<String, Boolean> participantsMap) {
+    List<String> participantsList = null;
 
-    if (participants != null) {
-      usersIds = new ArrayList<>();
-      Set<String> keys = participants.keySet();
+    if (participantsMap != null) {
+      participantsList = new ArrayList<>();
+      Set<String> keys = participantsMap.keySet();
       for (String user : keys) {
-        if (participants.get(user)) {
-          usersIds.add(user);
+        if (participantsMap.get(user)) {
+          participantsList.add(user);
         }
       }
     }
-    return usersIds;
+    
+    return participantsList;
   }
 
   private void validateParticipants(List<String> participants, CourseBatch courseBatch) {

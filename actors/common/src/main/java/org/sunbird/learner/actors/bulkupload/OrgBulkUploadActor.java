@@ -69,7 +69,8 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
       supportedColumnsMap = (Map<String, Object>) dataObject;
       List<String> supportedColumnsList = new ArrayList<>();
       supportedColumnsMap.forEach((key, value) -> supportedColumnsList.add(key));
-      validateFileHeaderFields(req, supportedColumnsList.toArray(new String[supportedColumnsList.size()]), false);
+      validateFileHeaderFields(
+          req, supportedColumnsList.toArray(new String[supportedColumnsList.size()]), false);
     } else {
       validateFileHeaderFields(req, bulkOrgAllowedFields, false);
     }

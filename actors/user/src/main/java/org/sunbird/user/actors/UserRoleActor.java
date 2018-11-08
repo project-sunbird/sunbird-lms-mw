@@ -75,16 +75,9 @@ public class UserRoleActor extends UserBaseActor {
     String hashTagId = (String) requestMap.get(JsonKey.HASHTAGID);
     String organisationId = (String) requestMap.get(JsonKey.ORGANISATION_ID);
     // update userOrg role with requested roles.
-    Map<String, Object> userOrgDBMap =
-        getUserService().getUserByUserIdAndOrgId(userId, organisationId);
+    Map<String, Object> userOrgDBMap = getUserService().esGetUserOrg(userId, organisationId);
     if (MapUtils.isEmpty(userOrgDBMap)) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.invalidUsrOrgData.getErrorCode(),
-              ResponseCode.invalidUsrOrgData.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
+      ProjectCommonException.throwClientErrorException(ResponseCode.invalidUsrOrgData, null);
     }
 
     UserOrg userOrg = prepareUserOrg(requestMap, hashTagId, userOrgDBMap);
@@ -109,8 +102,9 @@ public class UserRoleActor extends UserBaseActor {
     // try find organisation and fetch hashTagId from organisation.
     Map<String, Object> map = null;
     Organisation organisation = null;
+    OrganisationClient orgClient = new OrganisationClientImpl();
     if (StringUtils.isNotBlank(organisationId)) {
-      OrganisationClient orgClient = new OrganisationClientImpl();
+
       organisation =
           orgClient.getOrgById(
               getActorRef(ActorOperations.GET_ORG_DETAILS.getValue()), organisationId);
@@ -118,10 +112,10 @@ public class UserRoleActor extends UserBaseActor {
         requestMap.put(JsonKey.HASHTAGID, organisation.getHashTagId());
       }
     } else {
-      map = getOrgByExternalIdAndProvider(externalId, provider);
-      if (map != null) {
-        requestMap.put(JsonKey.ORGANISATION_ID, map.get(JsonKey.ID));
-        requestMap.put(JsonKey.HASHTAGID, map.get(JsonKey.HASHTAGID));
+      organisation = orgClient.esGetOrgByExternalId(externalId, provider);
+      if (organisation != null) {
+        requestMap.put(JsonKey.ORGANISATION_ID, organisation.getId());
+        requestMap.put(JsonKey.HASHTAGID, organisation.getHashTagId());
       }
     }
     // throw error if provided orgId or ExtenralId with Provider is not valid
@@ -130,25 +124,6 @@ public class UserRoleActor extends UserBaseActor {
       handleOrgNotFound(externalId, provider, organisationId);
     }
     return orgNotFound;
-  }
-
-  private Map<String, Object> getOrgByExternalIdAndProvider(String externalId, String provider) {
-    Map<String, Object> map = null;
-    SearchDTO searchDto = new SearchDTO();
-    Map<String, Object> filter = new HashMap<>();
-    filter.put(JsonKey.EXTERNAL_ID, externalId);
-    filter.put(JsonKey.PROVIDER, provider);
-    searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
-    Map<String, Object> esResponse =
-        ElasticSearchUtil.complexSearch(
-            searchDto,
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName());
-    List<Map<String, Object>> list = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
-    if (!list.isEmpty()) {
-      map = list.get(0);
-    }
-    return map;
   }
 
   private void handleOrgNotFound(String externalId, String provider, String organisationId) {
@@ -173,17 +148,33 @@ public class UserRoleActor extends UserBaseActor {
   private UserOrg prepareUserOrg(
       Map<String, Object> requestMap, String hashTagId, Map<String, Object> userOrgDBMap) {
     ObjectMapper mapper = new ObjectMapper();
-    UserOrg userOrg = mapper.convertValue(userOrgDBMap, UserOrg.class);
-    // Add default role into Requested Roles if it is not provided and then update into DB
+    List<Map<String, Object>> userOrgs =
+        (List<Map<String, Object>>) userOrgDBMap.get(JsonKey.ORGANISATIONS);
+    final String organisationId = (String) requestMap.get(JsonKey.ORGANISATION_ID);
+    Map<String, Object> userOrgMap =
+        userOrgs
+            .stream()
+            .filter(
+                aUserOrg -> {
+                  return organisationId.equals(aUserOrg.get(JsonKey.ORGANISATION_ID));
+                })
+            .findFirst()
+            .get();
+    UserOrg userOrg = mapper.convertValue(userOrgMap, UserOrg.class);
+
     List<String> roles = (List<String>) requestMap.get(JsonKey.ROLES);
-    if (!roles.contains(ProjectUtil.UserRole.PUBLIC.name()))
+    if (!roles.contains(ProjectUtil.UserRole.PUBLIC.name())) {
       roles.add(ProjectUtil.UserRole.PUBLIC.name());
+    }
     userOrg.setRoles(roles);
+
     if (StringUtils.isNotBlank(hashTagId)) {
       userOrg.setHashTagId(hashTagId);
     }
+
     userOrg.setUpdatedDate(ProjectUtil.getFormattedDate());
     userOrg.setUpdatedBy((String) requestMap.get(JsonKey.REQUESTED_BY));
+
     return userOrg;
   }
 

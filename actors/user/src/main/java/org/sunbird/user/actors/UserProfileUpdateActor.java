@@ -47,11 +47,11 @@ public class UserProfileUpdateActor extends BaseActor {
     userMap.remove(JsonKey.OPERATION_TYPE);
     List<Future<Object>> futures = getFutures(userMap, operationType);
     Future<Iterable<Object>> futuresSequence = Futures.sequence(futures, getContext().dispatcher());
-    Future<Response> futureResponse = getResponseFromFutureResult(futuresSequence);
-    Patterns.pipe(futureResponse, getContext().dispatcher()).to(sender());
+    Future<Response> consolidatedFutureResponse = getConsolidatedFutureResponse(futuresSequence);
+    Patterns.pipe(consolidatedFutureResponse, getContext().dispatcher()).to(sender());
   }
 
-  private Future<Response> getResponseFromFutureResult(Future<Iterable<Object>> futuresSequence) {
+  private Future<Response> getConsolidatedFutureResponse(Future<Iterable<Object>> futuresSequence) {
     return futuresSequence.map(
         new Mapper<Iterable<Object>, Response>() {
           Map<String, Object> map = new HashMap<>();

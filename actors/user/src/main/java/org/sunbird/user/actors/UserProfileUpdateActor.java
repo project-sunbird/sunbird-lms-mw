@@ -95,27 +95,63 @@ public class UserProfileUpdateActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private List<Future<Object>> getFutures(Map<String, Object> userMap, String operationType) {
     List<Future<Object>> futures = new ArrayList<>();
+    
     if (userMap.containsKey(JsonKey.ADDRESS)
         && CollectionUtils.isNotEmpty((List<Map<String, Object>>) userMap.get(JsonKey.ADDRESS))) {
       futures.add(saveAddress(userMap, operationType));
     }
+    
     if (userMap.containsKey(JsonKey.EDUCATION)
         && CollectionUtils.isNotEmpty((List<Map<String, Object>>) userMap.get(JsonKey.EDUCATION))) {
       futures.add(saveEducation(userMap, operationType));
     }
+    
     if (userMap.containsKey(JsonKey.JOB_PROFILE)
         && CollectionUtils.isNotEmpty(
             (List<Map<String, Object>>) userMap.get(JsonKey.JOB_PROFILE))) {
       futures.add(saveJobProfile(userMap, operationType));
     }
+    
     if (CollectionUtils.isNotEmpty((List<Map<String, String>>) userMap.get(JsonKey.EXTERNAL_IDS))) {
       futures.add(saveUserExternalIds(userMap));
     }
+
     if (StringUtils.isNotBlank((String) userMap.get(JsonKey.ORGANISATION_ID))
         || StringUtils.isNotBlank((String) userMap.get(JsonKey.ROOT_ORG_ID))) {
       futures.add(saveUserOrgDetails(userMap, operationType));
     }
+
     return futures;
+  }
+
+  private Future<Object> saveAddress(Map<String, Object> userMap, String operationType) {
+    String actorOperation = UserActorOperations.UPDATE_USER_ADDRESS.getValue();
+    
+    if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
+      actorOperation = UserActorOperations.INSERT_USER_ADDRESS.getValue();
+    }
+    
+    return saveUserAttributes(userMap, actorOperation);
+  }
+
+  private Future<Object> saveEducation(Map<String, Object> userMap, String operationType) {
+    String actorOperation = UserActorOperations.UPDATE_USER_EDUCATION.getValue();
+
+    if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
+      actorOperation = UserActorOperations.INSERT_USER_EDUCATION.getValue();
+    }
+    
+    return saveUserAttributes(userMap, actorOperation);
+  }
+
+  private Future<Object> saveJobProfile(Map<String, Object> userMap, String operationType) {
+    String actorOperation = UserActorOperations.UPDATE_USER_JOB_PROFILE.getValue();
+    
+    if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
+      actorOperation = UserActorOperations.INSERT_USER_JOB_PROFILE.getValue();
+    }
+    
+    return saveUserAttributes(userMap, actorOperation);
   }
 
   private Future<Object> saveUserExternalIds(Map<String, Object> userMap) {
@@ -124,42 +160,12 @@ public class UserProfileUpdateActor extends BaseActor {
   }
 
   private Future<Object> saveUserOrgDetails(Map<String, Object> userMap, String operationType) {
-    String actorOperation = null;
+    String actorOperation = UserActorOperations.UPDATE_USER_ORG_DETAILS.getValue();
+    
     if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
       actorOperation = UserActorOperations.INSERT_USER_ORG_DETAILS.getValue();
-    } else {
-      actorOperation = UserActorOperations.UPDATE_USER_ORG_DETAILS.getValue();
     }
-    return saveUserAttributes(userMap, actorOperation);
-  }
-
-  private Future<Object> saveJobProfile(Map<String, Object> userMap, String operationType) {
-    String actorOperation = null;
-    if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
-      actorOperation = UserActorOperations.INSERT_USER_JOB_PROFILE.getValue();
-    } else {
-      actorOperation = UserActorOperations.UPDATE_USER_JOB_PROFILE.getValue();
-    }
-    return saveUserAttributes(userMap, actorOperation);
-  }
-
-  private Future<Object> saveEducation(Map<String, Object> userMap, String operationType) {
-    String actorOperation = null;
-    if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
-      actorOperation = UserActorOperations.INSERT_USER_EDUCATION.getValue();
-    } else {
-      actorOperation = UserActorOperations.UPDATE_USER_EDUCATION.getValue();
-    }
-    return saveUserAttributes(userMap, actorOperation);
-  }
-
-  private Future<Object> saveAddress(Map<String, Object> userMap, String operationType) {
-    String actorOperation = null;
-    if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
-      actorOperation = UserActorOperations.INSERT_USER_ADDRESS.getValue();
-    } else {
-      actorOperation = UserActorOperations.UPDATE_USER_ADDRESS.getValue();
-    }
+    
     return saveUserAttributes(userMap, actorOperation);
   }
 
@@ -171,7 +177,7 @@ public class UserProfileUpdateActor extends BaseActor {
       return interServiceCommunication.getFuture(getActorRef(actorOperation), request);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "UserProfileUpdateActor:saveUserAttributes: Exception occurred while saving user attributes.",
+          "UserProfileUpdateActor:saveUserAttributes: Exception occurred with error message = " + ex.getMessage(),
           ex);
     }
     return null;

@@ -614,11 +614,10 @@ public class UserUtil {
           int status = (int) custodianOrg.get(JsonKey.STATUS);
           if (1 != status) {
             ProjectCommonException.throwClientErrorException(
-                ResponseCode.errorInActiveCustodianOrg, null);
+                ResponseCode.errorInActiveCustodianOrg);
           }
         } else {
-          ProjectCommonException.throwClientErrorException(
-              ResponseCode.errorInActiveCustodianOrg, null);
+          ProjectCommonException.throwClientErrorException(ResponseCode.errorInActiveCustodianOrg);
         }
       } else {
         ProjectCommonException.throwServerErrorException(

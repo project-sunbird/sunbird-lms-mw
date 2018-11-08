@@ -47,7 +47,7 @@ public class CourseBatchNotificationActor extends BaseActor {
     String requestedOperation = request.getOperation();
     
     if (requestedOperation.equals(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue())) {
-      courseBatchNotication(request);
+      courseBatchNotification(request);
     } else {
       ProjectLogger.log(
           "CourseBatchNotificationActor:onReceive: Unsupported operation = "
@@ -56,7 +56,7 @@ public class CourseBatchNotificationActor extends BaseActor {
     }
   }
 
-  private void courseBatchNotication(Request request) {
+  private void courseBatchNotification(Request request) {
     Map<String, Object> requestMap = request.getRequest();
     
     CourseBatch courseBatch = (CourseBatch) requestMap.get(JsonKey.COURSE_BATCH);
@@ -76,7 +76,7 @@ public class CourseBatchNotificationActor extends BaseActor {
         subject = JsonKey.COURSE_INVITATION;
       }
             
-      triggerEmailNotification(Arrays.asList(userId), courseBatch, JsonKey.UNENROLL_FROM_COURSE_BATCH, JsonKey.BATCH_MENTOR_UNENROL);
+      triggerEmailNotification(Arrays.asList(userId), courseBatch, subject, template);
       
     } else {
       
@@ -175,7 +175,6 @@ public class CourseBatchNotificationActor extends BaseActor {
       res.setResponseCode(ResponseCode.OK);
       sender().tell(res, self());
     } catch (Exception e) {
-      sender().tell(e, self());
       ProjectLogger.log(
           "CourseBatchNotificationActor:sendMail: Exception occurred with error message = " + e.getMessage(),
           LoggerEnum.ERROR);

@@ -1,15 +1,20 @@
 package org.sunbird.learner.actors.bulkupload.model;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.sql.Timestamp;
 
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
+import org.sunbird.common.responsecode.ResponseCode;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /** @author arvind. */
@@ -42,7 +47,7 @@ public class BulkUploadProcess implements Serializable {
   private Timestamp createdOn;
   private Timestamp lastUpdatedOn;
 
-  private String cloudStorageData;
+  private String storageDetails;
 
   public String getId() {
     return id;
@@ -172,27 +177,33 @@ public class BulkUploadProcess implements Serializable {
     this.taskCount = taskCount;
   }
 
-  public String getCloudStorageData() {
-    return this.cloudStorageData;
+  public String getStorageDetails() {
+    return this.storageDetails;
   }
 
-  public void setCloudStorageData(String cloudStorageData) {
-    this.cloudStorageData = cloudStorageData;
+  public void setStorageDetails(String cloudStorageData) {
+    this.storageDetails = cloudStorageData;
   }
 
   @JsonIgnore
-  public void setCloudStorageDataWithPojo(CloudStorageData cloudStorageData) throws Exception {
+  public void setStorageDetailsWithPojo(CloudStorageData cloudStorageData) {
     ObjectMapper mapper = new ObjectMapper();
-    String rawData = mapper.writeValueAsString(cloudStorageData);
-    setCloudStorageData(encryptionService.encryptData(rawData));
+    try {
+      String rawData = mapper.writeValueAsString(cloudStorageData);
+      setStorageDetails(encryptionService.encryptData(rawData));
+    } catch (Exception e) {
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.errorSavingStorageDetails, null);
+    }
   }
 
   @JsonIgnore
-  public CloudStorageData getCloudStorgeDataAsPojo() throws Exception {
-    String rawData = getCloudStorageData();
+  public CloudStorageData getStorageDetailsAsPojo()
+      throws JsonParseException, JsonMappingException, IOException {
+    String rawData = getStorageDetails();
     if (rawData != null) {
       ObjectMapper mapper = new ObjectMapper();
-      String decryptedData = decryptionService.decryptData(getCloudStorageData());
+      String decryptedData = decryptionService.decryptData(getStorageDetails());
       return mapper.readValue(decryptedData, CloudStorageData.class);
     } else {
       return null;

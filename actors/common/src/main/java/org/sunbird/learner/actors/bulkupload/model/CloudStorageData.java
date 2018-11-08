@@ -1,16 +1,17 @@
 package org.sunbird.learner.actors.bulkupload.model;
 
 public class CloudStorageData {
+
+  private String storageType;
+  private String container;
+  private String objectId;
+
   public CloudStorageData(String storageType, String container, String objectId) {
     super();
     this.storageType = storageType;
     this.container = container;
     this.objectId = objectId;
   }
-
-  private String storageType;
-  private String container;
-  private String objectId;
 
   public CloudStorageData() {}
 

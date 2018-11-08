@@ -25,8 +25,8 @@ import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.common.util.CloudUploadUtil;
-import org.sunbird.common.util.CloudUploadUtil.CloudStorageTypes;
+import org.sunbird.common.util.CloudStorageUtil;
+import org.sunbird.common.util.CloudStorageUtil.CloudStorageType;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessTaskDao;
 import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
@@ -45,7 +45,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * @author Amit Kumar
  */
 @ActorConfig(
-    tasks = {"bulkUpload", "getBulkOpStatus", "getStatusDownloadLink"},
+    tasks = {"bulkUpload", "getBulkOpStatus", "getBulkUploadStatusDownloadLink"},
     asyncTasks = {})
 public class BulkUploadManagementActor extends BaseBulkUploadActor {
 
@@ -113,7 +113,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       getUploadStatus(request);
     } else if (request
         .getOperation()
-        .equalsIgnoreCase(ActorOperations.GET_BULK_STATUS_DOWNLOAD_LINK.getValue())) {
+        .equalsIgnoreCase(ActorOperations.GET_BULK_UPLOAD_STATUS_DOWNLOAD_LINK.getValue())) {
       getBulkUploadDownloadStatusLink(request);
 
     } else {
@@ -127,32 +127,26 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     BulkUploadProcess result = bulkuploadDao.read(processId);
     if (result != null) {
       try {
-        CloudStorageData cloudStorageData = result.getCloudStorgeDataAsPojo();
+        CloudStorageData cloudStorageData = result.getStorageDetailsAsPojo();
         if (cloudStorageData == null) {
           ProjectCommonException.throwClientErrorException(
-              ResponseCode.errorDownloadLinkNotAvailable,
-              ProjectUtil.formatMessage(
-                  ResponseCode.errorDownloadLinkNotAvailable.getErrorMessage(), processId));
+              ResponseCode.errorUnavailableDownloadLink, null);
         }
         String signedUrl =
-            CloudUploadUtil.getSignedUrl(
-                CloudStorageTypes.getByName(cloudStorageData.getStorageType()),
+            CloudStorageUtil.getSignedUrl(
+                CloudStorageType.getByName(cloudStorageData.getStorageType()),
                 cloudStorageData.getContainer(),
                 cloudStorageData.getObjectId());
         Response response = new Response();
         response.setResponseCode(ResponseCode.OK);
         response.getResult().put(JsonKey.SIGNED_URL, signedUrl);
         sender().tell(response, self());
+      } catch (ProjectCommonException e) {
+
+        throw (ProjectCommonException) e;
       } catch (Exception e) {
-        if (e instanceof ProjectCommonException) {
-          throw (ProjectCommonException) e;
-        }
         ProjectCommonException.throwClientErrorException(
-            ResponseCode.errorGeneatingBulkDownloadStatusLinnk,
-            ProjectUtil.formatMessage(
-                ResponseCode.errorGeneatingBulkDownloadStatusLinnk.getErrorMessage(),
-                processId,
-                e.getMessage()));
+            ResponseCode.errorGenerateDownloadLink, null);
       }
     } else {
       throw new ProjectCommonException(

@@ -763,6 +763,10 @@ public class UserManagementActor extends BaseActor {
     if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
       userRequestValidator.validateCreateUserV2Request(actorMessage);
       validateChannelAndOrganisationId(userMap);
+    } else if (StringUtils.isNotBlank(version) && JsonKey.VERSION_3.equalsIgnoreCase(version)) {
+      userRequestValidator.validateCreateUserV3Request(actorMessage);
+      UserUtil.createUserV3Request(userMap);
+
     } else {
       userRequestValidator.validateCreateUserV1Request(actorMessage);
     }
@@ -774,10 +778,14 @@ public class UserManagementActor extends BaseActor {
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
     try {
-      String channel = Util.getCustodianChannel(userMap, systemSettingActorRef);
-      String rootOrgId = Util.getRootOrgIdFromChannel(channel);
-      userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
-      userMap.put(JsonKey.CHANNEL, channel);
+      if (JsonKey.VERSION_3.equalsIgnoreCase(version)) {
+        UserUtil.getActiveCustodianOrgId(userMap, systemSettingActorRef);
+      } else {
+        String channel = Util.getCustodianChannel(userMap, systemSettingActorRef);
+        String rootOrgId = Util.getRootOrgIdFromChannel(channel);
+        userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+        userMap.put(JsonKey.CHANNEL, channel);
+      }
     } catch (Exception ex) {
       sender().tell(ex, self());
       return;
@@ -825,9 +833,6 @@ public class UserManagementActor extends BaseActor {
     }
 
     UserUtil.upsertUserInKeycloak(userMap, JsonKey.CREATE);
-    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
-      userMap.put(JsonKey.PASSWORD, null);
-    }
     requestMap = UserUtil.encryptUserData(userMap);
     removeUnwanted(requestMap);
     Response response = null;

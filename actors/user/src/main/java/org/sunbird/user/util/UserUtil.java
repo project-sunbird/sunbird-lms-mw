@@ -1,5 +1,6 @@
 package org.sunbird.user.util;
 
+import akka.actor.ActorRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,6 +12,8 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.sunbird.actorutil.systemsettings.SystemSettingClient;
+import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -35,6 +38,7 @@ import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
+import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
@@ -570,6 +574,69 @@ public class UserUtil {
       ProjectLogger.log(e.getMessage(), e);
     }
     return organisations;
+  }
+
+  public static void createUserV3Request(Map<String, Object> userMap) {
+    userMap.put(JsonKey.USERNAME, ProjectUtil.generateUniqueId());
+    userMap.put(UserConstants.USER_TYPE, ProjectUtil.UserType.others.name());
+    userMap.put(UserConstants.SIGNUP_TYPE, ProjectUtil.SignupType.SELF_SIGNUP.name());
+  }
+
+  public static String getActiveCustodianOrgId(Map<String, Object> userMap, ActorRef actorRef) {
+    String custodianOrgId = "";
+    try {
+      SystemSettingClient client = SystemSettingClientImpl.getInstance();
+      SystemSetting systemSetting =
+          client.getSystemSettingByField(actorRef, UserConstants.CUSTODIAN_ORG_ID);
+      if (null != systemSetting && StringUtils.isNotBlank(systemSetting.getValue())) {
+        custodianOrgId = systemSetting.getValue();
+      }
+    } catch (Exception ex) {
+      ProjectLogger.log(
+          "UserUtil:getActiveCustodianOrgId: Exception occurred while fetching custodian org ID from system setting.",
+          ex);
+      ProjectCommonException.throwServerErrorException(
+          ResponseCode.errorSystemSettingNotFound,
+          ProjectUtil.formatMessage(
+              ResponseCode.errorSystemSettingNotFound.getErrorMessage(),
+              UserConstants.CUSTODIAN_ORG_ID));
+    }
+    Map<String, Object> custodianOrg = null;
+    if (StringUtils.isNotBlank(custodianOrgId)) {
+      custodianOrg =
+          ElasticSearchUtil.getDataByIdentifier(
+              ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.organisation.getTypeName(),
+              custodianOrgId);
+      if (MapUtils.isNotEmpty(custodianOrg)) {
+
+        if (null != custodianOrg.get(JsonKey.STATUS)) {
+          int status = (int) custodianOrg.get(JsonKey.STATUS);
+          if (1 != status) {
+            ProjectCommonException.throwClientErrorException(
+                ResponseCode.errorInActiveCustodianOrg, null);
+          }
+        } else {
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.errorInActiveCustodianOrg, null);
+        }
+      } else {
+        ProjectCommonException.throwServerErrorException(
+            ResponseCode.errorSystemSettingNotFound,
+            ProjectUtil.formatMessage(
+                ResponseCode.errorSystemSettingNotFound.getErrorMessage(),
+                UserConstants.CUSTODIAN_ORG_ID));
+      }
+    } else {
+      ProjectCommonException.throwServerErrorException(
+          ResponseCode.errorSystemSettingNotFound,
+          ProjectUtil.formatMessage(
+              ResponseCode.errorSystemSettingNotFound.getErrorMessage(),
+              UserConstants.CUSTODIAN_ORG_ID));
+    }
+    userMap.put(JsonKey.ROOT_ORG_ID, custodianOrgId);
+    userMap.put(JsonKey.CHANNEL, custodianOrg.get(JsonKey.CHANNEL));
+    return custodianOrgId;
   }
 }
 

@@ -369,9 +369,9 @@ public class CourseBatchManagementActorTest {
 
   private ProjectCommonException performCreateCourseBatchFailureTest(
       boolean mockCreateBatch, boolean addMentors, boolean addParticipants) {
-    mockCreateCourseBatch(false);
+    mockCreateCourseBatch(mockCreateBatch);
     actorMessage.setOperation(ActorOperations.CREATE_BATCH.getValue());
-    actorMessage.getRequest().putAll(getCourseBatchMap(true, true));
+    actorMessage.getRequest().putAll(getCourseBatchMap(addMentors, addParticipants));
     actorMessage.getContext().put(JsonKey.HEADER, new HashMap<>());
     subject.tell(actorMessage, probe.getRef());
     return probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);

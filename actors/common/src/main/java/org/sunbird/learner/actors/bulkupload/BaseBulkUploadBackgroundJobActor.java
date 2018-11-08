@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -96,7 +97,10 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
     bulkUploadDao.update(bulkUploadProcess);
   }
 
-  public void processBulkUpload(BulkUploadProcess bulkUploadProcess, Function function) {
+  public void processBulkUpload(
+      BulkUploadProcess bulkUploadProcess,
+      Function function,
+      Map<String, String> supportedColumnMap) {
     Integer sequence = 0;
     Integer taskCount = bulkUploadProcess.getTaskCount();
     List<Map<String, Object>> successList = new LinkedList<>();
@@ -140,7 +144,7 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
     bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
     try {
       CloudStorageData cloudStorageData =
-          uploadResultToCloud(bulkUploadProcess, successList, failureList);
+          uploadResultToCloud(bulkUploadProcess, successList, failureList, supportedColumnMap);
       ProjectLogger.log(
           "BaseBulkUploadBackgroundJobActor:processBulkUpload: completed.", LoggerEnum.INFO);
       bulkUploadProcess.setSuccessResult(ProjectUtil.convertMapToJsonString(successList));
@@ -153,32 +157,37 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
     }
     bulkUploadDao.update(bulkUploadProcess);
   }
-  
-  protected void validateMandatoryFields(
-	      Map<String, Object> csvColumns, BulkUploadProcessTask task, String[] mandatoryFields)
-	      throws JsonProcessingException {
-	    if (mandatoryFields != null) {
-	      for (String field : mandatoryFields) {
-	        if (StringUtils.isEmpty((String) csvColumns.get(field))) {
-	          String errorMessage = MessageFormat.format(ResponseCode.mandatoryParamsMissing.getErrorMessage(), new Object[] {field});
-	          
-	          setTaskStatus(task, ProjectUtil.BulkProcessStatus.FAILED, errorMessage, csvColumns, JsonKey.CREATE);
 
-	          ProjectCommonException.throwClientErrorException(ResponseCode.mandatoryParamsMissing, errorMessage);
-	        }
-	      }
-	    }
-	  }
+  protected void validateMandatoryFields(
+      Map<String, Object> csvColumns, BulkUploadProcessTask task, String[] mandatoryFields)
+      throws JsonProcessingException {
+    if (mandatoryFields != null) {
+      for (String field : mandatoryFields) {
+        if (StringUtils.isEmpty((String) csvColumns.get(field))) {
+          String errorMessage =
+              MessageFormat.format(
+                  ResponseCode.mandatoryParamsMissing.getErrorMessage(), new Object[] {field});
+
+          setTaskStatus(
+              task, ProjectUtil.BulkProcessStatus.FAILED, errorMessage, csvColumns, JsonKey.CREATE);
+
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.mandatoryParamsMissing, errorMessage);
+        }
+      }
+    }
+  }
 
   private CloudStorageData uploadResultToCloud(
       BulkUploadProcess bulkUploadProcess,
       List<Map<String, Object>> successList,
-      List<Map<String, Object>> failureList)
+      List<Map<String, Object>> failureList,
+      Map<String, String> supportedColumnMap)
       throws IOException {
 
     String objKey = generateObjectKey(bulkUploadProcess);
     File file = getFileHandle(bulkUploadProcess.getObjectType());
-    writeResultsToFile(file, successList, failureList);
+    writeResultsToFile(file, successList, failureList, supportedColumnMap);
     CloudStorageUtil.upload(
         CloudStorageType.AZURE, bulkUploadProcess.getObjectType(), objKey, file.getAbsolutePath());
     return new CloudStorageData(
@@ -204,17 +213,46 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
   }
 
   private void writeResultsToFile(
-      File file, List<Map<String, Object>> successList, List<Map<String, Object>> failureList)
+      File file,
+      List<Map<String, Object>> successList,
+      List<Map<String, Object>> failureList,
+      Map<String, String> supportedColumnsMap)
       throws IOException {
     try (CSVWriter csvWriter = new CSVWriter(new FileWriter(file)); ) {
-      List<String> headerRows = getHeaderRow(successList, failureList);
-      headerRows.add(JsonKey.BULK_UPLOAD_STATUS);
-      headerRows.add(JsonKey.BULK_UPLOAD_ERROR);
-      csvWriter.writeNext(headerRows.toArray(new String[0]));
-      addResults(successList, headerRows, csvWriter);
-      addResults(failureList, headerRows, csvWriter);
+      List<String> headerRowWithInternalNames = getHeaderRow(successList, failureList);
+
+      headerRowWithInternalNames.add(JsonKey.BULK_UPLOAD_STATUS);
+      headerRowWithInternalNames.add(JsonKey.BULK_UPLOAD_ERROR);
+
+      if (supportedColumnsMap != null && !supportedColumnsMap.isEmpty()) {
+        Map<String, String> revMap = getReverseMap(supportedColumnsMap);
+        List<String> headerRowWithDisplayNames = new ArrayList<>();
+        headerRowWithInternalNames.forEach(
+            s -> {
+              if (revMap.containsKey(s)) {
+                headerRowWithDisplayNames.add(revMap.get(s));
+              } else {
+                headerRowWithDisplayNames.add(s);
+              }
+            });
+        csvWriter.writeNext(headerRowWithDisplayNames.toArray(new String[0]));
+      } else {
+        csvWriter.writeNext(headerRowWithInternalNames.toArray(new String[0]));
+      }
+
+      addResults(successList, headerRowWithInternalNames, csvWriter);
+      addResults(failureList, headerRowWithInternalNames, csvWriter);
       csvWriter.flush();
     }
+  }
+
+  private Map<String, String> getReverseMap(Map<String, String> supportedColumnsMap) {
+    Map<String, String> revMap = new HashMap<>();
+    supportedColumnsMap.forEach(
+        (k, v) -> {
+          revMap.put(v, k);
+        });
+    return revMap;
   }
 
   private void addResults(

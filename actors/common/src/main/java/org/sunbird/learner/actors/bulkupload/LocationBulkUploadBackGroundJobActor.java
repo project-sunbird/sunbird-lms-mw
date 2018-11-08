@@ -62,7 +62,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
                   (tasks) -> {
                     processTasks((List<BulkUploadProcessTask>) tasks);
                     return null;
-                  });
+                  }, null);
               return null;
             });
         break;

@@ -35,6 +35,12 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     Util.initializeContext(request, TelemetryEnvKey.USER);
     ExecutionContext.setRequestId(request.getRequestId());
     if (operation.equalsIgnoreCase("userBulkUploadBackground")) {
+    	Map supportedColumns =
+		        systemSettingClient.getSystemSettingByFieldAndKey(
+		            getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+		            "userProfileConfig",
+		            "csv.supportedColumns",
+		            new TypeReference<Map>() {});
       handleBulkUploadBackground(
           request,
           (baseBulkUpload) -> {
@@ -43,7 +49,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
                 (tasks) -> {
                   processTasks((List<BulkUploadProcessTask>) tasks);
                   return null;
-                });
+                }, supportedColumns);
             return null;
           });
     } else {

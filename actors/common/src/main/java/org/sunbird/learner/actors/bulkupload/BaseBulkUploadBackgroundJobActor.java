@@ -141,6 +141,22 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
     }
     bulkUploadDao.update(bulkUploadProcess);
   }
+  
+   protected void validateMandatoryFields(
+      Map<String, Object> csvColumns, BulkUploadProcessTask task, String[] mandatoryFields)
+      throws JsonProcessingException {
+    if (mandatoryFields != null) {
+      for (String field : mandatoryFields) {
+        if (StringUtils.isEmpty((String) csvColumns.get(field))) {
+          String errorMessage = MessageFormat.format(ResponseCode.mandatoryParamsMissing.getErrorMessage(), new Object[] {field});
+          
+          setTaskStatus(task, ProjectUtil.BulkProcessStatus.FAILED, errorMessage, csvColumns, JsonKey.CREATE);
+
+          ProjectCommonException.throwClientErrorException(ResponseCode.mandatoryParamsMissing, errorMessage);
+        }
+      }
+    }
+  }
 
   private CloudStorageData uploadResultToCloud(
       BulkUploadProcess bulkUploadProcess,

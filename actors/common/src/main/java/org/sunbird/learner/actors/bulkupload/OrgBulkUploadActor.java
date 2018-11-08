@@ -1,15 +1,17 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.actorutil.systemsettings.SystemSettingClient;
+import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.util.BulkUploadActorOperation;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.TelemetryEnvKey;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -21,7 +23,7 @@ import org.sunbird.learner.util.Util;
   asyncTasks = {}
 )
 public class OrgBulkUploadActor extends BaseBulkUploadActor {
-
+  private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
   private String[] bulkOrgAllowedFields = {
     JsonKey.ORGANISATION_ID,
     JsonKey.ORGANISATION_NAME,
@@ -56,14 +58,31 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
 
   private void upload(Request request) throws IOException {
     Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
-    validateFileHeaderFields(req, bulkOrgAllowedFields, false);
+    Object dataObject =
+        systemSettingClient.getSystemSettingByFieldAndKey(
+            getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+            "orgProfileConfig",
+            "csv.supportedColumns",
+            new TypeReference<Map>() {});
+    Map<String, Object> supportedColumnsMap = null;
+    if (dataObject != null) {
+      supportedColumnsMap = (Map<String, Object>) dataObject;
+      List<String> supportedColumnsList = new ArrayList<>();
+      supportedColumnsMap.forEach((key, value) -> supportedColumnsList.add(key));
+      validateFileHeaderFields(req, supportedColumnsList.toArray(new String[supportedColumnsList.size()]), false);
+    } else {
+      validateFileHeaderFields(req, bulkOrgAllowedFields, false);
+    }
     BulkUploadProcess bulkUploadProcess =
         handleUpload(JsonKey.ORGANISATION, (String) req.get(JsonKey.CREATED_BY));
-    processOrgBulkUpload(req, bulkUploadProcess.getId(), bulkUploadProcess);
+    processOrgBulkUpload(req, bulkUploadProcess.getId(), bulkUploadProcess, supportedColumnsMap);
   }
 
   private void processOrgBulkUpload(
-      Map<String, Object> req, String processId, BulkUploadProcess bulkUploadProcess)
+      Map<String, Object> req,
+      String processId,
+      BulkUploadProcess bulkUploadProcess,
+      Map<String, Object> supportedColumnsMap)
       throws IOException {
     byte[] fileByteArray = null;
     if (null != req.get(JsonKey.FILE)) {
@@ -74,7 +93,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
     if (user != null) {
       String rootOrgId = (String) user.get(JsonKey.ROOT_ORG_ID);
       Map<String, Object> org = getOrg(rootOrgId);
-      if (org != null) {
+      if (org != null && (int) org.get(JsonKey.STATUS) == ProjectUtil.OrgStatus.ACTIVE.getValue()) {
         additionalInfo.put(JsonKey.CHANNEL, org.get(JsonKey.CHANNEL));
       }
     }
@@ -83,7 +102,8 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
           ResponseCode.errorNoRootOrgAssociated,
           ResponseCode.errorNoRootOrgAssociated.getErrorMessage());
     }
-    Integer recordCount = validateAndParseRecords(fileByteArray, processId, additionalInfo);
+    Integer recordCount =
+        validateAndParseRecords(fileByteArray, processId, additionalInfo, supportedColumnsMap);
     processBulkUpload(
         recordCount,
         processId,

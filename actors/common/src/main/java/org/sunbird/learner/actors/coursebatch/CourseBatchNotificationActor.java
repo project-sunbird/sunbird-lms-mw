@@ -161,7 +161,7 @@ public class CourseBatchNotificationActor extends BaseActor {
     String userId = (String) user.get(JsonKey.USER_ID);
 
     if (StringUtils.isNotBlank(userId)) {
-        requestMap.put(JsonKey.RECIPIENT_USERIDS, userId));
+        requestMap.put(JsonKey.RECIPIENT_USERIDS, userId);
     }
     requestMap.put(JsonKey.FIRST_NAME, userMap.get(JsonKey.FIRST_NAME));
 

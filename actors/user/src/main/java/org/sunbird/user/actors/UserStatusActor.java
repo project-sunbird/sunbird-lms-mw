@@ -1,6 +1,5 @@
 package org.sunbird.user.actors;
 
-import akka.actor.ActorRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.MessageFormat;
 import java.util.HashMap;
@@ -27,16 +26,12 @@ import org.sunbird.user.service.impl.UserServiceImpl;
 )
 public class UserStatusActor extends UserBaseActor {
   private UserService userService = UserServiceImpl.getInstance();
-  private ActorRef systemSettingActorRef = null;
 
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.USER);
     ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();
-    if (systemSettingActorRef == null) {
-      systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
-    }
     switch (operation) {
       case "blockUser":
         blockUser(request);
@@ -85,12 +80,10 @@ public class UserStatusActor extends UserBaseActor {
     ObjectMapper mapper = new ObjectMapper();
     User updatedUser = mapper.convertValue(userMapES, User.class);
 
-    if (isSSOEnabled()) {
-      if (isBlocked) {
-        getSSOManager().deactivateUser(userMapES);
-      } else {
-        getSSOManager().activateUser(userMapES);
-      }
+    if (isBlocked) {
+      getSSOManager().deactivateUser(userMapES);
+    } else {
+      getSSOManager().activateUser(userMapES);
     }
 
     Response response = getUserDao().updateUser(updatedUser);

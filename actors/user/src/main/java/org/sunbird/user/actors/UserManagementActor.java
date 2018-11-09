@@ -20,6 +20,8 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
+import org.sunbird.actorutil.systemsettings.SystemSettingClient;
+import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -42,6 +44,9 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.extension.user.UserExtension;
 import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.ChannelUtil;
+import org.sunbird.learner.util.DataCacheHandler;
+import org.sunbird.learner.util.FrameworkUtil;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
@@ -642,9 +647,15 @@ public class UserManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     actorMessage.toLower();
     Util.getUserProfileConfig(systemSettingActorRef);
+    SystemSettingClient systemSettingClient = SystemSettingClientImpl.getInstance();
     userService.validateUserId(actorMessage);
     Map<String, Object> userMap = actorMessage.getRequest();
     userRequestValidator.validateUpdateUserRequest(actorMessage);
+    List<String> frameworkFields = DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.FIELDS);
+    List<String> frameworkMandatoryFields =
+        DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.MANDATORY_FIELDS);
+    userRequestValidator.validateFrameworkRequestData(
+        frameworkFields, frameworkMandatoryFields, userMap);
     Map<String, Object> userDbRecord = UserUtil.validateExternalIdsAndReturnActiveUser(userMap);
 
     User user = mapper.convertValue(userMap, User.class);
@@ -662,6 +673,8 @@ public class UserManagementActor extends BaseActor {
     if (isSSOEnabled) {
       UserUtil.upsertUserInKeycloak(userMap, JsonKey.UPDATE);
     }
+    if (userMap.containsKey(JsonKey.FRAMEWORK))
+      validateFrameworkUpdateRequest(userMap, frameworkFields, frameworkMandatoryFields);
     userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     Map<String, Object> requestMap = UserUtil.encryptUserData(userMap);
@@ -926,5 +939,76 @@ public class UserManagementActor extends BaseActor {
     userMap.put(
         JsonKey.DEFAULT_PROFILE_FIELD_VISIBILITY,
         ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USER_PROFILE_FIELD_DEFAULT_VISIBILITY));
+  }
+
+  private void validateFrameworkUpdateRequest(
+      Map<String, Object> userMap,
+      List<String> frameworkFields,
+      List<String> frameworkMandatoryFields) {
+    User user = userService.getUserById((String) userMap.get(JsonKey.USER_ID));
+    Map<String, Object> response = ChannelUtil.getRootOrgDetails(user.getRootOrgId());
+    String frameworkId = (String) response.get(JsonKey.DEFAULT_FRAMEWORK);
+    Map<String, List<String>> frameworkRequest =
+        (Map<String, List<String>>) userMap.get(JsonKey.FRAMEWORK);
+    if (DataCacheHandler.getFrameworkMap().get(frameworkId) == null) {
+      getFrameworkDataAndCache(frameworkId);
+    }
+    validateFrameworkFromCache(frameworkRequest, frameworkFields, frameworkId);
+  }
+
+  private void getFrameworkDataAndCache(String frameworkId) {
+    Map<String, Object> response = FrameworkUtil.getRootOrgDetails(frameworkId);
+    Map<String, List<Map<String, String>>> frameworkCacheMap = null;
+    List<String> supportedfFields = DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.FIELDS);
+    Map<String, Object> result = (Map<String, Object>) response.get(JsonKey.RESULT);
+    Map<String, Object> frameworkDetails = (Map<String, Object>) result.get(JsonKey.FRAMEWORK);
+    List<Map<String, Object>> frameworkCategories =
+        (List<Map<String, Object>>) frameworkDetails.get(JsonKey.CATEGORIES);
+    for (Map<String, Object> frameworkCategoriesValue : frameworkCategories) {
+      String frameworkField = (String) frameworkCategoriesValue.get(JsonKey.CODE);
+      List<Map<String, String>> listOfFields = null;
+      if (supportedfFields.contains(frameworkField)) {
+        List<Map<String, Object>> frameworkTerms =
+            (List<Map<String, Object>>) frameworkCategoriesValue.get(JsonKey.TERMS);
+        for (Map<String, Object> frameworkTermsField : frameworkTerms) {
+          String id = (String) frameworkTermsField.get(JsonKey.IDENTIFIER);
+          String name = (String) frameworkTermsField.get(JsonKey.NAME);
+          Map<String, String> writtenValue = null;
+          writtenValue.put(JsonKey.ID, id);
+          writtenValue.put(JsonKey.NAME, name);
+          listOfFields.add(writtenValue);
+        }
+      }
+      frameworkCacheMap.put(frameworkField, listOfFields);
+    }
+    DataCacheHandler.getFrameworkMap().put(frameworkId, frameworkCacheMap);
+  }
+
+  private void validateFrameworkFromCache(
+      Map<String, List<String>> frameworkRequest,
+      List<String> frameworkFields,
+      String frameworkId) {
+    Map<String, List<Map<String, String>>> frameworkCachedValues =
+        DataCacheHandler.getFrameworkMap().get(frameworkId);
+    for (Map.Entry<String, List<String>> entry : frameworkRequest.entrySet()) {
+      {
+        List<Map<String, String>> cachedFrameworkList = frameworkCachedValues.get(entry.getKey());
+        for (String userFieldValues : entry.getValue()) {
+          boolean found = false;
+          for (int i = 0; i < cachedFrameworkList.size(); i++) {
+            if (cachedFrameworkList.get(i).get(JsonKey.NAME).equalsIgnoreCase(userFieldValues)) {
+              found = true;
+              break;
+            }
+          }
+          if (!found)
+            throw new ProjectCommonException(
+                ResponseCode.errorInvalidValueProvided.getErrorCode(),
+                ResponseCode.errorInvalidValueProvided.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode(),
+                StringFormatter.joinByDot(JsonKey.FRAMEWORK, entry.getKey()));
+        }
+      }
+    }
   }
 }

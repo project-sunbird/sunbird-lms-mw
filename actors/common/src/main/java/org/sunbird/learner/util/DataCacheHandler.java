@@ -28,6 +28,10 @@ public class DataCacheHandler implements Runnable {
   private static Map<String, Object> roleMap = new ConcurrentHashMap<>();
   private static Map<String, String> orgTypeMap = new ConcurrentHashMap<>();
   private static Map<String, String> configSettings = new ConcurrentHashMap<>();
+  private static Map<String, Map<String, List<Map<String, String>>>> frameworkMap =
+      new ConcurrentHashMap<>();
+  private static Map<String, List<String>> frameworkFieldsConfig = new ConcurrentHashMap<>();
+  private static Map<String, String> channelFrameworkMap = new ConcurrentHashMap<>();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final String KEY_SPACE_NAME = "sunbird";
 
@@ -39,6 +43,7 @@ public class DataCacheHandler implements Runnable {
     roleCache(roleMap);
     orgTypeCache(orgTypeMap);
     cacheSystemConfig(configSettings);
+    cacheFrameworkFieldsConfig(frameworkFieldsConfig);
     ProjectLogger.log("DataCacheHandler:run: Cache refresh completed.", LoggerEnum.INFO.name());
   }
 
@@ -58,12 +63,24 @@ public class DataCacheHandler implements Runnable {
         } else {
           configSettings.put(
               ((String) resultMap.get(JsonKey.FIELD)), (String) resultMap.get(JsonKey.VALUE));
+          Map<String, Object> systemSettingValues =
+              (Map<String, Object>) resultMap.get(JsonKey.FRAMEWORK);
         }
       }
     } else {
       configSettings.put(JsonKey.PHONE_UNIQUE, String.valueOf(false));
       configSettings.put(JsonKey.EMAIL_UNIQUE, String.valueOf(false));
     }
+  }
+
+  private void cacheFrameworkFieldsConfig(Map<String, List<String>> frameworkFieldsConfig) {
+    Response response =
+        cassandraOperation.getRecordById(
+            KEY_SPACE_NAME, JsonKey.SYSTEM_SETTINGS_DB, JsonKey.USER_PROFILE_CONFIG);
+    List<Map<String, Object>> responseList =
+        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    Map<String, Object> userProfileConfig = responseList.get(0);
+    frameworkFieldsConfig = (Map<String, List<String>>) userProfileConfig.get(JsonKey.FRAMEWORK);
   }
 
   private void orgTypeCache(Map<String, String> orgTypeMap) {
@@ -173,5 +190,31 @@ public class DataCacheHandler implements Runnable {
   /** @param configSettings the configSettings to set */
   public static void setConfigSettings(Map<String, String> configSettings) {
     DataCacheHandler.configSettings = configSettings;
+  }
+
+  /** @return the frameworkMap */
+  public static Map<String, Map<String, List<Map<String, String>>>> getFrameworkMap() {
+    return frameworkMap;
+  }
+
+  /** @param frameworkMap the frameworkValues to set */
+  public static void setFrameworkMap(
+      Map<String, Map<String, List<Map<String, String>>>> frameworkMap) {
+    DataCacheHandler.frameworkMap = frameworkMap;
+  }
+
+  /** @return the frameworkFieldsConfig */
+  public static Map<String, List<String>> getFrameworkFieldsConfig() {
+    return frameworkFieldsConfig;
+  }
+
+  /** @param channelFrameworkMap the channelFrameworkMap to set */
+  public static void setChannelFrameworkMap(Map<String, String> channelFrameworkMap) {
+    DataCacheHandler.channelFrameworkMap = channelFrameworkMap;
+  }
+
+  /** @return the channelFrameworkMap */
+  public static Map<String, String> getchannelFrameworkMap() {
+    return channelFrameworkMap;
   }
 }

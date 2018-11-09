@@ -77,9 +77,9 @@ public class FrameworkUtil {
       List<String> frameworkFields,
       List<String> frameworkMandatoryFields) {
     String frameworkId;
-    if (DataCacheHandler.getchannelFrameworkMap().get(user.getChannel()) != null)
+    if (DataCacheHandler.getchannelFrameworkMap().get(user.getChannel()) != null) {
       frameworkId = DataCacheHandler.getchannelFrameworkMap().get(user.getChannel());
-    else {
+    } else {
       Map<String, Object> response = ChannelUtil.getRootOrgDetails(user.getRootOrgId());
       frameworkId = (String) response.get(JsonKey.DEFAULT_FRAMEWORK);
     }
@@ -102,7 +102,9 @@ public class FrameworkUtil {
     for (Map<String, Object> frameworkCategoriesValue : frameworkCategories) {
       String frameworkField = (String) frameworkCategoriesValue.get(JsonKey.CODE);
       List<Map<String, String>> listOfFields = new ArrayList<>();
-      if (supportedfFields.contains(frameworkField)) {
+      if (supportedfFields.contains(frameworkField)
+          || frameworkField.equalsIgnoreCase(JsonKey.GRADE_LEVEL)) {
+        if (frameworkField.equalsIgnoreCase(JsonKey.GRADE_LEVEL)) frameworkField = JsonKey.GRADE;
         List<Map<String, Object>> frameworkTerms =
             (List<Map<String, Object>>) frameworkCategoriesValue.get(JsonKey.TERMS);
         for (Map<String, Object> frameworkTermsField : frameworkTerms) {
@@ -114,9 +116,11 @@ public class FrameworkUtil {
           listOfFields.add(writtenValue);
         }
       }
-      frameworkCacheMap.put(frameworkField, listOfFields);
+      if (!StringUtils.isEmpty(frameworkField) && listOfFields != null)
+        frameworkCacheMap.put(frameworkField, listOfFields);
     }
-    DataCacheHandler.updateFrameworkMap(frameworkId, frameworkCacheMap);
+    if (!frameworkCacheMap.isEmpty())
+      DataCacheHandler.updateFrameworkMap(frameworkId, frameworkCacheMap);
   }
 
   public static void validateFrameworkFromCache(

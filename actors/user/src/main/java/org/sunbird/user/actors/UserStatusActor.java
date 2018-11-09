@@ -1,6 +1,5 @@
 package org.sunbird.user.actors;
 
-import akka.actor.ActorRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.MessageFormat;
 import java.util.HashMap;
@@ -27,16 +26,12 @@ import org.sunbird.user.service.impl.UserServiceImpl;
 )
 public class UserStatusActor extends UserBaseActor {
   private UserService userService = UserServiceImpl.getInstance();
-  private ActorRef systemSettingActorRef = null;
 
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.USER);
     ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();
-    if (systemSettingActorRef == null) {
-      systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
-    }
     switch (operation) {
       case "blockUser":
         blockUser(request);
@@ -66,14 +61,16 @@ public class UserStatusActor extends UserBaseActor {
         MessageFormat.format("UserStatusActor:updateUserStatus:{0}:{1}: ", operation, userId);
     User user = userService.getUserById(userId);
 
-    if (operation.equals(ActorOperations.BLOCK_USER.getValue()) && user.getIsDeleted()) {
+    if (operation.equals(ActorOperations.BLOCK_USER.getValue())
+        && Boolean.TRUE.equals(user.getIsDeleted())) {
       throw new ProjectCommonException(
           ResponseCode.userAlreadyInactive.getErrorCode(),
           ResponseCode.userAlreadyInactive.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
-    if (operation.equals(ActorOperations.UNBLOCK_USER.getValue()) && !user.getIsDeleted()) {
+    if (operation.equals(ActorOperations.UNBLOCK_USER.getValue())
+        && Boolean.FALSE.equals(user.getIsDeleted())) {
       throw new ProjectCommonException(
           ResponseCode.userAlreadyActive.getErrorCode(),
           ResponseCode.userAlreadyActive.getErrorMessage(),
@@ -82,15 +79,14 @@ public class UserStatusActor extends UserBaseActor {
 
     Map<String, Object> userMapES =
         getUserMapES(userId, (String) request.getContext().get(JsonKey.REQUESTED_BY), isBlocked);
+
     ObjectMapper mapper = new ObjectMapper();
     User updatedUser = mapper.convertValue(userMapES, User.class);
 
-    if (isSSOEnabled()) {
-      if (isBlocked) {
-        getSSOManager().deactivateUser(userMapES);
-      } else {
-        getSSOManager().activateUser(userMapES);
-      }
+    if (isBlocked) {
+      getSSOManager().deactivateUser(userMapES);
+    } else {
+      getSSOManager().activateUser(userMapES);
     }
 
     Response response = getUserDao().updateUser(updatedUser);

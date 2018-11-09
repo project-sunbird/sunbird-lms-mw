@@ -3,6 +3,7 @@ package org.sunbird.user.actors;
 import static org.sunbird.learner.util.Util.isNotNull;
 
 import akka.actor.ActorRef;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -11,6 +12,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
@@ -28,6 +30,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
@@ -35,7 +38,6 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
-import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.request.UserRequestValidator;
@@ -57,14 +59,14 @@ import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
 import org.sunbird.user.util.UserUtil;
 
-/**
- * This actor will handle course enrollment operation .
- *
- * @author Manzarul
- * @author Amit Kumar
- */
 @ActorConfig(
-  tasks = {"createUser", "updateUser", "getUserProfile", "getUserDetailsByLoginId"},
+  tasks = {
+    "createUser",
+    "updateUser",
+    "getUserDetailsByLoginId",
+    "getUserProfile",
+    "getUserProfileV2"
+  },
   asyncTasks = {}
 )
 public class UserManagementActor extends BaseActor {
@@ -77,8 +79,6 @@ public class UserManagementActor extends BaseActor {
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
-  private boolean isSSOEnabled =
-      Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
   private Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private static final boolean IS_REGISTRY_ENABLED =
@@ -90,13 +90,19 @@ public class UserManagementActor extends BaseActor {
       InterServiceCommunicationFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
 
-  /** Receives the actor message and perform the course enrollment operation . */
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.USER);
     ExecutionContext.setRequestId(request.getRequestId());
     if (systemSettingActorRef == null) {
+      ProjectLogger.log(
+          "UserManagementActor:onReceive: systemSettingActorRef is initialised first time.",
+          LoggerEnum.INFO.name());
       systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
+    } else {
+      ProjectLogger.log(
+          "UserManagementActor:onReceive: systemSettingActorRef is already initialised.",
+          LoggerEnum.INFO.name());
     }
     String operation = request.getOperation();
     switch (operation) {
@@ -109,12 +115,14 @@ public class UserManagementActor extends BaseActor {
       case "getUserProfile":
         getUserProfile(request);
         break;
+      case "getUserProfileV2":
+        getUserProfileV2(request);
+        break;
       case "getUserDetailsByLoginId":
         getUserDetailsByLoginId(request);
         break;
       default:
         onReceiveUnsupportedOperation("UserManagementActor");
-        break;
     }
   }
 
@@ -224,31 +232,8 @@ public class UserManagementActor extends BaseActor {
         if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
           List<String> requestFields = (List<String>) actorMessage.getRequest().get(JsonKey.FIELDS);
           if (requestFields != null) {
-            if (!requestFields.contains(JsonKey.COMPLETENESS)) {
-              result.remove(JsonKey.COMPLETENESS);
-            }
-            if (!requestFields.contains(JsonKey.MISSING_FIELDS)) {
-              result.remove(JsonKey.MISSING_FIELDS);
-            }
-            if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
-              result.put(
-                  JsonKey.LAST_LOGIN_TIME,
-                  Long.parseLong(
-                      getLastLoginTime(
-                          (String) userMap.get(JsonKey.USER_ID),
-                          (String) result.get(JsonKey.LAST_LOGIN_TIME))));
-            }
-            if (!requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
-              result.remove(JsonKey.LAST_LOGIN_TIME);
-            }
-            if (requestFields.contains(JsonKey.TOPIC)) {
-              // fetch the topic details of all user associated orgs and append in the
-              // result
-              fetchTopicOfAssociatedOrgs(result);
-            }
-            if (requestFields.contains(JsonKey.ORGANISATIONS)) {
-              updateUserOrgInfo((List) result.get(JsonKey.ORGANISATIONS));
-            }
+            addExtraFieldsInUserProfileResponse(
+                result, String.join(",", requestFields), (String) userMap.get(JsonKey.USER_ID));
           } else {
             result.remove(JsonKey.MISSING_FIELDS);
             result.remove(JsonKey.COMPLETENESS);
@@ -282,6 +267,21 @@ public class UserManagementActor extends BaseActor {
     prepUserOrgInfoWithAdditionalData(userOrgs, orgInfoMap, locationInfoMap);
   }
 
+  private void updateRoleMasterInfo(Map<String, Object> result) {
+    Set<Entry<String, Object>> roleSet = DataCacheHandler.getRoleMap().entrySet();
+    List<Map<String, String>> roleList = new ArrayList<>();
+    roleSet
+        .parallelStream()
+        .forEach(
+            (roleSetItem) -> {
+              Map<String, String> roleMap = new HashMap<>();
+              roleMap.put(JsonKey.ID, roleSetItem.getKey());
+              roleMap.put(JsonKey.NAME, (String) roleSetItem.getValue());
+              roleList.add(roleMap);
+            });
+    result.put(JsonKey.ROLE_LIST, roleList);
+  }
+
   private void prepUserOrgInfoWithAdditionalData(
       List<Map<String, Object>> userOrgs,
       Map<String, Map<String, Object>> orgInfoMap,
@@ -295,6 +295,15 @@ public class UserManagementActor extends BaseActor {
       usrOrg.put(
           JsonKey.LOCATIONS,
           prepLocationFields((List<String>) orgInfo.get(JsonKey.LOCATION_IDS), locationInfoMap));
+    }
+  }
+
+  private void removeExcludedFieldsFromUserProfileResponse(
+      Map<String, Object> response, List<String> excludeFields) {
+    if (CollectionUtils.isNotEmpty(excludeFields)) {
+      for (String key : excludeFields) {
+        response.remove(key);
+      }
     }
   }
 
@@ -389,11 +398,41 @@ public class UserManagementActor extends BaseActor {
   }
 
   /**
-   * Method to get the user profile .
+   * Method to get user profile (version 1).
    *
-   * @param actorMessage Request
+   * @param actorMessage Request containing user ID
    */
   private void getUserProfile(Request actorMessage) {
+    Response response = getUserProfileData(actorMessage);
+    sender().tell(response, self());
+  }
+
+  /**
+   * Method to get user profile (version 2).
+   *
+   * @param actorMessage Request containing user ID
+   */
+  private void getUserProfileV2(Request actorMessage) {
+    Response response = getUserProfileData(actorMessage);
+    SystemSettingClient systemSetting = new SystemSettingClientImpl();
+    Object excludedFieldList =
+        systemSetting.getSystemSettingByFieldAndKey(
+            systemSettingActorRef,
+            JsonKey.USER_PROFILE_CONFIG,
+            JsonKey.SUNBIRD_USER_PROFILE_READ_EXCLUDED_FIELDS,
+            new TypeReference<List<String>>() {});
+    if (excludedFieldList != null) {
+      removeExcludedFieldsFromUserProfileResponse(
+          (Map<String, Object>) response.get(JsonKey.RESPONSE), (List<String>) excludedFieldList);
+    } else {
+      ProjectLogger.log(
+          "UserManagementActor:getUserProfileV2: System setting userProfileConfig.read.excludedFields not configured.",
+          LoggerEnum.INFO.name());
+    }
+    sender().tell(response, self());
+  }
+
+  private Response getUserProfileData(Request actorMessage) {
     Map<String, Object> userMap = actorMessage.getRequest();
     Map<String, Object> result =
         ElasticSearchUtil.getDataByIdentifier(
@@ -451,42 +490,15 @@ public class UserManagementActor extends BaseActor {
         result.putAll(privateResult);
       }
     } catch (Exception e) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.userDataEncryptionError.getErrorCode(),
-              ResponseCode.userDataEncryptionError.getErrorMessage(),
-              ResponseCode.SERVER_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
+      throw new ProjectCommonException(
+          ResponseCode.userDataEncryptionError.getErrorCode(),
+          ResponseCode.userDataEncryptionError.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
     }
     if (null != actorMessage.getContext().get(JsonKey.FIELDS)) {
       String requestFields = (String) actorMessage.getContext().get(JsonKey.FIELDS);
-      if (!StringUtils.isBlank(requestFields)) {
-        if (!requestFields.contains(JsonKey.COMPLETENESS)) {
-          result.remove(JsonKey.COMPLETENESS);
-        }
-        if (!requestFields.contains(JsonKey.MISSING_FIELDS)) {
-          result.remove(JsonKey.MISSING_FIELDS);
-        }
-        if (requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
-          result.put(
-              JsonKey.LAST_LOGIN_TIME,
-              Long.parseLong(
-                  getLastLoginTime(
-                      (String) userMap.get(JsonKey.USER_ID),
-                      (String) result.get(JsonKey.LAST_LOGIN_TIME))));
-        }
-        if (!requestFields.contains(JsonKey.LAST_LOGIN_TIME)) {
-          result.remove(JsonKey.LAST_LOGIN_TIME);
-        }
-        if (requestFields.contains(JsonKey.TOPIC)) {
-          // fetch the topic details of all user associated orgs and append in the result
-          fetchTopicOfAssociatedOrgs(result);
-        }
-        if (requestFields.contains(JsonKey.ORGANISATIONS)) {
-          updateUserOrgInfo((List) result.get(JsonKey.ORGANISATIONS));
-        }
-      }
+      addExtraFieldsInUserProfileResponse(
+          result, requestFields, (String) userMap.get(JsonKey.USER_ID));
     } else {
       result.remove(JsonKey.MISSING_FIELDS);
       result.remove(JsonKey.COMPLETENESS);
@@ -506,7 +518,36 @@ public class UserManagementActor extends BaseActor {
       result = new HashMap<>();
       response.put(JsonKey.RESPONSE, result);
     }
-    sender().tell(response, self());
+    return response;
+  }
+
+  private void addExtraFieldsInUserProfileResponse(
+      Map<String, Object> result, String fields, String userId) {
+    if (!StringUtils.isBlank(fields)) {
+      if (!fields.contains(JsonKey.COMPLETENESS)) {
+        result.remove(JsonKey.COMPLETENESS);
+      }
+      if (!fields.contains(JsonKey.MISSING_FIELDS)) {
+        result.remove(JsonKey.MISSING_FIELDS);
+      }
+      if (fields.contains(JsonKey.LAST_LOGIN_TIME)) {
+        result.put(
+            JsonKey.LAST_LOGIN_TIME,
+            Long.parseLong(getLastLoginTime(userId, (String) result.get(JsonKey.LAST_LOGIN_TIME))));
+      } else {
+        result.remove(JsonKey.LAST_LOGIN_TIME);
+      }
+      if (fields.contains(JsonKey.TOPIC)) {
+        // fetch the topic details of all user associated orgs and append in the result
+        fetchTopicOfAssociatedOrgs(result);
+      }
+      if (fields.contains(JsonKey.ORGANISATIONS)) {
+        updateUserOrgInfo((List) result.get(JsonKey.ORGANISATIONS));
+      }
+      if (fields.contains(JsonKey.ROLES)) {
+        updateRoleMasterInfo(result);
+      }
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -646,7 +687,6 @@ public class UserManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     actorMessage.toLower();
     Util.getUserProfileConfig(systemSettingActorRef);
-    SystemSettingClient systemSettingClient = SystemSettingClientImpl.getInstance();
     userService.validateUserId(actorMessage);
     Map<String, Object> userMap = actorMessage.getRequest();
     userRequestValidator.validateUpdateUserRequest(actorMessage);
@@ -668,13 +708,10 @@ public class UserManagementActor extends BaseActor {
     if (IS_REGISTRY_ENABLED) {
       UserUtil.updateUserToRegistry(userMap, (String) userDbRecord.get(JsonKey.REGISTRY_ID));
     }
-
-    if (isSSOEnabled) {
-      UserUtil.upsertUserInKeycloak(userMap, JsonKey.UPDATE);
-    }
     if (userMap.containsKey(JsonKey.FRAMEWORK))
       FrameworkUtil.validateFrameworkUpdateRequest(
           user, userMap, frameworkFields, frameworkMandatoryFields);
+    UserUtil.upsertUserInKeycloak(userMap, JsonKey.UPDATE);
     userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     Map<String, Object> requestMap = UserUtil.encryptUserData(userMap);
@@ -734,6 +771,9 @@ public class UserManagementActor extends BaseActor {
     if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
       userRequestValidator.validateCreateUserV2Request(actorMessage);
       validateChannelAndOrganisationId(userMap);
+    } else if (StringUtils.isNotBlank(version) && JsonKey.VERSION_3.equalsIgnoreCase(version)) {
+      userRequestValidator.validateCreateUserV3Request(actorMessage);
+      userMap.put(JsonKey.USERNAME, ProjectUtil.generateUniqueId());
     } else {
       userRequestValidator.validateCreateUserV1Request(actorMessage);
     }
@@ -742,13 +782,18 @@ public class UserManagementActor extends BaseActor {
     userMap.remove(JsonKey.ENC_PHONE);
     userMap.remove(JsonKey.EMAIL_VERIFIED);
     userMap.put(JsonKey.CREATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
+    userMap.put(JsonKey.VERSION, JsonKey.VERSION_3);
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
     try {
-      String channel = Util.getCustodianChannel(userMap, systemSettingActorRef);
-      String rootOrgId = Util.getRootOrgIdFromChannel(channel);
-      userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
-      userMap.put(JsonKey.CHANNEL, channel);
+      String custodianOrgId =
+          userService.getValidatedCustodianOrgId(userMap, systemSettingActorRef);
+      if (StringUtils.isBlank(custodianOrgId)) {
+        String channel = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL);
+        String rootOrgId = userService.getRootOrgIdFromChannel(channel);
+        userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+        userMap.put(JsonKey.CHANNEL, channel);
+      }
     } catch (Exception ex) {
       sender().tell(ex, self());
       return;
@@ -781,6 +826,7 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void processUserRequest(Map<String, Object> userMap) {
     Map<String, Object> requestMap = null;
     UserUtil.setUserDefaultValue(userMap);
@@ -794,16 +840,7 @@ public class UserManagementActor extends BaseActor {
       userExtension.create(userMap);
     }
 
-    if (isSSOEnabled) {
-      UserUtil.upsertUserInKeycloak(userMap, JsonKey.CREATE);
-    } else {
-      userMap.put(
-          JsonKey.USER_ID, OneWayHashing.encryptVal((String) userMap.get(JsonKey.USERNAME)));
-      userMap.put(JsonKey.ID, OneWayHashing.encryptVal((String) userMap.get(JsonKey.USERNAME)));
-    }
-    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
-      userMap.put(JsonKey.PASSWORD, null);
-    }
+    UserUtil.upsertUserInKeycloak(userMap, JsonKey.CREATE);
     requestMap = UserUtil.encryptUserData(userMap);
     removeUnwanted(requestMap);
     Response response = null;
@@ -812,7 +849,7 @@ public class UserManagementActor extends BaseActor {
           cassandraOperation.insertRecord(
               usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
     } finally {
-      if (null == response && isSSOEnabled) {
+      if (null == response) {
         ssoManager.removeUser(userMap);
       }
       if (null == response && IS_REGISTRY_ENABLED) {
@@ -831,10 +868,15 @@ public class UserManagementActor extends BaseActor {
       ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
     }
     // Enable this when you want to send full response of user attributes
-    // response.putAll(resp.getResult());
+    Map<String, Object> esResponse = new HashMap<>();
+    esResponse.putAll((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE));
+    esResponse.putAll(requestMap);
+    response.put(
+        JsonKey.ERRORS,
+        ((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ERRORS));
     sender().tell(response, self());
     if (null != resp) {
-      saveUserDetailsToEs(userMap);
+      saveUserDetailsToEs(esResponse);
     }
     sendEmailAndSms(requestMap);
     Map<String, Object> targetObject = null;

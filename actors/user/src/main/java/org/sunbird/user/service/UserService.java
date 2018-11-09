@@ -1,5 +1,6 @@
 package org.sunbird.user.service;
 
+import akka.actor.ActorRef;
 import java.util.Map;
 import org.sunbird.common.request.Request;
 import org.sunbird.models.user.User;
@@ -18,4 +19,8 @@ public interface UserService {
 
   void syncUserProfile(
       String userId, Map<String, Object> userDataMap, Map<String, Object> userPrivateDataMap);
+
+  String getValidatedCustodianOrgId(Map<String, Object> userMap, ActorRef actorRef);
+
+  String getRootOrgIdFromChannel(String channel);
 }

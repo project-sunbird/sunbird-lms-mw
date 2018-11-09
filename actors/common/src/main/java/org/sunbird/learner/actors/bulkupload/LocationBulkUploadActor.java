@@ -72,6 +72,6 @@ public class LocationBulkUploadActor extends BaseBulkUploadActor {
         recordCount,
         processId,
         bulkUploadProcess,
-        BulkUploadActorOperation.LOCATION_BULK_UPLOAD_BACKGROUND_JOB.getValue(),bulkLocationAllowedFields);
+        BulkUploadActorOperation.LOCATION_BULK_UPLOAD_BACKGROUND_JOB.getValue(), bulkLocationAllowedFields);
   }
 }

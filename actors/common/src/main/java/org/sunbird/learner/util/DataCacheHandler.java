@@ -208,6 +208,12 @@ public class DataCacheHandler implements Runnable {
     return frameworkFieldsConfig;
   }
 
+  /** @param frameworkId and its Values and update it */
+  public static void updateFrameworkMap(
+      String frameworkId, Map<String, List<Map<String, String>>> frameworkCacheMap) {
+    DataCacheHandler.frameworkMap.put(frameworkId, frameworkCacheMap);
+  }
+
   /** @param channelFrameworkMap the channelFrameworkMap to set */
   public static void setChannelFrameworkMap(Map<String, String> channelFrameworkMap) {
     DataCacheHandler.channelFrameworkMap = channelFrameworkMap;

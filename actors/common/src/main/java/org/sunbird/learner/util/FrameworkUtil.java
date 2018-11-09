@@ -227,6 +227,7 @@ public class FrameworkUtil {
                         || !(entry.getValue() instanceof List)
                         || ((List) entry.getValue()).isEmpty());
     if (isAnyFieldNotListOrEmpty) {
+      return false;
       ProjectLogger.log(
           "framework fields can only by list and cannot be null or empty", LoggerEnum.ERROR);
     }

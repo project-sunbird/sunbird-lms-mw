@@ -20,5 +20,5 @@ public interface UserService {
   void syncUserProfile(
       String userId, Map<String, Object> userDataMap, Map<String, Object> userPrivateDataMap);
 
-  String getActiveCustodianOrgId(Map<String, Object> userMap, ActorRef actorRef);
+  String getValidatedCustodianOrgId(Map<String, Object> userMap, ActorRef actorRef);
 }

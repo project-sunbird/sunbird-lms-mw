@@ -132,7 +132,7 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
-  public String getActiveCustodianOrgId(Map<String, Object> userMap, ActorRef actorRef) {
+  public String getValidatedCustodianOrgId(Map<String, Object> userMap, ActorRef actorRef) {
     String custodianOrgId = "";
     try {
       SystemSettingClient client = SystemSettingClientImpl.getInstance();

@@ -221,4 +221,8 @@ public class DataCacheHandler implements Runnable {
   public static Map<String, String> getchannelFrameworkMap() {
     return channelFrameworkMap;
   }
+
+  public static void upsertFrameworkToChannel(String channel, String frameworkId) {
+    channelFrameworkMap.put(channel, frameworkId);
+  }
 }

@@ -109,7 +109,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
         recordCount,
         processId,
         bulkUploadProcess,
-        BulkUploadActorOperation.ORG_BULK_UPLOAD_BACKGROUND_JOB.getValue());
+        BulkUploadActorOperation.ORG_BULK_UPLOAD_BACKGROUND_JOB.getValue(), bulkOrgAllowedFields);
   }
 
   Map<String, Object> getUser(String userId) {

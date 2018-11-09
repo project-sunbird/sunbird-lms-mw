@@ -578,8 +578,7 @@ public class UserUtil {
 
   public static void createUserV3Request(Map<String, Object> userMap) {
     userMap.put(JsonKey.USERNAME, ProjectUtil.generateUniqueId());
-    userMap.put(UserConstants.USER_TYPE, ProjectUtil.UserType.others.name());
-    userMap.put(UserConstants.SIGNUP_TYPE, ProjectUtil.SignupType.SELF_SIGNUP.name());
+    userMap.put(UserConstants.USER_TYPE, UserType.self_signup.name());
   }
 
   public static String getActiveCustodianOrgId(Map<String, Object> userMap, ActorRef actorRef) {
@@ -613,10 +612,10 @@ public class UserUtil {
           int status = (int) custodianOrg.get(JsonKey.STATUS);
           if (1 != status) {
             ProjectCommonException.throwClientErrorException(
-                ResponseCode.errorInActiveCustodianOrg);
+                ResponseCode.errorInactiveCustodianOrg);
           }
         } else {
-          ProjectCommonException.throwClientErrorException(ResponseCode.errorInActiveCustodianOrg);
+          ProjectCommonException.throwClientErrorException(ResponseCode.errorInactiveCustodianOrg);
         }
       } else {
         ProjectCommonException.throwServerErrorException(

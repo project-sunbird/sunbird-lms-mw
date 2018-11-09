@@ -15,6 +15,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.Constants;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -166,7 +167,7 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       ProjectLogger.log(logMessagePrefix + "completed", LoggerEnum.INFO);
       bulkUploadProcess.setSuccessResult(ProjectUtil.convertMapToJsonString(successList));
       bulkUploadProcess.setFailureResult(ProjectUtil.convertMapToJsonString(failureList));
-      bulkUploadProcess.setStorageDetailsObj(storageDetails);
+      bulkUploadProcess.setEncryptedStorageDetails(storageDetails);
       bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
     } catch (Exception e) {
       ProjectLogger.log(
@@ -244,7 +245,7 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       headerRowWithInternalNames.add(JsonKey.BULK_UPLOAD_STATUS);
       headerRowWithInternalNames.add(JsonKey.BULK_UPLOAD_ERROR);
 
-      if (supportedColumnsMap != null && !supportedColumnsMap.isEmpty()) {
+      if (MapUtils.isNotEmpty(supportedColumnsMap)) {
         Map<String, String> revMap = getReverseMap(supportedColumnsMap);
         List<String> headerRowWithDisplayNames = new ArrayList<>();
         headerRowWithInternalNames.forEach(
@@ -285,8 +286,6 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
               String errMsg = (String) map.get(JsonKey.ERROR_MSG);
               int i = 0;
               for (String field : headerRows) {
-                if (getColumnsToIgnore().contains(field)) continue;
-
                 if (JsonKey.BULK_UPLOAD_STATUS.equals(field)) {
                   nextLine[i++] = errMsg == null ? JsonKey.SUCCESS : JsonKey.FAILED;
                 } else if (JsonKey.BULK_UPLOAD_ERROR.equals(field)) {
@@ -299,5 +298,5 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
             });
   }
 
-  public abstract List<String> getColumnsToIgnore();
+
 }

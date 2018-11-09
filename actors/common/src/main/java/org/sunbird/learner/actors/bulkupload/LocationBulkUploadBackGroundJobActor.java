@@ -219,25 +219,4 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
       }
     }
   }
-
-  private Map<String, Integer> getOrderMap() {
-    Map<String, Integer> orderMap = new HashMap<>();
-    List<String> subTypeList =
-        Arrays.asList(
-            ProjectUtil.getConfigValue(GeoLocationJsonKey.SUNBIRD_VALID_LOCATION_TYPES).split(";"));
-    for (String str : subTypeList) {
-      List<String> typeList =
-          (((Arrays.asList(str.split(","))).stream().map(String::toLowerCase))
-              .collect(Collectors.toList()));
-      for (int i = 0; i < typeList.size(); i++) {
-        orderMap.put(typeList.get(i), i);
-      }
-    }
-    return orderMap;
-  }
-
-  @Override
-  public List<String> getColumnsToIgnore() {
-    return Collections.emptyList();
-  }
 }

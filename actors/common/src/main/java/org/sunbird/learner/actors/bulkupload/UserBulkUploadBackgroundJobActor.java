@@ -100,7 +100,10 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
         validateMandatoryFields(userMap, task, mandatoryColumnsObject);
       }
       if (null != userMap.get(JsonKey.ROLES)) {
-        convertCommaSepStringToList(userMap, JsonKey.ROLES);
+    	  String roles = (String)userMap.get(JsonKey.ROLES);
+    	  userMap.put(JsonKey.ROLES, Arrays.asList(roles.split("\\\\s*,\\\\s*")));
+
+        
       }
       User user = mapper.convertValue(userMap, User.class);
       user.setId((String) userMap.get(JsonKey.USER_ID));
@@ -166,16 +169,5 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
 
     task.setData(mapper.writeValueAsString(row));
     setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, row, JsonKey.UPDATE);
-  }
-
-  @Override
-  public List<String> getColumnsToIgnore() {
-    return Collections.emptyList();
-  }
-
-  private void convertCommaSepStringToList(Map<String, Object> map, String property) {
-    String[] props = ((String) map.get(property)).split(",");
-    List<String> list = new ArrayList<>(Arrays.asList(props));
-    map.put(property, list);
   }
 }

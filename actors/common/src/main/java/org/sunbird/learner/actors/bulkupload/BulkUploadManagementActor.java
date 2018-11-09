@@ -127,7 +127,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     BulkUploadProcess result = bulkuploadDao.read(processId);
     if (result != null) {
       try {
-        StorageDetails cloudStorageData = result.getStorageDetailsObj();
+        StorageDetails cloudStorageData = result.getDecryptedStorageDetails();
         if (cloudStorageData == null) {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.errorUnavailableDownloadLink, null);
@@ -136,14 +136,13 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
             CloudStorageUtil.getSignedUrl(
                 CloudStorageType.getByName(cloudStorageData.getStorageType()),
                 cloudStorageData.getContainer(),
-                cloudStorageData.getObjectId());
+                cloudStorageData.getFileName());
         Response response = new Response();
         response.setResponseCode(ResponseCode.OK);
         response.getResult().put(JsonKey.SIGNED_URL, signedUrl);
         sender().tell(response, self());
       } catch (ProjectCommonException e) {
-
-        throw (ProjectCommonException) e;
+    	  throw e;
       } catch (Exception e) {
         ProjectCommonException.throwClientErrorException(
             ResponseCode.errorGenerateDownloadLink, null);
@@ -236,10 +235,8 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         sender().tell(response, self());
       }
     } else {
-      throw new ProjectCommonException(
-          ResponseCode.invalidProcessId.getErrorCode(),
-          ResponseCode.invalidProcessId.getErrorMessage(),
-          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+    	ProjectUtil.createResourceNotFoundException();
+      
     }
   }
 

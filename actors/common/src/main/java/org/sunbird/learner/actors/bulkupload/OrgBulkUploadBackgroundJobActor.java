@@ -41,15 +41,15 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
               getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
               "orgProfileConfig",
               "csv.supportedColumns",
-              new TypeReference<Map<String,String>>() {});
-      
+              new TypeReference<Map<String, String>>() {});
+
       String[] supportedColumnsOrder =
-              systemSettingClient.getSystemSettingByFieldAndKey(
-                  getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
-                  "orgProfileConfig",
-                  "csv.supportedColumnsOrder",
-                  new TypeReference<String[]>() {});
-      
+          systemSettingClient.getSystemSettingByFieldAndKey(
+              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+              "orgProfileConfig",
+              "csv.supportedColumnsOrder",
+              new TypeReference<String[]>() {});
+
       handleBulkUploadBackground(
           request,
           (baseBulkUpload) -> {
@@ -59,7 +59,10 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
                   processTasks((List<BulkUploadProcessTask>) tasks);
                   return null;
                 },
-                supportedColumns, supportedColumnsOrder!=null?supportedColumnsOrder:( String[] )request.get(JsonKey.FIELDS));
+                supportedColumns,
+                supportedColumnsOrder != null
+                    ? supportedColumnsOrder
+                    : (String[]) request.get(JsonKey.FIELDS));
             return null;
           });
     } else {
@@ -198,11 +201,5 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
 
     task.setData(mapper.writeValueAsString(row));
     setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, row, JsonKey.UPDATE);
-  }
-
-  @Override
-  public List<String> getColumnsToIgnore() {
-
-    return Arrays.asList("locationIds", "rootOrgId", "id", "hashTagId", "slug", "isRootOrg");
   }
 }

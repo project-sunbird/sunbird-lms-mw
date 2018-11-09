@@ -7,13 +7,13 @@ public class StorageDetails {
 
   private String storageType;
   private String container;
-  private String objectId;
+  private String fileName;
 
-  public StorageDetails(String storageType, String container, String objectId) {
+  public StorageDetails(String storageType, String container, String fileName) {
     super();
     this.storageType = storageType;
     this.container = container;
-    this.objectId = objectId;
+    this.fileName = fileName;
   }
 
   public StorageDetails() {}
@@ -34,12 +34,12 @@ public class StorageDetails {
     this.container = container;
   }
 
-  public String getObjectId() {
-    return objectId;
+  public String getFileName() {
+    return fileName;
   }
 
-  public void setObjectId(String objectId) {
-    this.objectId = objectId;
+  public void setFileName(String fileName) {
+    this.fileName = fileName;
   }
 
   public String toJsonString() throws JsonProcessingException {

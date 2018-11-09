@@ -130,6 +130,9 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
             if (leafNodeCount > courseProgress) {
               updateDb.put(JsonKey.STATUS, ProgressStatus.STARTED.getValue());
             } else {
+              if(ProgressStatus.COMPLETED.getValue() != (Integer) course.get(JsonKey.STATUS)) {
+                updateDb.put(JsonKey.COMPLETED_ON, new Timestamp(new Date().getTime()));
+              }
               updateDb.put(JsonKey.STATUS, ProgressStatus.COMPLETED.getValue());
             }
           }

@@ -1,9 +1,9 @@
 package org.sunbird.user.util;
 
 public enum UserType {
-  teacher("teacher"),
-  self_signup("self_signup"),
-  others("others");
+  TEACHER("TEACHER"),
+  SELF_SIGNUP("SELF_SIGNUP"),
+  OTHER("OTHER");
 
   private String typeName;
 

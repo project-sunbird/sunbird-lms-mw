@@ -578,7 +578,7 @@ public class UserUtil {
 
   public static void createUserV3Request(Map<String, Object> userMap) {
     userMap.put(JsonKey.USERNAME, ProjectUtil.generateUniqueId());
-    userMap.put(UserConstants.USER_TYPE, UserType.self_signup.name());
+    userMap.put(UserConstants.USER_TYPE, UserType.SELF_SIGNUP.name());
   }
 
   public static String getActiveCustodianOrgId(Map<String, Object> userMap, ActorRef actorRef) {

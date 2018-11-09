@@ -21,27 +21,27 @@ public class UserLoginActorTest {
   private static final Props props = Props.create(UserLoginActor.class);
   private static ActorSystem system = ActorSystem.create("system");
   private String userId = "someUserId";
-  TestKit probe = new TestKit(system);
-  ActorRef subject = system.actorOf(props);
+  private TestKit probe = new TestKit(system);
+  private ActorRef subject = system.actorOf(props);
 
   @Test
   public void testUpdateUserLoginTimeSuccess() {
 
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.USER_CURRENT_LOGIN.getValue());
-    reqObj.put(JsonKey.USER_ID, userId);
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
+    Request request = new Request();
+    request.setOperation(ActorOperations.USER_CURRENT_LOGIN.getValue());
+    request.put(JsonKey.USER_ID, userId);
+    subject.tell(request, probe.getRef());
+    Response response = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
   }
 
   @Test
   public void testUpdateUserLoginTimeFailureWithInvalidMessage() {
 
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.GET_USER_COUNT.getValue());
-    reqObj.put(JsonKey.USER_ID, userId);
-    subject.tell(reqObj, probe.getRef());
+    Request request = new Request();
+    request.setOperation(ActorOperations.INVALID_OPERATION.getValue());
+    request.put(JsonKey.USER_ID, userId);
+    subject.tell(request, probe.getRef());
     ProjectCommonException exception =
         probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
     Assert.assertTrue(

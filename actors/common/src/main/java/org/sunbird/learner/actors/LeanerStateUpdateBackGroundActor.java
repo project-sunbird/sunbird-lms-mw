@@ -124,17 +124,13 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
         if (course.containsKey(JsonKey.LEAF_NODE_COUNT)
             && ProjectUtil.isNotNull(course.get(JsonKey.LEAF_NODE_COUNT))) {
           Integer leafNodeCount = (Integer) course.get(JsonKey.LEAF_NODE_COUNT);
-          if (0 == leafNodeCount) {
+          if (0 == leafNodeCount || (leafNodeCount > courseProgress)) {
             updateDb.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.STARTED.getValue());
           } else {
-            if (leafNodeCount > courseProgress) {
-              updateDb.put(JsonKey.STATUS, ProgressStatus.STARTED.getValue());
-            } else {
               if(ProgressStatus.COMPLETED.getValue() != (Integer) course.get(JsonKey.STATUS)) {
                 updateDb.put(JsonKey.COMPLETED_ON, new Timestamp(new Date().getTime()));
               }
               updateDb.put(JsonKey.STATUS, ProgressStatus.COMPLETED.getValue());
-            }
           }
         } else if (ProjectUtil.isNull(course.get(JsonKey.LEAF_NODE_COUNT))) {
           updateDb.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.STARTED.getValue());

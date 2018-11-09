@@ -571,11 +571,6 @@ public class UserUtil {
     }
     return organisations;
   }
-
-  public static void createUserV3Request(Map<String, Object> userMap) {
-    userMap.put(JsonKey.USERNAME, ProjectUtil.generateUniqueId());
-    userMap.put(UserConstants.USER_TYPE, UserType.SELF_SIGNUP.name());
-  }
 }
 
 @FunctionalInterface

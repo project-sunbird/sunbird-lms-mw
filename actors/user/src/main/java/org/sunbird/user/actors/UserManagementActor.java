@@ -765,8 +765,7 @@ public class UserManagementActor extends BaseActor {
       validateChannelAndOrganisationId(userMap);
     } else if (StringUtils.isNotBlank(version) && JsonKey.VERSION_3.equalsIgnoreCase(version)) {
       userRequestValidator.validateCreateUserV3Request(actorMessage);
-      UserUtil.createUserV3Request(userMap);
-
+      userMap.put(JsonKey.USERNAME, ProjectUtil.generateUniqueId());
     } else {
       userRequestValidator.validateCreateUserV1Request(actorMessage);
     }
@@ -779,17 +778,13 @@ public class UserManagementActor extends BaseActor {
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
     try {
-      if (JsonKey.VERSION_3.equalsIgnoreCase(version)) {
-        userService.getValidatedCustodianOrgId(userMap, systemSettingActorRef);
-      } else {
-        String custodianOrgId =
-            userService.getValidatedCustodianOrgId(userMap, systemSettingActorRef);
-        if (StringUtils.isBlank(custodianOrgId)) {
-          String channel = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL);
-          String rootOrgId = userService.getRootOrgIdFromChannel(channel);
-          userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
-          userMap.put(JsonKey.CHANNEL, channel);
-        }
+      String custodianOrgId =
+          userService.getValidatedCustodianOrgId(userMap, systemSettingActorRef);
+      if (StringUtils.isBlank(custodianOrgId)) {
+        String channel = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL);
+        String rootOrgId = userService.getRootOrgIdFromChannel(channel);
+        userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+        userMap.put(JsonKey.CHANNEL, channel);
       }
     } catch (Exception ex) {
       sender().tell(ex, self());

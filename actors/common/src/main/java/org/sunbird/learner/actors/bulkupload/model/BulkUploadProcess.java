@@ -185,7 +185,7 @@ public class BulkUploadProcess implements Serializable {
   }
 
   @JsonIgnore
-  public void setStorageDetailsObj(StorageDetails cloudStorageData) {
+  public void setEncryptedStorageDetails(StorageDetails cloudStorageData) {
     try {
       setStorageDetails(encryptionService.encryptData(cloudStorageData.toJsonString()));
     } catch (Exception e) {
@@ -195,7 +195,7 @@ public class BulkUploadProcess implements Serializable {
   }
 
   @JsonIgnore
-  public StorageDetails getStorageDetailsObj()
+  public StorageDetails getDecryptedStorageDetails()
       throws JsonParseException, JsonMappingException, IOException {
     String rawData = getStorageDetails();
     if (rawData != null) {

@@ -587,7 +587,7 @@ public class UserUtil {
     try {
       SystemSettingClient client = SystemSettingClientImpl.getInstance();
       SystemSetting systemSetting =
-          client.getSystemSettingByField(actorRef, UserConstants.CUSTODIAN_ORG_ID);
+          client.getSystemSettingByField(actorRef, JsonKey.CUSTODIAN_ORG_ID);
       if (null != systemSetting && StringUtils.isNotBlank(systemSetting.getValue())) {
         custodianOrgId = systemSetting.getValue();
       }
@@ -598,8 +598,7 @@ public class UserUtil {
       ProjectCommonException.throwServerErrorException(
           ResponseCode.errorSystemSettingNotFound,
           ProjectUtil.formatMessage(
-              ResponseCode.errorSystemSettingNotFound.getErrorMessage(),
-              UserConstants.CUSTODIAN_ORG_ID));
+              ResponseCode.errorSystemSettingNotFound.getErrorMessage(), JsonKey.CUSTODIAN_ORG_ID));
     }
     Map<String, Object> custodianOrg = null;
     if (StringUtils.isNotBlank(custodianOrgId)) {
@@ -624,14 +623,13 @@ public class UserUtil {
             ResponseCode.errorSystemSettingNotFound,
             ProjectUtil.formatMessage(
                 ResponseCode.errorSystemSettingNotFound.getErrorMessage(),
-                UserConstants.CUSTODIAN_ORG_ID));
+                JsonKey.CUSTODIAN_ORG_ID));
       }
     } else {
       ProjectCommonException.throwServerErrorException(
           ResponseCode.errorSystemSettingNotFound,
           ProjectUtil.formatMessage(
-              ResponseCode.errorSystemSettingNotFound.getErrorMessage(),
-              UserConstants.CUSTODIAN_ORG_ID));
+              ResponseCode.errorSystemSettingNotFound.getErrorMessage(), JsonKey.CUSTODIAN_ORG_ID));
     }
     userMap.put(JsonKey.ROOT_ORG_ID, custodianOrgId);
     userMap.put(JsonKey.CHANNEL, custodianOrg.get(JsonKey.CHANNEL));

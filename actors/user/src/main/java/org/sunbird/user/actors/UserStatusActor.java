@@ -61,14 +61,16 @@ public class UserStatusActor extends UserBaseActor {
         MessageFormat.format("UserStatusActor:updateUserStatus:{0}:{1}: ", operation, userId);
     User user = userService.getUserById(userId);
 
-    if (operation.equals(ActorOperations.BLOCK_USER.getValue()) && user.getIsDeleted()) {
+    if (operation.equals(ActorOperations.BLOCK_USER.getValue())
+        && Boolean.TRUE.equals(user.getIsDeleted())) {
       throw new ProjectCommonException(
           ResponseCode.userAlreadyInactive.getErrorCode(),
           ResponseCode.userAlreadyInactive.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
-    if (operation.equals(ActorOperations.UNBLOCK_USER.getValue()) && !user.getIsDeleted()) {
+    if (operation.equals(ActorOperations.UNBLOCK_USER.getValue())
+        && Boolean.FALSE.equals(user.getIsDeleted())) {
       throw new ProjectCommonException(
           ResponseCode.userAlreadyActive.getErrorCode(),
           ResponseCode.userAlreadyActive.getErrorMessage(),

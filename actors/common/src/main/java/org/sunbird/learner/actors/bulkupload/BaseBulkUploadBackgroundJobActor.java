@@ -132,7 +132,7 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
 
       } catch (IOException e) {
         ProjectLogger.log(
-            "BaseBulkUploadBackgroundJobActor:processBulkUpload: exception." + e.getMessage(), e);
+            "BaseBulkUploadBackgroundJobActor:processBulkUpload: Exception occurred with error message = " + e.getMessage(), e);
       }
       performBatchUpdate(tasks);
       sequence = nextSequence;
@@ -153,7 +153,7 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
     } catch (Exception e) {
       ProjectLogger.log(
-          "BaseBulkUploadBackgroundJobActor:processBulkUpload: exception." + e.getMessage(), e);
+          "BaseBulkUploadBackgroundJobActor:processBulkUpload: Exception occurred with error message = " + e.getMessage(), e);
     }
     bulkUploadDao.update(bulkUploadProcess);
   }

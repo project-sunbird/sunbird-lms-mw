@@ -227,17 +227,16 @@ public class FrameworkUtil {
                         || !(entry.getValue() instanceof List)
                         || ((List) entry.getValue()).isEmpty());
     if (isAnyFieldNotListOrEmpty) {
-      return false;
       ProjectLogger.log(
           "framework fields can only by list and cannot be null or empty", LoggerEnum.ERROR);
+      return false;
     }
     return true;
   }
 
   private static boolean validateFrameworks(
       Map<String, Object> framework, Map<String, Object> existing) {
-    Map<String, Object> existingFramework =
-        (Map<String, Object>) existingFramework.get(JsonKey.FRAMEWORK);
+    Map<String, Object> existingFramework = (Map<String, Object>) existing.get(JsonKey.FRAMEWORK);
     List<Map<String, Object>> categories =
         (List<Map<String, Object>>) existingFramework.get(JsonKey.CATEGORIES);
     final Map<String, List<Map<String, Object>>> categoriesTermsByCode = new HashMap<>();

@@ -870,6 +870,7 @@ public class UserManagementActor extends BaseActor {
     if (null != resp) {
       saveUserDetailsToEs(esResponse);
     }
+    requestMap.put(JsonKey.PASSWORD, userMap.get(JsonKey.PASSWORD));
     sendEmailAndSms(requestMap);
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();

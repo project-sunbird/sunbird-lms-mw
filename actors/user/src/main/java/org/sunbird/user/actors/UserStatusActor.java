@@ -77,6 +77,7 @@ public class UserStatusActor extends UserBaseActor {
 
     Map<String, Object> userMapES =
         getUserMapES(userId, (String) request.getContext().get(JsonKey.REQUESTED_BY), isBlocked);
+
     ObjectMapper mapper = new ObjectMapper();
     User updatedUser = mapper.convertValue(userMapES, User.class);
 

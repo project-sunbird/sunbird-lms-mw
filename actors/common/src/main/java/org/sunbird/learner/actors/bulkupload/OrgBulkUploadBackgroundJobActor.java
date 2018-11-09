@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
@@ -23,9 +24,8 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
 
 @ActorConfig(
-  tasks = {},
-  asyncTasks = {"orgBulkUploadBackground"}
-)
+    tasks = {},
+    asyncTasks = {"orgBulkUploadBackground"})
 public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJobActor {
   private OrganisationClient orgClient = new OrganisationClientImpl();
   private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
@@ -36,12 +36,12 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
     Util.initializeContext(request, TelemetryEnvKey.ORGANISATION);
     ExecutionContext.setRequestId(request.getRequestId());
     if (operation.equalsIgnoreCase("orgBulkUploadBackground")) {
-    	 Map supportedColumns =
-    		        systemSettingClient.getSystemSettingByFieldAndKey(
-    		            getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
-    		            "orgProfileConfig",
-    		            "csv.supportedColumns",
-    		            new TypeReference<Map>() {});
+      Map supportedColumns =
+          systemSettingClient.getSystemSettingByFieldAndKey(
+              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+              "orgProfileConfig",
+              "csv.supportedColumns",
+              new TypeReference<Map>() {});
       handleBulkUploadBackground(
           request,
           (baseBulkUpload) -> {
@@ -50,7 +50,8 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
                 (tasks) -> {
                   processTasks((List<BulkUploadProcessTask>) tasks);
                   return null;
-                }, (Map<String,String>)supportedColumns);
+                },
+                (Map<String, String>) supportedColumns);
             return null;
           });
     } else {
@@ -189,5 +190,11 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
 
     task.setData(mapper.writeValueAsString(row));
     setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, row, JsonKey.UPDATE);
+  }
+
+  @Override
+  public List<String> getColumnsToIgnore() {
+
+    return Arrays.asList("locationIds", "rootOrgId", "id", "hashTagId", "slug", "isRootOrg");
   }
 }

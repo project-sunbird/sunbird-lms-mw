@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,9 +34,8 @@ import org.sunbird.models.location.Location;
 import org.sunbird.models.location.apirequest.UpsertLocationRequest;
 
 @ActorConfig(
-  tasks = {},
-  asyncTasks = {"locationBulkUploadBackground"}
-)
+    tasks = {},
+    asyncTasks = {"locationBulkUploadBackground"})
 public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJobActor {
 
   private LocationClient locationClient = new LocationClientImpl();
@@ -62,7 +62,8 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
                   (tasks) -> {
                     processTasks((List<BulkUploadProcessTask>) tasks);
                     return null;
-                  }, null);
+                  },
+                  null);
               return null;
             });
         break;
@@ -233,5 +234,10 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
       }
     }
     return orderMap;
+  }
+
+  @Override
+  public List<String> getColumnsToIgnore() {
+    return Collections.emptyList();
   }
 }

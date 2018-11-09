@@ -19,9 +19,8 @@ import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.util.Util;
 
 @ActorConfig(
-  tasks = {"userBulkUpload"},
-  asyncTasks = {}
-)
+    tasks = {"userBulkUpload"},
+    asyncTasks = {})
 public class UserBulkUploadActor extends BaseBulkUploadActor {
   private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
   private String[] bulkUserAllowedFields = {
@@ -83,17 +82,21 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
     }
     BulkUploadProcess bulkUploadProcess =
         handleUpload(JsonKey.USER, (String) req.get(JsonKey.CREATED_BY));
-    processUserBulkUpload(req, bulkUploadProcess.getId(), bulkUploadProcess);
+    processUserBulkUpload(req, bulkUploadProcess.getId(), bulkUploadProcess, supportedColumnsMap);
   }
 
   private void processUserBulkUpload(
-      Map<String, Object> req, String processId, BulkUploadProcess bulkUploadProcess)
+      Map<String, Object> req,
+      String processId,
+      BulkUploadProcess bulkUploadProcess,
+      Map supportedColumnsMap)
       throws IOException {
     byte[] fileByteArray = null;
     if (null != req.get(JsonKey.FILE)) {
       fileByteArray = (byte[]) req.get(JsonKey.FILE);
     }
-    Integer recordCount = validateAndParseRecords(fileByteArray, processId, new HashMap());
+    Integer recordCount =
+        validateAndParseRecords(fileByteArray, processId, new HashMap(), supportedColumnsMap);
     processBulkUpload(
         recordCount,
         processId,

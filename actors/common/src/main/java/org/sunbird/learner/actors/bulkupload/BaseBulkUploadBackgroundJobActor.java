@@ -265,6 +265,7 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
               String errMsg = (String) map.get(JsonKey.ERROR_MSG);
               int i = 0;
               for (String field : headerRows) {
+                if (getColumnsToIgnore().contains(field)) continue;
 
                 if (JsonKey.BULK_UPLOAD_STATUS.equals(field)) {
                   nextLine[i++] = errMsg == null ? JsonKey.SUCCESS : JsonKey.FAILED;
@@ -282,7 +283,11 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       List<Map<String, Object>> successList, List<Map<String, Object>> failureList) {
     if (CollectionUtils.isNotEmpty(successList)) {
       Map<String, Object> firstRow = successList.get(0);
-      return firstRow.keySet().stream().collect(Collectors.toList());
+      return firstRow
+          .keySet()
+          .stream()
+          .filter(s -> !getColumnsToIgnore().contains(s))
+          .collect(Collectors.toList());
     }
     if (CollectionUtils.isNotEmpty(failureList)) {
       Map<String, Object> firstRow = failureList.get(0);
@@ -290,8 +295,11 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
           .keySet()
           .stream()
           .filter(s -> !JsonKey.ERROR_MSG.equals(s))
+          .filter(s -> !getColumnsToIgnore().contains(s))
           .collect(Collectors.toList());
     }
     return Collections.emptyList();
   }
+
+  public abstract List<String> getColumnsToIgnore();
 }

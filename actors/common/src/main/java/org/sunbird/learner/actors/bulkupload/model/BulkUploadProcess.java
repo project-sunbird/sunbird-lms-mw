@@ -46,7 +46,6 @@ public class BulkUploadProcess implements Serializable {
   private String createdBy;
   private Timestamp createdOn;
   private Timestamp lastUpdatedOn;
-
   private String storageDetails;
 
   public String getId() {
@@ -181,16 +180,14 @@ public class BulkUploadProcess implements Serializable {
     return this.storageDetails;
   }
 
-  public void setStorageDetails(String cloudStorageData) {
-    this.storageDetails = cloudStorageData;
+  public void setStorageDetails(String storageDetails) {
+    this.storageDetails = storageDetails;
   }
 
   @JsonIgnore
-  public void setStorageDetailsWithPojo(CloudStorageData cloudStorageData) {
-    ObjectMapper mapper = new ObjectMapper();
+  public void setStorageDetailsObj(StorageDetails cloudStorageData) {
     try {
-      String rawData = mapper.writeValueAsString(cloudStorageData);
-      setStorageDetails(encryptionService.encryptData(rawData));
+      setStorageDetails(encryptionService.encryptData(cloudStorageData.toJsonString()));
     } catch (Exception e) {
       ProjectCommonException.throwClientErrorException(
           ResponseCode.errorSavingStorageDetails, null);
@@ -198,13 +195,13 @@ public class BulkUploadProcess implements Serializable {
   }
 
   @JsonIgnore
-  public CloudStorageData getStorageDetailsAsPojo()
+  public StorageDetails getStorageDetailsObj()
       throws JsonParseException, JsonMappingException, IOException {
     String rawData = getStorageDetails();
     if (rawData != null) {
       ObjectMapper mapper = new ObjectMapper();
       String decryptedData = decryptionService.decryptData(getStorageDetails());
-      return mapper.readValue(decryptedData, CloudStorageData.class);
+      return mapper.readValue(decryptedData, StorageDetails.class);
     } else {
       return null;
     }

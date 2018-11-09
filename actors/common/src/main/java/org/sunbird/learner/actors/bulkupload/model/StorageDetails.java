@@ -1,19 +1,22 @@
 package org.sunbird.learner.actors.bulkupload.model;
 
-public class CloudStorageData {
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+public class StorageDetails {
 
   private String storageType;
   private String container;
   private String objectId;
 
-  public CloudStorageData(String storageType, String container, String objectId) {
+  public StorageDetails(String storageType, String container, String objectId) {
     super();
     this.storageType = storageType;
     this.container = container;
     this.objectId = objectId;
   }
 
-  public CloudStorageData() {}
+  public StorageDetails() {}
 
   public String getStorageType() {
     return storageType;
@@ -37,5 +40,9 @@ public class CloudStorageData {
 
   public void setObjectId(String objectId) {
     this.objectId = objectId;
+  }
+
+  public String toJsonString() throws JsonProcessingException {
+    return new ObjectMapper().writeValueAsString(this);
   }
 }

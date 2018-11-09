@@ -101,6 +101,6 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
         recordCount,
         processId,
         bulkUploadProcess,
-        BulkUploadActorOperation.USER_BULK_UPLOAD_BACKGROUND_JOB.getValue());
+        BulkUploadActorOperation.USER_BULK_UPLOAD_BACKGROUND_JOB.getValue(),bulkUserAllowedFields);
   }
 }

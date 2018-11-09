@@ -374,7 +374,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   }
 
   public void processBulkUpload(
-      int recordCount, String processId, BulkUploadProcess bulkUploadProcess, String operation)
+      int recordCount, String processId, BulkUploadProcess bulkUploadProcess, String operation, String[] allowedFields)
       throws IOException {
     ProjectLogger.log(
         "BaseBulkUploadActor: processBulkUpload called with operation = " + operation);
@@ -384,6 +384,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
 
     Request request = new Request();
     request.put(JsonKey.PROCESS_ID, processId);
+    request.put(JsonKey.FIELDS, allowedFields);
     request.setOperation(operation);
 
     tellToAnother(request);

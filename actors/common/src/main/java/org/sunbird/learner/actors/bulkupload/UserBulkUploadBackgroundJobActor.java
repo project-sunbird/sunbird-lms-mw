@@ -43,6 +43,13 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
               "userProfileConfig",
               "csv.supportedColumns",
               new TypeReference<Map>() {});
+      String[] supportedColumnsOrder =
+          systemSettingClient.getSystemSettingByFieldAndKey(
+              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+              "userProfileConfig",
+              "csv.supportedColumnsOrder",
+              new TypeReference<String[]>() {});
+
       handleBulkUploadBackground(
           request,
           (baseBulkUpload) -> {
@@ -52,7 +59,10 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
                   processTasks((List<BulkUploadProcessTask>) tasks);
                   return null;
                 },
-                supportedColumns);
+                supportedColumns,
+                supportedColumnsOrder != null
+                    ? supportedColumnsOrder
+                    : (String[]) request.get(JsonKey.FIELDS));
             return null;
           });
     } else {
@@ -87,7 +97,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
               "csv.mandatoryColumns",
               new TypeReference<String[]>() {});
       if (mandatoryColumnsObject != null) {
-        validateMandatoryFields(userMap, task,  mandatoryColumnsObject);
+        validateMandatoryFields(userMap, task, mandatoryColumnsObject);
       }
       if (null != userMap.get(JsonKey.ROLES)) {
         convertCommaSepStringToList(userMap, JsonKey.ROLES);

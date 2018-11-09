@@ -33,7 +33,7 @@ import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
 import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessTaskDaoImpl;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
-import org.sunbird.learner.actors.bulkupload.model.CloudStorageData;
+import org.sunbird.learner.actors.bulkupload.model.StorageDetails;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
@@ -127,7 +127,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     BulkUploadProcess result = bulkuploadDao.read(processId);
     if (result != null) {
       try {
-        CloudStorageData cloudStorageData = result.getStorageDetailsAsPojo();
+        StorageDetails cloudStorageData = result.getStorageDetailsObj();
         if (cloudStorageData == null) {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.errorUnavailableDownloadLink, null);

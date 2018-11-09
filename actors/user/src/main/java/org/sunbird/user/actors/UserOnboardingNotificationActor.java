@@ -46,16 +46,20 @@ public class UserOnboardingNotificationActor extends BaseActor {
     if (null != welcomeMailReqObj) {
       tellToAnother(welcomeMailReqObj);
     }
-    ProjectLogger.log("calling Send SMS method:", LoggerEnum.INFO);
+
     if (StringUtils.isNotBlank((String) requestMap.get(JsonKey.PHONE))) {
       Util.sendSMS(requestMap);
     }
+
     if (StringUtils.isBlank((String) requestMap.get(JsonKey.PASSWORD))) {
       ssoManager.setRequiredAction(
           (String) requestMap.get(JsonKey.USER_ID), KeycloakRequiredActionLinkUtil.UPDATE_PASSWORD);
-    } else {
+    }
+
+    if (StringUtils.isNotBlank((String) requestMap.get(JsonKey.EMAIL))) {
       ssoManager.setRequiredAction(
           (String) requestMap.get(JsonKey.USER_ID), KeycloakRequiredActionLinkUtil.VERIFY_EMAIL);
     }
   }
+
 }

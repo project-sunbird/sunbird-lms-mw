@@ -21,4 +21,6 @@ public interface UserService {
       String userId, Map<String, Object> userDataMap, Map<String, Object> userPrivateDataMap);
 
   String getValidatedCustodianOrgId(Map<String, Object> userMap, ActorRef actorRef);
+
+  String getRootOrgIdFromChannel(String channel);
 }

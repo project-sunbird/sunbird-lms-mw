@@ -778,7 +778,24 @@ public class UserManagementActor extends BaseActor {
     userMap.put(JsonKey.VERSION, JsonKey.VERSION_3);
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
-    userService.getValidatedCustodianOrgId(userMap, systemSettingActorRef);
+    try {
+      if (JsonKey.VERSION_3.equalsIgnoreCase(version)) {
+        userService.getValidatedCustodianOrgId(userMap, systemSettingActorRef);
+      } else {
+        String custodianOrgId =
+            userService.getValidatedCustodianOrgId(userMap, systemSettingActorRef);
+        if (StringUtils.isBlank(custodianOrgId)) {
+          String channel = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL);
+          String rootOrgId = userService.getRootOrgIdFromChannel(channel);
+          userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+          userMap.put(JsonKey.CHANNEL, channel);
+        }
+      }
+    } catch (Exception ex) {
+      sender().tell(ex, self());
+      return;
+    }
+
     processUserRequest(userMap);
   }
 

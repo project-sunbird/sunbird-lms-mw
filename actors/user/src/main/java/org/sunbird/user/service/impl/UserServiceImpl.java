@@ -15,6 +15,8 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.EsIndex;
+import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.impl.DefaultDecryptionServiceImpl;
@@ -184,5 +186,52 @@ public class UserServiceImpl implements UserService {
     userMap.put(JsonKey.ROOT_ORG_ID, custodianOrgId);
     userMap.put(JsonKey.CHANNEL, custodianOrg.get(JsonKey.CHANNEL));
     return custodianOrgId;
+  }
+
+  @Override
+  public String getRootOrgIdFromChannel(String channel) {
+
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(JsonKey.IS_ROOT_ORG, true);
+    if (StringUtils.isNotBlank(channel)) {
+      filters.put(JsonKey.CHANNEL, channel);
+    } else {
+      // If channel value is not coming in request then read the default channel value provided from
+      // ENV.
+      if (StringUtils.isNotBlank(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL))) {
+        filters.put(JsonKey.CHANNEL, ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL));
+      } else {
+        throw new ProjectCommonException(
+            ResponseCode.mandatoryParamsMissing.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.CHANNEL),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
+    SearchDTO searchDTO = new SearchDTO();
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
+    Map<String, Object> esResult =
+        ElasticSearchUtil.complexSearch(
+            searchDTO, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
+    if (MapUtils.isNotEmpty(esResult)
+        && CollectionUtils.isNotEmpty((List) esResult.get(JsonKey.CONTENT))) {
+      Map<String, Object> esContent =
+          ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
+      return (String) esContent.get(JsonKey.ID);
+    } else {
+      if (StringUtils.isNotBlank(channel)) {
+        throw new ProjectCommonException(
+            ResponseCode.invalidParameterValue.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.invalidParameterValue.getErrorMessage(), channel, JsonKey.CHANNEL),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      } else {
+        throw new ProjectCommonException(
+            ResponseCode.mandatoryParamsMissing.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.CHANNEL),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
   }
 }

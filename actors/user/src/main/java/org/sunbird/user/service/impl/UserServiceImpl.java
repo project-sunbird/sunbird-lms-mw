@@ -145,7 +145,7 @@ public class UserServiceImpl implements UserService {
       }
     } catch (Exception ex) {
       ProjectLogger.log(
-          "UserUtil:getActiveCustodianOrgId: Exception occurred while fetching custodian org ID from system setting.",
+          "UserUtil:getValidatedCustodianOrgId: Exception occurred with error message = " + ex.getMessage(),
           ex);
       ProjectCommonException.throwServerErrorException(
           ResponseCode.errorSystemSettingNotFound,

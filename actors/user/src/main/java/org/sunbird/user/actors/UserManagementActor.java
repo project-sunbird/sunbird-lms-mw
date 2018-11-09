@@ -780,7 +780,7 @@ public class UserManagementActor extends BaseActor {
     Util.getUserProfileConfig(systemSettingActorRef);
     try {
       if (JsonKey.VERSION_3.equalsIgnoreCase(version)) {
-        UserUtil.getActiveCustodianOrgId(userMap, systemSettingActorRef);
+        userService.getActiveCustodianOrgId(userMap, systemSettingActorRef);
       } else {
         String channel = Util.getCustodianChannel(userMap, systemSettingActorRef);
         String rootOrgId = Util.getRootOrgIdFromChannel(channel);

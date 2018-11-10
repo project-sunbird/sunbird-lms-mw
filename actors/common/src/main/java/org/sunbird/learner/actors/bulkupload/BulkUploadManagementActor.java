@@ -126,6 +126,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     BulkUploadProcessDaoImpl bulkuploadDao = new BulkUploadProcessDaoImpl();
     BulkUploadProcess result = bulkuploadDao.read(processId);
     if (result != null) {
+
       try {
         StorageDetails cloudStorageData = result.getDecryptedStorageDetails();
         if (cloudStorageData == null) {
@@ -141,17 +142,12 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         response.setResponseCode(ResponseCode.OK);
         response.getResult().put(JsonKey.SIGNED_URL, signedUrl);
         sender().tell(response, self());
-      } catch (ProjectCommonException e) {
-    	  throw e;
-      } catch (Exception e) {
+      } catch (IOException e) {
         ProjectCommonException.throwClientErrorException(
             ResponseCode.errorGenerateDownloadLink, null);
       }
     } else {
-      throw new ProjectCommonException(
-          ResponseCode.invalidProcessId.getErrorCode(),
-          ResponseCode.invalidProcessId.getErrorMessage(),
-          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+      ProjectUtil.createResourceNotFoundException();
     }
   }
 
@@ -235,8 +231,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         sender().tell(response, self());
       }
     } else {
-    	ProjectUtil.createResourceNotFoundException();
-      
+      ProjectUtil.createResourceNotFoundException();
     }
   }
 

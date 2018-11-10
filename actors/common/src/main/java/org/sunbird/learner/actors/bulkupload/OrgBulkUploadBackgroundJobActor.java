@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
@@ -23,9 +24,8 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
 
 @ActorConfig(
-  tasks = {},
-  asyncTasks = {"orgBulkUploadBackground"}
-)
+    tasks = {},
+    asyncTasks = {"orgBulkUploadBackground"})
 public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJobActor {
   private OrganisationClient orgClient = new OrganisationClientImpl();
   private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
@@ -36,6 +36,20 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
     Util.initializeContext(request, TelemetryEnvKey.ORGANISATION);
     ExecutionContext.setRequestId(request.getRequestId());
     if (operation.equalsIgnoreCase("orgBulkUploadBackground")) {
+      Map<String, String> supportedColumns =
+          systemSettingClient.getSystemSettingByFieldAndKey(
+              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+              "orgProfileConfig",
+              "csv.supportedColumns",
+              new TypeReference<Map<String, String>>() {});
+
+      String[] supportedColumnsOrder =
+          systemSettingClient.getSystemSettingByFieldAndKey(
+              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+              "orgProfileConfig",
+              "csv.supportedColumnsOrder",
+              new TypeReference<String[]>() {});
+
       handleBulkUploadBackground(
           request,
           (baseBulkUpload) -> {
@@ -44,7 +58,11 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
                 (tasks) -> {
                   processTasks((List<BulkUploadProcessTask>) tasks);
                   return null;
-                });
+                },
+                supportedColumns,
+                supportedColumnsOrder != null
+                    ? supportedColumnsOrder
+                    : (String[]) request.get(JsonKey.FIELDS));
             return null;
           });
     } else {

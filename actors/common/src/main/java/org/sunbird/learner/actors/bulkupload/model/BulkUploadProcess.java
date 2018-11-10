@@ -1,10 +1,21 @@
 package org.sunbird.learner.actors.bulkupload.model;
 
+import java.io.IOException;
+import java.io.Serializable;
+import java.sql.Timestamp;
+
+import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
+import org.sunbird.common.models.util.datasecurity.EncryptionService;
+import org.sunbird.common.responsecode.ResponseCode;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import java.io.Serializable;
-import java.sql.Timestamp;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /** @author arvind. */
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -12,6 +23,12 @@ import java.sql.Timestamp;
 public class BulkUploadProcess implements Serializable {
 
   private static final long serialVersionUID = 1L;
+  private EncryptionService encryptionService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
+          null);
+  private DecryptionService decryptionService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+          null);
 
   private String id;
   private String data;
@@ -29,6 +46,7 @@ public class BulkUploadProcess implements Serializable {
   private String createdBy;
   private Timestamp createdOn;
   private Timestamp lastUpdatedOn;
+  private String storageDetails;
 
   public String getId() {
     return id;
@@ -156,5 +174,36 @@ public class BulkUploadProcess implements Serializable {
 
   public void setTaskCount(Integer taskCount) {
     this.taskCount = taskCount;
+  }
+
+  public String getStorageDetails() {
+    return this.storageDetails;
+  }
+
+  public void setStorageDetails(String storageDetails) {
+    this.storageDetails = storageDetails;
+  }
+
+  @JsonIgnore
+  public void setEncryptedStorageDetails(StorageDetails cloudStorageData) {
+    try {
+      setStorageDetails(encryptionService.encryptData(cloudStorageData.toJsonString()));
+    } catch (Exception e) {
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.errorSavingStorageDetails, null);
+    }
+  }
+
+  @JsonIgnore
+  public StorageDetails getDecryptedStorageDetails()
+      throws JsonParseException, JsonMappingException, IOException {
+    String rawData = getStorageDetails();
+    if (rawData != null) {
+      ObjectMapper mapper = new ObjectMapper();
+      String decryptedData = decryptionService.decryptData(getStorageDetails());
+      return mapper.readValue(decryptedData, StorageDetails.class);
+    } else {
+      return null;
+    }
   }
 }

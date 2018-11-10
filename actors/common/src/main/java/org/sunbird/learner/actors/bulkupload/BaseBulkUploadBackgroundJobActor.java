@@ -1,22 +1,40 @@
 package org.sunbird.learner.actors.bulkupload;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.Constants;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.BulkUploadJsonKey;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.util.CloudStorageUtil;
+import org.sunbird.common.util.CloudStorageUtil.CloudStorageType;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
+import org.sunbird.learner.actors.bulkupload.model.StorageDetails;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.opencsv.CSVWriter;
 
 public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadActor {
 
@@ -81,7 +99,14 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
     bulkUploadDao.update(bulkUploadProcess);
   }
 
-  public void processBulkUpload(BulkUploadProcess bulkUploadProcess, Function function) {
+  public void processBulkUpload(
+      BulkUploadProcess bulkUploadProcess,
+      Function function,
+      Map<String, String> supportedColumnMap,
+      String[] supportedColumnsOrder) {
+    String logMessagePrefix =
+        MessageFormat.format(
+            "BaseBulkUploadBackGroundJobActor:processBulkUpload:{0}: ", bulkUploadProcess.getId());
     Integer sequence = 0;
     Integer taskCount = bulkUploadProcess.getTaskCount();
     List<Map<String, Object>> successList = new LinkedList<>();
@@ -96,8 +121,10 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       queryMap.put(BulkUploadJsonKey.SEQUENCE_ID, sequenceRange);
       List<BulkUploadProcessTask> tasks = bulkUploadProcessTaskDao.readByPrimaryKeys(queryMap);
       function.apply(tasks);
-      for (BulkUploadProcessTask task : tasks) {
-        try {
+
+      try {
+        for (BulkUploadProcessTask task : tasks) {
+
           if (task.getStatus().equals(ProjectUtil.BulkProcessStatus.FAILED.getValue())) {
             failureList.add(
                 mapper.readValue(
@@ -107,19 +134,45 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
                 mapper.readValue(
                     task.getSuccessResult(), new TypeReference<Map<String, Object>>() {}));
           }
-        } catch (IOException e) {
-          ProjectLogger.log(
-              "BaseBulkUploadBackgroundJobActor:processBulkUpload: exception." + e.getMessage(), e);
         }
+
+      } catch (IOException e) {
+        ProjectLogger.log(
+            logMessagePrefix + "Exception occurred with error message = " + e.getMessage(), e);
       }
       performBatchUpdate(tasks);
       sequence = nextSequence;
     }
-    ProjectLogger.log(
-        "BaseBulkUploadBackgroundJobActor:processBulkUpload: completed.", LoggerEnum.INFO);
-    bulkUploadProcess.setSuccessResult(ProjectUtil.convertMapToJsonString(successList));
-    bulkUploadProcess.setFailureResult(ProjectUtil.convertMapToJsonString(failureList));
-    bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
+    setCompletionStatus(
+        bulkUploadProcess, successList, failureList, supportedColumnMap, supportedColumnsOrder);
+  }
+
+  private void setCompletionStatus(
+      BulkUploadProcess bulkUploadProcess,
+      List successList,
+      List failureList,
+      Map supportedColumnMap,
+      String[] supportedColumnsOrder) {
+    String logMessagePrefix =
+        MessageFormat.format(
+            "BaseBulkUploadBackGroundJobActor:processBulkUpload:{0}: ", bulkUploadProcess.getId());
+    try {
+      StorageDetails storageDetails =
+          uploadResultToCloud(
+              bulkUploadProcess,
+              successList,
+              failureList,
+              supportedColumnMap,
+              supportedColumnsOrder);
+      ProjectLogger.log(logMessagePrefix + "completed", LoggerEnum.INFO);
+      bulkUploadProcess.setSuccessResult(ProjectUtil.convertMapToJsonString(successList));
+      bulkUploadProcess.setFailureResult(ProjectUtil.convertMapToJsonString(failureList));
+      bulkUploadProcess.setEncryptedStorageDetails(storageDetails);
+      bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
+    } catch (Exception e) {
+      ProjectLogger.log(
+          logMessagePrefix + "Exception occurred with error message = " + e.getMessage(), e);
+    }
     bulkUploadDao.update(bulkUploadProcess);
   }
 
@@ -142,4 +195,108 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       }
     }
   }
+
+  private StorageDetails uploadResultToCloud(
+      BulkUploadProcess bulkUploadProcess,
+      List<Map<String, Object>> successList,
+      List<Map<String, Object>> failureList,
+      Map<String, String> supportedColumnMap,
+      String[] supportedColumnsOrder)
+      throws IOException {
+
+    String objKey = generateObjectKey(bulkUploadProcess);
+    File file = getFileHandle(bulkUploadProcess.getObjectType());
+    writeResultsToFile(file, successList, failureList, supportedColumnMap, supportedColumnsOrder);
+    CloudStorageUtil.upload(
+        CloudStorageType.AZURE, bulkUploadProcess.getObjectType(), objKey, file.getAbsolutePath());
+    return new StorageDetails(
+        CloudStorageType.AZURE.getType(), bulkUploadProcess.getObjectType(), objKey);
+  }
+
+  private File getFileHandle(String objType) {
+
+    File file = null;
+    try {
+      file = File.createTempFile(objType, "upload");
+    } catch (IOException e) { // TODO Auto-generated catch block
+      ProjectLogger.log(
+          "BaseBulkUploadBackgroundJobActor:processBulkUpload: exception." + e.getMessage(), e);
+    }
+    return file;
+  }
+
+  private String generateObjectKey(BulkUploadProcess bulkUploadProcess) {
+    String objType = bulkUploadProcess.getObjectType();
+    String processId = bulkUploadProcess.getId();
+    return "bulk_upload_" + objType + "_" + processId + ".csv";
+  }
+
+  private void writeResultsToFile(
+      File file,
+      List<Map<String, Object>> successList,
+      List<Map<String, Object>> failureList,
+      Map<String, String> supportedColumnsMap,
+      String[] supportedColumnsOrder)
+      throws IOException {
+    try (CSVWriter csvWriter = new CSVWriter(new FileWriter(file)); ) {
+      List<String> headerRowWithInternalNames =
+          new ArrayList<>(Arrays.asList(supportedColumnsOrder));
+
+      headerRowWithInternalNames.add(JsonKey.BULK_UPLOAD_STATUS);
+      headerRowWithInternalNames.add(JsonKey.BULK_UPLOAD_ERROR);
+
+      if (MapUtils.isNotEmpty(supportedColumnsMap)) {
+        Map<String, String> revMap = getReverseMap(supportedColumnsMap);
+        List<String> headerRowWithDisplayNames = new ArrayList<>();
+        headerRowWithInternalNames.forEach(
+            s -> {
+              if (revMap.containsKey(s)) {
+                headerRowWithDisplayNames.add(revMap.get(s));
+              } else {
+                headerRowWithDisplayNames.add(s);
+              }
+            });
+        csvWriter.writeNext(headerRowWithDisplayNames.toArray(new String[0]));
+      } else {
+        csvWriter.writeNext(headerRowWithInternalNames.toArray(new String[0]));
+      }
+
+      addResults(successList, headerRowWithInternalNames, csvWriter);
+      addResults(failureList, headerRowWithInternalNames, csvWriter);
+      csvWriter.flush();
+    }
+  }
+
+  private Map<String, String> getReverseMap(Map<String, String> supportedColumnsMap) {
+    Map<String, String> revMap = new HashMap<>();
+    supportedColumnsMap.forEach(
+        (k, v) -> {
+          revMap.put(v, k);
+        });
+    return revMap;
+  }
+
+  private void addResults(
+      List<Map<String, Object>> resultList, List<String> headerRows, CSVWriter csvWriter) {
+    resultList
+        .stream()
+        .forEach(
+            map -> {
+              String[] nextLine = new String[headerRows.size()];
+              String errMsg = (String) map.get(JsonKey.ERROR_MSG);
+              int i = 0;
+              for (String field : headerRows) {
+                if (JsonKey.BULK_UPLOAD_STATUS.equals(field)) {
+                  nextLine[i++] = errMsg == null ? JsonKey.SUCCESS : JsonKey.FAILED;
+                } else if (JsonKey.BULK_UPLOAD_ERROR.equals(field)) {
+                  nextLine[i++] = errMsg == null ? "" : errMsg;
+                } else {
+                  nextLine[i++] = String.valueOf(map.get(field));
+                }
+              }
+              csvWriter.writeNext(nextLine);
+            });
+  }
+
+
 }

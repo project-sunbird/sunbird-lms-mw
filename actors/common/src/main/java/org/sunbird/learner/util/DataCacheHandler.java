@@ -1,6 +1,8 @@
 /** */
 package org.sunbird.learner.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -31,7 +33,7 @@ public class DataCacheHandler implements Runnable {
   private static Map<String, Map<String, List<Map<String, String>>>> frameworkMap =
       new ConcurrentHashMap<>();
   private static Map<String, List<String>> frameworkFieldsConfig = new ConcurrentHashMap<>();
-  private static Map<String, String> channelFrameworkMap = new ConcurrentHashMap<>();
+  private static Map<String, String> channelFrameworkMap = new HashMap<>();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final String KEY_SPACE_NAME = "sunbird";
 
@@ -78,7 +80,16 @@ public class DataCacheHandler implements Runnable {
     List<Map<String, Object>> responseList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     Map<String, Object> userProfileConfig = responseList.get(0);
-    frameworkFieldsConfig = (Map<String, List<String>>) userProfileConfig.get(JsonKey.FRAMEWORK);
+    String value = (String) userProfileConfig.get(JsonKey.VALUE);
+    ObjectMapper mapper = new ObjectMapper();
+    try {
+      Map<String, Object> userProfileValues =
+          (Map<String, Object>) mapper.readValue(value, Map.class);
+      frameworkFieldsConfig = (Map<String, List<String>>) userProfileValues.get(JsonKey.FRAMEWORK);
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "DatacacheHandler : cacheFrameworkFieldsConfig exception occured with message " + e);
+    }
   }
 
   private void orgTypeCache(Map<String, String> orgTypeMap) {

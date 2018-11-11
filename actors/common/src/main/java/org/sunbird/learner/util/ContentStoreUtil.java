@@ -33,7 +33,6 @@ public class ContentStoreUtil {
               + id;
       String response = HttpUtil.sendGetRequest(requestUrl, headers);
       ProjectLogger.log("Read details are ==" + response, LoggerEnum.INFO.name());
-      System.out.println(requestUrl + " " + response);
       resultMap = mapper.readValue(response, Map.class);
       if (!((String) resultMap.get(JsonKey.RESPONSE_CODE)).equalsIgnoreCase(JsonKey.OK)) {
         ProjectLogger.log("ContentStoreUtil : GetReadDetails Read Error Obtained");

@@ -699,7 +699,6 @@ public class UserManagementActor extends BaseActor {
     if (userMap.containsKey(JsonKey.FRAMEWORK)) {
       User userObj = userService.getUserById((String) userMap.get(JsonKey.USER_ID));
       String frameworkId = getFrameworkId(userObj.getChannel());
-      System.out.println("hfsjkhfsjrkljf : " + frameworkId);
       Map<String, List<Map<String, String>>> frameworkCachedValue =
           getFrameworkDetails(frameworkId);
       userRequestValidator.validateFrameworkRequestDetails(userMap, frameworkCachedValue);

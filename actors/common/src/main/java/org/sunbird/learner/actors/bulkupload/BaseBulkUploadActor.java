@@ -40,6 +40,11 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   protected Integer CASSANDRA_BATCH_SIZE = getBatchSize(JsonKey.CASSANDRA_WRITE_BATCH_SIZE);
   protected ObjectMapper mapper = new ObjectMapper();
 
+  public void validateBulkUploadFields(
+      String[] csvHeaderLine, String[] allowedFields, Boolean allFieldsMandatory) {
+    validateBulkUploadFields(csvHeaderLine, allowedFields, allFieldsMandatory, false);
+  }
+
   /**
    * Method to validate whether the header fields are valid.
    *
@@ -49,7 +54,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
    *     csvHeaderline . In case of false- csvHeader could be subset of the allowed fields.
    */
   public void validateBulkUploadFields(
-      String[] csvHeaderLine, String[] allowedFields, Boolean allFieldsMandatory) {
+      String[] csvHeaderLine, String[] allowedFields, Boolean allFieldsMandatory, boolean toLower) {
 
     if (ArrayUtils.isEmpty(csvHeaderLine)) {
       throw new ProjectCommonException(
@@ -62,6 +67,9 @@ public abstract class BaseBulkUploadActor extends BaseActor {
       Arrays.stream(allowedFields)
           .forEach(
               x -> {
+                if (toLower) {
+                  x = x.toLowerCase();
+                }
                 if (!(ArrayUtils.contains(csvHeaderLine, x))) {
                   throw new ProjectCommonException(
                       ResponseCode.mandatoryParamsMissing.getErrorCode(),
@@ -74,6 +82,9 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     Arrays.stream(csvHeaderLine)
         .forEach(
             x -> {
+              if (toLower) {
+                x = x.toLowerCase();
+              }
               if (!(ArrayUtils.contains(allowedFields, x))) {
                 throwInvalidColumnException(x, String.join(", ", allowedFields));
               }
@@ -219,14 +230,15 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   protected Integer validateAndParseRecords(
       byte[] fileByteArray, String processId, Map<String, Object> additionalRowFields)
       throws IOException {
-    return validateAndParseRecords(fileByteArray, processId, additionalRowFields, null);
+    return validateAndParseRecords(fileByteArray, processId, additionalRowFields, null, false);
   }
 
   protected Integer validateAndParseRecords(
       byte[] fileByteArray,
       String processId,
       Map<String, Object> additionalRowFields,
-      Map<String, Object> csvColumnMap)
+      Map<String, Object> csvColumnMap,
+      boolean toLowerCase)
       throws IOException {
 
     Integer sequence = 0;
@@ -247,8 +259,9 @@ public abstract class BaseBulkUploadActor extends BaseActor {
         } else {
           for (int j = 0; j < csvColumns.length; j++) {
             String value = (csvLine[j].trim().length() == 0 ? null : csvLine[j].trim());
-            if (csvColumnMap != null && csvColumnMap.get(csvColumns[j]) != null) {
-              record.put((String) csvColumnMap.get(csvColumns[j]), value);
+            String coulumn = toLowerCase ? csvColumns[j].toLowerCase() : csvColumns[j];
+            if (csvColumnMap != null && csvColumnMap.get(coulumn) != null) {
+              record.put((String) csvColumnMap.get(coulumn), value);
             } else {
               record.put(csvColumns[j], value);
             }
@@ -327,7 +340,16 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   }
 
   protected void validateFileHeaderFields(
-      Map<String, Object> req, String[] bulkLocationAllowedFields, Boolean allFieldsMandatory)
+      Map<String, Object> req, String[] bulkAllowedFields, Boolean allFieldsMandatory)
+      throws IOException {
+    validateFileHeaderFields(req, bulkAllowedFields, allFieldsMandatory, false);
+  }
+
+  protected void validateFileHeaderFields(
+      Map<String, Object> req,
+      String[] bulkLocationAllowedFields,
+      Boolean allFieldsMandatory,
+      boolean toLower)
       throws IOException {
     byte[] fileByteArray = (byte[]) req.get(JsonKey.FILE);
 
@@ -342,7 +364,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
           continue;
         }
         csvLine = trimColumnAttributes(csvLine);
-        validateBulkUploadFields(csvLine, bulkLocationAllowedFields, allFieldsMandatory);
+        validateBulkUploadFields(csvLine, bulkLocationAllowedFields, allFieldsMandatory, toLower);
         flag = false;
       }
     } catch (Exception ex) {

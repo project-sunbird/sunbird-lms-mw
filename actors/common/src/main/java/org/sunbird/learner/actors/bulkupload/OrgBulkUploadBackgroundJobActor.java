@@ -97,7 +97,7 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
 
       Organisation organisation = mapper.convertValue(orgMap, Organisation.class);
       organisation.setStatus(status);
-      organisation.setId((String) orgMap.get(JsonKey.ORGANISATION_ID));
+      organisation.setId((String) orgMap.get(JsonKey.ORG_ID));
 
       if (StringUtils.isEmpty(organisation.getId())) {
         callCreateOrg(organisation, task, locationCodes);
@@ -180,8 +180,9 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
       setTaskStatus(
           task, ProjectUtil.BulkProcessStatus.FAILED, ex.getMessage(), row, JsonKey.UPDATE);
     }
-
-    task.setData(mapper.writeValueAsString(row));
-    setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, row, JsonKey.UPDATE);
+    if (task.getStatus() != ProjectUtil.BulkProcessStatus.FAILED.getValue()) {
+      task.setData(mapper.writeValueAsString(row));
+      setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, row, JsonKey.UPDATE);
+    }
   }
 }

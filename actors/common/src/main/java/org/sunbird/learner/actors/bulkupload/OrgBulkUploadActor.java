@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
@@ -65,18 +66,27 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
             "csv.supportedColumns",
             new TypeReference<Map>() {});
     Map<String, Object> supportedColumnsMap = null;
+    Map<String, Object> supportedColumnsLowerCaseMap = null;
     if (dataObject != null) {
       supportedColumnsMap = (Map<String, Object>) dataObject;
       List<String> supportedColumnsList = new ArrayList<>();
-      supportedColumnsMap.forEach((key, value) -> supportedColumnsList.add(key));
+      supportedColumnsLowerCaseMap =
+          supportedColumnsMap
+              .entrySet()
+              .stream()
+              .collect(
+                  Collectors.toMap(
+                      entry -> (entry.getKey()).toLowerCase(), entry -> entry.getValue()));
+      supportedColumnsLowerCaseMap.forEach((key, value) -> supportedColumnsList.add(key));
       validateFileHeaderFields(
-          req, supportedColumnsList.toArray(new String[supportedColumnsList.size()]), false);
+          req, supportedColumnsList.toArray(new String[supportedColumnsList.size()]), false, true);
     } else {
-      validateFileHeaderFields(req, bulkOrgAllowedFields, false);
+      validateFileHeaderFields(req, bulkOrgAllowedFields, false, false);
     }
     BulkUploadProcess bulkUploadProcess =
         handleUpload(JsonKey.ORGANISATION, (String) req.get(JsonKey.CREATED_BY));
-    processOrgBulkUpload(req, bulkUploadProcess.getId(), bulkUploadProcess, supportedColumnsMap);
+    processOrgBulkUpload(
+        req, bulkUploadProcess.getId(), bulkUploadProcess, supportedColumnsLowerCaseMap);
   }
 
   private void processOrgBulkUpload(
@@ -94,8 +104,11 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
     if (user != null) {
       String rootOrgId = (String) user.get(JsonKey.ROOT_ORG_ID);
       Map<String, Object> org = getOrg(rootOrgId);
-      if (org != null && (int) org.get(JsonKey.STATUS) == ProjectUtil.OrgStatus.ACTIVE.getValue()) {
-        additionalInfo.put(JsonKey.CHANNEL, org.get(JsonKey.CHANNEL));
+      if (org != null) {
+        if (org.get(JsonKey.STATUS) == null
+            || (int) org.get(JsonKey.STATUS) == ProjectUtil.OrgStatus.ACTIVE.getValue()) {
+          additionalInfo.put(JsonKey.CHANNEL, org.get(JsonKey.CHANNEL));
+        }
       }
     }
     if (!additionalInfo.containsKey(JsonKey.CHANNEL)) {
@@ -104,7 +117,8 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
           ResponseCode.errorNoRootOrgAssociated.getErrorMessage());
     }
     Integer recordCount =
-        validateAndParseRecords(fileByteArray, processId, additionalInfo, supportedColumnsMap);
+        validateAndParseRecords(
+            fileByteArray, processId, additionalInfo, supportedColumnsMap, true);
     processBulkUpload(
         recordCount,
         processId,

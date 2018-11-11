@@ -997,6 +997,7 @@ public class UserManagementActor extends BaseActor {
       Map<String, Object> results = (Map<String, Object>) resultMap.get(JsonKey.RESULT);
       Map<String, Object> channelDetails = (Map<String, Object>) results.get(JsonKey.CHANNEL);
       frameworkId = (String) channelDetails.get(JsonKey.DEFAULT_FRAMEWORK);
+      DataCacheHandler.updateChannelFrameworkMap(channel, frameworkId);
       return frameworkId;
     } else {
       throw new ProjectCommonException(

@@ -236,4 +236,9 @@ public class DataCacheHandler implements Runnable {
   public static Map<String, String> getchannelFrameworkMap() {
     return readChannelResponseMap;
   }
+
+  /** @param channelFrameworkMap the channelFrameworkMap to set */
+  public static void updateChannelFrameworkMap(String channel, String frameworkId) {
+    DataCacheHandler.readChannelResponseMap.put(channel, frameworkId);
+  }
 }

@@ -30,10 +30,10 @@ public class DataCacheHandler implements Runnable {
   private static Map<String, Object> roleMap = new ConcurrentHashMap<>();
   private static Map<String, String> orgTypeMap = new ConcurrentHashMap<>();
   private static Map<String, String> configSettings = new ConcurrentHashMap<>();
-  private static Map<String, Map<String, List<Map<String, String>>>> frameworkMap =
+  private static Map<String, Map<String, List<Map<String, String>>>> readFrameworkResponseMap =
       new ConcurrentHashMap<>();
   private static Map<String, List<String>> frameworkFieldsConfig = new ConcurrentHashMap<>();
-  private static Map<String, String> channelFrameworkMap = new HashMap<>();
+  private static Map<String, String> readChannelResponseMap = new HashMap<>();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final String KEY_SPACE_NAME = "sunbird";
 
@@ -49,6 +49,7 @@ public class DataCacheHandler implements Runnable {
     ProjectLogger.log("DataCacheHandler:run: Cache refresh completed.", LoggerEnum.INFO.name());
   }
 
+  @SuppressWarnings("unchecked")
   private void cacheSystemConfig(Map<String, String> configSettings) {
     Response response =
         cassandraOperation.getAllRecords(KEY_SPACE_NAME, JsonKey.SYSTEM_SETTINGS_DB);
@@ -73,6 +74,7 @@ public class DataCacheHandler implements Runnable {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void cacheFrameworkFieldsConfig() {
     Response response =
         cassandraOperation.getRecordById(
@@ -92,6 +94,7 @@ public class DataCacheHandler implements Runnable {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void orgTypeCache(Map<String, String> orgTypeMap) {
     Response response = cassandraOperation.getAllRecords(KEY_SPACE_NAME, JsonKey.ORG_TYPE_DB);
     List<Map<String, Object>> responseList =
@@ -105,6 +108,7 @@ public class DataCacheHandler implements Runnable {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void roleCache(Map<String, Object> roleMap) {
     Response response = cassandraOperation.getAllRecords(KEY_SPACE_NAME, JsonKey.ROLE_GROUP);
     List<Map<String, Object>> responseList =
@@ -203,13 +207,13 @@ public class DataCacheHandler implements Runnable {
 
   /** @return the frameworkMap */
   public static Map<String, Map<String, List<Map<String, String>>>> getFrameworkMap() {
-    return frameworkMap;
+    return readFrameworkResponseMap;
   }
 
   /** @param frameworkMap the frameworkValues to set */
   public static void setFrameworkMap(
       Map<String, Map<String, List<Map<String, String>>>> frameworkMap) {
-    DataCacheHandler.frameworkMap = frameworkMap;
+    DataCacheHandler.readFrameworkResponseMap = frameworkMap;
   }
 
   /** @return the frameworkFieldsConfig */
@@ -220,16 +224,16 @@ public class DataCacheHandler implements Runnable {
   /** @param frameworkId and its Values and update it */
   public static void updateFrameworkMap(
       String frameworkId, Map<String, List<Map<String, String>>> frameworkCacheMap) {
-    DataCacheHandler.frameworkMap.put(frameworkId, frameworkCacheMap);
+    DataCacheHandler.readFrameworkResponseMap.put(frameworkId, frameworkCacheMap);
   }
 
   /** @param channelFrameworkMap the channelFrameworkMap to set */
   public static void setChannelFrameworkMap(Map<String, String> channelFrameworkMap) {
-    DataCacheHandler.channelFrameworkMap = channelFrameworkMap;
+    DataCacheHandler.readChannelResponseMap = channelFrameworkMap;
   }
 
   /** @return the channelFrameworkMap */
   public static Map<String, String> getchannelFrameworkMap() {
-    return channelFrameworkMap;
+    return readChannelResponseMap;
   }
 }

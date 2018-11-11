@@ -696,7 +696,14 @@ public class UserManagementActor extends BaseActor {
     userRequestValidator.validateFrameworkRequestData(
         userMap, frameworkFields, frameworkMandatoryFields);
     Map<String, Object> userDbRecord = UserUtil.validateExternalIdsAndReturnActiveUser(userMap);
-
+    if (userMap.containsKey(JsonKey.FRAMEWORK)) {
+      User userObj = userService.getUserById((String) userMap.get(JsonKey.USER_ID));
+      String frameworkId = getFrameworkId(userObj.getChannel());
+      System.out.println("hfsjkhfsjrkljf : " + frameworkId);
+      Map<String, List<Map<String, String>>> frameworkCachedValue =
+          getFrameworkDetails(frameworkId);
+      userRequestValidator.validateFrameworkRequestDetails(userMap, frameworkCachedValue);
+    }
     User user = mapper.convertValue(userMap, User.class);
     UserUtil.validateExternalIds(user, JsonKey.UPDATE);
     userMap.put(JsonKey.EXTERNAL_IDS, user.getExternalIds());
@@ -707,13 +714,6 @@ public class UserManagementActor extends BaseActor {
     UserUtil.checkEmailSameOrDiff(userMap, userDbRecord);
     if (IS_REGISTRY_ENABLED) {
       UserUtil.updateUserToRegistry(userMap, (String) userDbRecord.get(JsonKey.REGISTRY_ID));
-    }
-    if (userMap.containsKey(JsonKey.FRAMEWORK)) {
-      User userObj = userService.getUserById((String) userMap.get(JsonKey.USER_ID));
-      String frameworkId = getFrameworkId(userObj.getChannel());
-      Map<String, List<Map<String, String>>> frameworkCachedValue =
-          getFrameworkDetails(frameworkId);
-      userRequestValidator.validateFrameworkRequestDetails(userMap, frameworkCachedValue);
     }
     UserUtil.upsertUserInKeycloak(userMap, JsonKey.UPDATE);
     userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
@@ -991,16 +991,21 @@ public class UserManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   public static String getFrameworkId(String channel) {
     String frameworkId = DataCacheHandler.getchannelFrameworkMap().get(channel);
-    if (frameworkId == null) {
+    if (frameworkId != null) {
       Map<String, Object> resultMap =
           ContentStoreUtil.getReadDetails(channel, JsonKey.SUNBIRD_CHANNEL_READ_API);
       Map<String, Object> results = (Map<String, Object>) resultMap.get(JsonKey.RESULT);
-      frameworkId = (String) results.get(JsonKey.DEFAULT_FRAMEWORK);
+      Map<String, Object> channelDetails = (Map<String, Object>) results.get(JsonKey.CHANNEL);
+      frameworkId = (String) channelDetails.get(JsonKey.DEFAULT_FRAMEWORK);
+      return frameworkId;
+    } else {
+      throw new ProjectCommonException(
+          ResponseCode.errorNoFrameworkFoundForUserChannel.getErrorCode(),
+          ResponseCode.errorNoFrameworkFoundForUserChannel.getErrorMessage(),
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
-    return frameworkId;
   }
 
-  @SuppressWarnings("unchecked")
   public static Map<String, List<Map<String, String>>> getFrameworkDetails(String frameworkId) {
     if (DataCacheHandler.getFrameworkMap().get(frameworkId) == null) {
       getFrameworkDataAndCache(frameworkId);
@@ -1008,6 +1013,7 @@ public class UserManagementActor extends BaseActor {
     return DataCacheHandler.getFrameworkMap().get(frameworkId);
   }
 
+  @SuppressWarnings("unchecked")
   private static void getFrameworkDataAndCache(String frameworkId) {
     Map<String, Object> response =
         ContentStoreUtil.getReadDetails(frameworkId, JsonKey.SUNBIRD_FRAMEWORK_READ_API);
@@ -1022,7 +1028,7 @@ public class UserManagementActor extends BaseActor {
       List<Map<String, String>> listOfFields = new ArrayList<>();
       if (supportedfFields.contains(frameworkField)
           || frameworkField.equalsIgnoreCase(JsonKey.GRADE_LEVEL)) {
-        if (frameworkField.equalsIgnoreCase(JsonKey.GRADE_LEVEL)) frameworkField = JsonKey.GRADE;
+        if (frameworkField.equalsIgnoreCase(JsonKey.GRADE_LEVEL)) frameworkField = JsonKey.CLASS;
         List<Map<String, Object>> frameworkTerms =
             (List<Map<String, Object>>) frameworkCategoriesValue.get(JsonKey.TERMS);
         for (Map<String, Object> frameworkTermsField : frameworkTerms) {
@@ -1035,7 +1041,7 @@ public class UserManagementActor extends BaseActor {
         }
       }
       if (!StringUtils.isEmpty(frameworkField) && listOfFields != null)
-        frameworkCacheMap.put(frameworkField, listOfFields);
+        frameworkCacheMap.put(frameworkField.toLowerCase(), listOfFields);
     }
     if (!frameworkCacheMap.isEmpty())
       DataCacheHandler.updateFrameworkMap(frameworkId, frameworkCacheMap);

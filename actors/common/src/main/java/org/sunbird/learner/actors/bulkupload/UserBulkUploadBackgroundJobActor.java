@@ -74,7 +74,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
       Object mandatoryColumnsObject =
           systemSettingClient.getSystemSettingByFieldAndKey(
               getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
-              "orgProfileConfig",
+              "userProfileConfig",
               "csv.mandatoryColumns",
               new TypeReference<String[]>() {});
       if (mandatoryColumnsObject != null) {
@@ -130,7 +130,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     ProjectLogger.log("UserBulkUploadBackgroundJobActor: callUpdateUser called", LoggerEnum.INFO);
     Map<String, Object> row = mapper.convertValue(user, Map.class);
     try {
-      row.put(JsonKey.ORGANISATION_ID, user.getId());
+      row.put(JsonKey.USER_ID, user.getId());
       userClient.updateUser(getActorRef(ActorOperations.UPDATE_USER.getValue()), row);
     } catch (Exception ex) {
       ProjectLogger.log(

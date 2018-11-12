@@ -999,7 +999,7 @@ public class UserManagementActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   public static String getFrameworkId(String channel) {
-    String frameworkId = DataCacheHandler.getchannelFrameworkIdMap().get(channel);
+    String frameworkId = DataCacheHandler.getChannelFrameworkIdMap().get(channel);
     if (frameworkId != null) {
       Map<String, Object> resultMap = ContentStoreUtil.readChannel(channel);
       Map<String, Object> results = (Map<String, Object>) resultMap.get(JsonKey.RESULT);

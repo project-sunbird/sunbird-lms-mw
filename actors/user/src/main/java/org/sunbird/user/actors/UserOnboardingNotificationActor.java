@@ -5,8 +5,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.util.KeycloakRequiredActionLinkUtil;
 import org.sunbird.learner.util.UserUtility;
@@ -61,5 +59,4 @@ public class UserOnboardingNotificationActor extends BaseActor {
           (String) requestMap.get(JsonKey.USER_ID), KeycloakRequiredActionLinkUtil.VERIFY_EMAIL);
     }
   }
-
 }

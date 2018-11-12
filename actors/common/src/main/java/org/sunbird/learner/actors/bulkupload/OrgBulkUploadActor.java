@@ -63,12 +63,13 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
         systemSettingClient.getSystemSettingByFieldAndKey(
             getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
             "orgProfileConfig",
-            "csv.supportedColumns",
+            "csv",
             new TypeReference<Map>() {});
     Map<String, Object> supportedColumnsMap = null;
     Map<String, Object> supportedColumnsLowerCaseMap = null;
     if (dataObject != null) {
-      supportedColumnsMap = (Map<String, Object>) dataObject;
+      supportedColumnsMap =
+          ((Map<String, Object>) ((Map<String, Object>) dataObject).get("supportedColumns"));
       List<String> supportedColumnsList = new ArrayList<>();
       supportedColumnsLowerCaseMap =
           supportedColumnsMap
@@ -78,8 +79,15 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
                   Collectors.toMap(
                       entry -> (entry.getKey()).toLowerCase(), entry -> entry.getValue()));
       supportedColumnsLowerCaseMap.forEach((key, value) -> supportedColumnsList.add(key));
+      List<String> mandatoryColumns =
+          (List<String>) (((Map<String, Object>) dataObject).get("mandatoryColumns"));
       validateFileHeaderFields(
-          req, supportedColumnsList.toArray(new String[supportedColumnsList.size()]), false, true);
+          req,
+          supportedColumnsList.toArray(new String[supportedColumnsList.size()]),
+          false,
+          true,
+          mandatoryColumns,
+          supportedColumnsLowerCaseMap);
     } else {
       validateFileHeaderFields(req, bulkOrgAllowedFields, false, false);
     }
@@ -112,6 +120,9 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
       }
     }
     if (!additionalInfo.containsKey(JsonKey.CHANNEL)) {
+      bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
+      bulkUploadProcess.setFailureResult(ResponseCode.errorNoRootOrgAssociated.getErrorMessage());
+      bulkUploadDao.update(bulkUploadProcess);
       ProjectCommonException.throwClientErrorException(
           ResponseCode.errorNoRootOrgAssociated,
           ResponseCode.errorNoRootOrgAssociated.getErrorMessage());
@@ -119,6 +130,13 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
     Integer recordCount =
         validateAndParseRecords(
             fileByteArray, processId, additionalInfo, supportedColumnsMap, true);
+    if (recordCount == 0) {
+      bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
+      bulkUploadProcess.setFailureResult(ResponseCode.emptyFile.getErrorMessage());
+      bulkUploadDao.update(bulkUploadProcess);
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.emptyFile, ResponseCode.emptyFile.getErrorMessage());
+    }
     processBulkUpload(
         recordCount,
         processId,

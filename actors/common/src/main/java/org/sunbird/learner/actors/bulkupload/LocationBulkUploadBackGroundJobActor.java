@@ -5,12 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.InterServiceCommunication;
@@ -34,8 +30,9 @@ import org.sunbird.models.location.Location;
 import org.sunbird.models.location.apirequest.UpsertLocationRequest;
 
 @ActorConfig(
-    tasks = {},
-    asyncTasks = {"locationBulkUploadBackground"})
+  tasks = {},
+  asyncTasks = {"locationBulkUploadBackground"}
+)
 public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJobActor {
 
   private LocationClient locationClient = new LocationClientImpl();

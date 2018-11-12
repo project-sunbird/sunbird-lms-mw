@@ -1,14 +1,5 @@
 package org.sunbird.learner.actors.bulkupload.model;
 
-import java.io.IOException;
-import java.io.Serializable;
-import java.sql.Timestamp;
-
-import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.util.datasecurity.DecryptionService;
-import org.sunbird.common.models.util.datasecurity.EncryptionService;
-import org.sunbird.common.responsecode.ResponseCode;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -16,6 +7,13 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.io.Serializable;
+import java.sql.Timestamp;
+import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
+import org.sunbird.common.models.util.datasecurity.EncryptionService;
+import org.sunbird.common.responsecode.ResponseCode;
 
 /** @author arvind. */
 @JsonIgnoreProperties(ignoreUnknown = true)

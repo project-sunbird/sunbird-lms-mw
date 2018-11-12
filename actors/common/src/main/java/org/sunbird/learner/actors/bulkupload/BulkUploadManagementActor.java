@@ -147,7 +147,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
             ResponseCode.errorGenerateDownloadLink, null);
       }
     } else {
-      ProjectUtil.createResourceNotFoundException();
+      ProjectCommonException.throwResourceNotFoundException();
     }
   }
 
@@ -231,7 +231,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         sender().tell(response, self());
       }
     } else {
-      ProjectUtil.createResourceNotFoundException();
+      ProjectCommonException.throwResourceNotFoundException();
     }
   }
 

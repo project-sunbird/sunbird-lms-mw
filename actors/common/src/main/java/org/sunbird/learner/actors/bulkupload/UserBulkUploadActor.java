@@ -118,7 +118,7 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
     Integer recordCount =
         validateAndParseRecords(fileByteArray, processId, new HashMap(), supportedColumnsMap, true);
     if (recordCount.intValue() == 0) {
-      bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
+      bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
       bulkUploadProcess.setFailureResult(ResponseCode.emptyFile.getErrorMessage());
       bulkUploadDao.update(bulkUploadProcess);
       ProjectCommonException.throwClientErrorException(

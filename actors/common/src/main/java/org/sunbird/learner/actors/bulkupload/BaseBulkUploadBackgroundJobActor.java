@@ -205,7 +205,7 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       throws IOException {
 
     String objKey = generateObjectKey(bulkUploadProcess);
-    File file = getFileHandle(bulkUploadProcess.getObjectType());
+    File file = getFileHandle(bulkUploadProcess.getObjectType(), bulkUploadProcess.getId());
     writeResultsToFile(file, successList, failureList, supportedColumnMap, supportedColumnsOrder);
     CloudStorageUtil.upload(
         CloudStorageType.AZURE, bulkUploadProcess.getObjectType(), objKey, file.getAbsolutePath());
@@ -213,14 +213,15 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
         CloudStorageType.AZURE.getType(), bulkUploadProcess.getObjectType(), objKey);
   }
 
-  private File getFileHandle(String objType) {
-
+  private File getFileHandle(String objType, String processId) {
+    String logMessagePrefix = MessageFormat.format(
+	    "BaseBulkUploadBackGroundJobActor:getFileHandle:{0}: ", processId);
     File file = null;
     try {
       file = File.createTempFile(objType, "upload");
-    } catch (IOException e) { // TODO Auto-generated catch block
+    } catch (IOException e) {
       ProjectLogger.log(
-          "BaseBulkUploadBackgroundJobActor:processBulkUpload: exception." + e.getMessage(), e);
+    		  logMessagePrefix + "Exception occurred with error message = " + e.getMessage(), e);
     }
     return file;
   }

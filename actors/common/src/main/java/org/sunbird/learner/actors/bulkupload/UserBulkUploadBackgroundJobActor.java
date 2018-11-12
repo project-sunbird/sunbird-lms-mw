@@ -56,7 +56,9 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
             processBulkUpload(
                 (BulkUploadProcess) baseBulkUpload,
                 (tasks) -> {
-                  processTasks((List<BulkUploadProcessTask>) tasks,((BulkUploadProcess) baseBulkUpload).getOrganisationId());
+                  processTasks(
+                      (List<BulkUploadProcessTask>) tasks,
+                      ((BulkUploadProcess) baseBulkUpload).getOrganisationId());
                   return null;
                 },
                 supportedColumns,
@@ -70,12 +72,13 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     }
   }
 
-  private void processTasks(List<BulkUploadProcessTask> bulkUploadProcessTasks,String organisationId) {
+  private void processTasks(
+      List<BulkUploadProcessTask> bulkUploadProcessTasks, String organisationId) {
     for (BulkUploadProcessTask task : bulkUploadProcessTasks) {
       try {
         if (task.getStatus() != null
             && task.getStatus() != ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
-          processUser(task,organisationId);
+          processUser(task, organisationId);
           task.setLastUpdatedOn(new Timestamp(System.currentTimeMillis()));
           task.setIterationId(task.getIterationId() + 1);
         }
@@ -85,7 +88,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     }
   }
 
-  private void processUser(BulkUploadProcessTask task,String organisationId) {
+  private void processUser(BulkUploadProcessTask task, String organisationId) {
     ProjectLogger.log("UserBulkUploadBackgroundJobActor: processUser called", LoggerEnum.INFO);
     String data = task.getData();
     try {
@@ -103,19 +106,27 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
         String roles = (String) userMap.get(JsonKey.ROLES);
         userMap.put(JsonKey.ROLES, Arrays.asList(roles.split("\\\\s*,\\\\s*")));
       }
-      if(userMap.get(JsonKey.PHONE) != null ){
-        userMap.put(JsonKey.PHONE_VERIFIED,false);
+      if (userMap.get(JsonKey.PHONE) != null) {
+        userMap.put(JsonKey.PHONE_VERIFIED, false);
       }
-      if(userMap.get(JsonKey.ORG_ID) != null){
-       Map<String,Object> orgMap =  getOrg((String)userMap.get(JsonKey.ORG_ID));
-        if(orgMap == null){
+      if (userMap.get(JsonKey.ORG_ID) != null) {
+        Map<String, Object> orgMap = getOrg((String) userMap.get(JsonKey.ORG_ID));
+        if (orgMap == null) {
           setTaskStatus(
-                  task, ProjectUtil.BulkProcessStatus.FAILED, ResponseCode.invalidOrgId.getErrorMessage(), userMap, JsonKey.CREATE);
+              task,
+              ProjectUtil.BulkProcessStatus.FAILED,
+              ResponseCode.invalidOrgId.getErrorMessage(),
+              userMap,
+              JsonKey.CREATE);
           return;
         }
-        if(!((String)orgMap.get(JsonKey.ROOT_ORG_ID)).equalsIgnoreCase(organisationId)){
+        if (!((String) orgMap.get(JsonKey.ROOT_ORG_ID)).equalsIgnoreCase(organisationId)) {
           setTaskStatus(
-                  task, ProjectUtil.BulkProcessStatus.FAILED, ResponseCode.invalidRootOrganisationId.getErrorMessage(), userMap, JsonKey.CREATE);
+              task,
+              ProjectUtil.BulkProcessStatus.FAILED,
+              ResponseCode.invalidRootOrganisationId.getErrorMessage(),
+              userMap,
+              JsonKey.CREATE);
           return;
         }
       }
@@ -187,12 +198,12 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     }
   }
 
- private Map<String, Object> getOrg(String orgId) {
+  private Map<String, Object> getOrg(String orgId) {
     Map<String, Object> result =
-            ElasticSearchUtil.getDataByIdentifier(
-                    ProjectUtil.EsIndex.sunbird.getIndexName(),
-                    ProjectUtil.EsType.organisation.getTypeName(),
-                    orgId);
+        ElasticSearchUtil.getDataByIdentifier(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.organisation.getTypeName(),
+            orgId);
     if (result != null || result.size() > 0) {
       return result;
     }

@@ -30,8 +30,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 @ActorConfig(
-    tasks = {},
-    asyncTasks = {"orgBulkUploadBackground"})
+  tasks = {},
+  asyncTasks = {"orgBulkUploadBackground"}
+)
 public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJobActor {
   private OrganisationClient orgClient = new OrganisationClientImpl();
   private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();

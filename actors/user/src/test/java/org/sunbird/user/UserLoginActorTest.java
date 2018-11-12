@@ -28,7 +28,7 @@ public class UserLoginActorTest {
   @Test
   public void testUpdateUserLoginTimeSuccess() {
     Request request = new Request();
-    
+
     request.setOperation(ActorOperations.USER_CURRENT_LOGIN.getValue());
     request.put(JsonKey.USER_ID, userId);
 
@@ -54,5 +54,4 @@ public class UserLoginActorTest {
             .getCode()
             .equals(ResponseCode.invalidRequestData.getErrorCode()));
   }
-
 }

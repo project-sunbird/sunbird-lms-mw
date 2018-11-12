@@ -19,8 +19,9 @@ import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.util.Util;
 
 @ActorConfig(
-    tasks = {"userBulkUpload"},
-    asyncTasks = {})
+  tasks = {"userBulkUpload"},
+  asyncTasks = {}
+)
 public class UserBulkUploadActor extends BaseBulkUploadActor {
   private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
   private String[] bulkUserAllowedFields = {
@@ -96,7 +97,8 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
       fileByteArray = (byte[]) req.get(JsonKey.FILE);
     }
     Integer recordCount =
-        validateAndParseRecords(fileByteArray, processId, new HashMap(), supportedColumnsMap);
+        validateAndParseRecords(
+            fileByteArray, processId, new HashMap(), supportedColumnsMap, false);
     processBulkUpload(
         recordCount,
         processId,

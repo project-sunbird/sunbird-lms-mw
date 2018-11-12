@@ -763,6 +763,9 @@ public class UserManagementActor extends BaseActor {
     if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
       userRequestValidator.validateCreateUserV2Request(actorMessage);
       validateChannelAndOrganisationId(userMap);
+    } else if (StringUtils.isNotBlank(version) && JsonKey.VERSION_3.equalsIgnoreCase(version)) {
+      userRequestValidator.validateCreateUserV3Request(actorMessage);
+      userMap.put(JsonKey.USERNAME, ProjectUtil.generateUniqueId());
     } else {
       userRequestValidator.validateCreateUserV1Request(actorMessage);
     }
@@ -771,13 +774,18 @@ public class UserManagementActor extends BaseActor {
     userMap.remove(JsonKey.ENC_PHONE);
     userMap.remove(JsonKey.EMAIL_VERIFIED);
     userMap.put(JsonKey.CREATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
+    userMap.put(JsonKey.VERSION, JsonKey.VERSION_3);
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
     try {
-      String channel = Util.getCustodianChannel(userMap, systemSettingActorRef);
-      String rootOrgId = Util.getRootOrgIdFromChannel(channel);
-      userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
-      userMap.put(JsonKey.CHANNEL, channel);
+      String custodianOrgId =
+          userService.getValidatedCustodianOrgId(userMap, systemSettingActorRef);
+      if (StringUtils.isBlank(custodianOrgId)) {
+        String channel = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL);
+        String rootOrgId = userService.getRootOrgIdFromChannel(channel);
+        userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+        userMap.put(JsonKey.CHANNEL, channel);
+      }
     } catch (Exception ex) {
       sender().tell(ex, self());
       return;
@@ -825,9 +833,6 @@ public class UserManagementActor extends BaseActor {
     }
 
     UserUtil.upsertUserInKeycloak(userMap, JsonKey.CREATE);
-    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
-      userMap.put(JsonKey.PASSWORD, null);
-    }
     requestMap = UserUtil.encryptUserData(userMap);
     removeUnwanted(requestMap);
     Response response = null;
@@ -865,6 +870,7 @@ public class UserManagementActor extends BaseActor {
     if (null != resp) {
       saveUserDetailsToEs(esResponse);
     }
+    requestMap.put(JsonKey.PASSWORD, userMap.get(JsonKey.PASSWORD));
     sendEmailAndSms(requestMap);
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();

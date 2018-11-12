@@ -795,7 +795,6 @@ public class UserManagementActor extends BaseActor {
     userMap.remove(JsonKey.ENC_PHONE);
     userMap.remove(JsonKey.EMAIL_VERIFIED);
     userMap.put(JsonKey.CREATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
-    userMap.put(JsonKey.VERSION, JsonKey.VERSION_3);
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
     try {

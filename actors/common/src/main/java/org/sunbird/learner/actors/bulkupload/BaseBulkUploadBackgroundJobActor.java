@@ -1,20 +1,19 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.opencsv.CSVWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.Constants;
@@ -31,10 +30,6 @@ import org.sunbird.common.util.CloudStorageUtil.CloudStorageType;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 import org.sunbird.learner.actors.bulkupload.model.StorageDetails;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.opencsv.CSVWriter;
 
 public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadActor {
 
@@ -214,14 +209,14 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
   }
 
   private File getFileHandle(String objType, String processId) {
-    String logMessagePrefix = MessageFormat.format(
-	    "BaseBulkUploadBackGroundJobActor:getFileHandle:{0}: ", processId);
+    String logMessagePrefix =
+        MessageFormat.format("BaseBulkUploadBackGroundJobActor:getFileHandle:{0}: ", processId);
     File file = null;
     try {
       file = File.createTempFile(objType, "upload");
     } catch (IOException e) {
       ProjectLogger.log(
-    		  logMessagePrefix + "Exception occurred with error message = " + e.getMessage(), e);
+          logMessagePrefix + "Exception occurred with error message = " + e.getMessage(), e);
     }
     return file;
   }
@@ -298,6 +293,4 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
               csvWriter.writeNext(nextLine);
             });
   }
-
-
 }

@@ -1,5 +1,6 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -7,7 +8,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -37,16 +37,15 @@ import org.sunbird.learner.actors.bulkupload.model.StorageDetails;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 /**
  * This actor will handle bulk upload operation .
  *
  * @author Amit Kumar
  */
 @ActorConfig(
-    tasks = {"bulkUpload", "getBulkOpStatus", "getBulkUploadStatusDownloadLink"},
-    asyncTasks = {})
+  tasks = {"bulkUpload", "getBulkOpStatus", "getBulkUploadStatusDownloadLink"},
+  asyncTasks = {}
+)
 public class BulkUploadManagementActor extends BaseBulkUploadActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();

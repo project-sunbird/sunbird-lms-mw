@@ -72,15 +72,11 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
 
   private void processTasks(List<BulkUploadProcessTask> bulkUploadProcessTasks) {
     for (BulkUploadProcessTask task : bulkUploadProcessTasks) {
-      try {
-        if (task.getStatus() != null
-            && task.getStatus() != ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
-          processUser(task);
-          task.setLastUpdatedOn(new Timestamp(System.currentTimeMillis()));
-          task.setIterationId(task.getIterationId() + 1);
-        }
-      } catch (Exception ex) {
-        task.setFailureResult(ex.getMessage());
+      if (task.getStatus() != null
+          && task.getStatus() != ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
+        processUser(task);
+        task.setLastUpdatedOn(new Timestamp(System.currentTimeMillis()));
+        task.setIterationId(task.getIterationId() + 1);
       }
     }
   }
@@ -100,10 +96,8 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
         validateMandatoryFields(userMap, task, mandatoryColumnsObject);
       }
       if (null != userMap.get(JsonKey.ROLES)) {
-    	  String roles = (String)userMap.get(JsonKey.ROLES);
-    	  userMap.put(JsonKey.ROLES, Arrays.asList(roles.split("\\\\s*,\\\\s*")));
-
-        
+        String roles = (String) userMap.get(JsonKey.ROLES);
+        userMap.put(JsonKey.ROLES, Arrays.asList(roles.split("\\\\s*,\\\\s*")));
       }
       User user = mapper.convertValue(userMap, User.class);
       user.setId((String) userMap.get(JsonKey.USER_ID));

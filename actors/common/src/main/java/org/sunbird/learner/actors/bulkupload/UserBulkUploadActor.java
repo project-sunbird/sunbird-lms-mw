@@ -10,11 +10,9 @@ import java.util.stream.Collectors;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.util.Util;
 
@@ -117,13 +115,6 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
     }
     Integer recordCount =
         validateAndParseRecords(fileByteArray, processId, new HashMap(), supportedColumnsMap, true);
-    if (recordCount.intValue() == 0) {
-      bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
-      bulkUploadProcess.setFailureResult(ResponseCode.emptyFile.getErrorMessage());
-      bulkUploadDao.update(bulkUploadProcess);
-      ProjectCommonException.throwClientErrorException(
-          ResponseCode.emptyFile, ResponseCode.emptyFile.getErrorMessage());
-    }
     processBulkUpload(
         recordCount,
         processId,

@@ -1,20 +1,19 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.opencsv.CSVWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.Constants;
@@ -31,10 +30,6 @@ import org.sunbird.common.util.CloudStorageUtil.CloudStorageType;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 import org.sunbird.learner.actors.bulkupload.model.StorageDetails;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.opencsv.CSVWriter;
 
 public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadActor {
 
@@ -205,7 +200,7 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       throws IOException {
 
     String objKey = generateObjectKey(bulkUploadProcess);
-    File file = getFileHandle(bulkUploadProcess.getObjectType());
+    File file = getFileHandle(bulkUploadProcess.getObjectType(), bulkUploadProcess.getId());
     writeResultsToFile(file, successList, failureList, supportedColumnMap, supportedColumnsOrder);
     CloudStorageUtil.upload(
         CloudStorageType.AZURE, bulkUploadProcess.getObjectType(), objKey, file.getAbsolutePath());
@@ -213,14 +208,15 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
         CloudStorageType.AZURE.getType(), bulkUploadProcess.getObjectType(), objKey);
   }
 
-  private File getFileHandle(String objType) {
-
+  private File getFileHandle(String objType, String processId) {
+    String logMessagePrefix =
+        MessageFormat.format("BaseBulkUploadBackGroundJobActor:getFileHandle:{0}: ", processId);
     File file = null;
     try {
       file = File.createTempFile(objType, "upload");
-    } catch (IOException e) { // TODO Auto-generated catch block
+    } catch (IOException e) {
       ProjectLogger.log(
-          "BaseBulkUploadBackgroundJobActor:processBulkUpload: exception." + e.getMessage(), e);
+          logMessagePrefix + "Exception occurred with error message = " + e.getMessage(), e);
     }
     return file;
   }
@@ -297,6 +293,4 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
               csvWriter.writeNext(nextLine);
             });
   }
-
-
 }

@@ -5,7 +5,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
@@ -24,8 +23,9 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
 
 @ActorConfig(
-    tasks = {},
-    asyncTasks = {"orgBulkUploadBackground"})
+  tasks = {},
+  asyncTasks = {"orgBulkUploadBackground"}
+)
 public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJobActor {
   private OrganisationClient orgClient = new OrganisationClientImpl();
   private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
@@ -115,7 +115,7 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
 
       Organisation organisation = mapper.convertValue(orgMap, Organisation.class);
       organisation.setStatus(status);
-      organisation.setId((String) orgMap.get(JsonKey.ORGANISATION_ID));
+      organisation.setId((String) orgMap.get(JsonKey.ORG_ID));
 
       if (StringUtils.isEmpty(organisation.getId())) {
         callCreateOrg(organisation, task, locationCodes);
@@ -198,8 +198,9 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
       setTaskStatus(
           task, ProjectUtil.BulkProcessStatus.FAILED, ex.getMessage(), row, JsonKey.UPDATE);
     }
-
-    task.setData(mapper.writeValueAsString(row));
-    setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, row, JsonKey.UPDATE);
+    if (task.getStatus() != ProjectUtil.BulkProcessStatus.FAILED.getValue()) {
+      task.setData(mapper.writeValueAsString(row));
+      setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, row, JsonKey.UPDATE);
+    }
   }
 }

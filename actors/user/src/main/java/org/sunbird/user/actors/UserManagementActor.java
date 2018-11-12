@@ -999,7 +999,7 @@ public class UserManagementActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   public static String getFrameworkId(String channel) {
-    String frameworkId = DataCacheHandler.getchannelFrameworkIdMap().get(channel);
+    String frameworkId = DataCacheHandler.getChannelFrameworkIdMap().get(channel);
     if (frameworkId == null) {
       Map<String, Object> resultMap = ContentStoreUtil.readChannel(channel);
       Map<String, Object> results = (Map<String, Object>) resultMap.get(JsonKey.RESULT);
@@ -1011,23 +1011,25 @@ public class UserManagementActor extends BaseActor {
             DataCacheHandler.updateChannelFrameworkIdMap(channel, frameworkId);
             return frameworkId;
           }
-          return null;
         }
-        return null;
       }
-      return null;
+      throw new ProjectCommonException(
+          ResponseCode.errorNoFrameworkFound.getErrorCode(),
+          ResponseCode.errorNoFrameworkFound.getErrorMessage(),
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+
     } else return frameworkId;
   }
 
   public static Map<String, List<Map<String, String>>> getFrameworkDetails(String frameworkId) {
     if (DataCacheHandler.getFrameworkCategoriesMap().get(frameworkId) == null) {
-      getFrameworkDataAndCache(frameworkId);
+      handleGetFrameworkDetails(frameworkId);
     }
     return DataCacheHandler.getFrameworkCategoriesMap().get(frameworkId);
   }
 
   @SuppressWarnings("unchecked")
-  private static void getFrameworkDataAndCache(String frameworkId) {
+  private static void handleGetFrameworkDetails(String frameworkId) {
     Map<String, Object> response = ContentStoreUtil.readFramework(frameworkId);
     Map<String, List<Map<String, String>>> frameworkCacheMap = new HashMap<>();
     List<String> supportedfFields = DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.FIELDS);

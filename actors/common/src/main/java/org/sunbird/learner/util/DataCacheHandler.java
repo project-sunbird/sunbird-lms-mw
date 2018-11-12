@@ -183,44 +183,36 @@ public class DataCacheHandler implements Runnable {
     DataCacheHandler.configSettings = configSettings;
   }
 
-  /** @return the frameworkMap */
   public static Map<String, Map<String, List<Map<String, String>>>> getFrameworkCategoriesMap() {
     return frameworkCategoriesMap;
   }
 
-  /** @param frameworkMap the frameworkValues to set */
   public static void setFrameworkCategoriesMap(
       Map<String, Map<String, List<Map<String, String>>>> frameworkCategoriesMap) {
     DataCacheHandler.frameworkCategoriesMap = frameworkCategoriesMap;
   }
 
-  /** @return the frameworkFieldsConfig */
   public static void setFrameworkFieldsConfig(Map<String, List<String>> frameworkFieldsConfig) {
     DataCacheHandler.frameworkFieldsConfig = frameworkFieldsConfig;
   }
 
-  /** @return the frameworkFieldsConfig */
   public static Map<String, List<String>> getFrameworkFieldsConfig() {
     return frameworkFieldsConfig;
   }
 
-  /** @param frameworkId and its Values and update it */
   public static void updateFrameworkCategoriesMap(
       String frameworkId, Map<String, List<Map<String, String>>> frameworkCacheMap) {
     DataCacheHandler.frameworkCategoriesMap.put(frameworkId, frameworkCacheMap);
   }
 
-  /** @param channelFrameworkMap the channelFrameworkMap to set */
-  public static void setChannelFrameworkIdMap(Map<String, String> channelFrameworkMap) {
-    DataCacheHandler.channelFrameworkIdMap = channelFrameworkMap;
+  public static void setChannelFrameworkIdMap(Map<String, String> channelFrameworkIdMap) {
+    DataCacheHandler.channelFrameworkIdMap = channelFrameworkIdMap;
   }
 
-  /** @return the channelFrameworkMap */
-  public static Map<String, String> getchannelFrameworkIdMap() {
+  public static Map<String, String> getChannelFrameworkIdMap() {
     return channelFrameworkIdMap;
   }
 
-  /** @param channelFrameworkMap the channelFrameworkMap to set */
   public static void updateChannelFrameworkIdMap(String channel, String frameworkId) {
     DataCacheHandler.channelFrameworkIdMap.put(channel, frameworkId);
   }

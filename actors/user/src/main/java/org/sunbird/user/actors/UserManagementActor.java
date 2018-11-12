@@ -690,7 +690,7 @@ public class UserManagementActor extends BaseActor {
     Util.getUserProfileConfig(systemSettingActorRef);
     userService.validateUserId(actorMessage);
     Map<String, Object> userMap = actorMessage.getRequest();
-    if (DataCacheHandler.getFrameworkFieldsConfig().isEmpty()) {
+    if (MapUtils.isEmpty(DataCacheHandler.getFrameworkFieldsConfig())) {
       Map<String, List<String>> frameworkFieldsConfig =
           systemSettingClient.getSystemSettingByFieldAndKey(
               getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
@@ -707,8 +707,7 @@ public class UserManagementActor extends BaseActor {
         userMap, frameworkFields, frameworkMandatoryFields);
     Map<String, Object> userDbRecord = UserUtil.validateExternalIdsAndReturnActiveUser(userMap);
     if (userMap.containsKey(JsonKey.FRAMEWORK)) {
-      User userObj = userService.getUserById((String) userMap.get(JsonKey.USER_ID));
-      String frameworkId = getFrameworkId(userObj.getChannel());
+      String frameworkId = getFrameworkId((String) userDbRecord.get(JsonKey.CHANNEL));
       Map<String, List<Map<String, String>>> frameworkCachedValue =
           getFrameworkDetails(frameworkId);
       userRequestValidator.validateFrameworkCategoryValues(userMap, frameworkCachedValue);

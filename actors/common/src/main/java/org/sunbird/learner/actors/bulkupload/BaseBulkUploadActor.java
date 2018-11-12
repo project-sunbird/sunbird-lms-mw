@@ -359,8 +359,8 @@ public abstract class BaseBulkUploadActor extends BaseActor {
       String[] bulkLocationAllowedFields,
       Boolean allFieldsMandatory,
       boolean toLower,
-      List<String> mandatoryColumn,
-      Map<String, Object> supportedColumn)
+      List<String> mandatoryColumns,
+      Map<String, Object> supportedColumnsMap)
       throws IOException {
     byte[] fileByteArray = (byte[]) req.get(JsonKey.FILE);
 
@@ -379,8 +379,8 @@ public abstract class BaseBulkUploadActor extends BaseActor {
         }
         csvLine = trimColumnAttributes(csvLine);
         validateBulkUploadFields(csvLine, bulkLocationAllowedFields, allFieldsMandatory, toLower);
-        if (mandatoryColumn != null) {
-          validateMandatoryColumn(mandatoryColumn, csvLine, supportedColumn);
+        if (mandatoryColumns != null) {
+          validateMandatoryColumns(mandatoryColumns, csvLine, supportedColumnsMap);
         }
         flag = false;
       }
@@ -393,25 +393,25 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     }
   }
 
-  private void validateMandatoryColumn(
-      List<String> mandatoryColumn, String[] csvLine, Map<String, Object> supportedColumn) {
+  private void validateMandatoryColumns(
+      List<String> mandatoryColumns, String[] csvLine, Map<String, Object> supportedColumnsMap) {
     List<String> csvColumns = new ArrayList<>();
-    List<String> csvData = new ArrayList<>();
+    List<String> csvMappedColumns = new ArrayList<>();
     Arrays.stream(csvLine)
         .forEach(
             x -> {
               csvColumns.add(x.toLowerCase());
-              csvData.add((String) supportedColumn.get(x.toLowerCase()));
+              csvMappedColumns.add((String) supportedColumnsMap.get(x.toLowerCase()));
             });
 
-    mandatoryColumn.forEach(
-        x -> {
-          if (!(csvData.contains(x))) {
+    mandatoryColumns.forEach(
+        column -> {
+          if (!(csvMappedColumns.contains(column))) {
             throw new ProjectCommonException(
                 ResponseCode.mandatoryParamsMissing.getErrorCode(),
                 ResponseCode.mandatoryParamsMissing.getErrorMessage(),
                 ResponseCode.CLIENT_ERROR.getResponseCode(),
-                x);
+                column);
           }
         });
   }

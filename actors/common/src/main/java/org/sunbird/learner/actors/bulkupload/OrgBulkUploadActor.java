@@ -79,14 +79,14 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
                   Collectors.toMap(
                       entry -> (entry.getKey()).toLowerCase(), entry -> entry.getValue()));
       supportedColumnsLowerCaseMap.forEach((key, value) -> supportedColumnsList.add(key));
-      List<String> mandatoryColumnsObject =
+      List<String> mandatoryColumns =
           (List<String>) (((Map<String, Object>) dataObject).get("mandatoryColumns"));
       validateFileHeaderFields(
           req,
           supportedColumnsList.toArray(new String[supportedColumnsList.size()]),
           false,
           true,
-          mandatoryColumnsObject,
+          mandatoryColumns,
           supportedColumnsLowerCaseMap);
     } else {
       validateFileHeaderFields(req, bulkOrgAllowedFields, false, false);
@@ -120,12 +120,12 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
       }
     }
     if (!additionalInfo.containsKey(JsonKey.CHANNEL)) {
-      ProjectCommonException.throwClientErrorException(
-          ResponseCode.errorNoRootOrgAssociated,
-          ResponseCode.errorNoRootOrgAssociated.getErrorMessage());
       bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
       bulkUploadProcess.setFailureResult(ResponseCode.errorNoRootOrgAssociated.getErrorMessage());
       bulkUploadDao.update(bulkUploadProcess);
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.errorNoRootOrgAssociated,
+          ResponseCode.errorNoRootOrgAssociated.getErrorMessage());
     }
     Integer recordCount =
         validateAndParseRecords(

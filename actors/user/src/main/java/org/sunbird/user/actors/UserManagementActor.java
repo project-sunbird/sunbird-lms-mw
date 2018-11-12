@@ -1032,19 +1032,19 @@ public class UserManagementActor extends BaseActor {
     Map<String, List<Map<String, String>>> frameworkCacheMap = new HashMap<>();
     List<String> supportedfFields = DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.FIELDS);
     Map<String, Object> result = (Map<String, Object>) response.get(JsonKey.RESULT);
-    if (result != null) {
+    if (MapUtils.isNotEmpty(result)) {
       Map<String, Object> frameworkDetails = (Map<String, Object>) result.get(JsonKey.FRAMEWORK);
-      if (frameworkDetails != null) {
+      if (MapUtils.isNotEmpty(frameworkDetails)) {
         List<Map<String, Object>> frameworkCategories =
             (List<Map<String, Object>>) frameworkDetails.get(JsonKey.CATEGORIES);
-        if (frameworkCategories != null) {
+        if (CollectionUtils.isNotEmpty(frameworkCategories)) {
           for (Map<String, Object> frameworkCategoriesValue : frameworkCategories) {
             String frameworkField = (String) frameworkCategoriesValue.get(JsonKey.CODE);
             if (supportedfFields.contains(frameworkField)) {
               List<Map<String, String>> listOfFields = new ArrayList<>();
               List<Map<String, Object>> frameworkTermList =
                   (List<Map<String, Object>>) frameworkCategoriesValue.get(JsonKey.TERMS);
-              if (frameworkTermList != null) {
+              if (CollectionUtils.isNotEmpty(frameworkTermList)) {
                 for (Map<String, Object> frameworkTerm : frameworkTermList) {
                   String id = (String) frameworkTerm.get(JsonKey.IDENTIFIER);
                   String name = (String) frameworkTerm.get(JsonKey.NAME);
@@ -1054,10 +1054,11 @@ public class UserManagementActor extends BaseActor {
                   listOfFields.add(writtenValue);
                 }
               }
-              if (!StringUtils.isEmpty(frameworkField) && listOfFields != null)
-                frameworkCacheMap.put(frameworkField.toLowerCase(), listOfFields);
+              if (StringUtils.isNotBlank(frameworkField)
+                  && CollectionUtils.isNotEmpty(listOfFields))
+                frameworkCacheMap.put(frameworkField, listOfFields);
             }
-            if (!frameworkCacheMap.isEmpty())
+            if (MapUtils.isNotEmpty(frameworkCacheMap))
               DataCacheHandler.updateFrameworkCategoriesMap(frameworkId, frameworkCacheMap);
           }
         }

@@ -1,15 +1,22 @@
 package org.sunbird.user.service.impl;
 
+import akka.actor.ActorRef;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.sunbird.actorutil.systemsettings.SystemSettingClient;
+import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.EsIndex;
+import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.impl.DefaultDecryptionServiceImpl;
@@ -17,6 +24,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.Util;
+import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.models.user.User;
 import org.sunbird.user.dao.UserDao;
 import org.sunbird.user.dao.UserExternalIdentityDao;
@@ -123,5 +131,108 @@ public class UserServiceImpl implements UserService {
         ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.userprofilevisibility.getTypeName(),
         userId);
+  }
+
+  @Override
+  public String getValidatedCustodianOrgId(Map<String, Object> userMap, ActorRef actorRef) {
+    String custodianOrgId = "";
+    try {
+      SystemSettingClient client = SystemSettingClientImpl.getInstance();
+      SystemSetting systemSetting =
+          client.getSystemSettingByField(actorRef, JsonKey.CUSTODIAN_ORG_ID);
+      if (null != systemSetting && StringUtils.isNotBlank(systemSetting.getValue())) {
+        custodianOrgId = systemSetting.getValue();
+      }
+    } catch (Exception ex) {
+      ProjectLogger.log(
+          "UserUtil:getValidatedCustodianOrgId: Exception occurred with error message = "
+              + ex.getMessage(),
+          ex);
+      ProjectCommonException.throwServerErrorException(
+          ResponseCode.errorSystemSettingNotFound,
+          ProjectUtil.formatMessage(
+              ResponseCode.errorSystemSettingNotFound.getErrorMessage(), JsonKey.CUSTODIAN_ORG_ID));
+    }
+    Map<String, Object> custodianOrg = null;
+    if (StringUtils.isNotBlank(custodianOrgId)) {
+      custodianOrg =
+          ElasticSearchUtil.getDataByIdentifier(
+              ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.organisation.getTypeName(),
+              custodianOrgId);
+      if (MapUtils.isNotEmpty(custodianOrg)) {
+
+        if (null != custodianOrg.get(JsonKey.STATUS)) {
+          int status = (int) custodianOrg.get(JsonKey.STATUS);
+          if (1 != status) {
+            ProjectCommonException.throwClientErrorException(
+                ResponseCode.errorInactiveCustodianOrg);
+          }
+        } else {
+          ProjectCommonException.throwClientErrorException(ResponseCode.errorInactiveCustodianOrg);
+        }
+      } else {
+        ProjectCommonException.throwServerErrorException(
+            ResponseCode.errorSystemSettingNotFound,
+            ProjectUtil.formatMessage(
+                ResponseCode.errorSystemSettingNotFound.getErrorMessage(),
+                JsonKey.CUSTODIAN_ORG_ID));
+      }
+    } else {
+      ProjectCommonException.throwServerErrorException(
+          ResponseCode.errorSystemSettingNotFound,
+          ProjectUtil.formatMessage(
+              ResponseCode.errorSystemSettingNotFound.getErrorMessage(), JsonKey.CUSTODIAN_ORG_ID));
+    }
+    userMap.put(JsonKey.ROOT_ORG_ID, custodianOrgId);
+    userMap.put(JsonKey.CHANNEL, custodianOrg.get(JsonKey.CHANNEL));
+    return custodianOrgId;
+  }
+
+  @Override
+  public String getRootOrgIdFromChannel(String channel) {
+
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(JsonKey.IS_ROOT_ORG, true);
+    if (StringUtils.isNotBlank(channel)) {
+      filters.put(JsonKey.CHANNEL, channel);
+    } else {
+      // If channel value is not coming in request then read the default channel value provided from
+      // ENV.
+      if (StringUtils.isNotBlank(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL))) {
+        filters.put(JsonKey.CHANNEL, ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL));
+      } else {
+        throw new ProjectCommonException(
+            ResponseCode.mandatoryParamsMissing.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.CHANNEL),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
+    SearchDTO searchDTO = new SearchDTO();
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
+    Map<String, Object> esResult =
+        ElasticSearchUtil.complexSearch(
+            searchDTO, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
+    if (MapUtils.isNotEmpty(esResult)
+        && CollectionUtils.isNotEmpty((List) esResult.get(JsonKey.CONTENT))) {
+      Map<String, Object> esContent =
+          ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
+      return (String) esContent.get(JsonKey.ID);
+    } else {
+      if (StringUtils.isNotBlank(channel)) {
+        throw new ProjectCommonException(
+            ResponseCode.invalidParameterValue.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.invalidParameterValue.getErrorMessage(), channel, JsonKey.CHANNEL),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      } else {
+        throw new ProjectCommonException(
+            ResponseCode.mandatoryParamsMissing.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.CHANNEL),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
   }
 }

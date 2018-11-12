@@ -5,11 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.InterServiceCommunication;
@@ -62,7 +59,9 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
                   (tasks) -> {
                     processTasks((List<BulkUploadProcessTask>) tasks);
                     return null;
-                  });
+                  },
+                  null,
+                  (String[]) request.get(JsonKey.FIELDS));
               return null;
             });
         break;
@@ -217,21 +216,5 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
         task.setFailureResult(ex.getMessage());
       }
     }
-  }
-
-  private Map<String, Integer> getOrderMap() {
-    Map<String, Integer> orderMap = new HashMap<>();
-    List<String> subTypeList =
-        Arrays.asList(
-            ProjectUtil.getConfigValue(GeoLocationJsonKey.SUNBIRD_VALID_LOCATION_TYPES).split(";"));
-    for (String str : subTypeList) {
-      List<String> typeList =
-          (((Arrays.asList(str.split(","))).stream().map(String::toLowerCase))
-              .collect(Collectors.toList()));
-      for (int i = 0; i < typeList.size(); i++) {
-        orderMap.put(typeList.get(i), i);
-      }
-    }
-    return orderMap;
   }
 }

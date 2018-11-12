@@ -282,26 +282,9 @@ public class OrganisationManagementActor extends BaseActor {
         request.remove(JsonKey.ADDRESS);
       }
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-      boolean isChannelVerified = false;
-      // combination of source and external id should be unique ...
-      if (request.containsKey(JsonKey.PROVIDER) || request.containsKey(JsonKey.EXTERNAL_ID)) {
-        validateChannelIdForRootOrg(request);
-        if (request.containsKey(JsonKey.CHANNEL)) {
-          isChannelVerified = true;
-          validateChannel(request);
-        } else {
-          // if Channel value is not coming then check for provider
-          // now if any org has same channel value as provider and that
-          // org is rootOrg then set that root orgid with current orgId.
-          if (request.containsKey(JsonKey.PROVIDER)) {
-            String rootOrgId = getRootOrgIdFromChannel((String) request.get(JsonKey.PROVIDER));
-            if (!StringUtils.isBlank(rootOrgId)) {
-              request.put(JsonKey.ROOT_ORG_ID, rootOrgId);
-            }
-          }
-        }
-      }
-      if (request.containsKey(JsonKey.CHANNEL) && !isChannelVerified) {
+
+      validateChannelIdForRootOrg(request);
+      if (request.containsKey(JsonKey.CHANNEL)) {
         validateChannel(request);
       }
 
@@ -1643,20 +1626,6 @@ public class OrganisationManagementActor extends BaseActor {
       }
     }
     return false;
-  }
-
-  /**
-   * @param externalId
-   * @param provider
-   */
-  private void validateExternalIdAndProvider(String externalId, String provider) {
-    if (StringUtils.isBlank(externalId) || StringUtils.isBlank(provider)) {
-      ProjectLogger.log("Source and external ids should exist.");
-      throw new ProjectCommonException(
-          ResponseCode.sourceAndExternalIdValidationError.getErrorCode(),
-          ResponseCode.sourceAndExternalIdValidationError.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
   }
 
   /**

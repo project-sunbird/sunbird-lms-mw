@@ -25,10 +25,15 @@ import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.util.CloudStorageUtil;
+import org.sunbird.common.util.CloudStorageUtil.CloudStorageType;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessTaskDao;
+import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
 import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessTaskDaoImpl;
+import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
+import org.sunbird.learner.actors.bulkupload.model.StorageDetails;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
@@ -38,7 +43,7 @@ import org.sunbird.learner.util.Util.DbInfo;
  * @author Amit Kumar
  */
 @ActorConfig(
-  tasks = {"bulkUpload", "getBulkOpStatus"},
+  tasks = {"bulkUpload", "getBulkOpStatus", "getBulkUploadStatusDownloadLink"},
   asyncTasks = {}
 )
 public class BulkUploadManagementActor extends BaseBulkUploadActor {
@@ -105,8 +110,47 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         .getOperation()
         .equalsIgnoreCase(ActorOperations.GET_BULK_OP_STATUS.getValue())) {
       getUploadStatus(request);
+    } else if (request
+        .getOperation()
+        .equalsIgnoreCase(ActorOperations.GET_BULK_UPLOAD_STATUS_DOWNLOAD_LINK.getValue())) {
+      getBulkUploadDownloadStatusLink(request);
+
     } else {
       onReceiveUnsupportedOperation(request.getOperation());
+    }
+  }
+
+  private void getBulkUploadDownloadStatusLink(Request actorMessage) {
+    String processId = (String) actorMessage.getRequest().get(JsonKey.PROCESS_ID);
+    BulkUploadProcessDaoImpl bulkuploadDao = new BulkUploadProcessDaoImpl();
+    BulkUploadProcess result = bulkuploadDao.read(processId);
+    if (result != null) {
+      try {
+        StorageDetails cloudStorageData = result.getDecryptedStorageDetails();
+        if (cloudStorageData == null) {
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.errorUnavailableDownloadLink, null);
+        }
+        String signedUrl =
+            CloudStorageUtil.getSignedUrl(
+                CloudStorageType.getByName(cloudStorageData.getStorageType()),
+                cloudStorageData.getContainer(),
+                cloudStorageData.getFileName());
+        Response response = new Response();
+        response.setResponseCode(ResponseCode.OK);
+        response.getResult().put(JsonKey.SIGNED_URL, signedUrl);
+        sender().tell(response, self());
+      } catch (ProjectCommonException e) {
+        throw e;
+      } catch (Exception e) {
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.errorGenerateDownloadLink, null);
+      }
+    } else {
+      throw new ProjectCommonException(
+          ResponseCode.invalidProcessId.getErrorCode(),
+          ResponseCode.invalidProcessId.getErrorMessage(),
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
   }
 
@@ -190,10 +234,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
         sender().tell(response, self());
       }
     } else {
-      throw new ProjectCommonException(
-          ResponseCode.invalidProcessId.getErrorCode(),
-          ResponseCode.invalidProcessId.getErrorMessage(),
-          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+      ProjectUtil.createResourceNotFoundException();
     }
   }
 

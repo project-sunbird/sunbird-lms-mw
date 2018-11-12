@@ -77,7 +77,7 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
       List<String> supportedColumnsList = new ArrayList<>();
       supportedColumnsMap.forEach((key, value) -> supportedColumnsList.add(key));
       validateFileHeaderFields(
-          req, supportedColumnsList.toArray(new String[supportedColumnsList.size()]), false);
+          req, supportedColumnsList.toArray(new String[supportedColumnsList.size()]), true);
     } else {
       validateFileHeaderFields(req, bulkUserAllowedFields, false);
     }
@@ -97,11 +97,12 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
       fileByteArray = (byte[]) req.get(JsonKey.FILE);
     }
     Integer recordCount =
-        validateAndParseRecords(fileByteArray, processId, new HashMap(), supportedColumnsMap);
+        validateAndParseRecords(fileByteArray, processId, new HashMap(), supportedColumnsMap, true);
     processBulkUpload(
         recordCount,
         processId,
         bulkUploadProcess,
-        BulkUploadActorOperation.USER_BULK_UPLOAD_BACKGROUND_JOB.getValue());
+        BulkUploadActorOperation.USER_BULK_UPLOAD_BACKGROUND_JOB.getValue(),
+        bulkUserAllowedFields);
   }
 }

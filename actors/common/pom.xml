@@ -65,6 +65,12 @@
 			<groupId>org.sunbird</groupId>
 			<artifactId>common-util</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
+			<exclusions>
+				<exclusion>
+					<groupId>com.google.code.gson</groupId>
+					<artifactId>gson</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>com.typesafe.akka</groupId>

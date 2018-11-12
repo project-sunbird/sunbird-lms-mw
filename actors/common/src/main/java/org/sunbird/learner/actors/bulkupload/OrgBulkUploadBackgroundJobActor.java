@@ -36,6 +36,20 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
     Util.initializeContext(request, TelemetryEnvKey.ORGANISATION);
     ExecutionContext.setRequestId(request.getRequestId());
     if (operation.equalsIgnoreCase("orgBulkUploadBackground")) {
+      Map<String, String> supportedColumns =
+          systemSettingClient.getSystemSettingByFieldAndKey(
+              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+              "orgProfileConfig",
+              "csv.supportedColumns",
+              new TypeReference<Map<String, String>>() {});
+
+      String[] supportedColumnsOrder =
+          systemSettingClient.getSystemSettingByFieldAndKey(
+              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+              "orgProfileConfig",
+              "csv.supportedColumnsOrder",
+              new TypeReference<String[]>() {});
+
       handleBulkUploadBackground(
           request,
           (baseBulkUpload) -> {
@@ -44,7 +58,11 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
                 (tasks) -> {
                   processTasks((List<BulkUploadProcessTask>) tasks);
                   return null;
-                });
+                },
+                supportedColumns,
+                supportedColumnsOrder != null
+                    ? supportedColumnsOrder
+                    : (String[]) request.get(JsonKey.FIELDS));
             return null;
           });
     } else {
@@ -97,7 +115,7 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
 
       Organisation organisation = mapper.convertValue(orgMap, Organisation.class);
       organisation.setStatus(status);
-      organisation.setId((String) orgMap.get(JsonKey.ORGANISATION_ID));
+      organisation.setId((String) orgMap.get(JsonKey.ORG_ID));
 
       if (StringUtils.isEmpty(organisation.getId())) {
         callCreateOrg(organisation, task, locationCodes);
@@ -180,8 +198,9 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
       setTaskStatus(
           task, ProjectUtil.BulkProcessStatus.FAILED, ex.getMessage(), row, JsonKey.UPDATE);
     }
-
-    task.setData(mapper.writeValueAsString(row));
-    setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, row, JsonKey.UPDATE);
+    if (task.getStatus() != ProjectUtil.BulkProcessStatus.FAILED.getValue()) {
+      task.setData(mapper.writeValueAsString(row));
+      setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, row, JsonKey.UPDATE);
+    }
   }
 }

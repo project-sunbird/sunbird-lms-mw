@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
@@ -75,27 +74,35 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
     Map<String, Object> supportedColumnsMap = null;
     Map<String, Object> supportedColumnsLowerCaseMap = null;
     if (dataObject != null) {
-      supportedColumnsMap = ((Map<String, Object>)((Map<String, Object>) dataObject).get("supportedColumns"));
+      supportedColumnsMap =
+          ((Map<String, Object>) ((Map<String, Object>) dataObject).get("supportedColumns"));
       List<String> supportedColumnsList = new ArrayList<>();
 
       supportedColumnsLowerCaseMap =
-              supportedColumnsMap
-                      .entrySet()
-                      .stream()
-                      .collect(
-                              Collectors.toMap(
-                                      entry -> (entry.getKey()).toLowerCase(), entry -> entry.getValue()));
+          supportedColumnsMap
+              .entrySet()
+              .stream()
+              .collect(
+                  Collectors.toMap(
+                      entry -> (entry.getKey()).toLowerCase(), entry -> entry.getValue()));
       supportedColumnsLowerCaseMap.forEach((key, value) -> supportedColumnsList.add(key));
-      List<String> mandatoryColumnsObject = (List<String>)(((Map<String, Object>) dataObject).get("mandatoryColumns"));
-        validateFileHeaderFields(
-                req, supportedColumnsList.toArray(new String[supportedColumnsList.size()]), false, true,mandatoryColumnsObject,supportedColumnsLowerCaseMap);
+      List<String> mandatoryColumnsObject =
+          (List<String>) (((Map<String, Object>) dataObject).get("mandatoryColumns"));
+      validateFileHeaderFields(
+          req,
+          supportedColumnsList.toArray(new String[supportedColumnsList.size()]),
+          false,
+          true,
+          mandatoryColumnsObject,
+          supportedColumnsLowerCaseMap);
 
     } else {
       validateFileHeaderFields(req, bulkUserAllowedFields, false);
     }
     BulkUploadProcess bulkUploadProcess =
         handleUpload(JsonKey.USER, (String) req.get(JsonKey.CREATED_BY));
-    processUserBulkUpload(req, bulkUploadProcess.getId(), bulkUploadProcess, supportedColumnsLowerCaseMap);
+    processUserBulkUpload(
+        req, bulkUploadProcess.getId(), bulkUploadProcess, supportedColumnsLowerCaseMap);
   }
 
   private void processUserBulkUpload(
@@ -110,13 +117,12 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
     }
     Integer recordCount =
         validateAndParseRecords(fileByteArray, processId, new HashMap(), supportedColumnsMap, true);
-    if(recordCount.intValue() == 0){
+    if (recordCount.intValue() == 0) {
       bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
       bulkUploadProcess.setFailureResult(ResponseCode.emptyFile.getErrorMessage());
       bulkUploadDao.update(bulkUploadProcess);
       ProjectCommonException.throwClientErrorException(
-              ResponseCode.emptyFile,
-              ResponseCode.emptyFile.getErrorMessage());
+          ResponseCode.emptyFile, ResponseCode.emptyFile.getErrorMessage());
     }
     processBulkUpload(
         recordCount,

@@ -380,7 +380,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
         csvLine = trimColumnAttributes(csvLine);
         validateBulkUploadFields(csvLine, bulkLocationAllowedFields, allFieldsMandatory, toLower);
         if (mandatoryColumns != null) {
-          validateMandatoryColumn(mandatoryColumns, csvLine, supportedColumnsMap);
+          validateMandatoryColumns(mandatoryColumns, csvLine, supportedColumnsMap);
         }
         flag = false;
       }
@@ -393,25 +393,25 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     }
   }
 
-  private void validateMandatoryColumn(
+  private void validateMandatoryColumns(
       List<String> mandatoryColumns, String[] csvLine, Map<String, Object> supportedColumnsMap) {
     List<String> csvColumns = new ArrayList<>();
-    List<String> csvData = new ArrayList<>();
+    List<String> csvMappedColumns = new ArrayList<>();
     Arrays.stream(csvLine)
         .forEach(
             x -> {
               csvColumns.add(x.toLowerCase());
-              csvData.add((String) supportedColumnsMap.get(x.toLowerCase()));
+              csvMappedColumns.add((String) supportedColumnsMap.get(x.toLowerCase()));
             });
 
     mandatoryColumns.forEach(
-        x -> {
-          if (!(csvData.contains(x))) {
+        column -> {
+          if (!(csvMappedColumns.contains(column))) {
             throw new ProjectCommonException(
                 ResponseCode.mandatoryParamsMissing.getErrorCode(),
                 ResponseCode.mandatoryParamsMissing.getErrorMessage(),
                 ResponseCode.CLIENT_ERROR.getResponseCode(),
-                x);
+                column);
           }
         });
   }

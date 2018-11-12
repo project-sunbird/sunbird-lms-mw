@@ -42,11 +42,11 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.request.UserRequestValidator;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.content.util.ContentStoreUtil;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.extension.user.UserExtension;
 import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ContentStoreUtil;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
@@ -1001,8 +1001,7 @@ public class UserManagementActor extends BaseActor {
   public static String getFrameworkId(String channel) {
     String frameworkId = DataCacheHandler.getchannelFrameworkIdMap().get(channel);
     if (frameworkId != null) {
-      Map<String, Object> resultMap =
-          ContentStoreUtil.getReadDetails(channel, JsonKey.SUNBIRD_CHANNEL_READ_API);
+      Map<String, Object> resultMap = ContentStoreUtil.readChannel(channel);
       Map<String, Object> results = (Map<String, Object>) resultMap.get(JsonKey.RESULT);
       if (results != null) {
         Map<String, Object> channelDetails = (Map<String, Object>) results.get(JsonKey.CHANNEL);
@@ -1032,8 +1031,7 @@ public class UserManagementActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private static void getFrameworkDataAndCache(String frameworkId) {
-    Map<String, Object> response =
-        ContentStoreUtil.getReadDetails(frameworkId, JsonKey.SUNBIRD_FRAMEWORK_READ_API);
+    Map<String, Object> response = ContentStoreUtil.readFramework(frameworkId);
     Map<String, List<Map<String, String>>> frameworkCacheMap = new HashMap<>();
     List<String> supportedfFields = DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.FIELDS);
     Map<String, Object> result = (Map<String, Object>) response.get(JsonKey.RESULT);

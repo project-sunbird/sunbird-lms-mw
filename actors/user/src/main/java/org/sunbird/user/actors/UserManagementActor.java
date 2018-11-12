@@ -85,6 +85,7 @@ public class UserManagementActor extends BaseActor {
       Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE));
   private UserRequestValidator userRequestValidator = new UserRequestValidator();
   private UserService userService = new UserServiceImpl();
+  private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
   private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private static InterServiceCommunication interServiceCommunication =
       InterServiceCommunicationFactory.getInstance();
@@ -689,11 +690,20 @@ public class UserManagementActor extends BaseActor {
     Util.getUserProfileConfig(systemSettingActorRef);
     userService.validateUserId(actorMessage);
     Map<String, Object> userMap = actorMessage.getRequest();
+    if (DataCacheHandler.getFrameworkFieldsConfig() == null) {
+      Map<String, List<String>> frameworkFieldsConfig =
+          systemSettingClient.getSystemSettingByFieldAndKey(
+              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+              JsonKey.USER_PROFILE_CONFIG,
+              JsonKey.FRAMEWORK,
+              new TypeReference<Map<String, List<String>>>() {});
+      DataCacheHandler.setFrameworkFieldsConfig(frameworkFieldsConfig);
+    }
     List<String> frameworkFields = DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.FIELDS);
     List<String> frameworkMandatoryFields =
         DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.MANDATORY_FIELDS);
     userRequestValidator.validateUpdateUserRequest(actorMessage);
-    userRequestValidator.validateFrameworkRequestData(
+    userRequestValidator.validateMandatoryFrameworkFields(
         userMap, frameworkFields, frameworkMandatoryFields);
     Map<String, Object> userDbRecord = UserUtil.validateExternalIdsAndReturnActiveUser(userMap);
     if (userMap.containsKey(JsonKey.FRAMEWORK)) {
@@ -701,7 +711,7 @@ public class UserManagementActor extends BaseActor {
       String frameworkId = getFrameworkId(userObj.getChannel());
       Map<String, List<Map<String, String>>> frameworkCachedValue =
           getFrameworkDetails(frameworkId);
-      userRequestValidator.validateFrameworkRequestDetails(userMap, frameworkCachedValue);
+      userRequestValidator.validateFrameworkCategoryValues(userMap, frameworkCachedValue);
     }
     User user = mapper.convertValue(userMap, User.class);
     UserUtil.validateExternalIds(user, JsonKey.UPDATE);
@@ -989,28 +999,35 @@ public class UserManagementActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   public static String getFrameworkId(String channel) {
-    String frameworkId = DataCacheHandler.getchannelFrameworkMap().get(channel);
+    String frameworkId = DataCacheHandler.getchannelFrameworkIdMap().get(channel);
     if (frameworkId != null) {
       Map<String, Object> resultMap =
           ContentStoreUtil.getReadDetails(channel, JsonKey.SUNBIRD_CHANNEL_READ_API);
       Map<String, Object> results = (Map<String, Object>) resultMap.get(JsonKey.RESULT);
-      Map<String, Object> channelDetails = (Map<String, Object>) results.get(JsonKey.CHANNEL);
-      frameworkId = (String) channelDetails.get(JsonKey.DEFAULT_FRAMEWORK);
-      DataCacheHandler.updateChannelFrameworkMap(channel, frameworkId);
-      return frameworkId;
+      if (results != null) {
+        Map<String, Object> channelDetails = (Map<String, Object>) results.get(JsonKey.CHANNEL);
+        if (channelDetails != null) {
+          frameworkId = (String) channelDetails.get(JsonKey.DEFAULT_FRAMEWORK);
+          if (frameworkId != null) {
+            DataCacheHandler.updateChannelFrameworkIdMap(channel, frameworkId);
+            return frameworkId;
+          }
+        }
+      }
     } else {
       throw new ProjectCommonException(
-          ResponseCode.errorNoFrameworkFoundForUserChannel.getErrorCode(),
-          ResponseCode.errorNoFrameworkFoundForUserChannel.getErrorMessage(),
+          ResponseCode.errorNoFrameworkFound.getErrorCode(),
+          ResponseCode.errorNoFrameworkFound.getErrorMessage(),
           ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
+    return null;
   }
 
   public static Map<String, List<Map<String, String>>> getFrameworkDetails(String frameworkId) {
-    if (DataCacheHandler.getFrameworkMap().get(frameworkId) == null) {
+    if (DataCacheHandler.getFrameworkCategoriesMap().get(frameworkId) == null) {
       getFrameworkDataAndCache(frameworkId);
     }
-    return DataCacheHandler.getFrameworkMap().get(frameworkId);
+    return DataCacheHandler.getFrameworkCategoriesMap().get(frameworkId);
   }
 
   @SuppressWarnings("unchecked")
@@ -1020,30 +1037,36 @@ public class UserManagementActor extends BaseActor {
     Map<String, List<Map<String, String>>> frameworkCacheMap = new HashMap<>();
     List<String> supportedfFields = DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.FIELDS);
     Map<String, Object> result = (Map<String, Object>) response.get(JsonKey.RESULT);
-    Map<String, Object> frameworkDetails = (Map<String, Object>) result.get(JsonKey.FRAMEWORK);
-    List<Map<String, Object>> frameworkCategories =
-        (List<Map<String, Object>>) frameworkDetails.get(JsonKey.CATEGORIES);
-    for (Map<String, Object> frameworkCategoriesValue : frameworkCategories) {
-      String frameworkField = (String) frameworkCategoriesValue.get(JsonKey.CODE);
-      List<Map<String, String>> listOfFields = new ArrayList<>();
-      if (supportedfFields.contains(frameworkField)
-          || frameworkField.equalsIgnoreCase(JsonKey.GRADE_LEVEL)) {
-        if (frameworkField.equalsIgnoreCase(JsonKey.GRADE_LEVEL)) frameworkField = JsonKey.CLASS;
-        List<Map<String, Object>> frameworkTerms =
-            (List<Map<String, Object>>) frameworkCategoriesValue.get(JsonKey.TERMS);
-        for (Map<String, Object> frameworkTermsField : frameworkTerms) {
-          String id = (String) frameworkTermsField.get(JsonKey.IDENTIFIER);
-          String name = (String) frameworkTermsField.get(JsonKey.NAME);
-          Map<String, String> writtenValue = new HashMap<>();
-          writtenValue.put(JsonKey.ID, id);
-          writtenValue.put(JsonKey.NAME, name);
-          listOfFields.add(writtenValue);
+    if (result != null) {
+      Map<String, Object> frameworkDetails = (Map<String, Object>) result.get(JsonKey.FRAMEWORK);
+      if (frameworkDetails != null) {
+        List<Map<String, Object>> frameworkCategories =
+            (List<Map<String, Object>>) frameworkDetails.get(JsonKey.CATEGORIES);
+        if (frameworkCategories != null) {
+          for (Map<String, Object> frameworkCategoriesValue : frameworkCategories) {
+            String frameworkField = (String) frameworkCategoriesValue.get(JsonKey.CODE);
+            if (supportedfFields.contains(frameworkField)) {
+              List<Map<String, String>> listOfFields = new ArrayList<>();
+              List<Map<String, Object>> frameworkTermList =
+                  (List<Map<String, Object>>) frameworkCategoriesValue.get(JsonKey.TERMS);
+              if (frameworkTermList != null) {
+                for (Map<String, Object> frameworkTerm : frameworkTermList) {
+                  String id = (String) frameworkTerm.get(JsonKey.IDENTIFIER);
+                  String name = (String) frameworkTerm.get(JsonKey.NAME);
+                  Map<String, String> writtenValue = new HashMap<>();
+                  writtenValue.put(JsonKey.ID, id);
+                  writtenValue.put(JsonKey.NAME, name);
+                  listOfFields.add(writtenValue);
+                }
+              }
+              if (!StringUtils.isEmpty(frameworkField) && listOfFields != null)
+                frameworkCacheMap.put(frameworkField.toLowerCase(), listOfFields);
+            }
+            if (!frameworkCacheMap.isEmpty())
+              DataCacheHandler.updateFrameworkCategoriesMap(frameworkId, frameworkCacheMap);
+          }
         }
       }
-      if (!StringUtils.isEmpty(frameworkField) && listOfFields != null)
-        frameworkCacheMap.put(frameworkField.toLowerCase(), listOfFields);
     }
-    if (!frameworkCacheMap.isEmpty())
-      DataCacheHandler.updateFrameworkMap(frameworkId, frameworkCacheMap);
   }
 }

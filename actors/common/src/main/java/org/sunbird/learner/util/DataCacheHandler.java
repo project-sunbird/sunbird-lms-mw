@@ -1,7 +1,6 @@
 /** */
 package org.sunbird.learner.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,10 +29,10 @@ public class DataCacheHandler implements Runnable {
   private static Map<String, Object> roleMap = new ConcurrentHashMap<>();
   private static Map<String, String> orgTypeMap = new ConcurrentHashMap<>();
   private static Map<String, String> configSettings = new ConcurrentHashMap<>();
-  private static Map<String, Map<String, List<Map<String, String>>>> readFrameworkResponseMap =
+  private static Map<String, Map<String, List<Map<String, String>>>> frameworkCategoriesMap =
       new ConcurrentHashMap<>();
   private static Map<String, List<String>> frameworkFieldsConfig = new ConcurrentHashMap<>();
-  private static Map<String, String> readChannelResponseMap = new HashMap<>();
+  private static Map<String, String> channelFrameworkIdMap = new HashMap<>();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final String KEY_SPACE_NAME = "sunbird";
 
@@ -45,7 +44,6 @@ public class DataCacheHandler implements Runnable {
     roleCache(roleMap);
     orgTypeCache(orgTypeMap);
     cacheSystemConfig(configSettings);
-    cacheFrameworkFieldsConfig();
     ProjectLogger.log("DataCacheHandler:run: Cache refresh completed.", LoggerEnum.INFO.name());
   }
 
@@ -71,26 +69,6 @@ public class DataCacheHandler implements Runnable {
     } else {
       configSettings.put(JsonKey.PHONE_UNIQUE, String.valueOf(false));
       configSettings.put(JsonKey.EMAIL_UNIQUE, String.valueOf(false));
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  private void cacheFrameworkFieldsConfig() {
-    Response response =
-        cassandraOperation.getRecordById(
-            KEY_SPACE_NAME, JsonKey.SYSTEM_SETTINGS_DB, JsonKey.USER_PROFILE_CONFIG);
-    List<Map<String, Object>> responseList =
-        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    Map<String, Object> userProfileConfig = responseList.get(0);
-    String value = (String) userProfileConfig.get(JsonKey.VALUE);
-    ObjectMapper mapper = new ObjectMapper();
-    try {
-      Map<String, Object> userProfileValues =
-          (Map<String, Object>) mapper.readValue(value, Map.class);
-      frameworkFieldsConfig = (Map<String, List<String>>) userProfileValues.get(JsonKey.FRAMEWORK);
-    } catch (Exception e) {
-      ProjectLogger.log(
-          "DatacacheHandler : cacheFrameworkFieldsConfig exception occured with message " + e);
     }
   }
 
@@ -206,14 +184,19 @@ public class DataCacheHandler implements Runnable {
   }
 
   /** @return the frameworkMap */
-  public static Map<String, Map<String, List<Map<String, String>>>> getFrameworkMap() {
-    return readFrameworkResponseMap;
+  public static Map<String, Map<String, List<Map<String, String>>>> getFrameworkCategoriesMap() {
+    return frameworkCategoriesMap;
   }
 
   /** @param frameworkMap the frameworkValues to set */
-  public static void setFrameworkMap(
-      Map<String, Map<String, List<Map<String, String>>>> frameworkMap) {
-    DataCacheHandler.readFrameworkResponseMap = frameworkMap;
+  public static void setFrameworkCategoriesMap(
+      Map<String, Map<String, List<Map<String, String>>>> frameworkCategoriesMap) {
+    DataCacheHandler.frameworkCategoriesMap = frameworkCategoriesMap;
+  }
+
+  /** @return the frameworkFieldsConfig */
+  public static void setFrameworkFieldsConfig(Map<String, List<String>> frameworkFieldsConfig) {
+    DataCacheHandler.frameworkFieldsConfig = frameworkFieldsConfig;
   }
 
   /** @return the frameworkFieldsConfig */
@@ -222,23 +205,23 @@ public class DataCacheHandler implements Runnable {
   }
 
   /** @param frameworkId and its Values and update it */
-  public static void updateFrameworkMap(
+  public static void updateFrameworkCategoriesMap(
       String frameworkId, Map<String, List<Map<String, String>>> frameworkCacheMap) {
-    DataCacheHandler.readFrameworkResponseMap.put(frameworkId, frameworkCacheMap);
+    DataCacheHandler.frameworkCategoriesMap.put(frameworkId, frameworkCacheMap);
   }
 
   /** @param channelFrameworkMap the channelFrameworkMap to set */
-  public static void setChannelFrameworkMap(Map<String, String> channelFrameworkMap) {
-    DataCacheHandler.readChannelResponseMap = channelFrameworkMap;
+  public static void setChannelFrameworkIdMap(Map<String, String> channelFrameworkMap) {
+    DataCacheHandler.channelFrameworkIdMap = channelFrameworkMap;
   }
 
   /** @return the channelFrameworkMap */
-  public static Map<String, String> getchannelFrameworkMap() {
-    return readChannelResponseMap;
+  public static Map<String, String> getchannelFrameworkIdMap() {
+    return channelFrameworkIdMap;
   }
 
   /** @param channelFrameworkMap the channelFrameworkMap to set */
-  public static void updateChannelFrameworkMap(String channel, String frameworkId) {
-    DataCacheHandler.readChannelResponseMap.put(channel, frameworkId);
+  public static void updateChannelFrameworkIdMap(String channel, String frameworkId) {
+    DataCacheHandler.channelFrameworkIdMap.put(channel, frameworkId);
   }
 }

@@ -23,6 +23,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LocationActorOperation;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
@@ -1536,6 +1537,7 @@ public class OrganisationManagementActor extends BaseActor {
   }
 
   private List<Map<String, Object>> getOrg(String channel) {
+    ProjectLogger.log("OrganisationManagementActor:getOrg: channel = " + channel, LoggerEnum.INFO.name());
     Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
     Map<String, Object> requestData = new HashMap<>();
     requestData.put(JsonKey.CHANNEL, channel);
@@ -1543,10 +1545,13 @@ public class OrganisationManagementActor extends BaseActor {
     Response result =
         cassandraOperation.getRecordsByProperties(
             orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), requestData);
+    ProjectLogger.log("OrganisationManagementActor:getOrg: result = " + result.toString(), LoggerEnum.INFO.name());
+    ProjectLogger.log("OrganisationManagementActor:getOrg: result.response = " + result.get(JsonKey.RESPONSE).toString(), LoggerEnum.INFO.name());
     return (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
   }
 
   private String getRootOrgIdFromChannel(String channel) {
+    ProjectLogger.log("OrganisationManagementActor:getRootOrgIdFromChannel: channel = " + channel, LoggerEnum.INFO.name());
     if (!StringUtils.isBlank(channel)) {
       List<Map<String, Object>> list = getOrg(channel);
       if (!list.isEmpty()) return (String) list.get(0).getOrDefault(JsonKey.ID, "");

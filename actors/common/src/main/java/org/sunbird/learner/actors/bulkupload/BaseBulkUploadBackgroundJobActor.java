@@ -214,15 +214,14 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
   }
 
   private File getFileHandle(String objType, String processId) {
-	  String logMessagePrefix =
-		        MessageFormat.format(
-		            "BaseBulkUploadBackGroundJobActor:uploadResultToCloud:{0}: ", processId);
+    String logMessagePrefix = MessageFormat.format(
+	    "BaseBulkUploadBackGroundJobActor:getFileHandle:{0}: ", processId);
     File file = null;
     try {
       file = File.createTempFile(objType, "upload");
     } catch (IOException e) {
       ProjectLogger.log(
-    		  logMessagePrefix+ "exception." + e.getMessage(), e);
+    		  logMessagePrefix + "Exception occurred with error message = " + e.getMessage(), e);
     }
     return file;
   }

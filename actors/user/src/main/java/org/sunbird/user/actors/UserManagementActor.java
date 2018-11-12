@@ -1000,7 +1000,7 @@ public class UserManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   public static String getFrameworkId(String channel) {
     String frameworkId = DataCacheHandler.getchannelFrameworkIdMap().get(channel);
-    if (frameworkId != null) {
+    if (frameworkId == null) {
       Map<String, Object> resultMap = ContentStoreUtil.readChannel(channel);
       Map<String, Object> results = (Map<String, Object>) resultMap.get(JsonKey.RESULT);
       if (results != null) {
@@ -1011,15 +1011,12 @@ public class UserManagementActor extends BaseActor {
             DataCacheHandler.updateChannelFrameworkIdMap(channel, frameworkId);
             return frameworkId;
           }
+          return null;
         }
+        return null;
       }
-    } else {
-      throw new ProjectCommonException(
-          ResponseCode.errorNoFrameworkFound.getErrorCode(),
-          ResponseCode.errorNoFrameworkFound.getErrorMessage(),
-          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
-    }
-    return null;
+      return null;
+    } else return frameworkId;
   }
 
   public static Map<String, List<Map<String, String>>> getFrameworkDetails(String frameworkId) {

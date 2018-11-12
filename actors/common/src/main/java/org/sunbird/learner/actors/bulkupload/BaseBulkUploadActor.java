@@ -342,14 +342,20 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   protected void validateFileHeaderFields(
       Map<String, Object> req, String[] bulkAllowedFields, Boolean allFieldsMandatory)
       throws IOException {
-    validateFileHeaderFields(req, bulkAllowedFields, allFieldsMandatory, false);
+    validateFileHeaderFields(req, bulkAllowedFields, allFieldsMandatory, false,null,null);
   }
-
+  protected void validateFileHeaderFields(
+          Map<String, Object> req, String[] bulkAllowedFields, Boolean allFieldsMandatory, boolean toLower)
+          throws IOException {
+    validateFileHeaderFields(req, bulkAllowedFields, allFieldsMandatory, toLower,null,null);
+  }
   protected void validateFileHeaderFields(
       Map<String, Object> req,
       String[] bulkLocationAllowedFields,
       Boolean allFieldsMandatory,
-      boolean toLower)
+      boolean toLower,
+      List<String> mandatoryColumn,
+      Map<String,Object> supportedColumn)
       throws IOException {
     byte[] fileByteArray = (byte[]) req.get(JsonKey.FILE);
 
@@ -360,11 +366,16 @@ public abstract class BaseBulkUploadActor extends BaseActor {
       csvReader = getCsvReader(fileByteArray, ',', '"', 0);
       while (flag) {
         csvLine = csvReader.readNext();
+        if(csvLine == null)
+          ProjectCommonException.throwClientErrorException(ResponseCode.emptyFile,ResponseCode.emptyFile.getErrorMessage());
         if (ProjectUtil.isNotEmptyStringArray(csvLine)) {
           continue;
         }
         csvLine = trimColumnAttributes(csvLine);
         validateBulkUploadFields(csvLine, bulkLocationAllowedFields, allFieldsMandatory, toLower);
+        if(mandatoryColumn != null){
+          validateMandatoryColumn(mandatoryColumn,csvLine,supportedColumn);
+        }
         flag = false;
       }
     } catch (Exception ex) {
@@ -374,6 +385,28 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     } finally {
       IOUtils.closeQuietly(csvReader);
     }
+  }
+
+  private void validateMandatoryColumn(List<String> mandatoryColumn, String[] csvLine,Map<String,Object> supportedColumn) {
+    List<String> csvColumns = new ArrayList<>();
+    List<String> csvData = new ArrayList<>();
+    Arrays.stream(csvLine)
+            .forEach(
+                    x -> {
+                      csvColumns.add(x.toLowerCase());
+                      csvData.add((String) supportedColumn.get(x.toLowerCase()));
+                    });
+
+    mandatoryColumn.forEach(
+                    x -> {
+                      if (!(csvData.contains(x))) {
+                        throw new ProjectCommonException(
+                                ResponseCode.mandatoryParamsMissing.getErrorCode(),
+                                ResponseCode.mandatoryParamsMissing.getErrorMessage(),
+                                ResponseCode.CLIENT_ERROR.getResponseCode(),
+                                x);
+                      }
+                    });
   }
 
   public BulkUploadProcess handleUpload(String objectType, String createdBy) throws IOException {

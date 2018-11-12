@@ -64,10 +64,16 @@ public class AddressManagementActor extends BaseActor {
           responseAddressList.add(createAddress(encUserId, encCreatedById, address));
         } catch (ProjectCommonException e) {
           errMsgs.add(e.getMessage());
-          ProjectLogger.log("AddressManagementActor:insertAddress: Exception occurred with error message = " + e.getMessage(), e);
+          ProjectLogger.log(
+              "AddressManagementActor:insertAddress: Exception occurred with error message = "
+                  + e.getMessage(),
+              e);
         } catch (Exception e) {
           errMsgs.add("Error occurred while inserting address details.");
-          ProjectLogger.log("AddressManagementActor:insertAddress: Generic exception occurred with error message = " + e.getMessage(), e);
+          ProjectLogger.log(
+              "AddressManagementActor:insertAddress: Generic exception occurred with error message = "
+                  + e.getMessage(),
+              e);
         }
       }
     } catch (Exception e) {
@@ -115,10 +121,16 @@ public class AddressManagementActor extends BaseActor {
           }
         } catch (ProjectCommonException e) {
           errMsgs.add(e.getMessage());
-          ProjectLogger.log("AddressManagementActor:updateAddress: Exception occurred with error message = " + e.getMessage(), e);
+          ProjectLogger.log(
+              "AddressManagementActor:updateAddress: Exception occurred with error message = "
+                  + e.getMessage(),
+              e);
         } catch (Exception e) {
           errMsgs.add("Error occurred while updating address details.");
-          ProjectLogger.log("AddressManagementActor:updateAddress: Generic exception occurred with error message = " + e.getMessage(), e);
+          ProjectLogger.log(
+              "AddressManagementActor:updateAddress: Generic exception occurred with error message = "
+                  + e.getMessage(),
+              e);
         }
       }
     } catch (Exception e) {

@@ -67,7 +67,10 @@ public class UserExternalIdManagementActor extends BaseActor {
           }
         } catch (Exception e) {
           errMsgs.add(e.getMessage());
-          ProjectLogger.log("UserExternalIdManagementActor:upsertUserExternalIdentityDetails: Exception occurred with error message = " + e.getMessage(), e);
+          ProjectLogger.log(
+              "UserExternalIdManagementActor:upsertUserExternalIdentityDetails: Exception occurred with error message = "
+                  + e.getMessage(),
+              e);
         }
         response.put(JsonKey.EXTERNAL_IDS, responseExternalIdList);
         response.put(JsonKey.KEY, JsonKey.EXTERNAL_IDS);

@@ -690,7 +690,7 @@ public class UserManagementActor extends BaseActor {
     Util.getUserProfileConfig(systemSettingActorRef);
     userService.validateUserId(actorMessage);
     Map<String, Object> userMap = actorMessage.getRequest();
-    if (DataCacheHandler.getFrameworkFieldsConfig() == null) {
+    if (DataCacheHandler.getFrameworkFieldsConfig().isEmpty()) {
       Map<String, List<String>> frameworkFieldsConfig =
           systemSettingClient.getSystemSettingByFieldAndKey(
               getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),

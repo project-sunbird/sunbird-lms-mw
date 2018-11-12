@@ -86,14 +86,14 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
                   Collectors.toMap(
                       entry -> (entry.getKey()).toLowerCase(), entry -> entry.getValue()));
       supportedColumnsLowerCaseMap.forEach((key, value) -> supportedColumnsList.add(key));
-      List<String> mandatoryColumnsObject =
+      List<String> mandatoryColumns =
           (List<String>) (((Map<String, Object>) dataObject).get("mandatoryColumns"));
       validateFileHeaderFields(
           req,
           supportedColumnsList.toArray(new String[supportedColumnsList.size()]),
           false,
           true,
-          mandatoryColumnsObject,
+          mandatoryColumns,
           supportedColumnsLowerCaseMap);
 
     } else {

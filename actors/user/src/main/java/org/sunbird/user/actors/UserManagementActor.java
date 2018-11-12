@@ -1024,13 +1024,13 @@ public class UserManagementActor extends BaseActor {
 
   public static Map<String, List<Map<String, String>>> getFrameworkDetails(String frameworkId) {
     if (DataCacheHandler.getFrameworkCategoriesMap().get(frameworkId) == null) {
-      getFrameworkDataAndCache(frameworkId);
+      handleGetFrameworkDetails(frameworkId);
     }
     return DataCacheHandler.getFrameworkCategoriesMap().get(frameworkId);
   }
 
   @SuppressWarnings("unchecked")
-  private static void getFrameworkDataAndCache(String frameworkId) {
+  private static void handleGetFrameworkDetails(String frameworkId) {
     Map<String, Object> response = ContentStoreUtil.readFramework(frameworkId);
     Map<String, List<Map<String, String>>> frameworkCacheMap = new HashMap<>();
     List<String> supportedfFields = DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.FIELDS);

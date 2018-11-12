@@ -282,7 +282,7 @@ public class OrganisationManagementActor extends BaseActor {
         request.remove(JsonKey.ADDRESS);
       }
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-      
+
       validateChannelIdForRootOrg(request);
       if (request.containsKey(JsonKey.CHANNEL)) {
         validateChannel(request);

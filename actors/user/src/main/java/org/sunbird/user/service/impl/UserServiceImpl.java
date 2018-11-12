@@ -145,7 +145,8 @@ public class UserServiceImpl implements UserService {
       }
     } catch (Exception ex) {
       ProjectLogger.log(
-          "UserUtil:getValidatedCustodianOrgId: Exception occurred with error message = " + ex.getMessage(),
+          "UserUtil:getValidatedCustodianOrgId: Exception occurred with error message = "
+              + ex.getMessage(),
           ex);
       ProjectCommonException.throwServerErrorException(
           ResponseCode.errorSystemSettingNotFound,

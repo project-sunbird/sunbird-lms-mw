@@ -67,10 +67,16 @@ public class JobProfileManagementActor extends BaseActor {
               insertJobProfileDetails(requestMap, jobProfileMap, addrResponse, createdBy));
         } catch (ProjectCommonException e) {
           errMsgs.add(e.getMessage());
-          ProjectLogger.log("JobProfileManagementActor:insertJobProfile: Exception occurred with error message = " + e.getMessage(), e);
+          ProjectLogger.log(
+              "JobProfileManagementActor:insertJobProfile: Exception occurred with error message = "
+                  + e.getMessage(),
+              e);
         } catch (Exception e) {
           errMsgs.add("Error occurred while inserting job profile details.");
-          ProjectLogger.log("JobProfileManagementActor:insertJobProfile: Generic exception occurred with error message = " + e.getMessage(), e);
+          ProjectLogger.log(
+              "JobProfileManagementActor:insertJobProfile: Generic exception occurred with error message = "
+                  + e.getMessage(),
+              e);
         }
       }
     } catch (Exception e) {
@@ -119,10 +125,16 @@ public class JobProfileManagementActor extends BaseActor {
           }
         } catch (ProjectCommonException e) {
           errMsgs.add(e.getMessage());
-          ProjectLogger.log("JobProfileManagementActor:updateJobProfile: Exception occurred with error message = " + e.getMessage(), e);
+          ProjectLogger.log(
+              "JobProfileManagementActor:updateJobProfile: Exception occurred with error message = "
+                  + e.getMessage(),
+              e);
         } catch (Exception e) {
           errMsgs.add("Error occurred while updating job profile details.");
-          ProjectLogger.log("JobProfileManagementActor:updateJobProfile: Generic exception occurred with error message = " + e.getMessage(), e);
+          ProjectLogger.log(
+              "JobProfileManagementActor:updateJobProfile: Generic exception occurred with error message = "
+                  + e.getMessage(),
+              e);
         }
       }
     } catch (Exception e) {
@@ -226,5 +238,4 @@ public class JobProfileManagementActor extends BaseActor {
     addrResponse.put(JsonKey.ADDRESS, address);
     return addrResponse;
   }
-
 }

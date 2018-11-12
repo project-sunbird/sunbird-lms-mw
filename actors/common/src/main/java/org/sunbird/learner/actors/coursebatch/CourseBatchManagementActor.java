@@ -166,10 +166,8 @@ public class CourseBatchManagementActor extends BaseActor {
 
     } else {
       batchNotificationMap.put(JsonKey.OPERATION_TYPE, JsonKey.ADD);
-      batchNotificationMap.put(
-          JsonKey.ADDED_MENTORS, courseBatch.getMentors());
-      batchNotificationMap.put(
-          JsonKey.ADDED_PARTICIPANTS, courseBatch.getParticipant());
+      batchNotificationMap.put(JsonKey.ADDED_MENTORS, courseBatch.getMentors());
+      batchNotificationMap.put(JsonKey.ADDED_PARTICIPANTS, courseBatch.getParticipant());
     }
     batchNotificationMap.put(JsonKey.COURSE_BATCH, courseBatch);
     batchNotification.setRequest(batchNotificationMap);
@@ -235,7 +233,7 @@ public class CourseBatchManagementActor extends BaseActor {
     List<String> prevMentors = prevBatch.getMentors();
     List<String> removedMentors = prevBatch.getMentors();
     List<String> addedMentors = newBatch.getMentors();
-    
+
     if (addedMentors == null) {
       addedMentors = new ArrayList<>();
     }
@@ -243,10 +241,10 @@ public class CourseBatchManagementActor extends BaseActor {
       prevMentors = new ArrayList<>();
       removedMentors = new ArrayList<>();
     }
-    
+
     removedMentors.removeAll(addedMentors);
     addedMentors.removeAll(prevMentors);
-    
+
     participantsMap.put(JsonKey.REMOVED_MENTORS, removedMentors);
     participantsMap.put(JsonKey.ADDED_MENTORS, addedMentors);
 
@@ -525,7 +523,7 @@ public class CourseBatchManagementActor extends BaseActor {
         }
       }
     }
-    
+
     return participantsList;
   }
 

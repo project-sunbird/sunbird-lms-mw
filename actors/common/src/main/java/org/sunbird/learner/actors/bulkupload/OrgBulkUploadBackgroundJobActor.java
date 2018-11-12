@@ -1,20 +1,23 @@
 package org.sunbird.learner.actors.bulkupload;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.org.OrganisationClient;
 import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -22,6 +25,9 @@ import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 @ActorConfig(
     tasks = {},
@@ -72,15 +78,11 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
 
   private void processTasks(List<BulkUploadProcessTask> bulkUploadProcessTasks) {
     for (BulkUploadProcessTask task : bulkUploadProcessTasks) {
-      try {
-        if (task.getStatus() != null
-            && task.getStatus() != ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
-          processOrg(task);
-          task.setLastUpdatedOn(new Timestamp(System.currentTimeMillis()));
-          task.setIterationId(task.getIterationId() + 1);
-        }
-      } catch (Exception ex) {
-        task.setFailureResult(ex.getMessage());
+      if (task.getStatus() != null
+          && task.getStatus() != ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
+        processOrg(task);
+        task.setLastUpdatedOn(new Timestamp(System.currentTimeMillis()));
+        task.setIterationId(task.getIterationId() + 1);
       }
     }
   }
@@ -101,7 +103,8 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
       }
       int status = getOrgStatus(orgMap);
       if (status == -1) {
-        task.setFailureResult(ResponseCode.invalidOrgStatus.getErrorMessage());
+        orgMap.put(JsonKey.ERROR_MSG, ResponseCode.invalidOrgStatus.getErrorMessage());
+        task.setFailureResult(mapper.writeValueAsString(orgMap));
         task.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
         return;
       }

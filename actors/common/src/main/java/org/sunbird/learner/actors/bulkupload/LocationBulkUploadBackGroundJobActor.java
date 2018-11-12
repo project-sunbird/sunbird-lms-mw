@@ -63,7 +63,8 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
                     processTasks((List<BulkUploadProcessTask>) tasks);
                     return null;
                   },
-                  null, (String[])request.get(JsonKey.FIELDS));
+                  null,
+                  (String[]) request.get(JsonKey.FIELDS));
               return null;
             });
         break;
@@ -207,15 +208,11 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
 
   private void processTasks(List<BulkUploadProcessTask> tasks) {
     for (BulkUploadProcessTask task : tasks) {
-      try {
-        if (task.getStatus() != null
-            && task.getStatus() != ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
-          processLocation(task);
-          task.setLastUpdatedOn(new Timestamp(System.currentTimeMillis()));
-          task.setIterationId(task.getIterationId() + 1);
-        }
-      } catch (Exception ex) {
-        task.setFailureResult(ex.getMessage());
+      if (task.getStatus() != null
+          && task.getStatus() != ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
+        processLocation(task);
+        task.setLastUpdatedOn(new Timestamp(System.currentTimeMillis()));
+        task.setIterationId(task.getIterationId() + 1);
       }
     }
   }

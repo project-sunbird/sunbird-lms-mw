@@ -785,7 +785,9 @@ public class UserManagementActor extends BaseActor {
       validateChannelAndOrganisationId(userMap);
     } else if (StringUtils.isNotBlank(version) && JsonKey.VERSION_3.equalsIgnoreCase(version)) {
       userRequestValidator.validateCreateUserV3Request(actorMessage);
-      userMap.put(JsonKey.USERNAME, ProjectUtil.generateUniqueId());
+      if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
+        userMap.put(JsonKey.USERNAME, ProjectUtil.generateUniqueId());
+      }
     } else {
       userRequestValidator.validateCreateUserV1Request(actorMessage);
     }
@@ -797,10 +799,11 @@ public class UserManagementActor extends BaseActor {
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
     try {
-      if (JsonKey.VERSION_3.equalsIgnoreCase((String) userMap.get(JsonKey.VERSION))) {
+      if (JsonKey.VERSION_3.equalsIgnoreCase((String) userMap.get(JsonKey.VERSION))
+          && StringUtils.isBlank((String) userMap.get(JsonKey.CHANNEL))) {
         userService.getValidatedCustodianOrgId(userMap, systemSettingActorRef);
       } else {
-        String channel = Util.getCustodianChannel(userMap, systemSettingActorRef);
+        String channel = userService.getCustodianChannel(userMap, systemSettingActorRef);
         String rootOrgId = userService.getRootOrgIdFromChannel(channel);
         userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
         userMap.put(JsonKey.CHANNEL, channel);

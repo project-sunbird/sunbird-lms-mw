@@ -160,7 +160,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.organisation.getTypeName(),
             orgId);
-    if (result != null || result.size() > 0) {
+    if (result != null && result.size() > 0) {
       return result;
     }
     return null;

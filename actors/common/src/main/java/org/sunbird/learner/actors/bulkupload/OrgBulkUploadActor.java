@@ -78,7 +78,11 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
               .collect(
                   Collectors.toMap(
                       entry -> (entry.getKey()).toLowerCase(), entry -> entry.getValue()));
-      supportedColumnsLowerCaseMap.forEach((key, value) -> supportedColumnsList.add(key));
+      supportedColumnsLowerCaseMap.forEach(
+          (key, value) -> {
+            supportedColumnsList.add(key);
+            supportedColumnsList.add((String) value);
+          });
       List<String> mandatoryColumns =
           (List<String>) (((Map<String, Object>) dataObject).get("mandatoryColumns"));
       validateFileHeaderFields(
@@ -156,7 +160,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.organisation.getTypeName(),
             orgId);
-    if (result != null || result.size() > 0) {
+    if (result != null && result.size() > 0) {
       return result;
     }
     return null;

@@ -1,11 +1,11 @@
 package org.sunbird.learner.actors.bulkupload;
 
-import java.io.IOException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.org.OrganisationClient;
@@ -25,9 +25,6 @@ import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 
 @ActorConfig(
     tasks = {},
@@ -125,14 +122,11 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
       } else {
         callUpdateOrg(organisation, task, locationCodes);
       }
-
-    } catch (IOException e) {
+    } catch (Exception e) {
       ProjectLogger.log(
           "OrgBulkUploadBackgroundJobActor:callCreateOrg: Exception occurred with error message = "
               + e.getMessage(),
           LoggerEnum.INFO);
-      task.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
-      task.setFailureResult(e.getMessage());
     }
   }
 

@@ -139,8 +139,8 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
         callUpdateUser(user, task);
       }
     } catch (Exception e) {
-      ProjectCommonException.throwClientErrorException(
-          ResponseCode.SERVER_ERROR, ResponseCode.SERVER_ERROR.getErrorMessage());
+      task.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
+      ProjectCommonException.throwClientErrorException(ResponseCode.SERVER_ERROR, e.getMessage());
     }
   }
 

@@ -371,9 +371,10 @@ public abstract class BaseBulkUploadActor extends BaseActor {
       csvReader = getCsvReader(fileByteArray, ',', '"', 0);
       while (flag) {
         csvLine = csvReader.readNext();
-        if (csvLine == null)
+        if (csvLine == null) {
           ProjectCommonException.throwClientErrorException(
-              ResponseCode.emptyFile, ResponseCode.emptyFile.getErrorMessage());
+              ResponseCode.csvFileEmpty, ResponseCode.csvFileEmpty.getErrorMessage());
+        }
         if (ProjectUtil.isNotEmptyStringArray(csvLine)) {
           continue;
         }
@@ -383,6 +384,11 @@ public abstract class BaseBulkUploadActor extends BaseActor {
           validateMandatoryColumns(mandatoryColumns, csvLine, supportedColumnsMap);
         }
         flag = false;
+      }
+      csvLine = csvReader.readNext();
+      if (csvLine == null) {
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.errorCsvNoDataRows, ResponseCode.errorCsvNoDataRows.getErrorMessage());
       }
     } catch (Exception ex) {
       ProjectLogger.log(

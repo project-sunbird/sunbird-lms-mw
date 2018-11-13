@@ -214,7 +214,8 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
   }
 
   @Override
-  public void preProcessResult(Map<String, Object> result) { 
-	  // Do Nothing
+  public void preProcessResult(Map<String, Object> result) {
+    // Do nothing
   }
+
 }

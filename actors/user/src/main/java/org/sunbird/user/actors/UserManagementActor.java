@@ -707,7 +707,10 @@ public class UserManagementActor extends BaseActor {
         userMap, frameworkFields, frameworkMandatoryFields);
     Map<String, Object> userDbRecord = UserUtil.validateExternalIdsAndReturnActiveUser(userMap);
     if (userMap.containsKey(JsonKey.FRAMEWORK)) {
-      String frameworkId = getFrameworkId((String) userDbRecord.get(JsonKey.HASH_TAG_ID));
+      Map<String, Object> rootOrgMap =
+          Util.getOrgDetails((String) userDbRecord.get(JsonKey.ROOT_ORG_ID));
+      String hashtagId = (String) rootOrgMap.get(JsonKey.HASHTAGID);
+      String frameworkId = getFrameworkId(hashtagId);
       Map<String, List<Map<String, String>>> frameworkCachedValue =
           getFrameworkDetails(frameworkId);
       userRequestValidator.validateFrameworkCategoryValues(userMap, frameworkCachedValue);

@@ -30,9 +30,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 @ActorConfig(
-  tasks = {},
-  asyncTasks = {"orgBulkUploadBackground"}
-)
+    tasks = {},
+    asyncTasks = {"orgBulkUploadBackground"})
 public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJobActor {
   private OrganisationClient orgClient = new OrganisationClientImpl();
   private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
@@ -207,4 +206,10 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
       setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, row, JsonKey.UPDATE);
     }
   }
+
+  @Override
+  public void preProcessResult(Map<String, Object> result) { 
+    // Do nothing
+  }
+
 }

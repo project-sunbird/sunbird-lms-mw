@@ -707,7 +707,10 @@ public class UserManagementActor extends BaseActor {
         userMap, frameworkFields, frameworkMandatoryFields);
     Map<String, Object> userDbRecord = UserUtil.validateExternalIdsAndReturnActiveUser(userMap);
     if (userMap.containsKey(JsonKey.FRAMEWORK)) {
-      String frameworkId = getFrameworkId((String) userDbRecord.get(JsonKey.CHANNEL));
+      Map<String, Object> rootOrgMap =
+          Util.getOrgDetails((String) userDbRecord.get(JsonKey.ROOT_ORG_ID));
+      String hashtagId = (String) rootOrgMap.get(JsonKey.HASHTAGID);
+      String frameworkId = getFrameworkId(hashtagId);
       Map<String, List<Map<String, String>>> frameworkCachedValue =
           getFrameworkDetails(frameworkId);
       userRequestValidator.validateFrameworkCategoryValues(userMap, frameworkCachedValue);
@@ -785,7 +788,9 @@ public class UserManagementActor extends BaseActor {
       validateChannelAndOrganisationId(userMap);
     } else if (StringUtils.isNotBlank(version) && JsonKey.VERSION_3.equalsIgnoreCase(version)) {
       userRequestValidator.validateCreateUserV3Request(actorMessage);
-      userMap.put(JsonKey.USERNAME, ProjectUtil.generateUniqueId());
+      if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
+        userMap.put(JsonKey.USERNAME, ProjectUtil.generateUniqueId());
+      }
     } else {
       userRequestValidator.validateCreateUserV1Request(actorMessage);
     }
@@ -797,10 +802,11 @@ public class UserManagementActor extends BaseActor {
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
     try {
-      if (JsonKey.VERSION_3.equalsIgnoreCase((String) userMap.get(JsonKey.VERSION))) {
+      if (JsonKey.VERSION_3.equalsIgnoreCase((String) userMap.get(JsonKey.VERSION))
+          && StringUtils.isBlank((String) userMap.get(JsonKey.CHANNEL))) {
         userService.getValidatedCustodianOrgId(userMap, systemSettingActorRef);
       } else {
-        String channel = Util.getCustodianChannel(userMap, systemSettingActorRef);
+        String channel = userService.getCustodianChannel(userMap, systemSettingActorRef);
         String rootOrgId = userService.getRootOrgIdFromChannel(channel);
         userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
         userMap.put(JsonKey.CHANNEL, channel);
@@ -996,17 +1002,17 @@ public class UserManagementActor extends BaseActor {
   }
 
   @SuppressWarnings("unchecked")
-  public static String getFrameworkId(String channel) {
-    String frameworkId = DataCacheHandler.getChannelFrameworkIdMap().get(channel);
+  public static String getFrameworkId(String hashtagId) {
+    String frameworkId = DataCacheHandler.getHashtagIdFrameworkIdMap().get(hashtagId);
     if (frameworkId == null) {
-      Map<String, Object> resultMap = ContentStoreUtil.readChannel(channel);
+      Map<String, Object> resultMap = ContentStoreUtil.readChannel(hashtagId);
       Map<String, Object> results = (Map<String, Object>) resultMap.get(JsonKey.RESULT);
       if (results != null) {
         Map<String, Object> channelDetails = (Map<String, Object>) results.get(JsonKey.CHANNEL);
         if (channelDetails != null) {
           frameworkId = (String) channelDetails.get(JsonKey.DEFAULT_FRAMEWORK);
           if (frameworkId != null) {
-            DataCacheHandler.updateChannelFrameworkIdMap(channel, frameworkId);
+            DataCacheHandler.updateHashtagIdFrameworkIdMap(hashtagId, frameworkId);
             return frameworkId;
           }
         }

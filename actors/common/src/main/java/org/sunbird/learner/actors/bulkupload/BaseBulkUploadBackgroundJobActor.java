@@ -278,6 +278,7 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
         .stream()
         .forEach(
             map -> {
+              preProcessResult(map);
               String[] nextLine = new String[headerRows.size()];
               String errMsg = (String) map.get(JsonKey.ERROR_MSG);
               int i = 0;
@@ -293,4 +294,6 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
               csvWriter.writeNext(nextLine);
             });
   }
+
+  public abstract void preProcessResult(Map<String, Object> result);
 }

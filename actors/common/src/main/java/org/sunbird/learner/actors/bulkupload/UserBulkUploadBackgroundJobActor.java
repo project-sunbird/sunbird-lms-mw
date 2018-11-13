@@ -1,11 +1,10 @@
 package org.sunbird.learner.actors.bulkupload;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
@@ -19,8 +18,12 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
+import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 @ActorConfig(
   tasks = {},
@@ -206,5 +209,11 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
       return result;
     }
     return null;
+  }
+  
+  @Override
+  public void preProcessResult(Map<String, Object> result) {
+   UserUtility.decryptUserData(result);
+   Util.addMaskEmailAndPhone(result);
   }
 }

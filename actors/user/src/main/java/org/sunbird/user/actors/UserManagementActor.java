@@ -853,7 +853,7 @@ public class UserManagementActor extends BaseActor {
       UserExtension userExtension = new UserProviderRegistryImpl();
       userExtension.create(userMap);
     }
-
+    UserUtil.toLower(userMap);
     UserUtil.upsertUserInKeycloak(userMap, JsonKey.CREATE);
     requestMap = UserUtil.encryptUserData(userMap);
     removeUnwanted(requestMap);

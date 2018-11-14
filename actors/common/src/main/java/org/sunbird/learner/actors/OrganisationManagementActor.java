@@ -23,6 +23,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LocationActorOperation;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
@@ -282,50 +283,9 @@ public class OrganisationManagementActor extends BaseActor {
         request.remove(JsonKey.ADDRESS);
       }
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-      boolean isChannelVerified = false;
-      // combination of source and external id should be unique ...
-      if (request.containsKey(JsonKey.PROVIDER) || request.containsKey(JsonKey.EXTERNAL_ID)) {
-        validateExternalIdAndProvider(
-            (String) request.get(JsonKey.PROVIDER), (String) request.get(JsonKey.EXTERNAL_ID));
-        validateChannelIdForRootOrg(request);
-        if (request.containsKey(JsonKey.CHANNEL)) {
-          isChannelVerified = true;
-          validateChannel(request);
-        } else {
-          // if Channel value is not coming then check for provider
-          // now if any org has same channel value as provider and that
-          // org is rootOrg then set that root orgid with current orgId.
-          if (request.containsKey(JsonKey.PROVIDER)) {
-            String rootOrgId = getRootOrgIdFromChannel((String) request.get(JsonKey.PROVIDER));
-            if (!StringUtils.isBlank(rootOrgId)) {
-              request.put(JsonKey.ROOT_ORG_ID, rootOrgId);
-            }
-          }
-        }
 
-        Map<String, Object> dbMap = new HashMap<>();
-        dbMap.put(JsonKey.PROVIDER, request.get(JsonKey.PROVIDER));
-        dbMap.put(JsonKey.EXTERNAL_ID, request.get(JsonKey.EXTERNAL_ID));
-        Response result =
-            cassandraOperation.getRecordsByProperties(
-                orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), dbMap);
-        List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-        if (!(list.isEmpty())) {
-          ProjectLogger.log(
-              "Org exist with Source "
-                  + request.get(JsonKey.PROVIDER)
-                  + " , External Id "
-                  + request.get(JsonKey.EXTERNAL_ID));
-          ProjectCommonException exception =
-              new ProjectCommonException(
-                  ResponseCode.sourceAndExternalIdAlreadyExist.getErrorCode(),
-                  ResponseCode.sourceAndExternalIdAlreadyExist.getErrorMessage(),
-                  ResponseCode.CLIENT_ERROR.getResponseCode());
-          sender().tell(exception, self());
-          return;
-        }
-      }
-      if (request.containsKey(JsonKey.CHANNEL) && !isChannelVerified) {
+      validateChannelIdForRootOrg(request);
+      if (request.containsKey(JsonKey.CHANNEL)) {
         validateChannel(request);
       }
 
@@ -685,38 +645,6 @@ public class OrganisationManagementActor extends BaseActor {
       if (!(validateOrgRequest(request))) {
         ProjectLogger.log("REQUESTED DATA IS NOT VALID");
         return;
-      }
-      // validate if Source and external id is in request , it should not already
-      // exist in DataBase
-      // .....
-      if (request.containsKey(JsonKey.PROVIDER) || request.containsKey(JsonKey.EXTERNAL_ID)) {
-        validateExternalIdAndProvider(
-            (String) request.get(JsonKey.EXTERNAL_ID), (String) request.get(JsonKey.PROVIDER));
-        Map<String, Object> dbMap = new HashMap<>();
-        dbMap.put(JsonKey.PROVIDER, request.get(JsonKey.PROVIDER));
-        dbMap.put(JsonKey.EXTERNAL_ID, request.get(JsonKey.EXTERNAL_ID));
-        Response result =
-            cassandraOperation.getRecordsByProperties(
-                orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), dbMap);
-        List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-        if (!(list.isEmpty())) {
-          String organisationId = (String) list.get(0).get(JsonKey.ID);
-
-          if (!(request.get(JsonKey.ORGANISATION_ID).equals(organisationId))) {
-            ProjectLogger.log(
-                "Org exist with Source "
-                    + request.get(JsonKey.PROVIDER)
-                    + " , External Id "
-                    + request.get(JsonKey.EXTERNAL_ID));
-            ProjectCommonException exception =
-                new ProjectCommonException(
-                    ResponseCode.sourceAndExternalIdAlreadyExist.getErrorCode(),
-                    ResponseCode.sourceAndExternalIdAlreadyExist.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
-            sender().tell(exception, self());
-            return;
-          }
-        }
       }
       validateChannelIdForRootOrg(request);
       //
@@ -1609,6 +1537,7 @@ public class OrganisationManagementActor extends BaseActor {
   }
 
   private List<Map<String, Object>> getOrg(String channel) {
+    ProjectLogger.log("OrganisationManagementActor:getOrg: channel = " + channel, LoggerEnum.INFO.name());
     Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
     Map<String, Object> requestData = new HashMap<>();
     requestData.put(JsonKey.CHANNEL, channel);
@@ -1616,10 +1545,13 @@ public class OrganisationManagementActor extends BaseActor {
     Response result =
         cassandraOperation.getRecordsByProperties(
             orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), requestData);
+    ProjectLogger.log("OrganisationManagementActor:getOrg: result = " + result.toString(), LoggerEnum.INFO.name());
+    ProjectLogger.log("OrganisationManagementActor:getOrg: result.response = " + result.get(JsonKey.RESPONSE).toString(), LoggerEnum.INFO.name());
     return (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
   }
 
   private String getRootOrgIdFromChannel(String channel) {
+    ProjectLogger.log("OrganisationManagementActor:getRootOrgIdFromChannel: channel = " + channel, LoggerEnum.INFO.name());
     if (!StringUtils.isBlank(channel)) {
       List<Map<String, Object>> list = getOrg(channel);
       if (!list.isEmpty()) return (String) list.get(0).getOrDefault(JsonKey.ID, "");
@@ -1699,20 +1631,6 @@ public class OrganisationManagementActor extends BaseActor {
       }
     }
     return false;
-  }
-
-  /**
-   * @param externalId
-   * @param provider
-   */
-  private void validateExternalIdAndProvider(String externalId, String provider) {
-    if (StringUtils.isBlank(externalId) || StringUtils.isBlank(provider)) {
-      ProjectLogger.log("Source and external ids should exist.");
-      throw new ProjectCommonException(
-          ResponseCode.sourceAndExternalIdValidationError.getErrorCode(),
-          ResponseCode.sourceAndExternalIdValidationError.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
   }
 
   /**

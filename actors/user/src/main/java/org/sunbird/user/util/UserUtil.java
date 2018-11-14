@@ -2,6 +2,7 @@ package org.sunbird.user.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -570,6 +571,18 @@ public class UserUtil {
       ProjectLogger.log(e.getMessage(), e);
     }
     return organisations;
+  }
+
+  public static void toLower(Map<String, Object> userMap) {
+    Arrays.asList(
+            ProjectUtil.getConfigValue(JsonKey.SUNBIRD_API_REQUEST_LOWER_CASE_FIELDS).split(","))
+        .stream()
+        .forEach(
+            field -> {
+              if (StringUtils.isNotBlank((String) userMap.get(field))) {
+                userMap.put(field, ((String) userMap.get(field)).toLowerCase());
+              }
+            });
   }
 }
 

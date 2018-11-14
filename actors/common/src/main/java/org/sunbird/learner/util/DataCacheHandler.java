@@ -1,6 +1,7 @@
 /** */
 package org.sunbird.learner.util;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,6 +29,10 @@ public class DataCacheHandler implements Runnable {
   private static Map<String, Object> roleMap = new ConcurrentHashMap<>();
   private static Map<String, String> orgTypeMap = new ConcurrentHashMap<>();
   private static Map<String, String> configSettings = new ConcurrentHashMap<>();
+  private static Map<String, Map<String, List<Map<String, String>>>> frameworkCategoriesMap =
+      new ConcurrentHashMap<>();
+  private static Map<String, List<String>> frameworkFieldsConfig = new ConcurrentHashMap<>();
+  private static Map<String, String> hashtagIdFrameworkIdMap = new HashMap<>();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final String KEY_SPACE_NAME = "sunbird";
 
@@ -42,6 +47,7 @@ public class DataCacheHandler implements Runnable {
     ProjectLogger.log("DataCacheHandler:run: Cache refresh completed.", LoggerEnum.INFO.name());
   }
 
+  @SuppressWarnings("unchecked")
   private void cacheSystemConfig(Map<String, String> configSettings) {
     Response response =
         cassandraOperation.getAllRecords(KEY_SPACE_NAME, JsonKey.SYSTEM_SETTINGS_DB);
@@ -66,6 +72,7 @@ public class DataCacheHandler implements Runnable {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void orgTypeCache(Map<String, String> orgTypeMap) {
     Response response = cassandraOperation.getAllRecords(KEY_SPACE_NAME, JsonKey.ORG_TYPE_DB);
     List<Map<String, Object>> responseList =
@@ -79,13 +86,14 @@ public class DataCacheHandler implements Runnable {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void roleCache(Map<String, Object> roleMap) {
     Response response = cassandraOperation.getAllRecords(KEY_SPACE_NAME, JsonKey.ROLE_GROUP);
     List<Map<String, Object>> responseList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (null != responseList && !responseList.isEmpty()) {
       for (Map<String, Object> resultMap : responseList) {
-        roleMap.put((String) resultMap.get(JsonKey.ID), resultMap.get(JsonKey.ID));
+        roleMap.put((String) resultMap.get(JsonKey.ID), resultMap.get(JsonKey.NAME));
       }
     }
     Response response2 = cassandraOperation.getAllRecords(KEY_SPACE_NAME, JsonKey.ROLE);
@@ -93,7 +101,7 @@ public class DataCacheHandler implements Runnable {
         (List<Map<String, Object>>) response2.get(JsonKey.RESPONSE);
     if (null != responseList2 && !responseList2.isEmpty()) {
       for (Map<String, Object> resultMap2 : responseList2) {
-        roleMap.put((String) resultMap2.get(JsonKey.ID), resultMap2.get(JsonKey.ID));
+        roleMap.put((String) resultMap2.get(JsonKey.ID), resultMap2.get(JsonKey.NAME));
       }
     }
   }
@@ -173,5 +181,39 @@ public class DataCacheHandler implements Runnable {
   /** @param configSettings the configSettings to set */
   public static void setConfigSettings(Map<String, String> configSettings) {
     DataCacheHandler.configSettings = configSettings;
+  }
+
+  public static Map<String, Map<String, List<Map<String, String>>>> getFrameworkCategoriesMap() {
+    return frameworkCategoriesMap;
+  }
+
+  public static void setFrameworkCategoriesMap(
+      Map<String, Map<String, List<Map<String, String>>>> frameworkCategoriesMap) {
+    DataCacheHandler.frameworkCategoriesMap = frameworkCategoriesMap;
+  }
+
+  public static void setFrameworkFieldsConfig(Map<String, List<String>> frameworkFieldsConfig) {
+    DataCacheHandler.frameworkFieldsConfig = frameworkFieldsConfig;
+  }
+
+  public static Map<String, List<String>> getFrameworkFieldsConfig() {
+    return frameworkFieldsConfig;
+  }
+
+  public static void updateFrameworkCategoriesMap(
+      String frameworkId, Map<String, List<Map<String, String>>> frameworkCacheMap) {
+    DataCacheHandler.frameworkCategoriesMap.put(frameworkId, frameworkCacheMap);
+  }
+
+  public static void setHashtagIdFrameworkIdMap(Map<String, String> hashtagIdFrameworkIdMap) {
+    DataCacheHandler.hashtagIdFrameworkIdMap = hashtagIdFrameworkIdMap;
+  }
+
+  public static Map<String, String> getHashtagIdFrameworkIdMap() {
+    return hashtagIdFrameworkIdMap;
+  }
+
+  public static void updateHashtagIdFrameworkIdMap(String hashtagId, String frameworkId) {
+    DataCacheHandler.hashtagIdFrameworkIdMap.put(hashtagId, frameworkId);
   }
 }

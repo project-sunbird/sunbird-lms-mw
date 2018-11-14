@@ -10,50 +10,54 @@ import java.util.stream.Collectors;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
-import org.sunbird.common.ElasticSearchUtil;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.util.Util;
 
 @ActorConfig(
-  tasks = {"orgBulkUpload"},
+  tasks = {"userBulkUpload"},
   asyncTasks = {}
 )
-public class OrgBulkUploadActor extends BaseBulkUploadActor {
+public class UserBulkUploadActor extends BaseBulkUploadActor {
   private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
-  private String[] bulkOrgAllowedFields = {
-    JsonKey.ORGANISATION_ID,
-    JsonKey.ORGANISATION_NAME,
+  private String[] bulkUserAllowedFields = {
+    JsonKey.FIRST_NAME,
+    JsonKey.LAST_NAME,
+    JsonKey.PHONE,
+    JsonKey.COUNTRY_CODE,
+    JsonKey.EMAIL,
+    JsonKey.USERNAME,
+    JsonKey.PHONE_VERIFIED,
+    JsonKey.EMAIL_VERIFIED,
+    JsonKey.ROLES,
+    JsonKey.POSITION,
+    JsonKey.GRADE,
+    JsonKey.LOCATION,
+    JsonKey.DOB,
+    JsonKey.GENDER,
+    JsonKey.LANGUAGE,
+    JsonKey.PROFILE_SUMMARY,
+    JsonKey.SUBJECT,
+    JsonKey.WEB_PAGES,
+    JsonKey.EXTERNAL_ID_PROVIDER,
     JsonKey.EXTERNAL_ID,
-    JsonKey.DESCRIPTION,
-    JsonKey.LOCATION_CODE,
-    JsonKey.STATUS,
-    JsonKey.CHANNEL,
-    JsonKey.IS_ROOT_ORG,
-    JsonKey.PROVIDER,
-    JsonKey.HOME_URL,
-    JsonKey.ORG_CODE,
-    JsonKey.ORG_TYPE,
-    JsonKey.PREFERRED_LANGUAGE,
-    JsonKey.THEME,
-    JsonKey.CONTACT_DETAILS,
-    JsonKey.LOC_ID,
-    JsonKey.HASHTAGID,
+    JsonKey.EXTERNAL_ID_TYPE,
+    JsonKey.EXTERNAL_IDS,
+    JsonKey.USER_ID,
+    JsonKey.ORG_ID
   };
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    Util.initializeContext(request, TelemetryEnvKey.ORGANISATION);
+    Util.initializeContext(request, TelemetryEnvKey.USER);
     ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();
-    if (operation.equalsIgnoreCase("orgBulkUpload")) {
+    if (operation.equalsIgnoreCase("userBulkUpload")) {
       upload(request);
     } else {
-      onReceiveUnsupportedOperation("OrgBulkUploadActor");
+      onReceiveUnsupportedOperation("UserBulkUploadActor");
     }
   }
 
@@ -62,7 +66,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
     Object dataObject =
         systemSettingClient.getSystemSettingByFieldAndKey(
             getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
-            "orgProfileConfig",
+            "userProfileConfig",
             "csv",
             new TypeReference<Map>() {});
     Map<String, Object> supportedColumnsMap = null;
@@ -71,6 +75,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
       supportedColumnsMap =
           ((Map<String, Object>) ((Map<String, Object>) dataObject).get("supportedColumns"));
       List<String> supportedColumnsList = new ArrayList<>();
+
       supportedColumnsLowerCaseMap =
           supportedColumnsMap
               .entrySet()
@@ -92,16 +97,17 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
           true,
           mandatoryColumns,
           supportedColumnsLowerCaseMap);
+
     } else {
-      validateFileHeaderFields(req, bulkOrgAllowedFields, false, false);
+      validateFileHeaderFields(req, bulkUserAllowedFields, false);
     }
     BulkUploadProcess bulkUploadProcess =
-        handleUpload(JsonKey.ORGANISATION, (String) req.get(JsonKey.CREATED_BY));
-    processOrgBulkUpload(
+        handleUpload(JsonKey.USER, (String) req.get(JsonKey.CREATED_BY));
+    processUserBulkUpload(
         req, bulkUploadProcess.getId(), bulkUploadProcess, supportedColumnsLowerCaseMap);
   }
 
-  private void processOrgBulkUpload(
+  private void processUserBulkUpload(
       Map<String, Object> req,
       String processId,
       BulkUploadProcess bulkUploadProcess,
@@ -111,58 +117,13 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
     if (null != req.get(JsonKey.FILE)) {
       fileByteArray = (byte[]) req.get(JsonKey.FILE);
     }
-    HashMap<String, Object> additionalInfo = new HashMap<>();
-    Map<String, Object> user = getUser((String) req.get(JsonKey.CREATED_BY));
-    if (user != null) {
-      String rootOrgId = (String) user.get(JsonKey.ROOT_ORG_ID);
-      Map<String, Object> org = getOrg(rootOrgId);
-      if (org != null) {
-        if (org.get(JsonKey.STATUS) == null
-            || (int) org.get(JsonKey.STATUS) == ProjectUtil.OrgStatus.ACTIVE.getValue()) {
-          additionalInfo.put(JsonKey.CHANNEL, org.get(JsonKey.CHANNEL));
-        }
-      }
-    }
-    if (!additionalInfo.containsKey(JsonKey.CHANNEL)) {
-      bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
-      bulkUploadProcess.setFailureResult(ResponseCode.errorNoRootOrgAssociated.getErrorMessage());
-      bulkUploadDao.update(bulkUploadProcess);
-      ProjectCommonException.throwClientErrorException(
-          ResponseCode.errorNoRootOrgAssociated,
-          ResponseCode.errorNoRootOrgAssociated.getErrorMessage());
-    }
     Integer recordCount =
-        validateAndParseRecords(
-            fileByteArray, processId, additionalInfo, supportedColumnsMap, true);
+        validateAndParseRecords(fileByteArray, processId, new HashMap(), supportedColumnsMap, true);
     processBulkUpload(
         recordCount,
         processId,
         bulkUploadProcess,
-        BulkUploadActorOperation.ORG_BULK_UPLOAD_BACKGROUND_JOB.getValue(),
-        bulkOrgAllowedFields);
-  }
-
-  Map<String, Object> getUser(String userId) {
-    Map<String, Object> result =
-        ElasticSearchUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            userId);
-    if (result != null || result.size() > 0) {
-      return result;
-    }
-    return null;
-  }
-
-  Map<String, Object> getOrg(String orgId) {
-    Map<String, Object> result =
-        ElasticSearchUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName(),
-            orgId);
-    if (result != null && result.size() > 0) {
-      return result;
-    }
-    return null;
+        BulkUploadActorOperation.USER_BULK_UPLOAD_BACKGROUND_JOB.getValue(),
+        bulkUserAllowedFields);
   }
 }

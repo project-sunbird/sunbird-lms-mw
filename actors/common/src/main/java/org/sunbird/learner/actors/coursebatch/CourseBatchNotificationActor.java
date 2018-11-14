@@ -4,11 +4,7 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
@@ -30,10 +26,8 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.course.batch.CourseBatch;
 
 /**
- * This actor will initiates email notification when user get enrolled/unenrolled to a open batch
- * and also for Mentor/Participants addition/removal for an "invite-only" batches
- *
- * @author github.com/iostream04
+ * Actor responsible to sending email notifications to participants and mentors in open and
+ * invite-only batches.
  */
 @ActorConfig(
   tasks = {"courseBatchNotification"},
@@ -48,288 +42,85 @@ public class CourseBatchNotificationActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-
     String requestedOperation = request.getOperation();
+
     if (requestedOperation.equals(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue())) {
-      courseBatchNotication(request);
+      courseBatchNotification(request);
     } else {
       ProjectLogger.log(
-          "CourseBatchNotificationActor : onReceive, No suitable Operation found for the request "
+          "CourseBatchNotificationActor:onReceive: Unsupported operation = "
               + request.getOperation(),
           LoggerEnum.ERROR);
     }
   }
 
-  private void courseBatchNotication(Request request) {
+  private void courseBatchNotification(Request request) {
     Map<String, Object> requestMap = request.getRequest();
-    if (requestMap.get(JsonKey.USER_ID) != null) {
-      batchEnrollOperationNotifier(
-          (String) requestMap.get(JsonKey.USER_ID),
-          (CourseBatch) requestMap.get(JsonKey.COURSE_BATCH),
-          (String) requestMap.get(JsonKey.OPERATION_TYPE));
-    } else if (requestMap.get(JsonKey.UPDATE) != null) {
-      batchUpdateOperationNotifier((CourseBatch) requestMap.get(JsonKey.COURSE_BATCH), requestMap);
-    } else {
-      sendEmailNotification(
-          (CourseBatch) requestMap.get(JsonKey.COURSE_BATCH),
-          null,
-          null,
-          (String) requestMap.get(JsonKey.OPERATION_TYPE));
-    }
-  }
 
-  /*
-   * This method process open batch enroll and unenroll operation notifications
-   *
-   * @param courseMap , map for getting operation and email related data
-   *
-   * @param courseBatch object for getting course and email related data
-   */
-  public void batchEnrollOperationNotifier(
-      String userId, CourseBatch courseBatch, String operationType) {
-    Map<String, Object> requestMap = createRequestMap(courseBatch);
-    List<String> userIds = new ArrayList<>();
-    userIds.add(userId);
-    List<Map<String, Object>> participentList = getUsersFromDB(userIds);
-    Map<String, String> user;
-    if (!CollectionUtils.isEmpty(participentList)) {
+    CourseBatch courseBatch = (CourseBatch) requestMap.get(JsonKey.COURSE_BATCH);
+
+    String userId = (String) requestMap.get(JsonKey.USER_ID);
+
+    if (userId != null) {
+
+      // Open batch
+      String template = JsonKey.OPEN_BATCH_LEARNER_UNENROL;
+      String subject = JsonKey.UNENROLL_FROM_COURSE_BATCH;
+
+      String operationType = (String) requestMap.get(JsonKey.OPERATION_TYPE);
+
       if (operationType.equals(JsonKey.ADD)) {
-        user = getUserData(participentList.get(0), JsonKey.ADD);
-        user.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.BATCH_LEARNER_ENROL);
-      } else {
-        user = getUserData(participentList.get(0), JsonKey.REMOVE);
-        user.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.OPEN_BATCH_LEARNER_UNENROL);
+        template = JsonKey.BATCH_LEARNER_ENROL;
+        subject = JsonKey.COURSE_INVITATION;
       }
-      sendMail(user, requestMap);
-    }
-  }
 
-  /*
-   * This method takes courseBatch object and ObjectType as parameter and process
-   * update batch related operation notifications
-   *
-   * @param CourseBatch object for course related data
-   *
-   * @param operationType String for specifying the operation type ie: add/remove
-   */
+      triggerEmailNotification(Arrays.asList(userId), courseBatch, subject, template);
 
-  private void sendEmailNotification(
-      CourseBatch courseBatch,
-      List<String> mentors,
-      List<String> participants,
-      String operationType) {
-    List<Map<String, Object>> mentorList = null;
-    List<Map<String, Object>> participantList = null;
-    if (mentors == null) {
-      mentorList = getUsersFromDB(courseBatch.getMentors());
     } else {
-      mentorList = getUsersFromDB(mentors);
-    }
-    List<String> userIds = null;
-    if (participants == null) {
-      userIds = getParticipants(courseBatch);
-    } else {
-      userIds = participants;
-    }
-    if (userIds != null) {
-      participantList = getUsersFromDB(userIds);
-    }
-    if (mentorList != null) {
-      processUserDataAndSendMail(mentorList, courseBatch, operationType, JsonKey.MENTOR);
-    }
-    if (participantList != null) {
-      processUserDataAndSendMail(participantList, courseBatch, operationType, JsonKey.PARTICIPANT);
-    }
-  }
 
-  /*
-   * This method call sendMail method with all the required data
-   *
-   * @param CourseBatch object for course related data
-   *
-   * @param List<Map<String,Object>> list of user
-   *
-   * @param operationType String for specifying the operation type ie: add/remove
-   */
-  private void processUserDataAndSendMail(
-      List<Map<String, Object>> userList,
-      CourseBatch courseBatch,
-      String operationType,
-      String userType) {
+      // Invite only batch
+      List<String> addedMentors = (List<String>) requestMap.get(JsonKey.ADDED_MENTORS);
+      List<String> removedMentors = (List<String>) requestMap.get(JsonKey.REMOVED_MENTORS);
 
-    for (Map<String, Object> user : userList) {
-      Map<String, Object> requestMap = new HashMap<String, Object>();
-      requestMap = this.createRequestMap(courseBatch);
-      Map<String, String> userData = null;
-      if (operationType.equals(JsonKey.ADD)) {
-        userData = getUserData(user, JsonKey.ADD);
-        if (userData != null) {
-          if (userType.equals(JsonKey.PARTICIPANT)) {
-            userData.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.BATCH_LEARNER_ENROL);
-          } else {
-            userData.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.BATCH_MENTOR_ENROL);
-          }
-        } else {
-          ProjectLogger.log(
-              "BatchOperationNotifierActor: processUserDataAndSendMail : User data is NULL",
-              LoggerEnum.ERROR.name());
-        }
-      } else {
-        userData = getUserData(user, JsonKey.REMOVE);
-        if (userData != null) {
-          if (userType.equals(JsonKey.PARTICIPANT)) {
-            userData.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.BATCH_LEARNER_UNENROL);
-          } else {
-            userData.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.BATCH_MENTOR_UNENROL);
-          }
-        } else {
-          ProjectLogger.log(
-              "BatchOperationNotifierActor: processUserDataAndSendMail : User data is NULL",
-              LoggerEnum.ERROR.name());
-        }
-      }
-      if (user.get(JsonKey.USER_ID) != null
-          && StringUtils.isNotBlank((String) user.get(JsonKey.USER_ID))) {
-        requestMap.put(JsonKey.RECIPIENT_USERIDS, (String) user.get(JsonKey.USER_ID));
-      }
-      sendMail(userData, requestMap);
-    }
-  }
-
-  /*
-   * This method takes courseBatch object as parameter and process update
-   * batch related operation notifications
-   *
-   * @param courseBatch course and email related data before update
-   *
-   * @param courseBatchNew course and email related data after update
-   */
-  @SuppressWarnings("unchecked")
-  private void batchUpdateOperationNotifier(
-      CourseBatch courseBatch, Map<String, Object> requestMap) {
-
-    if (requestMap.get(JsonKey.REMOVED_MENTORS) != null
-        || requestMap.get(JsonKey.REMOVED_PARTICIPANTS) != null) {
-
-      sendEmailNotification(
+      triggerEmailNotification(
+          addedMentors, courseBatch, JsonKey.COURSE_INVITATION, JsonKey.BATCH_MENTOR_ENROL);
+      triggerEmailNotification(
+          removedMentors,
           courseBatch,
-          (List<String>) requestMap.get(JsonKey.REMOVED_MENTORS),
-          (List<String>) requestMap.get(JsonKey.REMOVED_PARTICIPANTS),
-          JsonKey.REMOVE);
-    }
-    if (requestMap.get(JsonKey.ADDED_MENTORS) != null
-        || requestMap.get(JsonKey.ADDED_PARTICIPANTS) != null) {
+          JsonKey.UNENROLL_FROM_COURSE_BATCH,
+          JsonKey.BATCH_MENTOR_UNENROL);
 
-      sendEmailNotification(
+      List<String> addedParticipants = (List<String>) requestMap.get(JsonKey.ADDED_PARTICIPANTS);
+      List<String> removedParticipants =
+          (List<String>) requestMap.get(JsonKey.REMOVED_PARTICIPANTS);
+
+      triggerEmailNotification(
+          addedParticipants, courseBatch, JsonKey.COURSE_INVITATION, JsonKey.BATCH_MENTOR_ENROL);
+      triggerEmailNotification(
+          removedParticipants,
           courseBatch,
-          (List<String>) requestMap.get(JsonKey.ADDED_MENTORS),
-          (List<String>) requestMap.get(JsonKey.ADDED_PARTICIPANTS),
-          JsonKey.ADD);
+          JsonKey.UNENROLL_FROM_COURSE_BATCH,
+          JsonKey.BATCH_MENTOR_UNENROL);
     }
   }
 
-  /*
-   * This method takes courseBatch object as parameter and returns a map which
-   * contains required data for sending email returns Map<String,Object>'
-   *
-   * @param CourseBatch object course and email related data
-   *
-   * @return Map<String, Object> which have required data for email notification
-   */
-  @SuppressWarnings("unchecked")
-  private Map<String, Object> createRequestMap(CourseBatch courseBatch) {
-    Map<String, Object> courseBatchObject = new ObjectMapper().convertValue(courseBatch, Map.class);
-    Map<String, String> additionalCourseInfo =
-        (Map<String, String>) courseBatchObject.get(JsonKey.COURSE_ADDITIONAL_INFO);
-    Map<String, Object> requestMap = new HashMap<String, Object>();
-    requestMap.put(JsonKey.ORG_NAME, courseBatchObject.get(JsonKey.ORG_NAME));
-    requestMap.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.COURSE_LOGO_URL));
-    requestMap.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.COURSE_NAME));
-    requestMap.put(JsonKey.START_DATE, courseBatchObject.get(JsonKey.START_DATE));
-    requestMap.put(JsonKey.END_DATE, courseBatchObject.get(JsonKey.END_DATE));
-    requestMap.put(JsonKey.COURSE_ID, courseBatchObject.get(JsonKey.COURSE_ID));
-    requestMap.put(JsonKey.NAME, courseBatch.getName());
-    return requestMap;
-  }
+  private void triggerEmailNotification(
+      List<String> userIdList, CourseBatch courseBatch, String subject, String template) {
 
-  /*
-   * @param Map<String, Object> data for populating user object
-   *
-   * @param operationType String for operation type
-   *
-   * @return map<String, String>
-   */
-  private Map<String, String> getUserData(Map<String, Object> data, String operationType) {
-    Map<String, String> user = new HashMap<String, String>();
-    user.put(JsonKey.FIRST_NAME, data.get(JsonKey.FIRST_NAME).toString());
-    user.put(JsonKey.EMAIL, data.get(JsonKey.EMAIL).toString());
-    if (operationType.equalsIgnoreCase(JsonKey.ADD)) {
-      user.put(JsonKey.SUBJECT, JsonKey.COURSE_INVITATION);
-    } else if (operationType.equalsIgnoreCase(JsonKey.REMOVE)) {
-      user.put(JsonKey.SUBJECT, JsonKey.UNENROLL_FROM_COURSE_BATCH);
-    }
-    return user;
-  }
+    if (CollectionUtils.isEmpty(userIdList)) return;
 
-  /*
-   * This method is for sending e-mails for one at a time, EmailServiceActor will
-   * be called for sending email
-   *
-   * @param Map<String, String> user will have user data
-   *
-   * @param Map<String, Object> RequestMap for email data.
-   */
-  private void sendMail(Map<String, String> user, Map<String, Object> requestMap) {
-    requestMap.put(JsonKey.FIRST_NAME, user.get(JsonKey.FIRST_NAME));
-    requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, user.get(JsonKey.EMAIL_TEMPLATE_TYPE));
-    requestMap.put(JsonKey.RECIPIENT_EMAILS, new String[] {user.get(JsonKey.EMAIL)});
-    requestMap.put(JsonKey.SUBJECT, user.get(JsonKey.SUBJECT));
-    requestMap.put(JsonKey.REQUEST, BackgroundOperations.emailService.name());
-    ActorRef ref = system.actorOf(props);
-    try {
-      Response response = emailServiceClient.sendMail(ref, requestMap);
-      sender().tell(response, self());
-      Response res = new Response();
-      res.setResponseCode(ResponseCode.OK);
-      sender().tell(res, self());
-    } catch (Exception e) {
-      sender().tell(e, self());
-      ProjectLogger.log(
-          "CourseBatchNotificationActor: sendMail using emailService client failed **** " + e,
-          LoggerEnum.ERROR);
+    List<Map<String, Object>> userMapList = getUsersFromDB(userIdList);
+
+    for (Map<String, Object> user : userMapList) {
+      Map<String, Object> requestMap = this.createEmailRequest(user, courseBatch);
+
+      requestMap.put(JsonKey.SUBJECT, subject);
+      requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, template);
+
+      sendMail(requestMap);
     }
   }
 
-  /*
-   * This method takes CourseBatch object and returns list of participants
-   *
-   * @param CourseBatch object
-   *
-   * @returns list of users
-   */
-  private List<String> getParticipants(CourseBatch courseBatch) {
-    List<String> usersIds = null;
-    Map<String, Boolean> participants = courseBatch.getParticipant();
-    if (participants != null) {
-      usersIds = new ArrayList<>();
-      Set<String> keys = participants.keySet();
-      for (String user : keys) {
-        if (participants.get(user)) {
-          usersIds.add(user);
-        }
-      }
-    }
-    return usersIds;
-  }
-
-  /*
-   * This method takes List<String>userIds and returns List<Map<User,Objects>> of
-   * participants
-   *
-   * @param List<String> userIds list of userIds
-   *
-   * @return List<Map<String, Object>> map of user related data.
-   */
   @SuppressWarnings("unchecked")
   private List<Map<String, Object>> getUsersFromDB(List<String> userIds) {
     if (userIds != null) {
@@ -349,5 +140,50 @@ public class CourseBatchNotificationActor extends BaseActor {
       return userList;
     }
     return null;
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> createEmailRequest(
+      Map<String, Object> userMap, CourseBatch courseBatch) {
+    Map<String, Object> courseBatchObject = new ObjectMapper().convertValue(courseBatch, Map.class);
+    Map<String, String> additionalCourseInfo =
+        (Map<String, String>) courseBatchObject.get(JsonKey.COURSE_ADDITIONAL_INFO);
+
+    Map<String, Object> requestMap = new HashMap<String, Object>();
+
+    requestMap.put(JsonKey.REQUEST, BackgroundOperations.emailService.name());
+
+    requestMap.put(JsonKey.ORG_NAME, courseBatchObject.get(JsonKey.ORG_NAME));
+    requestMap.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.COURSE_LOGO_URL));
+    requestMap.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.COURSE_NAME));
+    requestMap.put(JsonKey.START_DATE, courseBatchObject.get(JsonKey.START_DATE));
+    requestMap.put(JsonKey.END_DATE, courseBatchObject.get(JsonKey.END_DATE));
+    requestMap.put(JsonKey.COURSE_ID, courseBatchObject.get(JsonKey.COURSE_ID));
+    requestMap.put(JsonKey.NAME, courseBatch.getName());
+
+    String userId = (String) userMap.get(JsonKey.USER_ID);
+
+    if (StringUtils.isNotBlank(userId)) {
+      requestMap.put(JsonKey.RECIPIENT_USERIDS, userId);
+    }
+    requestMap.put(JsonKey.FIRST_NAME, userMap.get(JsonKey.FIRST_NAME));
+
+    return requestMap;
+  }
+
+  private void sendMail(Map<String, Object> requestMap) {
+    ActorRef ref = system.actorOf(props);
+    try {
+      Response response = emailServiceClient.sendMail(ref, requestMap);
+      sender().tell(response, self());
+      Response res = new Response();
+      res.setResponseCode(ResponseCode.OK);
+      sender().tell(res, self());
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "CourseBatchNotificationActor:sendMail: Exception occurred with error message = "
+              + e.getMessage(),
+          LoggerEnum.ERROR);
+    }
   }
 }

@@ -5,11 +5,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.util.KeycloakRequiredActionLinkUtil;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
+import org.sunbird.services.sso.SSOManager;
+import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.user.util.UserActorOperations;
 
 @ActorConfig(
@@ -17,6 +18,8 @@ import org.sunbird.user.util.UserActorOperations;
   asyncTasks = {"processOnBoardingMailAndSms"}
 )
 public class UserOnboardingNotificationActor extends BaseActor {
+
+  private SSOManager ssoManager = SSOServiceFactory.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -41,9 +44,19 @@ public class UserOnboardingNotificationActor extends BaseActor {
     if (null != welcomeMailReqObj) {
       tellToAnother(welcomeMailReqObj);
     }
-    ProjectLogger.log("calling Send SMS method:", LoggerEnum.INFO);
+
     if (StringUtils.isNotBlank((String) requestMap.get(JsonKey.PHONE))) {
       Util.sendSMS(requestMap);
+    }
+
+    if (StringUtils.isBlank((String) requestMap.get(JsonKey.PASSWORD))) {
+      ssoManager.setRequiredAction(
+          (String) requestMap.get(JsonKey.USER_ID), KeycloakRequiredActionLinkUtil.UPDATE_PASSWORD);
+    }
+
+    if (StringUtils.isNotBlank((String) requestMap.get(JsonKey.EMAIL))) {
+      ssoManager.setRequiredAction(
+          (String) requestMap.get(JsonKey.USER_ID), KeycloakRequiredActionLinkUtil.VERIFY_EMAIL);
     }
   }
 }

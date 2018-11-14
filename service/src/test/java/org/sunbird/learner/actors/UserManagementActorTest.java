@@ -612,7 +612,7 @@ public class UserManagementActorTest {
     ActorRef subject = system.actorOf(props);
 
     Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.GET_PROFILE.getValue());
+    reqObj.setOperation(ActorOperations.GET_USER_PROFILE.getValue());
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.USER_ID, userId);
     Map<String, Object> request = new HashMap<String, Object>();
@@ -642,7 +642,7 @@ public class UserManagementActorTest {
     ActorRef subject = system.actorOf(props);
 
     Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.GET_PROFILE.getValue());
+    reqObj.setOperation(ActorOperations.GET_USER_PROFILE.getValue());
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.USER_ID, (userId + "12345"));
     Map<String, Object> request = new HashMap<String, Object>();
@@ -926,7 +926,7 @@ public class UserManagementActorTest {
     ActorRef subject = system.actorOf(props);
 
     Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.GET_PROFILE.getValue());
+    reqObj.setOperation(ActorOperations.GET_USER_PROFILE.getValue());
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.USER_ID, userId);
     Map<String, Object> request = new HashMap<String, Object>();
@@ -970,7 +970,7 @@ public class UserManagementActorTest {
     ActorRef subject = system.actorOf(props);
 
     Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.GET_PROFILE.getValue());
+    reqObj.setOperation(ActorOperations.GET_USER_PROFILE.getValue());
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.USER_ID, userId);
     Map<String, Object> request = new HashMap<String, Object>();
@@ -1435,7 +1435,7 @@ public class UserManagementActorTest {
     ActorRef subject = system.actorOf(props);
 
     Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.GET_PROFILE.getValue());
+    reqObj.setOperation(ActorOperations.GET_USER_PROFILE.getValue());
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.USER_ID, userId);
     Map<String, Object> request = new HashMap<String, Object>();

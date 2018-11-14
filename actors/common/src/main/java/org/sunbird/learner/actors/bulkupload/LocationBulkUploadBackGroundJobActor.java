@@ -30,9 +30,8 @@ import org.sunbird.models.location.Location;
 import org.sunbird.models.location.apirequest.UpsertLocationRequest;
 
 @ActorConfig(
-  tasks = {},
-  asyncTasks = {"locationBulkUploadBackground"}
-)
+    tasks = {},
+    asyncTasks = {"locationBulkUploadBackground"})
 public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJobActor {
 
   private LocationClient locationClient = new LocationClientImpl();
@@ -213,4 +212,10 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
       }
     }
   }
+
+  @Override
+  public void preProcessResult(Map<String, Object> result) {
+    // Do nothing
+  }
+
 }

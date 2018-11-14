@@ -32,7 +32,7 @@ public class DataCacheHandler implements Runnable {
   private static Map<String, Map<String, List<Map<String, String>>>> frameworkCategoriesMap =
       new ConcurrentHashMap<>();
   private static Map<String, List<String>> frameworkFieldsConfig = new ConcurrentHashMap<>();
-  private static Map<String, String> channelFrameworkIdMap = new HashMap<>();
+  private static Map<String, String> hashtagIdFrameworkIdMap = new HashMap<>();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final String KEY_SPACE_NAME = "sunbird";
 
@@ -205,15 +205,15 @@ public class DataCacheHandler implements Runnable {
     DataCacheHandler.frameworkCategoriesMap.put(frameworkId, frameworkCacheMap);
   }
 
-  public static void setChannelFrameworkIdMap(Map<String, String> channelFrameworkIdMap) {
-    DataCacheHandler.channelFrameworkIdMap = channelFrameworkIdMap;
+  public static void setHashtagIdFrameworkIdMap(Map<String, String> hashtagIdFrameworkIdMap) {
+    DataCacheHandler.hashtagIdFrameworkIdMap = hashtagIdFrameworkIdMap;
   }
 
-  public static Map<String, String> getChannelFrameworkIdMap() {
-    return channelFrameworkIdMap;
+  public static Map<String, String> getHashtagIdFrameworkIdMap() {
+    return hashtagIdFrameworkIdMap;
   }
 
-  public static void updateChannelFrameworkIdMap(String channel, String frameworkId) {
-    DataCacheHandler.channelFrameworkIdMap.put(channel, frameworkId);
+  public static void updateHashtagIdFrameworkIdMap(String hashtagId, String frameworkId) {
+    DataCacheHandler.hashtagIdFrameworkIdMap.put(hashtagId, frameworkId);
   }
 }

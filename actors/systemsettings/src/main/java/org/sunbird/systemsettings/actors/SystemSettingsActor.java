@@ -1,20 +1,19 @@
 package org.sunbird.systemsettings.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.List;
-import java.util.Map;
+import java.text.MessageFormat;
+import java.util.*;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.TelemetryEnvKey;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
@@ -55,10 +54,10 @@ public class SystemSettingsActor extends BaseActor {
   private void getSystemSetting(Request actorMessage) {
     ProjectLogger.log("SystemSettingsActor: getSystemSetting called", LoggerEnum.INFO.name());
     ProjectLogger.log(
-        "SystemSettingsActor:getSystemSetting: request is " + actorMessage.getRequest(), LoggerEnum.INFO.name());
-
-    Map<String, Object> req = actorMessage.getRequest();
-    SystemSetting setting = systemSettingDaoImpl.readByField((String) req.get(JsonKey.FIELD));
+        "SystemSettingsActor:getSystemSetting: request is " + actorMessage.getRequest(),
+        LoggerEnum.INFO.name());
+    SystemSetting setting =
+        systemSettingDaoImpl.readByField((String) actorMessage.getContext().get(JsonKey.FIELD));
 
     if (setting == null) {
       throw new ProjectCommonException(
@@ -86,8 +85,67 @@ public class SystemSettingsActor extends BaseActor {
     ProjectLogger.log("SystemSettingsActor: setSystemSetting called", LoggerEnum.DEBUG.name());
 
     Map<String, Object> req = actorMessage.getRequest();
+    if (((String) req.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.PHONE_UNIQUE)) {
+      checkEmailOrPhoneData(
+          (String) req.get(JsonKey.FIELD),
+          (String) req.get(JsonKey.VALUE),
+          JsonKey.ENC_PHONE,
+          ResponseCode.duplicatePhoneData,
+          JsonKey.PHONE);
+    }
+    if (((String) req.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.EMAIL_UNIQUE)) {
+      checkEmailOrPhoneData(
+          (String) req.get(JsonKey.FIELD),
+          (String) req.get(JsonKey.VALUE),
+          JsonKey.ENC_EMAIL,
+          ResponseCode.duplicateEmailData,
+          JsonKey.EMAIL);
+    }
     SystemSetting systemSetting = mapper.convertValue(req, SystemSetting.class);
     Response response = systemSettingDaoImpl.write(systemSetting);
     sender().tell(response, self());
+  }
+
+  private void checkEmailOrPhoneData(
+      String field, String value, String facetsKey, ResponseCode responseCode, String objectType) {
+    SystemSetting systemSetting = systemSettingDaoImpl.readByField(field);
+
+    if (systemSetting != null) {
+      boolean dbUniqueValue = Boolean.parseBoolean(systemSetting.getValue());
+      boolean reqUniqueValue = Boolean.parseBoolean(value);
+
+      SearchDTO searchDto = null;
+      if ((!dbUniqueValue) && reqUniqueValue) {
+        searchDto = new SearchDTO();
+        searchDto.setLimit(0);
+        Map<String, String> facets = new HashMap<>();
+        facets.put(facetsKey, null);
+        List<Map<String, String>> list = new ArrayList<>();
+        list.add(facets);
+        searchDto.setFacets(list);
+        Map<String, Object> esResponse =
+            ElasticSearchUtil.complexSearch(
+                searchDto,
+                ProjectUtil.EsIndex.sunbird.getIndexName(),
+                ProjectUtil.EsType.user.getTypeName());
+        if (null != esResponse) {
+          List<Map<String, Object>> facetsRes =
+              (List<Map<String, Object>>) esResponse.get(JsonKey.FACETS);
+          if (null != facetsRes && !facetsRes.isEmpty()) {
+            Map<String, Object> map = facetsRes.get(0);
+            List<Map<String, Object>> values = (List<Map<String, Object>>) map.get("values");
+            for (Map<String, Object> result : values) {
+              long count = (long) result.get(JsonKey.COUNT);
+              if (count > 1) {
+                throw new ProjectCommonException(
+                    responseCode.getErrorCode(),
+                    MessageFormat.format(responseCode.getErrorMessage(), objectType),
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }

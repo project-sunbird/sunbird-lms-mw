@@ -118,7 +118,7 @@ public class CourseEnrollmentActor extends BaseActor {
   private boolean courseNotificationActive() {
     return Boolean.parseBoolean(
         PropertiesCache.getInstance()
-            .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ACTIVE));
+            .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ENABLED));
   }
 
   private Map<String, Object> createUserCourseMap(

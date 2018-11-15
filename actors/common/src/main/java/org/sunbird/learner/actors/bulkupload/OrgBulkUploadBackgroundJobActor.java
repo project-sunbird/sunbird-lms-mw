@@ -50,12 +50,6 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
     Util.initializeContext(request, TelemetryEnvKey.ORGANISATION);
     ExecutionContext.setRequestId(request.getRequestId());
     if (operation.equalsIgnoreCase("orgBulkUploadBackground")) {
-      Map<String, String> supportedColumns =
-          systemSettingClient.getSystemSettingByFieldAndKey(
-              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
-              "orgProfileConfig",
-              "csv.supportedColumns",
-              new TypeReference<Map<String, String>>() {});
       Map<String, String> outputColumns =
           systemSettingClient.getSystemSettingByFieldAndKey(
               getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
@@ -63,12 +57,11 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
               "csv.outputColumns",
               new TypeReference<Map<String, String>>() {});
 
-      supportedColumns.putAll(outputColumns);
-      String[] supportedColumnsOrder =
+      String[] outputColumnsOrder =
           systemSettingClient.getSystemSettingByFieldAndKey(
               getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
               "orgProfileConfig",
-              "csv.supportedColumnsOrder",
+              "csv.outputColumnsOrder",
               new TypeReference<String[]>() {});
 
       handleBulkUploadBackground(
@@ -80,9 +73,9 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
                   processTasks((List<BulkUploadProcessTask>) tasks);
                   return null;
                 },
-                supportedColumns,
-                supportedColumnsOrder != null
-                    ? supportedColumnsOrder
+                outputColumns,
+                outputColumnsOrder != null
+                    ? outputColumnsOrder
                     : (String[]) request.get(JsonKey.FIELDS));
             return null;
           });

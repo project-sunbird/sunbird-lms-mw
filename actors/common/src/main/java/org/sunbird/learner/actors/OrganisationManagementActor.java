@@ -6,6 +6,7 @@ import static org.sunbird.learner.util.Util.isNull;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -317,7 +318,8 @@ public class OrganisationManagementActor extends BaseActor {
         String externalId = ((String) request.get(JsonKey.EXTERNAL_ID)).toLowerCase();
         if (!validateExternalIdUniquenessCreate(externalId)) {
           ProjectCommonException.throwClientErrorException(
-              ResponseCode.externalIdUniquenessInvalid);
+              ResponseCode.errorDuplicateEntry, MessageFormat.format(
+                      ResponseCode.errorDuplicateEntry.getErrorMessage(), externalId, JsonKey.EXTERNAL_ID));
         }
         request.put(JsonKey.EXTERNAL_ID, externalId);
       }
@@ -714,8 +716,9 @@ public class OrganisationManagementActor extends BaseActor {
         String externalId = ((String) request.get(JsonKey.EXTERNAL_ID)).toLowerCase();
         if (!validateExternalIdUniquenessUpdate(
             externalId, (String) request.get(JsonKey.ORGANISATION_ID))) {
-          ProjectCommonException.throwClientErrorException(
-              ResponseCode.externalIdUniquenessInvalid);
+        	ProjectCommonException.throwClientErrorException(
+                    ResponseCode.errorDuplicateEntry, MessageFormat.format(
+                            ResponseCode.errorDuplicateEntry.getErrorMessage(), externalId, JsonKey.EXTERNAL_ID));
         }
         request.put(JsonKey.EXTERNAL_ID, externalId);
       }

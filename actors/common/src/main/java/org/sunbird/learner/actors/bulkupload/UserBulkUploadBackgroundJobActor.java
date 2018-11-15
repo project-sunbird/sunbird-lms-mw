@@ -24,9 +24,8 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
 
 @ActorConfig(
-  tasks = {},
-  asyncTasks = {"userBulkUploadBackground"}
-)
+    tasks = {},
+    asyncTasks = {"userBulkUploadBackground"})
 public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJobActor {
   private UserClient userClient = new UserClientImpl();
   private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
@@ -37,25 +36,19 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     Util.initializeContext(request, TelemetryEnvKey.USER);
     ExecutionContext.setRequestId(request.getRequestId());
     if (operation.equalsIgnoreCase("userBulkUploadBackground")) {
-      Map supportedColumns =
-          systemSettingClient.getSystemSettingByFieldAndKey(
-              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
-              "userProfileConfig",
-              "csv.supportedColumns",
-              new TypeReference<Map>() {});
-      
+
       Map outputColumns =
-              systemSettingClient.getSystemSettingByFieldAndKey(
-                  getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
-                  "userProfileConfig",
-                  "csv.outputColumns",
-                  new TypeReference<Map>() {});
-      supportedColumns.putAll(outputColumns);
-      String[] supportedColumnsOrder =
           systemSettingClient.getSystemSettingByFieldAndKey(
               getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
               "userProfileConfig",
-              "csv.supportedColumnsOrder",
+              "csv.outputColumns",
+              new TypeReference<Map>() {});
+
+      String[] outputColumnsOrder =
+          systemSettingClient.getSystemSettingByFieldAndKey(
+              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+              "userProfileConfig",
+              "csv.outputColumnsOrder",
               new TypeReference<String[]>() {});
 
       handleBulkUploadBackground(
@@ -69,9 +62,9 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
                       ((BulkUploadProcess) baseBulkUpload).getOrganisationId());
                   return null;
                 },
-                supportedColumns,
-                supportedColumnsOrder != null
-                    ? supportedColumnsOrder
+                outputColumns,
+                outputColumnsOrder != null
+                    ? outputColumnsOrder
                     : (String[]) request.get(JsonKey.FIELDS));
             return null;
           });
@@ -143,9 +136,9 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
       user.setId((String) userMap.get(JsonKey.USER_ID));
       user.setOrganisationId((String) userMap.get(JsonKey.ORG_ID));
       if (StringUtils.isEmpty(user.getId())) {
-        callCreateUser(user, task, (String)orgMap.get(JsonKey.ORG_NAME));
+        callCreateUser(user, task, (String) orgMap.get(JsonKey.ORG_NAME));
       } else {
-        callUpdateUser(user, task, (String)orgMap.get(JsonKey.ORG_NAME));
+        callUpdateUser(user, task, (String) orgMap.get(JsonKey.ORG_NAME));
       }
     } catch (Exception e) {
       task.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());

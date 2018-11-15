@@ -341,10 +341,7 @@ public class OrganisationManagementActor extends BaseActor {
 
       if (request.containsKey(JsonKey.EMAIL)
           && !EmailValidator.isEmailValid((String) request.get(JsonKey.EMAIL))) {
-        throw new ProjectCommonException(
-            ResponseCode.emailFormatError.getErrorCode(),
-            ResponseCode.emailFormatError.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+        ProjectCommonException.throwClientErrorException(ResponseCode.emailFormatError);
       }
 
       // adding one extra filed for tag.
@@ -657,10 +654,7 @@ public class OrganisationManagementActor extends BaseActor {
       }
       if (request.containsKey(JsonKey.EMAIL)
           && !EmailValidator.isEmailValid((String) request.get(JsonKey.EMAIL))) {
-        throw new ProjectCommonException(
-            ResponseCode.emailFormatError.getErrorCode(),
-            ResponseCode.emailFormatError.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
+        ProjectCommonException.throwClientErrorException(ResponseCode.emailFormatError);
       }
       validateChannelIdForRootOrg(request);
       //

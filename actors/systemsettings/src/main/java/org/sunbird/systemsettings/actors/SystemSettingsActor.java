@@ -5,6 +5,8 @@ import java.text.MessageFormat;
 import java.util.*;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.actorutil.user.UserClient;
+import org.sunbird.actorutil.user.impl.UserClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -26,6 +28,7 @@ import org.sunbird.systemsettings.dao.impl.SystemSettingDaoImpl;
 public class SystemSettingsActor extends BaseActor {
   private final ObjectMapper mapper = new ObjectMapper();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private UserClient userClient = new UserClientImpl();
   private final SystemSettingDaoImpl systemSettingDaoImpl =
       new SystemSettingDaoImpl(cassandraOperation);
 
@@ -86,66 +89,16 @@ public class SystemSettingsActor extends BaseActor {
 
     Map<String, Object> req = actorMessage.getRequest();
     if (((String) req.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.PHONE_UNIQUE)) {
-      checkEmailOrPhoneData(
-          (String) req.get(JsonKey.FIELD),
-          (String) req.get(JsonKey.VALUE),
-          JsonKey.ENC_PHONE,
-          ResponseCode.duplicatePhoneData,
-          JsonKey.PHONE);
+      SystemSetting systemSetting = systemSettingDaoImpl.readByField((String)req.get(JsonKey.FIELD));
+      userClient.esIsPhoneUnique(Boolean.parseBoolean(systemSetting.getValue()),Boolean.parseBoolean((String)req.get(JsonKey.VALUE)));
     }
     if (((String) req.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.EMAIL_UNIQUE)) {
-      checkEmailOrPhoneData(
-          (String) req.get(JsonKey.FIELD),
-          (String) req.get(JsonKey.VALUE),
-          JsonKey.ENC_EMAIL,
-          ResponseCode.duplicateEmailData,
-          JsonKey.EMAIL);
+      SystemSetting systemSetting = systemSettingDaoImpl.readByField((String)req.get(JsonKey.FIELD));
+      userClient.esIsEmailUnique(Boolean.parseBoolean(systemSetting.getValue()),Boolean.parseBoolean((String)req.get(JsonKey.VALUE)));
     }
     SystemSetting systemSetting = mapper.convertValue(req, SystemSetting.class);
     Response response = systemSettingDaoImpl.write(systemSetting);
     sender().tell(response, self());
   }
 
-  private void checkEmailOrPhoneData(
-      String field, String value, String facetsKey, ResponseCode responseCode, String objectType) {
-    SystemSetting systemSetting = systemSettingDaoImpl.readByField(field);
-
-    if (systemSetting != null) {
-      boolean dbUniqueValue = Boolean.parseBoolean(systemSetting.getValue());
-      boolean reqUniqueValue = Boolean.parseBoolean(value);
-
-      SearchDTO searchDto = null;
-      if ((!dbUniqueValue) && reqUniqueValue) {
-        searchDto = new SearchDTO();
-        searchDto.setLimit(0);
-        Map<String, String> facets = new HashMap<>();
-        facets.put(facetsKey, null);
-        List<Map<String, String>> list = new ArrayList<>();
-        list.add(facets);
-        searchDto.setFacets(list);
-        Map<String, Object> esResponse =
-            ElasticSearchUtil.complexSearch(
-                searchDto,
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName());
-        if (null != esResponse) {
-          List<Map<String, Object>> facetsRes =
-              (List<Map<String, Object>>) esResponse.get(JsonKey.FACETS);
-          if (null != facetsRes && !facetsRes.isEmpty()) {
-            Map<String, Object> map = facetsRes.get(0);
-            List<Map<String, Object>> values = (List<Map<String, Object>>) map.get("values");
-            for (Map<String, Object> result : values) {
-              long count = (long) result.get(JsonKey.COUNT);
-              if (count > 1) {
-                throw new ProjectCommonException(
-                    responseCode.getErrorCode(),
-                    MessageFormat.format(responseCode.getErrorMessage(), objectType),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
-              }
-            }
-          }
-        }
-      }
-    }
-  }
 }

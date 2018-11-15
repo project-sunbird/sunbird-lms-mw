@@ -75,7 +75,6 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
       supportedColumnsMap =
           ((Map<String, Object>) ((Map<String, Object>) dataObject).get("supportedColumns"));
       List<String> supportedColumnsList = new ArrayList<>();
-
       supportedColumnsLowerCaseMap =
           supportedColumnsMap
               .entrySet()
@@ -83,6 +82,13 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
               .collect(
                   Collectors.toMap(
                       entry -> (entry.getKey()).toLowerCase(), entry -> entry.getValue()));
+      
+      Map<String, Object> internalNamesLowerCaseMap = new HashMap<>();
+      supportedColumnsMap.forEach(
+          (String k, Object v) -> {
+            internalNamesLowerCaseMap.put(v.toString().toLowerCase(), v.toString());
+          });
+      supportedColumnsLowerCaseMap.putAll(internalNamesLowerCaseMap);
       supportedColumnsLowerCaseMap.forEach(
           (key, value) -> {
             supportedColumnsList.add(key);

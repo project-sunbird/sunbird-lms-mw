@@ -87,20 +87,27 @@ public class SystemSettingsActor extends BaseActor {
   private void setSystemSetting(Request actorMessage) {
     ProjectLogger.log("SystemSettingsActor: setSystemSetting called", LoggerEnum.DEBUG.name());
 
-    Map<String, Object> req = actorMessage.getRequest();
-    if (((String) req.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.PHONE_UNIQUE)) {
+    Map<String, Object> request = actorMessage.getRequest();
+    
+    Boolean isPhoneUnique = ((String) request.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.PHONE_UNIQUE) ? true : false;
+    Boolean isEmailUnique = ((String) request.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.EMAIL_UNIQUE) ? true : false;
+    
+    if (isPhoneUnique || isEmailUnique) {
       SystemSetting systemSetting = systemSettingDaoImpl.readByField((String)req.get(JsonKey.FIELD));
-      if(systemSetting != null) {
-        userClient.esIsPhoneUnique(Boolean.parseBoolean(systemSetting.getValue()), Boolean.parseBoolean((String) req.get(JsonKey.VALUE)));
+
+      Boolean existingValue = Boolean.parseBoolean(systemSetting.getValue());
+      Boolean requiredValue = Boolean.parseBoolean((String) request.get(JsonKey.VALUE));
+
+      if (existingValue == false && requiredValue == true) { 
+        if (isPhoneUnique) {
+          userClient.esVerifyPhoneUniqueness();
+        } else {
+          userClient.esVerifyEmailUniqueness();
+        }
       }
     }
-    if (((String) req.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.EMAIL_UNIQUE)) {
-      SystemSetting systemSetting = systemSettingDaoImpl.readByField((String)req.get(JsonKey.FIELD));
-      if(systemSetting != null) {
-        userClient.esIsEmailUnique(Boolean.parseBoolean(systemSetting.getValue()), Boolean.parseBoolean((String) req.get(JsonKey.VALUE)));
-      }
-    }
-    SystemSetting systemSetting = mapper.convertValue(req, SystemSetting.class);
+    
+    SystemSetting systemSetting = mapper.convertValue(request, SystemSetting.class);
     Response response = systemSettingDaoImpl.write(systemSetting);
     sender().tell(response, self());
   }

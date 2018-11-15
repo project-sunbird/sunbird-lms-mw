@@ -1,21 +1,18 @@
 package org.sunbird.systemsettings.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.text.MessageFormat;
 import java.util.*;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.user.UserClient;
 import org.sunbird.actorutil.user.impl.UserClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
@@ -88,28 +85,30 @@ public class SystemSettingsActor extends BaseActor {
     ProjectLogger.log("SystemSettingsActor: setSystemSetting called", LoggerEnum.DEBUG.name());
 
     Map<String, Object> request = actorMessage.getRequest();
-    
-    Boolean isPhoneUnique = ((String) request.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.PHONE_UNIQUE) ? true : false;
-    Boolean isEmailUnique = ((String) request.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.EMAIL_UNIQUE) ? true : false;
-    
+
+    Boolean isPhoneUnique =
+        ((String) request.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.PHONE_UNIQUE) ? true : false;
+    Boolean isEmailUnique =
+        ((String) request.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.EMAIL_UNIQUE) ? true : false;
+
     if (isPhoneUnique || isEmailUnique) {
-      SystemSetting systemSetting = systemSettingDaoImpl.readByField((String)req.get(JsonKey.FIELD));
+      SystemSetting systemSetting =
+          systemSettingDaoImpl.readByField((String) request.get(JsonKey.FIELD));
 
       Boolean existingValue = Boolean.parseBoolean(systemSetting.getValue());
       Boolean requiredValue = Boolean.parseBoolean((String) request.get(JsonKey.VALUE));
 
-      if (existingValue == false && requiredValue == true) { 
+      if (existingValue == false && requiredValue == true) {
         if (isPhoneUnique) {
-          userClient.esVerifyPhoneUniqueness();
+          userClient.esIsPhoneUnique();
         } else {
-          userClient.esVerifyEmailUniqueness();
+          userClient.esIsEmailUnique();
         }
       }
     }
-    
+
     SystemSetting systemSetting = mapper.convertValue(request, SystemSetting.class);
     Response response = systemSettingDaoImpl.write(systemSetting);
     sender().tell(response, self());
   }
-
 }

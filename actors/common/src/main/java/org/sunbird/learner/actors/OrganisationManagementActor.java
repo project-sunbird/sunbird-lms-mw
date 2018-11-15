@@ -316,10 +316,13 @@ public class OrganisationManagementActor extends BaseActor {
       }
       if (request.get(JsonKey.EXTERNAL_ID) != null) {
         String externalId = ((String) request.get(JsonKey.EXTERNAL_ID)).toLowerCase();
-        if (!validateExternalIdUniquenessCreate(externalId)) {
+        if (!validateExternalIdUniqueness(externalId, null)) {
           ProjectCommonException.throwClientErrorException(
-              ResponseCode.errorDuplicateEntry, MessageFormat.format(
-                      ResponseCode.errorDuplicateEntry.getErrorMessage(), externalId, JsonKey.EXTERNAL_ID));
+              ResponseCode.errorDuplicateEntry,
+              MessageFormat.format(
+                  ResponseCode.errorDuplicateEntry.getErrorMessage(),
+                  externalId,
+                  JsonKey.EXTERNAL_ID));
         }
         request.put(JsonKey.EXTERNAL_ID, externalId);
       }
@@ -680,7 +683,7 @@ public class OrganisationManagementActor extends BaseActor {
             return;
           }
         } else if (!channelAdded
-            && !validateChannelForUniquenessForUpdate(
+            && !validateChannelUniqueness(
                 (String) request.get(JsonKey.CHANNEL),
                 (String) request.get(JsonKey.ORGANISATION_ID))) {
           ProjectLogger.log("Channel validation failed");
@@ -714,11 +717,14 @@ public class OrganisationManagementActor extends BaseActor {
       }
       if (request.get(JsonKey.EXTERNAL_ID) != null) {
         String externalId = ((String) request.get(JsonKey.EXTERNAL_ID)).toLowerCase();
-        if (!validateExternalIdUniquenessUpdate(
+        if (!validateExternalIdUniqueness(
             externalId, (String) request.get(JsonKey.ORGANISATION_ID))) {
-        	ProjectCommonException.throwClientErrorException(
-                    ResponseCode.errorDuplicateEntry, MessageFormat.format(
-                            ResponseCode.errorDuplicateEntry.getErrorMessage(), externalId, JsonKey.EXTERNAL_ID));
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.errorDuplicateEntry,
+              MessageFormat.format(
+                  ResponseCode.errorDuplicateEntry.getErrorMessage(),
+                  externalId,
+                  JsonKey.EXTERNAL_ID));
         }
         request.put(JsonKey.EXTERNAL_ID, externalId);
       }
@@ -1533,25 +1539,9 @@ public class OrganisationManagementActor extends BaseActor {
     return true;
   }
 
-  /**
-   * validates if channel is already present in the organisation
-   *
-   * @param channel
-   * @return boolean
-   */
-  @SuppressWarnings("unchecked")
-  private boolean validateChannelForUniqueness(String channel) {
-    if (!StringUtils.isBlank(channel)) {
-      List<Map<String, Object>> list = getOrg(channel);
-      if (!list.isEmpty()) {
-        return false;
-      }
-    }
-    return true;
-  }
-
   private List<Map<String, Object>> getOrg(String channel) {
-    ProjectLogger.log("OrganisationManagementActor:getOrg: channel = " + channel, LoggerEnum.INFO.name());
+    ProjectLogger.log(
+        "OrganisationManagementActor:getOrg: channel = " + channel, LoggerEnum.INFO.name());
     Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
     Map<String, Object> requestData = new HashMap<>();
     requestData.put(JsonKey.CHANNEL, channel);
@@ -1559,13 +1549,20 @@ public class OrganisationManagementActor extends BaseActor {
     Response result =
         cassandraOperation.getRecordsByProperties(
             orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), requestData);
-    ProjectLogger.log("OrganisationManagementActor:getOrg: result = " + result.toString(), LoggerEnum.INFO.name());
-    ProjectLogger.log("OrganisationManagementActor:getOrg: result.response = " + result.get(JsonKey.RESPONSE).toString(), LoggerEnum.INFO.name());
+    ProjectLogger.log(
+        "OrganisationManagementActor:getOrg: result = " + result.toString(),
+        LoggerEnum.INFO.name());
+    ProjectLogger.log(
+        "OrganisationManagementActor:getOrg: result.response = "
+            + result.get(JsonKey.RESPONSE).toString(),
+        LoggerEnum.INFO.name());
     return (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
   }
 
   private String getRootOrgIdFromChannel(String channel) {
-    ProjectLogger.log("OrganisationManagementActor:getRootOrgIdFromChannel: channel = " + channel, LoggerEnum.INFO.name());
+    ProjectLogger.log(
+        "OrganisationManagementActor:getRootOrgIdFromChannel: channel = " + channel,
+        LoggerEnum.INFO.name());
     if (!StringUtils.isBlank(channel)) {
       List<Map<String, Object>> list = getOrg(channel);
       if (!list.isEmpty()) return (String) list.get(0).getOrDefault(JsonKey.ID, "");
@@ -1627,28 +1624,23 @@ public class OrganisationManagementActor extends BaseActor {
    * @return boolean
    */
   @SuppressWarnings("unchecked")
-  private boolean validateChannelForUniquenessForUpdate(String channel, String orgId) {
+  private boolean validateChannelUniqueness(String channel, String orgId) {
     if (!StringUtils.isBlank(channel)) {
-      return validateUniquenessByPropertyNullable(JsonKey.CHANNEL, channel, orgId);
+    	return validateFieldUniqueness(JsonKey.CHANNEL, channel, orgId);
     }
-    return false;
+    return (orgId == null);
   }
 
-  private boolean validateExternalIdUniquenessCreate(String externalId) {
-    return validateUniquenessByPropertyNullable(JsonKey.EXTERNAL_ID, externalId, null);
+  private boolean validateExternalIdUniqueness(String externalId, String orgId) {
+    return validateFieldUniqueness(JsonKey.EXTERNAL_ID, externalId, orgId);
   }
 
-  private boolean validateExternalIdUniquenessUpdate(String externalId, String orgId) {
-    return validateUniquenessByPropertyNullable(JsonKey.EXTERNAL_ID, externalId, orgId);
-  }
-
-  private boolean validateUniquenessByPropertyNullable(
-      String property, String propertyValue, String orgId) {
-    if (propertyValue != null) {
+  private boolean validateFieldUniqueness(String key, String value, String orgId) {
+    if (value != null) {
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
       Response result =
           cassandraOperation.getRecordsByProperty(
-              orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), property, propertyValue);
+              orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), key, value);
       List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
       if ((list.isEmpty())) {
         return true;
@@ -1685,7 +1677,7 @@ public class OrganisationManagementActor extends BaseActor {
             ResponseCode.invalidChannel.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
-    } else if (!validateChannelForUniqueness((String) req.get(JsonKey.CHANNEL))) {
+    } else if (!validateChannelUniqueness((String) req.get(JsonKey.CHANNEL), null)) {
       ProjectLogger.log("Channel validation failed");
       throw new ProjectCommonException(
           ResponseCode.channelUniquenessInvalid.getErrorCode(),

@@ -99,9 +99,9 @@ public class SystemSettingsActor extends BaseActor {
 
       if (existingValue == false && requiredValue == true) {
         if (isPhoneUnique) {
-          userClient.esIsPhoneUnique();
+          userClient.esVerifyPhoneUniqueness();
         } else {
-          userClient.esIsEmailUnique();
+          userClient.esVerifyEmailUniqueness();
         }
       }
     }

@@ -856,9 +856,9 @@ public class UserManagementActor extends BaseActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void processUserRequest(Map<String, Object> userMap, String operationFor) {
+  private void processUserRequest(Map<String, Object> userMap, String callerId) {
     Map<String, Object> requestMap = null;
-    UserUtil.setUserDefaultValue(userMap, operationFor);
+    UserUtil.setUserDefaultValue(userMap, callerId);
     User user = mapper.convertValue(userMap, User.class);
     UserUtil.checkUserExistOrNot(user);
     UserUtil.validateExternalIds(user, JsonKey.CREATE);
@@ -892,7 +892,7 @@ public class UserManagementActor extends BaseActor {
       Map<String, Object> userRequest = new HashMap<>();
       userRequest.putAll(userMap);
       userRequest.put(JsonKey.OPERATION_TYPE, JsonKey.CREATE);
-      userRequest.put(JsonKey.OPERATION_FOR, operationFor);
+      userRequest.put(JsonKey.CALLER_ID, callerId);
       resp = saveUserAttributes(userRequest);
     } else {
       ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");

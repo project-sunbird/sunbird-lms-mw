@@ -115,8 +115,8 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
         userMap.put(JsonKey.PHONE_VERIFIED, true);
       }
       try {
-        if (null != userMap.get(JsonKey.ROLES)) {
-          String roles = (String) userMap.get(JsonKey.ROLES);
+        String roles = (String) userMap.get(JsonKey.ROLES);
+        if (roles != null) {
           userMap.put(JsonKey.ROLES, Arrays.asList(roles.split("\\\\s*,\\\\s*")));
           RoleService.validateRoles((List<String>) userMap.get(JsonKey.ROLES));
         }

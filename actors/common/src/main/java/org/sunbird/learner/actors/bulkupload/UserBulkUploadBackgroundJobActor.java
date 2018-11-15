@@ -1,10 +1,13 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
@@ -12,7 +15,14 @@ import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.actorutil.user.UserClient;
 import org.sunbird.actorutil.user.impl.UserClientImpl;
 import org.sunbird.common.ElasticSearchUtil;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.TelemetryEnvKey;
+import org.sunbird.common.models.util.UserType;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -21,9 +31,6 @@ import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 
 @ActorConfig(
   tasks = {},
@@ -90,6 +97,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void processUser(BulkUploadProcessTask task, String organisationId) {
     ProjectLogger.log("UserBulkUploadBackgroundJobActor: processUser called", LoggerEnum.INFO);
     String data = task.getData();
@@ -107,9 +115,27 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
       if (null != userMap.get(JsonKey.ROLES)) {
         String roles = (String) userMap.get(JsonKey.ROLES);
         userMap.put(JsonKey.ROLES, Arrays.asList(roles.split("\\\\s*,\\\\s*")));
+        String response = Util.validateRoles((List<String>) userMap.get(JsonKey.ROLES));
+        if (!JsonKey.SUCCESS.equalsIgnoreCase(response)) {
+          setTaskStatus(
+              task,
+              ProjectUtil.BulkProcessStatus.FAILED,
+              ResponseCode.invalidRole.getErrorMessage(),
+              userMap,
+              JsonKey.CREATE);
+          return;
+        }
       }
+
       if (userMap.get(JsonKey.PHONE) != null) {
-        userMap.put(JsonKey.PHONE_VERIFIED, false);
+        userMap.put(JsonKey.PHONE_VERIFIED, true);
+      }
+      try {
+        validateUserTypeAndOrganisationId(userMap);
+      } catch (Exception ex) {
+        setTaskStatus(
+            task, ProjectUtil.BulkProcessStatus.FAILED, ex.getMessage(), userMap, JsonKey.CREATE);
+        return;
       }
       if (userMap.get(JsonKey.ORG_ID) != null) {
         Map<String, Object> orgMap = getOrg((String) userMap.get(JsonKey.ORG_ID));
@@ -135,6 +161,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
       User user = mapper.convertValue(userMap, User.class);
       user.setId((String) userMap.get(JsonKey.USER_ID));
       user.setOrganisationId((String) userMap.get(JsonKey.ORG_ID));
+      user.setRootOrgId(organisationId);
       if (StringUtils.isEmpty(user.getId())) {
         callCreateUser(user, task);
       } else {
@@ -142,6 +169,30 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
       }
     } catch (Exception e) {
       task.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
+    }
+  }
+
+  private void validateUserTypeAndOrganisationId(Map<String, Object> userMap) {
+    List<String> userTypes =
+        Stream.of(UserType.values()).map(UserType::name).collect(Collectors.toList());
+    userTypes.remove("SELF_SIGNUP");
+    String userType = (String) userMap.get("userType");
+    if (userTypes.contains(userType.trim().toUpperCase())) {
+      userMap.put("userType", userType.trim().toUpperCase());
+    } else {
+      throw new ProjectCommonException(
+          ResponseCode.invalidValue.getErrorCode(),
+          ProjectUtil.formatMessage(
+              ResponseCode.invalidValue.getErrorMessage(), "userType", userType, userTypes),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    if (UserType.TEACHER.name().equalsIgnoreCase(userType.trim().toUpperCase())
+        && StringUtils.isBlank((String) userMap.get(JsonKey.ORG_ID))) {
+      throw new ProjectCommonException(
+          ResponseCode.mandatoryParamsMissing.getErrorCode(),
+          ProjectUtil.formatMessage(
+              ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.ORGANISATION_ID),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
   }
 
@@ -210,10 +261,10 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     }
     return null;
   }
-  
+
   @Override
   public void preProcessResult(Map<String, Object> result) {
-   UserUtility.decryptUserData(result);
-   Util.addMaskEmailAndPhone(result);
+    UserUtility.decryptUserData(result);
+    Util.addMaskEmailAndPhone(result);
   }
 }

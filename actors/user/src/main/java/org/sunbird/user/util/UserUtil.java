@@ -445,11 +445,12 @@ public class UserUtil {
     return profileService.computeProfile(userMap);
   }
 
-  public static void setUserDefaultValue(Map<String, Object> userMap) {
-    /** will ignore roles coming from req, Only public role is applicable for user by default */
-    List<String> roles = new ArrayList<>();
-    roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
-    userMap.put(JsonKey.ROLES, roles);
+  public static void setUserDefaultValue(Map<String, Object> userMap, String operationFor) {
+    if (StringUtils.isBlank(operationFor)) {
+      List<String> roles = new ArrayList<>();
+      roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
+      userMap.put(JsonKey.ROLES, roles);
+    }
     // update db with emailVerified as false (default)
     userMap.put(JsonKey.EMAIL_VERIFIED, false);
     if (!StringUtils.isBlank((String) userMap.get(JsonKey.COUNTRY_CODE))) {

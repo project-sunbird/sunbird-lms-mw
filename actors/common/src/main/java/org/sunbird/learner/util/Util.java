@@ -1326,6 +1326,7 @@ public final class Util {
     return channel;
   }
 
+  @SuppressWarnings("unchecked")
   public static void upsertUserOrgData(Map<String, Object> userMap) {
     Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
     Map<String, Object> map = new WeakHashMap<>();
@@ -1343,6 +1344,7 @@ public final class Util {
         reqMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
       }
       reqMap.put(JsonKey.UPDATED_BY, userMap.get(JsonKey.UPDATED_BY));
+      reqMap.put(JsonKey.IS_DELETED, false);
       reqMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
       if (StringUtils.isNotEmpty((String) userMap.get(JsonKey.HASHTAGID))) {
         reqMap.put(JsonKey.HASHTAGID, userMap.get(JsonKey.HASHTAGID));

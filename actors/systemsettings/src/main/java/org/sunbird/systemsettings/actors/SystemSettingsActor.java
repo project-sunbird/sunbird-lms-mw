@@ -90,11 +90,15 @@ public class SystemSettingsActor extends BaseActor {
     Map<String, Object> req = actorMessage.getRequest();
     if (((String) req.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.PHONE_UNIQUE)) {
       SystemSetting systemSetting = systemSettingDaoImpl.readByField((String)req.get(JsonKey.FIELD));
-      userClient.esIsPhoneUnique(Boolean.parseBoolean(systemSetting.getValue()),Boolean.parseBoolean((String)req.get(JsonKey.VALUE)));
+      if(systemSetting != null) {
+        userClient.esIsPhoneUnique(Boolean.parseBoolean(systemSetting.getValue()), Boolean.parseBoolean((String) req.get(JsonKey.VALUE)));
+      }
     }
     if (((String) req.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.EMAIL_UNIQUE)) {
       SystemSetting systemSetting = systemSettingDaoImpl.readByField((String)req.get(JsonKey.FIELD));
-      userClient.esIsEmailUnique(Boolean.parseBoolean(systemSetting.getValue()),Boolean.parseBoolean((String)req.get(JsonKey.VALUE)));
+      if(systemSetting != null) {
+        userClient.esIsEmailUnique(Boolean.parseBoolean(systemSetting.getValue()), Boolean.parseBoolean((String) req.get(JsonKey.VALUE)));
+      }
     }
     SystemSetting systemSetting = mapper.convertValue(req, SystemSetting.class);
     Response response = systemSettingDaoImpl.write(systemSetting);

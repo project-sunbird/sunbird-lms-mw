@@ -140,7 +140,7 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
 
       Organisation organisation = mapper.convertValue(orgMap, Organisation.class);
       organisation.setStatus(status);
-      organisation.setId((String) orgMap.get(JsonKey.ORG_ID));
+      organisation.setId((String) orgMap.get(JsonKey.ORGANISATION_ID));
 
       if (StringUtils.isEmpty(organisation.getId())) {
         callCreateOrg(organisation, task, locationCodes);

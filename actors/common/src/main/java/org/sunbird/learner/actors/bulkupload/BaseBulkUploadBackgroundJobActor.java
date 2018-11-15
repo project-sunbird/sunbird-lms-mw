@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.Constants;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -152,18 +153,20 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
         MessageFormat.format(
             "BaseBulkUploadBackGroundJobActor:processBulkUpload:{0}: ", bulkUploadProcess.getId());
     try {
-      StorageDetails storageDetails =
-          uploadResultToCloud(
-              bulkUploadProcess,
-              successList,
-              failureList,
-              supportedColumnMap,
-              supportedColumnsOrder);
+      
       ProjectLogger.log(logMessagePrefix + "completed", LoggerEnum.INFO);
       bulkUploadProcess.setSuccessResult(ProjectUtil.convertMapToJsonString(successList));
       bulkUploadProcess.setFailureResult(ProjectUtil.convertMapToJsonString(failureList));
-      bulkUploadProcess.setEncryptedStorageDetails(storageDetails);
       bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
+      StorageDetails storageDetails =
+              uploadResultToCloud(
+                  bulkUploadProcess,
+                  successList,
+                  failureList,
+                  supportedColumnMap,
+                  supportedColumnsOrder);
+      bulkUploadProcess.setEncryptedStorageDetails(storageDetails);
+      
     } catch (Exception e) {
       ProjectLogger.log(
           logMessagePrefix + "Exception occurred with error message = " + e.getMessage(), e);
@@ -200,12 +203,20 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       throws IOException {
 
     String objKey = generateObjectKey(bulkUploadProcess);
-    File file = getFileHandle(bulkUploadProcess.getObjectType(), bulkUploadProcess.getId());
-    writeResultsToFile(file, successList, failureList, supportedColumnMap, supportedColumnsOrder);
-    CloudStorageUtil.upload(
-        CloudStorageType.AZURE, bulkUploadProcess.getObjectType(), objKey, file.getAbsolutePath());
-    return new StorageDetails(
-        CloudStorageType.AZURE.getType(), bulkUploadProcess.getObjectType(), objKey);
+    File file = null;
+    try {
+      file = getFileHandle(bulkUploadProcess.getObjectType(), bulkUploadProcess.getId());
+      writeResultsToFile(file, successList, failureList, supportedColumnMap, supportedColumnsOrder);
+      CloudStorageUtil.upload(
+          CloudStorageType.AZURE,
+          bulkUploadProcess.getObjectType(),
+          objKey,
+          file.getAbsolutePath());
+      return new StorageDetails(
+          CloudStorageType.AZURE.getType(), bulkUploadProcess.getObjectType(), objKey);
+    } finally {
+    	FileUtils.deleteQuietly(file);
+    }
   }
 
   private File getFileHandle(String objType, String processId) {

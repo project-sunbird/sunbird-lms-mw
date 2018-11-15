@@ -314,7 +314,12 @@ public class OrganisationManagementActor extends BaseActor {
         request.put(JsonKey.PROVIDER, ((String) request.get(JsonKey.PROVIDER)).toLowerCase());
       }
       if (request.get(JsonKey.EXTERNAL_ID) != null) {
-        request.put(JsonKey.EXTERNAL_ID, ((String) request.get(JsonKey.EXTERNAL_ID)).toLowerCase());
+        String externalId = ((String) request.get(JsonKey.EXTERNAL_ID)).toLowerCase();
+        if (!validateExternalIdUniquenessCreate(externalId)) {
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.externalIdUniquenessInvalid);
+        }
+        request.put(JsonKey.EXTERNAL_ID, externalId);
       }
       // update address if present in request
       if (null != addressReq && addressReq.size() > 0) {
@@ -706,7 +711,13 @@ public class OrganisationManagementActor extends BaseActor {
         request.put(JsonKey.PROVIDER, ((String) request.get(JsonKey.PROVIDER)).toLowerCase());
       }
       if (request.get(JsonKey.EXTERNAL_ID) != null) {
-        request.put(JsonKey.EXTERNAL_ID, ((String) request.get(JsonKey.EXTERNAL_ID)).toLowerCase());
+        String externalId = ((String) request.get(JsonKey.EXTERNAL_ID)).toLowerCase();
+        if (!validateExternalIdUniquenessUpdate(
+            externalId, (String) request.get(JsonKey.ORGANISATION_ID))) {
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.externalIdUniquenessInvalid);
+        }
+        request.put(JsonKey.EXTERNAL_ID, externalId);
       }
       String parentOrg = (String) request.get(JsonKey.PARENT_ORG_ID);
       Boolean isValidParent = false;
@@ -1615,22 +1626,43 @@ public class OrganisationManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private boolean validateChannelForUniquenessForUpdate(String channel, String orgId) {
     if (!StringUtils.isBlank(channel)) {
+      return validateUniquenessByPropertyNullable(JsonKey.CHANNEL, channel, orgId);
+    }
+    return false;
+  }
+
+  private boolean validateExternalIdUniquenessCreate(String externalId) {
+    return validateUniquenessByPropertyNullable(JsonKey.EXTERNAL_ID, externalId, null);
+  }
+
+  private boolean validateExternalIdUniquenessUpdate(String externalId, String orgId) {
+    return validateUniquenessByPropertyNullable(JsonKey.EXTERNAL_ID, externalId, orgId);
+  }
+
+  private boolean validateUniquenessByPropertyNullable(
+      String property, String propertyValue, String orgId) {
+    if (propertyValue != null) {
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
       Response result =
           cassandraOperation.getRecordsByProperty(
-              orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), JsonKey.CHANNEL, channel);
+              orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), property, propertyValue);
       List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
       if ((list.isEmpty())) {
         return true;
       } else {
+        if (orgId == null) {
+          return false;
+        }
         Map<String, Object> data = list.get(0);
         String id = (String) data.get(JsonKey.ID);
         if (id.equalsIgnoreCase(orgId)) {
           return true;
+        } else {
+          return false;
         }
       }
     }
-    return false;
+    return true;
   }
 
   /**

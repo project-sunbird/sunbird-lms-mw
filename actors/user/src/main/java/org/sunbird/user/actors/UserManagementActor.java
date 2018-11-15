@@ -95,7 +95,7 @@ public class UserManagementActor extends BaseActor {
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.USER);
     ExecutionContext.setRequestId(request.getRequestId());
-    cacheFrameworkData();
+    cacheFrameworkFieldsConfig();
     if (systemSettingActorRef == null) {
       systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
     }
@@ -121,7 +121,7 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
-  private void cacheFrameworkData() {
+  private void cacheFrameworkFieldsConfig() {
     if (MapUtils.isEmpty(DataCacheHandler.getFrameworkFieldsConfig())) {
       Map<String, List<String>> frameworkFieldsConfig =
           systemSettingClient.getSystemSettingByFieldAndKey(
@@ -699,12 +699,7 @@ public class UserManagementActor extends BaseActor {
     if (StringUtils.isBlank(callerId)) {
       userService.validateUserId(actorMessage);
     }
-    String rootOrgId = null;
     Map<String, Object> userMap = actorMessage.getRequest();
-    if (StringUtils.isNotBlank(callerId)) {
-      rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
-      userMap.remove(JsonKey.ROOT_ORG_ID);
-    }
     userRequestValidator.validateUpdateUserRequest(actorMessage);
     Map<String, Object> userDbRecord = UserUtil.validateExternalIdsAndReturnActiveUser(userMap);
     validateUserFrameworkData(userMap, userDbRecord);
@@ -727,7 +722,9 @@ public class UserManagementActor extends BaseActor {
     Response response =
         cassandraOperation.updateRecord(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
-    userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+    if (StringUtils.isNotBlank(callerId)) {
+      userMap.put(JsonKey.ROOT_ORG_ID, actorMessage.getContext().get(JsonKey.ROOT_ORG_ID));
+    }
     Response resp = null;
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       Map<String, Object> userRequest = new HashMap<>(userMap);
@@ -798,13 +795,10 @@ public class UserManagementActor extends BaseActor {
       userRequestValidator.validateCreateUserV2Request(actorMessage);
       validateChannelAndOrganisationId(userMap);
     } else if (StringUtils.isNotBlank(version) && JsonKey.VERSION_3.equalsIgnoreCase(version)) {
-      String rootOrgId = null;
-      if (StringUtils.isNotBlank(callerId)) {
-        rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
-        userMap.remove(JsonKey.ROOT_ORG_ID);
-      }
       userRequestValidator.validateCreateUserV3Request(actorMessage);
-      userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+      if (StringUtils.isNotBlank(callerId)) {
+        userMap.put(JsonKey.ROOT_ORG_ID, actorMessage.getContext().get(JsonKey.ROOT_ORG_ID));
+      }
       if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
         userMap.put(JsonKey.USERNAME, ProjectUtil.generateUniqueId());
       }

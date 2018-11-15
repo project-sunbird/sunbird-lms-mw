@@ -6,8 +6,6 @@ import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
@@ -15,7 +13,6 @@ import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.actorutil.user.UserClient;
 import org.sunbird.actorutil.user.impl.UserClientImpl;
 import org.sunbird.common.ElasticSearchUtil;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -27,10 +24,11 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
+import org.sunbird.learner.actors.role.service.RoleService;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
-import org.sunbird.models.user.UserType;
+import org.sunbird.validator.user.UserBulkUploadRequestValidator;
 
 @ActorConfig(
   tasks = {},
@@ -112,26 +110,17 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
       if (mandatoryColumnsObject != null) {
         validateMandatoryFields(userMap, task, mandatoryColumnsObject);
       }
-      if (null != userMap.get(JsonKey.ROLES)) {
-        String roles = (String) userMap.get(JsonKey.ROLES);
-        userMap.put(JsonKey.ROLES, Arrays.asList(roles.split("\\\\s*,\\\\s*")));
-        String response = Util.validateRoles((List<String>) userMap.get(JsonKey.ROLES));
-        if (!JsonKey.SUCCESS.equalsIgnoreCase(response)) {
-          setTaskStatus(
-              task,
-              ProjectUtil.BulkProcessStatus.FAILED,
-              ResponseCode.invalidRole.getErrorMessage(),
-              userMap,
-              JsonKey.CREATE);
-          return;
-        }
-      }
 
       if (userMap.get(JsonKey.PHONE) != null) {
         userMap.put(JsonKey.PHONE_VERIFIED, true);
       }
       try {
-        validateUserTypeAndOrganisationId(userMap);
+        if (null != userMap.get(JsonKey.ROLES)) {
+          String roles = (String) userMap.get(JsonKey.ROLES);
+          userMap.put(JsonKey.ROLES, Arrays.asList(roles.split("\\\\s*,\\\\s*")));
+          RoleService.validateRoles((List<String>) userMap.get(JsonKey.ROLES));
+        }
+        UserBulkUploadRequestValidator.validateUserBulkUploadRequest(userMap);
       } catch (Exception ex) {
         setTaskStatus(
             task, ProjectUtil.BulkProcessStatus.FAILED, ex.getMessage(), userMap, JsonKey.CREATE);
@@ -172,30 +161,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     }
   }
 
-  private void validateUserTypeAndOrganisationId(Map<String, Object> userMap) {
-    List<String> userTypes =
-        Stream.of(UserType.values()).map(UserType::name).collect(Collectors.toList());
-    userTypes.remove("SELF_SIGNUP");
-    String userType = (String) userMap.get("userType");
-    if (userTypes.contains(userType.trim().toUpperCase())) {
-      userMap.put("userType", userType.trim().toUpperCase());
-    } else {
-      throw new ProjectCommonException(
-          ResponseCode.invalidValue.getErrorCode(),
-          ProjectUtil.formatMessage(
-              ResponseCode.invalidValue.getErrorMessage(), "userType", userType, userTypes),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
-    if (UserType.TEACHER.name().equalsIgnoreCase(userType.trim().toUpperCase())
-        && StringUtils.isBlank((String) userMap.get(JsonKey.ORG_ID))) {
-      throw new ProjectCommonException(
-          ResponseCode.mandatoryParamsMissing.getErrorCode(),
-          ProjectUtil.formatMessage(
-              ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.ORGANISATION_ID),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
-  }
-
+  @SuppressWarnings("unchecked")
   private void callCreateUser(User user, BulkUploadProcessTask task)
       throws JsonProcessingException {
     ProjectLogger.log("UserBulkUploadBackgroundJobActor: callCreateUser called", LoggerEnum.INFO);
@@ -228,6 +194,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void callUpdateUser(User user, BulkUploadProcessTask task)
       throws JsonProcessingException {
     ProjectLogger.log("UserBulkUploadBackgroundJobActor: callUpdateUser called", LoggerEnum.INFO);

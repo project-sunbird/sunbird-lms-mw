@@ -82,5 +82,8 @@ public class UserOrgManagementActor extends BaseActor {
       addPublicRole(requestMap);
       Util.upsertUserOrgData(requestMap);
     }
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    sender().tell(response, self());
   }
 }

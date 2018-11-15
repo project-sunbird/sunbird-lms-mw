@@ -699,8 +699,13 @@ public class UserManagementActor extends BaseActor {
     if (StringUtils.isBlank(operationFor)) {
       userService.validateUserId(actorMessage);
     }
-    userRequestValidator.validateUpdateUserRequest(actorMessage);
+    String rootOrgId = null;
     Map<String, Object> userMap = actorMessage.getRequest();
+    if (StringUtils.isNotBlank(operationFor)) {
+      rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
+      userMap.remove(JsonKey.ROOT_ORG_ID);
+    }
+    userRequestValidator.validateUpdateUserRequest(actorMessage);
     Map<String, Object> userDbRecord = UserUtil.validateExternalIdsAndReturnActiveUser(userMap);
     validateUserFrameworkData(userMap, userDbRecord);
     User user = mapper.convertValue(userMap, User.class);
@@ -722,7 +727,7 @@ public class UserManagementActor extends BaseActor {
     Response response =
         cassandraOperation.updateRecord(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
-
+    userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
     Response resp = null;
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       Map<String, Object> userRequest = new HashMap<>(userMap);

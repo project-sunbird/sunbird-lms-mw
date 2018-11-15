@@ -1,20 +1,21 @@
 package org.sunbird.systemsettings.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.List;
-import java.util.Map;
+import java.text.MessageFormat;
+import java.util.*;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.actorutil.user.UserClient;
+import org.sunbird.actorutil.user.impl.UserClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.TelemetryEnvKey;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
@@ -27,6 +28,7 @@ import org.sunbird.systemsettings.dao.impl.SystemSettingDaoImpl;
 public class SystemSettingsActor extends BaseActor {
   private final ObjectMapper mapper = new ObjectMapper();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private UserClient userClient = new UserClientImpl();
   private final SystemSettingDaoImpl systemSettingDaoImpl =
       new SystemSettingDaoImpl(cassandraOperation);
 
@@ -55,10 +57,10 @@ public class SystemSettingsActor extends BaseActor {
   private void getSystemSetting(Request actorMessage) {
     ProjectLogger.log("SystemSettingsActor: getSystemSetting called", LoggerEnum.INFO.name());
     ProjectLogger.log(
-        "SystemSettingsActor:getSystemSetting: request is " + actorMessage.getRequest(), LoggerEnum.INFO.name());
-
-    Map<String, Object> req = actorMessage.getRequest();
-    SystemSetting setting = systemSettingDaoImpl.readByField((String) req.get(JsonKey.FIELD));
+        "SystemSettingsActor:getSystemSetting: request is " + actorMessage.getRequest(),
+        LoggerEnum.INFO.name());
+    SystemSetting setting =
+        systemSettingDaoImpl.readByField((String) actorMessage.getContext().get(JsonKey.FIELD));
 
     if (setting == null) {
       throw new ProjectCommonException(
@@ -85,9 +87,29 @@ public class SystemSettingsActor extends BaseActor {
   private void setSystemSetting(Request actorMessage) {
     ProjectLogger.log("SystemSettingsActor: setSystemSetting called", LoggerEnum.DEBUG.name());
 
-    Map<String, Object> req = actorMessage.getRequest();
-    SystemSetting systemSetting = mapper.convertValue(req, SystemSetting.class);
+    Map<String, Object> request = actorMessage.getRequest();
+    
+    Boolean isPhoneUnique = ((String) request.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.PHONE_UNIQUE) ? true : false;
+    Boolean isEmailUnique = ((String) request.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.EMAIL_UNIQUE) ? true : false;
+    
+    if (isPhoneUnique || isEmailUnique) {
+      SystemSetting systemSetting = systemSettingDaoImpl.readByField((String)req.get(JsonKey.FIELD));
+
+      Boolean existingValue = Boolean.parseBoolean(systemSetting.getValue());
+      Boolean requiredValue = Boolean.parseBoolean((String) request.get(JsonKey.VALUE));
+
+      if (existingValue == false && requiredValue == true) { 
+        if (isPhoneUnique) {
+          userClient.esVerifyPhoneUniqueness();
+        } else {
+          userClient.esVerifyEmailUniqueness();
+        }
+      }
+    }
+    
+    SystemSetting systemSetting = mapper.convertValue(request, SystemSetting.class);
     Response response = systemSettingDaoImpl.write(systemSetting);
     sender().tell(response, self());
   }
+
 }

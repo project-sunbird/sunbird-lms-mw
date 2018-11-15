@@ -224,14 +224,13 @@ public class UserServiceImpl implements UserService {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.errorInactiveOrg,
               ProjectUtil.formatMessage(
-                  ResponseCode.errorInactiveOrg.getErrorMessage(),
-                  JsonKey.CHANNEL + ": " + channel));
+                  ResponseCode.errorInactiveOrg.getErrorMessage(), JsonKey.CHANNEL, channel));
         }
       } else {
         ProjectCommonException.throwClientErrorException(
             ResponseCode.errorInactiveOrg,
             ProjectUtil.formatMessage(
-                ResponseCode.errorInactiveOrg.getErrorMessage(), JsonKey.CHANNEL + ": " + channel));
+                ResponseCode.errorInactiveOrg.getErrorMessage(), JsonKey.CHANNEL, channel));
       }
       return (String) esContent.get(JsonKey.ID);
     } else {

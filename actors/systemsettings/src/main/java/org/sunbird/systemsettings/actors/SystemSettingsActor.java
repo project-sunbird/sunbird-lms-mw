@@ -92,8 +92,7 @@ public class SystemSettingsActor extends BaseActor {
         ((String) request.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.EMAIL_UNIQUE) ? true : false;
 
     if (isPhoneUnique || isEmailUnique) {
-      SystemSetting systemSetting =
-          systemSettingDaoImpl.readByField((String) request.get(JsonKey.FIELD));
+      SystemSetting systemSetting = systemSettingDaoImpl.readByField((String)request.get(JsonKey.FIELD));
 
       Boolean existingValue = Boolean.parseBoolean(systemSetting.getValue());
       Boolean requiredValue = Boolean.parseBoolean((String) request.get(JsonKey.VALUE));

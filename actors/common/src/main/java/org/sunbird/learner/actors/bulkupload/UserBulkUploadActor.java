@@ -83,12 +83,12 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
                   Collectors.toMap(
                       entry -> (entry.getKey()).toLowerCase(), entry -> entry.getValue()));
       
-      Map<String, Object> lowerCaseInternalNamesMap = new HashMap<>();
+      Map<String, Object> internalNamesLowerCaseMap = new HashMap<>();
       supportedColumnsMap.forEach(
           (String k, Object v) -> {
-            lowerCaseInternalNamesMap.put(v.toString().toLowerCase(), v.toString());
+            internalNamesLowerCaseMap.put(v.toString().toLowerCase(), v.toString());
           });
-      supportedColumnsLowerCaseMap.putAll(lowerCaseInternalNamesMap);
+      supportedColumnsLowerCaseMap.putAll(internalNamesLowerCaseMap);
       supportedColumnsLowerCaseMap.forEach(
           (key, value) -> {
             supportedColumnsList.add(key);

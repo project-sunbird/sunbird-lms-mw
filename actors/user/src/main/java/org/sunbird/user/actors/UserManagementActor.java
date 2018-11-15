@@ -695,13 +695,13 @@ public class UserManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     actorMessage.toLower();
     Util.getUserProfileConfig(systemSettingActorRef);
-    String operationFor = (String) actorMessage.getContext().get(JsonKey.OPERATION_FOR);
-    if (StringUtils.isBlank(operationFor)) {
+    String callerId = (String) actorMessage.getContext().get(JsonKey.CALLER_ID);
+    if (StringUtils.isBlank(callerId)) {
       userService.validateUserId(actorMessage);
     }
     String rootOrgId = null;
     Map<String, Object> userMap = actorMessage.getRequest();
-    if (StringUtils.isNotBlank(operationFor)) {
+    if (StringUtils.isNotBlank(callerId)) {
       rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
       userMap.remove(JsonKey.ROOT_ORG_ID);
     }
@@ -792,14 +792,14 @@ public class UserManagementActor extends BaseActor {
   private void createUser(Request actorMessage) {
     actorMessage.toLower();
     Map<String, Object> userMap = actorMessage.getRequest();
-    String operationFor = (String) actorMessage.getContext().get(JsonKey.OPERATION_FOR);
+    String callerId = (String) actorMessage.getContext().get(JsonKey.CALLER_ID);
     String version = (String) actorMessage.getContext().get(JsonKey.VERSION);
     if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
       userRequestValidator.validateCreateUserV2Request(actorMessage);
       validateChannelAndOrganisationId(userMap);
     } else if (StringUtils.isNotBlank(version) && JsonKey.VERSION_3.equalsIgnoreCase(version)) {
       String rootOrgId = null;
-      if (StringUtils.isNotBlank(operationFor)) {
+      if (StringUtils.isNotBlank(callerId)) {
         rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
         userMap.remove(JsonKey.ROOT_ORG_ID);
       }
@@ -817,7 +817,7 @@ public class UserManagementActor extends BaseActor {
     userMap.remove(JsonKey.EMAIL_VERIFIED);
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
-    if (StringUtils.isBlank(operationFor)) {
+    if (StringUtils.isBlank(callerId)) {
       userMap.put(JsonKey.CREATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
       try {
         if (JsonKey.VERSION_3.equalsIgnoreCase(version)
@@ -834,7 +834,7 @@ public class UserManagementActor extends BaseActor {
         return;
       }
     }
-    processUserRequest(userMap, operationFor);
+    processUserRequest(userMap, callerId);
   }
 
   private void validateChannelAndOrganisationId(Map<String, Object> userMap) {

@@ -445,8 +445,8 @@ public class UserUtil {
     return profileService.computeProfile(userMap);
   }
 
-  public static void setUserDefaultValue(Map<String, Object> userMap, String operationFor) {
-    if (StringUtils.isBlank(operationFor)) {
+  public static void setUserDefaultValue(Map<String, Object> userMap, String callerId) {
+    if (StringUtils.isBlank(callerId)) {
       List<String> roles = new ArrayList<>();
       roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
       userMap.put(JsonKey.ROLES, roles);

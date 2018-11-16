@@ -157,7 +157,7 @@ public class CourseBatchManagementActor extends BaseActor {
   private void batchOperationNotifier(
       CourseBatch courseBatch, Map<String, Object> participantMentorMap) {
     ProjectLogger.log(
-        "CourseBatchManagementActor: batchoperationNotifier: ", LoggerEnum.INFO.name());
+        "CourseBatchManagementActor: batchoperationNotifier called", LoggerEnum.INFO.name());
     Request batchNotification = new Request();
     batchNotification.setOperation(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue());
     Map<String, Object> batchNotificationMap = new HashMap<>();

@@ -83,7 +83,7 @@ public class UserRoleActor extends UserBaseActor {
     Response response = userOrgDao.updateUserOrg(userOrg);
     sender().tell(response, self());
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-      syncUserRoles(userOrgDBMap, JsonKey.ORGANISATION, userId, organisationId);
+      syncUserRoles(requestMap, JsonKey.ORGANISATION, userId, organisationId);
     } else {
       ProjectLogger.log("UserRoleActor: No ES call to save user roles");
     }

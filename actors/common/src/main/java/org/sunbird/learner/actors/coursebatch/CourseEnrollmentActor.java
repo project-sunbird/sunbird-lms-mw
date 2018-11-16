@@ -108,9 +108,8 @@ public class CourseEnrollmentActor extends BaseActor {
           LoggerEnum.INFO.name());
       UserCoursesService.sync(courseMap, (String) courseMap.get(JsonKey.ID));
     }
-    if (courseNotificationActive()) {
-      batchOperationNotifier(courseMap, courseBatch, JsonKey.ADD);
-    }
+    batchOperationNotifier(courseMap, courseBatch, JsonKey.ADD);
+    if (courseNotificationActive()) {}
     updateCourseBatch(courseBatch);
     generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
   }
@@ -181,8 +180,8 @@ public class CourseEnrollmentActor extends BaseActor {
     if (courseNotificationActive()) {
       ProjectLogger.log(
           "CourseEnrollMentActor:unenrollCourseBatch: Unsupported operation = ", LoggerEnum.INFO);
-      batchOperationNotifier(request, courseBatch, JsonKey.REMOVE);
     }
+    batchOperationNotifier(request, courseBatch, JsonKey.REMOVE);
   }
 
   private void batchOperationNotifier(

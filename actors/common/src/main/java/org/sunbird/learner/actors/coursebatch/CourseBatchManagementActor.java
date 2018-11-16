@@ -136,10 +136,8 @@ public class CourseBatchManagementActor extends BaseActor {
     rollUp.put("l1", (String) request.get(JsonKey.COURSE_ID));
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
 
-    if (courseNotificationActive()) {
-
-      batchOperationNotifier(courseBatch, null);
-    }
+    batchOperationNotifier(courseBatch, null);
+    if (courseNotificationActive()) {}
   }
 
   private boolean courseNotificationActive() {
@@ -232,9 +230,8 @@ public class CourseBatchManagementActor extends BaseActor {
     rollUp.put("l1", courseBatch.getCourseId());
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
 
-    if (courseNotificationActive()) {
-      batchOperationNotifier(courseBatch, participantsMap);
-    }
+    batchOperationNotifier(courseBatch, participantsMap);
+    if (courseNotificationActive()) {}
   }
 
   private Map<String, Object> getMentorLists(

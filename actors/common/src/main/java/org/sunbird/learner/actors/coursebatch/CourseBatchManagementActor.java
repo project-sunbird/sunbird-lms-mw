@@ -167,7 +167,8 @@ public class CourseBatchManagementActor extends BaseActor {
     } else {
       batchNotificationMap.put(JsonKey.OPERATION_TYPE, JsonKey.ADD);
       batchNotificationMap.put(JsonKey.ADDED_MENTORS, courseBatch.getMentors());
-      batchNotificationMap.put(JsonKey.ADDED_PARTICIPANTS, courseBatch.getParticipant());
+      batchNotificationMap.put(
+          JsonKey.ADDED_PARTICIPANTS, getParticipantsList(courseBatch.getParticipant()));
     }
     batchNotificationMap.put(JsonKey.COURSE_BATCH, courseBatch);
     batchNotification.setRequest(batchNotificationMap);

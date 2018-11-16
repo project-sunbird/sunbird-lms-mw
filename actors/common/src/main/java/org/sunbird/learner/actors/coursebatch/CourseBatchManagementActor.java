@@ -143,6 +143,12 @@ public class CourseBatchManagementActor extends BaseActor {
   }
 
   private boolean courseNotificationActive() {
+    ProjectLogger.log(
+        "CourseBatchManagementActor: courseNotificationActive: "
+            + Boolean.parseBoolean(
+                PropertiesCache.getInstance()
+                    .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ENABLED)),
+        LoggerEnum.INFO.name());
     return Boolean.parseBoolean(
         PropertiesCache.getInstance()
             .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ENABLED));
@@ -150,6 +156,8 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private void batchOperationNotifier(
       CourseBatch courseBatch, Map<String, Object> participantMentorMap) {
+    ProjectLogger.log(
+        "CourseBatchManagementActor: batchoperationNotifier called", LoggerEnum.INFO.name());
     Request batchNotification = new Request();
     batchNotification.setOperation(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue());
     Map<String, Object> batchNotificationMap = new HashMap<>();
@@ -167,7 +175,8 @@ public class CourseBatchManagementActor extends BaseActor {
     } else {
       batchNotificationMap.put(JsonKey.OPERATION_TYPE, JsonKey.ADD);
       batchNotificationMap.put(JsonKey.ADDED_MENTORS, courseBatch.getMentors());
-      batchNotificationMap.put(JsonKey.ADDED_PARTICIPANTS, courseBatch.getParticipant());
+      batchNotificationMap.put(
+          JsonKey.ADDED_PARTICIPANTS, getParticipantsList(courseBatch.getParticipant()));
     }
     batchNotificationMap.put(JsonKey.COURSE_BATCH, courseBatch);
     batchNotification.setRequest(batchNotificationMap);

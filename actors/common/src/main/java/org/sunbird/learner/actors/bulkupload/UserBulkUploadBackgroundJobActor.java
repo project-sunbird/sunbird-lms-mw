@@ -133,8 +133,9 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
             task, ProjectUtil.BulkProcessStatus.FAILED, ex.getMessage(), userMap, JsonKey.CREATE);
         return;
       }
-      if (StringUtils.isNotBlank((String) userMap.get(JsonKey.ORG_ID))
-          || StringUtils.isNotBlank((String) userMap.get(JsonKey.ORG_EXTERNAL_ID))) {
+      String orgId = (String) userMap.get(JsonKey.ORG_ID);
+      String orgExternalId = (String) userMap.get(JsonKey.ORG_EXTERNAL_ID);
+      if (StringUtils.isNotBlank(orgId) || StringUtils.isNotBlank(orgExternalId)) {
         orgMap = getOrgDetails(userMap);
         if (MapUtils.isEmpty(orgMap)) {
           setTaskStatus(
@@ -145,10 +146,8 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
               JsonKey.CREATE);
           return;
         } else {
-          if (StringUtils.isNotBlank((String) userMap.get(JsonKey.ORG_ID))
-              && StringUtils.isNotBlank((String) userMap.get(JsonKey.ORG_EXTERNAL_ID))) {
-            if (!((String) userMap.get(JsonKey.ORG_ID))
-                .equalsIgnoreCase((String) orgMap.get(JsonKey.ID))) {
+          if (StringUtils.isNotBlank(orgId) && StringUtils.isNotBlank(orgExternalId)) {
+            if (!(orgId).equalsIgnoreCase((String) orgMap.get(JsonKey.ID))) {
               String message =
                   MessageFormat.format(
                       ResponseCode.errorConflictingProperties.getErrorMessage(),
@@ -161,10 +160,10 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
               return;
             }
           } else {
-            if (StringUtils.isNotBlank((String) userMap.get(JsonKey.ORG_EXTERNAL_ID))) {
+            if (StringUtils.isNotBlank(orgExternalId)) {
               userMap.put(JsonKey.ORGANISATION_ID, orgMap.get(JsonKey.ID));
             } else {
-              userMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ORG_ID));
+              userMap.put(JsonKey.ORGANISATION_ID, orgId);
             }
           }
         }

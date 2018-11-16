@@ -45,8 +45,7 @@ public class CourseBatchNotificationActor extends BaseActor {
     String requestedOperation = request.getOperation();
 
     if (requestedOperation.equals(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue())) {
-      ProjectLogger.log(
-          "CourseBatchNotificationActor:onReceive:  " + request.getOperation(), LoggerEnum.INFO);
+      ProjectLogger.log("CourseBatchNotificationActor:onReceive: operation = " + request.getOperation(), LoggerEnum.INFO);
       courseBatchNotification(request);
     } else {
       ProjectLogger.log(
@@ -64,11 +63,11 @@ public class CourseBatchNotificationActor extends BaseActor {
 
     String userId = (String) requestMap.get(JsonKey.USER_ID);
     ProjectLogger.log(
-        "CourseBatchNotificationActor:courseBatchNotification:userId = " + userId, LoggerEnum.INFO);
+        "CourseBatchNotificationActor:courseBatchNotification: userId = " + userId, LoggerEnum.INFO);
 
     if (userId != null) {
       ProjectLogger.log(
-          "CourseBatchNotificationActor:courseBatchNotification: for single user = ",
+          "CourseBatchNotificationActor:courseBatchNotification: Open batch",
           LoggerEnum.INFO);
 
       // Open batch
@@ -86,7 +85,7 @@ public class CourseBatchNotificationActor extends BaseActor {
 
     } else {
       ProjectLogger.log(
-          "CourseBatchNotificationActor:courseBatchNotification: updateOperation = ",
+          "CourseBatchNotificationActor:courseBatchNotification: Invite only batch",
           LoggerEnum.INFO);
 
       List<String> addedMentors = (List<String>) requestMap.get(JsonKey.ADDED_MENTORS);
@@ -118,7 +117,7 @@ public class CourseBatchNotificationActor extends BaseActor {
       List<String> userIdList, CourseBatch courseBatch, String subject, String template) {
 
     ProjectLogger.log(
-        "CourseBatchNotificationActor: triggerEmailNotification :userIdList = "
+        "CourseBatchNotificationActor:triggerEmailNotification: userIdList = "
             + CollectionUtils.isEmpty(userIdList),
         LoggerEnum.INFO);
 
@@ -133,7 +132,7 @@ public class CourseBatchNotificationActor extends BaseActor {
       requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, template);
       requestMap.put(JsonKey.RECIPIENT_EMAILS, new String[] {(String) user.get(JsonKey.EMAIL)});
       ProjectLogger.log(
-          "CourseBatchNotificationActor: triggerEmailNotification :forLoop, emailid : "
+          "CourseBatchNotificationActor:triggerEmailNotification: emailid = "
               + (String) user.get(JsonKey.EMAIL),
           LoggerEnum.INFO);
 
@@ -157,7 +156,7 @@ public class CourseBatchNotificationActor extends BaseActor {
       }
       List<Map<String, Object>> userList =
           (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-      ProjectLogger.log("CourseBatchNotificationActor: getUsersFromDB: success ", LoggerEnum.INFO);
+      ProjectLogger.log("CourseBatchNotificationActor:getUsersFromDB: success ", LoggerEnum.INFO);
       return userList;
     }
     return null;
@@ -190,7 +189,7 @@ public class CourseBatchNotificationActor extends BaseActor {
     }
     requestMap.put(JsonKey.FIRST_NAME, userMap.get(JsonKey.FIRST_NAME));
     ProjectLogger.log(
-        "CourseBatchNotificationActor: createEmailRequest: success  ", LoggerEnum.INFO);
+        "CourseBatchNotificationActor:createEmailRequest: success  ", LoggerEnum.INFO);
 
     return requestMap;
   }

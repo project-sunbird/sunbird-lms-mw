@@ -116,6 +116,12 @@ public class CourseEnrollmentActor extends BaseActor {
   }
 
   private boolean courseNotificationActive() {
+    ProjectLogger.log(
+        "CourseEnrollMentActor: courseNotificationActive: "
+            + Boolean.parseBoolean(
+                PropertiesCache.getInstance()
+                    .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ENABLED)),
+        LoggerEnum.INFO.name());
     return Boolean.parseBoolean(
         PropertiesCache.getInstance()
             .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ENABLED));
@@ -173,12 +179,15 @@ public class CourseEnrollmentActor extends BaseActor {
     generateAndProcessTelemetryEvent(request, "user.batch.course.unenroll");
 
     if (courseNotificationActive()) {
+      ProjectLogger.log(
+          "CourseEnrollMentActor:unenrollCourseBatch: Unsupported operation = ", LoggerEnum.INFO);
       batchOperationNotifier(request, courseBatch, JsonKey.REMOVE);
     }
   }
 
   private void batchOperationNotifier(
       Map<String, Object> request, CourseBatch courseBatchResult, String operationType) {
+    ProjectLogger.log("CourseBatchEnrollment: batchOperationNotifier: ", LoggerEnum.INFO.name());
     Request batchNotification = new Request();
     batchNotification.setOperation(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue());
     Map<String, Object> batchNotificationMap = new HashMap<>();

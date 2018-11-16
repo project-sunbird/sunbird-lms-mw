@@ -22,6 +22,7 @@ import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.EmailValidator;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LocationActorOperation;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -314,9 +315,9 @@ public class OrganisationManagementActor extends BaseActor {
       if (request.get(JsonKey.PROVIDER) != null) {
         request.put(JsonKey.PROVIDER, ((String) request.get(JsonKey.PROVIDER)).toLowerCase());
       }
-      if (request.get(JsonKey.EXTERNAL_ID) != null) {
-        String externalId = ((String) request.get(JsonKey.EXTERNAL_ID)).toLowerCase();
-        if (!validateExternalIdUniqueness(externalId, null)) {
+      String externalId = (String) request.get(JsonKey.EXTERNAL_ID);
+      if (externalId != null) {
+        if (!validateExternalIdUniqueness(externalId.toLowerCase(), null)) {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.errorDuplicateEntry,
               MessageFormat.format(
@@ -346,6 +347,11 @@ public class OrganisationManagementActor extends BaseActor {
         request.put(JsonKey.ROOT_ORG_ID, uniqueId);
       } else if (StringUtils.isBlank((String) request.get(JsonKey.ROOT_ORG_ID))) {
         request.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
+      }
+
+      if (request.containsKey(JsonKey.EMAIL)
+          && !EmailValidator.isEmailValid((String) request.get(JsonKey.EMAIL))) {
+        ProjectCommonException.throwClientErrorException(ResponseCode.emailFormatError);
       }
 
       // adding one extra filed for tag.
@@ -656,6 +662,10 @@ public class OrganisationManagementActor extends BaseActor {
         ProjectLogger.log("REQUESTED DATA IS NOT VALID");
         return;
       }
+      if (request.containsKey(JsonKey.EMAIL)
+          && !EmailValidator.isEmailValid((String) request.get(JsonKey.EMAIL))) {
+        ProjectCommonException.throwClientErrorException(ResponseCode.emailFormatError);
+      }
       validateChannelIdForRootOrg(request);
       //
       boolean channelAdded = false;
@@ -715,10 +725,10 @@ public class OrganisationManagementActor extends BaseActor {
       if (request.get(JsonKey.PROVIDER) != null) {
         request.put(JsonKey.PROVIDER, ((String) request.get(JsonKey.PROVIDER)).toLowerCase());
       }
-      if (request.get(JsonKey.EXTERNAL_ID) != null) {
-        String externalId = ((String) request.get(JsonKey.EXTERNAL_ID)).toLowerCase();
+      String externalId = (String) request.get(JsonKey.EXTERNAL_ID);
+      if (externalId != null) {
         if (!validateExternalIdUniqueness(
-            externalId, (String) request.get(JsonKey.ORGANISATION_ID))) {
+            externalId.toLowerCase(), (String) request.get(JsonKey.ORGANISATION_ID))) {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.errorDuplicateEntry,
               MessageFormat.format(

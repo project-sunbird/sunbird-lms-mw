@@ -218,6 +218,20 @@ public class UserServiceImpl implements UserService {
         && CollectionUtils.isNotEmpty((List) esResult.get(JsonKey.CONTENT))) {
       Map<String, Object> esContent =
           ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
+      if (null != esContent.get(JsonKey.STATUS)) {
+        int status = (int) esContent.get(JsonKey.STATUS);
+        if (1 != status) {
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.errorInactiveOrg,
+              ProjectUtil.formatMessage(
+                  ResponseCode.errorInactiveOrg.getErrorMessage(), JsonKey.CHANNEL, channel));
+        }
+      } else {
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.errorInactiveOrg,
+            ProjectUtil.formatMessage(
+                ResponseCode.errorInactiveOrg.getErrorMessage(), JsonKey.CHANNEL, channel));
+      }
       return (String) esContent.get(JsonKey.ID);
     } else {
       if (StringUtils.isNotBlank(channel)) {

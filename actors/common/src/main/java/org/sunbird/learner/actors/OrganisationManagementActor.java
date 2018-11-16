@@ -314,9 +314,9 @@ public class OrganisationManagementActor extends BaseActor {
       if (request.get(JsonKey.PROVIDER) != null) {
         request.put(JsonKey.PROVIDER, ((String) request.get(JsonKey.PROVIDER)).toLowerCase());
       }
-      if (request.get(JsonKey.EXTERNAL_ID) != null) {
-        String externalId = ((String) request.get(JsonKey.EXTERNAL_ID)).toLowerCase();
-        if (!validateExternalIdUniqueness(externalId, null)) {
+      String externalId = ((String) request.get(JsonKey.EXTERNAL_ID)).toLowerCase();
+      if (externalId != null) {
+        if (!validateExternalIdUniqueness(externalId.toLowerCase(), null)) {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.errorDuplicateEntry,
               MessageFormat.format(
@@ -715,10 +715,10 @@ public class OrganisationManagementActor extends BaseActor {
       if (request.get(JsonKey.PROVIDER) != null) {
         request.put(JsonKey.PROVIDER, ((String) request.get(JsonKey.PROVIDER)).toLowerCase());
       }
-      if (request.get(JsonKey.EXTERNAL_ID) != null) {
-        String externalId = ((String) request.get(JsonKey.EXTERNAL_ID)).toLowerCase();
+      String externalId = ((String) request.get(JsonKey.EXTERNAL_ID));
+      if (externalId != null) {
         if (!validateExternalIdUniqueness(
-            externalId, (String) request.get(JsonKey.ORGANISATION_ID))) {
+            externalId.toLowerCase(), (String) request.get(JsonKey.ORGANISATION_ID))) {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.errorDuplicateEntry,
               MessageFormat.format(

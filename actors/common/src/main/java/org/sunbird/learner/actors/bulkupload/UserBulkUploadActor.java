@@ -10,7 +10,10 @@ import java.util.stream.Collectors;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.BulkUploadActorOperation;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
@@ -61,6 +64,7 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void upload(Request request) throws IOException {
     Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
     Object dataObject =
@@ -75,7 +79,6 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
       supportedColumnsMap =
           ((Map<String, Object>) ((Map<String, Object>) dataObject).get("supportedColumns"));
       List<String> supportedColumnsList = new ArrayList<>();
-
       supportedColumnsLowerCaseMap =
           supportedColumnsMap
               .entrySet()
@@ -83,6 +86,13 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
               .collect(
                   Collectors.toMap(
                       entry -> (entry.getKey()).toLowerCase(), entry -> entry.getValue()));
+      
+      Map<String, Object> internalNamesLowerCaseMap = new HashMap<>();
+      supportedColumnsMap.forEach(
+          (String k, Object v) -> {
+            internalNamesLowerCaseMap.put(v.toString().toLowerCase(), v.toString());
+          });
+      supportedColumnsLowerCaseMap.putAll(internalNamesLowerCaseMap);
       supportedColumnsLowerCaseMap.forEach(
           (key, value) -> {
             supportedColumnsList.add(key);

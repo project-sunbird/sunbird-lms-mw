@@ -95,15 +95,9 @@ public class UserManagementActor extends BaseActor {
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.USER);
     ExecutionContext.setRequestId(request.getRequestId());
+    cacheFrameworkFieldsConfig();
     if (systemSettingActorRef == null) {
-      ProjectLogger.log(
-          "UserManagementActor:onReceive: systemSettingActorRef is initialised first time.",
-          LoggerEnum.INFO.name());
       systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
-    } else {
-      ProjectLogger.log(
-          "UserManagementActor:onReceive: systemSettingActorRef is already initialised.",
-          LoggerEnum.INFO.name());
     }
     String operation = request.getOperation();
     switch (operation) {
@@ -124,6 +118,18 @@ public class UserManagementActor extends BaseActor {
         break;
       default:
         onReceiveUnsupportedOperation("UserManagementActor");
+    }
+  }
+
+  private void cacheFrameworkFieldsConfig() {
+    if (MapUtils.isEmpty(DataCacheHandler.getFrameworkFieldsConfig())) {
+      Map<String, List<String>> frameworkFieldsConfig =
+          systemSettingClient.getSystemSettingByFieldAndKey(
+              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+              JsonKey.USER_PROFILE_CONFIG,
+              JsonKey.FRAMEWORK,
+              new TypeReference<Map<String, List<String>>>() {});
+      DataCacheHandler.setFrameworkFieldsConfig(frameworkFieldsConfig);
     }
   }
 
@@ -683,38 +689,20 @@ public class UserManagementActor extends BaseActor {
     result.put(JsonKey.TOPICS, topicSet);
   }
 
+  @SuppressWarnings("unchecked")
   private void updateUser(Request actorMessage) {
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     actorMessage.toLower();
     Util.getUserProfileConfig(systemSettingActorRef);
-    userService.validateUserId(actorMessage);
+    String callerId = (String) actorMessage.getContext().get(JsonKey.CALLER_ID);
+    if (StringUtils.isBlank(callerId)) {
+      userService.validateUserId(actorMessage);
+    }
     Map<String, Object> userMap = actorMessage.getRequest();
-    if (MapUtils.isEmpty(DataCacheHandler.getFrameworkFieldsConfig())) {
-      Map<String, List<String>> frameworkFieldsConfig =
-          systemSettingClient.getSystemSettingByFieldAndKey(
-              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
-              JsonKey.USER_PROFILE_CONFIG,
-              JsonKey.FRAMEWORK,
-              new TypeReference<Map<String, List<String>>>() {});
-      DataCacheHandler.setFrameworkFieldsConfig(frameworkFieldsConfig);
-    }
-    List<String> frameworkFields = DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.FIELDS);
-    List<String> frameworkMandatoryFields =
-        DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.MANDATORY_FIELDS);
     userRequestValidator.validateUpdateUserRequest(actorMessage);
-    userRequestValidator.validateMandatoryFrameworkFields(
-        userMap, frameworkFields, frameworkMandatoryFields);
     Map<String, Object> userDbRecord = UserUtil.validateExternalIdsAndReturnActiveUser(userMap);
-    if (userMap.containsKey(JsonKey.FRAMEWORK)) {
-      Map<String, Object> rootOrgMap =
-          Util.getOrgDetails((String) userDbRecord.get(JsonKey.ROOT_ORG_ID));
-      String hashtagId = (String) rootOrgMap.get(JsonKey.HASHTAGID);
-      String frameworkId = getFrameworkId(hashtagId);
-      Map<String, List<Map<String, String>>> frameworkCachedValue =
-          getFrameworkDetails(frameworkId);
-      userRequestValidator.validateFrameworkCategoryValues(userMap, frameworkCachedValue);
-    }
+    validateUserFrameworkData(userMap, userDbRecord);
     User user = mapper.convertValue(userMap, User.class);
     UserUtil.validateExternalIds(user, JsonKey.UPDATE);
     userMap.put(JsonKey.EXTERNAL_IDS, user.getExternalIds());
@@ -734,26 +722,49 @@ public class UserManagementActor extends BaseActor {
     Response response =
         cassandraOperation.updateRecord(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
+    if (StringUtils.isNotBlank(callerId)) {
+      userMap.put(JsonKey.ROOT_ORG_ID, actorMessage.getContext().get(JsonKey.ROOT_ORG_ID));
+    }
     Response resp = null;
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
       Map<String, Object> userRequest = new HashMap<>(userMap);
       userRequest.put(JsonKey.OPERATION_TYPE, JsonKey.UPDATE);
       resp = saveUserAttributes(userRequest);
+    } else {
+      ProjectLogger.log("UserManagementActor:updateUser: User update failure");
     }
-    // Enable this when you want to send full response of user attributes
-    // response.putAll(resp.getResult());
+    response.put(
+        JsonKey.ERRORS,
+        ((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ERRORS));
     sender().tell(response, self());
     if (null != resp) {
       Map<String, Object> completeUserDetails = new HashMap<>(userDbRecord);
       completeUserDetails.putAll(requestMap);
       saveUserDetailsToEs(completeUserDetails);
-    } else {
-      ProjectLogger.log("UserManagementActor:updateUser: User update fail");
     }
     targetObject =
         TelemetryUtil.generateTargetObject(
             (String) userMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
+  }
+
+  private void validateUserFrameworkData(
+      Map<String, Object> userRequestMap, Map<String, Object> userDbRecord) {
+    if (userRequestMap.containsKey(JsonKey.FRAMEWORK)) {
+      List<String> frameworkFields =
+          DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.FIELDS);
+      List<String> frameworkMandatoryFields =
+          DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.MANDATORY_FIELDS);
+      userRequestValidator.validateMandatoryFrameworkFields(
+          userRequestMap, frameworkFields, frameworkMandatoryFields);
+      Map<String, Object> rootOrgMap =
+          Util.getOrgDetails((String) userDbRecord.get(JsonKey.ROOT_ORG_ID));
+      String hashtagId = (String) rootOrgMap.get(JsonKey.HASHTAGID);
+      String frameworkId = getFrameworkId(hashtagId);
+      Map<String, List<Map<String, String>>> frameworkCachedValue =
+          getFrameworkDetails(frameworkId);
+      userRequestValidator.validateFrameworkCategoryValues(userRequestMap, frameworkCachedValue);
+    }
   }
 
   private void removeFieldsFrmReq(Map<String, Object> userMap) {
@@ -765,10 +776,6 @@ public class UserManagementActor extends BaseActor {
     userMap.remove(JsonKey.USERNAME);
     userMap.remove(JsonKey.ROOT_ORG_ID);
     userMap.remove(JsonKey.LOGIN_ID);
-    /**
-     * Ignore all roles coming from req. With update user api, we are not allowing to update user
-     * roles
-     */
     userMap.remove(JsonKey.ROLES);
     // channel update is not allowed
     userMap.remove(JsonKey.CHANNEL);
@@ -782,12 +789,16 @@ public class UserManagementActor extends BaseActor {
   private void createUser(Request actorMessage) {
     actorMessage.toLower();
     Map<String, Object> userMap = actorMessage.getRequest();
+    String callerId = (String) actorMessage.getContext().get(JsonKey.CALLER_ID);
     String version = (String) actorMessage.getContext().get(JsonKey.VERSION);
     if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
       userRequestValidator.validateCreateUserV2Request(actorMessage);
       validateChannelAndOrganisationId(userMap);
     } else if (StringUtils.isNotBlank(version) && JsonKey.VERSION_3.equalsIgnoreCase(version)) {
       userRequestValidator.validateCreateUserV3Request(actorMessage);
+      if (StringUtils.isNotBlank(callerId)) {
+        userMap.put(JsonKey.ROOT_ORG_ID, actorMessage.getContext().get(JsonKey.ROOT_ORG_ID));
+      }
       if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
         userMap.put(JsonKey.USERNAME, ProjectUtil.generateUniqueId());
       }
@@ -798,25 +809,26 @@ public class UserManagementActor extends BaseActor {
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
     userMap.remove(JsonKey.EMAIL_VERIFIED);
-    userMap.put(JsonKey.CREATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
-    try {
-      if (JsonKey.VERSION_3.equalsIgnoreCase((String) userMap.get(JsonKey.VERSION))
-          && StringUtils.isBlank((String) userMap.get(JsonKey.CHANNEL))) {
-        userService.getValidatedCustodianOrgId(userMap, systemSettingActorRef);
-      } else {
-        String channel = userService.getCustodianChannel(userMap, systemSettingActorRef);
-        String rootOrgId = userService.getRootOrgIdFromChannel(channel);
-        userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
-        userMap.put(JsonKey.CHANNEL, channel);
+    if (StringUtils.isBlank(callerId)) {
+      userMap.put(JsonKey.CREATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
+      try {
+        if (JsonKey.VERSION_3.equalsIgnoreCase(version)
+            && StringUtils.isBlank((String) userMap.get(JsonKey.CHANNEL))) {
+          userService.getValidatedCustodianOrgId(userMap, systemSettingActorRef);
+        } else {
+          String channel = userService.getCustodianChannel(userMap, systemSettingActorRef);
+          String rootOrgId = userService.getRootOrgIdFromChannel(channel);
+          userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+          userMap.put(JsonKey.CHANNEL, channel);
+        }
+      } catch (Exception ex) {
+        sender().tell(ex, self());
+        return;
       }
-    } catch (Exception ex) {
-      sender().tell(ex, self());
-      return;
     }
-
-    processUserRequest(userMap);
+    processUserRequest(userMap, callerId);
   }
 
   private void validateChannelAndOrganisationId(Map<String, Object> userMap) {
@@ -844,9 +856,9 @@ public class UserManagementActor extends BaseActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void processUserRequest(Map<String, Object> userMap) {
+  private void processUserRequest(Map<String, Object> userMap, String callerId) {
     Map<String, Object> requestMap = null;
-    UserUtil.setUserDefaultValue(userMap);
+    UserUtil.setUserDefaultValue(userMap, callerId);
     User user = mapper.convertValue(userMap, User.class);
     UserUtil.checkUserExistOrNot(user);
     UserUtil.validateExternalIds(user, JsonKey.CREATE);
@@ -880,6 +892,7 @@ public class UserManagementActor extends BaseActor {
       Map<String, Object> userRequest = new HashMap<>();
       userRequest.putAll(userMap);
       userRequest.put(JsonKey.OPERATION_TYPE, JsonKey.CREATE);
+      userRequest.put(JsonKey.CALLER_ID, callerId);
       resp = saveUserAttributes(userRequest);
     } else {
       ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");

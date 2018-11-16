@@ -13,15 +13,22 @@ import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.actorutil.user.UserClient;
 import org.sunbird.actorutil.user.impl.UserClientImpl;
 import org.sunbird.common.ElasticSearchUtil;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
+import org.sunbird.learner.actors.role.service.RoleService;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
+import org.sunbird.validator.user.UserBulkUploadRequestValidator;
 
 @ActorConfig(
   tasks = {},
@@ -88,6 +95,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void processUser(BulkUploadProcessTask task, String organisationId) {
     ProjectLogger.log("UserBulkUploadBackgroundJobActor: processUser called", LoggerEnum.INFO);
     String data = task.getData();
@@ -102,12 +110,21 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
       if (mandatoryColumnsObject != null) {
         validateMandatoryFields(userMap, task, mandatoryColumnsObject);
       }
-      if (null != userMap.get(JsonKey.ROLES)) {
-        String roles = (String) userMap.get(JsonKey.ROLES);
-        userMap.put(JsonKey.ROLES, Arrays.asList(roles.split("\\\\s*,\\\\s*")));
-      }
+
       if (userMap.get(JsonKey.PHONE) != null) {
         userMap.put(JsonKey.PHONE_VERIFIED, true);
+      }
+      try {
+        String roles = (String) userMap.get(JsonKey.ROLES);
+        if (roles != null) {
+          userMap.put(JsonKey.ROLES, Arrays.asList(roles.split("\\\\s*,\\\\s*")));
+          RoleService.validateRoles((List<String>) userMap.get(JsonKey.ROLES));
+        }
+        UserBulkUploadRequestValidator.validateUserBulkUploadRequest(userMap);
+      } catch (Exception ex) {
+        setTaskStatus(
+            task, ProjectUtil.BulkProcessStatus.FAILED, ex.getMessage(), userMap, JsonKey.CREATE);
+        return;
       }
       if (userMap.get(JsonKey.ORG_ID) != null) {
         Map<String, Object> orgMap = getOrg((String) userMap.get(JsonKey.ORG_ID));
@@ -133,6 +150,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
       User user = mapper.convertValue(userMap, User.class);
       user.setId((String) userMap.get(JsonKey.USER_ID));
       user.setOrganisationId((String) userMap.get(JsonKey.ORG_ID));
+      user.setRootOrgId(organisationId);
       if (StringUtils.isEmpty(user.getId())) {
         callCreateUser(user, task);
       } else {
@@ -143,6 +161,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void callCreateUser(User user, BulkUploadProcessTask task)
       throws JsonProcessingException {
     ProjectLogger.log("UserBulkUploadBackgroundJobActor: callCreateUser called", LoggerEnum.INFO);
@@ -175,6 +194,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void callUpdateUser(User user, BulkUploadProcessTask task)
       throws JsonProcessingException {
     ProjectLogger.log("UserBulkUploadBackgroundJobActor: callUpdateUser called", LoggerEnum.INFO);

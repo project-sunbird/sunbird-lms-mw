@@ -716,7 +716,9 @@ public class UserManagementActor extends BaseActor {
     }
     UserUtil.upsertUserInKeycloak(userMap, JsonKey.UPDATE);
     userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-    userMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
+    if (StringUtils.isBlank(callerId)) {
+      userMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
+    }
     Map<String, Object> requestMap = UserUtil.encryptUserData(userMap);
     removeUnwanted(requestMap);
     Response response =

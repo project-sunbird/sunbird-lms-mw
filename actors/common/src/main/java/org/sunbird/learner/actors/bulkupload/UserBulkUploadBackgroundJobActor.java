@@ -173,7 +173,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
         setTaskStatus(
             task,
             ProjectUtil.BulkProcessStatus.FAILED,
-            "Root organisation ID of API user is conflicting with that of specified organisation ID.",
+            ResponseCode.errorConflictingRootOrgId.getErrorMessage(),
             userMap,
             JsonKey.CREATE);
         return;

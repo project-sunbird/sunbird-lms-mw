@@ -78,7 +78,6 @@ public class CourseBatchNotificationActor extends BaseActor {
 
     } else {
 
-      // Invite only batch
       List<String> addedMentors = (List<String>) requestMap.get(JsonKey.ADDED_MENTORS);
       List<String> removedMentors = (List<String>) requestMap.get(JsonKey.REMOVED_MENTORS);
 
@@ -116,6 +115,7 @@ public class CourseBatchNotificationActor extends BaseActor {
 
       requestMap.put(JsonKey.SUBJECT, subject);
       requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, template);
+      requestMap.put(JsonKey.RECIPIENT_EMAILS, new String[] {(String) user.get(JsonKey.EMAIL)});
 
       sendMail(requestMap);
     }
@@ -179,6 +179,8 @@ public class CourseBatchNotificationActor extends BaseActor {
       Response res = new Response();
       res.setResponseCode(ResponseCode.OK);
       sender().tell(res, self());
+      ProjectLogger.log(
+          "CourseBatchNotificationActor:sendMail: Email sent successfully", LoggerEnum.INFO);
     } catch (Exception e) {
       ProjectLogger.log(
           "CourseBatchNotificationActor:sendMail: Exception occurred with error message = "

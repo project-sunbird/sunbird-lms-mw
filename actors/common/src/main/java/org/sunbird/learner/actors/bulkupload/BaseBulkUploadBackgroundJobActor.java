@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.Constants;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -97,8 +98,8 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
   public void processBulkUpload(
       BulkUploadProcess bulkUploadProcess,
       Function function,
-      Map<String, String> supportedColumnMap,
-      String[] supportedColumnsOrder) {
+      Map<String, String> outputColumnMap,
+      String[] outputColumnsOrder) {
     String logMessagePrefix =
         MessageFormat.format(
             "BaseBulkUploadBackGroundJobActor:processBulkUpload:{0}: ", bulkUploadProcess.getId());
@@ -139,31 +140,29 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       sequence = nextSequence;
     }
     setCompletionStatus(
-        bulkUploadProcess, successList, failureList, supportedColumnMap, supportedColumnsOrder);
+        bulkUploadProcess, successList, failureList, outputColumnMap, outputColumnsOrder);
   }
 
   private void setCompletionStatus(
       BulkUploadProcess bulkUploadProcess,
       List successList,
       List failureList,
-      Map supportedColumnMap,
-      String[] supportedColumnsOrder) {
+      Map<String, String> outputColumnsMap,
+      String[] outputColumnsOrder) {
     String logMessagePrefix =
         MessageFormat.format(
             "BaseBulkUploadBackGroundJobActor:processBulkUpload:{0}: ", bulkUploadProcess.getId());
     try {
-      StorageDetails storageDetails =
-          uploadResultToCloud(
-              bulkUploadProcess,
-              successList,
-              failureList,
-              supportedColumnMap,
-              supportedColumnsOrder);
+
       ProjectLogger.log(logMessagePrefix + "completed", LoggerEnum.INFO);
       bulkUploadProcess.setSuccessResult(ProjectUtil.convertMapToJsonString(successList));
       bulkUploadProcess.setFailureResult(ProjectUtil.convertMapToJsonString(failureList));
-      bulkUploadProcess.setEncryptedStorageDetails(storageDetails);
       bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
+      StorageDetails storageDetails =
+          uploadResultToCloud(
+              bulkUploadProcess, successList, failureList, outputColumnsMap, outputColumnsOrder);
+      bulkUploadProcess.setEncryptedStorageDetails(storageDetails);
+
     } catch (Exception e) {
       ProjectLogger.log(
           logMessagePrefix + "Exception occurred with error message = " + e.getMessage(), e);
@@ -195,17 +194,25 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       BulkUploadProcess bulkUploadProcess,
       List<Map<String, Object>> successList,
       List<Map<String, Object>> failureList,
-      Map<String, String> supportedColumnMap,
-      String[] supportedColumnsOrder)
+      Map<String, String> outputColumnsMap,
+      String[] outputColumnsOrder)
       throws IOException {
 
     String objKey = generateObjectKey(bulkUploadProcess);
-    File file = getFileHandle(bulkUploadProcess.getObjectType(), bulkUploadProcess.getId());
-    writeResultsToFile(file, successList, failureList, supportedColumnMap, supportedColumnsOrder);
-    CloudStorageUtil.upload(
-        CloudStorageType.AZURE, bulkUploadProcess.getObjectType(), objKey, file.getAbsolutePath());
-    return new StorageDetails(
-        CloudStorageType.AZURE.getType(), bulkUploadProcess.getObjectType(), objKey);
+    File file = null;
+    try {
+      file = getFileHandle(bulkUploadProcess.getObjectType(), bulkUploadProcess.getId());
+      writeResultsToFile(file, successList, failureList, outputColumnsMap, outputColumnsOrder);
+      CloudStorageUtil.upload(
+          CloudStorageType.AZURE,
+          bulkUploadProcess.getObjectType(),
+          objKey,
+          file.getAbsolutePath());
+      return new StorageDetails(
+          CloudStorageType.AZURE.getType(), bulkUploadProcess.getObjectType(), objKey);
+    } finally {
+      FileUtils.deleteQuietly(file);
+    }
   }
 
   private File getFileHandle(String objType, String processId) {
@@ -231,23 +238,21 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       File file,
       List<Map<String, Object>> successList,
       List<Map<String, Object>> failureList,
-      Map<String, String> supportedColumnsMap,
-      String[] supportedColumnsOrder)
+      Map<String, String> outputColumnsMap,
+      String[] outputColumnsOrder)
       throws IOException {
     try (CSVWriter csvWriter = new CSVWriter(new FileWriter(file)); ) {
-      List<String> headerRowWithInternalNames =
-          new ArrayList<>(Arrays.asList(supportedColumnsOrder));
+      List<String> headerRowWithInternalNames = new ArrayList<>(Arrays.asList(outputColumnsOrder));
 
       headerRowWithInternalNames.add(JsonKey.BULK_UPLOAD_STATUS);
       headerRowWithInternalNames.add(JsonKey.BULK_UPLOAD_ERROR);
 
-      if (MapUtils.isNotEmpty(supportedColumnsMap)) {
-        Map<String, String> revMap = getReverseMap(supportedColumnsMap);
+      if (MapUtils.isNotEmpty(outputColumnsMap)) {
         List<String> headerRowWithDisplayNames = new ArrayList<>();
         headerRowWithInternalNames.forEach(
             s -> {
-              if (revMap.containsKey(s)) {
-                headerRowWithDisplayNames.add(revMap.get(s));
+              if (outputColumnsMap.containsKey(s)) {
+                headerRowWithDisplayNames.add(outputColumnsMap.get(s));
               } else {
                 headerRowWithDisplayNames.add(s);
               }
@@ -261,15 +266,6 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       addResults(failureList, headerRowWithInternalNames, csvWriter);
       csvWriter.flush();
     }
-  }
-
-  private Map<String, String> getReverseMap(Map<String, String> supportedColumnsMap) {
-    Map<String, String> revMap = new HashMap<>();
-    supportedColumnsMap.forEach(
-        (k, v) -> {
-          revMap.put(v, k);
-        });
-    return revMap;
   }
 
   private void addResults(

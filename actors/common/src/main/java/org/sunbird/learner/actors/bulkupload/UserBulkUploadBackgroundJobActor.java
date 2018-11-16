@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.org.OrganisationClient;
@@ -254,7 +255,10 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     if (StringUtils.isNotBlank((String) userMap.get(JsonKey.EXTERNAL_ID))) {
       Map<String, Object> filters = new HashMap<>();
       filters.put(JsonKey.EXTERNAL_ID, userMap.get(JsonKey.EXTERNAL_ID));
-      return organisationClient.esSearchOrgByFilter(filters);
+      if (CollectionUtils.isNotEmpty(organisationClient.esSearchOrgByFilter(filters))) {
+        return organisationClient.esSearchOrgByFilter(filters).get(0);
+      }
+      return null;
     } else if (StringUtils.isNotBlank((String) userMap.get(JsonKey.ORG_ID))) {
       return organisationClient.esGetOrgById((String) userMap.get(JsonKey.ORG_ID));
     }

@@ -152,9 +152,9 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
                   MessageFormat.format(
                       ResponseCode.errorConflictingProperties.getErrorMessage(),
                       JsonKey.ORGANISATION_ID,
-                      userMap.get(JsonKey.ORG_ID),
+                      orgId,
                       JsonKey.ORG_EXTERNAL_ID,
-                      userMap.get(JsonKey.ORG_EXTERNAL_ID));
+                      orgExternalId);
               setTaskStatus(
                   task, ProjectUtil.BulkProcessStatus.FAILED, message, userMap, JsonKey.CREATE);
               return;

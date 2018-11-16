@@ -3,9 +3,13 @@ package org.sunbird.learner.actors.bulkupload;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import java.sql.Timestamp;
+import java.text.MessageFormat;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
@@ -22,6 +26,7 @@ import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 import org.sunbird.learner.actors.role.service.RoleService;
@@ -64,8 +69,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
                 (BulkUploadProcess) baseBulkUpload,
                 (tasks) -> {
                   processTasks(
-                      (List<BulkUploadProcessTask>) tasks,
-                      ((BulkUploadProcess) baseBulkUpload).getOrganisationId());
+                      (List<BulkUploadProcessTask>) tasks, ((BulkUploadProcess) baseBulkUpload));
                   return null;
                 },
                 supportedColumns,
@@ -80,12 +84,13 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
   }
 
   private void processTasks(
-      List<BulkUploadProcessTask> bulkUploadProcessTasks, String organisationId) {
+      List<BulkUploadProcessTask> bulkUploadProcessTasks, BulkUploadProcess bulkUploadProcess) {
     for (BulkUploadProcessTask task : bulkUploadProcessTasks) {
       try {
         if (task.getStatus() != null
             && task.getStatus() != ProjectUtil.BulkProcessStatus.COMPLETED.getValue()) {
-          processUser(task, organisationId);
+          processUser(
+              task, bulkUploadProcess.getOrganisationId(), bulkUploadProcess.getUploadedBy());
           task.setLastUpdatedOn(new Timestamp(System.currentTimeMillis()));
           task.setIterationId(task.getIterationId() + 1);
         }
@@ -96,7 +101,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
   }
 
   @SuppressWarnings("unchecked")
-  private void processUser(BulkUploadProcessTask task, String organisationId) {
+  private void processUser(BulkUploadProcessTask task, String organisationId, String uploadedBy) {
     ProjectLogger.log("UserBulkUploadBackgroundJobActor: processUser called", LoggerEnum.INFO);
     String data = task.getData();
     try {
@@ -126,9 +131,10 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
             task, ProjectUtil.BulkProcessStatus.FAILED, ex.getMessage(), userMap, JsonKey.CREATE);
         return;
       }
-      if (userMap.get(JsonKey.ORG_ID) != null) {
-        Map<String, Object> orgMap = getOrg((String) userMap.get(JsonKey.ORG_ID));
-        if (orgMap == null) {
+      if (StringUtils.isNotBlank((String) userMap.get(JsonKey.ORG_ID))
+          || StringUtils.isNotBlank((String) userMap.get(JsonKey.EXTERNAL_ID))) {
+        Map<String, Object> orgMap = getOrgDetails(userMap);
+        if (MapUtils.isEmpty(orgMap)) {
           setTaskStatus(
               task,
               ProjectUtil.BulkProcessStatus.FAILED,
@@ -136,6 +142,29 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
               userMap,
               JsonKey.CREATE);
           return;
+        } else {
+          if (StringUtils.isNotBlank((String) userMap.get(JsonKey.ORG_ID))
+              && StringUtils.isNotBlank((String) userMap.get(JsonKey.EXTERNAL_ID))) {
+            if (!((String) userMap.get(JsonKey.ORG_ID))
+                .equalsIgnoreCase((String) orgMap.get(JsonKey.ID))) {
+              String message =
+                  MessageFormat.format(
+                      ResponseCode.errorConflictingProperties.getErrorMessage(),
+                      JsonKey.ORGANISATION_ID,
+                      userMap.get(JsonKey.ORG_ID),
+                      JsonKey.EXTERNAL_ID,
+                      userMap.get(JsonKey.EXTERNAL_ID));
+              setTaskStatus(
+                  task, ProjectUtil.BulkProcessStatus.FAILED, message, userMap, JsonKey.CREATE);
+              return;
+            }
+          } else {
+            if (StringUtils.isNotBlank((String) userMap.get(JsonKey.EXTERNAL_ID))) {
+              userMap.put(JsonKey.ORGANISATION_ID, orgMap.get(JsonKey.ID));
+            } else {
+              userMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ORG_ID));
+            }
+          }
         }
         if (!((String) orgMap.get(JsonKey.ROOT_ORG_ID)).equalsIgnoreCase(organisationId)) {
           setTaskStatus(
@@ -149,11 +178,12 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
       }
       User user = mapper.convertValue(userMap, User.class);
       user.setId((String) userMap.get(JsonKey.USER_ID));
-      user.setOrganisationId((String) userMap.get(JsonKey.ORG_ID));
       user.setRootOrgId(organisationId);
       if (StringUtils.isEmpty(user.getId())) {
+        user.setCreatedBy(uploadedBy);
         callCreateUser(user, task);
       } else {
+        user.setUpdatedBy(uploadedBy);
         callUpdateUser(user, task);
       }
     } catch (Exception e) {
@@ -217,16 +247,33 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     }
   }
 
-  private Map<String, Object> getOrg(String orgId) {
-    Map<String, Object> result =
-        ElasticSearchUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName(),
-            orgId);
-    if (result != null && result.size() > 0) {
-      return result;
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> getOrgDetails(Map<String, Object> userMap) {
+    Map<String, Object> organization = null;
+    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.EXTERNAL_ID))) {
+      Map<String, Object> filters = new HashMap<>();
+      filters.put(JsonKey.EXTERNAL_ID, userMap.get(JsonKey.EXTERNAL_ID));
+      Map<String, Object> map = new HashMap<>();
+      map.put(JsonKey.FILTERS, filters);
+      SearchDTO searchDto = Util.createSearchDto(map);
+      Map<String, Object> result =
+          ElasticSearchUtil.complexSearch(
+              searchDto,
+              ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.organisation.getTypeName());
+      List<Map<String, Object>> orgMapList =
+          (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+      if (CollectionUtils.isNotEmpty(orgMapList)) {
+        organization = orgMapList.get(0);
+      }
+    } else if (StringUtils.isNotBlank((String) userMap.get(JsonKey.ORG_ID))) {
+      organization =
+          ElasticSearchUtil.getDataByIdentifier(
+              ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.organisation.getTypeName(),
+              (String) userMap.get(JsonKey.ORG_ID));
     }
-    return null;
+    return organization;
   }
 
   @Override

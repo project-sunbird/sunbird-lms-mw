@@ -314,7 +314,7 @@ public class OrganisationManagementActor extends BaseActor {
       if (request.get(JsonKey.PROVIDER) != null) {
         request.put(JsonKey.PROVIDER, ((String) request.get(JsonKey.PROVIDER)).toLowerCase());
       }
-      String externalId = ((String) request.get(JsonKey.EXTERNAL_ID)).toLowerCase();
+      String externalId = (String) request.get(JsonKey.EXTERNAL_ID);
       if (externalId != null) {
         if (!validateExternalIdUniqueness(externalId.toLowerCase(), null)) {
           ProjectCommonException.throwClientErrorException(
@@ -715,7 +715,7 @@ public class OrganisationManagementActor extends BaseActor {
       if (request.get(JsonKey.PROVIDER) != null) {
         request.put(JsonKey.PROVIDER, ((String) request.get(JsonKey.PROVIDER)).toLowerCase());
       }
-      String externalId = ((String) request.get(JsonKey.EXTERNAL_ID));
+      String externalId = (String) request.get(JsonKey.EXTERNAL_ID);
       if (externalId != null) {
         if (!validateExternalIdUniqueness(
             externalId.toLowerCase(), (String) request.get(JsonKey.ORGANISATION_ID))) {

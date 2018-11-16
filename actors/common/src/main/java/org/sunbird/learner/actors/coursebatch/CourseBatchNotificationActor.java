@@ -205,7 +205,7 @@ public class CourseBatchNotificationActor extends BaseActor {
       res.setResponseCode(ResponseCode.OK);
       sender().tell(res, self());
       ProjectLogger.log(
-          "CourseBatchNotificationActor:sendMail: email sent successfully  ", LoggerEnum.INFO);
+          "CourseBatchNotificationActor:sendMail: Email sent successfully", LoggerEnum.INFO);
     } catch (Exception e) {
       ProjectLogger.log(
           "CourseBatchNotificationActor:sendMail: Exception occurred with error message = "

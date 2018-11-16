@@ -137,7 +137,6 @@ public class CourseBatchManagementActor extends BaseActor {
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
 
     if (courseNotificationActive()) {
-
       batchOperationNotifier(courseBatch, null);
     }
   }

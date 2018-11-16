@@ -45,7 +45,9 @@ public class CourseBatchNotificationActor extends BaseActor {
     String requestedOperation = request.getOperation();
 
     if (requestedOperation.equals(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue())) {
-      ProjectLogger.log("CourseBatchNotificationActor:onReceive: operation = " + request.getOperation(), LoggerEnum.INFO);
+      ProjectLogger.log(
+          "CourseBatchNotificationActor:onReceive: operation = " + request.getOperation(),
+          LoggerEnum.INFO);
       courseBatchNotification(request);
     } else {
       ProjectLogger.log(
@@ -63,12 +65,12 @@ public class CourseBatchNotificationActor extends BaseActor {
 
     String userId = (String) requestMap.get(JsonKey.USER_ID);
     ProjectLogger.log(
-        "CourseBatchNotificationActor:courseBatchNotification: userId = " + userId, LoggerEnum.INFO);
+        "CourseBatchNotificationActor:courseBatchNotification: userId = " + userId,
+        LoggerEnum.INFO);
 
     if (userId != null) {
       ProjectLogger.log(
-          "CourseBatchNotificationActor:courseBatchNotification: Open batch",
-          LoggerEnum.INFO);
+          "CourseBatchNotificationActor:courseBatchNotification: Open batch", LoggerEnum.INFO);
 
       // Open batch
       String template = JsonKey.OPEN_BATCH_LEARNER_UNENROL;
@@ -130,7 +132,10 @@ public class CourseBatchNotificationActor extends BaseActor {
 
       requestMap.put(JsonKey.SUBJECT, subject);
       requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, template);
-      requestMap.put(JsonKey.RECIPIENT_EMAILS, new String[] {(String) user.get(JsonKey.EMAIL)});
+      requestMap.put(
+          JsonKey.RECIPIENT_EMAILS,
+          new ArrayList<>(Arrays.asList((String) user.get(JsonKey.EMAIL))));
+
       ProjectLogger.log(
           "CourseBatchNotificationActor:triggerEmailNotification: emailid = "
               + (String) user.get(JsonKey.EMAIL),

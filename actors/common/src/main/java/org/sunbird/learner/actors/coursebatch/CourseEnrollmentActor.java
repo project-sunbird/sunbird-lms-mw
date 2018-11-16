@@ -179,8 +179,6 @@ public class CourseEnrollmentActor extends BaseActor {
     generateAndProcessTelemetryEvent(request, "user.batch.course.unenroll");
 
     if (courseNotificationActive()) {
-      ProjectLogger.log(
-          "CourseEnrollMentActor:unenrollCourseBatch: Unsupported operation = ", LoggerEnum.INFO);
       batchOperationNotifier(request, courseBatch, JsonKey.REMOVE);
     }
   }

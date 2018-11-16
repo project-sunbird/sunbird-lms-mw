@@ -134,7 +134,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
         return;
       }
       if (StringUtils.isNotBlank((String) userMap.get(JsonKey.ORG_ID))
-          || StringUtils.isNotBlank((String) userMap.get(JsonKey.EXTERNAL_ID))) {
+          || StringUtils.isNotBlank((String) userMap.get(JsonKey.ORG_EXTERNAL_ID))) {
         orgMap = getOrgDetails(userMap);
         if (MapUtils.isEmpty(orgMap)) {
           setTaskStatus(
@@ -146,7 +146,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
           return;
         } else {
           if (StringUtils.isNotBlank((String) userMap.get(JsonKey.ORG_ID))
-              && StringUtils.isNotBlank((String) userMap.get(JsonKey.EXTERNAL_ID))) {
+              && StringUtils.isNotBlank((String) userMap.get(JsonKey.ORG_EXTERNAL_ID))) {
             if (!((String) userMap.get(JsonKey.ORG_ID))
                 .equalsIgnoreCase((String) orgMap.get(JsonKey.ID))) {
               String message =
@@ -161,7 +161,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
               return;
             }
           } else {
-            if (StringUtils.isNotBlank((String) userMap.get(JsonKey.EXTERNAL_ID))) {
+            if (StringUtils.isNotBlank((String) userMap.get(JsonKey.ORG_EXTERNAL_ID))) {
               userMap.put(JsonKey.ORGANISATION_ID, orgMap.get(JsonKey.ID));
             } else {
               userMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ORG_ID));

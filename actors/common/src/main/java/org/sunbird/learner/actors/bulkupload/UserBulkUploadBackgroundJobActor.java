@@ -169,7 +169,8 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
           }
         }
       }
-      if (!(organisation.getRootOrgId()).equalsIgnoreCase(organisationId)) {
+      if (null != organisation
+          && (!(organisation.getRootOrgId()).equalsIgnoreCase(organisationId))) {
         setTaskStatus(
             task,
             ProjectUtil.BulkProcessStatus.FAILED,
@@ -180,13 +181,17 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
       }
       User user = mapper.convertValue(userMap, User.class);
       user.setId((String) userMap.get(JsonKey.USER_ID));
+      String orgName = "";
+      if (null != organisation) {
+        orgName = organisation.getOrgName();
+      }
       if (StringUtils.isEmpty(user.getId())) {
         user.setCreatedBy(uploadedBy);
         user.setRootOrgId(organisationId);
-        callCreateUser(user, task, organisation.getOrgName());
+        callCreateUser(user, task, orgName);
       } else {
         user.setUpdatedBy(uploadedBy);
-        callUpdateUser(user, task, organisation.getOrgName());
+        callUpdateUser(user, task, orgName);
       }
     } catch (Exception e) {
       task.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());

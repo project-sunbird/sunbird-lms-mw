@@ -696,7 +696,9 @@ public class UserManagementActor extends BaseActor {
     actorMessage.toLower();
     Util.getUserProfileConfig(systemSettingActorRef);
     String callerId = (String) actorMessage.getContext().get(JsonKey.CALLER_ID);
-    if (StringUtils.isBlank(callerId)) {
+    if (StringUtils.isNotBlank(callerId)) {
+      userService.validateUploader(actorMessage);
+    } else {
       userService.validateUserId(actorMessage);
     }
     Map<String, Object> userMap = actorMessage.getRequest();

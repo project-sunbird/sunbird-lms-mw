@@ -1,12 +1,10 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import akka.actor.ActorRef;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
-
-import akka.actor.ActorRef;
-
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -38,8 +36,9 @@ import org.sunbird.models.location.Location;
 import org.sunbird.models.organisation.Organisation;
 
 @ActorConfig(
-    tasks = {},
-    asyncTasks = {"orgBulkUploadBackground"})
+  tasks = {},
+  asyncTasks = {"orgBulkUploadBackground"}
+)
 public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJobActor {
   private OrganisationClient orgClient = new OrganisationClientImpl();
   private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
@@ -250,8 +249,7 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
   }
 
   @Override
-  public void preProcessResult(Map<String, Object> result) { 
+  public void preProcessResult(Map<String, Object> result) {
     // Do nothing
   }
-
 }

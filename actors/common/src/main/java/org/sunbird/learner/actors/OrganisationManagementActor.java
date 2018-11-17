@@ -1636,7 +1636,7 @@ public class OrganisationManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private boolean validateChannelUniqueness(String channel, String orgId) {
     if (!StringUtils.isBlank(channel)) {
-    	return validateFieldUniqueness(JsonKey.CHANNEL, channel, orgId);
+      return validateFieldUniqueness(JsonKey.CHANNEL, channel, orgId);
     }
     return (orgId == null);
   }

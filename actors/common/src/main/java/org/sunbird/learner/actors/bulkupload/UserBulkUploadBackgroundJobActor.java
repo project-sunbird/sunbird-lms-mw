@@ -180,9 +180,9 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
       }
       User user = mapper.convertValue(userMap, User.class);
       user.setId((String) userMap.get(JsonKey.USER_ID));
-      user.setRootOrgId(organisationId);
       if (StringUtils.isEmpty(user.getId())) {
         user.setCreatedBy(uploadedBy);
+        user.setRootOrgId(organisationId);
         callCreateUser(user, task, organisation.getOrgName());
       } else {
         user.setUpdatedBy(uploadedBy);

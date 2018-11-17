@@ -273,4 +273,21 @@ public class UserServiceImpl implements UserService {
     }
     return channel;
   }
+
+  @Override
+  public void validateUploader(Request request) {
+    // uploader and user should belong to same root org,
+    // then only will allow to update user profile details.
+    Map<String, Object> userMap = request.getRequest();
+    String userId = (String) userMap.get(JsonKey.USER_ID);
+    String uploaderUserId = (String) userMap.get(JsonKey.UPDATED_BY);
+    User uploader = userService.getUserById(uploaderUserId);
+    User user = userService.getUserById(userId);
+    if (!user.getRootOrgId().equalsIgnoreCase(uploader.getRootOrgId())) {
+      throw new ProjectCommonException(
+          ResponseCode.unAuthorized.getErrorCode(),
+          ResponseCode.unAuthorized.getErrorMessage(),
+          ResponseCode.UNAUTHORIZED.getResponseCode());
+    }
+  }
 }

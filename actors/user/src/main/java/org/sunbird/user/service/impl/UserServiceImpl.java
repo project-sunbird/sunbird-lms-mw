@@ -284,10 +284,7 @@ public class UserServiceImpl implements UserService {
     User uploader = userService.getUserById(uploaderUserId);
     User user = userService.getUserById(userId);
     if (!user.getRootOrgId().equalsIgnoreCase(uploader.getRootOrgId())) {
-      throw new ProjectCommonException(
-          ResponseCode.unAuthorized.getErrorCode(),
-          ResponseCode.unAuthorized.getErrorMessage(),
-          ResponseCode.UNAUTHORIZED.getResponseCode());
+      ProjectCommonException.throwUnauthorizedErrorException();
     }
   }
 }

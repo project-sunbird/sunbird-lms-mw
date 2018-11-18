@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -125,8 +126,14 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
       try {
         String roles = (String) userMap.get(JsonKey.ROLES);
         if (roles != null) {
-          String[] roleList = roles.split(",");
-          userMap.put(JsonKey.ROLES, Arrays.asList(roleList));
+          String[] roleArray = roles.split(",");
+          List<String> roleList = new ArrayList<>();
+          Arrays.stream(roleArray)
+              .forEach(
+                  x -> {
+                    roleList.add(x.trim());
+                  });
+          userMap.put(JsonKey.ROLES, roleList);
           RoleService.validateRoles((List<String>) userMap.get(JsonKey.ROLES));
         }
         UserBulkUploadRequestValidator.validateUserBulkUploadRequest(userMap);

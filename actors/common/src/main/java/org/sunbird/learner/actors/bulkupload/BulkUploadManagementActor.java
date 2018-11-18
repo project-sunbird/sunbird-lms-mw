@@ -215,7 +215,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
                       addTaskDataToList(failureList, x.getFailureResult());
                     }
                   });
-          if (!(JsonKey.USER.equalsIgnoreCase(objectType))) {
+          if (JsonKey.USER.equalsIgnoreCase(objectType)) {
             try {
               successList
                   .stream()

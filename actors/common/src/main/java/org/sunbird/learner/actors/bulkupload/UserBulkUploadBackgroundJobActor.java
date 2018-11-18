@@ -257,9 +257,10 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
   }
 
   private Organisation getOrgDetails(Map<String, Object> userMap) {
-    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.EXTERNAL_ID))) {
+    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.ORG_EXTERNAL_ID))) {
       Map<String, Object> filters = new HashMap<>();
-      filters.put(JsonKey.EXTERNAL_ID, userMap.get(JsonKey.EXTERNAL_ID));
+      filters.put(
+          JsonKey.EXTERNAL_ID, ((String) userMap.get(JsonKey.ORG_EXTERNAL_ID)).toLowerCase());
       if (CollectionUtils.isNotEmpty(organisationClient.esSearchOrgByFilter(filters))) {
         return organisationClient.esSearchOrgByFilter(filters).get(0);
       }

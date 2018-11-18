@@ -34,6 +34,7 @@ import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessTaskDaoIm
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 import org.sunbird.learner.actors.bulkupload.model.StorageDetails;
+import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
@@ -214,6 +215,28 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
                       addTaskDataToList(failureList, x.getFailureResult());
                     }
                   });
+          if (JsonKey.USER.equalsIgnoreCase(objectType)) {
+            try {
+              successList
+                  .stream()
+                  .forEach(
+                      x -> {
+                        UserUtility.decryptUserData(x);
+                        Util.addMaskEmailAndPhone(x);
+                      });
+              failureList
+                  .stream()
+                  .forEach(
+                      x -> {
+                        UserUtility.decryptUserData(x);
+                        Util.addMaskEmailAndPhone(x);
+                      });
+            } catch (Exception ex) {
+              ProjectLogger.log(
+                  "BulkUploadManagementActor:getUploadStatus: Exception occurred with error message = " + ex.getMessage(),
+                  ex);
+            }
+          }
           resMap.put(JsonKey.SUCCESS_RESULT, successList);
           resMap.put(JsonKey.FAILURE_RESULT, failureList);
         }

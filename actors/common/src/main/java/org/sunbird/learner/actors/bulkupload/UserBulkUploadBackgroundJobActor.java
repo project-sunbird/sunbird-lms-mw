@@ -125,7 +125,8 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
       try {
         String roles = (String) userMap.get(JsonKey.ROLES);
         if (roles != null) {
-          userMap.put(JsonKey.ROLES, Arrays.asList(roles.split("\\\\s*,\\\\s*")));
+          String[] roleList = roles.split(",");
+          userMap.put(JsonKey.ROLES, Arrays.asList(roleList));
           RoleService.validateRoles((List<String>) userMap.get(JsonKey.ROLES));
         }
         UserBulkUploadRequestValidator.validateUserBulkUploadRequest(userMap);

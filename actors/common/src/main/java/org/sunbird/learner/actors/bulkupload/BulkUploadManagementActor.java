@@ -233,7 +233,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
                       });
             } catch (Exception ex) {
               ProjectLogger.log(
-                  "BulkUploadManagementActor:getUploadStatus : Exception occurred while decrypting user details:",
+                  "BulkUploadManagementActor:getUploadStatus: Exception occurred with error message = " + ex.getMessage(),
                   ex);
             }
           }

@@ -186,6 +186,14 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
                   mapper.readValue(
                       decryptionService.decryptData((String) resMap.get(JsonKey.SUCCESS_RESULT)),
                       Object[].class);
+              if (JsonKey.USER.equalsIgnoreCase(objectType)) {
+                Arrays.stream(successMap)
+                    .forEach(
+                        x -> {
+                          UserUtility.decryptUserData((Map<String, Object>) x);
+                          Util.addMaskEmailAndPhone((Map<String, Object>) x);
+                        });
+              }
               resMap.put(JsonKey.SUCCESS_RESULT, successMap);
             }
             if (null != resMap.get(JsonKey.FAILURE_RESULT)) {
@@ -193,6 +201,14 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
                   mapper.readValue(
                       decryptionService.decryptData((String) resMap.get(JsonKey.FAILURE_RESULT)),
                       Object[].class);
+              if (JsonKey.USER.equalsIgnoreCase(objectType)) {
+                Arrays.stream(successMap)
+                    .forEach(
+                        x -> {
+                          UserUtility.decryptUserData((Map<String, Object>) x);
+                          Util.addMaskEmailAndPhone((Map<String, Object>) x);
+                        });
+              }
               resMap.put(JsonKey.FAILURE_RESULT, failureMap);
             }
           } catch (IOException e) {
@@ -215,28 +231,6 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
                       addTaskDataToList(failureList, x.getFailureResult());
                     }
                   });
-          if (JsonKey.USER.equalsIgnoreCase(objectType)) {
-            try {
-              successList
-                  .stream()
-                  .forEach(
-                      x -> {
-                        UserUtility.decryptUserData(x);
-                        Util.addMaskEmailAndPhone(x);
-                      });
-              failureList
-                  .stream()
-                  .forEach(
-                      x -> {
-                        UserUtility.decryptUserData(x);
-                        Util.addMaskEmailAndPhone(x);
-                      });
-            } catch (Exception ex) {
-              ProjectLogger.log(
-                  "BulkUploadManagementActor:getUploadStatus: Exception occurred with error message = " + ex.getMessage(),
-                  ex);
-            }
-          }
           resMap.put(JsonKey.SUCCESS_RESULT, successList);
           resMap.put(JsonKey.FAILURE_RESULT, failureList);
         }

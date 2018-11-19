@@ -86,10 +86,10 @@ public class SystemSettingsActor extends BaseActor {
     Map<String, Object> request = actorMessage.getRequest();
     String id = (String) request.get(JsonKey.ID);
     String field = (String) request.get(JsonKey.FIELD);
-    if (field.equalsIgnoreCase(JsonKey.PHONE_UNIQUE)
-        || field.equalsIgnoreCase(JsonKey.EMAIL_UNIQUE)
-        || id.equalsIgnoreCase(JsonKey.PHONE_UNIQUE)
-        || id.equalsIgnoreCase(JsonKey.EMAIL_UNIQUE)) {
+    if (PHONE_UNIQUE.equalsIgnoreCase(field)
+        || EMAIL_UNIQUE.equalsIgnoreCase(field)
+        || PHONE_UNIQUE.equalsIgnoreCase(id)
+        || EMAIL_UNIQUE.equalsIgnoreCase(id)) {
       ProjectCommonException.throwClientErrorException(
           ResponseCode.errorUpdateSettingNotAllowed,
           MessageFormat.format(ResponseCode.errorUpdateSettingNotAllowed.getErrorMessage(), field));

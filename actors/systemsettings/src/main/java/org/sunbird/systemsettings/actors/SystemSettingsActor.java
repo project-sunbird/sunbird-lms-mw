@@ -91,7 +91,7 @@ public class SystemSettingsActor extends BaseActor {
         || id.equalsIgnoreCase(JsonKey.PHONE_UNIQUE)
         || id.equalsIgnoreCase(JsonKey.EMAIL_UNIQUE)) {
       ProjectCommonException.throwClientErrorException(
-          ResponseCode.errorUpdateNotAllowed,
+          ResponseCode.errorUpdateSettingNotAllowed,
           MessageFormat.format(ResponseCode.errorUpdateSettingNotAllowed.getErrorMessage(), field));
     }
 

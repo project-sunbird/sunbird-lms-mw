@@ -1,7 +1,6 @@
 package org.sunbird.systemsettings.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.text.MessageFormat;
 import java.util.*;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;

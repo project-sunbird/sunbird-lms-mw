@@ -13,6 +13,8 @@ public interface UserService {
 
   void validateUserId(Request request);
 
+  void validateUploader(Request request);
+
   Map<String, Object> esGetPublicUserProfileById(String userId);
 
   Map<String, Object> esGetPrivateUserProfileById(String userId);

@@ -18,6 +18,7 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -39,13 +40,18 @@ public class CourseBatchNotificationActor extends BaseActor {
   private static EmailServiceClient emailServiceClient = EmailServiceFactory.getInstance();
   private static final Props props = Props.create(EmailServiceActor.class);
   private static ActorSystem system = ActorSystem.create("system");
+  private DecryptionService decryptionService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+          null);
 
   @Override
   public void onReceive(Request request) throws Throwable {
     String requestedOperation = request.getOperation();
 
     if (requestedOperation.equals(ActorOperations.COURSE_BATCH_NOTIFICATION.getValue())) {
-      ProjectLogger.log("CourseBatchNotificationActor:onReceive: operation = " + request.getOperation(), LoggerEnum.INFO);
+      ProjectLogger.log(
+          "CourseBatchNotificationActor:onReceive: operation = " + request.getOperation(),
+          LoggerEnum.INFO);
       courseBatchNotification(request);
     } else {
       ProjectLogger.log(
@@ -63,12 +69,12 @@ public class CourseBatchNotificationActor extends BaseActor {
 
     String userId = (String) requestMap.get(JsonKey.USER_ID);
     ProjectLogger.log(
-        "CourseBatchNotificationActor:courseBatchNotification: userId = " + userId, LoggerEnum.INFO);
+        "CourseBatchNotificationActor:courseBatchNotification: userId = " + userId,
+        LoggerEnum.INFO);
 
     if (userId != null) {
       ProjectLogger.log(
-          "CourseBatchNotificationActor:courseBatchNotification: Open batch",
-          LoggerEnum.INFO);
+          "CourseBatchNotificationActor:courseBatchNotification: Open batch", LoggerEnum.INFO);
 
       // Open batch
       String template = JsonKey.OPEN_BATCH_LEARNER_UNENROL;
@@ -130,7 +136,9 @@ public class CourseBatchNotificationActor extends BaseActor {
 
       requestMap.put(JsonKey.SUBJECT, subject);
       requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, template);
-      requestMap.put(JsonKey.RECIPIENT_EMAILS, new String[] {(String) user.get(JsonKey.EMAIL)});
+      String email = decryptionService.decryptData((String) user.get(JsonKey.EMAIL));
+      requestMap.put(JsonKey.RECIPIENT_EMAILS, new ArrayList<>(Arrays.asList(email)));
+
       ProjectLogger.log(
           "CourseBatchNotificationActor:triggerEmailNotification: emailid = "
               + (String) user.get(JsonKey.EMAIL),

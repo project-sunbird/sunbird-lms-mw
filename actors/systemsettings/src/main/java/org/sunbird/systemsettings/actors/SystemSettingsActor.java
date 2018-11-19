@@ -92,7 +92,7 @@ public class SystemSettingsActor extends BaseActor {
         || id.equalsIgnoreCase(JsonKey.EMAIL_UNIQUE)) {
       ProjectCommonException.throwClientErrorException(
           ResponseCode.errorUpdateNotAllowed,
-          MessageFormat.format(ResponseCode.errorUpdateNotAllowed.getErrorMessage(), field));
+          MessageFormat.format(ResponseCode.errorUpdateSettingNotAllowed.getErrorMessage(), field));
     }
 
     SystemSetting systemSetting = mapper.convertValue(request, SystemSetting.class);

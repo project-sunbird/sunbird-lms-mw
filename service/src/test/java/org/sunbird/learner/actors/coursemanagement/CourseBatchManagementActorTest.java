@@ -13,6 +13,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -34,6 +35,7 @@ import org.sunbird.learner.actors.coursebatch.CourseBatchManagementActor;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ServiceFactory.class})
 @PowerMockIgnore("javax.management.*")
+@Ignore
 public class CourseBatchManagementActorTest {
 
   private TestKit probe;

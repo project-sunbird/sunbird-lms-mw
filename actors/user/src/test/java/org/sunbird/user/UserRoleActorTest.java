@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.concurrent.CompletionStage;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -114,7 +115,7 @@ public class UserRoleActorTest {
     Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
   }
 
-  @Test
+  @Ignore
   public void testAssignRolesSuccessWithValidRole() {
 
     TestKit probe = new TestKit(system);
@@ -149,7 +150,7 @@ public class UserRoleActorTest {
     Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
   }
 
-  @Test
+  @Ignore
   public void testAssignRolesFailure() {
 
     TestKit probe = new TestKit(system);

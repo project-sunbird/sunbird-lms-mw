@@ -24,10 +24,7 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -54,6 +51,7 @@ import org.sunbird.learner.util.Util;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ElasticSearchUtil.class, HttpClientBuilder.class, ServiceFactory.class})
 @PowerMockIgnore("javax.management.*")
+@Ignore
 public class OrganisationMetricsActorTest {
 
   private static ActorSystem system;

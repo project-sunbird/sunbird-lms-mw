@@ -32,6 +32,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -63,6 +64,7 @@ public class OrganisationManagementActorTest {
   private static final String VALID_EMAIL = "someEmail@someDomain.com";
   private static final String INVALID_EMAIL = "invalidEmail";
   private static final String ROOT_ORG_ID = "someRootOrgId";
+  private static final long INVALID_STATUS = 10000;
   private static FiniteDuration duration = duration("10 second");
 
   @BeforeClass
@@ -242,24 +244,85 @@ public class OrganisationManagementActorTest {
   }
 
   @Test
-  public void testUpdateStatusSuc() {
+  public void testUpdateOrgStatusToRetiresSuccess() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.UPDATE_ORG_STATUS.getValue());
-    HashMap<String, Object> innerMap = new HashMap<>();
-    Map<String, Object> orgMap = new HashMap<String, Object>();
-    orgMap.put(JsonKey.ORGANISATION_ID, orgId);
-    orgMap.put(JsonKey.STATUS, new BigInteger(String.valueOf(OrgStatus.RETIRED.getValue())));
-    innerMap.put(JsonKey.ORGANISATION, orgMap);
-    reqObj.setRequest(innerMap);
-    subject.tell(reqObj, probe.getRef());
+    mockCasandraGetRecordById(false);
+    mockCasandraUpdateRecordResponse();
+    subject.tell(
+        UpdateOrgStatusRequest(orgId, new BigInteger(String.valueOf(OrgStatus.RETIRED.getValue()))),
+        probe.getRef());
     Response res = probe.expectMsgClass(duration("200 second"), Response.class);
     Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
-  public void testUpdateStatusSucInvalidOrgId() {
+  public void testUpdateOrgStatusToInactiveSuccess() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    mockCasandraGetRecordById(false);
+    mockCasandraUpdateRecordResponse();
+    subject.tell(
+        UpdateOrgStatusRequest(
+            orgId, new BigInteger(String.valueOf(OrgStatus.INACTIVE.getValue()))),
+        probe.getRef());
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+  }
+
+  @Test
+  public void testUpdateOrgStatusToBlockedSuccess() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    mockCasandraGetRecordById(false);
+    mockCasandraUpdateRecordResponse();
+    subject.tell(
+        UpdateOrgStatusRequest(orgId, new BigInteger(String.valueOf(OrgStatus.BLOCKED.getValue()))),
+        probe.getRef());
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+  }
+
+  @Test
+  public void testUpdateOrgStatusToActivesSuccess() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    mockCasandraGetRecordById(false);
+    mockCasandraUpdateRecordResponse();
+    subject.tell(
+        UpdateOrgStatusRequest(orgId, new BigInteger(String.valueOf(OrgStatus.ACTIVE.getValue()))),
+        probe.getRef());
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+  }
+
+  @Test
+  public void testUpdateOrgStatusWithInvalidOrgIdFailure() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    mockCasandraGetRecordById(true);
+    subject.tell(
+        UpdateOrgStatusRequest(orgId, new BigInteger(String.valueOf(OrgStatus.ACTIVE.getValue()))),
+        probe.getRef());
+    ProjectCommonException exception =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exception);
+  }
+
+  @Test
+  public void testUpdateOrgStatusWithInvalidStatusFailure() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    mockCasandraGetRecordById(false);
+    mockCasandraUpdateRecordResponse();
+    subject.tell(UpdateOrgStatusRequest(orgId, BigInteger.valueOf(INVALID_STATUS)), probe.getRef());
+    ProjectCommonException exception =
+        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    Assert.assertTrue(null != exception);
+  }
+
+  @Test
+  public void testUpdateStatusWithInvalidOrgIdFailure() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -277,7 +340,7 @@ public class OrganisationManagementActorTest {
   }
 
   @Test
-  public void testUpdateStatusSucInvalidStateTransition() {
+  public void testUpdateStatusWithInvalidStateTransitionFailure() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -1089,18 +1152,16 @@ public class OrganisationManagementActorTest {
     return request;
   }
 
-  private Request createOrgRequestUsingProviderAndExternalId(
-      boolean isRootOrg, boolean isExternalIdRequired) {
+  private Request UpdateOrgStatusRequest(String orgId, BigInteger status) {
     Request request = new Request();
     HashMap<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.REQUESTED_BY, USER_ID);
     request.setContext(innerMap);
     HashMap<String, Object> req = new HashMap<>();
-    req.put(JsonKey.ORG_NAME, ORG_NAME);
-    if (isRootOrg) req.put(JsonKey.IS_ROOT_ORG, isRootOrg);
-    if (isExternalIdRequired) req.put(JsonKey.EXTERNAL_ID, EXTERNAL_ID);
+    req.put(JsonKey.ORG_ID, orgId);
+    req.put(JsonKey.STATUS, status);
     request.setRequest(req);
-    request.setOperation(ActorOperations.CREATE_ORG.getValue());
+    request.setOperation(ActorOperations.UPDATE_ORG_STATUS.getValue());
     return request;
   }
 
@@ -1109,11 +1170,23 @@ public class OrganisationManagementActorTest {
     if (isFailure)
       when(cassandraOperation.getRecordsByProperty(
               Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-          .thenReturn(createGetChannelFailureResponse());
+          .thenReturn(createGetRecordByIdFailureResponse());
     else
       when(cassandraOperation.getRecordsByProperty(
               Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-          .thenReturn(createGetChannelSuccessResponse());
+          .thenReturn(createGetRecordByIdSuccessResponse());
+  }
+
+  @SuppressWarnings("unchecked")
+  private void mockCasandraGetRecordById(boolean isFailure) {
+    if (isFailure)
+      when(cassandraOperation.getRecordById(
+              Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+          .thenReturn(createGetRecordByIdFailureResponse());
+    else
+      when(cassandraOperation.getRecordById(
+              Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+          .thenReturn(createGetRecordByIdSuccessResponse());
   }
 
   @SuppressWarnings("unchecked")
@@ -1121,41 +1194,49 @@ public class OrganisationManagementActorTest {
     if (isFailure)
       when(cassandraOperation.getRecordsByProperties(
               Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-          .thenReturn(createGetChannelFailureResponse());
+          .thenReturn(createGetRecordByIdFailureResponse());
     else
       when(cassandraOperation.getRecordsByProperties(
               Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-          .thenReturn(createGetChannelSuccessResponse());
+          .thenReturn(createGetRecordByIdSuccessResponse());
   }
 
   @SuppressWarnings("unchecked")
   private void mockCasandraInsertResponse() {
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(createCassandraInsertSuccessResponse());
+        .thenReturn(createCassandraCommonSuccessResponse());
   }
 
   @SuppressWarnings("unchecked")
-  private Response createGetChannelFailureResponse() {
+  private void mockCasandraUpdateRecordResponse() {
+    when(cassandraOperation.updateRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(createCassandraCommonSuccessResponse());
+  }
+
+  @SuppressWarnings("unchecked")
+  private Response createGetRecordByIdFailureResponse() {
     Response response = new Response();
     List<Map<String, Object>> result = new ArrayList<>();
     response.put(JsonKey.RESPONSE, result);
     return response;
   }
 
-  private Response createGetChannelSuccessResponse() {
+  private Response createGetRecordByIdSuccessResponse() {
     Response response = new Response();
     Map<String, Object> orgMap = new HashMap<>();
     orgMap.put(JsonKey.ID, ROOT_ORG_ID);
     orgMap.put(JsonKey.ROOT_ORG_ID, ROOT_ORG_ID);
     orgMap.put(JsonKey.CHANNEL, CHANNEL);
+    orgMap.put(JsonKey.STATUS, ProjectUtil.OrgStatus.ACTIVE.getValue());
     List<Map<String, Object>> result = new ArrayList<>();
     result.add(orgMap);
     response.put(JsonKey.RESPONSE, result);
     return response;
   }
 
-  private Response createCassandraInsertSuccessResponse() {
+  private Response createCassandraCommonSuccessResponse() {
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     return response;

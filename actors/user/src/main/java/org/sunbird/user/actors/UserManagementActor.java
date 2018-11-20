@@ -696,7 +696,9 @@ public class UserManagementActor extends BaseActor {
     actorMessage.toLower();
     Util.getUserProfileConfig(systemSettingActorRef);
     String callerId = (String) actorMessage.getContext().get(JsonKey.CALLER_ID);
-    if (StringUtils.isBlank(callerId)) {
+    if (StringUtils.isNotBlank(callerId)) {
+      userService.validateUploader(actorMessage);
+    } else {
       userService.validateUserId(actorMessage);
     }
     Map<String, Object> userMap = actorMessage.getRequest();
@@ -716,7 +718,9 @@ public class UserManagementActor extends BaseActor {
     }
     UserUtil.upsertUserInKeycloak(userMap, JsonKey.UPDATE);
     userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-    userMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
+    if (StringUtils.isBlank(callerId)) {
+      userMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
+    }
     Map<String, Object> requestMap = UserUtil.encryptUserData(userMap);
     removeUnwanted(requestMap);
     Response response =

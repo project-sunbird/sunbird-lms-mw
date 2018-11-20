@@ -8,14 +8,12 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.user.UserClient;
 import org.sunbird.actorutil.user.impl.UserClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
@@ -83,33 +81,23 @@ public class SystemSettingsActor extends BaseActor {
     sender().tell(response, self());
   }
 
-  @SuppressWarnings("unchecked")
   private void setSystemSetting(Request actorMessage) {
     ProjectLogger.log("SystemSettingsActor: setSystemSetting called", LoggerEnum.DEBUG.name());
 
     Map<String, Object> request = actorMessage.getRequest();
-    
-    Boolean isPhoneUnique = ((String) request.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.PHONE_UNIQUE) ? true : false;
-    Boolean isEmailUnique = ((String) request.get(JsonKey.FIELD)).equalsIgnoreCase(JsonKey.EMAIL_UNIQUE) ? true : false;
-    
-    if (isPhoneUnique || isEmailUnique) {
-      SystemSetting systemSetting = systemSettingDaoImpl.readByField((String)request.get(JsonKey.FIELD));
-
-      Boolean existingValue = Boolean.parseBoolean(systemSetting.getValue());
-      Boolean requiredValue = Boolean.parseBoolean((String) request.get(JsonKey.VALUE));
-
-      if (existingValue == false && requiredValue == true) { 
-        if (isPhoneUnique) {
-          userClient.esVerifyPhoneUniqueness();
-        } else {
-          userClient.esVerifyEmailUniqueness();
-        }
-      }
+    String id = (String) request.get(JsonKey.ID);
+    String field = (String) request.get(JsonKey.FIELD);
+    if (JsonKey.PHONE_UNIQUE.equalsIgnoreCase(field)
+        || JsonKey.EMAIL_UNIQUE.equalsIgnoreCase(field)
+        || JsonKey.PHONE_UNIQUE.equalsIgnoreCase(id)
+        || JsonKey.EMAIL_UNIQUE.equalsIgnoreCase(id)) {
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.errorUpdateSettingNotAllowed,
+          MessageFormat.format(ResponseCode.errorUpdateSettingNotAllowed.getErrorMessage(), field));
     }
-    
+
     SystemSetting systemSetting = mapper.convertValue(request, SystemSetting.class);
     Response response = systemSettingDaoImpl.write(systemSetting);
     sender().tell(response, self());
   }
-
 }

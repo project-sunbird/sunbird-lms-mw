@@ -34,6 +34,7 @@ import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessTaskDaoIm
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 import org.sunbird.learner.actors.bulkupload.model.StorageDetails;
+import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
@@ -185,6 +186,14 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
                   mapper.readValue(
                       decryptionService.decryptData((String) resMap.get(JsonKey.SUCCESS_RESULT)),
                       Object[].class);
+              if (JsonKey.USER.equalsIgnoreCase(objectType)) {
+                Arrays.stream(successMap)
+                    .forEach(
+                        x -> {
+                          UserUtility.decryptUserData((Map<String, Object>) x);
+                          Util.addMaskEmailAndPhone((Map<String, Object>) x);
+                        });
+              }
               resMap.put(JsonKey.SUCCESS_RESULT, successMap);
             }
             if (null != resMap.get(JsonKey.FAILURE_RESULT)) {
@@ -192,6 +201,14 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
                   mapper.readValue(
                       decryptionService.decryptData((String) resMap.get(JsonKey.FAILURE_RESULT)),
                       Object[].class);
+              if (JsonKey.USER.equalsIgnoreCase(objectType)) {
+                Arrays.stream(successMap)
+                    .forEach(
+                        x -> {
+                          UserUtility.decryptUserData((Map<String, Object>) x);
+                          Util.addMaskEmailAndPhone((Map<String, Object>) x);
+                        });
+              }
               resMap.put(JsonKey.FAILURE_RESULT, failureMap);
             }
           } catch (IOException e) {

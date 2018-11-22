@@ -29,16 +29,22 @@ import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.role.dao.impl.RoleDaoImpl;
+import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
 import org.sunbird.user.actors.UserRoleActor;
+import org.sunbird.user.dao.UserOrgDao;
+import org.sunbird.user.dao.impl.UserOrgDaoImpl;
 import scala.concurrent.duration.Duration;
 
 @RunWith(PowerMockRunner.class)
@@ -53,7 +59,12 @@ import scala.concurrent.duration.Duration;
   Organisation.class,
   OrganisationClientImpl.class,
   InterServiceCommunicationFactory.class,
-  Response.class
+  Response.class,
+  ElasticSearchUtil.class,
+  Util.class,
+  SearchDTO.class,
+  UserOrgDaoImpl.class,
+  UserOrgDao.class
 })
 @PowerMockIgnore({"javax.management.*"})
 public class UserRoleActorTest {
@@ -69,6 +80,8 @@ public class UserRoleActorTest {
   private static Organisation organisation;
   private static Response response;
   private static Map<String, Object> map;
+  private static SearchDTO searchDTO;
+  private static UserOrgDao userOrgDao;
 
   @Before
   public void beforeEachTest() {
@@ -80,21 +93,64 @@ public class UserRoleActorTest {
     roleDao = Mockito.mock(RoleDaoImpl.class);
     when(RoleDaoImpl.getInstance()).thenReturn(roleDao);
     system = ActorSystem.create("system");
-    PowerMockito.mockStatic(ServiceFactory.class);
-    cassandraOperation = mock(CassandraOperationImpl.class);
-    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     actorSelection = Mockito.mock(ActorSelection.class);
     PowerMockito.mockStatic(BaseMWService.class);
-    completionStage = Mockito.mock(CompletionStage.class);
     PowerMockito.mockStatic(RequestRouter.class);
     actorRef = Mockito.mock(ActorRef.class);
-
     PowerMockito.mockStatic(InterServiceCommunicationFactory.class);
     interServiceCommunication = Mockito.mock(InterServiceCommunication.class);
     when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
     organisation = Mockito.mock(Organisation.class);
     response = Mockito.mock(Response.class);
     map = Mockito.mock(Map.class);
+    PowerMockito.mockStatic(ElasticSearchUtil.class);
+    PowerMockito.mockStatic(Util.class);
+    searchDTO = Mockito.mock(SearchDTO.class);
+    when(Util.createSearchDto(Mockito.anyMap())).thenReturn(searchDTO);
+    PowerMockito.mockStatic(UserOrgDaoImpl.class);
+    userOrgDao = Mockito.mock(UserOrgDaoImpl.class);
+    when(UserOrgDaoImpl.getInstance()).thenReturn(userOrgDao);
+
+    when(BaseMWService.getRemoteRouter(Mockito.anyString())).thenReturn(actorSelection);
+    when(actorSelection.resolveOneCS(Duration.create(Mockito.anyLong(), "seconds")))
+        .thenReturn(completionStage);
+    when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
+    when(interServiceCommunication.getResponse(Mockito.anyObject(), Mockito.anyObject()))
+        .thenReturn(response);
+    when(response.get(Mockito.anyString())).thenReturn(map);
+    when(userOrgDao.updateUserOrg(Mockito.anyObject())).thenReturn(getSuccessResponse());
+    completionStage = Mockito.mock(CompletionStage.class);
+  }
+
+  private void mockGetSkillResponse(String userId, boolean isSuccess) {
+    HashMap<String, Object> esDtoMap = new HashMap<>();
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(JsonKey.USER_ID, userId);
+    esDtoMap.put(JsonKey.FILTERS, filters);
+    List<String> fields = new ArrayList<>();
+    fields.add(JsonKey.SKILLS);
+    esDtoMap.put(JsonKey.FIELDS, fields);
+    PowerMockito.mockStatic(ElasticSearchUtil.class);
+    when(ElasticSearchUtil.complexSearch(
+            searchDTO,
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName()))
+        .thenReturn(createGetResponse(isSuccess));
+  }
+
+  private Map<String, Object> createGetResponse(boolean isSuccess) {
+    HashMap<String, Object> response = new HashMap<>();
+    HashMap<String, Object> orgMap = new HashMap<>();
+    orgMap.put(JsonKey.ORGANISATION_ID, "ORGANISATION_ID");
+    List<Map<String, Object>> content = new ArrayList<>();
+    List<Map<String, Object>> orgList = new ArrayList<>();
+    orgList.add(orgMap);
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.ORGANISATIONS, orgList);
+    if (isSuccess) content.add(innerMap);
+
+    response.put(JsonKey.CONTENT, content);
+    return response;
   }
 
   @Test
@@ -102,14 +158,11 @@ public class UserRoleActorTest {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-    Response response = getCassandraResponse();
     when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(response);
-
+        .thenReturn(getCassandraResponse());
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_ROLES.getValue());
     subject.tell(reqObj, probe.getRef());
-
     Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
   }
@@ -119,20 +172,25 @@ public class UserRoleActorTest {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
+    mockGetSkillResponse("someUserId", true);
+    subject.tell(getRequestObj(), probe.getRef());
+    Response res = probe.expectMsgClass(duration("10000 second"), Response.class);
+    Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
+  }
 
-    when(BaseMWService.getRemoteRouter(Mockito.anyString())).thenReturn(actorSelection);
+  @Test
+  public void testAssignRolesFailure() {
 
-    when(actorSelection.resolveOneCS(Duration.create(Mockito.anyLong(), "seconds")))
-        .thenReturn(completionStage);
-    when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    mockGetSkillResponse("someUserId", false);
+    subject.tell(getRequestObj(), probe.getRef());
+    ProjectCommonException res =
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    Assert.assertTrue(res.getResponseCode() == 400);
+  }
 
-    when(interServiceCommunication.getResponse(Mockito.anyObject(), Mockito.anyObject()))
-        .thenReturn(response);
-    when(response.get(Mockito.anyString())).thenReturn(map);
-
-    //        when(interServiceCommunication.getResponse(Mockito.anyObject(),
-    // Mockito.anyObject())).thenReturn(organisation);
-
+  private Object getRequestObj() {
     Request reqObj = new Request();
     List roleLst = new ArrayList();
     roleLst.add("anyRole");
@@ -143,38 +201,22 @@ public class UserRoleActorTest {
     reqObj.put(JsonKey.PROVIDER, "PROVIDER");
     reqObj.put(JsonKey.ORGANISATION_ID, "ORGANISATION_ID");
     reqObj.setOperation(ActorOperations.ASSIGN_ROLES.getValue());
-    subject.tell(reqObj, probe.getRef());
-
-    Response res = probe.expectMsgClass(duration("10000 second"), Response.class);
-    Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
-  }
-
-  @Test
-  public void testAssignRolesFailure() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    Response response = getCassandraResponse();
-    when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(response);
-
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.GET_ROLES.getValue());
-    subject.tell(reqObj, probe.getRef());
-
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != res);
+    return reqObj;
   }
 
   private Response getCassandraResponse() {
-
     Response response = new Response();
     List<Map<String, Object>> list = new ArrayList<>();
     Map<String, Object> orgMap = new HashMap<>();
-    orgMap.put(JsonKey.ID, "org123");
+    orgMap.put(JsonKey.ID, "ORGANISATION_ID");
     list.add(orgMap);
     response.put(JsonKey.RESPONSE, list);
+    return response;
+  }
+
+  private Response getSuccessResponse() {
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     return response;
   }
 }

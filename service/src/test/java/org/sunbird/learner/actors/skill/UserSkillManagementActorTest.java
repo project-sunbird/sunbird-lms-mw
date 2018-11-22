@@ -326,6 +326,8 @@ public class UserSkillManagementActorTest {
     HashMap<String, Object> esDtoMap = new HashMap<>();
 
     Map<String, Object> filters = new HashMap<>();
+    Map<String, Object> response = null;
+
     filters.put(JsonKey.USER_ID, userId);
     esDtoMap.put(JsonKey.FILTERS, filters);
     List<String> fields = new ArrayList<>();
@@ -334,18 +336,14 @@ public class UserSkillManagementActorTest {
     PowerMockito.mockStatic(ElasticSearchUtil.class);
 
     if (!isFailure) {
-      when(ElasticSearchUtil.complexSearch(
-              ElasticSearchUtil.createSearchDTO(esDtoMap),
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.user.getTypeName()))
-          .thenReturn(createGetSkillResponse());
-    } else {
-      when(ElasticSearchUtil.complexSearch(
-              ElasticSearchUtil.createSearchDTO(esDtoMap),
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.user.getTypeName()))
-          .thenReturn(new HashMap<>());
-    }
+      response = createGetSkillResponse();
+    } else response = new HashMap<>();
+
+    when(ElasticSearchUtil.complexSearch(
+            ElasticSearchUtil.createSearchDTO(esDtoMap),
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName()))
+        .thenReturn(response);
   }
 
   private void mockCasandraRequestForEndorsement() {

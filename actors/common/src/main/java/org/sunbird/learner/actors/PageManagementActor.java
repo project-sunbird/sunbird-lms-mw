@@ -517,7 +517,8 @@ public class PageManagementActor extends BaseActor {
         "PageManagementActor:getContentData: Page assemble final search query: " + query,
         LoggerEnum.INFO.name());
 
-    Future<Map<String, Object>> result = ContentSearchUtil.searchContent(query, headers);
+    Future<Map<String, Object>> result =
+        ContentSearchUtil.searchContent(query, queryString, headers);
 
     return result.map(
         new Mapper<Map<String, Object>, Map<String, Object>>() {

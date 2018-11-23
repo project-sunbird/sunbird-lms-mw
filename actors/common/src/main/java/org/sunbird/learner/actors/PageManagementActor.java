@@ -231,12 +231,12 @@ public class PageManagementActor extends BaseActor {
   private void getPageData(Request actorMessage) throws Exception {
     ProjectLogger.log("Inside getPageData method", LoggerEnum.INFO);
     String sectionQuery = null;
-    //    List<Map<String, Object>> sectionList = new ArrayList<>();
     Map<String, Object> filterMap = new HashMap<>();
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.PAGE);
     String pageName = (String) req.get(JsonKey.PAGE_NAME);
     String source = (String) req.get(JsonKey.SOURCE);
     String orgId = (String) req.get(JsonKey.ORGANISATION_ID);
+    String urlQueryString = (String) actorMessage.getContext().get(JsonKey.URL_QUERY_STRING);
     Map<String, String> headers =
         (Map<String, String>) actorMessage.getRequest().get(JsonKey.HEADER);
     filterMap.putAll(req);
@@ -268,7 +268,6 @@ public class PageManagementActor extends BaseActor {
         sectionQuery = (String) pageMap.get(JsonKey.APP_MAP);
       }
     }
-
     Object[] arr = mapper.readValue(sectionQuery, Object[].class);
     List<Future<Map<String, Object>>> sectionList = new ArrayList<>();
     for (Object obj : arr) {
@@ -281,6 +280,7 @@ public class PageManagementActor extends BaseActor {
               reqFilters,
               headers,
               filterMap,
+              urlQueryString,
               sectionMap.get(JsonKey.GROUP),
               sectionMap.get(JsonKey.INDEX));
       sectionList.add(contentFuture);
@@ -488,6 +488,7 @@ public class PageManagementActor extends BaseActor {
       Map<String, Object> reqFilters,
       Map<String, String> headers,
       Map<String, Object> filterMap,
+      String urlQueryString,
       Object group,
       Object index)
       throws Exception {
@@ -506,17 +507,18 @@ public class PageManagementActor extends BaseActor {
             + (String) section.get(JsonKey.SEARCH_QUERY),
         LoggerEnum.INFO.name());
     applyFilters(filters, reqFilters);
-    String query = "";
+    String queryRequestBody = "";
 
-    query = mapper.writeValueAsString(map);
-    if (StringUtils.isBlank(query)) {
-      query = (String) section.get(JsonKey.SEARCH_QUERY);
+    queryRequestBody = mapper.writeValueAsString(map);
+    if (StringUtils.isBlank(queryRequestBody)) {
+      queryRequestBody = (String) section.get(JsonKey.SEARCH_QUERY);
     }
     ProjectLogger.log(
-        "PageManagementActor:getContentData: Page assemble final search query: " + query,
+        "PageManagementActor:getContentData: Page assemble final search query: " + queryRequestBody,
         LoggerEnum.INFO.name());
 
-    Future<Map<String, Object>> result = ContentSearchUtil.searchContent(query, headers);
+    Future<Map<String, Object>> result =
+        ContentSearchUtil.searchContent(urlQueryString, queryRequestBody, headers);
 
     return result.map(
         new Mapper<Map<String, Object>, Map<String, Object>>() {

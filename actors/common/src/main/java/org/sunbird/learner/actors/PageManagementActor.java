@@ -513,9 +513,6 @@ public class PageManagementActor extends BaseActor {
     if (StringUtils.isBlank(query)) {
       query = (String) section.get(JsonKey.SEARCH_QUERY);
     }
-    if (StringUtils.isNotBlank(queryString)) {
-      query = query + queryString;
-    }
     ProjectLogger.log(
         "PageManagementActor:getContentData: Page assemble final search query: " + query,
         LoggerEnum.INFO.name());

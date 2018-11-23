@@ -18,6 +18,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.RestUtil;
 import scala.concurrent.Future;
@@ -47,21 +49,19 @@ public class ContentSearchUtil {
 
   public static Future<Map<String, Object>> searchContent(
       String queryRequestBody, Map<String, String> headers) {
-    try {
-      return searchContent(null, queryRequestBody, headers);
-    } catch (Exception e) {
-      return null;
-    }
+    return searchContent(null, queryRequestBody, headers);
   }
 
   public static Future<Map<String, Object>> searchContent(
-      String urlQueryString, String queryRequestBody, Map<String, String> headers)
-      throws Exception {
+      String urlQueryString, String queryRequestBody, Map<String, String> headers) {
     Unirest.clearDefaultHeaders();
     String urlString =
         StringUtils.isNotBlank(urlQueryString)
             ? contentSearchURL + urlQueryString
             : contentSearchURL;
+    ProjectLogger.log(
+        "ContentSearchUtil:searchContent Making content search call to " + urlString,
+        LoggerEnum.INFO);
     BaseRequest request =
         Unirest.post(urlString).headers(getUpdatedHeaders(headers)).body(queryRequestBody);
     Future<HttpResponse<JsonNode>> response = RestUtil.executeAsync(request);

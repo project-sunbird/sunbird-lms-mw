@@ -52,6 +52,27 @@ public class ContentSearchUtil {
         Unirest.post(contentSearchURL).headers(getUpdatedHeaders(headers)).body(body);
     Future<HttpResponse<JsonNode>> response = RestUtil.executeAsync(request);
 
+    return commonResponseMap(response);
+  }
+
+  public static Future<Map<String, Object>> searchContent(
+      String body, String queryString, Map<String, String> headers) throws Exception {
+    if (queryString != null) {
+      Unirest.clearDefaultHeaders();
+      BaseRequest request =
+          Unirest.post(contentSearchURL + queryString)
+              .headers(getUpdatedHeaders(headers))
+              .body(body);
+      Future<HttpResponse<JsonNode>> response = RestUtil.executeAsync(request);
+
+      return commonResponseMap(response);
+    } else {
+      return searchContent(body, headers);
+    }
+  }
+
+  private static Future<Map<String, Object>> commonResponseMap(
+      Future<HttpResponse<JsonNode>> response) throws Exception {
     return response.map(
         new Mapper<HttpResponse<JsonNode>, Map<String, Object>>() {
           @Override

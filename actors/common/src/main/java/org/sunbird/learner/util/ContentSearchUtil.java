@@ -45,34 +45,27 @@ public class ContentSearchUtil {
     return headers;
   }
 
-  public static Future<Map<String, Object>> searchContent(String body, Map<String, String> headers)
-      throws Exception {
-    Unirest.clearDefaultHeaders();
-    BaseRequest request =
-        Unirest.post(contentSearchURL).headers(getUpdatedHeaders(headers)).body(body);
-    Future<HttpResponse<JsonNode>> response = RestUtil.executeAsync(request);
-
-    return commonResponseMap(response);
-  }
-
   public static Future<Map<String, Object>> searchContent(
-      String body, String queryString, Map<String, String> headers) throws Exception {
-    if (StringUtils.isNotBlank(queryString)) {
-      Unirest.clearDefaultHeaders();
-      BaseRequest request =
-          Unirest.post(contentSearchURL + queryString)
-              .headers(getUpdatedHeaders(headers))
-              .body(body);
-      Future<HttpResponse<JsonNode>> response = RestUtil.executeAsync(request);
-
-      return commonResponseMap(response);
-    } else {
-      return searchContent(body, headers);
+      String queryRequestBody, Map<String, String> headers) {
+    try {
+      return searchContent(null, queryRequestBody, headers);
+    } catch (Exception e) {
+      return null;
     }
   }
 
-  private static Future<Map<String, Object>> commonResponseMap(
-      Future<HttpResponse<JsonNode>> response) throws Exception {
+  public static Future<Map<String, Object>> searchContent(
+      String urlQueryString, String queryRequestBody, Map<String, String> headers)
+      throws Exception {
+    Unirest.clearDefaultHeaders();
+    String urlString =
+        StringUtils.isNotBlank(urlQueryString)
+            ? contentSearchURL + urlQueryString
+            : contentSearchURL;
+    BaseRequest request =
+        Unirest.post(urlString).headers(getUpdatedHeaders(headers)).body(queryRequestBody);
+    Future<HttpResponse<JsonNode>> response = RestUtil.executeAsync(request);
+
     return response.map(
         new Mapper<HttpResponse<JsonNode>, Map<String, Object>>() {
           @Override
@@ -92,10 +85,6 @@ public class ContentSearchUtil {
                 resultMap.put(JsonKey.PARAMS, param);
                 return resultMap;
               } else {
-                String err = RestUtil.getFromResponse(response, "params.err");
-                String message = RestUtil.getFromResponse(response, "params.errmsg");
-                //    	    				throw new ProjectCommonException(err, message,
-                // ResponseCode.SERVER_ERROR.getResponseCode());
                 return null;
               }
             } catch (Exception e) {

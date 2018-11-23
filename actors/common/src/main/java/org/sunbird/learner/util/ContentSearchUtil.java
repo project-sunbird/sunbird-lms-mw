@@ -57,7 +57,7 @@ public class ContentSearchUtil {
 
   public static Future<Map<String, Object>> searchContent(
       String body, String queryString, Map<String, String> headers) throws Exception {
-    if (queryString != null) {
+    if (StringUtils.isNotBlank(queryString)) {
       Unirest.clearDefaultHeaders();
       BaseRequest request =
           Unirest.post(contentSearchURL + queryString)

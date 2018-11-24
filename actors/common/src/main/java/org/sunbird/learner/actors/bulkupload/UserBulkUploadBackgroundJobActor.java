@@ -99,7 +99,8 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
           task.setIterationId(task.getIterationId() + 1);
         }
       } catch (Exception ex) {
-        task.setFailureResult(ex.getMessage());
+        ProjectLogger.log("Error in processTasks", ex);
+        task.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
       }
     }
   }
@@ -144,6 +145,9 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
       }
       String orgId = (String) userMap.get(JsonKey.ORG_ID);
       String orgExternalId = (String) userMap.get(JsonKey.ORG_EXTERNAL_ID);
+      HashMap<String, Object> uploaderMap = new HashMap<>();
+      uploaderMap.put(JsonKey.ORG_ID, organisationId);
+      Organisation uploaderOrg = getOrgDetails(uploaderMap);
       if (StringUtils.isNotBlank(orgId) || StringUtils.isNotBlank(orgExternalId)) {
         organisation = getOrgDetails(userMap);
         if (null == organisation) {
@@ -178,7 +182,8 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
         }
       }
       if (null != organisation
-          && (!(organisation.getRootOrgId()).equalsIgnoreCase(organisationId))) {
+          && (!(organisation.getRootOrgId()).equalsIgnoreCase(organisationId))
+          && (!(organisation.getRootOrgId()).equalsIgnoreCase(uploaderOrg.getRootOrgId()))) {
         setTaskStatus(
             task,
             ProjectUtil.BulkProcessStatus.FAILED,
@@ -202,6 +207,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
         callUpdateUser(user, task, orgName);
       }
     } catch (Exception e) {
+      ProjectLogger.log("Error in process user", data, e);
       task.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
     }
   }

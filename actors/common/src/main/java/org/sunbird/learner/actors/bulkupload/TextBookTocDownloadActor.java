@@ -15,7 +15,6 @@ public class TextBookTocDownloadActor extends BaseActor {
 
     @Override
     public void onReceive(Request request) throws Throwable {
-        //File file =new File("/Users/kumar/downloaded_files/test.csv");
         File file =new File("test.csv");
         file.createNewFile();
         sender().tell(file, sender());

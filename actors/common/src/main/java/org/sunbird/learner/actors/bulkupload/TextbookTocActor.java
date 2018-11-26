@@ -11,9 +11,6 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * @author gauraw
- */
 @ActorConfig(tasks = {"textbookTocUpload", "textbookTocDownload"}, asyncTasks = {})
 public class TextbookTocActor extends BaseBulkUploadActor {
 
@@ -46,4 +43,5 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         file.createNewFile();
         sender().tell(file, sender());
     }
+
 }

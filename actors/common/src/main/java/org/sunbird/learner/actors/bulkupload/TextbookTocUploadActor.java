@@ -9,9 +9,10 @@ import org.sunbird.common.responsecode.ResponseCode;
 import java.util.HashMap;
 import java.util.Map;
 
-@ActorConfig(
-        tasks = {"textbookTocUpload"},
-        asyncTasks = {})
+/**
+ * @author gauraw
+ */
+@ActorConfig(tasks = {"textbookTocUpload"}, asyncTasks = {})
 public class TextbookTocUploadActor extends BaseBulkUploadActor {
 
     @Override

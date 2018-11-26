@@ -8,10 +8,7 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -29,7 +26,6 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -48,7 +44,7 @@ public class UserSkillManagementActorTest {
   private static final String ENDORSED_USER_ID = "someEndorsedUserId";
   private static final String ENDORSE_SKILL_NAME = "C";
   private static List<String> skillsList = new ArrayList<>();
-  private static FiniteDuration duration = duration("10000 second");
+  private static FiniteDuration duration = duration("1000 second");
 
   @BeforeClass
   public static void setUp() {
@@ -72,7 +68,7 @@ public class UserSkillManagementActorTest {
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(insertResponse);
-    mockCasandraRequestForGetUser(false);
+    mockCassandraRequestForGetUser(false);
     subject.tell(createAddSkillRequest(USER_ID, ENDORSED_USER_ID, skillsList), probe.getRef());
     Response response = probe.expectMsgClass(duration, Response.class);
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
@@ -83,7 +79,7 @@ public class UserSkillManagementActorTest {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-    mockCasandraRequestForGetUser(true);
+    mockCassandraRequestForGetUser(true);
     subject.tell(createAddSkillRequest(USER_ID, ENDORSED_USER_ID, skillsList), probe.getRef());
 
     ProjectCommonException exception = probe.expectMsgClass(duration, ProjectCommonException.class);
@@ -101,7 +97,7 @@ public class UserSkillManagementActorTest {
     when(cassandraOperation.getRecordById(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(createGetUserSuccessResponse());
-    mockGetSkillResponse(ENDORSED_USER_ID, false);
+    mockGetSkillResponse(ENDORSED_USER_ID, createGetSkillResponse());
     subject.tell(actorMessage, probe.getRef());
     Response response = probe.expectMsgClass(duration, Response.class);
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
@@ -115,7 +111,7 @@ public class UserSkillManagementActorTest {
 
     Request actorMessage = createUpdateSkillRequest(USER_ID, skillsList);
 
-    mockCasandraRequestForGetUser(true);
+    mockCassandraRequestForGetUser(true);
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException exception = probe.expectMsgClass(duration, ProjectCommonException.class);
     Assert.assertTrue(
@@ -127,7 +123,7 @@ public class UserSkillManagementActorTest {
   public void testGetSkillSuccess() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-    mockGetSkillResponse(USER_ID, false);
+    mockGetSkillResponse(USER_ID, createGetSkillResponse());
     subject.tell(createGetSkillRequest(USER_ID, ENDORSED_USER_ID), probe.getRef());
     Response response = probe.expectMsgClass(duration, Response.class);
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
@@ -138,7 +134,7 @@ public class UserSkillManagementActorTest {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-    mockGetSkillResponse(USER_ID, true);
+    mockGetSkillResponse(USER_ID, Collections.emptyMap());
     subject.tell(createGetSkillRequest(USER_ID, ENDORSED_USER_ID), probe.getRef());
     ProjectCommonException exception = probe.expectMsgClass(duration, ProjectCommonException.class);
     Assert.assertTrue(
@@ -177,11 +173,11 @@ public class UserSkillManagementActorTest {
   }
 
   @Test
-  public void testAddSkillEndorsementSuccessWithInvalidEndorsedUserId() {
+  public void testAddSkillEndorsementFailureWithInvalidEndorsedUserId() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
-    mockCasandraRequestForGetUser(true);
+    mockCassandraRequestForGetUser(true);
     subject.tell(
         createSkillEndorsementRequest(USER_ID, ENDORSED_USER_ID, ENDORSE_SKILL_NAME),
         probe.getRef());
@@ -195,7 +191,7 @@ public class UserSkillManagementActorTest {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-    mockCasandraRequestForGetUser(true);
+    mockCassandraRequestForGetUser(true);
     subject.tell(
         createSkillEndorsementRequest(USER_ID, ENDORSED_USER_ID, ENDORSE_SKILL_NAME),
         probe.getRef());
@@ -210,13 +206,21 @@ public class UserSkillManagementActorTest {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-    mockCasandraRequestForEndorsement();
+
+    when(cassandraOperation.getRecordById(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(createSkillEndorsementResponse());
+    when(cassandraOperation.updateRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(createCassandraUpdateSuccessResponse());
+    when(cassandraOperation.getRecordsByProperty(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(createSkillEndorsementResponse());
     subject.tell(
         createSkillEndorsementRequest(USER_ID, ENDORSED_USER_ID, ENDORSE_SKILL_NAME),
         probe.getRef());
-    ProjectCommonException result = probe.expectMsgClass(duration, ProjectCommonException.class);
-    Assert.assertTrue(
-        null != result && result.getResponseCode() == ResponseCode.CLIENT_ERROR.getResponseCode());
+    Response response = probe.expectMsgClass(duration, Response.class);
+    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
   }
 
   private Request createAddSkillRequest(
@@ -304,6 +308,12 @@ public class UserSkillManagementActorTest {
     return response;
   }
 
+  private Response createCassandraUpdateSuccessResponse() {
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    return response;
+  }
+
   private Response createGetUserSuccessResponse() {
     Response response = new Response();
     Map<String, Object> userMap = new HashMap<>();
@@ -322,12 +332,10 @@ public class UserSkillManagementActorTest {
     return response;
   }
 
-  private void mockGetSkillResponse(String userId, boolean isFailure) {
+  private void mockGetSkillResponse(String userId, Map response) {
     HashMap<String, Object> esDtoMap = new HashMap<>();
 
     Map<String, Object> filters = new HashMap<>();
-    Map<String, Object> response = null;
-
     filters.put(JsonKey.USER_ID, userId);
     esDtoMap.put(JsonKey.FILTERS, filters);
     List<String> fields = new ArrayList<>();
@@ -335,26 +343,12 @@ public class UserSkillManagementActorTest {
     esDtoMap.put(JsonKey.FIELDS, fields);
     PowerMockito.mockStatic(ElasticSearchUtil.class);
 
-    if (!isFailure) {
-      response = createGetSkillResponse();
-    } else response = new HashMap<>();
-
     when(ElasticSearchUtil.complexSearch(
-            ElasticSearchUtil.createSearchDTO(esDtoMap),
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName()))
+            Mockito.anyObject(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(response);
   }
 
-  private void mockCasandraRequestForEndorsement() {
-    when(cassandraOperation.getRecordById(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(createGetUserSuccessResponse())
-        .thenReturn(createGetSkillsSuccessResponse())
-        .thenReturn(createSkillEndorsementResponse());
-  }
-
-  private void mockCasandraRequestForGetUser(boolean isFailure) {
+  private void mockCassandraRequestForGetUser(boolean isFailure) {
     if (isFailure)
       when(cassandraOperation.getRecordById(
               Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))

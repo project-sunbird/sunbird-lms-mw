@@ -27,7 +27,6 @@ import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.actor.service.BaseMWService;
 import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
-import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -41,7 +40,6 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.role.dao.impl.RoleDaoImpl;
 import org.sunbird.learner.util.Util;
-import org.sunbird.models.organisation.Organisation;
 import org.sunbird.user.actors.UserRoleActor;
 import org.sunbird.user.dao.UserOrgDao;
 import org.sunbird.user.dao.impl.UserOrgDaoImpl;
@@ -56,8 +54,6 @@ import scala.concurrent.duration.Duration;
   ActorRef.class,
   RequestRouter.class,
   InterServiceCommunication.class,
-  Organisation.class,
-  OrganisationClientImpl.class,
   InterServiceCommunicationFactory.class,
   Response.class,
   ElasticSearchUtil.class,

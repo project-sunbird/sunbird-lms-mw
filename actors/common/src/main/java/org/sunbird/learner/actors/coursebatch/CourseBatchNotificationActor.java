@@ -18,6 +18,7 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -43,6 +44,11 @@ public class CourseBatchNotificationActor extends BaseActor {
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
+  private static String courseBatchNotificationSignature =
+      PropertiesCache.getInstance()
+          .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATION_SIGNATURE);
+  private static String baseUrl =
+      PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_WEB_URL);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -83,7 +89,7 @@ public class CourseBatchNotificationActor extends BaseActor {
       String operationType = (String) requestMap.get(JsonKey.OPERATION_TYPE);
 
       if (operationType.equals(JsonKey.ADD)) {
-        template = JsonKey.BATCH_LEARNER_ENROL;
+        template = JsonKey.OPEN_BATCH_LEARNER_ENROL;
         subject = JsonKey.COURSE_INVITATION;
       }
 
@@ -110,12 +116,12 @@ public class CourseBatchNotificationActor extends BaseActor {
           (List<String>) requestMap.get(JsonKey.REMOVED_PARTICIPANTS);
 
       triggerEmailNotification(
-          addedParticipants, courseBatch, JsonKey.COURSE_INVITATION, JsonKey.BATCH_MENTOR_ENROL);
+          addedParticipants, courseBatch, JsonKey.COURSE_INVITATION, JsonKey.BATCH_LEARNER_ENROL);
       triggerEmailNotification(
           removedParticipants,
           courseBatch,
           JsonKey.UNENROLL_FROM_COURSE_BATCH,
-          JsonKey.BATCH_MENTOR_UNENROL);
+          JsonKey.BATCH_LEARNER_UNENROL);
     }
   }
 
@@ -184,12 +190,15 @@ public class CourseBatchNotificationActor extends BaseActor {
 
     requestMap.put(JsonKey.ORG_NAME, courseBatchObject.get(JsonKey.ORG_NAME));
     requestMap.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.COURSE_LOGO_URL));
-    requestMap.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.COURSE_NAME));
     requestMap.put(JsonKey.START_DATE, courseBatchObject.get(JsonKey.START_DATE));
     requestMap.put(JsonKey.END_DATE, courseBatchObject.get(JsonKey.END_DATE));
     requestMap.put(JsonKey.COURSE_ID, courseBatchObject.get(JsonKey.COURSE_ID));
-    requestMap.put(JsonKey.NAME, courseBatch.getName());
-
+    requestMap.put(JsonKey.BATCH_NAME, courseBatch.getName());
+    requestMap.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.COURSE_NAME));
+    requestMap.put(
+        JsonKey.COURSE_BATCH_URL,
+        getCourseBatchUrl(courseBatch.getCourseId(), courseBatch.getId()));
+    requestMap.put(JsonKey.SIGNATURE, courseBatchNotificationSignature);
     String userId = (String) userMap.get(JsonKey.USER_ID);
 
     if (StringUtils.isNotBlank(userId)) {
@@ -200,6 +209,12 @@ public class CourseBatchNotificationActor extends BaseActor {
         "CourseBatchNotificationActor:createEmailRequest: success  ", LoggerEnum.INFO);
 
     return requestMap;
+  }
+
+  private String getCourseBatchUrl(String courseId, String batchId) {
+
+    String url = new String(baseUrl + "/learn/course/" + courseId + "/batch/" + batchId);
+    return url;
   }
 
   private void sendMail(Map<String, Object> requestMap) {

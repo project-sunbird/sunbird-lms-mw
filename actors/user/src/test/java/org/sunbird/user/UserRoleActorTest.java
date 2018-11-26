@@ -77,7 +77,6 @@ public class UserRoleActorTest {
   private static CompletionStage completionStage;
   private static ActorRef actorRef;
   private static InterServiceCommunication interServiceCommunication;
-  private static Organisation organisation;
   private static Response response;
   private static Map<String, Object> map;
   private static SearchDTO searchDTO;
@@ -100,7 +99,6 @@ public class UserRoleActorTest {
     PowerMockito.mockStatic(InterServiceCommunicationFactory.class);
     interServiceCommunication = Mockito.mock(InterServiceCommunication.class);
     when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
-    organisation = Mockito.mock(Organisation.class);
     response = Mockito.mock(Response.class);
     map = Mockito.mock(Map.class);
     PowerMockito.mockStatic(ElasticSearchUtil.class);
@@ -110,7 +108,7 @@ public class UserRoleActorTest {
     PowerMockito.mockStatic(UserOrgDaoImpl.class);
     userOrgDao = Mockito.mock(UserOrgDaoImpl.class);
     when(UserOrgDaoImpl.getInstance()).thenReturn(userOrgDao);
-
+    completionStage = Mockito.mock(CompletionStage.class);
     when(BaseMWService.getRemoteRouter(Mockito.anyString())).thenReturn(actorSelection);
     when(actorSelection.resolveOneCS(Duration.create(Mockito.anyLong(), "seconds")))
         .thenReturn(completionStage);
@@ -119,38 +117,6 @@ public class UserRoleActorTest {
         .thenReturn(response);
     when(response.get(Mockito.anyString())).thenReturn(map);
     when(userOrgDao.updateUserOrg(Mockito.anyObject())).thenReturn(getSuccessResponse());
-    completionStage = Mockito.mock(CompletionStage.class);
-  }
-
-  private void mockGetSkillResponse(String userId, boolean isSuccess) {
-    HashMap<String, Object> esDtoMap = new HashMap<>();
-    Map<String, Object> filters = new HashMap<>();
-    filters.put(JsonKey.USER_ID, userId);
-    esDtoMap.put(JsonKey.FILTERS, filters);
-    List<String> fields = new ArrayList<>();
-    fields.add(JsonKey.SKILLS);
-    esDtoMap.put(JsonKey.FIELDS, fields);
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
-    when(ElasticSearchUtil.complexSearch(
-            searchDTO,
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName()))
-        .thenReturn(createGetResponse(isSuccess));
-  }
-
-  private Map<String, Object> createGetResponse(boolean isSuccess) {
-    HashMap<String, Object> response = new HashMap<>();
-    HashMap<String, Object> orgMap = new HashMap<>();
-    orgMap.put(JsonKey.ORGANISATION_ID, "ORGANISATION_ID");
-    List<Map<String, Object>> content = new ArrayList<>();
-    List<Map<String, Object>> orgList = new ArrayList<>();
-    orgList.add(orgMap);
-    HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.ORGANISATIONS, orgList);
-    if (isSuccess) content.add(innerMap);
-
-    response.put(JsonKey.CONTENT, content);
-    return response;
   }
 
   @Test
@@ -190,6 +156,20 @@ public class UserRoleActorTest {
     Assert.assertTrue(res.getResponseCode() == 400);
   }
 
+  private Map<String, Object> createGetResponse(boolean isSuccess) {
+    HashMap<String, Object> response = new HashMap<>();
+    HashMap<String, Object> orgMap = new HashMap<>();
+    orgMap.put(JsonKey.ORGANISATION_ID, "ORGANISATION_ID");
+    List<Map<String, Object>> content = new ArrayList<>();
+    List<Map<String, Object>> orgList = new ArrayList<>();
+    orgList.add(orgMap);
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.ORGANISATIONS, orgList);
+    if (isSuccess) content.add(innerMap);
+    response.put(JsonKey.CONTENT, content);
+    return response;
+  }
+
   private Object getRequestObj() {
     Request reqObj = new Request();
     List roleLst = new ArrayList();
@@ -202,6 +182,21 @@ public class UserRoleActorTest {
     reqObj.put(JsonKey.ORGANISATION_ID, "ORGANISATION_ID");
     reqObj.setOperation(ActorOperations.ASSIGN_ROLES.getValue());
     return reqObj;
+  }
+
+  private void mockGetSkillResponse(String userId, boolean isSuccess) {
+    HashMap<String, Object> esDtoMap = new HashMap<>();
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(JsonKey.USER_ID, userId);
+    esDtoMap.put(JsonKey.FILTERS, filters);
+    List<String> fields = new ArrayList<>();
+    fields.add(JsonKey.SKILLS);
+    esDtoMap.put(JsonKey.FIELDS, fields);
+    when(ElasticSearchUtil.complexSearch(
+            searchDTO,
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName()))
+        .thenReturn(createGetResponse(isSuccess));
   }
 
   private Response getCassandraResponse() {

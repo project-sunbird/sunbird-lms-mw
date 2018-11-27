@@ -181,13 +181,6 @@ public class UserRoleActorTest {
   }
 
   private void mockGetSkillResponse(String userId, boolean isSuccess) {
-    HashMap<String, Object> esDtoMap = new HashMap<>();
-    Map<String, Object> filters = new HashMap<>();
-    filters.put(JsonKey.USER_ID, userId);
-    esDtoMap.put(JsonKey.FILTERS, filters);
-    List<String> fields = new ArrayList<>();
-    fields.add(JsonKey.SKILLS);
-    esDtoMap.put(JsonKey.FIELDS, fields);
     when(ElasticSearchUtil.complexSearch(
             searchDTO,
             ProjectUtil.EsIndex.sunbird.getIndexName(),

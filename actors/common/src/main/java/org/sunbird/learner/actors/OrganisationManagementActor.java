@@ -38,6 +38,8 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.service.OrgService;
+import org.sunbird.learner.service.impl.OrgServiceImpl;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
@@ -67,6 +69,7 @@ import org.sunbird.validator.location.LocationRequestValidator;
 public class OrganisationManagementActor extends BaseActor {
   private ObjectMapper mapper = new ObjectMapper();
   private Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+  private OrgService orgService = OrgServiceImpl.getInstance();
   private final CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final LocationRequestValidator validator = new LocationRequestValidator();
   private final EncryptionService encryptionService =
@@ -351,7 +354,7 @@ public class OrganisationManagementActor extends BaseActor {
 
       if (request.containsKey(JsonKey.EMAIL)) {
         if (EmailValidator.isEmailValid((String) request.get(JsonKey.EMAIL))) {
-          checkEmailUniqueness(request, JsonKey.CREATE);
+          orgService.validateEmailUniqueness(request, true);
         } else {
           ProjectCommonException.throwClientErrorException(ResponseCode.emailFormatError);
         }
@@ -465,29 +468,6 @@ public class OrganisationManagementActor extends BaseActor {
       sender().tell(e, self());
       return;
     }
-  }
-
-  @SuppressWarnings("unchecked")
-  private boolean checkEmailUniqueness(Map<String, Object> orgMap, String operationType) {
-    Response result =
-        cassandraOperation.getRecordsByIndexedProperty(
-            orgDbInfo.getKeySpace(),
-            orgDbInfo.getTableName(),
-            JsonKey.EMAIL,
-            orgMap.get(JsonKey.EMAIL));
-    List<Map<String, Object>> orgMapList = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-    if (!orgMapList.isEmpty()) {
-      if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
-        ProjectCommonException.throwClientErrorException(ResponseCode.emailInUse);
-      } else {
-        Map<String, Object> orgDbMap = orgMapList.get(0);
-        if (!(((String) orgDbMap.get(JsonKey.ID))
-            .equalsIgnoreCase((String) orgMap.get(JsonKey.ORGANISATION_ID)))) {
-          ProjectCommonException.throwClientErrorException(ResponseCode.emailInUse);
-        }
-      }
-    }
-    return true;
   }
 
   private void validateCodeAndAddLocationIds(Map<String, Object> req) {
@@ -691,7 +671,7 @@ public class OrganisationManagementActor extends BaseActor {
 
       if (request.containsKey(JsonKey.EMAIL)) {
         if (EmailValidator.isEmailValid((String) request.get(JsonKey.EMAIL))) {
-          checkEmailUniqueness(request, JsonKey.UPDATE);
+          orgService.validateEmailUniqueness(request, false);
         } else {
           ProjectCommonException.throwClientErrorException(ResponseCode.emailFormatError);
         }

@@ -140,17 +140,25 @@ public class CourseBatchManagementActor extends BaseActor {
     if (CourseBatchUtil.doOperationInEkStepCourse(contentDetails, courseBatch, true)
         .equalsIgnoreCase(JsonKey.SUCCESS)) {
       courseBatch.setCountIncrementStatus(true);
-      courseBatch.setCountIncrementDate(courseBatch.getStartDate());
-      Map<String, Object> courseBatchMap = new ObjectMapper().convertValue(courseBatch, Map.class);
-      Response response = courseBatchDao.update(courseBatchMap);
+      try {
+        courseBatch.setCountIncrementDate(new SimpleDateFormat("yyyy-MM-dd").format(new Date()));
+        Map<String, Object> courseBatchMap =
+            new ObjectMapper().convertValue(courseBatch, Map.class);
+        Response response = courseBatchDao.update(courseBatchMap);
 
-      if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-        CourseBatchUtil.syncCourseBatchForeground(
-            (String) courseBatchMap.get(JsonKey.ID), courseBatchMap);
-      } else {
+        if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+          CourseBatchUtil.syncCourseBatchForeground(
+              (String) courseBatchMap.get(JsonKey.ID), courseBatchMap);
+        } else {
+          ProjectLogger.log(
+              "CourseBatchManagementActor:createCourseBatch: Course batch not synced to ES as response is not successful",
+              LoggerEnum.INFO.name());
+        }
+      } catch (Exception ex) {
         ProjectLogger.log(
-            "CourseBatchManagementActor:createCourseBatch: Course batch not synced to ES as response is not successful",
-            LoggerEnum.INFO.name());
+            "CourseBatchManagementActor:createCourseBatch: Exception occurred with error message = "
+                + ex.getMessage(),
+            ex);
       }
     }
   }

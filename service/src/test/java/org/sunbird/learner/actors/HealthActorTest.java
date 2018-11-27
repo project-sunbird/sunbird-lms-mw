@@ -8,6 +8,7 @@ import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.common.models.response.Response;
@@ -17,6 +18,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.learner.actors.health.HealthActor;
 import org.sunbird.learner.util.Util;
 
+@Ignore
 public class HealthActorTest {
 
   private static ActorSystem system;

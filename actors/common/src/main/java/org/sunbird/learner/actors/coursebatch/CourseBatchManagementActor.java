@@ -98,9 +98,9 @@ public class CourseBatchManagementActor extends BaseActor {
     request.remove(JsonKey.PARTICIPANTS);
     request.remove(JsonKey.PARTICIPANT);
     CourseBatch courseBatch = new ObjectMapper().convertValue(request, CourseBatch.class);
-    courseBatch.setCountDecrementStatus(false);
+    courseBatch.initCount();
     courseBatch.setId(courseBatchId);
-    setCourseBatchStatusDetails(courseBatch);
+    courseBatch.setStatus(setCourseBatchStatus((String) request.get(JsonKey.START_DATE)));
     courseBatch.setHashTagId(
         getHashTagId((String) request.get(JsonKey.HASH_TAG_ID), JsonKey.CREATE, "", courseBatchId));
     String courseId = (String) request.get(JsonKey.COURSE_ID);
@@ -137,7 +137,22 @@ public class CourseBatchManagementActor extends BaseActor {
     if (courseNotificationActive()) {
       batchOperationNotifier(courseBatch, null);
     }
-    CourseBatchUtil.doOperationInEkStepCourse(contentDetails, courseBatch, true);
+    if (CourseBatchUtil.doOperationInEkStepCourse(contentDetails, courseBatch, true)
+        .equalsIgnoreCase(JsonKey.SUCCESS)) {
+      courseBatch.setCountIncrementStatus(true);
+      courseBatch.setCountIncrementDate(courseBatch.getStartDate());
+      Map<String, Object> courseBatchMap = new ObjectMapper().convertValue(courseBatch, Map.class);
+      Response response = courseBatchDao.update(courseBatchMap);
+
+      if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+        CourseBatchUtil.syncCourseBatchForeground(
+            (String) courseBatchMap.get(JsonKey.ID), courseBatchMap);
+      } else {
+        ProjectLogger.log(
+            "CourseBatchManagementActor:createCourseBatch: Course batch not synced to ES as response is not successful",
+            LoggerEnum.INFO.name());
+      }
+    }
   }
 
   private boolean courseNotificationActive() {
@@ -430,18 +445,15 @@ public class CourseBatchManagementActor extends BaseActor {
     sender().tell(result, self());
   }
 
-  private void setCourseBatchStatusDetails(CourseBatch courseBatch) {
+  private int setCourseBatchStatus(String startDate) {
     try {
       SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
       Date todaydate = format.parse(format.format(new Date()));
-      Date requestedStartDate = format.parse(courseBatch.getStartDate());
+      Date requestedStartDate = format.parse(startDate);
       if (todaydate.compareTo(requestedStartDate) == 0) {
-        courseBatch.setStatus(ProgressStatus.STARTED.getValue());
-        courseBatch.setCountIncrementStatus(true);
-        courseBatch.setCountIncrementDate(courseBatch.getStartDate());
+        return ProgressStatus.STARTED.getValue();
       } else {
-        courseBatch.setStatus(ProgressStatus.NOT_STARTED.getValue());
-        courseBatch.setCountIncrementStatus(false);
+        return ProgressStatus.NOT_STARTED.getValue();
       }
     } catch (ParseException e) {
       ProjectLogger.log(
@@ -449,6 +461,7 @@ public class CourseBatchManagementActor extends BaseActor {
               + e.getMessage(),
           e);
     }
+    return ProgressStatus.NOT_STARTED.getValue();
   }
 
   private void validateMentors(CourseBatch courseBatch) {

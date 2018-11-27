@@ -66,6 +66,7 @@ import org.sunbird.validator.location.LocationRequestValidator;
 )
 public class OrganisationManagementActor extends BaseActor {
   private ObjectMapper mapper = new ObjectMapper();
+  private Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
   private final CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final LocationRequestValidator validator = new LocationRequestValidator();
   private final EncryptionService encryptionService =
@@ -284,7 +285,6 @@ public class OrganisationManagementActor extends BaseActor {
         addressReq = (Map<String, Object>) request.get(JsonKey.ADDRESS);
         request.remove(JsonKey.ADDRESS);
       }
-      Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
       validateChannelIdForRootOrg(request);
       if (request.containsKey(JsonKey.CHANNEL)) {
@@ -349,9 +349,12 @@ public class OrganisationManagementActor extends BaseActor {
         request.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
       }
 
-      if (request.containsKey(JsonKey.EMAIL)
-          && !EmailValidator.isEmailValid((String) request.get(JsonKey.EMAIL))) {
-        ProjectCommonException.throwClientErrorException(ResponseCode.emailFormatError);
+      if (request.containsKey(JsonKey.EMAIL)) {
+        if (EmailValidator.isEmailValid((String) request.get(JsonKey.EMAIL))) {
+          checkEmailUniqueness(request, JsonKey.CREATE);
+        } else {
+          ProjectCommonException.throwClientErrorException(ResponseCode.emailFormatError);
+        }
       }
 
       // adding one extra filed for tag.
@@ -462,6 +465,29 @@ public class OrganisationManagementActor extends BaseActor {
       sender().tell(e, self());
       return;
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private boolean checkEmailUniqueness(Map<String, Object> orgMap, String operationType) {
+    Response result =
+        cassandraOperation.getRecordsByIndexedProperty(
+            orgDbInfo.getKeySpace(),
+            orgDbInfo.getTableName(),
+            JsonKey.EMAIL,
+            orgMap.get(JsonKey.EMAIL));
+    List<Map<String, Object>> orgMapList = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+    if (!orgMapList.isEmpty()) {
+      if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
+        ProjectCommonException.throwClientErrorException(ResponseCode.emailInUse);
+      } else {
+        Map<String, Object> orgDbMap = orgMapList.get(0);
+        if (!(((String) orgDbMap.get(JsonKey.ID))
+            .equalsIgnoreCase((String) orgMap.get(JsonKey.ORGANISATION_ID)))) {
+          ProjectCommonException.throwClientErrorException(ResponseCode.emailInUse);
+        }
+      }
+    }
+    return true;
   }
 
   private void validateCodeAndAddLocationIds(Map<String, Object> req) {
@@ -662,9 +688,13 @@ public class OrganisationManagementActor extends BaseActor {
         ProjectLogger.log("REQUESTED DATA IS NOT VALID");
         return;
       }
-      if (request.containsKey(JsonKey.EMAIL)
-          && !EmailValidator.isEmailValid((String) request.get(JsonKey.EMAIL))) {
-        ProjectCommonException.throwClientErrorException(ResponseCode.emailFormatError);
+
+      if (request.containsKey(JsonKey.EMAIL)) {
+        if (EmailValidator.isEmailValid((String) request.get(JsonKey.EMAIL))) {
+          checkEmailUniqueness(request, JsonKey.UPDATE);
+        } else {
+          ProjectCommonException.throwClientErrorException(ResponseCode.emailFormatError);
+        }
       }
       validateChannelIdForRootOrg(request);
       //

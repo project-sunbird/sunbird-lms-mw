@@ -98,13 +98,11 @@ public class CourseBatchManagementActor extends BaseActor {
     request.remove(JsonKey.PARTICIPANTS);
     request.remove(JsonKey.PARTICIPANT);
     CourseBatch courseBatch = new ObjectMapper().convertValue(request, CourseBatch.class);
-    courseBatch.initCount();
+    courseBatch.setCountDecrementStatus(false);
     courseBatch.setId(courseBatchId);
-    courseBatch.setStatus(setCourseBatchStatus((String) request.get(JsonKey.START_DATE)));
-
+    setCourseBatchStatusDetails(courseBatch);
     courseBatch.setHashTagId(
         getHashTagId((String) request.get(JsonKey.HASH_TAG_ID), JsonKey.CREATE, "", courseBatchId));
-
     String courseId = (String) request.get(JsonKey.COURSE_ID);
     Map<String, Object> contentDetails = getContentDetails(courseId, headers);
     courseBatch.setContentDetails(contentDetails, requestedBy);
@@ -139,6 +137,7 @@ public class CourseBatchManagementActor extends BaseActor {
     if (courseNotificationActive()) {
       batchOperationNotifier(courseBatch, null);
     }
+    CourseBatchUtil.doOperationInEkStepCourse(contentDetails, courseBatch, true);
   }
 
   private boolean courseNotificationActive() {
@@ -431,15 +430,18 @@ public class CourseBatchManagementActor extends BaseActor {
     sender().tell(result, self());
   }
 
-  private int setCourseBatchStatus(String startDate) {
+  private void setCourseBatchStatusDetails(CourseBatch courseBatch) {
     try {
       SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
       Date todaydate = format.parse(format.format(new Date()));
-      Date requestedStartDate = format.parse(startDate);
+      Date requestedStartDate = format.parse(courseBatch.getStartDate());
       if (todaydate.compareTo(requestedStartDate) == 0) {
-        return ProgressStatus.STARTED.getValue();
+        courseBatch.setStatus(ProgressStatus.STARTED.getValue());
+        courseBatch.setCountIncrementStatus(true);
+        courseBatch.setCountIncrementDate(courseBatch.getStartDate());
       } else {
-        return ProgressStatus.NOT_STARTED.getValue();
+        courseBatch.setStatus(ProgressStatus.NOT_STARTED.getValue());
+        courseBatch.setCountIncrementStatus(false);
       }
     } catch (ParseException e) {
       ProjectLogger.log(
@@ -447,7 +449,6 @@ public class CourseBatchManagementActor extends BaseActor {
               + e.getMessage(),
           e);
     }
-    return ProgressStatus.NOT_STARTED.getValue();
   }
 
   private void validateMentors(CourseBatch courseBatch) {

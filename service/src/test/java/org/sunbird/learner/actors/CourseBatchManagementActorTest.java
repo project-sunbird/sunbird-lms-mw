@@ -15,11 +15,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
 import org.mockito.Mockito;
@@ -48,6 +44,7 @@ import org.sunbird.learner.util.Util;
 @PrepareForTest({EkStepRequestUtil.class, ElasticSearchUtil.class, CourseEnrollmentActor.class})
 @PowerMockIgnore("javax.management.*")
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@Ignore
 public class CourseBatchManagementActorTest {
 
   private static ActorSystem system;

@@ -10,10 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runners.MethodSorters;
 import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -25,6 +22,7 @@ import org.sunbird.learner.datapersistence.DbOperationActor;
 import org.sunbird.learner.util.Util;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@Ignore
 public class DbOperationActorTest {
   private static ActorSystem system;
   private static final Props props = Props.create(DbOperationActor.class);

@@ -876,6 +876,7 @@ public class UserManagementActor extends BaseActor {
     UserUtil.upsertUserInKeycloak(userMap, JsonKey.CREATE);
     requestMap = UserUtil.encryptUserData(userMap);
     removeUnwanted(requestMap);
+    requestMap.put(JsonKey.IS_DELETED, false);
     Response response = null;
     try {
       response =

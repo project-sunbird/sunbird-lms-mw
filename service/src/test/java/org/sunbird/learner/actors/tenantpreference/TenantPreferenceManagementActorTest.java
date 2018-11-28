@@ -10,11 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runners.MethodSorters;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
@@ -30,6 +26,7 @@ import org.sunbird.learner.util.Util;
 
 /** Created by arvind on 30/10/17. */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@Ignore
 public class TenantPreferenceManagementActorTest {
 
   private static ActorSystem system;

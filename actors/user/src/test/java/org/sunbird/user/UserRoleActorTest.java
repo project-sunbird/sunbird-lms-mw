@@ -68,15 +68,7 @@ public class UserRoleActorTest {
   private ActorSystem system = ActorSystem.create("system");;
   private final Props props = Props.create(UserRoleActor.class);
   private CassandraOperationImpl cassandraOperation;
-  private RoleDaoImpl roleDao;
-  private ActorSelection actorSelection;
-  private CompletionStage completionStage;
-  private ActorRef actorRef;
-  private InterServiceCommunication interServiceCommunication;
-  private Response response;
-  private Map<String, Object> map;
   private SearchDTO searchDTO;
-  private UserOrgDao userOrgDao;
 
   @Before
   public void beforeEachTest() {
@@ -85,25 +77,26 @@ public class UserRoleActorTest {
     cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     PowerMockito.mockStatic(RoleDaoImpl.class);
-    roleDao = Mockito.mock(RoleDaoImpl.class);
+    RoleDaoImpl roleDao = Mockito.mock(RoleDaoImpl.class);
     when(RoleDaoImpl.getInstance()).thenReturn(roleDao);
-    actorSelection = Mockito.mock(ActorSelection.class);
+    ActorSelection actorSelection = Mockito.mock(ActorSelection.class);
     PowerMockito.mockStatic(BaseMWService.class);
     PowerMockito.mockStatic(RequestRouter.class);
-    actorRef = Mockito.mock(ActorRef.class);
+    ActorRef actorRef = Mockito.mock(ActorRef.class);
     PowerMockito.mockStatic(InterServiceCommunicationFactory.class);
-    interServiceCommunication = Mockito.mock(InterServiceCommunication.class);
+    InterServiceCommunication interServiceCommunication =
+        Mockito.mock(InterServiceCommunication.class);
     when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
-    response = Mockito.mock(Response.class);
-    map = Mockito.mock(Map.class);
+    Response response = Mockito.mock(Response.class);
+    Map<String, Object> map = Mockito.mock(Map.class);
     PowerMockito.mockStatic(ElasticSearchUtil.class);
     PowerMockito.mockStatic(Util.class);
     searchDTO = Mockito.mock(SearchDTO.class);
     when(Util.createSearchDto(Mockito.anyMap())).thenReturn(searchDTO);
     PowerMockito.mockStatic(UserOrgDaoImpl.class);
-    userOrgDao = Mockito.mock(UserOrgDaoImpl.class);
+    UserOrgDao userOrgDao = Mockito.mock(UserOrgDaoImpl.class);
     when(UserOrgDaoImpl.getInstance()).thenReturn(userOrgDao);
-    completionStage = Mockito.mock(CompletionStage.class);
+    CompletionStage completionStage = Mockito.mock(CompletionStage.class);
     when(BaseMWService.getRemoteRouter(Mockito.anyString())).thenReturn(actorSelection);
     when(actorSelection.resolveOneCS(Duration.create(Mockito.anyLong(), "seconds")))
         .thenReturn(completionStage);

@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -23,6 +24,7 @@ import org.sunbird.learner.actors.search.CourseSearchActor;
 import org.sunbird.learner.util.Util;
 
 /** @author Manzarul */
+@Ignore
 public class CourseSearchActorTest {
   private static ActorSystem system;
   private static final Props props = Props.create(CourseSearchActor.class);

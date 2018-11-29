@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
 import org.mockito.Mockito;
@@ -146,7 +146,7 @@ public class UserActorTest {
     assertTrue(null != ex);
   }
 
-  @Test
+  @Ignore
   public void testCreateUserWithInvalidChannel() throws Exception {
     mockClasses();
     TestKit probe = new TestKit(system);
@@ -162,7 +162,7 @@ public class UserActorTest {
     assertTrue(null != ex);
   }
 
-  @Test
+  @Ignore
   public void testInvalidParamRootOrgInRequest() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -179,7 +179,7 @@ public class UserActorTest {
     assertTrue(ex.getMessage().equalsIgnoreCase("Invalid parameter rootOrgId in request."));
   }
 
-  @Test
+  @Ignore
   public void testInvalidParamRegOrgIdInRequest() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -196,7 +196,7 @@ public class UserActorTest {
     assertTrue(ex.getMessage().equalsIgnoreCase("Invalid parameter regOrgId in request."));
   }
 
-  @Test
+  @Ignore
   public void testMissingParamProviderInRequest() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -215,7 +215,7 @@ public class UserActorTest {
             .equalsIgnoreCase("Missing parameter provider which is dependent on externalId."));
   }
 
-  @Test
+  @Ignore
   public void testMissingParamExternalIdInRequest() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);

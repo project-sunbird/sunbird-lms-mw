@@ -219,8 +219,7 @@ public final class CourseBatchSchedulerUtil {
       ProjectLogger.log(
           "EKstep content not found for course id==" + courseId, LoggerEnum.INFO.name());
     }
-    if (response.equalsIgnoreCase(JsonKey.SUCCESS)) return true;
-    return false;
+    return response.equalsIgnoreCase(JsonKey.SUCCESS);
   }
 
   private static Map<String, String> getBasicHeader() {

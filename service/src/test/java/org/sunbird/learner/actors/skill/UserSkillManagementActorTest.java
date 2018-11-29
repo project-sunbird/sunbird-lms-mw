@@ -45,22 +45,22 @@ public class UserSkillManagementActorTest {
   private String USER_ID = "someUserId";
   private String ROOT_ORG_ID = "someRootOrgId";
   private String ENDORSED_USER_ID = "someEndorsedUserId";
-  private String ENDORSE_SKILL_NAME = "C";
+  private String ENDORSE_SKILL_NAME = "someEndorsedSkillName";
   private List<String> skillsList = new ArrayList<>();
-  private FiniteDuration duration = duration("1000 second");
+  private FiniteDuration duration = duration("10 second");
 
   @BeforeClass
   public static void setUp() {
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
     system = ActorSystem.create("system");
+    PowerMockito.mockStatic(ServiceFactory.class);
   }
 
   @Before
   public void beforeEachTest() {
+    PowerMockito.mockStatic(ElasticSearchUtil.class);
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    Mockito.reset(cassandraOperation);
   }
 
   @Test
@@ -112,9 +112,7 @@ public class UserSkillManagementActorTest {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-
     Request actorMessage = createUpdateSkillRequest(USER_ID, skillsList);
-
     mockCassandraRequestForGetUser(true);
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException exception = probe.expectMsgClass(duration, ProjectCommonException.class);
@@ -166,10 +164,8 @@ public class UserSkillManagementActorTest {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-
     Request actorMessage = new Request();
     actorMessage.setOperation(ActorOperations.GET_SKILLS_LIST.getValue() + "INVALID");
-
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException exception = probe.expectMsgClass(duration, ProjectCommonException.class);
     Assert.assertTrue(null != exception);
@@ -209,13 +205,19 @@ public class UserSkillManagementActorTest {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-    mockCassandraRequestForEndorsement();
+
+    when(cassandraOperation.getRecordById(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(createSkillEndorsementResponse());
+
+    when(cassandraOperation.getRecordsByProperty(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(endorsementSkillResponse());
     subject.tell(
         createSkillEndorsementRequest(USER_ID, ENDORSED_USER_ID, ENDORSE_SKILL_NAME),
         probe.getRef());
-    ProjectCommonException result = probe.expectMsgClass(duration, ProjectCommonException.class);
-    Assert.assertTrue(
-        null != result && result.getResponseCode() == ResponseCode.CLIENT_ERROR.getResponseCode());
+    Response response = probe.expectMsgClass(duration, Response.class);
+    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
   }
 
   private Request createAddSkillRequest(
@@ -287,8 +289,8 @@ public class UserSkillManagementActorTest {
 
   private Response createSkillEndorsementResponse() {
     Response response = new Response();
-    List<HashMap<String, Object>> result = new ArrayList<>();
-    HashMap<String, Object> skill = new HashMap<>();
+    List<Map<String, Object>> result = new ArrayList<>();
+    Map<String, Object> skill = new HashMap<>();
     skill.put(JsonKey.SKILL_NAME, ENDORSE_SKILL_NAME);
     skill.put(JsonKey.SKILL_NAME_TO_LOWERCASE, ENDORSE_SKILL_NAME.toLowerCase());
     skill.put(JsonKey.ENDORSERS_LIST, new ArrayList<>());
@@ -308,6 +310,7 @@ public class UserSkillManagementActorTest {
     Map<String, Object> userMap = new HashMap<>();
     userMap.put(JsonKey.ID, USER_ID);
     userMap.put(JsonKey.ROOT_ORG_ID, ROOT_ORG_ID);
+    userMap.put(JsonKey.ENDORSERS_LIST, new ArrayList<>());
     List<Map<String, Object>> result = new ArrayList<>();
     result.add(userMap);
     response.put(JsonKey.RESPONSE, result);
@@ -329,7 +332,6 @@ public class UserSkillManagementActorTest {
     List<String> fields = new ArrayList<>();
     fields.add(JsonKey.SKILLS);
     esDtoMap.put(JsonKey.FIELDS, fields);
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
     when(ElasticSearchUtil.complexSearch(
             Mockito.eq(ElasticSearchUtil.createSearchDTO(esDtoMap)),
             Mockito.eq(ProjectUtil.EsIndex.sunbird.getIndexName()),
@@ -337,10 +339,11 @@ public class UserSkillManagementActorTest {
         .thenReturn(createGetSkillResponse());
   }
 
-  private void mockCassandraRequestForEndorsement() {
-    when(cassandraOperation.getRecordById(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(createSkillEndorsementResponse());
+  private Response endorsementSkillResponse() {
+    Response response = new Response();
+    List<Map<String, Object>> result = new ArrayList<>();
+    response.put(JsonKey.RESPONSE, result);
+    return response;
   }
 
   private void mockCassandraRequestForGetUser(boolean isFailure) {

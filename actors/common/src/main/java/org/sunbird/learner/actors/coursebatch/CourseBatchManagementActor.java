@@ -54,6 +54,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private CourseBatchDao courseBatchDao = new CourseBatchDaoImpl();
   private UserCoursesService userCoursesService = new UserCoursesService();
+  private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -137,30 +138,7 @@ public class CourseBatchManagementActor extends BaseActor {
     if (courseNotificationActive()) {
       batchOperationNotifier(courseBatch, null);
     }
-    if (CourseBatchUtil.doOperationInEkStepCourse(contentDetails, courseBatch, true)
-        .equalsIgnoreCase(JsonKey.SUCCESS)) {
-      courseBatch.setCountIncrementStatus(true);
-      try {
-        courseBatch.setCountIncrementDate(new SimpleDateFormat("yyyy-MM-dd").format(new Date()));
-        Map<String, Object> courseBatchMap =
-            new ObjectMapper().convertValue(courseBatch, Map.class);
-        Response response = courseBatchDao.update(courseBatchMap);
-
-        if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-          CourseBatchUtil.syncCourseBatchForeground(
-              (String) courseBatchMap.get(JsonKey.ID), courseBatchMap);
-        } else {
-          ProjectLogger.log(
-              "CourseBatchManagementActor:createCourseBatch: Course batch not synced to ES as response is not successful",
-              LoggerEnum.INFO.name());
-        }
-      } catch (Exception ex) {
-        ProjectLogger.log(
-            "CourseBatchManagementActor:createCourseBatch: Exception occurred with error message = "
-                + ex.getMessage(),
-            ex);
-      }
-    }
+    syncWithEkstepAndUpdateDB(courseBatch);
   }
 
   private boolean courseNotificationActive() {
@@ -455,7 +433,6 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private int setCourseBatchStatus(String startDate) {
     try {
-      SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
       Date todaydate = format.parse(format.format(new Date()));
       Date requestedStartDate = format.parse(startDate);
       if (todaydate.compareTo(requestedStartDate) == 0) {
@@ -624,7 +601,6 @@ public class CourseBatchManagementActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private void updateCourseBatchDate(CourseBatch courseBatch, Map<String, Object> req) {
-    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     Map<String, Object> courseBatchMap = new ObjectMapper().convertValue(courseBatch, Map.class);
     Date todayDate = getDate(null, format, null);
     Date dbBatchStartDate = getDate(JsonKey.START_DATE, format, courseBatchMap);
@@ -745,7 +721,6 @@ public class CourseBatchManagementActor extends BaseActor {
   private void validateUpdateBatchStartDate(Date startDate) {
     if (startDate != null) {
       try {
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
         format.format(startDate);
       } catch (Exception e) {
         throw new ProjectCommonException(
@@ -873,6 +848,34 @@ public class CourseBatchManagementActor extends BaseActor {
               ResponseCode.invalidOrgId.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void syncWithEkstepAndUpdateDB(CourseBatch courseBatch) {
+    if (CourseBatchSchedulerUtil.doOperationInEkStepCourse(
+        courseBatch.getCourseId(), true, courseBatch.getEnrollmentType())) {
+      courseBatch.setCountIncrementStatus(true);
+      try {
+        courseBatch.setCountIncrementDate(format.format(new Date()));
+        Map<String, Object> courseBatchMap =
+            new ObjectMapper().convertValue(courseBatch, Map.class);
+        Response response = courseBatchDao.update(courseBatchMap);
+
+        if (JsonKey.SUCCESS.equalsIgnoreCase((String) response.get(JsonKey.RESPONSE))) {
+          CourseBatchUtil.syncCourseBatchForeground(
+              (String) courseBatchMap.get(JsonKey.ID), courseBatchMap);
+        } else {
+          ProjectLogger.log(
+              "CourseBatchManagementActor:createCourseBatch: Course batch not synced to ES as response is not successful",
+              LoggerEnum.INFO.name());
+        }
+      } catch (Exception ex) {
+        ProjectLogger.log(
+            "CourseBatchManagementActor:createCourseBatch: Exception occurred with error message = "
+                + ex.getMessage(),
+            ex);
       }
     }
   }

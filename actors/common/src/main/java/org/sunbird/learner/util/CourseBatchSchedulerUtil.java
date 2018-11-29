@@ -115,14 +115,13 @@ public final class CourseBatchSchedulerUtil {
     CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Util.DbInfo courseBatchDBInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
     try {
-      String response =
+      boolean response =
           doOperationInEkStepCourse(
               (String) map.get(JsonKey.COURSE_ID),
               increment,
-              (String) map.get(JsonKey.ENROLLMENT_TYPE),
-              (String) map.get(JsonKey.HASHTAGID));
+              (String) map.get(JsonKey.ENROLLMENT_TYPE));
       ProjectLogger.log("Geeting response code back for update content == " + response);
-      if (response.equalsIgnoreCase(JsonKey.SUCCESS)) {
+      if (response) {
         boolean flag = updateDataIntoES(map);
         if (flag) {
           cassandraOperation.updateRecord(
@@ -165,8 +164,8 @@ public final class CourseBatchSchedulerUtil {
    * @param hashTagId
    * @return
    */
-  public static String doOperationInEkStepCourse(
-      String courseId, boolean increment, String enrollmentType, String hashTagId) {
+  public static boolean doOperationInEkStepCourse(
+      String courseId, boolean increment, String enrollmentType) {
     String name = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION);
     String contentName = "";
     String response = "";
@@ -220,7 +219,8 @@ public final class CourseBatchSchedulerUtil {
       ProjectLogger.log(
           "EKstep content not found for course id==" + courseId, LoggerEnum.INFO.name());
     }
-    return response;
+    if (response.equalsIgnoreCase(JsonKey.SUCCESS)) return true;
+    return false;
   }
 
   private static Map<String, String> getBasicHeader() {

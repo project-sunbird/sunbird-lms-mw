@@ -11,10 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runners.MethodSorters;
 import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -31,6 +28,7 @@ import org.sunbird.learner.util.Util;
  * @author arvind on 30/4/18.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@Ignore
 public class LocationBulkUploadActorTest {
 
   private static ActorSystem system;

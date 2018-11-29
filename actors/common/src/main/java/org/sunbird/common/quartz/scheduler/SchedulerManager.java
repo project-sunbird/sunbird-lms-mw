@@ -41,7 +41,7 @@ public final class SchedulerManager {
         "Call to start scheduler jobs - org.sunbird.common.quartz.scheduler.SchedulerManager");
 
     try {
-      Thread.sleep(240000);
+      Thread.sleep(30000);
       boolean isEmbedded = false;
       Properties configProp = null;
       String embeddVal = System.getenv(JsonKey.SUNBIRD_QUARTZ_MODE);

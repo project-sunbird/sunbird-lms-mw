@@ -42,7 +42,7 @@ public class UserSkillManagementActorTest {
   private static ActorSystem system;
   private static final Props props = Props.create(UserSkillManagementActor.class);
   private CassandraOperation cassandraOperation;
-  private String USER_ID = "someUserId";
+  private String USER_ID = "userId";
   private String ROOT_ORG_ID = "someRootOrgId";
   private String ENDORSED_USER_ID = "someEndorsedUserId";
   private String ENDORSE_SKILL_NAME = "someEndorsedSkillName";

@@ -186,7 +186,6 @@ public class UserRoleActorTest {
 
     Map<String, Object> orgMap = new HashMap<>();
     List<Map<String, Object>> list = new ArrayList<>();
-    Map<String, Object> orMap = new HashMap<>();
     orgMap.put(JsonKey.ORGANISATION_ID, "ORGANISATION_ID");
     list.add(orgMap);
     orgMap.put(JsonKey.ORGANISATIONS, list);

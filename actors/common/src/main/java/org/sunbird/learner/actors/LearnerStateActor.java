@@ -1,11 +1,18 @@
 package org.sunbird.learner.actors;
 
+import akka.dispatch.Mapper;
+import akka.pattern.Patterns;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -23,7 +30,9 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.Util;
+import scala.concurrent.Future;
 
 /**
  * This actor will handle leaner's state operation like get course , get content etc.
@@ -61,7 +70,9 @@ public class LearnerStateActor extends BaseActor {
               searchDto,
               ProjectUtil.EsIndex.sunbird.getIndexName(),
               ProjectUtil.EsType.usercourses.getTypeName());
-
+      if (result != null && !result.isEmpty()) {
+        addContentDetails(request, result);
+      }
       response.put(JsonKey.COURSES, result.get(JsonKey.CONTENT));
       sender().tell(response, self());
 
@@ -77,6 +88,72 @@ public class LearnerStateActor extends BaseActor {
     } else {
       onReceiveUnsupportedOperation(request.getOperation());
     }
+  }
+
+  private void addContentDetails(Request request, Map<String, Object> result) {
+    List<Map<String, Object>> batches = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+    if (batches == null || batches.isEmpty()) {
+      return;
+    }
+    Set<String> courseIds =
+        batches
+            .stream()
+            .map(batch -> (String) batch.get(JsonKey.COURSE_ID))
+            .collect(Collectors.toSet());
+    Map<String, Map<String, Object>> req = new HashMap<>();
+    req.put(JsonKey.REQUEST, new HashMap<String, Object>());
+    req.get(JsonKey.REQUEST).put(JsonKey.FILTERS, new HashMap<String, Object>());
+    Map<String, Object> filter =
+        (Map<String, Object>) req.get(JsonKey.REQUEST).get(JsonKey.FILTERS);
+    filter.put(JsonKey.CONTENT_TYPE, new String[] {JsonKey.COURSE});
+    filter.put(JsonKey.IDENTIFIER, courseIds);
+    String requestBody = null;
+    try {
+      requestBody = new ObjectMapper().writeValueAsString(req);
+    } catch (JsonProcessingException e) {
+      ProjectLogger.log("Exception while processing filters", e);
+    }
+    ProjectLogger.log(
+        "requestBody "
+            + requestBody
+            + " request param : "
+            + (String) request.getContext().get(JsonKey.URL_QUERY_STRING),
+        LoggerEnum.INFO);
+
+    Future<Map<String, Object>> futureResult =
+        ContentSearchUtil.searchContent(
+            (String) request.getContext().get(JsonKey.URL_QUERY_STRING),
+            requestBody,
+            (Map<String, String>) request.getRequest().get(JsonKey.HEADER));
+
+    Future<Response> response =
+        futureResult.map(
+            new Mapper<Map<String, Object>, Response>() {
+              @Override
+              public Response apply(Map<String, Object> result) {
+                Map<String, Object> contentsById = new HashMap<>();
+                if (MapUtils.isNotEmpty(result)) {
+                  ((List<Map<String, Object>>) result.get(JsonKey.CONTENTS))
+                      .stream()
+                      .forEach(
+                          content ->
+                              contentsById.put((String) content.get(JsonKey.IDENTIFIER), content));
+                }
+                batches
+                    .stream()
+                    .map(
+                        batch ->
+                            batch.put(
+                                JsonKey.CONTENT,
+                                contentsById.get((String) batch.get(JsonKey.COURSE_ID))));
+                Response response = new Response();
+                response.put(JsonKey.COURSES, result.get(JsonKey.CONTENT));
+                return response;
+              }
+            },
+            getContext().dispatcher());
+
+    Patterns.pipe(response, getContext().dispatcher());
   }
 
   private Response getCourseContentState(String userId, Map<String, Object> requestMap) {

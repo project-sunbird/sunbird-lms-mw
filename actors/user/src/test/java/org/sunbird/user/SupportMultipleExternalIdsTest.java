@@ -41,15 +41,13 @@ import org.sunbird.models.user.User;
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
 public class SupportMultipleExternalIdsTest {
 
-  private static CassandraOperation cassandraOperation;
-  private static User user = null;
-  private EncryptionService encryptionService;
+  private static User user;
 
   @Before
   public void beforeEach() throws Exception {
 
     PowerMockito.mockStatic(org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.class);
-    encryptionService = Mockito.mock(EncryptionService.class);
+    EncryptionService encryptionService = Mockito.mock(EncryptionService.class);
     Mockito.when(
             org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
                 .getEncryptionServiceInstance(null))
@@ -74,7 +72,7 @@ public class SupportMultipleExternalIdsTest {
     externalIdResMap.put(JsonKey.EXTERNAL_ID, "someExternalId");
 
     PowerMockito.mockStatic(ServiceFactory.class);
-    cassandraOperation = PowerMockito.mock(CassandraOperationImpl.class);
+    CassandraOperation cassandraOperation = PowerMockito.mock(CassandraOperationImpl.class);
     PowerMockito.when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     Response response1 = new Response();
     List<Map<String, String>> resMapList = new ArrayList<>();
@@ -87,7 +85,7 @@ public class SupportMultipleExternalIdsTest {
   }
 
   @Test
-  public void testCheckExternalIdUniquenessForCreate() {
+  public void testForCreateSuccess() {
 
     try {
       Util.checkExternalIdUniqueness(user, JsonKey.CREATE);
@@ -97,7 +95,7 @@ public class SupportMultipleExternalIdsTest {
   }
 
   @Test
-  public void testCheckExternalIdUniquenessForUpdate() {
+  public void testForUpdateSuccess() {
 
     try {
       user.setUserId("someUserId");
@@ -108,7 +106,7 @@ public class SupportMultipleExternalIdsTest {
   }
 
   @Test
-  public void testCheckExternalIdNotFoundForUpdate() {
+  public void testForUpdateWithExternalIdNotFoundFailure() {
 
     try {
       user.setUserId("someUserId");
@@ -120,7 +118,7 @@ public class SupportMultipleExternalIdsTest {
   }
 
   @Test
-  public void testCheckExternalIdNotFoundForDelete() {
+  public void testForDeleteWithExternalIdNotFoundFailure() {
 
     try {
       user.setUserId("someUserId");

@@ -114,10 +114,9 @@ public class LearnerStateActor extends BaseActor {
       ProjectLogger.log("Exception while processing filters", e);
     }
     ProjectLogger.log(
-        "requestBody "
-            + requestBody
-            + " request param : "
-            + (String) request.getContext().get(JsonKey.URL_QUERY_STRING),
+        String.format(
+            "requestBody {0} , request param : {1}",
+            requestBody, (String) request.getContext().get(JsonKey.URL_QUERY_STRING)),
         LoggerEnum.INFO);
 
     Future<Map<String, Object>> futureResult =
@@ -131,21 +130,23 @@ public class LearnerStateActor extends BaseActor {
             new Mapper<Map<String, Object>, Response>() {
               @Override
               public Response apply(Map<String, Object> result) {
-                Map<String, Object> contentsById = new HashMap<>();
+
                 if (MapUtils.isNotEmpty(result)) {
+                  Map<String, Object> contentsById = new HashMap<>();
                   ((List<Map<String, Object>>) result.get(JsonKey.CONTENTS))
                       .stream()
                       .forEach(
                           content ->
                               contentsById.put((String) content.get(JsonKey.IDENTIFIER), content));
+
+                  batches
+                      .stream()
+                      .map(
+                          batch ->
+                              batch.put(
+                                  JsonKey.CONTENT,
+                                  contentsById.get((String) batch.get(JsonKey.COURSE_ID))));
                 }
-                batches
-                    .stream()
-                    .map(
-                        batch ->
-                            batch.put(
-                                JsonKey.CONTENT,
-                                contentsById.get((String) batch.get(JsonKey.COURSE_ID))));
                 Response response = new Response();
                 response.put(JsonKey.COURSES, result.get(JsonKey.CONTENT));
                 return response;

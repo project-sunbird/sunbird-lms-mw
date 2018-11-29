@@ -138,7 +138,7 @@ public class CourseBatchManagementActor extends BaseActor {
     if (courseNotificationActive()) {
       batchOperationNotifier(courseBatch, null);
     }
-    syncToEkstepAndUpdateDB(courseBatch);
+    updateBatchCount(courseBatch);
   }
 
   private boolean courseNotificationActive() {
@@ -433,9 +433,9 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private int setCourseBatchStatus(String startDate) {
     try {
-      Date todaydate = DATE_FORMAT.parse(DATE_FORMAT.format(new Date()));
+      Date todayDate = DATE_FORMAT.parse(DATE_FORMAT.format(new Date()));
       Date requestedStartDate = DATE_FORMAT.parse(startDate);
-      if (todaydate.compareTo(requestedStartDate) == 0) {
+      if (todayDate.compareTo(requestedStartDate) == 0) {
         return ProgressStatus.STARTED.getValue();
       } else {
         return ProgressStatus.NOT_STARTED.getValue();
@@ -853,7 +853,7 @@ public class CourseBatchManagementActor extends BaseActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void syncToEkstepAndUpdateDB(CourseBatch courseBatch) {
+  private void updateBatchCount(CourseBatch courseBatch) {
     if (CourseBatchSchedulerUtil.doOperationInEkStepCourse(
         courseBatch.getCourseId(), true, courseBatch.getEnrollmentType())) {
       courseBatch.setCountIncrementStatus(true);

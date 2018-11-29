@@ -858,7 +858,7 @@ public class CourseBatchManagementActor extends BaseActor {
         courseBatch.getCourseId(), true, courseBatch.getEnrollmentType())) {
       courseBatch.setCountIncrementStatus(true);
       try {
-        courseBatch.setCountIncrementDate(format.format(new Date()));
+        courseBatch.setCountIncrementDate(ProjectUtil.getFormattedDate());
         Map<String, Object> courseBatchMap =
             new ObjectMapper().convertValue(courseBatch, Map.class);
         Response response = courseBatchDao.update(courseBatchMap);

@@ -1,5 +1,6 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import org.sunbird.actor.router.ActorConfig;
@@ -43,14 +44,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     sender().tell(response, sender());
   }
 
-  private void download(Request request) {
-    Response response = new Response();
-    Map<String, Object> textbook = new HashMap<>();
-    textbook.put(
-        "tocUrl",
-        "https://sunbirddev.blob.core.windows.net/sunbird-content-dev/content/do_1126441512460369921103/artifact/1_1543475510769.pdf");
-    textbook.put("ttl", 86400);
-    response.getResult().put("textbook", textbook);
-    sender().tell(response, sender());
+  private void download(Request request) throws Exception {
+    File file = new File("test.csv");
+    file.createNewFile();
+    sender().tell(file, sender());
   }
 }

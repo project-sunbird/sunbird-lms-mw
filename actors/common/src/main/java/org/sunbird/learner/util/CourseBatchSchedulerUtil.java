@@ -176,8 +176,7 @@ public final class CourseBatchSchedulerUtil {
     map.put(dateAttribute, dateRangeFilter);
     map.put(counterAttribute, false);
     dto.addAdditionalProperty(JsonKey.FILTERS, map);
-    String loggerMessageIfEmpty = "No data found for" + dateAttribute + " course batch===" + date;
-    return contentReadResponse(dto, loggerMessageIfEmpty);
+    return contentReadResponse(dto);
   }
 
   private static List<Map<String, Object>> courseBatchStartStatusData(String startDate) {
@@ -189,13 +188,11 @@ public final class CourseBatchSchedulerUtil {
     map.put(JsonKey.COUNTER_INCREMENT_STATUS, true);
     map.put(JsonKey.STATUS, 0);
     dto.addAdditionalProperty(JsonKey.FILTERS, map);
-    String loggerMessageIfEmpty = "No data found for status change with start date " + startDate;
-    return contentReadResponse(dto, loggerMessageIfEmpty);
+    return contentReadResponse(dto);
   }
 
   @SuppressWarnings("unchecked")
-  private static List<Map<String, Object>> contentReadResponse(
-      SearchDTO dto, String loggerMessageIfEmpty) {
+  private static List<Map<String, Object>> contentReadResponse(SearchDTO dto) {
     List<Map<String, Object>> listOfMap = new ArrayList<>();
     Map<String, Object> responseMap =
         ElasticSearchUtil.complexSearch(
@@ -207,10 +204,16 @@ public final class CourseBatchSchedulerUtil {
       if (val != null) {
         listOfMap = (List<Map<String, Object>>) val;
       } else {
-        ProjectLogger.log(loggerMessageIfEmpty, LoggerEnum.INFO.name());
+        ProjectLogger.log(
+            "CourseBatchSchedulerUtil: contentReadResponse: Empty records for "
+                + dto.getAdditionalProperties().toString(),
+            LoggerEnum.INFO.name());
       }
     } else {
-      ProjectLogger.log(loggerMessageIfEmpty, LoggerEnum.INFO.name());
+      ProjectLogger.log(
+          "CourseBatchSchedulerUtil: contentReadResponse: No response from ElasticSearch for "
+              + dto.getAdditionalProperties().toString(),
+          LoggerEnum.INFO.name());
     }
     return listOfMap;
   }

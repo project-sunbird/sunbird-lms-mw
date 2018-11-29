@@ -65,7 +65,7 @@ public class ManageCourseBatchCount implements Job {
         "start date and end date is ==" + today + "  " + yesterDay, LoggerEnum.INFO.name());
     Map<String, Object> data = CourseBatchSchedulerUtil.getBatchDetailsFromES(today, yesterDay);
     Map<String, Map<String, Integer>> contentMap = new HashMap<>();
-    Map<String, List<Map<String, Object>>> courseBatchMap = new HashMap<>();
+    Map<String, Map<String, List<Map<String, Object>>>> courseBatchMap = new HashMap<>();
     if (data != null && data.size() > 0) {
       if (null != data.get(JsonKey.START_DATE)) {
         List<Map<String, Object>> listMap =
@@ -128,25 +128,11 @@ public class ManageCourseBatchCount implements Job {
       courseBatchMap.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.COMPLETED.getValue());
     }
     courseBatchMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-    /*
-    if(isCountIncrementStatus) {
-     CourseBatchSchedulerUtil.updateCourseBatchDbStatus(weakMap, true);
-    	}
-    else if(isCountDecrementStatus) {
-     CourseBatchSchedulerUtil.updateCourseBatchDbStatus(weakMap, false);
-    }
-    else {
-     boolean flag = CourseBatchSchedulerUtil.updateDataIntoES(weakMap);
-     if(flag) {
-      CourseBatchSchedulerUtil.updateDataIntoCassandra(weakMap);
-     }
-    }
-    */
   }
 
   private void updateContentAndCourseBatchMap(
       Map<String, Map<String, Integer>> contentMap,
-      Map<String, List<Map<String, Object>>> courseBatchMap,
+      Map<String, Map<String, List<Map<String, Object>>>> courseBatchMap,
       Map<String, Object> map,
       boolean flag) {
     String name = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION);
@@ -175,9 +161,13 @@ public class ManageCourseBatchCount implements Job {
         countMap.put(contentNameNotMatch, batchCountNotMatchVal);
         contentMap.put(courseId, countMap);
         // Creating courseBatchMap for this courseId
-        List<Map<String, Object>> courseBatchList = new ArrayList<>();
-        courseBatchList.add(map);
-        courseBatchMap.put(courseId, courseBatchList);
+        Map<String, List<Map<String, Object>>> courseBatchTypeMap = new HashMap<>();
+        List<Map<String, Object>> courseBatchMatchList = new ArrayList<>();
+        List<Map<String, Object>> courseBatchNotMatchList = new ArrayList<>();
+        courseBatchMatchList.add(map);
+        courseBatchTypeMap.put(contentNameMatch, courseBatchMatchList);
+        courseBatchTypeMap.put(contentNameNotMatch, courseBatchNotMatchList);
+        courseBatchMap.put(courseId, courseBatchTypeMap);
       }
     } else {
       batchCountMatchUpdatedVal = contentMap.get(courseId).get(contentNameMatch) + (flag ? 1 : -1);
@@ -185,13 +175,13 @@ public class ManageCourseBatchCount implements Job {
         batchCountMatchUpdatedVal = 0;
       }
       contentMap.get(courseId).put(contentNameMatch, batchCountMatchUpdatedVal);
-      courseBatchMap.get(courseId).add(map);
+      courseBatchMap.get(courseId).get(contentNameMatch).add(map);
     }
   }
 
   private void updateEkstepAndDb(
       Map<String, Map<String, Integer>> contentMap,
-      Map<String, List<Map<String, Object>>> courseBatchMap) {
+      Map<String, Map<String, List<Map<String, Object>>>> courseBatchMap) {
     boolean response;
     for (Map.Entry<String, Map<String, Integer>> ekStepUpdateMap : contentMap.entrySet()) {
       String courseId = ekStepUpdateMap.getKey();
@@ -200,8 +190,16 @@ public class ManageCourseBatchCount implements Job {
             CourseBatchSchedulerUtil.updateEkstepContent(
                 courseId, batchTypeCount.getKey(), batchTypeCount.getValue());
         if (response) {
-          List<Map<String, Object>> courseBatchUpdateList = courseBatchMap.get(courseId);
-          if (courseBatchUpdateList != null && !courseBatchUpdateList.isEmpty()) {}
+          List<Map<String, Object>> courseBatchUpdateList =
+              courseBatchMap.get(courseId).get(batchTypeCount.getKey());
+          if (courseBatchUpdateList != null && !courseBatchUpdateList.isEmpty()) {
+            courseBatchUpdateList.forEach(
+                map -> {
+                  if (CourseBatchSchedulerUtil.updateDataIntoES(map)) {
+                    CourseBatchSchedulerUtil.updateDataIntoCassandra(map);
+                  }
+                });
+          }
         }
       }
     }

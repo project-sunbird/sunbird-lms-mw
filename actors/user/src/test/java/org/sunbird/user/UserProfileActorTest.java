@@ -48,7 +48,6 @@ public class UserProfileActorTest {
 
   private final Props props = Props.create(UserProfileActor.class);
   private CassandraOperationImpl cassandraOperation;
-  private SearchDTO searchDTO;
   private String userId = "USER-ID";
 
   @Before
@@ -57,7 +56,7 @@ public class UserProfileActorTest {
     PowerMockito.mockStatic(ServiceFactory.class);
     PowerMockito.mockStatic(ElasticSearchUtil.class);
     PowerMockito.mockStatic(Util.class);
-    searchDTO = Mockito.mock(SearchDTO.class);
+    SearchDTO searchDTO = Mockito.mock(SearchDTO.class);
     when(Util.createSearchDto(Mockito.anyMap())).thenReturn(searchDTO);
     cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);

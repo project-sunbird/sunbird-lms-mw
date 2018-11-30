@@ -85,7 +85,7 @@ public class SupportMultipleExternalIdsTest {
   }
 
   @Test
-  public void testForCreateSuccess() {
+  public void testCheckExternalIdUniquenessSuccessForCreate() {
 
     try {
       Util.checkExternalIdUniqueness(user, JsonKey.CREATE);
@@ -95,7 +95,7 @@ public class SupportMultipleExternalIdsTest {
   }
 
   @Test
-  public void testForUpdateSuccess() {
+  public void testCheckExternalIdUniquenessSuccessForUpdate() {
 
     try {
       user.setUserId("someUserId");
@@ -106,7 +106,7 @@ public class SupportMultipleExternalIdsTest {
   }
 
   @Test
-  public void testForUpdateWithExternalIdNotFoundFailure() {
+  public void testCheckExternalIdUniquenessFailureWithUpdateOperation() {
 
     try {
       user.setUserId("someUserId");
@@ -118,7 +118,7 @@ public class SupportMultipleExternalIdsTest {
   }
 
   @Test
-  public void testForDeleteWithExternalIdNotFoundFailure() {
+  public void testCheckExternalIdUniquenessFailureWithRemoveOperation() {
 
     try {
       user.setUserId("someUserId");

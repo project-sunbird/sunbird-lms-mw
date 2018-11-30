@@ -1,5 +1,6 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import static org.sunbird.common.exception.ProjectCommonException.throwClientErrorException;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -81,21 +82,19 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
 
     private void validateTextBook(Request request) {
-        String mode=((Map<String,Object>)request.get(JsonKey.DATA)).get(JsonKey.MODE).toString();
+        String mode = ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.MODE).toString();
         Map<String, Object> response = ContentStoreUtil.readContent(request.get(JsonKey.TEXTBOOK_ID).toString());
         if (null != response && !response.isEmpty()) {
             Map<String, Object> result = (Map<String, Object>) response.get(JsonKey.RESULT);
             Map<String, Object> textbook = (Map<String, Object>) result.get(JsonKey.CONTENT);
             List<String> allowedContentTypes = Arrays.asList(ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_ALLOWED_CONTNET_TYPES).split(","));
             if (!JsonKey.TEXTBOOK_TOC_ALLOWED_MIMETYPE.equalsIgnoreCase(textbook.get(JsonKey.MIME_TYPE).toString()) || !allowedContentTypes.contains(textbook.get(JsonKey.CONTENT_TYPE).toString())) {
-                ProjectCommonException.throwClientErrorException(
-                        ResponseCode.invalidTextbook, ResponseCode.invalidTextbook.getErrorMessage());
+                throwClientErrorException(ResponseCode.invalidTextbook, ResponseCode.invalidTextbook.getErrorMessage());
             }
             if (JsonKey.CREATE.equalsIgnoreCase(mode)) {
                 List<Object> children = textbook.containsKey(JsonKey.CHILDREN) ? (List<Object>) textbook.get(JsonKey.CHILDREN) : null;
                 if (null != children || !children.isEmpty()) {
-                    ProjectCommonException.throwClientErrorException(
-                            ResponseCode.textbookChildrenExist, ResponseCode.textbookChildrenExist.getErrorMessage());
+                    throwClientErrorException(ResponseCode.textbookChildrenExist, ResponseCode.textbookChildrenExist.getErrorMessage());
                 }
             }
         } else {

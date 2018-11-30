@@ -11,6 +11,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.actors.coursebatch.dao.UserCoursesDao;
 import org.sunbird.learner.actors.coursebatch.dao.impl.UserCoursesDaoImpl;
 import org.sunbird.models.user.courses.UserCourses;
@@ -106,6 +107,18 @@ public class UserCoursesService {
     updateAttributes.put(JsonKey.ID, userCourses.getId());
     userCourseDao.update(updateAttributes);
     sync(updateAttributes, userCourses.getId());
+  }
+
+  public Map<String, Object> getActiveUserCourses(String userId) {
+    Map<String, Object> filter = new HashMap<>();
+    filter.put(JsonKey.USER_ID, userId);
+    filter.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
+    SearchDTO searchDto = new SearchDTO();
+    searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
+    return ElasticSearchUtil.complexSearch(
+        searchDto,
+        ProjectUtil.EsIndex.sunbird.getIndexName(),
+        ProjectUtil.EsType.usercourses.getTypeName());
   }
 
   public static void sync(Map<String, Object> courseMap, String id) {

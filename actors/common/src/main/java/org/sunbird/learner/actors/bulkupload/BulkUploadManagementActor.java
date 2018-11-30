@@ -140,7 +140,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
                 cloudStorageData.getFileName());
         Response response = new Response();
         response.setResponseCode(ResponseCode.OK);
-        Map<String,Object> resultMap  = response.getResult();
+        Map<String, Object> resultMap = response.getResult();
         resultMap.put(JsonKey.SIGNED_URL, signedUrl);
         resultMap.put(JsonKey.OBJECT_TYPE, bulkUploadProcess.getObjectType());
         resultMap.put(JsonKey.PROCESS_ID, bulkUploadProcess.getId());

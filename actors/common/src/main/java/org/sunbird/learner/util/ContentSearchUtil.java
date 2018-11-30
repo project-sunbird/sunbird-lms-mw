@@ -60,7 +60,7 @@ public class ContentSearchUtil {
             ? contentSearchURL + urlQueryString
             : contentSearchURL;
     ProjectLogger.log(
-        "ContentSearchUtil:searchContent Making content search call to " + urlString,
+        "ContentSearchUtil:searchContent Making content search call to = " + urlString,
         LoggerEnum.INFO);
     BaseRequest request =
         Unirest.post(urlString).headers(getUpdatedHeaders(headers)).body(queryRequestBody);
@@ -77,6 +77,12 @@ public class ContentSearchUtil {
                 Object contents = resultMap.get(JsonKey.CONTENT);
                 resultMap.remove(JsonKey.CONTENT);
                 resultMap.put(JsonKey.CONTENTS, contents);
+                ProjectLogger.log(
+                    "ContentSearchUtil:searchContent requestBody = "
+                        + queryRequestBody
+                        + " content = "
+                        + contents,
+                    LoggerEnum.INFO.name());
                 String resmsgId = RestUtil.getFromResponse(response, "params.resmsgid");
                 String apiId = RestUtil.getFromResponse(response, "id");
                 Map<String, Object> param = new HashMap<>();

@@ -42,8 +42,8 @@ import org.sunbird.user.service.impl.UserServiceImpl;
 public class UserStatusActorTest {
 
   private static final Props props = Props.create(UserStatusActor.class);
-  private static ActorSystem system = ActorSystem.create("system");
-  private String userId = "someUserId";
+  private static final ActorSystem system = ActorSystem.create("system");
+  private static final String userId = "someUserId";
   private User user;
   private static CassandraOperationImpl cassandraOperation;
 
@@ -51,21 +51,25 @@ public class UserStatusActorTest {
   public void init() {
 
     PowerMockito.mockStatic(ServiceFactory.class);
-    UserResource resource = mock(UserResource.class);
-    UsersResource usersResource = mock(UsersResource.class);
     UserRepresentation ur = mock(UserRepresentation.class);
     RealmResource realmResource = mock(RealmResource.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
 
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     Keycloak keycloak = mock(Keycloak.class);
+
     PowerMockito.mockStatic(UserServiceImpl.class);
     UserService userService = mock(UserService.class);
     when(UserServiceImpl.getInstance()).thenReturn(userService);
+
     PowerMockito.mockStatic(KeyCloakConnectionProvider.class);
     when(KeyCloakConnectionProvider.getConnection()).thenReturn(keycloak);
     when(keycloak.realm(Mockito.anyString())).thenReturn(realmResource);
+
+    UsersResource usersResource = mock(UsersResource.class);
     when(realmResource.users()).thenReturn(usersResource);
+
+    UserResource resource = mock(UserResource.class);
     when(usersResource.get(Mockito.any())).thenReturn(resource);
     when(resource.toRepresentation()).thenReturn(ur);
     ur.setEnabled(Mockito.anyBoolean());
@@ -84,11 +88,7 @@ public class UserStatusActorTest {
     when(cassandraOperation.updateRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(response);
-
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.BLOCK_USER.getValue());
-    reqObj.put(JsonKey.USER_ID, userId);
-    subject.tell(reqObj, probe.getRef());
+    subject.tell(getRequestObject(ActorOperations.BLOCK_USER.getValue()), probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
   }
@@ -98,12 +98,8 @@ public class UserStatusActorTest {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-
     when(user.getIsDeleted()).thenReturn(true);
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.BLOCK_USER.getValue());
-    reqObj.put(JsonKey.USER_ID, userId);
-    subject.tell(reqObj, probe.getRef());
+    subject.tell(getRequestObject(ActorOperations.BLOCK_USER.getValue()), probe.getRef());
     ProjectCommonException exception =
         probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
     Assert.assertTrue(
@@ -123,11 +119,7 @@ public class UserStatusActorTest {
     when(cassandraOperation.updateRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(response);
-
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.UNBLOCK_USER.getValue());
-    reqObj.put(JsonKey.USER_ID, userId);
-    subject.tell(reqObj, probe.getRef());
+    subject.tell(getRequestObject(ActorOperations.UNBLOCK_USER.getValue()), probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
   }
@@ -139,16 +131,21 @@ public class UserStatusActorTest {
     ActorRef subject = system.actorOf(props);
 
     when(user.getIsDeleted()).thenReturn(false);
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.UNBLOCK_USER.getValue());
-    reqObj.put(JsonKey.USER_ID, userId);
-    subject.tell(reqObj, probe.getRef());
+    subject.tell(getRequestObject(ActorOperations.UNBLOCK_USER.getValue()), probe.getRef());
     ProjectCommonException exception =
         probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
     Assert.assertTrue(
         ((ProjectCommonException) exception)
             .getCode()
             .equals(ResponseCode.userAlreadyActive.getErrorCode()));
+  }
+
+  private Request getRequestObject(String operation) {
+
+    Request reqObj = new Request();
+    reqObj.setOperation(operation);
+    reqObj.put(JsonKey.USER_ID, userId);
+    return reqObj;
   }
 
   private Response createCassandraUpdateSuccessResponse() {

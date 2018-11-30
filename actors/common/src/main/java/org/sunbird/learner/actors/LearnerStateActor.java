@@ -95,7 +95,7 @@ public class LearnerStateActor extends BaseActor {
 
     ProjectLogger.log(
         String.format(
-            "LearnerStateActor.addCourseDetails: requestBody {0} , request param : {1}",
+            "LearnerStateActor:addCourseDetails: request body = {0}, query string = {1}",
             requestBody, (String) request.getContext().get(JsonKey.URL_QUERY_STRING)),
         LoggerEnum.INFO);
 
@@ -105,7 +105,7 @@ public class LearnerStateActor extends BaseActor {
                 requestBody,
                 (Map<String, String>) request.getRequest().get(JsonKey.HEADER))
             .map(mapToCourseByCourseId(), getContext().dispatcher())
-            .map(prepareBatchesResponse(batches), getContext().dispatcher());
+            .map(prepareCourseBatchResponse(batches), getContext().dispatcher());
 
     Patterns.pipe(response, getContext().dispatcher());
   }
@@ -120,18 +120,21 @@ public class LearnerStateActor extends BaseActor {
     Map<String, Object> filters = new HashMap<String, Object>();
     filters.put(JsonKey.CONTENT_TYPE, new String[] {JsonKey.COURSE});
     filters.put(JsonKey.IDENTIFIER, courseIds);
-    Map<String, Map<String, Object>> req = new HashMap<>();
-    req.put(JsonKey.FILTERS, filters);
-    Map<String, Map<String, Map<String, Object>>> reqWrapper = new HashMap<>();
-    reqWrapper.put(JsonKey.REQUEST, req);
 
-    String requestBody = null;
+    Map<String, Map<String, Object>> requestMap = new HashMap<>();
+    requestMap.put(JsonKey.FILTERS, filters);
+    
+    Map<String, Map<String, Map<String, Object>>> request = new HashMap<>();
+    request.put(JsonKey.REQUEST, requestMap);
+
+    String requestJson = null;
     try {
-      requestBody = new ObjectMapper().writeValueAsString(reqWrapper);
+      requestJson = new ObjectMapper().writeValueAsString(request);
     } catch (JsonProcessingException e) {
-      ProjectLogger.log("Exception while processing filters", e);
+      ProjectLogger.log("LearnerStateActor:prepareCourseSearchRequest: Exception occurred with error message = " + e.getMessage(), e);
     }
-    return requestBody;
+
+    return requestJson;
   }
 
   private Mapper<Map<String, Object>, Map<String, Object>> mapToCourseByCourseId() {
@@ -153,7 +156,7 @@ public class LearnerStateActor extends BaseActor {
     };
   }
 
-  private Mapper<Map<String, Object>, Response> prepareBatchesResponse(
+  private Mapper<Map<String, Object>, Response> prepareCourseBatchResponse(
       List<Map<String, Object>> batches) {
     return new Mapper<Map<String, Object>, Response>() {
       public Response apply(Map<String, Object> contentsByCourseId) {

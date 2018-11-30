@@ -89,13 +89,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             List<String> allowedContentTypes = Arrays.asList(ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_ALLOWED_CONTNET_TYPES).split(","));
             if (!JsonKey.TEXTBOOK_TOC_ALLOWED_MIMETYPE.equalsIgnoreCase(textbook.get(JsonKey.MIME_TYPE).toString()) || !allowedContentTypes.contains(textbook.get(JsonKey.CONTENT_TYPE).toString())) {
                 ProjectCommonException.throwClientErrorException(
-                        ResponseCode.errorInvalidTextbook, ResponseCode.errorInvalidTextbook.getErrorMessage());
+                        ResponseCode.invalidTextbook, ResponseCode.invalidTextbook.getErrorMessage());
             }
             if (JsonKey.CREATE.equalsIgnoreCase(mode)) {
                 List<Object> children = textbook.containsKey(JsonKey.CHILDREN) ? (List<Object>) textbook.get(JsonKey.CHILDREN) : null;
                 if (null != children || !children.isEmpty()) {
                     ProjectCommonException.throwClientErrorException(
-                            ResponseCode.errorInvalidTextbookUploadNotAllowed, ResponseCode.errorInvalidTextbookUploadNotAllowed.getErrorMessage());
+                            ResponseCode.textbookChildrenExist, ResponseCode.textbookChildrenExist.getErrorMessage());
                 }
             }
         } else {

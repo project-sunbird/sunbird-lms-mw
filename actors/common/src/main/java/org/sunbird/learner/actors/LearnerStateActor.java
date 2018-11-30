@@ -163,9 +163,9 @@ public class LearnerStateActor extends BaseActor {
       List<Map<String, Object>> batches) {
     return new Mapper<Map<String, Object>, Response>() {
       public Response apply(Map<String, Object> contentsByCourseId) {
-        List<Map<String, Object>> batchesWithCourse = batches;
+        List<Map<String, Object>> batchesWithCourseDetails = batches;
         if (MapUtils.isNotEmpty(contentsByCourseId)) {
-          batchesWithCourse =
+          batchesWithCourseDetails =
               batches
                   .stream()
                   .map(
@@ -180,7 +180,7 @@ public class LearnerStateActor extends BaseActor {
                   .collect(Collectors.toList());
         }
         Response response = new Response();
-        response.put(JsonKey.COURSES, batchesWithCourse);
+        response.put(JsonKey.COURSES, batchesWithCourseDetails);
         return response;
       }
     };

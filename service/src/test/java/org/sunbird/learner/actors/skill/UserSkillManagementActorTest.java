@@ -45,6 +45,7 @@ public class UserSkillManagementActorTest {
   private static final String USER_ID = "userId";
   private static final String ROOT_ORG_ID = "someRootOrgId";
   private static final String ENDORSED_USER_ID = "someEndorsedUserId";
+  private static final String ENDORSED_SKILL_NAME = "someEndorsedSkillName";
   private List<String> skillsList = new ArrayList<>();
   private FiniteDuration duration = duration("10 second");
 
@@ -177,7 +178,7 @@ public class UserSkillManagementActorTest {
 
     mockCassandraRequestForGetUser(true);
     subject.tell(
-        createSkillEndorsementRequest(USER_ID, ENDORSED_USER_ID, ENDORSE_SKILL_NAME),
+        createSkillEndorsementRequest(USER_ID, ENDORSED_USER_ID, ENDORSED_SKILL_NAME),
         probe.getRef());
     ProjectCommonException result = probe.expectMsgClass(duration, ProjectCommonException.class);
     Assert.assertTrue(
@@ -191,7 +192,7 @@ public class UserSkillManagementActorTest {
     ActorRef subject = system.actorOf(props);
     mockCassandraRequestForGetUser(true);
     subject.tell(
-        createSkillEndorsementRequest(USER_ID, ENDORSED_USER_ID, ENDORSE_SKILL_NAME),
+        createSkillEndorsementRequest(USER_ID, ENDORSED_USER_ID, ENDORSED_SKILL_NAME),
         probe.getRef());
     ProjectCommonException exception = probe.expectMsgClass(duration, ProjectCommonException.class);
     Assert.assertTrue(
@@ -213,7 +214,7 @@ public class UserSkillManagementActorTest {
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(endorsementSkillResponse());
     subject.tell(
-        createSkillEndorsementRequest(USER_ID, ENDORSED_USER_ID, ENDORSE_SKILL_NAME),
+        createSkillEndorsementRequest(USER_ID, ENDORSED_USER_ID, ENDORSED_SKILL_NAME),
         probe.getRef());
     Response response = probe.expectMsgClass(duration, Response.class);
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
@@ -290,8 +291,8 @@ public class UserSkillManagementActorTest {
     Response response = new Response();
     List<Map<String, Object>> result = new ArrayList<>();
     Map<String, Object> skill = new HashMap<>();
-    skill.put(JsonKey.SKILL_NAME, ENDORSE_SKILL_NAME);
-    skill.put(JsonKey.SKILL_NAME_TO_LOWERCASE, ENDORSE_SKILL_NAME.toLowerCase());
+    skill.put(JsonKey.SKILL_NAME, ENDORSED_SKILL_NAME);
+    skill.put(JsonKey.SKILL_NAME_TO_LOWERCASE, ENDORSED_SKILL_NAME.toLowerCase());
     skill.put(JsonKey.ENDORSERS_LIST, new ArrayList<>());
     result.add(skill);
     response.put(JsonKey.RESPONSE, result);

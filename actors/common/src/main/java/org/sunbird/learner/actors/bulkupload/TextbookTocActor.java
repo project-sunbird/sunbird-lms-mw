@@ -18,7 +18,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
-@ActorConfig(tasks = {"textbookTocUpload", "textbookTocUrl", "textbookTocUpdate"}, asyncTasks = {})
+@ActorConfig(tasks = {"textbookTocUpload", "textbookTocUrl"}, asyncTasks = {})
 public class TextbookTocActor extends BaseBulkUploadActor {
 
     @Override

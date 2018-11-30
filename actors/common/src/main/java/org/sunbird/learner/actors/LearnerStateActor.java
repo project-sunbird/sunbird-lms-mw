@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.helpers.MessageFormatter;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -100,9 +101,10 @@ public class LearnerStateActor extends BaseActor {
     String requestBody = prepareCourseSearchRequest(batches);
 
     ProjectLogger.log(
-        String.format(
-            "LearnerStateActor:addCourseDetails: request body = {0}, query string = {1}",
-            requestBody, (String) request.getContext().get(JsonKey.URL_QUERY_STRING)),
+        MessageFormatter.format(
+                "LearnerStateActor:addCourseDetails: request body = {0}, query string = {1}",
+                requestBody, (String) request.getContext().get(JsonKey.URL_QUERY_STRING))
+            .getMessage(),
         LoggerEnum.INFO.name());
 
     Future<Response> response =
@@ -191,6 +193,14 @@ public class LearnerStateActor extends BaseActor {
                         }
                         return batch;
                       })
+                  .peek(
+                      batch ->
+                          ProjectLogger.log(
+                              "LearnerStateActor:prepareCourseBatchResponse batchId ="
+                                  + (String) batch.get(JsonKey.BATCH_ID)
+                                  + " batch = "
+                                  + batch,
+                              LoggerEnum.INFO.name()))
                   .collect(Collectors.toList());
         }
         Response response = new Response();

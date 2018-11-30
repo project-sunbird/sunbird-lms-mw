@@ -56,7 +56,7 @@ public class LearnerStateActor extends BaseActor {
   @Override
   public void onReceive(Request request) throws Exception {
     if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_COURSE.getValue())) {
-      getUserEnrolledCourse(request);
+      getCourse(request);
     } else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_CONTENT.getValue())) {
 
       Response res = new Response();
@@ -71,7 +71,7 @@ public class LearnerStateActor extends BaseActor {
     }
   }
 
-  public void getUserEnrolledCourse(Request request) {
+  public void getCourse(Request request) {
     String userId = (String) request.getRequest().get(JsonKey.USER_ID);
 
     Map<String, Object> filter = new HashMap<>();
@@ -96,9 +96,32 @@ public class LearnerStateActor extends BaseActor {
   private void addCourseDetails(Request request, Map<String, Object> userCoursesResult) {
     List<Map<String, Object>> batches =
         (List<Map<String, Object>>) userCoursesResult.get(JsonKey.CONTENT);
+
     if (CollectionUtils.isNotEmpty(batches)) {
       return;
     }
+    String requestBody = prepareCourseSearchRequest(batches);
+    if (StringUtils.isBlank(requestBody)) {
+      return;
+    }
+    ProjectLogger.log(
+        String.format(
+            "requestBody {0} , request param : {1}",
+            requestBody, (String) request.getContext().get(JsonKey.URL_QUERY_STRING)),
+        LoggerEnum.INFO);
+
+    Future<Response> response =
+        ContentSearchUtil.searchContent(
+                (String) request.getContext().get(JsonKey.URL_QUERY_STRING),
+                requestBody,
+                (Map<String, String>) request.getRequest().get(JsonKey.HEADER))
+            .map(mapToCourseByCourseId(), getContext().dispatcher())
+            .map(prepareBatchesResponse(batches), getContext().dispatcher());
+
+    Patterns.pipe(response, getContext().dispatcher());
+  }
+
+  private String prepareCourseSearchRequest(List<Map<String, Object>> batches) {
     Set<String> courseIds =
         batches
             .stream()
@@ -119,56 +142,44 @@ public class LearnerStateActor extends BaseActor {
     } catch (JsonProcessingException e) {
       ProjectLogger.log("Exception while processing filters", e);
     }
-    ProjectLogger.log(
-        String.format(
-            "requestBody {0} , request param : {1}",
-            requestBody, (String) request.getContext().get(JsonKey.URL_QUERY_STRING)),
-        LoggerEnum.INFO);
+    return requestBody;
+  }
 
-    Future<Response> response =
-        ContentSearchUtil.searchContent(
-                (String) request.getContext().get(JsonKey.URL_QUERY_STRING),
-                requestBody,
-                (Map<String, String>) request.getRequest().get(JsonKey.HEADER))
-            .map(
-                new Mapper<Map<String, Object>, Map<String, Object>>() {
-                  @Override
-                  public Map<String, Object> apply(Map<String, Object> result) {
-                    Map<String, Object> contentsById = new HashMap<>();
-                    if (MapUtils.isNotEmpty(result)) {
+  private Mapper<Map<String, Object>, Map<String, Object>> mapToCourseByCourseId() {
+    return new Mapper<Map<String, Object>, Map<String, Object>>() {
+      @Override
+      public Map<String, Object> apply(Map<String, Object> result) {
+        Map<String, Object> contentsById = new HashMap<>();
+        if (MapUtils.isNotEmpty(result)) {
 
-                      ((List<Map<String, Object>>) result.get(JsonKey.CONTENTS))
-                          .stream()
-                          .forEach(
-                              content ->
-                                  contentsById.put(
-                                      (String) content.get(JsonKey.IDENTIFIER), content));
-                    }
-                    return contentsById;
-                  }
-                },
-                getContext().dispatcher())
-            .map(
-                new Mapper<Map<String, Object>, Response>() {
-                  public Response apply(Map<String, Object> contentsByCourseId) {
-                    if (MapUtils.isNotEmpty(contentsByCourseId)) {
-                      batches
-                          .stream()
-                          .map(
-                              batch ->
-                                  batch.put(
-                                      JsonKey.CONTENT,
-                                      contentsByCourseId.get(
-                                          (String) batch.get(JsonKey.COURSE_ID))));
-                    }
-                    Response response = new Response();
-                    response.put(JsonKey.COURSES, batches);
-                    return response;
-                  }
-                },
-                getContext().dispatcher());
+          ((List<Map<String, Object>>) result.get(JsonKey.CONTENTS))
+              .stream()
+              .forEach(
+                  content -> contentsById.put((String) content.get(JsonKey.IDENTIFIER), content));
+        }
+        return contentsById;
+      }
+    };
+  }
 
-    Patterns.pipe(response, getContext().dispatcher());
+  private Mapper<Map<String, Object>, Response> prepareBatchesResponse(
+      List<Map<String, Object>> batches) {
+    return new Mapper<Map<String, Object>, Response>() {
+      public Response apply(Map<String, Object> contentsByCourseId) {
+        if (MapUtils.isNotEmpty(contentsByCourseId)) {
+          batches
+              .stream()
+              .map(
+                  batch ->
+                      batch.put(
+                          JsonKey.CONTENT,
+                          contentsByCourseId.get((String) batch.get(JsonKey.COURSE_ID))));
+        }
+        Response response = new Response();
+        response.put(JsonKey.COURSES, batches);
+        return response;
+      }
+    };
   }
 
   private Response getCourseContentState(String userId, Map<String, Object> requestMap) {

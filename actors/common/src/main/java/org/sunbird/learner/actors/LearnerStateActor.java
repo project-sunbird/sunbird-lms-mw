@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
@@ -17,7 +18,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -28,8 +28,8 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.coursebatch.service.UserCoursesService;
 import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.Util;
 import scala.concurrent.Future;
@@ -47,6 +47,7 @@ import scala.concurrent.Future;
 public class LearnerStateActor extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private UserCoursesService userCoursesService = new UserCoursesService();
 
   /**
    * Receives the actor message and perform the operation like get course , get content etc.
@@ -73,18 +74,8 @@ public class LearnerStateActor extends BaseActor {
 
   public void getCourse(Request request) {
     String userId = (String) request.getRequest().get(JsonKey.USER_ID);
+    Map<String, Object> result = userCoursesService.getActiveUserCourses(userId);
 
-    Map<String, Object> filter = new HashMap<>();
-    filter.put(JsonKey.USER_ID, userId);
-    filter.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
-    SearchDTO searchDto = new SearchDTO();
-    searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
-
-    Map<String, Object> result =
-        ElasticSearchUtil.complexSearch(
-            searchDto,
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.usercourses.getTypeName());
     if (MapUtils.isNotEmpty(result)) {
       addCourseDetails(request, result);
     }
@@ -97,16 +88,14 @@ public class LearnerStateActor extends BaseActor {
     List<Map<String, Object>> batches =
         (List<Map<String, Object>>) userCoursesResult.get(JsonKey.CONTENT);
 
-    if (CollectionUtils.isNotEmpty(batches)) {
+    if (CollectionUtils.isEmpty(batches)) {
       return;
     }
     String requestBody = prepareCourseSearchRequest(batches);
-    if (StringUtils.isBlank(requestBody)) {
-      return;
-    }
+
     ProjectLogger.log(
         String.format(
-            "requestBody {0} , request param : {1}",
+            "LearnerStateActor.addCourseDetails: requestBody {0} , request param : {1}",
             requestBody, (String) request.getContext().get(JsonKey.URL_QUERY_STRING)),
         LoggerEnum.INFO);
 
@@ -151,11 +140,13 @@ public class LearnerStateActor extends BaseActor {
       public Map<String, Object> apply(Map<String, Object> result) {
         Map<String, Object> contentsById = new HashMap<>();
         if (MapUtils.isNotEmpty(result)) {
-
-          ((List<Map<String, Object>>) result.get(JsonKey.CONTENTS))
-              .stream()
-              .forEach(
-                  content -> contentsById.put((String) content.get(JsonKey.IDENTIFIER), content));
+          contentsById =
+              ((List<Map<String, Object>>) result.get(JsonKey.CONTENTS))
+                  .stream()
+                  .collect(
+                      Collectors.toMap(
+                          content -> (String) content.get(JsonKey.IDENTIFIER),
+                          Function.identity()));
         }
         return contentsById;
       }

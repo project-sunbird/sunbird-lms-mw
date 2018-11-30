@@ -7,6 +7,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
@@ -39,13 +41,19 @@ import org.sunbird.models.user.User;
   EncryptionService.class,
   org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.class
 })
-@PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*", "javax.crypto.*", "javax.script.*"})
+@PowerMockIgnore({
+  "javax.management.*",
+  "javax.net.ssl.*",
+  "javax.security.*",
+  "javax.crypto.*",
+  "javax.script.*"
+})
 public class SupportMultipleExternalIdsTest {
 
   private static User user;
 
   @Before
-  public void beforeEach() throws Exception {
+  public void beforeEach() {
 
     PowerMockito.mockStatic(org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.class);
     EncryptionService encryptionService = Mockito.mock(EncryptionService.class);
@@ -53,11 +61,15 @@ public class SupportMultipleExternalIdsTest {
             org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
                 .getEncryptionServiceInstance(null))
         .thenReturn(encryptionService);
-    Mockito.when(encryptionService.encryptData(Mockito.anyString())).thenReturn("abc123");
+    try {
+      Mockito.when(encryptionService.encryptData(Mockito.anyString())).thenReturn("abc123");
+    } catch (Exception e) { // TODO Auto-generated catch block
+      Assert.fail("Initialization failed");
+    }
   }
 
   @BeforeClass
-  public static void setUp() throws Exception {
+  public static void setUp() {
 
     List<Map<String, String>> externalIds = new ArrayList<>();
     Map<String, String> externalIdReqMap = new HashMap<>();
@@ -80,7 +92,7 @@ public class SupportMultipleExternalIdsTest {
     CassandraOperation cassandraOperation = PowerMockito.mock(CassandraOperationImpl.class);
     PowerMockito.when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     Response response1 = new Response();
-    
+
     List<Map<String, String>> resMapList = new ArrayList<>();
     resMapList.add(externalIdResMap);
     response1.put(JsonKey.RESPONSE, resMapList);
@@ -96,7 +108,7 @@ public class SupportMultipleExternalIdsTest {
     try {
       Util.checkExternalIdUniqueness(user, JsonKey.CREATE);
     } catch (ProjectCommonException e) {
-    System.out.println("I was here");
+      System.out.println("I was here");
       assertEquals(ResponseCode.userAlreadyExists.getErrorCode(), e.getCode());
     }
   }

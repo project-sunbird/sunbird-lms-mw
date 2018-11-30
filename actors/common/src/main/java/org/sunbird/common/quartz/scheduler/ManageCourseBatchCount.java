@@ -8,6 +8,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections.MapUtils;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
@@ -27,7 +28,7 @@ import org.sunbird.telemetry.util.TelemetryUtil;
  */
 public class ManageCourseBatchCount implements Job {
 
-  private Map<String, Map<String, Object>> contentMap = new HashMap<>();
+  private Map<String, Map<String, Object>> courseDetailsMap = new HashMap<>();
   private Map<String, List<Map<String, Object>>> openBatchMap = new HashMap<>();
   private Map<String, List<Map<String, Object>>> privateBatchMap = new HashMap<>();
 
@@ -72,29 +73,24 @@ public class ManageCourseBatchCount implements Job {
         List<Map<String, Object>> listMap =
             (List<Map<String, Object>>) data.get(JsonKey.START_DATE);
         for (Map<String, Object> map : listMap) {
-          updateBatchMap(map);
+          updateCourseBatchStatus(true, false, map);
+          updateCourseIdToBatchListMap(map);
         }
-        getContentAndStore(openBatchMap);
-        getContentAndStore(privateBatchMap);
-        contentMapUpdate(true);
-        openBatchMap.clear();
-        privateBatchMap.clear();
+        performAction(true);
       }
       if (null != data.get(JsonKey.END_DATE)) {
         List<Map<String, Object>> listMap = (List<Map<String, Object>>) data.get(JsonKey.END_DATE);
         for (Map<String, Object> map : listMap) {
-          updateBatchMap(map);
+          updateCourseBatchStatus(false, true, map);
+          updateCourseIdToBatchListMap(map);
         }
+        performAction(false);
       }
-      getContentAndStore(openBatchMap);
-      getContentAndStore(privateBatchMap);
-      contentMapUpdate(false);
-      openBatchMap.clear();
-      privateBatchMap.clear();
+
       if (null != data.get(JsonKey.STATUS)) {
         List<Map<String, Object>> listMap = (List<Map<String, Object>>) data.get(JsonKey.STATUS);
         for (Map<String, Object> map : listMap) {
-          updateCourseBatchMap(false, false, map);
+          updateCourseBatchStatus(false, false, map);
           boolean flag = CourseBatchSchedulerUtil.updateDataIntoES(map);
           if (flag) {
             CourseBatchSchedulerUtil.updateDataIntoCassandra(map);
@@ -120,7 +116,16 @@ public class ManageCourseBatchCount implements Job {
     return info;
   }
 
-  private void updateCourseBatchMap(
+  private void performAction(boolean increment) {
+    updateCourseDetailsMap(openBatchMap);
+    updateCourseDetailsMap(privateBatchMap);
+    courseDetailsMapUpdate(increment);
+    openBatchMap.clear();
+    privateBatchMap.clear();
+    courseDetailsMap.clear();
+  }
+
+  private void updateCourseBatchStatus(
       boolean isCountIncrementStatus,
       boolean isCountDecrementStatus,
       Map<String, Object> courseBatchMap) {
@@ -138,46 +143,45 @@ public class ManageCourseBatchCount implements Job {
     courseBatchMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
   }
 
-  private void updateBatchMap(Map<String, Object> map) {
+  private void updateCourseIdToBatchListMap(Map<String, Object> map) {
     String courseId = (String) map.get(JsonKey.COURSE_ID);
     String enrollmentType = (String) map.get(JsonKey.ENROLLMENT_TYPE);
     if (JsonKey.OPEN.equals(enrollmentType)) {
-      if (openBatchMap.containsKey(courseId)) {
-        openBatchMap.get(courseId).add(map);
-      } else {
-        List<Map<String, Object>> batchList = new ArrayList<>();
-        batchList.add(map);
-        openBatchMap.put(courseId, batchList);
-      }
+      updateBatchMap(courseId, map, openBatchMap);
     } else {
-      if (privateBatchMap.containsKey(courseId)) {
-        privateBatchMap.get(courseId).add(map);
-      } else {
-        List<Map<String, Object>> batchList = new ArrayList<>();
-        batchList.add(map);
-        privateBatchMap.put(courseId, batchList);
-      }
+      updateBatchMap(courseId, map, privateBatchMap);
     }
   }
 
-  private void contentMapUpdate(boolean increment) {
+  private void updateBatchMap(
+      String courseId, Map<String, Object> map, Map<String, List<Map<String, Object>>> batchMap) {
+    if (batchMap.containsKey(courseId)) {
+      batchMap.get(courseId).add(map);
+    } else {
+      List<Map<String, Object>> batchList = new ArrayList<>();
+      batchList.add(map);
+      batchMap.put(courseId, batchList);
+    }
+  }
+
+  private void courseDetailsMapUpdate(boolean increment) {
     for (Map.Entry<String, List<Map<String, Object>>> openBatchList : openBatchMap.entrySet()) {
       String contentName = CourseBatchSchedulerUtil.getContentName(JsonKey.OPEN);
-      updateContentMapCount(
+      updateCourseBatchCount(
           increment, contentName, openBatchList.getKey(), openBatchList.getValue().size());
     }
     for (Map.Entry<String, List<Map<String, Object>>> privateBatchList :
         privateBatchMap.entrySet()) {
       String contentName = CourseBatchSchedulerUtil.getContentName(JsonKey.INVITE_ONLY);
-      updateContentMapCount(
+      updateCourseBatchCount(
           increment, contentName, privateBatchList.getKey(), privateBatchList.getValue().size());
     }
     updateEkstepAndDb();
   }
 
-  private void updateContentMapCount(
+  private void updateCourseBatchCount(
       boolean increment, String contentName, String courseId, int size) {
-    int val = (int) contentMap.get(courseId).getOrDefault(contentName, 0);
+    int val = (int) courseDetailsMap.get(courseId).getOrDefault(contentName, 0);
     if (increment) {
       val += size;
     } else {
@@ -186,54 +190,60 @@ public class ManageCourseBatchCount implements Job {
         val = 0;
       }
     }
-    contentMap.get(courseId).put(contentName, val);
+    courseDetailsMap.get(courseId).put(contentName, val);
   }
 
-  private void getContentAndStore(Map<String, List<Map<String, Object>>> batchMap) {
+  private void updateCourseDetailsMap(Map<String, List<Map<String, Object>>> batchMap) {
     Map<String, String> ekstepHeader = CourseBatchSchedulerUtil.headerMap;
     for (Map.Entry<String, List<Map<String, Object>>> batchList : batchMap.entrySet()) {
       String courseId = batchList.getKey();
-      if (!contentMap.containsKey(courseId)) {
+      if (!courseDetailsMap.containsKey(courseId)) {
         Map<String, Object> ekStepContent =
             CourseEnrollmentActor.getCourseObjectFromEkStep(courseId, ekstepHeader);
-        if (null != ekStepContent && ekStepContent.size() > 0) {
-          contentMap.put(courseId, ekStepContent);
+        if (MapUtils.isNotEmpty(ekStepContent)) {
+          courseDetailsMap.put(courseId, ekStepContent);
+        } else {
+          ProjectLogger.log(
+              "ManagerCourseBatchCount: updateDetailsMap: No content Found for courseId "
+                  + courseId,
+              LoggerEnum.INFO);
         }
       }
     }
   }
 
   private void updateEkstepAndDb() {
-    boolean response;
-    for (Map.Entry<String, Map<String, Object>> ekStepUpdateMap : contentMap.entrySet()) {
+    for (Map.Entry<String, Map<String, Object>> ekStepUpdateMap : courseDetailsMap.entrySet()) {
       String courseId = ekStepUpdateMap.getKey();
-      String contentName = CourseBatchSchedulerUtil.getContentName(JsonKey.OPEN);
-      response =
+      updateESAndCassandra(
+          openBatchMap.get(courseId), ekStepUpdateMap.getValue(), courseId, JsonKey.OPEN);
+      updateESAndCassandra(
+          privateBatchMap.get(courseId), ekStepUpdateMap.getValue(), courseId, JsonKey.INVITE_ONLY);
+    }
+  }
+
+  private void updateESAndCassandra(
+      List<Map<String, Object>> batchMapList,
+      Map<String, Object> contentDetails,
+      String courseId,
+      String enrollmentType) {
+    if (batchMapList != null && !batchMapList.isEmpty()) {
+      String contentName = CourseBatchSchedulerUtil.getContentName(enrollmentType);
+      boolean response =
           CourseBatchSchedulerUtil.updateEkstepContent(
-              courseId, contentName, (int) ekStepUpdateMap.getValue().get(contentName));
+              courseId, contentName, (int) contentDetails.get(contentName));
       if (response) {
-        openBatchMap
-            .get(courseId)
-            .forEach(
-                map -> {
-                  if (CourseBatchSchedulerUtil.updateDataIntoES(map)) {
-                    CourseBatchSchedulerUtil.updateDataIntoCassandra(map);
-                  }
-                });
-        contentName = CourseBatchSchedulerUtil.getContentName(JsonKey.INVITE_ONLY);
-        response =
-            CourseBatchSchedulerUtil.updateEkstepContent(
-                courseId, contentName, (int) ekStepUpdateMap.getValue().get(contentName));
-        if (response) {
-          openBatchMap
-              .get(courseId)
-              .forEach(
-                  map -> {
-                    if (CourseBatchSchedulerUtil.updateDataIntoES(map)) {
-                      CourseBatchSchedulerUtil.updateDataIntoCassandra(map);
-                    }
-                  });
-        }
+        batchMapList.forEach(
+            map -> {
+              if (CourseBatchSchedulerUtil.updateDataIntoES(map)) {
+                CourseBatchSchedulerUtil.updateDataIntoCassandra(map);
+              }
+            });
+      } else {
+        ProjectLogger.log(
+            "ManagerCourseBatchCount: updateDetailsMap: Update count failed for courseId "
+                + courseId,
+            LoggerEnum.INFO);
       }
     }
   }

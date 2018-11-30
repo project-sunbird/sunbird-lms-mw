@@ -1,7 +1,5 @@
 package org.sunbird.learner.actors;
 
-import akka.dispatch.Mapper;
-import akka.pattern.Patterns;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
@@ -10,7 +8,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
@@ -33,7 +30,6 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.coursebatch.service.UserCoursesService;
 import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.Util;
-import scala.concurrent.Future;
 
 /**
  * This actor will handle leaner's state operation like get course , get content etc.
@@ -92,9 +88,11 @@ public class LearnerStateActor extends BaseActor {
   private void addCourseDetails(Request request, Map<String, Object> userCoursesResult) {
     List<Map<String, Object>> batches =
         (List<Map<String, Object>>) userCoursesResult.get(JsonKey.CONTENT);
+
     ProjectLogger.log(
-        String.format("LearnerStateActor:addCourseDetails: batches size = {0}", batches.size()),
+        "LearnerStateActor:addCourseDetails: batches size = " + batches.size(),
         LoggerEnum.INFO.name());
+
     if (CollectionUtils.isEmpty(batches)) {
       return;
     }
@@ -107,15 +105,53 @@ public class LearnerStateActor extends BaseActor {
             .getMessage(),
         LoggerEnum.INFO.name());
 
-    Future<Response> response =
-        ContentSearchUtil.searchContent(
-                (String) request.getContext().get(JsonKey.URL_QUERY_STRING),
-                requestBody,
-                (Map<String, String>) request.getRequest().get(JsonKey.HEADER))
-            .map(mapToCourseByCourseId(), getContext().dispatcher())
-            .map(prepareCourseBatchResponse(batches), getContext().dispatcher());
+    Map<String, Object> contents = null;
+    contents =
+        ContentSearchUtil.searchContentSync(
+            (String) request.getContext().get(JsonKey.URL_QUERY_STRING),
+            requestBody,
+            (Map<String, String>) request.getRequest().get(JsonKey.HEADER));
 
-    Patterns.pipe(response, getContext().dispatcher());
+    mergeDetailsAndSendCourses(contents, batches);
+  }
+
+  public void mergeDetailsAndSendCourses(
+      Map<String, Object> coursesContents, List<Map<String, Object>> batches) {
+
+    ProjectLogger.log(
+        "LearnerStateActor:prepareCourseBatchResponse coursesContents =" + coursesContents,
+        LoggerEnum.INFO.name());
+
+    Map<String, Object> contentsByCourseId = new HashMap<>();
+    if (MapUtils.isNotEmpty(coursesContents)) {
+      List<Map<String, Object>> courses =
+          (List<Map<String, Object>>) coursesContents.get(JsonKey.CONTENTS);
+      courses.forEach(
+          course -> contentsByCourseId.put((String) course.get(JsonKey.IDENTIFIER), course));
+    }
+    List<Map<String, Object>> batchesWithCourseDetails = batches;
+    if (MapUtils.isNotEmpty(contentsByCourseId)) {
+      batchesWithCourseDetails =
+          batches
+              .stream()
+              .map(
+                  batch -> {
+                    if (contentsByCourseId.containsKey((String) batch.get(JsonKey.COURSE_ID))) {
+                      batch.put(
+                          JsonKey.CONTENT,
+                          contentsByCourseId.get((String) batch.get(JsonKey.COURSE_ID)));
+                    }
+                    return batch;
+                  })
+              .collect(Collectors.toList());
+      ProjectLogger.log(
+          "LearnerStateActor:prepareCourseBatchResponse batchesWithCourseDetails ="
+              + batchesWithCourseDetails,
+          LoggerEnum.INFO.name());
+    }
+    Response response = new Response();
+    response.put(JsonKey.COURSES, batchesWithCourseDetails);
+    sender().tell(response, self());
   }
 
   private String prepareCourseSearchRequest(List<Map<String, Object>> batches) {
@@ -148,66 +184,6 @@ public class LearnerStateActor extends BaseActor {
     }
 
     return requestJson;
-  }
-
-  private Mapper<Map<String, Object>, Map<String, Object>> mapToCourseByCourseId() {
-    return new Mapper<Map<String, Object>, Map<String, Object>>() {
-      @Override
-      public Map<String, Object> apply(Map<String, Object> result) {
-        Map<String, Object> contentsById = new HashMap<>();
-        if (MapUtils.isNotEmpty(result)) {
-          ProjectLogger.log(
-              "LearnerStateActor:mapToCourseByCourseId = " + result.get(JsonKey.CONTENTS),
-              LoggerEnum.INFO.name());
-          contentsById =
-              ((List<Map<String, Object>>) result.get(JsonKey.CONTENTS))
-                  .stream()
-                  .collect(
-                      Collectors.toMap(
-                          content -> (String) content.get(JsonKey.IDENTIFIER),
-                          Function.identity()));
-        }
-        return contentsById;
-      }
-    };
-  }
-
-  private Mapper<Map<String, Object>, Response> prepareCourseBatchResponse(
-      List<Map<String, Object>> batches) {
-    return new Mapper<Map<String, Object>, Response>() {
-      public Response apply(Map<String, Object> contentsByCourseId) {
-        List<Map<String, Object>> batchesWithCourseDetails = batches;
-        ProjectLogger.log(
-            "LearnerStateActor:prepareCourseBatchResponse = " + contentsByCourseId,
-            LoggerEnum.INFO.name());
-        if (MapUtils.isNotEmpty(contentsByCourseId)) {
-          batchesWithCourseDetails =
-              batches
-                  .stream()
-                  .map(
-                      batch -> {
-                        if (contentsByCourseId.containsKey((String) batch.get(JsonKey.COURSE_ID))) {
-                          batch.put(
-                              JsonKey.CONTENT,
-                              contentsByCourseId.get((String) batch.get(JsonKey.COURSE_ID)));
-                        }
-                        return batch;
-                      })
-                  .peek(
-                      batch ->
-                          ProjectLogger.log(
-                              "LearnerStateActor:prepareCourseBatchResponse batchId ="
-                                  + (String) batch.get(JsonKey.BATCH_ID)
-                                  + " batch = "
-                                  + batch,
-                              LoggerEnum.INFO.name()))
-                  .collect(Collectors.toList());
-        }
-        Response response = new Response();
-        response.put(JsonKey.COURSES, batchesWithCourseDetails);
-        return response;
-      }
-    };
   }
 
   private Response getCourseContentState(String userId, Map<String, Object> requestMap) {

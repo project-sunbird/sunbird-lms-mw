@@ -124,11 +124,11 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
   private void getBulkUploadDownloadStatusLink(Request actorMessage) {
     String processId = (String) actorMessage.getRequest().get(JsonKey.PROCESS_ID);
     BulkUploadProcessDaoImpl bulkuploadDao = new BulkUploadProcessDaoImpl();
-    BulkUploadProcess result = bulkuploadDao.read(processId);
-    if (result != null) {
+    BulkUploadProcess bulkUploadProcess = bulkuploadDao.read(processId);
+    if (bulkUploadProcess != null) {
 
       try {
-        StorageDetails cloudStorageData = result.getDecryptedStorageDetails();
+        StorageDetails cloudStorageData = bulkUploadProcess.getDecryptedStorageDetails();
         if (cloudStorageData == null) {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.errorUnavailableDownloadLink, null);
@@ -140,7 +140,12 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
                 cloudStorageData.getFileName());
         Response response = new Response();
         response.setResponseCode(ResponseCode.OK);
-        response.getResult().put(JsonKey.SIGNED_URL, signedUrl);
+        Map<String, Object> resultMap = response.getResult();
+        resultMap.put(JsonKey.SIGNED_URL, signedUrl);
+        resultMap.put(JsonKey.OBJECT_TYPE, bulkUploadProcess.getObjectType());
+        resultMap.put(JsonKey.PROCESS_ID, bulkUploadProcess.getId());
+        resultMap.put(JsonKey.STATUS, bulkUploadProcess.getStatus());
+        updateResponseStatus(resultMap);
         sender().tell(response, self());
       } catch (IOException e) {
         ProjectCommonException.throwClientErrorException(

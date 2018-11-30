@@ -45,19 +45,18 @@ public class UserSkillManagementActorTest {
   private static final String USER_ID = "userId";
   private static final String ROOT_ORG_ID = "someRootOrgId";
   private static final String ENDORSED_USER_ID = "someEndorsedUserId";
-  private static final String ENDORSE_SKILL_NAME = "someEndorsedSkillName";
   private List<String> skillsList = new ArrayList<>();
   private FiniteDuration duration = duration("10 second");
 
   @BeforeClass
-  public static void setUp() {
+  public static void setup() {
     system = ActorSystem.create("system");
     PowerMockito.mockStatic(ServiceFactory.class);
+    PowerMockito.mockStatic(ElasticSearchUtil.class);
   }
 
   @Before
   public void beforeEachTest() {
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
@@ -160,7 +159,7 @@ public class UserSkillManagementActorTest {
   }
 
   @Test
-  public void testFailureWithInvalidOperationName() {
+  public void testGetSkillsFailureWithInvalidOperationName() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);

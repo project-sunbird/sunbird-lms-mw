@@ -3,6 +3,7 @@ package org.sunbird.user;
 import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +39,7 @@ import org.sunbird.models.user.User;
   EncryptionService.class,
   org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.class
 })
-@PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
+@PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*", "javax.crypto.*", "javax.script.*"})
 public class SupportMultipleExternalIdsTest {
 
   private static User user;
@@ -61,6 +62,10 @@ public class SupportMultipleExternalIdsTest {
     List<Map<String, String>> externalIds = new ArrayList<>();
     Map<String, String> externalIdReqMap = new HashMap<>();
     externalIdReqMap.put(JsonKey.ID, "userId");
+    externalIdReqMap.put(JsonKey.PROVIDER, "someProvider");
+    externalIdReqMap.put(JsonKey.ID_TYPE, "someIdType");
+    externalIdReqMap.put(JsonKey.USER_ID, "reqUserId");
+    externalIdReqMap.put(JsonKey.EXTERNAL_ID, "someExternalId");
     externalIds.add(externalIdReqMap);
     user = new User();
     user.setExternalIds(externalIds);
@@ -75,6 +80,7 @@ public class SupportMultipleExternalIdsTest {
     CassandraOperation cassandraOperation = PowerMockito.mock(CassandraOperationImpl.class);
     PowerMockito.when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     Response response1 = new Response();
+    
     List<Map<String, String>> resMapList = new ArrayList<>();
     resMapList.add(externalIdResMap);
     response1.put(JsonKey.RESPONSE, resMapList);
@@ -90,6 +96,7 @@ public class SupportMultipleExternalIdsTest {
     try {
       Util.checkExternalIdUniqueness(user, JsonKey.CREATE);
     } catch (ProjectCommonException e) {
+    System.out.println("I was here");
       assertEquals(ResponseCode.userAlreadyExists.getErrorCode(), e.getCode());
     }
   }
@@ -98,7 +105,7 @@ public class SupportMultipleExternalIdsTest {
   public void testCheckExternalIdUniquenessSuccessForUpdate() {
 
     try {
-      user.setUserId("someUserId");
+      user.setUserId("someUserId2");
       Util.checkExternalIdUniqueness(user, JsonKey.UPDATE);
     } catch (ProjectCommonException e) {
       assertEquals(ResponseCode.externalIdAssignedToOtherUser.getErrorCode(), e.getCode());
@@ -106,10 +113,10 @@ public class SupportMultipleExternalIdsTest {
   }
 
   @Test
-  public void testCheckExternalIdUniquenessFailureWithUpdateOperation() {
+  public void testCheckExternalIdUniquenessSuccessWithUpdateOperation() {
 
     try {
-      user.setUserId("someUserId");
+      user.setUserId("someUserId2");
       user.getExternalIds().get(0).put(JsonKey.OPERATION, JsonKey.UPDATE);
       Util.checkExternalIdUniqueness(user, JsonKey.UPDATE);
     } catch (ProjectCommonException e) {
@@ -118,10 +125,10 @@ public class SupportMultipleExternalIdsTest {
   }
 
   @Test
-  public void testCheckExternalIdUniquenessFailureWithRemoveOperation() {
+  public void testCheckExternalIdUniquenessSuccessWithRemoveOperation() {
 
     try {
-      user.setUserId("someUserId");
+      user.setUserId("someUserId2");
       user.getExternalIds().get(0).put(JsonKey.OPERATION, JsonKey.REMOVE);
       Util.checkExternalIdUniqueness(user, JsonKey.UPDATE);
     } catch (ProjectCommonException e) {

@@ -15,7 +15,9 @@ import org.sunbird.content.textbook.TextBookTocUpload;
 import org.sunbird.content.util.ContentStoreUtil;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @ActorConfig(tasks = {"textbookTocUpload", "textbookTocUrl"}, asyncTasks = {})
@@ -33,6 +35,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
 
     private void upload(Request request) {
+        validateTextBook(request);
         Response response = new Response();
         response.setResponseCode(ResponseCode.OK);
         ResponseParams params = new ResponseParams();
@@ -77,4 +80,29 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         sender().tell(response, sender());
     }
 
+    private void validateTextBook(Request request) {
+        String mode=((Map<String,Object>)request.get(JsonKey.DATA)).get(JsonKey.MODE).toString();
+        Map<String, Object> response = ContentStoreUtil.readContent(request.get(JsonKey.TEXTBOOK_ID).toString());
+        if (null != response && !response.isEmpty()) {
+            Map<String, Object> result = (Map<String, Object>) response.get(JsonKey.RESULT);
+            Map<String, Object> textbook = (Map<String, Object>) result.get(JsonKey.CONTENT);
+            List<String> allowedContentTypes = Arrays.asList(ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_ALLOWED_CONTNET_TYPES).split(","));
+            if (!JsonKey.TEXTBOOK_TOC_ALLOWED_MIMETYPE.equalsIgnoreCase(textbook.get(JsonKey.MIME_TYPE).toString()) || !allowedContentTypes.contains(textbook.get(JsonKey.CONTENT_TYPE).toString())) {
+                ProjectCommonException.throwClientErrorException(
+                        ResponseCode.errorInvalidTextbook, ResponseCode.errorInvalidTextbook.getErrorMessage());
+            }
+            if (JsonKey.CREATE.equalsIgnoreCase(mode)) {
+                List<Object> children = textbook.containsKey(JsonKey.CHILDREN) ? (List<Object>) textbook.get(JsonKey.CHILDREN) : null;
+                if (null != children || !children.isEmpty()) {
+                    ProjectCommonException.throwClientErrorException(
+                            ResponseCode.errorInvalidTextbookUploadNotAllowed, ResponseCode.errorInvalidTextbookUploadNotAllowed.getErrorMessage());
+                }
+            }
+        } else {
+            throw new ProjectCommonException(
+                    ResponseCode.errorProcessingRequest.getErrorCode(),
+                    ResponseCode.errorProcessingRequest.getErrorMessage(),
+                    ResponseCode.SERVER_ERROR.getResponseCode());
+        }
+    }
 }

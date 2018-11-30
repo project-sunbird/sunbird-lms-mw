@@ -78,6 +78,8 @@ public class LearnerStateActor extends BaseActor {
 
     if (MapUtils.isNotEmpty(result)) {
       addCourseDetails(request, result);
+    } else {
+      ProjectLogger.log("LearnerStateActor:getCourse: returning batch without course details", LoggerEnum.INFO);
     }
     Response response = new Response();
     response.put(JsonKey.COURSES, result.get(JsonKey.CONTENT));
@@ -87,7 +89,9 @@ public class LearnerStateActor extends BaseActor {
   private void addCourseDetails(Request request, Map<String, Object> userCoursesResult) {
     List<Map<String, Object>> batches =
         (List<Map<String, Object>>) userCoursesResult.get(JsonKey.CONTENT);
-
+    ProjectLogger.log(
+        String.format("LearnerStateActor:addCourseDetails: batches size = {0}", batches.size()),
+        LoggerEnum.INFO);
     if (CollectionUtils.isEmpty(batches)) {
       return;
     }
@@ -120,7 +124,8 @@ public class LearnerStateActor extends BaseActor {
     Map<String, Object> filters = new HashMap<String, Object>();
     filters.put(JsonKey.CONTENT_TYPE, new String[] {JsonKey.COURSE});
     filters.put(JsonKey.IDENTIFIER, courseIds);
-
+    ProjectLogger.log(
+        "LearnerStateActor:prepareCourseSearchRequest: courseIds = " + courseIds, LoggerEnum.INFO);
     Map<String, Map<String, Object>> requestMap = new HashMap<>();
     requestMap.put(JsonKey.FILTERS, filters);
 
@@ -146,6 +151,9 @@ public class LearnerStateActor extends BaseActor {
       public Map<String, Object> apply(Map<String, Object> result) {
         Map<String, Object> contentsById = new HashMap<>();
         if (MapUtils.isNotEmpty(result)) {
+          ProjectLogger.log(
+              "LearnerStateActor:mapToCourseByCourseId = " + result.get(JsonKey.CONTENTS),
+              LoggerEnum.INFO);
           contentsById =
               ((List<Map<String, Object>>) result.get(JsonKey.CONTENTS))
                   .stream()
@@ -164,6 +172,8 @@ public class LearnerStateActor extends BaseActor {
     return new Mapper<Map<String, Object>, Response>() {
       public Response apply(Map<String, Object> contentsByCourseId) {
         List<Map<String, Object>> batchesWithCourseDetails = batches;
+        ProjectLogger.log(
+            "LearnerStateActor:prepareCourseBatchResponse = " + contentsByCourseId, LoggerEnum.INFO);
         if (MapUtils.isNotEmpty(contentsByCourseId)) {
           batchesWithCourseDetails =
               batches

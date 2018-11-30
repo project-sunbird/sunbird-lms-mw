@@ -1,16 +1,23 @@
 package org.sunbird.learner.actors;
 
+import akka.dispatch.Mapper;
+import akka.pattern.Patterns;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -21,9 +28,11 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.coursebatch.service.UserCoursesService;
+import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.Util;
+import scala.concurrent.Future;
 
 /**
  * This actor will handle leaner's state operation like get course , get content etc.
@@ -38,6 +47,7 @@ import org.sunbird.learner.util.Util;
 public class LearnerStateActor extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private UserCoursesService userCoursesService = new UserCoursesService();
 
   /**
    * Receives the actor message and perform the operation like get course , get content etc.
@@ -46,25 +56,8 @@ public class LearnerStateActor extends BaseActor {
    */
   @Override
   public void onReceive(Request request) throws Exception {
-    Response response = new Response();
     if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_COURSE.getValue())) {
-      String userId = (String) request.getRequest().get(JsonKey.USER_ID);
-
-      Map<String, Object> filter = new HashMap<>();
-      filter.put(JsonKey.USER_ID, userId);
-      filter.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
-      SearchDTO searchDto = new SearchDTO();
-      searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
-
-      Map<String, Object> result =
-          ElasticSearchUtil.complexSearch(
-              searchDto,
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.usercourses.getTypeName());
-
-      response.put(JsonKey.COURSES, result.get(JsonKey.CONTENT));
-      sender().tell(response, self());
-
+      getCourse(request);
     } else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_CONTENT.getValue())) {
 
       Response res = new Response();
@@ -77,6 +70,120 @@ public class LearnerStateActor extends BaseActor {
     } else {
       onReceiveUnsupportedOperation(request.getOperation());
     }
+  }
+
+  public void getCourse(Request request) {
+    String userId = (String) request.getRequest().get(JsonKey.USER_ID);
+    Map<String, Object> result = userCoursesService.getActiveUserCourses(userId);
+
+    if (MapUtils.isNotEmpty(result)) {
+      addCourseDetails(request, result);
+    }
+    Response response = new Response();
+    response.put(JsonKey.COURSES, result.get(JsonKey.CONTENT));
+    sender().tell(response, self());
+  }
+
+  private void addCourseDetails(Request request, Map<String, Object> userCoursesResult) {
+    List<Map<String, Object>> batches =
+        (List<Map<String, Object>>) userCoursesResult.get(JsonKey.CONTENT);
+
+    if (CollectionUtils.isEmpty(batches)) {
+      return;
+    }
+    String requestBody = prepareCourseSearchRequest(batches);
+
+    ProjectLogger.log(
+        String.format(
+            "LearnerStateActor:addCourseDetails: request body = {0}, query string = {1}",
+            requestBody, (String) request.getContext().get(JsonKey.URL_QUERY_STRING)),
+        LoggerEnum.INFO);
+
+    Future<Response> response =
+        ContentSearchUtil.searchContent(
+                (String) request.getContext().get(JsonKey.URL_QUERY_STRING),
+                requestBody,
+                (Map<String, String>) request.getRequest().get(JsonKey.HEADER))
+            .map(mapToCourseByCourseId(), getContext().dispatcher())
+            .map(prepareCourseBatchResponse(batches), getContext().dispatcher());
+
+    Patterns.pipe(response, getContext().dispatcher());
+  }
+
+  private String prepareCourseSearchRequest(List<Map<String, Object>> batches) {
+    Set<String> courseIds =
+        batches
+            .stream()
+            .map(batch -> (String) batch.get(JsonKey.COURSE_ID))
+            .collect(Collectors.toSet());
+
+    Map<String, Object> filters = new HashMap<String, Object>();
+    filters.put(JsonKey.CONTENT_TYPE, new String[] {JsonKey.COURSE});
+    filters.put(JsonKey.IDENTIFIER, courseIds);
+
+    Map<String, Map<String, Object>> requestMap = new HashMap<>();
+    requestMap.put(JsonKey.FILTERS, filters);
+
+    Map<String, Map<String, Map<String, Object>>> request = new HashMap<>();
+    request.put(JsonKey.REQUEST, requestMap);
+
+    String requestJson = null;
+    try {
+      requestJson = new ObjectMapper().writeValueAsString(request);
+    } catch (JsonProcessingException e) {
+      ProjectLogger.log(
+          "LearnerStateActor:prepareCourseSearchRequest: Exception occurred with error message = "
+              + e.getMessage(),
+          e);
+    }
+
+    return requestJson;
+  }
+
+  private Mapper<Map<String, Object>, Map<String, Object>> mapToCourseByCourseId() {
+    return new Mapper<Map<String, Object>, Map<String, Object>>() {
+      @Override
+      public Map<String, Object> apply(Map<String, Object> result) {
+        Map<String, Object> contentsById = new HashMap<>();
+        if (MapUtils.isNotEmpty(result)) {
+          contentsById =
+              ((List<Map<String, Object>>) result.get(JsonKey.CONTENTS))
+                  .stream()
+                  .collect(
+                      Collectors.toMap(
+                          content -> (String) content.get(JsonKey.IDENTIFIER),
+                          Function.identity()));
+        }
+        return contentsById;
+      }
+    };
+  }
+
+  private Mapper<Map<String, Object>, Response> prepareCourseBatchResponse(
+      List<Map<String, Object>> batches) {
+    return new Mapper<Map<String, Object>, Response>() {
+      public Response apply(Map<String, Object> contentsByCourseId) {
+        List<Map<String, Object>> batchesWithCourseDetails = batches;
+        if (MapUtils.isNotEmpty(contentsByCourseId)) {
+          batchesWithCourseDetails =
+              batches
+                  .stream()
+                  .map(
+                      batch -> {
+                        if (contentsByCourseId.containsKey((String) batch.get(JsonKey.COURSE_ID))) {
+                          batch.put(
+                              JsonKey.CONTENT,
+                              contentsByCourseId.get((String) batch.get(JsonKey.COURSE_ID)));
+                        }
+                        return batch;
+                      })
+                  .collect(Collectors.toList());
+        }
+        Response response = new Response();
+        response.put(JsonKey.COURSES, batchesWithCourseDetails);
+        return response;
+      }
+    };
   }
 
   private Response getCourseContentState(String userId, Map<String, Object> requestMap) {

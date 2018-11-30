@@ -79,7 +79,7 @@ public class LearnerStateActor extends BaseActor {
     if (MapUtils.isNotEmpty(result)) {
       addCourseDetails(request, result);
     }
-    String.format("LearnerStateActor:getCourse return batches without course", LoggerEnum.INFO);
+    ProjectLogger.log("LearnerStateActor:getCourse return batches without course", LoggerEnum.INFO);
     Response response = new Response();
     response.put(JsonKey.COURSES, result.get(JsonKey.CONTENT));
     sender().tell(response, self());
@@ -88,8 +88,9 @@ public class LearnerStateActor extends BaseActor {
   private void addCourseDetails(Request request, Map<String, Object> userCoursesResult) {
     List<Map<String, Object>> batches =
         (List<Map<String, Object>>) userCoursesResult.get(JsonKey.CONTENT);
-    String.format(
-        "LearnerStateActor:addCourseDetails batch size" + batches.size(), LoggerEnum.INFO);
+    ProjectLogger.log(
+        String.format("LearnerStateActor:addCourseDetails batch size {0}", batches.size()),
+        LoggerEnum.INFO);
     if (CollectionUtils.isEmpty(batches)) {
       return;
     }
@@ -123,7 +124,7 @@ public class LearnerStateActor extends BaseActor {
     filters.put(JsonKey.CONTENT_TYPE, new String[] {JsonKey.COURSE});
     filters.put(JsonKey.IDENTIFIER, courseIds);
     ProjectLogger.log(
-        "LearnerStateActor:prepareCourseSearchRequest: courseIds" + courseIds, LoggerEnum.INFO);
+        "LearnerStateActor:prepareCourseSearchRequest: courseIds " + courseIds, LoggerEnum.INFO);
     Map<String, Map<String, Object>> requestMap = new HashMap<>();
     requestMap.put(JsonKey.FILTERS, filters);
 

@@ -128,7 +128,6 @@ public final class CourseBatchSchedulerUtil {
    * @param courseId
    * @param increment
    * @param enrollmentType
-   * @param hashTagId
    * @return
    */
   public static boolean doOperationInEkStepCourse(

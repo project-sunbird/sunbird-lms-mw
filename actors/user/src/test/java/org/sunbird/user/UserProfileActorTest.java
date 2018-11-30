@@ -48,7 +48,7 @@ public class UserProfileActorTest {
 
   private final Props props = Props.create(UserProfileActor.class);
   private CassandraOperationImpl cassandraOperation;
-  private String userId = "USER-ID";
+ 
 
   @Before
   public void beforeEachTest() {
@@ -80,7 +80,7 @@ public class UserProfileActorTest {
 
   @Test
   public void testSetProfileVisibilitySuccess() {
-
+    final String userId = "USER-ID";
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -99,7 +99,7 @@ public class UserProfileActorTest {
 
   @Test
   public void testSetProfileVisibilityFailure() {
-
+    final String userId = "USER-ID";
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 

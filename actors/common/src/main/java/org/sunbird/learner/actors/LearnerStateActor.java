@@ -123,7 +123,7 @@ public class LearnerStateActor extends BaseActor {
 
     Map<String, Map<String, Object>> requestMap = new HashMap<>();
     requestMap.put(JsonKey.FILTERS, filters);
-    
+
     Map<String, Map<String, Map<String, Object>>> request = new HashMap<>();
     request.put(JsonKey.REQUEST, requestMap);
 
@@ -131,7 +131,10 @@ public class LearnerStateActor extends BaseActor {
     try {
       requestJson = new ObjectMapper().writeValueAsString(request);
     } catch (JsonProcessingException e) {
-      ProjectLogger.log("LearnerStateActor:prepareCourseSearchRequest: Exception occurred with error message = " + e.getMessage(), e);
+      ProjectLogger.log(
+          "LearnerStateActor:prepareCourseSearchRequest: Exception occurred with error message = "
+              + e.getMessage(),
+          e);
     }
 
     return requestJson;
@@ -160,17 +163,24 @@ public class LearnerStateActor extends BaseActor {
       List<Map<String, Object>> batches) {
     return new Mapper<Map<String, Object>, Response>() {
       public Response apply(Map<String, Object> contentsByCourseId) {
+        List<Map<String, Object>> batchesWithCourse = batches;
         if (MapUtils.isNotEmpty(contentsByCourseId)) {
-          batches
-              .stream()
-              .map(
-                  batch ->
-                      batch.put(
-                          JsonKey.CONTENT,
-                          contentsByCourseId.get((String) batch.get(JsonKey.COURSE_ID))));
+          batchesWithCourse =
+              batches
+                  .stream()
+                  .map(
+                      batch -> {
+                        if (contentsByCourseId.containsKey((String) batch.get(JsonKey.COURSE_ID))) {
+                          batch.put(
+                              JsonKey.CONTENT,
+                              contentsByCourseId.get((String) batch.get(JsonKey.COURSE_ID)));
+                        }
+                        return batch;
+                      })
+                  .collect(Collectors.toList());
         }
         Response response = new Response();
-        response.put(JsonKey.COURSES, batches);
+        response.put(JsonKey.COURSES, batchesWithCourse);
         return response;
       }
     };

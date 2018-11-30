@@ -388,6 +388,7 @@ public class CourseBatchManagementActor extends BaseActor {
     request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
     request.getRequest().put(JsonKey.BATCH, courseBatchObject);
     if (courseNotificationActive()) {
+      courseBatch.setParticipant(getAddedParticipants(participants, courseBatch));
       batchOperationNotifier(courseBatch, null);
     }
     try {
@@ -400,6 +401,23 @@ public class CourseBatchManagementActor extends BaseActor {
               + ex.getMessage(),
           ex);
     }
+  }
+
+  private Map<String, Boolean> getAddedParticipants(
+      Map<String, Boolean> participants, CourseBatch courseBatch) {
+    Map<String, Boolean> currentParticipants = courseBatch.getParticipant();
+    if (participants == null) return courseBatch.getParticipant();
+    else if (currentParticipants == null || currentParticipants.isEmpty()) {
+      return participants;
+    } else {
+      Set<String> keys = currentParticipants.keySet();
+      for (String key : keys) {
+        if (participants.containsKey(key)) {
+          participants.remove(key);
+        }
+      }
+    }
+    return participants;
   }
 
   private void getCourseBatch(Request actorMessage) {

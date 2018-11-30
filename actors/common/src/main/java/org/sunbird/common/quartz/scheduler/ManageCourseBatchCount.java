@@ -4,7 +4,6 @@ package org.sunbird.common.quartz.scheduler;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,7 +75,7 @@ public class ManageCourseBatchCount implements Job {
           updateCourseBatchStatus(true, false, map);
           updateCourseIdToBatchListMap(map);
         }
-        performAction(true);
+        handleUpdateBatchCount(true);
       }
       if (null != data.get(JsonKey.END_DATE)) {
         List<Map<String, Object>> listMap = (List<Map<String, Object>>) data.get(JsonKey.END_DATE);
@@ -84,7 +83,7 @@ public class ManageCourseBatchCount implements Job {
           updateCourseBatchStatus(false, true, map);
           updateCourseIdToBatchListMap(map);
         }
-        performAction(false);
+        handleUpdateBatchCount(false);
       }
 
       if (null != data.get(JsonKey.STATUS)) {
@@ -116,10 +115,10 @@ public class ManageCourseBatchCount implements Job {
     return info;
   }
 
-  private void performAction(boolean increment) {
+  private void handleUpdateBatchCount(boolean increment) {
     updateCourseDetailsMap(openBatchMap);
     updateCourseDetailsMap(privateBatchMap);
-    courseDetailsMapUpdate(increment);
+    updateAllCourseBatchCount(increment);
     openBatchMap.clear();
     privateBatchMap.clear();
     courseDetailsMap.clear();
@@ -129,15 +128,14 @@ public class ManageCourseBatchCount implements Job {
       boolean isCountIncrementStatus,
       boolean isCountDecrementStatus,
       Map<String, Object> courseBatchMap) {
-    String todayDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
     courseBatchMap.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.STARTED.getValue());
     if (isCountIncrementStatus) {
       courseBatchMap.put(JsonKey.COUNTER_INCREMENT_STATUS, true);
-      courseBatchMap.put(JsonKey.COUNT_INCREMENT_DATE, todayDate);
+      courseBatchMap.put(JsonKey.COUNT_INCREMENT_DATE, ProjectUtil.getFormattedDate());
     }
     if (isCountDecrementStatus) {
       courseBatchMap.put(JsonKey.COUNTER_DECREMENT_STATUS, true);
-      courseBatchMap.put(JsonKey.COUNT_DECREMENT_DATE, todayDate);
+      courseBatchMap.put(JsonKey.COUNT_DECREMENT_DATE, ProjectUtil.getFormattedDate());
       courseBatchMap.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.COMPLETED.getValue());
     }
     courseBatchMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
@@ -164,19 +162,19 @@ public class ManageCourseBatchCount implements Job {
     }
   }
 
-  private void courseDetailsMapUpdate(boolean increment) {
+  private void updateAllCourseBatchCount(boolean increment) {
     for (Map.Entry<String, List<Map<String, Object>>> openBatchList : openBatchMap.entrySet()) {
-      String contentName = CourseBatchSchedulerUtil.getContentName(JsonKey.OPEN);
+      String contentName = CourseBatchSchedulerUtil.getCountName(JsonKey.OPEN);
       updateCourseBatchCount(
           increment, contentName, openBatchList.getKey(), openBatchList.getValue().size());
     }
     for (Map.Entry<String, List<Map<String, Object>>> privateBatchList :
         privateBatchMap.entrySet()) {
-      String contentName = CourseBatchSchedulerUtil.getContentName(JsonKey.INVITE_ONLY);
+      String contentName = CourseBatchSchedulerUtil.getCountName(JsonKey.INVITE_ONLY);
       updateCourseBatchCount(
           increment, contentName, privateBatchList.getKey(), privateBatchList.getValue().size());
     }
-    updateEkstepAndDb();
+    doUpdateOpenAndClosedCourseBatchCount();
   }
 
   private void updateCourseBatchCount(
@@ -212,23 +210,26 @@ public class ManageCourseBatchCount implements Job {
     }
   }
 
-  private void updateEkstepAndDb() {
-    for (Map.Entry<String, Map<String, Object>> ekStepUpdateMap : courseDetailsMap.entrySet()) {
-      String courseId = ekStepUpdateMap.getKey();
-      updateESAndCassandra(
-          openBatchMap.get(courseId), ekStepUpdateMap.getValue(), courseId, JsonKey.OPEN);
-      updateESAndCassandra(
-          privateBatchMap.get(courseId), ekStepUpdateMap.getValue(), courseId, JsonKey.INVITE_ONLY);
+  private void doUpdateOpenAndClosedCourseBatchCount() {
+    for (Map.Entry<String, Map<String, Object>> courseDetailsEntry : courseDetailsMap.entrySet()) {
+      String courseId = courseDetailsEntry.getKey();
+      doUpdateCourseBatchCount(
+          openBatchMap.get(courseId), courseDetailsEntry.getValue(), courseId, JsonKey.OPEN);
+      doUpdateCourseBatchCount(
+          privateBatchMap.get(courseId),
+          courseDetailsEntry.getValue(),
+          courseId,
+          JsonKey.INVITE_ONLY);
     }
   }
 
-  private void updateESAndCassandra(
+  private void doUpdateCourseBatchCount(
       List<Map<String, Object>> batchMapList,
       Map<String, Object> contentDetails,
       String courseId,
       String enrollmentType) {
     if (batchMapList != null && !batchMapList.isEmpty()) {
-      String contentName = CourseBatchSchedulerUtil.getContentName(enrollmentType);
+      String contentName = CourseBatchSchedulerUtil.getCountName(enrollmentType);
       boolean response =
           CourseBatchSchedulerUtil.updateEkstepContent(
               courseId, contentName, (int) contentDetails.get(contentName));

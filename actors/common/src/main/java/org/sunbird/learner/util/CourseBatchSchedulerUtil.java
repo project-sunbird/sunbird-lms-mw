@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections.MapUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.util.HttpUtil;
@@ -47,17 +48,16 @@ public final class CourseBatchSchedulerUtil {
         "method call start to collect get course batch data -" + startDate + " " + endDate,
         LoggerEnum.INFO.name());
     Map<String, Object> response = new HashMap<>();
-    List<Map<String, Object>> courseBatchStartedList =
-        courseBatchStartAndCompleteData(startDate, true);
+    List<Map<String, Object>> courseBatchStartedList = getToBeUpdatedCoursesByDate(startDate, true);
     if (!courseBatchStartedList.isEmpty()) {
       response.put(JsonKey.START_DATE, courseBatchStartedList);
     }
     List<Map<String, Object>> courseBatchCompletedList =
-        courseBatchStartAndCompleteData(endDate, false);
+        getToBeUpdatedCoursesByDate(endDate, false);
     if (!courseBatchCompletedList.isEmpty()) {
       response.put(JsonKey.END_DATE, courseBatchCompletedList);
     }
-    List<Map<String, Object>> courseBatchStartStatusList = courseBatchStartStatusData(startDate);
+    List<Map<String, Object>> courseBatchStartStatusList = getToBeUpdatedCoursesByStatus(startDate);
     if (!courseBatchStartStatusList.isEmpty()) {
       response.put(JsonKey.STATUS, courseBatchStartStatusList);
     }
@@ -132,15 +132,15 @@ public final class CourseBatchSchedulerUtil {
    */
   public static boolean doOperationInEkStepCourse(
       String courseId, boolean increment, String enrollmentType) {
-    String contentName = getContentName(enrollmentType);
+    String contentName = getCountName(enrollmentType);
     boolean response = false;
     Map<String, Object> ekStepContent =
         CourseEnrollmentActor.getCourseObjectFromEkStep(courseId, getBasicHeader());
-    if (ekStepContent != null && ekStepContent.size() > 0) {
+    if (MapUtils.isNotEmpty(ekStepContent)) {
       int val = getUpdatedBatchCount(ekStepContent, contentName, increment);
       if (ekStepContent.get(JsonKey.CHANNEL) != null) {
         ProjectLogger.log(
-            "Channel value is coming from Content "
+            "Channel value coming from content is "
                 + (String) ekStepContent.get(JsonKey.CHANNEL)
                 + " Id "
                 + courseId,
@@ -149,7 +149,7 @@ public final class CourseBatchSchedulerUtil {
             getBasicHeader(), JsonKey.CHANNEL_ID, (String) ekStepContent.get(JsonKey.CHANNEL));
       } else {
         ProjectLogger.log(
-            "Channel value is  not coming from Contnet Id " + courseId, LoggerEnum.INFO.name());
+            "No channel value available in content with Id " + courseId, LoggerEnum.INFO.name());
       }
       response = updateEkstepContent(courseId, contentName, val);
     } else {
@@ -163,7 +163,7 @@ public final class CourseBatchSchedulerUtil {
     return headerMap;
   }
 
-  private static List<Map<String, Object>> courseBatchStartAndCompleteData(
+  private static List<Map<String, Object>> getToBeUpdatedCoursesByDate(
       String date, boolean isStartDate) {
     String dateAttribute = isStartDate ? JsonKey.START_DATE : JsonKey.END_DATE;
     String counterAttribute =
@@ -175,10 +175,10 @@ public final class CourseBatchSchedulerUtil {
     map.put(dateAttribute, dateRangeFilter);
     map.put(counterAttribute, false);
     dto.addAdditionalProperty(JsonKey.FILTERS, map);
-    return contentReadResponse(dto);
+    return searchContent(dto);
   }
 
-  private static List<Map<String, Object>> courseBatchStartStatusData(String startDate) {
+  private static List<Map<String, Object>> getToBeUpdatedCoursesByStatus(String startDate) {
     SearchDTO dto = new SearchDTO();
     Map<String, Object> map = new HashMap<>();
     Map<String, String> dateRangeFilter = new HashMap<>();
@@ -187,11 +187,11 @@ public final class CourseBatchSchedulerUtil {
     map.put(JsonKey.COUNTER_INCREMENT_STATUS, true);
     map.put(JsonKey.STATUS, 0);
     dto.addAdditionalProperty(JsonKey.FILTERS, map);
-    return contentReadResponse(dto);
+    return searchContent(dto);
   }
 
   @SuppressWarnings("unchecked")
-  private static List<Map<String, Object>> contentReadResponse(SearchDTO dto) {
+  private static List<Map<String, Object>> searchContent(SearchDTO dto) {
     List<Map<String, Object>> listOfMap = new ArrayList<>();
     Map<String, Object> responseMap =
         ElasticSearchUtil.complexSearch(
@@ -217,10 +217,10 @@ public final class CourseBatchSchedulerUtil {
     return listOfMap;
   }
 
-  public static String getContentName(String enrollmentType) {
+  public static String getCountName(String enrollmentType) {
     String name = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION);
     String contentName = "";
-    if (enrollmentType.equals(ProjectUtil.EnrolmentType.open.getVal())) {
+    if (ProjectUtil.EnrolmentType.open.getVal().equals(enrollmentType)) {
       contentName = "c_" + name + "_open_batch_count";
     } else {
       contentName = "c_" + name + "_private_batch_count";
@@ -231,11 +231,7 @@ public final class CourseBatchSchedulerUtil {
   public static int getUpdatedBatchCount(
       Map<String, Object> ekStepContent, String contentName, boolean increment) {
     int val = (int) ekStepContent.getOrDefault(contentName, 0);
-    if (increment) {
-      val = val + 1;
-    } else {
-      if (val != 0) val = val - 1;
-    }
+    val = increment ? val + 1 : (val > 0) ? val - 1 : 0;
     return val;
   }
 
@@ -256,7 +252,6 @@ public final class CourseBatchSchedulerUtil {
     } catch (IOException e) {
       ProjectLogger.log("Error while updating content value " + e.getMessage(), e);
     }
-    if (response.equalsIgnoreCase(JsonKey.SUCCESS)) return true;
-    return false;
+    return JsonKey.SUCCESS.equalsIgnoreCase(response);
   }
 }

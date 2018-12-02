@@ -1,11 +1,13 @@
 package org.sunbird.learner.actors.bulkupload;
 
-import static org.sunbird.common.exception.ProjectCommonException.throwClientErrorException;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.response.ResponseParams;
+import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.TextbookActorOperation;
@@ -16,10 +18,15 @@ import org.sunbird.content.textbook.TextBookTocUpload;
 import org.sunbird.content.util.ContentStoreUtil;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import static org.sunbird.common.exception.ProjectCommonException.throwClientErrorException;
 
 @ActorConfig(tasks = {"textbookTocUpload", "textbookTocUrl"}, asyncTasks = {})
 public class TextbookTocActor extends BaseBulkUploadActor {
@@ -35,17 +42,17 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         }
     }
 
-    private void upload(Request request) {
-        validateTextBook(request);
+    private void upload(Request request) throws Exception {
+        String mode = ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.MODE).toString();
+        validateTextBook(request, mode);
         Response response = new Response();
-        response.setResponseCode(ResponseCode.OK);
-        ResponseParams params = new ResponseParams();
-        params.setStatus("successful");
-        response.setParams(params);
-        Map<String, Object> result = new HashMap<>();
-        result.put("contentId", "do_11263298042220544013");
-        result.put("versionKey", "1542273096671");
-        response.putAll(result);
+        if(StringUtils.equalsIgnoreCase(mode, "create")){
+            response = createTextbook(request);
+        }else if(StringUtils.equalsIgnoreCase(mode, "update")) {
+            response = updateTextbook(request);
+        } else{
+            unSupportedMessage();
+        }
         sender().tell(response, sender());
     }
 
@@ -81,27 +88,190 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         sender().tell(response, sender());
     }
 
-    private void validateTextBook(Request request) {
-        String mode = ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.MODE).toString();
-        Map<String, Object> response = ContentStoreUtil.readContent(request.get(JsonKey.TEXTBOOK_ID).toString());
-        if (null != response && !response.isEmpty()) {
+    private void validateTextBook(Request request, String mode) {
+        Map<String, Object> textbook = getTextbook((String) request.get(JsonKey.TEXTBOOK_ID));
+        List<String> allowedContentTypes = Arrays.asList(ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_ALLOWED_CONTNET_TYPES).split(","));
+        if (!JsonKey.TEXTBOOK_TOC_ALLOWED_MIMETYPE.equalsIgnoreCase(textbook.get(JsonKey.MIME_TYPE).toString()) || !allowedContentTypes.contains(textbook.get(JsonKey.CONTENT_TYPE).toString())) {
+            throwClientErrorException(ResponseCode.invalidTextbook, ResponseCode.invalidTextbook.getErrorMessage());
+        }
+        if (JsonKey.CREATE.equalsIgnoreCase(mode)) {
+            List<Object> children = textbook.containsKey(JsonKey.CHILDREN) ? (List<Object>) textbook.get(JsonKey.CHILDREN) : null;
+            if (null != children || !children.isEmpty()) {
+                throwClientErrorException(ResponseCode.textbookChildrenExist, ResponseCode.textbookChildrenExist.getErrorMessage());
+            }
+        }
+    }
+
+    private Response createTextbook(Request request) throws Exception {
+        Map<String, Object> file = (Map<String, Object>) request.get(JsonKey.FILE);
+        List<Map<String, Object>> data = (List<Map<String, Object>>) file.get(JsonKey.FILE_DATA);
+
+        if(CollectionUtils.isEmpty(data)){
+            throw new ProjectCommonException(
+                    ResponseCode.invalidRequestData.getErrorCode(),
+                    ResponseCode.invalidRequestData.getErrorMessage(),
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
+        }else{
+            String tbId = (String) request.get(JsonKey.TEXTBOOK_ID);
+            Map<String, Object> tbMetadata = getTextbook(tbId);
+            Map<String, Object> nodesModified = new HashMap<>();
+            Map<String, Object> hierarchyData = new HashMap<>();
+            hierarchyData.put(tbId, new HashMap<String, Object>() {{
+                put(JsonKey.NAME, tbMetadata.get(JsonKey.NAME));
+                put(JsonKey.CONTENT_TYPE, tbMetadata.get(JsonKey.CONTENT_TYPE));
+                put(JsonKey.CHILDREN, new HashSet<>());
+                put("root", true);
+            }});
+            for(Map<String, Object> row: data) {
+                populateNodes(row, tbId, tbMetadata, nodesModified, hierarchyData);
+            }
+            Map<String, Object> updateRequest = new HashMap<String, Object>() {{
+                put(JsonKey.REQUEST, new HashMap<String, Object>(){{
+                    put(JsonKey.DATA, new HashMap<String, Object>(){{
+                        put(JsonKey.NODES_MODIFIED, nodesModified);
+                        put(JsonKey.HIERARCHY, hierarchyData);
+                    }});
+                }});
+            }};
+            return updateHierarchy(tbId, updateRequest);
+        }
+    }
+
+    private void populateNodes(Map<String, Object> row, String tbId, Map<String, Object> tbMetadata, Map<String, Object> nodesModified, Map<String, Object> hierarchyData) {
+        Map<String, Object> hierarchy = (Map<String, Object>) row.get(JsonKey.HIERARCHY);
+        hierarchy.remove("Textbook");
+        hierarchy.remove("identifier");
+        String unitType = (String) tbMetadata.get("contentType") + "Unit";
+        int levelCount = 0;
+        String code = tbId;
+        String parentCode = tbId;
+        String name = (String) tbMetadata.get("name");
+        for(int i = 1; i<= hierarchy.size(); i++){
+            if(StringUtils.isNotBlank((String) hierarchy.get("L:"+ i))){
+                name = (String) hierarchy.get("L:"+ i);
+                code += name;
+                levelCount +=1;
+                if(i-1 > 0)
+                    parentCode +=(String) hierarchy.get("L:"+ (i-1));
+            }else{
+                break;
+            }
+        }
+        code = getCode(code);
+        parentCode = getCode(parentCode);
+        if(levelCount == 1) {
+            parentCode = tbId;
+        }
+        if(null == nodesModified.get(code)) {
+            String finalName = name;
+            nodesModified.put(code, new HashMap<String, Object>() {{
+                put("isNew", true);
+                put("root", false);
+                put("name", finalName);
+                put("mimeType", "application/vnd.ekstep.content-collection");
+                put("contentType", unitType);
+                put("framework", tbMetadata.get("framework"));
+                putAll((Map<String, Object>) row.get("metadata"));
+            }});
+        }
+
+        if(null != hierarchyData.get(code)) {
+            ((Map<String, Object>) hierarchyData.get(code)).put("name", name);
+        }else{
+            String finalName1 = name;
+            hierarchyData.put(code, new HashMap<String, Object>() {{
+                put(JsonKey.NAME, finalName1);
+                put(JsonKey.CHILDREN, new HashSet<>());
+                put("root", false);
+            }});
+        }
+
+        if(null != hierarchyData.get(parentCode)){
+            ((Set) ((Map<String, Object>) hierarchyData.get(parentCode)).get("children")).add(code);
+        } else{
+            String finalCode = code;
+            hierarchyData.put(parentCode, new HashMap<String, Object>() {{
+                put(JsonKey.NAME, "");
+                put(JsonKey.CHILDREN, new HashSet<String>(){{
+                    add(finalCode);
+                }});
+                put("root", false);
+            }});
+        }
+    }
+
+    private String getCode(String code) {
+        return DigestUtils.md5Hex(code);
+    }
+
+
+    private Map<String, Object> getTextbook(String tbId) {
+        Map<String, Object> response = ContentStoreUtil.readContent(tbId);
+        if (null != response && !response.isEmpty() && StringUtils.equals(ResponseCode.OK.name(), (String)response.get(JsonKey.RESPONSE_CODE))) {
             Map<String, Object> result = (Map<String, Object>) response.get(JsonKey.RESULT);
             Map<String, Object> textbook = (Map<String, Object>) result.get(JsonKey.CONTENT);
-            List<String> allowedContentTypes = Arrays.asList(ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_ALLOWED_CONTNET_TYPES).split(","));
-            if (!JsonKey.TEXTBOOK_TOC_ALLOWED_MIMETYPE.equalsIgnoreCase(textbook.get(JsonKey.MIME_TYPE).toString()) || !allowedContentTypes.contains(textbook.get(JsonKey.CONTENT_TYPE).toString())) {
-                throwClientErrorException(ResponseCode.invalidTextbook, ResponseCode.invalidTextbook.getErrorMessage());
-            }
-            if (JsonKey.CREATE.equalsIgnoreCase(mode)) {
-                List<Object> children = textbook.containsKey(JsonKey.CHILDREN) ? (List<Object>) textbook.get(JsonKey.CHILDREN) : null;
-                if (null != children || !children.isEmpty()) {
-                    throwClientErrorException(ResponseCode.textbookChildrenExist, ResponseCode.textbookChildrenExist.getErrorMessage());
-                }
-            }
+            return textbook;
         } else {
             throw new ProjectCommonException(
                     ResponseCode.errorProcessingRequest.getErrorCode(),
                     ResponseCode.errorProcessingRequest.getErrorMessage(),
                     ResponseCode.SERVER_ERROR.getResponseCode());
         }
+    }
+
+    private Response updateTextbook(Request request) throws IOException {
+        List<Map<String, Object>> data = (List<Map<String, Object>>) ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.FILE_DATA);
+        Map<String, Object> nodesModified = new HashMap<>();
+        for(Map<String, Object> row : data) {
+            Map<String, Object> metadata = (Map<String, Object>) row.get(JsonKey.METADATA);
+            String id = (String) metadata.get(JsonKey.ID);
+            metadata.remove(JsonKey.ID);
+            if(StringUtils.isNotBlank(id)){
+                nodesModified.put(id, new HashMap<String, Object>(){{
+                    putAll(metadata);
+                }});
+            }
+        }
+
+        Map<String, Object> updateRequest = new HashMap<String, Object>() {{
+            put(JsonKey.REQUEST, new HashMap<String, Object>() {{
+                put(JsonKey.DATA, new HashMap<String, Object>() {{
+                    put(JsonKey.NODES_MODIFIED, nodesModified);
+                }});
+            }});
+        }};
+        return updateHierarchy((String) request.get(JsonKey.TEXTBOOK_ID), updateRequest);
+    }
+
+    private Response updateHierarchy(String tbId, Map<String, Object> updateRequest) throws IOException {
+        String requestUrl =
+                ProjectUtil.getConfigValue(JsonKey.SUNBIRD_API_BASE_URL)
+                        + ProjectUtil.getConfigValue("/content/v3/hierarchy/update");
+
+        String updateResp = HttpUtil.sendPatchRequest(requestUrl, "", getDefaultHeaders());
+
+        if(StringUtils.equalsIgnoreCase(updateResp, ResponseCode.success.getErrorCode())){
+            Response response = new Response();
+            response.setResponseCode(ResponseCode.OK);
+            ResponseParams params = new ResponseParams();
+            params.setStatus("successful");
+            response.setParams(params);
+            Map<String, Object> result = new HashMap<>();
+            result.put(JsonKey.CONTENT_ID,  tbId);
+            response.putAll(result);
+            return response;
+        }else{
+            throw new ProjectCommonException(
+                    ResponseCode.errorProcessingRequest.getErrorCode(),
+                    ResponseCode.errorProcessingRequest.getErrorMessage(),
+                    ResponseCode.SERVER_ERROR.getResponseCode());
+        }
+    }
+
+    private Map<String,String> getDefaultHeaders() {
+
+        return  new HashMap<String, String>() {{
+            put(JsonKey.AUTHORIZATION, JsonKey.BEARER + ProjectUtil.getConfigValue(JsonKey.SUNBIRD_AUTHORIZATION));
+        }};
     }
 }

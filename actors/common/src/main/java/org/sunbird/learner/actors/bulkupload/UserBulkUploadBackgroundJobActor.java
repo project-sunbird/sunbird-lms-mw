@@ -194,6 +194,18 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
             JsonKey.CREATE);
         return;
       }
+
+      if (organisation != null
+          && !ProjectUtil.OrgStatus.ACTIVE.getValue().equals(organisation.getStatus())) {
+        setTaskStatus(
+            task,
+            ProjectUtil.BulkProcessStatus.FAILED,
+            ResponseCode.invalidOrgStatus.getErrorMessage(),
+            userMap,
+            JsonKey.CREATE);
+        return;
+      }
+
       User user = mapper.convertValue(userMap, User.class);
       user.setId((String) userMap.get(JsonKey.USER_ID));
       String orgName = "";

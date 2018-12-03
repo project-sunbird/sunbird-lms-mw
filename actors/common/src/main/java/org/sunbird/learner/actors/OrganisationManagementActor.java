@@ -646,6 +646,29 @@ public class OrganisationManagementActor extends BaseActor {
       actorMessage.toLower();
       Map<String, Object> request = actorMessage.getRequest();
 
+      String orgId = (String) request.get(JsonKey.ORGANISATION_ID);
+      Response result =
+          cassandraOperation.getRecordById(
+              orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), orgId);
+      List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      Map<String, Object> orgDBO;
+      if (!(list.isEmpty())) {
+        orgDBO = list.get(0);
+      } else {
+        ProjectLogger.log("Invalid Org Id");
+        ProjectCommonException exception =
+            new ProjectCommonException(
+                ResponseCode.invalidRequestData.getErrorCode(),
+                ResponseCode.invalidRequestData.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+        sender().tell(exception, self());
+        return;
+      }
+      if (request.containsKey(JsonKey.LOCATION_IDS)) {
+        validateLocationIdsForUpdate(
+            (List<String>) orgDBO.get(JsonKey.LOCATION_IDS),
+            (List<String>) request.get(JsonKey.LOCATION_IDS));
+      }
       if (request.containsKey(JsonKey.LOCATION_CODE)
           && !CollectionUtils.isEmpty((List<String>) request.get(JsonKey.LOCATION_CODE))) {
         validateCodeAndAddLocationIds(request);
@@ -746,7 +769,7 @@ public class OrganisationManagementActor extends BaseActor {
         validateRootOrg(request);
         isValidParent = true;
       }
-      Map<String, Object> orgDBO;
+
       Map<String, Object> updateOrgDBO = new HashMap<>();
       updateOrgDBO.putAll(request);
       updateOrgDBO.remove(JsonKey.ORGANISATION_ID);
@@ -755,24 +778,6 @@ public class OrganisationManagementActor extends BaseActor {
       updateOrgDBO.remove(JsonKey.APPROVED_DATE);
       updateOrgDBO.remove(JsonKey.STATUS);
       String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
-
-      String orgId = (String) request.get(JsonKey.ORGANISATION_ID);
-      Response result =
-          cassandraOperation.getRecordById(
-              orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), orgId);
-      List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-      if (!(list.isEmpty())) {
-        orgDBO = list.get(0);
-      } else {
-        ProjectLogger.log("Invalid Org Id");
-        ProjectCommonException exception =
-            new ProjectCommonException(
-                ResponseCode.invalidRequestData.getErrorCode(),
-                ResponseCode.invalidRequestData.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-        sender().tell(exception, self());
-        return;
-      }
 
       boolean isAddressUpdated = false;
       // update address if present in request
@@ -906,6 +911,23 @@ public class OrganisationManagementActor extends BaseActor {
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
       return;
+    }
+  }
+
+  private void validateLocationIdsForUpdate(
+      List<String> dbLocationIds, List<String> updateLocationIds) {
+    if (dbLocationIds == null && updateLocationIds != null)
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.unupdatableField,
+          MessageFormat.format(
+              ResponseCode.unupdatableField.getErrorMessage(), JsonKey.LOCATION_IDS));
+    if (dbLocationIds != null && updateLocationIds != null) {
+      if (!CollectionUtils.isEqualCollection(dbLocationIds, updateLocationIds)) {
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.unupdatableField,
+            MessageFormat.format(
+                ResponseCode.unupdatableField.getErrorMessage(), JsonKey.LOCATION_IDS));
+      }
     }
   }
 

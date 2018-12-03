@@ -60,7 +60,7 @@ public class ContentSearchUtil {
             ? contentSearchURL + urlQueryString
             : contentSearchURL;
     ProjectLogger.log(
-        "ContentSearchUtil:searchContent Making content search call to " + urlString,
+        "ContentSearchUtil:searchContent Making content search call to = " + urlString,
         LoggerEnum.INFO);
     BaseRequest request =
         Unirest.post(urlString).headers(getUpdatedHeaders(headers)).body(queryRequestBody);
@@ -77,6 +77,12 @@ public class ContentSearchUtil {
                 Object contents = resultMap.get(JsonKey.CONTENT);
                 resultMap.remove(JsonKey.CONTENT);
                 resultMap.put(JsonKey.CONTENTS, contents);
+                ProjectLogger.log(
+                    "ContentSearchUtil:searchContent requestBody = "
+                        + queryRequestBody
+                        + " content = "
+                        + contents,
+                    LoggerEnum.INFO.name());
                 String resmsgId = RestUtil.getFromResponse(response, "params.resmsgid");
                 String apiId = RestUtil.getFromResponse(response, "id");
                 Map<String, Object> param = new HashMap<>();
@@ -93,6 +99,47 @@ public class ContentSearchUtil {
           }
         },
         ExecutionContexts.global());
+  }
+
+  public static Map<String, Object> searchContentSync(
+      String urlQueryString, String queryRequestBody, Map<String, String> headers) {
+    Unirest.clearDefaultHeaders();
+    String urlString =
+        StringUtils.isNotBlank(urlQueryString)
+            ? contentSearchURL + urlQueryString
+            : contentSearchURL;
+    ProjectLogger.log(
+        "ContentSearchUtil:searchContentSync Making content search call to = " + urlString,
+        LoggerEnum.INFO);
+    BaseRequest request =
+        Unirest.post(urlString).headers(getUpdatedHeaders(headers)).body(queryRequestBody);
+    try {
+      HttpResponse<JsonNode> response = RestUtil.execute(request);
+      if (RestUtil.isSuccessful(response)) {
+        JSONObject result = response.getBody().getObject().getJSONObject("result");
+        Map<String, Object> resultMap = jsonToMap(result);
+        Object contents = resultMap.get(JsonKey.CONTENT);
+        resultMap.remove(JsonKey.CONTENT);
+        resultMap.put(JsonKey.CONTENTS, contents);
+        ProjectLogger.log(
+            "ContentSearchUtil:searchContentSync requestBody = "
+                + queryRequestBody
+                + " content = "
+                + contents,
+            LoggerEnum.INFO.name());
+        String resmsgId = RestUtil.getFromResponse(response, "params.resmsgid");
+        String apiId = RestUtil.getFromResponse(response, "id");
+        Map<String, Object> param = new HashMap<>();
+        param.put(JsonKey.RES_MSG_ID, resmsgId);
+        param.put(JsonKey.API_ID, apiId);
+        resultMap.put(JsonKey.PARAMS, param);
+        return resultMap;
+      } else {
+        return null;
+      }
+    } catch (Exception e) {
+      return null;
+    }
   }
 
   public static Map<String, Object> jsonToMap(JSONObject object) throws JSONException {

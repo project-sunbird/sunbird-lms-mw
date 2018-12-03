@@ -14,11 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runners.MethodSorters;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.service.SunbirdMWService;
@@ -47,6 +43,7 @@ import org.sunbird.user.actors.UserManagementActor;
 /** @author Amit Kumar */
 // @Ignore
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@Ignore
 public class UserManagementActorTest {
 
   private static ActorSystem system;

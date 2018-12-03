@@ -9,6 +9,7 @@ import akka.testkit.javadsl.TestKit;
 import java.util.HashMap;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.ActorOperations;
@@ -17,6 +18,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.learner.util.Util;
 
 /** @author arvind on 27/6/17. */
+@Ignore
 public class RecommendorActorTest {
 
   private static ActorSystem system;

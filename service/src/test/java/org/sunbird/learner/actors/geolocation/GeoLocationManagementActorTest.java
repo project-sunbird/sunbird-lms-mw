@@ -12,11 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runners.MethodSorters;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -29,6 +25,7 @@ import org.sunbird.learner.util.Util;
 
 /** Created by arvind on 3/11/17. */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@Ignore
 public class GeoLocationManagementActorTest {
 
   private static ActorSystem system;

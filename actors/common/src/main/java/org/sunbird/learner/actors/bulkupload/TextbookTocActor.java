@@ -1,8 +1,10 @@
 package org.sunbird.learner.actors.bulkupload;
 
+
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -106,6 +108,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         }
         sender().tell(response, sender());
     }
+  }
 
     private void validateTextBook(Request request, String mode) {
         Map<String, Object> textbook = getTextbook((String) request.get(JsonKey.TEXTBOOK_ID));
@@ -324,4 +327,14 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                     ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
+  private void download(Request request) {
+    Response response = new Response();
+    Map<String, Object> textbook = new HashMap<>();
+    textbook.put(
+        "tocUrl",
+        "https://sunbirddev.blob.core.windows.net/sunbird-content-dev/content/do_1126441512460369921103/artifact/1_1543475510769.pdf");
+    textbook.put("ttl", 86400);
+    response.getResult().put("textbook", textbook);
+    sender().tell(response, sender());
+  }
 }

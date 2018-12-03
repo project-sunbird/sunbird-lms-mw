@@ -54,6 +54,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private CourseBatchDao courseBatchDao = new CourseBatchDaoImpl();
   private UserCoursesService userCoursesService = new UserCoursesService();
+  private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -101,10 +102,8 @@ public class CourseBatchManagementActor extends BaseActor {
     courseBatch.initCount();
     courseBatch.setId(courseBatchId);
     courseBatch.setStatus(setCourseBatchStatus((String) request.get(JsonKey.START_DATE)));
-
     courseBatch.setHashTagId(
         getHashTagId((String) request.get(JsonKey.HASH_TAG_ID), JsonKey.CREATE, "", courseBatchId));
-
     String courseId = (String) request.get(JsonKey.COURSE_ID);
     Map<String, Object> contentDetails = getContentDetails(courseId, headers);
     courseBatch.setContentDetails(contentDetails, requestedBy);
@@ -139,6 +138,7 @@ public class CourseBatchManagementActor extends BaseActor {
     if (courseNotificationActive()) {
       batchOperationNotifier(courseBatch, null);
     }
+    updateBatchCount(courseBatch);
   }
 
   private boolean courseNotificationActive() {
@@ -388,6 +388,7 @@ public class CourseBatchManagementActor extends BaseActor {
     request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
     request.getRequest().put(JsonKey.BATCH, courseBatchObject);
     if (courseNotificationActive()) {
+      courseBatch.setParticipant(getAddedParticipants(participants, courseBatch));
       batchOperationNotifier(courseBatch, null);
     }
     try {
@@ -400,6 +401,23 @@ public class CourseBatchManagementActor extends BaseActor {
               + ex.getMessage(),
           ex);
     }
+  }
+
+  private Map<String, Boolean> getAddedParticipants(
+      Map<String, Boolean> participants, CourseBatch courseBatch) {
+    Map<String, Boolean> currentParticipants = courseBatch.getParticipant();
+    if (participants == null) return courseBatch.getParticipant();
+    else if (currentParticipants == null || currentParticipants.isEmpty()) {
+      return participants;
+    } else {
+      Set<String> keys = currentParticipants.keySet();
+      for (String key : keys) {
+        if (participants.containsKey(key)) {
+          participants.remove(key);
+        }
+      }
+    }
+    return participants;
   }
 
   private void getCourseBatch(Request actorMessage) {
@@ -433,10 +451,9 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private int setCourseBatchStatus(String startDate) {
     try {
-      SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-      Date todaydate = format.parse(format.format(new Date()));
-      Date requestedStartDate = format.parse(startDate);
-      if (todaydate.compareTo(requestedStartDate) == 0) {
+      Date todayDate = DATE_FORMAT.parse(DATE_FORMAT.format(new Date()));
+      Date requestedStartDate = DATE_FORMAT.parse(startDate);
+      if (todayDate.compareTo(requestedStartDate) == 0) {
         return ProgressStatus.STARTED.getValue();
       } else {
         return ProgressStatus.NOT_STARTED.getValue();
@@ -602,13 +619,12 @@ public class CourseBatchManagementActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private void updateCourseBatchDate(CourseBatch courseBatch, Map<String, Object> req) {
-    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     Map<String, Object> courseBatchMap = new ObjectMapper().convertValue(courseBatch, Map.class);
-    Date todayDate = getDate(null, format, null);
-    Date dbBatchStartDate = getDate(JsonKey.START_DATE, format, courseBatchMap);
-    Date dbBatchEndDate = getDate(JsonKey.END_DATE, format, courseBatchMap);
-    Date requestedStartDate = getDate(JsonKey.START_DATE, format, req);
-    Date requestedEndDate = getDate(JsonKey.END_DATE, format, req);
+    Date todayDate = getDate(null, DATE_FORMAT, null);
+    Date dbBatchStartDate = getDate(JsonKey.START_DATE, DATE_FORMAT, courseBatchMap);
+    Date dbBatchEndDate = getDate(JsonKey.END_DATE, DATE_FORMAT, courseBatchMap);
+    Date requestedStartDate = getDate(JsonKey.START_DATE, DATE_FORMAT, req);
+    Date requestedEndDate = getDate(JsonKey.END_DATE, DATE_FORMAT, req);
 
     validateUpdateBatchStartDate(requestedStartDate);
     validateBatchStartAndEndDate(
@@ -723,8 +739,7 @@ public class CourseBatchManagementActor extends BaseActor {
   private void validateUpdateBatchStartDate(Date startDate) {
     if (startDate != null) {
       try {
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-        format.format(startDate);
+        DATE_FORMAT.format(startDate);
       } catch (Exception e) {
         throw new ProjectCommonException(
             ResponseCode.dateFormatError.getErrorCode(),
@@ -851,6 +866,26 @@ public class CourseBatchManagementActor extends BaseActor {
               ResponseCode.invalidOrgId.getErrorMessage(),
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void updateBatchCount(CourseBatch courseBatch) {
+    if (CourseBatchSchedulerUtil.doOperationInEkStepCourse(
+        courseBatch.getCourseId(), true, courseBatch.getEnrollmentType())) {
+      courseBatch.setCountIncrementStatus(true);
+      courseBatch.setCountIncrementDate(ProjectUtil.getFormattedDate());
+      Map<String, Object> courseBatchMap = new ObjectMapper().convertValue(courseBatch, Map.class);
+      Response response = courseBatchDao.update(courseBatchMap);
+
+      if (JsonKey.SUCCESS.equalsIgnoreCase((String) response.get(JsonKey.RESPONSE))) {
+        CourseBatchUtil.syncCourseBatchForeground(
+            (String) courseBatchMap.get(JsonKey.ID), courseBatchMap);
+      } else {
+        ProjectLogger.log(
+            "CourseBatchManagementActor:updateBatchCount: Course batch not synced to ES as response is not successful",
+            LoggerEnum.INFO.name());
       }
     }
   }

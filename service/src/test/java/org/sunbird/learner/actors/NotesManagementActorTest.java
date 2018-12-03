@@ -11,11 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runners.MethodSorters;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
@@ -33,6 +29,7 @@ import org.sunbird.learner.util.Util;
 
 /** Test class to validate the note operations */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@Ignore
 public class NotesManagementActorTest {
 
   private static ActorSystem system;

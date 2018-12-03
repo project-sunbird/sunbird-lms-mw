@@ -12,10 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runners.MethodSorters;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -28,6 +25,7 @@ import org.sunbird.learner.util.Util;
 
 /** @author Amit Kumar. */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@Ignore
 public class PageManagementActorTest {
 
   private static ActorSystem system;

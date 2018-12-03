@@ -14,11 +14,8 @@ import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.*;
-import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
+import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -27,6 +24,8 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.EsIndex;
+import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -34,10 +33,10 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.user.actors.UserManagementActor;
 
+/** @author arvind. */
+// @Ignore
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@RunWith(PowerMockRunner.class)
-@PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class})
-@PowerMockIgnore("javax.management.*")
+@Ignore
 public class OrganisationManagementActorTest {
 
   private static ActorSystem system;
@@ -68,57 +67,57 @@ public class OrganisationManagementActorTest {
   private static Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private static Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
 
-  /* @BeforeClass
-    public static void setUp() {
-      CassandraOperation operation = ServiceFactory.getInstance();
-  //    SunbirdMWService.init();
-      system = ActorSystem.create("system");
-      Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-      // userManagementDB = Util.dbInfoMap.get(JsonKey.USER_DB);
-      addressDB = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
-      orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
-      orgDB = Util.dbInfoMap.get(JsonKey.ORG_DB);
-      locationDB = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
-      Map<String, Object> geoLocation = new HashMap<>();
-      // need to delete in after class...
-      geoLocation.put(JsonKey.ID, LOCATION_ID);
-      // geoLocation.put(JsonKey.LOCATION_ID , LOCATION_ID);
-      operation.insertRecord(locationDB.getKeySpace(), locationDB.getTableName(), geoLocation);
-      Map<String, Object> parentOrg = new HashMap<>();
-      parentOrg.put(JsonKey.ID, parentOrgId);
-      operation.upsertRecord(orgDB.getKeySpace(), orgDB.getTableName(), parentOrg);
+  @BeforeClass
+  public static void setUp() {
+    CassandraOperation operation = ServiceFactory.getInstance();
+    SunbirdMWService.init();
+    system = ActorSystem.create("system");
+    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
+    // userManagementDB = Util.dbInfoMap.get(JsonKey.USER_DB);
+    addressDB = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
+    orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
+    orgDB = Util.dbInfoMap.get(JsonKey.ORG_DB);
+    locationDB = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
+    Map<String, Object> geoLocation = new HashMap<>();
+    // need to delete in after class...
+    geoLocation.put(JsonKey.ID, LOCATION_ID);
+    // geoLocation.put(JsonKey.LOCATION_ID , LOCATION_ID);
+    operation.insertRecord(locationDB.getKeySpace(), locationDB.getTableName(), geoLocation);
+    Map<String, Object> parentOrg = new HashMap<>();
+    parentOrg.put(JsonKey.ID, parentOrgId);
+    operation.upsertRecord(orgDB.getKeySpace(), orgDB.getTableName(), parentOrg);
 
-      String rootOrgId = "ofure8ofp9yfpf9ego";
+    String rootOrgId = "ofure8ofp9yfpf9ego";
 
-      Map<String, Object> rootOrg = new HashMap<>();
-      rootOrg.put(JsonKey.ID, "ofure8ofp9yfpf9ego");
-      rootOrg.put(JsonKey.IS_ROOT_ORG, true);
-      rootOrg.put(JsonKey.CHANNEL, CHANNEL);
-      rootOrg.put(JsonKey.PROVIDER, PROVIDER + "01");
-      rootOrg.put(JsonKey.EXTERNAL_ID, EXTERNAL_ID + "01");
+    Map<String, Object> rootOrg = new HashMap<>();
+    rootOrg.put(JsonKey.ID, "ofure8ofp9yfpf9ego");
+    rootOrg.put(JsonKey.IS_ROOT_ORG, true);
+    rootOrg.put(JsonKey.CHANNEL, CHANNEL);
+    rootOrg.put(JsonKey.PROVIDER, PROVIDER + "01");
+    rootOrg.put(JsonKey.EXTERNAL_ID, EXTERNAL_ID + "01");
 
-      operation.upsertRecord(orgDB.getKeySpace(), orgDB.getTableName(), rootOrg);
-      ElasticSearchUtil.createData(
-          EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), rootOrgId, rootOrg);
+    operation.upsertRecord(orgDB.getKeySpace(), orgDB.getTableName(), rootOrg);
+    ElasticSearchUtil.createData(
+        EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), rootOrgId, rootOrg);
 
-      Map<String, Object> userMap = new HashMap<>();
-      userMap.put(JsonKey.ID, USER_ID);
-      // userMap.put(JsonKey.ROOT_ORG_ID, ROOT_ORG_ID);
-      operation.insertRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(), userMap);
-      userMap.put(JsonKey.USER_ID, USER_ID);
-      ElasticSearchUtil.createData(
-          EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID, userMap);
+    Map<String, Object> userMap = new HashMap<>();
+    userMap.put(JsonKey.ID, USER_ID);
+    // userMap.put(JsonKey.ROOT_ORG_ID, ROOT_ORG_ID);
+    operation.insertRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(), userMap);
+    userMap.put(JsonKey.USER_ID, USER_ID);
+    ElasticSearchUtil.createData(
+        EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID, userMap);
 
-      Map<String, Object> userMap1 = new HashMap<>();
-      userMap1.put(JsonKey.ID, USER_ID + "01");
-      // userMap.put(JsonKey.ROOT_ORG_ID, ROOT_ORG_ID);
-      operation.insertRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(), userMap1);
-      userMap1.put(JsonKey.USER_ID, USER_ID + "01");
-      ElasticSearchUtil.createData(
-          EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID, userMap1);
-    }*/
+    Map<String, Object> userMap1 = new HashMap<>();
+    userMap1.put(JsonKey.ID, USER_ID + "01");
+    // userMap.put(JsonKey.ROOT_ORG_ID, ROOT_ORG_ID);
+    operation.insertRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(), userMap1);
+    userMap1.put(JsonKey.USER_ID, USER_ID + "01");
+    ElasticSearchUtil.createData(
+        EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID, userMap1);
+  }
 
-  @Test
+  // @Test
   public void test10createUserForId() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(propsUser);
@@ -135,7 +134,7 @@ public class OrganisationManagementActorTest {
     reqObj.setRequest(request);
 
     subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Response res = probe.expectMsgClass(Response.class);
     usrId = (String) res.get(JsonKey.USER_ID);
   }
 
@@ -405,7 +404,7 @@ public class OrganisationManagementActorTest {
     Assert.assertTrue(null != exc);
   }
 
-  @Test
+  // @Test
   public void test16CreateOrgRootWithoutChannelExc() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);

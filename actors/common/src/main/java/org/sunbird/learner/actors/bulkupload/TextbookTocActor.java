@@ -18,7 +18,6 @@ import org.sunbird.content.util.ContentCloudStore;
 import org.sunbird.content.util.ContentStoreUtil;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -86,7 +85,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 String prefix =
                         TextBookTocUploader.textBookTocFolder + File.separator +
                                     textbookId + "_" + versionKey + CSV.getExtension();
-                String cloudPath = ""/*ContentCloudStore.getUri(prefix, false)*/;
+                String cloudPath = ContentCloudStore.getUri(prefix, false);
                 if (StringUtils.isBlank(cloudPath))
                     cloudPath = new TextBookTocUploader(null).execute(content, textbookId, versionKey);
 
@@ -113,14 +112,14 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         }
         if (JsonKey.CREATE.equalsIgnoreCase(mode)) {
             List<Object> children = textbook.containsKey(JsonKey.CHILDREN) ? (List<Object>) textbook.get(JsonKey.CHILDREN) : null;
-            if (null != children || !children.isEmpty()) {
+            if (null != children && !children.isEmpty()) {
                 throwClientErrorException(ResponseCode.textbookChildrenExist, ResponseCode.textbookChildrenExist.getErrorMessage());
             }
         }
     }
 
     private Response createTextbook(Request request) throws Exception {
-        Map<String, Object> file = (Map<String, Object>) request.get(JsonKey.FILE);
+        Map<String, Object> file = (Map<String, Object>) request.get(JsonKey.DATA);
         List<Map<String, Object>> data = (List<Map<String, Object>>) file.get(JsonKey.FILE_DATA);
 
         if(CollectionUtils.isEmpty(data)){
@@ -181,14 +180,23 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         }
         if(null == nodesModified.get(code)) {
             String finalName = name;
+            Map<String, Object> metadata = (Map<String, Object>) row.get("metadata");
+            List<String> keywords = Arrays.asList(((String)metadata.get("keywords")).split(","));
+            List<String> gradeLevel = Arrays.asList(((String)metadata.get("gradeLevel")).split(","));
+            metadata.remove("keywords");
+            metadata.remove("gradeLevel");
             nodesModified.put(code, new HashMap<String, Object>() {{
                 put("isNew", true);
                 put("root", false);
-                put("name", finalName);
-                put("mimeType", "application/vnd.ekstep.content-collection");
-                put("contentType", unitType);
-                put("framework", tbMetadata.get("framework"));
-                putAll((Map<String, Object>) row.get("metadata"));
+                put("metadata", new HashMap<String, Object>(){{
+                    put("name", finalName);
+                    put("mimeType", "application/vnd.ekstep.content-collection");
+                    put("contentType", unitType);
+                    put("framework", tbMetadata.get("framework"));
+                    putAll(metadata);
+                    put("keywords", keywords);
+                    put("gradeLevel", gradeLevel);
+                }});
             }});
         }
 
@@ -236,16 +244,27 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         }
     }
 
-    private Response updateTextbook(Request request) throws IOException {
+    private Response updateTextbook(Request request) throws Exception {
         List<Map<String, Object>> data = (List<Map<String, Object>>) ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.FILE_DATA);
         Map<String, Object> nodesModified = new HashMap<>();
         for(Map<String, Object> row : data) {
             Map<String, Object> metadata = (Map<String, Object>) row.get(JsonKey.METADATA);
             String id = (String) metadata.get(JsonKey.ID);
+            List<String> keywords = Arrays.asList(((String)metadata.get("keywords")).split(","));
+            List<String> gradeLevel = Arrays.asList(((String)metadata.get("gradeLevel")).split(","));
             metadata.remove(JsonKey.ID);
+            metadata.remove("keywords");
+            metadata.remove("gradeLevel");
             if(StringUtils.isNotBlank(id)){
                 nodesModified.put(id, new HashMap<String, Object>(){{
-                    putAll(metadata);
+                    put("isNew", false);
+                    put("root", false);
+                    put("metadata", new HashMap<String, Object>(){{
+                        putAll(metadata);
+                        put("keywords", keywords);
+                        put("gradeLevel", gradeLevel);
+                    }});
+
                 }});
             }
         }
@@ -260,12 +279,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         return updateHierarchy((String) request.get(JsonKey.TEXTBOOK_ID), updateRequest);
     }
 
-    private Response updateHierarchy(String tbId, Map<String, Object> updateRequest) throws IOException {
+    private Response updateHierarchy(String tbId, Map<String, Object> updateRequest) throws Exception {
         String requestUrl =
                 ProjectUtil.getConfigValue(JsonKey.SUNBIRD_API_BASE_URL)
-                        + ProjectUtil.getConfigValue("/content/v3/hierarchy/update");
+                        + "/content/v3/hierarchy/update";
 
-        String updateResp = HttpUtil.sendPatchRequest(requestUrl, "", getDefaultHeaders());
+
+        String updateResp = HttpUtil.sendPatchRequest(requestUrl, mapper.writeValueAsString(updateRequest), getDefaultHeaders());
 
         if(StringUtils.equalsIgnoreCase(updateResp, ResponseCode.success.getErrorCode())){
             Response response = new Response();
@@ -288,6 +308,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     private Map<String,String> getDefaultHeaders() {
 
         return  new HashMap<String, String>() {{
+            put("Content-Type", "application/json");
             put(JsonKey.AUTHORIZATION, JsonKey.BEARER + ProjectUtil.getConfigValue(JsonKey.SUNBIRD_AUTHORIZATION));
         }};
     }

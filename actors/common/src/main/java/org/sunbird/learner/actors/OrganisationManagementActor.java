@@ -655,7 +655,8 @@ public class OrganisationManagementActor extends BaseActor {
       if (!(list.isEmpty())) {
         orgDBO = list.get(0);
       } else {
-        ProjectLogger.log("Invalid Org Id");
+        ProjectLogger.log(
+            "OrganisationManagementActor: updateOrgData called", LoggerEnum.DEBUG.name());
         ProjectCommonException exception =
             new ProjectCommonException(
                 ResponseCode.invalidRequestData.getErrorCode(),

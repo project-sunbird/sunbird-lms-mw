@@ -108,7 +108,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         }
         sender().tell(response, sender());
     }
-}
+
 
     private void validateTextBook(Request request, String mode) {
         Map<String, Object> textbook = getTextbook((String) request.get(JsonKey.TEXTBOOK_ID));

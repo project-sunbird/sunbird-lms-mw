@@ -13,8 +13,8 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.TextbookActorOperation;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.content.ContentCloudStore;
-import org.sunbird.content.textbook.TextBookTocUpload;
+import org.sunbird.content.textbook.TextBookTocUploader;
+import org.sunbird.content.util.ContentCloudStore;
 import org.sunbird.content.util.ContentStoreUtil;
 
 import java.io.File;
@@ -27,8 +27,9 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.sunbird.common.exception.ProjectCommonException.throwClientErrorException;
+import static org.sunbird.content.textbook.FileType.Type.CSV;
 
-@ActorConfig(tasks = {"textbookTocUpload", "textbookTocUrl"}, asyncTasks = {})
+@ActorConfig(tasks = {"textbookTocUpload", "textbookTocUrl", "textbookTocUpdate"}, asyncTasks = {})
 public class TextbookTocActor extends BaseBulkUploadActor {
 
     @Override
@@ -58,32 +59,48 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
     private void getTocUrl(Request request) {
         String textbookId = (String) request.get(JsonKey.TEXTBOOK_ID);
+        validateTocUrlRequest(textbookId);
         Map<String, Object> readHierarchyResponse = ContentStoreUtil.readHierarchy(textbookId);
         Response response = new Response();
         String responseCode = (String) readHierarchyResponse.get(JsonKey.RESPONSE_CODE);
         if (StringUtils.equals(ResponseCode.OK.name(), responseCode)) {
             Map<String, Object> result  = (Map<String, Object>) readHierarchyResponse.get(JsonKey.RESULT);
+
             Map<String, Object> content = (Map<String, Object>) result.get(JsonKey.CONTENT);
-            File csv = null;
             if (null != content) {
+                if (!StringUtils.equalsIgnoreCase(
+                        JsonKey.TEXTBOOK, (String) content.get(JsonKey.CONTENT_TYPE)))
+                    throw new ProjectCommonException(
+                            ResponseCode.invalidTextBook.getErrorCode(),
+                            ResponseCode.invalidTextBook.getErrorMessage(),
+                            ResponseCode.CLIENT_ERROR.getResponseCode());
+
+                Object children = content.get(JsonKey.CHILDREN);
+                if (null == children || ((List<Map>) children).isEmpty())
+                    throw new ProjectCommonException(
+                      ResponseCode.noChildrenExists.getErrorCode(),
+                      ResponseCode.noChildrenExists.getErrorMessage(),
+                      ResponseCode.CLIENT_ERROR.getResponseCode());
+
                 String versionKey = (String) content.get(JsonKey.VERSION_KEY);
                 String prefix =
-                        File.separator + TextBookTocUpload.textBookTocCloudFolder + File.separator +
-                                textbookId + "_" + versionKey + "." + JsonKey.FILE_TYPE_CSV;
-                String cloudPath = ContentCloudStore.getUri(prefix, false);
-                if (StringUtils.isBlank(cloudPath)) {
-                    cloudPath = TextBookTocUpload.csvToCloud(csv, content, textbookId, versionKey);
-                }
+                        TextBookTocUploader.textBookTocFolder + File.separator +
+                                    textbookId + "_" + versionKey + CSV.getExtension();
+                String cloudPath = ""/*ContentCloudStore.getUri(prefix, false)*/;
+                if (StringUtils.isBlank(cloudPath))
+                    cloudPath = new TextBookTocUploader(null).execute(content, textbookId, versionKey);
+
                 Map<String, Object> textbook = new HashMap<>();
                 textbook.put(JsonKey.TOC_URL, cloudPath);
-                textbook.put(JsonKey.TTL, ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_CSV_TTL));
+                textbook.put(JsonKey.TTL,
+                        ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_CSV_TTL));
                 response.put(JsonKey.TEXTBOOK, textbook);
             }
         } else {
             throw new ProjectCommonException(
-                ResponseCode.errorProcessingRequest.getErrorCode(),
-                ResponseCode.errorProcessingRequest.getErrorMessage(),
-                ResponseCode.SERVER_ERROR.getResponseCode());
+                ResponseCode.textBookNotFound.getErrorCode(),
+                ResponseCode.textBookNotFound.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
         }
         sender().tell(response, sender());
     }
@@ -274,4 +291,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             put(JsonKey.AUTHORIZATION, JsonKey.BEARER + ProjectUtil.getConfigValue(JsonKey.SUNBIRD_AUTHORIZATION));
         }};
     }
+
+    private void validateTocUrlRequest(String textbookId){
+        if (StringUtils.isBlank(textbookId))
+            throw new ProjectCommonException(
+                    ResponseCode.invalidTextBook.getErrorCode(),
+                    ResponseCode.invalidTextBook.getErrorMessage(),
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+
 }

@@ -87,10 +87,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                                     textbookId + "_" + versionKey + CSV.getExtension();
                 String cloudPath = ContentCloudStore.getUri(prefix, false);
                 if (StringUtils.isBlank(cloudPath))
-                    cloudPath = new TextBookTocUploader(null).execute(content, textbookId, versionKey);
+                    cloudPath = "https://s3.ap-south-1.amazonaws.com/test-input-dev/content/toc/test_2.csv";
+                    //cloudPath = new TextBookTocUploader(null).execute(content, textbookId, versionKey);
+
 
                 Map<String, Object> textbook = new HashMap<>();
-                textbook.put(JsonKey.TOC_URL, cloudPath);
+                //textbook.put(JsonKey.TOC_URL, cloudPath);
+                textbook.put(JsonKey.TOC_URL, "https://s3.ap-south-1.amazonaws.com/test-input-dev/content/toc/test_2.csv");
                 textbook.put(JsonKey.TTL,
                         ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_CSV_TTL));
                 response.put(JsonKey.TEXTBOOK, textbook);

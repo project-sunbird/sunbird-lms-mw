@@ -79,18 +79,18 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 Object children = content.get(JsonKey.CHILDREN);
                 if (null == children || ((List<Map>) children).isEmpty())
                     throw new ProjectCommonException(
-                      ResponseCode.noChildrenExists.getErrorCode(),
-                      ResponseCode.noChildrenExists.getErrorMessage(),
-                      ResponseCode.CLIENT_ERROR.getResponseCode());
+                            ResponseCode.noChildrenExists.getErrorCode(),
+                            ResponseCode.noChildrenExists.getErrorMessage(),
+                            ResponseCode.CLIENT_ERROR.getResponseCode());
 
                 String versionKey = (String) content.get(JsonKey.VERSION_KEY);
                 String prefix =
                         TextBookTocUploader.textBookTocFolder + File.separator +
-                                    textbookId + "_" + versionKey + CSV.getExtension();
+                                textbookId + "_" + versionKey + CSV.getExtension();
                 String cloudPath = ContentCloudStore.getUri(prefix, false);
                 if (StringUtils.isBlank(cloudPath))
                     cloudPath = "https://s3.ap-south-1.amazonaws.com/test-input-dev/content/toc/test_2.csv";
-                    //cloudPath = new TextBookTocUploader(null).execute(content, textbookId, versionKey);
+                //cloudPath = new TextBookTocUploader(null).execute(content, textbookId, versionKey);
 
 
                 Map<String, Object> textbook = new HashMap<>();
@@ -102,13 +102,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             }
         } else {
             throw new ProjectCommonException(
-                ResponseCode.textBookNotFound.getErrorCode(),
-                ResponseCode.textBookNotFound.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
+                    ResponseCode.textBookNotFound.getErrorCode(),
+                    ResponseCode.textBookNotFound.getErrorMessage(),
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
         }
         sender().tell(response, sender());
     }
-  }
+}
 
     private void validateTextBook(Request request, String mode) {
         Map<String, Object> textbook = getTextbook((String) request.get(JsonKey.TEXTBOOK_ID));
@@ -327,14 +327,14 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                     ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
-  private void download(Request request) {
-    Response response = new Response();
-    Map<String, Object> textbook = new HashMap<>();
-    textbook.put(
-        "tocUrl",
-        "https://sunbirddev.blob.core.windows.net/sunbird-content-dev/content/do_1126441512460369921103/artifact/1_1543475510769.pdf");
-    textbook.put("ttl", 86400);
-    response.getResult().put("textbook", textbook);
-    sender().tell(response, sender());
-  }
+    private void download(Request request) {
+        Response response = new Response();
+        Map<String, Object> textbook = new HashMap<>();
+        textbook.put(
+                "tocUrl",
+                "https://sunbirddev.blob.core.windows.net/sunbird-content-dev/content/do_1126441512460369921103/artifact/1_1543475510769.pdf");
+        textbook.put("ttl", 86400);
+        response.getResult().put("textbook", textbook);
+        sender().tell(response, sender());
+    }
 }

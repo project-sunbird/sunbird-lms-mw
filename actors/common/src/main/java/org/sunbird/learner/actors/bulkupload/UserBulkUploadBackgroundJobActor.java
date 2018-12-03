@@ -159,19 +159,21 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
               JsonKey.CREATE);
           return;
         } else {
-          if (StringUtils.isNotBlank(orgId) && StringUtils.isNotBlank(orgExternalId)) {
-            if (!(orgId).equalsIgnoreCase(organisation.getId())) {
-              String message =
-                  MessageFormat.format(
-                      ResponseCode.errorConflictingValues.getErrorMessage(),
-                      JsonKey.ORGANISATION_ID,
-                      orgId,
-                      JsonKey.ORG_EXTERNAL_ID,
-                      orgExternalId);
-              setTaskStatus(
-                  task, ProjectUtil.BulkProcessStatus.FAILED, message, userMap, JsonKey.CREATE);
-              return;
-            }
+          if (StringUtils.isNotBlank(orgId)
+              && StringUtils.isNotBlank(orgExternalId)
+              && !(orgId).equalsIgnoreCase(organisation.getId())) {
+
+            String message =
+                MessageFormat.format(
+                    ResponseCode.errorConflictingValues.getErrorMessage(),
+                    JsonKey.ORGANISATION_ID,
+                    orgId,
+                    JsonKey.ORG_EXTERNAL_ID,
+                    orgExternalId);
+            setTaskStatus(
+                task, ProjectUtil.BulkProcessStatus.FAILED, message, userMap, JsonKey.CREATE);
+            return;
+
           } else {
             if (StringUtils.isNotBlank(orgExternalId)) {
               userMap.put(JsonKey.ORGANISATION_ID, organisation.getId());

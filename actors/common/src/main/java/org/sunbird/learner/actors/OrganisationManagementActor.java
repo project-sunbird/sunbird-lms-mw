@@ -261,7 +261,7 @@ public class OrganisationManagementActor extends BaseActor {
     // object of telemetry event...
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
-
+    String callerId = (String) actorMessage.getContext().get(JsonKey.CALLER_ID);
     try {
       actorMessage.toLower();
       Map<String, Object> request = actorMessage.getRequest();
@@ -308,7 +308,13 @@ public class OrganisationManagementActor extends BaseActor {
       String uniqueId = ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv());
       request.put(JsonKey.ID, uniqueId);
       request.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
-      request.put(JsonKey.STATUS, ProjectUtil.OrgStatus.ACTIVE.getValue());
+      if (JsonKey.BULK_ORG_UPLOAD.equalsIgnoreCase(callerId)) {
+        if (null == request.get(JsonKey.STATUS)) {
+          request.put(JsonKey.STATUS, ProjectUtil.OrgStatus.ACTIVE.getValue());
+        }
+      } else {
+        request.put(JsonKey.STATUS, ProjectUtil.OrgStatus.ACTIVE.getValue());
+      }
       // removing default from request, not allowing user to create default org.
       request.remove(JsonKey.IS_DEFAULT);
       // allow lower case values for source and externalId to the database
@@ -641,7 +647,7 @@ public class OrganisationManagementActor extends BaseActor {
     // object of telemetry event...
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
-
+    String callerId = (String) actorMessage.getContext().get(JsonKey.CALLER_ID);
     try {
       actorMessage.toLower();
       Map<String, Object> request = actorMessage.getRequest();
@@ -753,7 +759,14 @@ public class OrganisationManagementActor extends BaseActor {
       updateOrgDBO.remove(JsonKey.IS_APPROVED);
       updateOrgDBO.remove(JsonKey.APPROVED_BY);
       updateOrgDBO.remove(JsonKey.APPROVED_DATE);
-      updateOrgDBO.remove(JsonKey.STATUS);
+      if (JsonKey.BULK_ORG_UPLOAD.equalsIgnoreCase(callerId)) {
+        if (null == request.get(JsonKey.STATUS)) {
+          updateOrgDBO.remove(JsonKey.STATUS);
+        }
+      } else {
+        updateOrgDBO.remove(JsonKey.STATUS);
+      }
+
       String updatedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
 
       String orgId = (String) request.get(JsonKey.ORGANISATION_ID);

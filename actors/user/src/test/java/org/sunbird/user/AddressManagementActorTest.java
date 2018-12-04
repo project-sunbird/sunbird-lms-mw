@@ -58,24 +58,24 @@ public class AddressManagementActorTest {
 
     try {
       Mockito.when(encryptionService.encryptData(Mockito.anyString())).thenReturn("encrptUserId");
-    } catch (Exception e) { // TODO Auto-generated catch block
-      Assert.fail("Initialization failed");
+    } catch (Exception e) {
+      Assert.fail("AddressManagementActorTest initialization failed");
     }
     cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
   }
 
   @Test
-  public void testInsertAddressSuccess() {
+  public void testInsertUserAddressSuccess() {
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getSuccessResponse());
-    getAssertResult("insertUserAddress", true);
+    testScenario("insertUserAddress", true);
   }
 
   @Test
-  public void testInsertAddressFailure() {
-    getAssertResult("insertUserAddress", false);
+  public void testInsertUserAddressFailureWithoutReqParams() {
+    testScenario("insertUserAddress", false);
   }
 
   @Test
@@ -83,15 +83,15 @@ public class AddressManagementActorTest {
     when(cassandraOperation.deleteRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getSuccessResponse());
-    getAssertResult("updateUserAddress", true);
+    testScenario("updateUserAddress", true);
   }
 
   @Test
-  public void testUpdateAddressFailure() {
-    getAssertResult("updateUserAddress", true);
+  public void testUpdateUserAddressFailureWithoutMandatoryFields() {
+    testScenario("updateUserAddress", true);
   }
 
-  private void getAssertResult(String operation, boolean success) {
+  private void testScenario(String operation, boolean success) {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     subject.tell(getRequestObject(operation, success), probe.getRef());
@@ -103,10 +103,10 @@ public class AddressManagementActorTest {
     }
   }
 
-  private Request getRequestObject(String operation, boolean isParamReq) {
+  private Request getRequestObject(String operation, boolean withReqParams) {
     Request reqObj = new Request();
     reqObj.setOperation(operation);
-    if (isParamReq) {
+    if (withReqParams) {
       reqObj.put(JsonKey.ADDRESS, getAddressList());
       reqObj.put(JsonKey.ID, "someId");
       reqObj.put(JsonKey.CREATED_BY, "createdBy");
@@ -114,7 +114,7 @@ public class AddressManagementActorTest {
     return reqObj;
   }
 
-  private Object getAddressList() {
+  private List<Map<String, Object>> getAddressList() {
 
     List<Map<String, Object>> lst = new ArrayList<>();
     Map<String, Object> map = new HashMap<>();

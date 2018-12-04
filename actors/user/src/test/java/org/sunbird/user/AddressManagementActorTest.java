@@ -8,8 +8,13 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
-import java.util.*;
-import org.junit.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -36,19 +41,14 @@ import org.sunbird.user.actors.AddressManagementActor;
 @PowerMockIgnore({"javax.management.*"})
 public class AddressManagementActorTest {
 
-  private static ActorSystem system = ActorSystem.create("system");;
+  private static ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(AddressManagementActor.class);
   private CassandraOperation cassandraOperation;
-
-  @BeforeClass
-  public static void setup() {
-    //    system = ActorSystem.create("system");
-    PowerMockito.mockStatic(ServiceFactory.class);
-  }
 
   @Before
   public void beforeEachTest() throws Exception {
 
+    PowerMockito.mockStatic(ServiceFactory.class);
     PowerMockito.mockStatic(org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.class);
     EncryptionService encryptionService = Mockito.mock(EncryptionService.class);
     Mockito.when(
@@ -57,62 +57,65 @@ public class AddressManagementActorTest {
         .thenReturn(encryptionService);
 
     try {
-      Mockito.when(encryptionService.encryptData(Mockito.anyString())).thenReturn("abc123");
+      Mockito.when(encryptionService.encryptData(Mockito.anyString())).thenReturn("encrptUserId");
     } catch (Exception e) { // TODO Auto-generated catch block
       Assert.fail("Initialization failed");
     }
-
     cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
   }
 
   @Test
-  public void testInsertAddress() {
+  public void testInsertAddressSuccess() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-
-    Request reqObj = new Request();
-    reqObj.setOperation("insertUserAddress");
-    reqObj.put(JsonKey.ADDRESS, getAddressList());
-    reqObj.put(JsonKey.ID, "someId");
-    reqObj.put(JsonKey.CREATED_BY, "createdBy");
-
-    //        when(cassandraOperation.getRecordsByProperties(
-    //                Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-    //                .thenReturn(getSuccessResponse());
-    //        when(ElasticSearchUtil.upsertData(
-    //                Mockito.anyString(), Mockito.anyString(), Mockito.anyString(),
-    // Mockito.anyMap()))
-    //                .thenReturn(true);
-
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
-    Assert.assertTrue(true == true);
+    when(cassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getSuccessResponse());
+    subject.tell(getRequestObject("insertUserAddress", true), probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertTrue(null != res && res.getResult().get(JsonKey.RESPONSE) == "SUCCESS");
   }
 
   @Test
-  public void testUpdateAddress() {
+  public void testInsertAddressFailure() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
+    subject.tell(getRequestObject("insertUserAddress", false), probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertTrue(res.getResult().get(JsonKey.ERROR_MSG) != null);
+  }
 
-    Request reqObj = new Request();
-    reqObj.setOperation("updateUserAddress");
-    reqObj.put(JsonKey.ADDRESS, getAddressList());
-    reqObj.put(JsonKey.ID, "someId");
-    reqObj.put(JsonKey.CREATED_BY, "createdBy");
-
+  @Test
+  public void testUpdateAddressSuccess() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
     when(cassandraOperation.deleteRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getSuccessResponse());
+    subject.tell(getRequestObject("updateUserAddress", true), probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertTrue(null != res && res.getResult().get(JsonKey.RESPONSE) == "SUCCESS");
+  }
 
-    //        when(ElasticSearchUtil.upsertData(
-    //                Mockito.anyString(), Mockito.anyString(), Mockito.anyString(),
-    // Mockito.anyMap()))
-    //                .thenReturn(true);
+  @Test
+  public void testUpdateAddressFailure() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    subject.tell(getRequestObject("updateUserAddress", false), probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertTrue(res.getResult().get(JsonKey.ERROR_MSG) != null);
+  }
 
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
-    Assert.assertTrue(true == true);
+  private Request getRequestObject(String operation, boolean isParamReq) {
+    Request reqObj = new Request();
+    reqObj.setOperation(operation);
+    if (isParamReq) {
+      reqObj.put(JsonKey.ADDRESS, getAddressList());
+      reqObj.put(JsonKey.ID, "someId");
+      reqObj.put(JsonKey.CREATED_BY, "createdBy");
+    }
+    return reqObj;
   }
 
   private Object getAddressList() {
@@ -120,6 +123,7 @@ public class AddressManagementActorTest {
     List<Map<String, Object>> lst = new ArrayList<>();
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.ADDRESS, "anyAddress");
+    map.put(JsonKey.ID, "someUserId");
     map.put(JsonKey.IS_DELETED, true);
     lst.add(map);
     return lst;

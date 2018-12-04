@@ -70,12 +70,12 @@ public class AddressManagementActorTest {
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getSuccessResponse());
-    abc("insertUserAddress", true);
+    getAssertResult("insertUserAddress", true);
   }
 
   @Test
   public void testInsertAddressFailure() {
-    abc("insertUserAddress", false);
+    getAssertResult("insertUserAddress", false);
   }
 
   @Test
@@ -83,15 +83,15 @@ public class AddressManagementActorTest {
     when(cassandraOperation.deleteRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getSuccessResponse());
-    abc("updateUserAddress", true);
+    getAssertResult("updateUserAddress", true);
   }
 
   @Test
   public void testUpdateAddressFailure() {
-    abc("updateUserAddress", true);
+    getAssertResult("updateUserAddress", true);
   }
 
-  private void abc(String operation, boolean success) {
+  private void getAssertResult(String operation, boolean success) {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     subject.tell(getRequestObject(operation, success), probe.getRef());

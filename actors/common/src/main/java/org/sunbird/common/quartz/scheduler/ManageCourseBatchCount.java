@@ -102,13 +102,13 @@ public class ManageCourseBatchCount implements Job {
       ProjectLogger.log(
           "No data found in Elasticsearch for course batch update.", LoggerEnum.INFO.name());
     }
-    findAndFixCoursesWithCountMismatch(today, yesterDay, true);
-    findAndFixCoursesWithCountMismatch(today, yesterDay, false);
+    findAndFixCoursesWithCountMismatch(today, true);
+    findAndFixCoursesWithCountMismatch(today, false);
     TelemetryUtil.telemetryProcessingCall(logInfo, null, null, "LOG");
   }
 
   @SuppressWarnings("unchecked")
-  private void findAndFixCoursesWithCountMismatch(String today, String yesterDay, boolean open) {
+  private void findAndFixCoursesWithCountMismatch(String today, boolean open) {
     // Get some page SIZE of courses using content search with open batch count > 0
     // For each course, compare the number of open batches with the count in course metadata with
     // start date <= yesterday end date >= today

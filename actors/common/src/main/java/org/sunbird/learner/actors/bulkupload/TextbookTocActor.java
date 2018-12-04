@@ -287,7 +287,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
     private Response updateHierarchy(String tbId, Map<String, Object> updateRequest) throws Exception {
         String requestUrl =
-                ProjectUtil.getConfigValue(JsonKey.SUNBIRD_API_BASE_URL)
+                ProjectUtil.getConfigValue(JsonKey.EKSTEP_BASE_URL)
                         + "/content/v3/hierarchy/update";
 
 

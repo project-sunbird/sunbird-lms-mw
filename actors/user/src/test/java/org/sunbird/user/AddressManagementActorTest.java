@@ -67,44 +67,40 @@ public class AddressManagementActorTest {
 
   @Test
   public void testInsertAddressSuccess() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getSuccessResponse());
-    subject.tell(getRequestObject("insertUserAddress", true), probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(null != res && res.getResult().get(JsonKey.RESPONSE) == "SUCCESS");
+    abc("insertUserAddress", true);
   }
 
   @Test
   public void testInsertAddressFailure() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    subject.tell(getRequestObject("insertUserAddress", false), probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(res.getResult().get(JsonKey.ERROR_MSG) != null);
+    abc("insertUserAddress", false);
   }
 
   @Test
   public void testUpdateAddressSuccess() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
     when(cassandraOperation.deleteRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getSuccessResponse());
-    subject.tell(getRequestObject("updateUserAddress", true), probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(null != res && res.getResult().get(JsonKey.RESPONSE) == "SUCCESS");
+    abc("updateUserAddress", true);
   }
 
   @Test
   public void testUpdateAddressFailure() {
+    abc("updateUserAddress", true);
+  }
+
+  private void abc(String operation, boolean success) {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-    subject.tell(getRequestObject("updateUserAddress", false), probe.getRef());
+    subject.tell(getRequestObject(operation, success), probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(res.getResult().get(JsonKey.ERROR_MSG) != null);
+    if (success) {
+      Assert.assertTrue(res != null && res.getResult().get(JsonKey.RESPONSE) == "SUCCESS");
+    } else {
+      Assert.assertTrue(res != null && res.getResult().get(JsonKey.ERROR_MSG) != null);
+    }
   }
 
   private Request getRequestObject(String operation, boolean isParamReq) {

@@ -193,14 +193,11 @@ public final class CourseBatchSchedulerUtil {
   }
 
   public static List<Map<String, Object>> getAllBatch(
-      String courseId, String today, String yesterDay, String enrollmentType) {
+      String courseId, String today, String enrollmentType) {
     SearchDTO dto = new SearchDTO();
     Map<String, Object> map = new HashMap<>();
-    Map<String, String> startDateRangeFilter = new HashMap<>();
-    startDateRangeFilter.put("<=", yesterDay);
-    map.put(JsonKey.START_DATE, startDateRangeFilter);
     Map<String, String> endDateRangeFilter = new HashMap<>();
-    endDateRangeFilter.put(">=", today);
+    endDateRangeFilter.put(">", today);
     map.put(JsonKey.END_DATE, endDateRangeFilter);
     map.put(JsonKey.ENROLLMENT_TYPE, enrollmentType);
     map.put(JsonKey.COURSE_ID, courseId);
@@ -208,8 +205,7 @@ public final class CourseBatchSchedulerUtil {
     return searchContent(dto);
   }
 
-  @SuppressWarnings("unchecked")
-  public static List<Map<String, Object>> getContentForCleanUp(boolean open) {
+  public static Map<String, Object> getContentForCleanUp(boolean open, int offset) {
     Map<String, Object> dto = new HashMap<>();
     Map<String, Integer> countFilter = new HashMap<>();
     String countName;
@@ -222,6 +218,8 @@ public final class CourseBatchSchedulerUtil {
     Map<String, Object> map = new HashMap<>();
     map.put(countName, countFilter);
     dto.put(JsonKey.FILTERS, map);
+    dto.put(JsonKey.OFFSET, offset);
+    dto.put(JsonKey.LIMIT, 100);
     Map<String, Object> requestMap = new HashMap<>();
     requestMap.put(JsonKey.REQUEST, dto);
     try {
@@ -229,11 +227,12 @@ public final class CourseBatchSchedulerUtil {
           ContentSearchUtil.searchContentSync(
               null, new ObjectMapper().writeValueAsString(requestMap), getHeader());
       if (MapUtils.isNotEmpty(result)) {
-        return (List<Map<String, Object>>) result.get(JsonKey.CONTENTS);
+        return result;
       }
     } catch (JsonProcessingException e) {
       ProjectLogger.log(
-          "CourseBatchScheduleUtil: getContentForCleanUp: Error Occured while processing ",
+          "CourseBatchScheduleUtil: getContentForCleanUp: Error Occured while processing "
+              + requestMap,
           LoggerEnum.INFO);
       return null;
     }

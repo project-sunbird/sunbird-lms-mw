@@ -107,6 +107,7 @@ public class ManageCourseBatchCount implements Job {
     TelemetryUtil.telemetryProcessingCall(logInfo, null, null, "LOG");
   }
 
+  @SuppressWarnings("unchecked")
   private void findAndFixCoursesWithCountMismatch(String today, String yesterDay, boolean open) {
     // Get some page SIZE of courses using content search with open batch count > 0
     // For each course, compare the number of open batches with the count in course metadata with
@@ -120,17 +121,25 @@ public class ManageCourseBatchCount implements Job {
         open
             ? CourseBatchSchedulerUtil.getCountName(JsonKey.OPEN)
             : CourseBatchSchedulerUtil.getCountName(JsonKey.INVITE_ONLY);
-    List<Map<String, Object>> courseDetailsList =
-        CourseBatchSchedulerUtil.getContentForCleanUp(open);
-    if (CollectionUtils.isNotEmpty(courseDetailsList)) {
-      for (Map<String, Object> openBatchMap : courseDetailsList) {
-        String courseId = (String) openBatchMap.get("IL_UNIQUE_ID");
-        List<Map<String, Object>> openBatchFromES =
-            CourseBatchSchedulerUtil.getAllBatch(courseId, today, yesterDay, enrollmentType);
-        int activeBatchCount = openBatchFromES.size();
-        int ekStepBatchCount = (int) openBatchMap.get(countName);
-        if (activeBatchCount != ekStepBatchCount) {
-          CourseBatchSchedulerUtil.updateEkstepContent(courseId, countName, activeBatchCount);
+    // Setting the initial count as 10000
+    int totalCount = 10000;
+    for (int offset = 0; offset < totalCount; offset += 100) {
+      Map<String, Object> response = CourseBatchSchedulerUtil.getContentForCleanUp(open, offset);
+      if (MapUtils.isNotEmpty(response)) {
+        totalCount = (int) response.get(JsonKey.COUNT);
+        List<Map<String, Object>> courseDetailsList =
+            (List<Map<String, Object>>) response.get(JsonKey.CONTENTS);
+        if (CollectionUtils.isNotEmpty(courseDetailsList) || totalCount != 0) {
+          for (Map<String, Object> openBatchMap : courseDetailsList) {
+            String courseId = (String) openBatchMap.get("IL_UNIQUE_ID");
+            List<Map<String, Object>> openBatchFromES =
+                CourseBatchSchedulerUtil.getAllBatch(courseId, today, enrollmentType);
+            int activeBatchCount = openBatchFromES.size();
+            int ekStepBatchCount = (int) openBatchMap.getOrDefault(countName, 0);
+            if (activeBatchCount != ekStepBatchCount) {
+              CourseBatchSchedulerUtil.updateEkstepContent(courseId, countName, activeBatchCount);
+            }
+          }
         }
       }
     }

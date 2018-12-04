@@ -3,7 +3,7 @@ jdk: openjdk8
 install: echo "Over-riding default script for travis-ci"
 script:
   - jdk_switcher use openjdk8
-  - mvn clean -Dactors/sunbird-open-saber-bridge.skip.tests=true package
+  - mvn clean package -pl actors/sunbird-open-saber-bridge
 cache:
   directories:
   - "$HOME/.m2"

@@ -193,13 +193,13 @@ public class CourseBatchManagementActor extends BaseActor {
     List<String> participants = (List<String>) request.get(JsonKey.PARTICIPANTS);
     String requestedBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
 
+    CourseBatch oldBatch = courseBatchDao.readById((String) request.get(JsonKey.ID));
     CourseBatch courseBatch = getUpdateCourseBatch(request);
     courseBatch.setUpdatedDate(ProjectUtil.getFormattedDate());
     checkBatchStatus(courseBatch);
     validateUserPermission(courseBatch, requestedBy);
     validateContentOrg(courseBatch.getCreatedFor());
     validateMentors(courseBatch);
-    CourseBatch oldBatch = courseBatchDao.readById((String) request.get(JsonKey.ID));
     if (participants != null) {
       validateParticipants(participants, courseBatch);
       participantsMap = getParticipantsMap(participants, courseBatch);

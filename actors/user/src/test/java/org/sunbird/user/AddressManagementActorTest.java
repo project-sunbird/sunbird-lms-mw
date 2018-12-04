@@ -30,6 +30,7 @@ import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.user.actors.AddressManagementActor;
+import org.sunbird.user.util.UserActorOperations;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
@@ -70,12 +71,12 @@ public class AddressManagementActorTest {
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getSuccessResponse());
-    testScenario("insertUserAddress", true);
+    testScenario(UserActorOperations.INSERT_USER_ADDRESS.getValue(), true);
   }
 
   @Test
   public void testInsertUserAddressFailureWithoutReqParams() {
-    testScenario("insertUserAddress", false);
+    testScenario(UserActorOperations.INSERT_USER_ADDRESS.getValue(), false);
   }
 
   @Test
@@ -83,12 +84,12 @@ public class AddressManagementActorTest {
     when(cassandraOperation.deleteRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getSuccessResponse());
-    testScenario("updateUserAddress", true);
+    testScenario(UserActorOperations.UPDATE_USER_ADDRESS.getValue(), true);
   }
 
   @Test
   public void testUpdateUserAddressFailureWithoutMandatoryFields() {
-    testScenario("updateUserAddress", true);
+    testScenario(UserActorOperations.UPDATE_USER_ADDRESS.getValue(), true);
   }
 
   private void testScenario(String operation, boolean success) {

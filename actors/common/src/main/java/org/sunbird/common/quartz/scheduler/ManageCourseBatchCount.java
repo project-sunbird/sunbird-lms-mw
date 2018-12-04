@@ -102,29 +102,26 @@ public class ManageCourseBatchCount implements Job {
       ProjectLogger.log(
           "No data found in Elasticsearch for course batch update.", LoggerEnum.INFO.name());
     }
-    findAndFixCoursesWithCountMismatch(today, true);
-    findAndFixCoursesWithCountMismatch(today, false);
+    findAndFixCoursesWithCountMismatch(today, JsonKey.OPEN);
+    findAndFixCoursesWithCountMismatch(today, JsonKey.INVITE_ONLY);
     TelemetryUtil.telemetryProcessingCall(logInfo, null, null, "LOG");
   }
 
   @SuppressWarnings("unchecked")
-  private void findAndFixCoursesWithCountMismatch(String today, boolean open) {
+  private void findAndFixCoursesWithCountMismatch(String today, String enrollmentType) {
     // Get some page SIZE of courses using content search with open batch count > 0
     // For each course, compare the number of open batches with the count in course metadata with
     // start date <= yesterday end date >= today
     // If not matching update the count in ekstep
     // If more records, then repeat step 1
-
     // Repeat above steps for invite only
-    String enrollmentType = open ? JsonKey.OPEN : JsonKey.INVITE_ONLY;
-    String countName =
-        open
-            ? CourseBatchSchedulerUtil.getCountName(JsonKey.OPEN)
-            : CourseBatchSchedulerUtil.getCountName(JsonKey.INVITE_ONLY);
+
+    String countName = CourseBatchSchedulerUtil.getCountName(enrollmentType);
     // Setting the initial count as 10000
     int totalCount = 10000;
     for (int offset = 0; offset < totalCount; offset += 100) {
-      Map<String, Object> response = CourseBatchSchedulerUtil.getContentForCleanUp(open, offset);
+      Map<String, Object> response =
+          CourseBatchSchedulerUtil.getContentForCleanUp(enrollmentType, offset);
       if (MapUtils.isNotEmpty(response)) {
         totalCount = (int) response.get(JsonKey.COUNT);
         List<Map<String, Object>> courseDetailsList =

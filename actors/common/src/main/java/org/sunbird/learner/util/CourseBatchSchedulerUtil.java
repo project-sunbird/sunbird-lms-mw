@@ -205,15 +205,10 @@ public final class CourseBatchSchedulerUtil {
     return searchContent(dto);
   }
 
-  public static Map<String, Object> getContentForCleanUp(boolean open, int offset) {
+  public static Map<String, Object> getContentForCleanUp(String enrollmentType, int offset) {
     Map<String, Object> dto = new HashMap<>();
     Map<String, Integer> countFilter = new HashMap<>();
-    String countName;
-    if (open) {
-      countName = getCountName(JsonKey.OPEN);
-    } else {
-      countName = getCountName(JsonKey.INVITE_ONLY);
-    }
+    String countName = getCountName(enrollmentType);
     countFilter.put(">", 0);
     Map<String, Object> map = new HashMap<>();
     map.put(countName, countFilter);

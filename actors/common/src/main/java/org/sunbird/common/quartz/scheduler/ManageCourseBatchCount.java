@@ -7,6 +7,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
@@ -33,6 +34,7 @@ public class ManageCourseBatchCount implements Job {
 
   @SuppressWarnings("unchecked")
   public void execute(JobExecutionContext ctx) throws JobExecutionException {
+
     ProjectLogger.log(
         "Executing COURSE_BATCH_COUNT job at: "
             + Calendar.getInstance().getTime()
@@ -100,7 +102,38 @@ public class ManageCourseBatchCount implements Job {
       ProjectLogger.log(
           "No data found in Elasticsearch for course batch update.", LoggerEnum.INFO.name());
     }
+    findAndFixCoursesWithCountMismatch(today, yesterDay, true);
+    findAndFixCoursesWithCountMismatch(today, yesterDay, false);
     TelemetryUtil.telemetryProcessingCall(logInfo, null, null, "LOG");
+  }
+
+  private void findAndFixCoursesWithCountMismatch(String today, String yesterDay, boolean open) {
+    // Get some page SIZE of courses using content search with open batch count > 0
+    // For each course, compare the number of open batches with the count in course metadata with
+    // start date <= yesterday end date >= today
+    // If not matching update the count in ekstep
+    // If more records, then repeat step 1
+
+    // Repeat above steps for invite only
+    String enrollmentType = open ? JsonKey.OPEN : JsonKey.INVITE_ONLY;
+    String countName =
+        open
+            ? CourseBatchSchedulerUtil.getCountName(JsonKey.OPEN)
+            : CourseBatchSchedulerUtil.getCountName(JsonKey.INVITE_ONLY);
+    List<Map<String, Object>> courseDetailsList =
+        CourseBatchSchedulerUtil.getContentForCleanUp(open);
+    if (CollectionUtils.isNotEmpty(courseDetailsList)) {
+      for (Map<String, Object> openBatchMap : courseDetailsList) {
+        String courseId = (String) openBatchMap.get("IL_UNIQUE_ID");
+        List<Map<String, Object>> openBatchFromES =
+            CourseBatchSchedulerUtil.getAllBatch(courseId, today, yesterDay, enrollmentType);
+        int activeBatchCount = openBatchFromES.size();
+        int ekStepBatchCount = (int) openBatchMap.get(countName);
+        if (activeBatchCount != ekStepBatchCount) {
+          CourseBatchSchedulerUtil.updateEkstepContent(courseId, countName, activeBatchCount);
+        }
+      }
+    }
   }
 
   private Map<String, Object> genarateLogInfo(String logType, String message) {

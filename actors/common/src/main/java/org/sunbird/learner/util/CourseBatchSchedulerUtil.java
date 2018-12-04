@@ -1,6 +1,8 @@
 /** */
 package org.sunbird.learner.util;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -190,6 +192,54 @@ public final class CourseBatchSchedulerUtil {
     return searchContent(dto);
   }
 
+  public static List<Map<String, Object>> getAllBatch(
+      String courseId, String today, String yesterDay, String enrollmentType) {
+    SearchDTO dto = new SearchDTO();
+    Map<String, Object> map = new HashMap<>();
+    Map<String, String> startDateRangeFilter = new HashMap<>();
+    startDateRangeFilter.put("<=", yesterDay);
+    map.put(JsonKey.START_DATE, startDateRangeFilter);
+    Map<String, String> endDateRangeFilter = new HashMap<>();
+    endDateRangeFilter.put(">=", today);
+    map.put(JsonKey.END_DATE, endDateRangeFilter);
+    map.put(JsonKey.ENROLLMENT_TYPE, enrollmentType);
+    map.put(JsonKey.COURSE_ID, courseId);
+    dto.addAdditionalProperty(JsonKey.FILTERS, map);
+    return searchContent(dto);
+  }
+
+  @SuppressWarnings("unchecked")
+  public static List<Map<String, Object>> getContentForCleanUp(boolean open) {
+    Map<String, Object> dto = new HashMap<>();
+    Map<String, Integer> countFilter = new HashMap<>();
+    String countName;
+    if (open) {
+      countName = getCountName(JsonKey.OPEN);
+    } else {
+      countName = getCountName(JsonKey.INVITE_ONLY);
+    }
+    countFilter.put(">", 0);
+    Map<String, Object> map = new HashMap<>();
+    map.put(countName, countFilter);
+    dto.put(JsonKey.FILTERS, map);
+    Map<String, Object> requestMap = new HashMap<>();
+    requestMap.put(JsonKey.REQUEST, dto);
+    try {
+      Map<String, Object> result =
+          ContentSearchUtil.searchContentSync(
+              null, new ObjectMapper().writeValueAsString(requestMap), getHeader());
+      if (MapUtils.isNotEmpty(result)) {
+        return (List<Map<String, Object>>) result.get(JsonKey.CONTENTS);
+      }
+    } catch (JsonProcessingException e) {
+      ProjectLogger.log(
+          "CourseBatchScheduleUtil: getContentForCleanUp: Error Occured while processing ",
+          LoggerEnum.INFO);
+      return null;
+    }
+    return null;
+  }
+
   @SuppressWarnings("unchecked")
   private static List<Map<String, Object>> searchContent(SearchDTO dto) {
     List<Map<String, Object>> listOfMap = new ArrayList<>();
@@ -253,5 +303,14 @@ public final class CourseBatchSchedulerUtil {
       ProjectLogger.log("Error while updating content value " + e.getMessage(), e);
     }
     return JsonKey.SUCCESS.equalsIgnoreCase(response);
+  }
+
+  public static Map<String, String> getHeader() {
+    Map<String, String> headerMap = new HashMap<>();
+    String header = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_AUTHORIZATION);
+    header = JsonKey.BEARER + header;
+    headerMap.put(JsonKey.AUTHORIZATION, header);
+    headerMap.put("Content-Type", "application/json");
+    return headerMap;
   }
 }

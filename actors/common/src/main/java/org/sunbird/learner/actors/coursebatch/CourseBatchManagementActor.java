@@ -199,7 +199,7 @@ public class CourseBatchManagementActor extends BaseActor {
     validateUserPermission(courseBatch, requestedBy);
     validateContentOrg(courseBatch.getCreatedFor());
     validateMentors(courseBatch);
-    CourseBatch oldBatch = getUpdateCourseBatch(request);
+    CourseBatch oldBatch = courseBatchDao.readById((String) request.get(JsonKey.ID));
     if (participants != null) {
       validateParticipants(participants, courseBatch);
       participantsMap = getParticipantsMap(participants, courseBatch);

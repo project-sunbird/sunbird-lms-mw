@@ -61,7 +61,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
     private void getTocUrl(Request request) {
         String textbookId = (String) request.get(JsonKey.TEXTBOOK_ID);
-        validateTocUrlRequest(textbookId);
+        if (StringUtils.isBlank(textbookId))
+            throwClientErrorException(ResponseCode.invalidTextbook, ResponseCode.invalidTextbook.getErrorMessage());
+
         Map<String, Object> readHierarchyResponse = ContentStoreUtil.readHierarchy(textbookId);
         Response response = new Response();
         String responseCode = (String) readHierarchyResponse.get(JsonKey.RESPONSE_CODE);
@@ -70,20 +72,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
             Map<String, Object> content = (Map<String, Object>) result.get(JsonKey.CONTENT);
             if (null != content) {
-                if (!StringUtils.equalsIgnoreCase(
-                        JsonKey.TEXTBOOK, (String) content.get(JsonKey.CONTENT_TYPE)))
-                    throw new ProjectCommonException(
-                            ResponseCode.invalidTextBook.getErrorCode(),
-                            ResponseCode.invalidTextBook.getErrorMessage(),
-                            ResponseCode.CLIENT_ERROR.getResponseCode());
-
-                Object children = content.get(JsonKey.CHILDREN);
-                if (null == children || ((List<Map>) children).isEmpty())
-                    throw new ProjectCommonException(
-                            ResponseCode.noChildrenExists.getErrorCode(),
-                            ResponseCode.noChildrenExists.getErrorMessage(),
-                            ResponseCode.CLIENT_ERROR.getResponseCode());
-
+                validateTextBook(content, JsonKey.DOWNLOAD);
                 String versionKey = (String) content.get(JsonKey.VERSION_KEY);
                 String prefix =
                         TextBookTocUploader.textBookTocFolder + File.separator +
@@ -102,10 +91,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 response.put(JsonKey.TEXTBOOK, textbook);
             }
         } else {
-            throw new ProjectCommonException(
-                    ResponseCode.textBookNotFound.getErrorCode(),
-                    ResponseCode.textBookNotFound.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
+            throwClientErrorException(ResponseCode.textBookNotFound, ResponseCode.textBookNotFound.getErrorMessage());
         }
         sender().tell(response, sender());
     }
@@ -116,11 +102,14 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         if (!JsonKey.TEXTBOOK_TOC_ALLOWED_MIMETYPE.equalsIgnoreCase(textbook.get(JsonKey.MIME_TYPE).toString()) || !allowedContentTypes.contains(textbook.get(JsonKey.CONTENT_TYPE).toString())) {
             throwClientErrorException(ResponseCode.invalidTextbook, ResponseCode.invalidTextbook.getErrorMessage());
         }
+        List<Object> children = textbook.containsKey(JsonKey.CHILDREN) ? (List<Object>) textbook.get(JsonKey.CHILDREN) : null;
         if (JsonKey.CREATE.equalsIgnoreCase(mode)) {
-            List<Object> children = textbook.containsKey(JsonKey.CHILDREN) ? (List<Object>) textbook.get(JsonKey.CHILDREN) : null;
             if (null != children && !children.isEmpty()) {
                 throwClientErrorException(ResponseCode.textbookChildrenExist, ResponseCode.textbookChildrenExist.getErrorMessage());
             }
+        } else if (JsonKey.DOWNLOAD.equalsIgnoreCase(mode)) {
+            if (null == children || children.isEmpty())
+                throwClientErrorException(ResponseCode.noChildrenExists, ResponseCode.noChildrenExists.getErrorMessage());
         }
     }
 
@@ -350,14 +339,6 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             put("Content-Type", "application/json");
             put(JsonKey.AUTHORIZATION, JsonKey.BEARER + ProjectUtil.getConfigValue(JsonKey.SUNBIRD_AUTHORIZATION));
         }};
-    }
-
-    private void validateTocUrlRequest(String textbookId){
-        if (StringUtils.isBlank(textbookId))
-            throw new ProjectCommonException(
-                    ResponseCode.invalidTextBook.getErrorCode(),
-                    ResponseCode.invalidTextBook.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
     private void download(Request request) {

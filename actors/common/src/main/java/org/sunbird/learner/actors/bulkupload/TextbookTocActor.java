@@ -114,7 +114,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
 
     private void validateRequest(Request request, String mode) {
-        Boolean isNameValReq = false;
+        Boolean isNameValReq = true;
         Set<String> rowsHash = new HashSet<>();
         List<String> mandatoryFields = Arrays.asList(ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_MANDATORY_FIELDS).split(","));
         Map<String, Object> textbook = getTextbook((String) request.get(JsonKey.TEXTBOOK_ID));
@@ -122,7 +122,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
         validateTextBook(textbook, mode);
 
-        List<Map<String, Object>> fileData = (List<Map<String, Object>>) request.get(JsonKey.FILE_DATA);
+        List<Map<String, Object>> fileData = (List<Map<String, Object>>) ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.FILE_DATA);
 
         for (Map<String, Object> row : fileData) {
             Boolean isAdded = rowsHash.add(DigestUtils.md5Hex(SerializationUtils.serialize(row.toString())));
@@ -136,7 +136,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 if (StringUtils.isBlank(name) || !StringUtils.endsWithIgnoreCase(name, textbookName)) {
                     throwClientErrorException(ResponseCode.invalidTextbookName, ResponseCode.invalidTextbookName.getErrorMessage());
                 }
-                isNameValReq=true;
+                isNameValReq=false;
             }
             for (String field : mandatoryFields) {
                 if (!hierarchy.containsKey(field)) {

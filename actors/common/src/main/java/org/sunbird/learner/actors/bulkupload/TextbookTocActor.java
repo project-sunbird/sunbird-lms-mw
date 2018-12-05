@@ -3,6 +3,7 @@ package org.sunbird.learner.actors.bulkupload;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import org.sunbird.actor.router.ActorConfig;
@@ -46,7 +47,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
     private void upload(Request request) throws Exception {
         String mode = ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.MODE).toString();
-        validateTextBook(request, mode);
+        validateRequest(request, mode);
         Response response = new Response();
         if(StringUtils.equalsIgnoreCase(mode, "create")){
             response = createTextbook(request);
@@ -89,8 +90,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                                 textbookId + "_" + versionKey + CSV.getExtension();
                 String cloudPath = ContentCloudStore.getUri(prefix, false);
                 if (StringUtils.isBlank(cloudPath))
-                    cloudPath = "https://s3.ap-south-1.amazonaws.com/test-input-dev/content/toc/test_2.csv";
-                //cloudPath = new TextBookTocUploader(null).execute(content, textbookId, versionKey);
+                    //cloudPath = "https://s3.ap-south-1.amazonaws.com/test-input-dev/content/toc/test_2.csv";
+                cloudPath = new TextBookTocUploader(null).execute(content, textbookId, versionKey);
 
 
                 Map<String, Object> textbook = new HashMap<>();
@@ -110,8 +111,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
 
 
-    private void validateTextBook(Request request, String mode) {
-        Map<String, Object> textbook = getTextbook((String) request.get(JsonKey.TEXTBOOK_ID));
+    private void validateTextBook(Map<String, Object> textbook, String mode) {
         List<String> allowedContentTypes = Arrays.asList(ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_ALLOWED_CONTNET_TYPES).split(","));
         if (!JsonKey.TEXTBOOK_TOC_ALLOWED_MIMETYPE.equalsIgnoreCase(textbook.get(JsonKey.MIME_TYPE).toString()) || !allowedContentTypes.contains(textbook.get(JsonKey.CONTENT_TYPE).toString())) {
             throwClientErrorException(ResponseCode.invalidTextbook, ResponseCode.invalidTextbook.getErrorMessage());
@@ -120,6 +120,39 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             List<Object> children = textbook.containsKey(JsonKey.CHILDREN) ? (List<Object>) textbook.get(JsonKey.CHILDREN) : null;
             if (null != children && !children.isEmpty()) {
                 throwClientErrorException(ResponseCode.textbookChildrenExist, ResponseCode.textbookChildrenExist.getErrorMessage());
+            }
+        }
+    }
+
+    private void validateRequest(Request request, String mode) {
+        Boolean isNameValReq = false;
+        Map<String, Object> map = new HashMap<>();
+        Set<String> rowsHash = new HashSet<>();
+        List<String> mandatoryFields = Arrays.asList(ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_MANDATORY_FIELDS).split(","));
+        Map<String, Object> textbook = getTextbook((String) request.get(JsonKey.TEXTBOOK_ID));
+        String textbookName = (String) textbook.get(JsonKey.NAME);
+
+        validateTextBook(textbook, mode);
+
+        List<Map<String, Object>> fileData = (List<Map<String, Object>>) request.get(JsonKey.FILE_DATA);
+
+        for (Map<String, Object> row : fileData) {
+            Boolean isAdded = rowsHash.add(DigestUtils.md5Hex(SerializationUtils.serialize(row.toString())));
+            if (!isAdded) {
+                throwClientErrorException(ResponseCode.duplicateRows, ResponseCode.duplicateRows.getErrorMessage());
+            }
+
+            Map<String, Object> hierarchy = (Map<String, Object>) row.get(JsonKey.HIERARCHY);
+            if (isNameValReq) {
+                String name = (String) hierarchy.get("Textbook");
+                if (StringUtils.isBlank(name) || !StringUtils.endsWithIgnoreCase(name, textbookName)) {
+                    throwClientErrorException(ResponseCode.invalidTextbookName, ResponseCode.invalidTextbookName.getErrorMessage());
+                }
+            }
+            for (String field : mandatoryFields) {
+                if (!hierarchy.containsKey(field)) {
+                    throwClientErrorException(ResponseCode.requiredFieldMissing, ResponseCode.requiredFieldMissing.getErrorMessage() + mandatoryFields);
+                }
             }
         }
     }

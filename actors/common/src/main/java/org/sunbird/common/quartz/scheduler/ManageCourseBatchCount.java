@@ -118,17 +118,17 @@ public class ManageCourseBatchCount implements Job {
 
     String countName = CourseBatchSchedulerUtil.getCountName(enrollmentType);
     // Setting the initial count as 10000
-    int totalCount = 10000;
-    for (int offset = 0; offset < totalCount; offset += 100) {
+    int totalCourse = 0, offset = 0;
+    do {
       Map<String, Object> response =
-          CourseBatchSchedulerUtil.getContentForCleanUp(enrollmentType, offset);
+          CourseBatchSchedulerUtil.getContentForCleanUp(countName, offset);
       if (MapUtils.isNotEmpty(response)) {
-        totalCount = (int) response.get(JsonKey.COUNT);
+        totalCourse = (int) response.get(JsonKey.COUNT);
         List<Map<String, Object>> courseDetailsList =
             (List<Map<String, Object>>) response.get(JsonKey.CONTENTS);
-        if (CollectionUtils.isNotEmpty(courseDetailsList) || totalCount != 0) {
+        if (CollectionUtils.isNotEmpty(courseDetailsList) || totalCourse != 0) {
           for (Map<String, Object> openBatchMap : courseDetailsList) {
-            String courseId = (String) openBatchMap.get("IL_UNIQUE_ID");
+            String courseId = (String) openBatchMap.get(JsonKey.IDENTIFIER);
             List<Map<String, Object>> openBatchFromES =
                 CourseBatchSchedulerUtil.getAllBatch(courseId, today, enrollmentType);
             int activeBatchCount = openBatchFromES.size();
@@ -139,7 +139,8 @@ public class ManageCourseBatchCount implements Job {
           }
         }
       }
-    }
+      offset += 100;
+    } while (offset < totalCourse);
   }
 
   private Map<String, Object> genarateLogInfo(String logType, String message) {

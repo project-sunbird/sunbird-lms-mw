@@ -175,6 +175,7 @@ public final class CourseBatchSchedulerUtil {
     Map<String, String> dateRangeFilter = new HashMap<>();
     dateRangeFilter.put("<=", date);
     map.put(dateAttribute, dateRangeFilter);
+    map.put(JsonKey.STATUS, 0);
     map.put(counterAttribute, false);
     dto.addAdditionalProperty(JsonKey.FILTERS, map);
     return searchContent(dto);
@@ -205,10 +206,9 @@ public final class CourseBatchSchedulerUtil {
     return searchContent(dto);
   }
 
-  public static Map<String, Object> getContentForCleanUp(String enrollmentType, int offset) {
+  public static Map<String, Object> getContentForCleanUp(String countName, int offset) {
     Map<String, Object> dto = new HashMap<>();
     Map<String, Integer> countFilter = new HashMap<>();
-    String countName = getCountName(enrollmentType);
     countFilter.put(">", 0);
     Map<String, Object> map = new HashMap<>();
     map.put(countName, countFilter);

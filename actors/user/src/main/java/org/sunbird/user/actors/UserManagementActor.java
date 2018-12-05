@@ -877,11 +877,6 @@ public class UserManagementActor extends BaseActor {
     requestMap = UserUtil.encryptUserData(userMap);
     removeUnwanted(requestMap);
     requestMap.put(JsonKey.IS_DELETED, false);
-    Map<String, String> profileVisbility = new HashMap<>();
-    for (String field : ProjectUtil.defaultPrivateFields) {
-      profileVisbility.put(field, JsonKey.PRIVATE);
-    }
-    requestMap.put(JsonKey.PROFILE_VISIBILITY, profileVisbility);
     Response response = null;
     try {
       response =

@@ -126,8 +126,10 @@ public class LearnerStateActor extends BaseActor {
     if (MapUtils.isNotEmpty(coursesContents)) {
       List<Map<String, Object>> courses =
           (List<Map<String, Object>>) coursesContents.get(JsonKey.CONTENTS);
-      courses.forEach(
-          course -> contentsByCourseId.put((String) course.get(JsonKey.IDENTIFIER), course));
+      if (CollectionUtils.isNotEmpty(courses)) {
+        courses.forEach(
+            course -> contentsByCourseId.put((String) course.get(JsonKey.IDENTIFIER), course));
+      }
     }
     List<Map<String, Object>> batchesWithCourseDetails = batches;
     if (MapUtils.isNotEmpty(contentsByCourseId)) {

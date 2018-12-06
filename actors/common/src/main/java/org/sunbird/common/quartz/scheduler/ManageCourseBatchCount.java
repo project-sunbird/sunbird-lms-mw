@@ -117,7 +117,6 @@ public class ManageCourseBatchCount implements Job {
     // Repeat above steps for invite only
 
     String countName = CourseBatchSchedulerUtil.getCountName(enrollmentType);
-    // Setting the initial count as 10000
     int totalCourse = 0, offset = 0;
     do {
       Map<String, Object> response =
@@ -127,12 +126,18 @@ public class ManageCourseBatchCount implements Job {
         List<Map<String, Object>> courseDetailsList =
             (List<Map<String, Object>>) response.get(JsonKey.CONTENTS);
         if (CollectionUtils.isNotEmpty(courseDetailsList) || totalCourse != 0) {
-          for (Map<String, Object> openBatchMap : courseDetailsList) {
-            String courseId = (String) openBatchMap.get(JsonKey.IDENTIFIER);
-            List<Map<String, Object>> openBatchFromES =
-                CourseBatchSchedulerUtil.getAllBatch(courseId, today, enrollmentType);
-            int activeBatchCount = openBatchFromES.size();
-            int ekStepBatchCount = (int) openBatchMap.getOrDefault(countName, 0);
+          for (Map<String, Object> courseDetail : courseDetailsList) {
+            String courseId = (String) courseDetail.get(JsonKey.IDENTIFIER);
+            /*List<Map<String, Object>> batchListWithFutureEndDate =
+            CourseBatchSchedulerUtil.getAllBatchWithFutureEndDate(courseId, today, enrollmentType);*/
+            List<Map<String, Object>> ongoingBatchList =
+                CourseBatchSchedulerUtil.getAllBatchWithStatusNotCompleted(
+                    courseId, 1, enrollmentType);
+            List<Map<String, Object>> upcomingBatchList =
+                CourseBatchSchedulerUtil.getAllBatchWithStatusNotCompleted(
+                    courseId, 0, enrollmentType);
+            int activeBatchCount = ongoingBatchList.size() + upcomingBatchList.size();
+            int ekStepBatchCount = (int) courseDetail.getOrDefault(countName, 0);
             if (activeBatchCount != ekStepBatchCount) {
               CourseBatchSchedulerUtil.updateEkstepContent(courseId, countName, activeBatchCount);
             }

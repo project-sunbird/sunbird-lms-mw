@@ -193,13 +193,24 @@ public final class CourseBatchSchedulerUtil {
     return searchContent(dto);
   }
 
-  public static List<Map<String, Object>> getAllBatch(
+  public static List<Map<String, Object>> getAllBatchWithFutureEndDate(
       String courseId, String today, String enrollmentType) {
     SearchDTO dto = new SearchDTO();
     Map<String, Object> map = new HashMap<>();
     Map<String, String> endDateRangeFilter = new HashMap<>();
     endDateRangeFilter.put(">", today);
     map.put(JsonKey.END_DATE, endDateRangeFilter);
+    map.put(JsonKey.ENROLLMENT_TYPE, enrollmentType);
+    map.put(JsonKey.COURSE_ID, courseId);
+    dto.addAdditionalProperty(JsonKey.FILTERS, map);
+    return searchContent(dto);
+  }
+
+  public static List<Map<String, Object>> getAllBatchWithStatusNotCompleted(
+      String courseId, int status, String enrollmentType) {
+    SearchDTO dto = new SearchDTO();
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.STATUS, status);
     map.put(JsonKey.ENROLLMENT_TYPE, enrollmentType);
     map.put(JsonKey.COURSE_ID, courseId);
     dto.addAdditionalProperty(JsonKey.FILTERS, map);

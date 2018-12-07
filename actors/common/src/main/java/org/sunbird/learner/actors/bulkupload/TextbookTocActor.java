@@ -5,18 +5,22 @@ import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.jclouds.json.Json;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.TextbookActorOperation;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.textbook.TextBookTocUploader;
-import org.sunbird.content.util.ContentStoreUtil;
+import org.sunbird.content.util.TextBookTocUtil;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -27,20 +31,7 @@ import java.util.Set;
 
 import static java.io.File.separator;
 import static org.sunbird.common.exception.ProjectCommonException.throwClientErrorException;
-import static org.sunbird.common.models.util.JsonKey.CONTENT;
-import static org.sunbird.common.models.util.JsonKey.CONTENT_TYPE;
-import static org.sunbird.common.models.util.JsonKey.DOWNLOAD;
-import static org.sunbird.common.models.util.JsonKey.MIME_TYPE;
-import static org.sunbird.common.models.util.JsonKey.RESPONSE_CODE;
-import static org.sunbird.common.models.util.JsonKey.RESULT;
-import static org.sunbird.common.models.util.JsonKey.TEXTBOOK;
-import static org.sunbird.common.models.util.JsonKey.TEXTBOOK_ID;
-import static org.sunbird.common.models.util.JsonKey.TEXTBOOK_TOC_ALLOWED_CONTNET_TYPES;
-import static org.sunbird.common.models.util.JsonKey.TEXTBOOK_TOC_ALLOWED_MIMETYPE;
-import static org.sunbird.common.models.util.JsonKey.TEXTBOOK_TOC_CSV_TTL;
-import static org.sunbird.common.models.util.JsonKey.TOC_URL;
-import static org.sunbird.common.models.util.JsonKey.TTL;
-import static org.sunbird.common.models.util.JsonKey.VERSION_KEY;
+import static org.sunbird.common.models.util.JsonKey.*;
 import static org.sunbird.common.responsecode.ResponseCode.OK;
 import static org.sunbird.common.responsecode.ResponseCode.invalidTextbook;
 import static org.sunbird.common.responsecode.ResponseCode.noChildrenExists;
@@ -79,34 +70,40 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
     private void getTocUrl(Request request) {
         String textbookId = (String) request.get(TEXTBOOK_ID);
-        if (StringUtils.isBlank(textbookId))
+        if (StringUtils.isBlank(textbookId)) {
+            ProjectLogger.log("Invalid TextBook Provided");
             throwClientErrorException(invalidTextbook, invalidTextbook.getErrorMessage());
-
-        Map<String, Object> readHierarchyResponse = ContentStoreUtil.readHierarchy(textbookId);
+        }
+        ProjectLogger.log("Reading Hierarchy for TextBook | Id: ", textbookId);
+        Map<String, Object> readHierarchyResponse = TextBookTocUtil.readHierarchy(textbookId);
         Response response = new Response();
         String responseCode = (String) readHierarchyResponse.get(RESPONSE_CODE);
         if (StringUtils.equals(OK.name(), responseCode)) {
             Map<String, Object> result = (Map<String, Object>) readHierarchyResponse.get(RESULT);
-
             Map<String, Object> content = (Map<String, Object>) result.get(CONTENT);
             if (null != content) {
                 validateTextBook(content, DOWNLOAD);
                 String versionKey = (String) content.get(VERSION_KEY);
-
                 String prefix =
                         textBookTocFolder + separator +
                                 textbookId + "_" + versionKey + CSV.getExtension();
+                ProjectLogger.log("Fetching TextBook Toc URL from Cloud", LoggerEnum.INFO);
                 String cloudPath = ""/*ContentCloudStore.getUri(prefix, false)*/;
-                if (StringUtils.isBlank(cloudPath))
+                if (StringUtils.isBlank(cloudPath)) {
                     cloudPath = new TextBookTocUploader(null).execute(content, textbookId, versionKey);
-
+                }
+                ProjectLogger.log("Sending Response for Toc Download API for TextBook | Id: " + textbookId);
                 Map<String, Object> textbook = new HashMap<>();
                 textbook.put(TOC_URL, cloudPath);
                 textbook.put(TTL,
                         ProjectUtil.getConfigValue(TEXTBOOK_TOC_CSV_TTL));
                 response.put(TEXTBOOK, textbook);
+            } else {
+                ProjectLogger.log("No content fetched for TextBook | Id:" + textbookId, LoggerEnum.INFO);
             }
         } else {
+            ProjectLogger.
+                    log("TextBook Not Found | Id: " + textbookId, LoggerEnum.ERROR);
             throwClientErrorException(textBookNotFound, textBookNotFound.getErrorMessage());
         }
         sender().tell(response, sender());
@@ -165,7 +162,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     private Response createTextbook(Request request) throws Exception {
         Map<String, Object> file = (Map<String, Object>) request.get(JsonKey.DATA);
         List<Map<String, Object>> data = (List<Map<String, Object>>) file.get(JsonKey.FILE_DATA);
-
+        ProjectLogger.log("Create Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data), LoggerEnum.INFO.name());
         if (CollectionUtils.isEmpty(data)) {
             throw new ProjectCommonException(
                     ResponseCode.invalidRequestData.getErrorCode(),
@@ -193,6 +190,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                     }});
                 }});
             }};
+            ProjectLogger.log("Create Textbook - UpdateHierarchy Request : " + mapper.writeValueAsString(updateRequest), LoggerEnum.INFO.name());
             return updateHierarchy(tbId, updateRequest);
         }
     }
@@ -213,7 +211,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 levelCount += 1;
                 if (i - 1 > 0)
                     parentCode += (String) hierarchy.get("L:" + (i - 1));
-                populateNodeModified(name, getCode(code), (Map<String, Object>) row.get("metadata"), unitType, framework, nodesModified);
+                if(StringUtils.isBlank((String) hierarchy.get("L:" + (i + 1))))
+                    populateNodeModified(name, getCode(code), (Map<String, Object>) row.get(JsonKey.METADATA), unitType, framework, nodesModified, true);
+                else
+                    populateNodeModified(name, getCode(code), null, unitType, framework, nodesModified, true);
                 populateHierarchyData(tbId, name, getCode(code), getCode(parentCode), levelCount, hierarchyData);
             } else {
                 break;
@@ -227,7 +228,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
 
     private Map<String, Object> getTextbook(String tbId) {
-        Map<String, Object> response = ContentStoreUtil.readContent(tbId);
+        Map<String, Object> response = TextBookTocUtil.readContent(tbId);
         if (null != response && !response.isEmpty() && StringUtils.equals(OK.name(), (String) response.get(RESPONSE_CODE))) {
             Map<String, Object> result = (Map<String, Object>) response.get(RESULT);
             Map<String, Object> textbook = (Map<String, Object>) result.get(CONTENT);
@@ -242,12 +243,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
     private Response updateTextbook(Request request) throws Exception {
         List<Map<String, Object>> data = (List<Map<String, Object>>) ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.FILE_DATA);
+        ProjectLogger.log("Update Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data), LoggerEnum.INFO.name());
         Map<String, Object> nodesModified = new HashMap<>();
         for (Map<String, Object> row : data) {
             Map<String, Object> metadata = (Map<String, Object>) row.get(JsonKey.METADATA);
             String id = (String) metadata.get(JsonKey.IDENTIFIER);
             metadata.remove(JsonKey.IDENTIFIER);
-            populateNodeModified(null, id, metadata, null, null, nodesModified);
+            populateNodeModified(null, id, metadata, null, null, nodesModified, false);
         }
         Map<String, Object> updateRequest = new HashMap<String, Object>() {{
             put(JsonKey.REQUEST, new HashMap<String, Object>() {{
@@ -256,6 +258,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 }});
             }});
         }};
+        ProjectLogger.log("Update Textbook - UpdateHierarchy Request : " + mapper.writeValueAsString(updateRequest), LoggerEnum.INFO.name());
         return updateHierarchy((String) request.get(TEXTBOOK_ID), updateRequest);
     }
 
@@ -302,31 +305,51 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         sender().tell(response, sender());
     }
 
-    private void populateNodeModified(String name, String code, Map<String, Object> metadata, String unitType, String framework, Map<String, Object> nodesModified) {
-        if (null == nodesModified.get(code)) {
-            List<String> keywords = (StringUtils.isNotBlank((String) metadata.get(JsonKey.KEYWORDS))) ? Arrays.asList(((String) metadata.get(JsonKey.KEYWORDS)).split(",")) : null;
-            List<String> gradeLevel = (StringUtils.isNotBlank((String) metadata.get(JsonKey.GRADE_LEVEL))) ? Arrays.asList(((String) metadata.get(JsonKey.GRADE_LEVEL)).split(",")) : null;
-            metadata.remove(JsonKey.KEYWORDS);
-            metadata.remove(JsonKey.GRADE_LEVEL);
-            nodesModified.put(code, new HashMap<String, Object>() {{
-                put(JsonKey.TB_IS_NEW, true);
-                put(JsonKey.TB_ROOT, false);
-                put(JsonKey.METADATA, new HashMap<String, Object>() {{
-                    if (StringUtils.isNotBlank(name))
-                        put(JsonKey.NAME, name);
-                    put(JsonKey.MIME_TYPE, JsonKey.COLLECTION_MIME_TYPE);
-                    if (StringUtils.isNotBlank(unitType))
-                        put(JsonKey.CONTENT_TYPE, unitType);
-                    if (StringUtils.isNotBlank(framework))
-                        put(JsonKey.FRAMEWORK, framework);
-                    putAll(metadata);
-                    if (CollectionUtils.isNotEmpty(keywords))
-                        put(JsonKey.KEYWORDS, keywords);
-                    if (CollectionUtils.isNotEmpty(gradeLevel))
-                        put(JsonKey.GRADE_LEVEL, gradeLevel);
-                }});
-            }});
-        }
+    private void populateNodeModified(String name, String code, Map<String, Object> metadata, String unitType, String framework, Map<String, Object> nodesModified, boolean isNew) {
+            Map<String, Object> node = null;
+            if (nodesModified.containsKey(code)) {
+                node = (Map<String, Object>) nodesModified.get(code);
+                if (MapUtils.isNotEmpty(metadata)) {
+                    Map<String, Object> newMeta = new HashMap<String, Object>() {{
+                        List<String> keywords = (StringUtils.isNotBlank((String) metadata.get(JsonKey.KEYWORDS))) ? Arrays.asList(((String) metadata.get(JsonKey.KEYWORDS)).split(",")) : null;
+                        List<String> gradeLevel = (StringUtils.isNotBlank((String) metadata.get(JsonKey.GRADE_LEVEL))) ? Arrays.asList(((String) metadata.get(JsonKey.GRADE_LEVEL)).split(",")) : null;
+                        putAll(metadata);
+                        remove(JsonKey.KEYWORDS);
+                        remove(JsonKey.GRADE_LEVEL);
+                        if (CollectionUtils.isNotEmpty(keywords))
+                            put(JsonKey.KEYWORDS, keywords);
+                        if (CollectionUtils.isNotEmpty(gradeLevel))
+                            put(JsonKey.GRADE_LEVEL, gradeLevel);
+                    }};
+                    ((Map<String, Object>) node.get(JsonKey.METADATA)).putAll(newMeta);
+                }
+            } else {
+                node = new HashMap<String, Object>() {{
+                    put(JsonKey.TB_IS_NEW, isNew);
+                    put(JsonKey.TB_ROOT, false);
+                    put(JsonKey.METADATA, new HashMap<String, Object>() {{
+                        if (StringUtils.isNotBlank(name))
+                            put(JsonKey.NAME, name);
+                        put(JsonKey.MIME_TYPE, JsonKey.COLLECTION_MIME_TYPE);
+                        if (StringUtils.isNotBlank(unitType))
+                            put(JsonKey.CONTENT_TYPE, unitType);
+                        if (StringUtils.isNotBlank(framework))
+                            put(JsonKey.FRAMEWORK, framework);
+                        if(MapUtils.isNotEmpty(metadata)){
+                            List<String> keywords = (StringUtils.isNotBlank((String) metadata.get(JsonKey.KEYWORDS))) ? Arrays.asList(((String) metadata.get(JsonKey.KEYWORDS)).split(",")) : null;
+                            List<String> gradeLevel = (StringUtils.isNotBlank((String) metadata.get(JsonKey.GRADE_LEVEL))) ? Arrays.asList(((String) metadata.get(JsonKey.GRADE_LEVEL)).split(",")) : null;
+                            putAll(metadata);
+                            remove(JsonKey.KEYWORDS);
+                            remove(JsonKey.GRADE_LEVEL);
+                            if (CollectionUtils.isNotEmpty(keywords))
+                                put(JsonKey.KEYWORDS, keywords);
+                            if (CollectionUtils.isNotEmpty(gradeLevel))
+                                put(JsonKey.GRADE_LEVEL, gradeLevel);
+                        }
+                    }});
+                }};
+            }
+            nodesModified.put(code, node);
     }
 
     private void populateHierarchyData(String tbId, String name, String code, String parentCode, int levelCount, Map<String, Object> hierarchyData) {

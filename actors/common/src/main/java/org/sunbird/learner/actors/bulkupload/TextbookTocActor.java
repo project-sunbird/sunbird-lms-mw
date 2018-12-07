@@ -16,6 +16,7 @@ import org.sunbird.common.models.util.TextbookActorOperation;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.textbook.TextBookTocUploader;
+import org.sunbird.content.util.ContentCloudStore;
 import org.sunbird.content.util.ContentStoreUtil;
 
 import java.util.Arrays;
@@ -96,7 +97,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 String prefix =
                         textBookTocFolder + separator +
                                 textbookId + "_" + versionKey + CSV.getExtension();
-                String cloudPath = ""/*ContentCloudStore.getUri(prefix, false)*/;
+                String cloudPath = ContentCloudStore.getUri(prefix, false);
                 if (StringUtils.isBlank(cloudPath))
                     cloudPath = new TextBookTocUploader(null).execute(content, textbookId, versionKey);
 
@@ -213,7 +214,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 levelCount += 1;
                 if (i - 1 > 0)
                     parentCode += (String) hierarchy.get("L:" + (i - 1));
-                populateNodeModified(name, getCode(code), (Map<String, Object>) row.get("metadata"), unitType, framework, nodesModified);
+                populateNodeModified(name, getCode(code), (Map<String, Object>) row.get(JsonKey.METADATA), unitType, framework, nodesModified, true);
                 populateHierarchyData(tbId, name, getCode(code), getCode(parentCode), levelCount, hierarchyData);
             } else {
                 break;
@@ -247,7 +248,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             Map<String, Object> metadata = (Map<String, Object>) row.get(JsonKey.METADATA);
             String id = (String) metadata.get(JsonKey.IDENTIFIER);
             metadata.remove(JsonKey.IDENTIFIER);
-            populateNodeModified(null, id, metadata, null, null, nodesModified);
+            populateNodeModified(null, id, metadata, null, null, nodesModified, false);
         }
         Map<String, Object> updateRequest = new HashMap<String, Object>() {{
             put(JsonKey.REQUEST, new HashMap<String, Object>() {{
@@ -302,14 +303,12 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         sender().tell(response, sender());
     }
 
-    private void populateNodeModified(String name, String code, Map<String, Object> metadata, String unitType, String framework, Map<String, Object> nodesModified) {
+    private void populateNodeModified(String name, String code, Map<String, Object> metadata, String unitType, String framework, Map<String, Object> nodesModified, boolean isNew) {
         if (null == nodesModified.get(code)) {
             List<String> keywords = (StringUtils.isNotBlank((String) metadata.get(JsonKey.KEYWORDS))) ? Arrays.asList(((String) metadata.get(JsonKey.KEYWORDS)).split(",")) : null;
             List<String> gradeLevel = (StringUtils.isNotBlank((String) metadata.get(JsonKey.GRADE_LEVEL))) ? Arrays.asList(((String) metadata.get(JsonKey.GRADE_LEVEL)).split(",")) : null;
-            metadata.remove(JsonKey.KEYWORDS);
-            metadata.remove(JsonKey.GRADE_LEVEL);
             nodesModified.put(code, new HashMap<String, Object>() {{
-                put(JsonKey.TB_IS_NEW, true);
+                put(JsonKey.TB_IS_NEW, isNew);
                 put(JsonKey.TB_ROOT, false);
                 put(JsonKey.METADATA, new HashMap<String, Object>() {{
                     if (StringUtils.isNotBlank(name))
@@ -320,6 +319,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                     if (StringUtils.isNotBlank(framework))
                         put(JsonKey.FRAMEWORK, framework);
                     putAll(metadata);
+                    remove(JsonKey.KEYWORDS);
+                    remove(JsonKey.GRADE_LEVEL);
                     if (CollectionUtils.isNotEmpty(keywords))
                         put(JsonKey.KEYWORDS, keywords);
                     if (CollectionUtils.isNotEmpty(gradeLevel))

@@ -32,7 +32,6 @@ import java.util.Set;
 
 import static java.io.File.separator;
 import static org.sunbird.common.exception.ProjectCommonException.throwClientErrorException;
-import static org.sunbird.common.exception.ProjectCommonException.throwServerErrorException;
 import static org.sunbird.common.models.util.JsonKey.*;
 import static org.sunbird.common.models.util.LoggerEnum.ERROR;
 import static org.sunbird.common.models.util.LoggerEnum.INFO;
@@ -88,7 +87,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         Map<String, Object> result  = (Map<String, Object>) readContentResponse.get(RESULT);
         Map<String, Object> content = (Map<String, Object>) result.get(CONTENT);
         Response response = new Response();
-        if (null != content || !content.isEmpty()) {
+        if (null != content && !content.isEmpty()) {
             validateTextBook(content, DOWNLOAD);
             String versionKey = (String) content.get(VERSION_KEY);
             String prefix =

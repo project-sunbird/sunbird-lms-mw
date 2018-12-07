@@ -11,13 +11,14 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.TextbookActorOperation;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.textbook.TextBookTocUploader;
-import org.sunbird.content.util.ContentCloudStore;
-import org.sunbird.content.util.ContentStoreUtil;
+import org.sunbird.content.util.TextBookTocUtil;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -28,20 +29,7 @@ import java.util.Set;
 
 import static java.io.File.separator;
 import static org.sunbird.common.exception.ProjectCommonException.throwClientErrorException;
-import static org.sunbird.common.models.util.JsonKey.CONTENT;
-import static org.sunbird.common.models.util.JsonKey.CONTENT_TYPE;
-import static org.sunbird.common.models.util.JsonKey.DOWNLOAD;
-import static org.sunbird.common.models.util.JsonKey.MIME_TYPE;
-import static org.sunbird.common.models.util.JsonKey.RESPONSE_CODE;
-import static org.sunbird.common.models.util.JsonKey.RESULT;
-import static org.sunbird.common.models.util.JsonKey.TEXTBOOK;
-import static org.sunbird.common.models.util.JsonKey.TEXTBOOK_ID;
-import static org.sunbird.common.models.util.JsonKey.TEXTBOOK_TOC_ALLOWED_CONTNET_TYPES;
-import static org.sunbird.common.models.util.JsonKey.TEXTBOOK_TOC_ALLOWED_MIMETYPE;
-import static org.sunbird.common.models.util.JsonKey.TEXTBOOK_TOC_CSV_TTL;
-import static org.sunbird.common.models.util.JsonKey.TOC_URL;
-import static org.sunbird.common.models.util.JsonKey.TTL;
-import static org.sunbird.common.models.util.JsonKey.VERSION_KEY;
+import static org.sunbird.common.models.util.JsonKey.*;
 import static org.sunbird.common.responsecode.ResponseCode.OK;
 import static org.sunbird.common.responsecode.ResponseCode.invalidTextbook;
 import static org.sunbird.common.responsecode.ResponseCode.noChildrenExists;
@@ -80,34 +68,40 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
     private void getTocUrl(Request request) {
         String textbookId = (String) request.get(TEXTBOOK_ID);
-        if (StringUtils.isBlank(textbookId))
+        if (StringUtils.isBlank(textbookId)) {
+            ProjectLogger.log("Invalid TextBook Provided");
             throwClientErrorException(invalidTextbook, invalidTextbook.getErrorMessage());
-
-        Map<String, Object> readHierarchyResponse = ContentStoreUtil.readHierarchy(textbookId);
+        }
+        ProjectLogger.log("Reading Hierarchy for TextBook | Id: ", textbookId);
+        Map<String, Object> readHierarchyResponse = TextBookTocUtil.readHierarchy(textbookId);
         Response response = new Response();
         String responseCode = (String) readHierarchyResponse.get(RESPONSE_CODE);
         if (StringUtils.equals(OK.name(), responseCode)) {
             Map<String, Object> result = (Map<String, Object>) readHierarchyResponse.get(RESULT);
-
             Map<String, Object> content = (Map<String, Object>) result.get(CONTENT);
             if (null != content) {
                 validateTextBook(content, DOWNLOAD);
                 String versionKey = (String) content.get(VERSION_KEY);
-
                 String prefix =
                         textBookTocFolder + separator +
                                 textbookId + "_" + versionKey + CSV.getExtension();
-                String cloudPath = ContentCloudStore.getUri(prefix, false);
-                if (StringUtils.isBlank(cloudPath))
+                ProjectLogger.log("Fetching TextBook Toc URL from Cloud", LoggerEnum.INFO);
+                String cloudPath = ""/*ContentCloudStore.getUri(prefix, false)*/;
+                if (StringUtils.isBlank(cloudPath)) {
                     cloudPath = new TextBookTocUploader(null).execute(content, textbookId, versionKey);
-
+                }
+                ProjectLogger.log("Sending Response for Toc Download API for TextBook | Id: " + textbookId);
                 Map<String, Object> textbook = new HashMap<>();
                 textbook.put(TOC_URL, cloudPath);
                 textbook.put(TTL,
                         ProjectUtil.getConfigValue(TEXTBOOK_TOC_CSV_TTL));
                 response.put(TEXTBOOK, textbook);
+            } else {
+                ProjectLogger.log("No content fetched for TextBook | Id:" + textbookId, LoggerEnum.INFO);
             }
         } else {
+            ProjectLogger.
+                    log("TextBook Not Found | Id: " + textbookId, LoggerEnum.ERROR);
             throwClientErrorException(textBookNotFound, textBookNotFound.getErrorMessage());
         }
         sender().tell(response, sender());
@@ -228,7 +222,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
 
     private Map<String, Object> getTextbook(String tbId) {
-        Map<String, Object> response = ContentStoreUtil.readContent(tbId);
+        Map<String, Object> response = TextBookTocUtil.readContent(tbId);
         if (null != response && !response.isEmpty() && StringUtils.equals(OK.name(), (String) response.get(RESPONSE_CODE))) {
             Map<String, Object> result = (Map<String, Object>) response.get(RESULT);
             Map<String, Object> textbook = (Map<String, Object>) result.get(CONTENT);

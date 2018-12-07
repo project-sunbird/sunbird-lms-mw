@@ -32,6 +32,7 @@ import java.util.Set;
 
 import static java.io.File.separator;
 import static org.sunbird.common.exception.ProjectCommonException.throwClientErrorException;
+import static org.sunbird.common.exception.ProjectCommonException.throwServerErrorException;
 import static org.sunbird.common.models.util.JsonKey.*;
 import static org.sunbird.common.models.util.LoggerEnum.ERROR;
 import static org.sunbird.common.models.util.LoggerEnum.INFO;
@@ -131,7 +132,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         if (!TEXTBOOK_TOC_ALLOWED_MIMETYPE.equalsIgnoreCase(textbook.get(MIME_TYPE).toString()) || !allowedContentTypes.contains(textbook.get(CONTENT_TYPE).toString())) {
             throwClientErrorException(invalidTextbook, invalidTextbook.getErrorMessage());
         }
-        List<Object> children = textbook.containsKey(JsonKey.CHILDREN) ? (List<Object>) textbook.get(JsonKey.CHILDREN) : null;
+        List<Object> children = (List<Object>) textbook.get(JsonKey.CHILDREN);
         if (JsonKey.CREATE.equalsIgnoreCase(mode)) {
             if (null != children && !children.isEmpty()) {
                 throwClientErrorException(textbookChildrenExist, textbookChildrenExist.getErrorMessage());

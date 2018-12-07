@@ -1,6 +1,7 @@
 package org.sunbird.learner.actors.bulkupload;
 
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -22,6 +23,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.textbook.TextBookTocUploader;
 import org.sunbird.content.util.TextBookTocUtil;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -126,10 +128,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         }
     }
 
-    private void validateRequest(Request request, String mode) {
-        Boolean isNameValReq = true;
+    private void validateRequest(Request request, String mode) throws IOException {
         Set<String> rowsHash = new HashSet<>();
-        List<String> mandatoryFields = Arrays.asList(ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_MANDATORY_FIELDS).split(","));
+        String mandatoryFields = ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_MANDATORY_FIELDS);
+        Map<String, String> mandatoryFieldsMap = mapper.readValue(mandatoryFields, new TypeReference<Map<String, String>>() {
+        });
         Map<String, Object> textbook = getTextbook((String) request.get(TEXTBOOK_ID));
         String textbookName = (String) textbook.get(JsonKey.NAME);
 
@@ -142,18 +145,15 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             if (!isAdded) {
                 throwClientErrorException(ResponseCode.duplicateRows, ResponseCode.duplicateRows.getErrorMessage());
             }
-
             Map<String, Object> hierarchy = (Map<String, Object>) row.get(JsonKey.HIERARCHY);
-            if (isNameValReq) {
-                String name = (String) hierarchy.getOrDefault(StringUtils.capitalize(JsonKey.TEXTBOOK), "");
-                if (StringUtils.isBlank(name) || !StringUtils.endsWithIgnoreCase(name, textbookName)) {
-                    throwClientErrorException(ResponseCode.invalidTextbookName, ResponseCode.invalidTextbookName.getErrorMessage());
-                }
-                isNameValReq = false;
+
+            String name = (String) hierarchy.getOrDefault(StringUtils.capitalize(JsonKey.TEXTBOOK), "");
+            if (StringUtils.isBlank(name) || !StringUtils.equalsIgnoreCase(name, textbookName)) {
+                throwClientErrorException(ResponseCode.invalidTextbookName, ResponseCode.invalidTextbookName.getErrorMessage());
             }
-            for (String field : mandatoryFields) {
-                if (!hierarchy.containsKey(field)) {
-                    throwClientErrorException(ResponseCode.requiredFieldMissing, ResponseCode.requiredFieldMissing.getErrorMessage() + mandatoryFields);
+            for (String field : mandatoryFieldsMap.keySet()) {
+                if (!hierarchy.containsKey(field) || StringUtils.isBlank(hierarchy.getOrDefault(field, "").toString())) {
+                    throwClientErrorException(ResponseCode.requiredFieldMissing, ResponseCode.requiredFieldMissing.getErrorMessage() + mandatoryFieldsMap.values());
                 }
             }
         }
@@ -234,6 +234,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             Map<String, Object> textbook = (Map<String, Object>) result.get(CONTENT);
             return textbook;
         } else {
+            ProjectLogger.log("Read Textbook Api Failed. Error Response : " + response, LoggerEnum.INFO.name());
             throw new ProjectCommonException(
                     ResponseCode.errorProcessingRequest.getErrorCode(),
                     ResponseCode.errorProcessingRequest.getErrorMessage(),

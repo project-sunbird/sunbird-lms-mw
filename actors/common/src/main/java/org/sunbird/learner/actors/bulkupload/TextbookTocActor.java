@@ -21,6 +21,7 @@ import org.sunbird.common.models.util.TextbookActorOperation;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.textbook.TextBookTocUploader;
+import org.sunbird.content.util.ContentCloudStore;
 import org.sunbird.content.util.TextBookTocUtil;
 
 import java.io.IOException;
@@ -90,7 +91,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                         textBookTocFolder + separator +
                                 textbookId + "_" + versionKey + CSV.getExtension();
                 ProjectLogger.log("Fetching TextBook Toc URL from Cloud", LoggerEnum.INFO);
-                String cloudPath = ""/*ContentCloudStore.getUri(prefix, false)*/;
+                String cloudPath = ContentCloudStore.getUri(prefix, false);
                 if (StringUtils.isBlank(cloudPath)) {
                     cloudPath = new TextBookTocUploader(null).execute(content, textbookId, versionKey);
                 }

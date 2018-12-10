@@ -25,12 +25,7 @@ import org.sunbird.content.util.ContentCloudStore;
 import org.sunbird.content.util.TextBookTocUtil;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static java.io.File.separator;
 import static org.sunbird.common.exception.ProjectCommonException.throwClientErrorException;
@@ -151,6 +146,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
             String name = (String) hierarchy.getOrDefault(StringUtils.capitalize(JsonKey.TEXTBOOK), "");
             if (StringUtils.isBlank(name) || !StringUtils.equalsIgnoreCase(name, textbookName)) {
+                ProjectLogger.log("Name mismatch. Content has: "+ name + " but, file has: "+ textbookName, null, LoggerEnum.ERROR.name());
                 throwClientErrorException(ResponseCode.invalidTextbookName, ResponseCode.invalidTextbookName.getErrorMessage());
             }
             for (String field : mandatoryFieldsMap.keySet()) {
@@ -164,7 +160,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     private Response createTextbook(Request request) throws Exception {
         Map<String, Object> file = (Map<String, Object>) request.get(JsonKey.DATA);
         List<Map<String, Object>> data = (List<Map<String, Object>>) file.get(JsonKey.FILE_DATA);
-        ProjectLogger.log("Create Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data), LoggerEnum.INFO.name());
+        ProjectLogger.log("Create Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data));
         if (CollectionUtils.isEmpty(data)) {
             throw new ProjectCommonException(
                     ResponseCode.invalidRequestData.getErrorCode(),
@@ -178,7 +174,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             hierarchyData.put(tbId, new HashMap<String, Object>() {{
                 put(JsonKey.NAME, tbMetadata.get(JsonKey.NAME));
                 put(CONTENT_TYPE, tbMetadata.get(CONTENT_TYPE));
-                put(JsonKey.CHILDREN, new HashSet<>());
+                put(JsonKey.CHILDREN, new ArrayList<>());
                 put(JsonKey.TB_ROOT, true);
             }});
             for (Map<String, Object> row : data) {
@@ -309,11 +305,36 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
 
     private void populateNodeModified(String name, String code, Map<String, Object> metadata, String unitType, String framework, Map<String, Object> nodesModified, boolean isNew) {
-            Map<String, Object> node = null;
-            if (nodesModified.containsKey(code)) {
-                node = (Map<String, Object>) nodesModified.get(code);
-                if (MapUtils.isNotEmpty(metadata)) {
-                    Map<String, Object> newMeta = new HashMap<String, Object>() {{
+        Map<String, Object> node = null;
+        if (nodesModified.containsKey(code)) {
+            node = (Map<String, Object>) nodesModified.get(code);
+            if (MapUtils.isNotEmpty(metadata)) {
+                Map<String, Object> newMeta = new HashMap<String, Object>() {{
+                    List<String> keywords = (StringUtils.isNotBlank((String) metadata.get(JsonKey.KEYWORDS))) ? Arrays.asList(((String) metadata.get(JsonKey.KEYWORDS)).split(",")) : null;
+                    List<String> gradeLevel = (StringUtils.isNotBlank((String) metadata.get(JsonKey.GRADE_LEVEL))) ? Arrays.asList(((String) metadata.get(JsonKey.GRADE_LEVEL)).split(",")) : null;
+                    putAll(metadata);
+                    remove(JsonKey.KEYWORDS);
+                    remove(JsonKey.GRADE_LEVEL);
+                    if (CollectionUtils.isNotEmpty(keywords))
+                        put(JsonKey.KEYWORDS, keywords);
+                    if (CollectionUtils.isNotEmpty(gradeLevel))
+                        put(JsonKey.GRADE_LEVEL, gradeLevel);
+                }};
+                ((Map<String, Object>) node.get(JsonKey.METADATA)).putAll(newMeta);
+            }
+        } else {
+            node = new HashMap<String, Object>() {{
+                put(JsonKey.TB_IS_NEW, isNew);
+                put(JsonKey.TB_ROOT, false);
+                put(JsonKey.METADATA, new HashMap<String, Object>() {{
+                    if (StringUtils.isNotBlank(name))
+                        put(JsonKey.NAME, name);
+                    put(JsonKey.MIME_TYPE, JsonKey.COLLECTION_MIME_TYPE);
+                    if (StringUtils.isNotBlank(unitType))
+                        put(JsonKey.CONTENT_TYPE, unitType);
+                    if (StringUtils.isNotBlank(framework))
+                        put(JsonKey.FRAMEWORK, framework);
+                    if(MapUtils.isNotEmpty(metadata)){
                         List<String> keywords = (StringUtils.isNotBlank((String) metadata.get(JsonKey.KEYWORDS))) ? Arrays.asList(((String) metadata.get(JsonKey.KEYWORDS)).split(",")) : null;
                         List<String> gradeLevel = (StringUtils.isNotBlank((String) metadata.get(JsonKey.GRADE_LEVEL))) ? Arrays.asList(((String) metadata.get(JsonKey.GRADE_LEVEL)).split(",")) : null;
                         putAll(metadata);
@@ -323,36 +344,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                             put(JsonKey.KEYWORDS, keywords);
                         if (CollectionUtils.isNotEmpty(gradeLevel))
                             put(JsonKey.GRADE_LEVEL, gradeLevel);
-                    }};
-                    ((Map<String, Object>) node.get(JsonKey.METADATA)).putAll(newMeta);
-                }
-            } else {
-                node = new HashMap<String, Object>() {{
-                    put(JsonKey.TB_IS_NEW, isNew);
-                    put(JsonKey.TB_ROOT, false);
-                    put(JsonKey.METADATA, new HashMap<String, Object>() {{
-                        if (StringUtils.isNotBlank(name))
-                            put(JsonKey.NAME, name);
-                        put(JsonKey.MIME_TYPE, JsonKey.COLLECTION_MIME_TYPE);
-                        if (StringUtils.isNotBlank(unitType))
-                            put(JsonKey.CONTENT_TYPE, unitType);
-                        if (StringUtils.isNotBlank(framework))
-                            put(JsonKey.FRAMEWORK, framework);
-                        if(MapUtils.isNotEmpty(metadata)){
-                            List<String> keywords = (StringUtils.isNotBlank((String) metadata.get(JsonKey.KEYWORDS))) ? Arrays.asList(((String) metadata.get(JsonKey.KEYWORDS)).split(",")) : null;
-                            List<String> gradeLevel = (StringUtils.isNotBlank((String) metadata.get(JsonKey.GRADE_LEVEL))) ? Arrays.asList(((String) metadata.get(JsonKey.GRADE_LEVEL)).split(",")) : null;
-                            putAll(metadata);
-                            remove(JsonKey.KEYWORDS);
-                            remove(JsonKey.GRADE_LEVEL);
-                            if (CollectionUtils.isNotEmpty(keywords))
-                                put(JsonKey.KEYWORDS, keywords);
-                            if (CollectionUtils.isNotEmpty(gradeLevel))
-                                put(JsonKey.GRADE_LEVEL, gradeLevel);
-                        }
-                    }});
-                }};
-            }
-            nodesModified.put(code, node);
+                    }
+                }});
+            }};
+        }
+        nodesModified.put(code, node);
     }
 
     private void populateHierarchyData(String tbId, String name, String code, String parentCode, int levelCount, Map<String, Object> hierarchyData) {
@@ -364,18 +360,21 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         } else {
             hierarchyData.put(code, new HashMap<String, Object>() {{
                 put(JsonKey.NAME, name);
-                put(JsonKey.CHILDREN, new HashSet<>());
+                put(JsonKey.CHILDREN, new ArrayList<>());
                 put(JsonKey.TB_ROOT, false);
             }});
         }
 
         if (null != hierarchyData.get(parentCode)) {
-            ((Set) ((Map<String, Object>) hierarchyData.get(parentCode)).get(JsonKey.CHILDREN)).add(code);
+            List<String> children = ((List) ((Map<String, Object>) hierarchyData.get(parentCode)).get(JsonKey.CHILDREN));
+            if (!children.contains(code)) {
+                children.add(code);
+            }
         } else {
             String finalCode = code;
             hierarchyData.put(parentCode, new HashMap<String, Object>() {{
                 put(JsonKey.NAME, "");
-                put(JsonKey.CHILDREN, new HashSet<String>() {{
+                put(JsonKey.CHILDREN, new ArrayList<String>() {{
                     add(finalCode);
                 }});
                 put(JsonKey.TB_ROOT, false);

@@ -18,20 +18,24 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.TextbookActorOperation;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.content.textbook.FileType;
 import org.sunbird.content.textbook.TextBookTocUploader;
 import org.sunbird.content.util.ContentCloudStore;
 import org.sunbird.content.util.TextBookTocUtil;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static java.io.File.separator;
 import static org.sunbird.common.exception.ProjectCommonException.throwClientErrorException;
+import static org.sunbird.common.exception.ProjectCommonException.throwServerErrorException;
 import static org.sunbird.common.models.util.JsonKey.*;
 import static org.sunbird.common.models.util.LoggerEnum.ERROR;
 import static org.sunbird.common.models.util.LoggerEnum.INFO;
@@ -45,6 +49,8 @@ import static org.sunbird.content.textbook.TextBookTocUploader.textBookTocFolder
 
 @ActorConfig(tasks = {"textbookTocUpload", "textbookTocUrl", "textbookTocUpdate"}, asyncTasks = {})
 public class TextbookTocActor extends BaseBulkUploadActor {
+
+    private static Set<String> underProcessTextBookTocsCreation = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     @Override
     public void onReceive(Request request) throws Throwable {
@@ -90,33 +96,57 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         if (null != content && !content.isEmpty()) {
             validateTextBook(content, DOWNLOAD);
             String versionKey = (String) content.get(VERSION_KEY);
+            FileType fileType = CSV.getFileType();
             String prefix =
                     textBookTocFolder + separator +
-                            textbookId + "_" + versionKey + CSV.getExtension();
-            String cloudPath = ContentCloudStore.getUri(prefix, false);
+                            textbookId + "_" + versionKey + fileType.getExtension();
+            String cloudPath = null;
+            if (isUnderProcessing(textbookId, versionKey) &&
+                    StringUtils.isBlank(cloudPath = ContentCloudStore.getUri(prefix, false))) {
+                ProjectLogger.log("TextBook Toc creation for " +
+                        "TextBook | Id: " + textbookId + " , Version Key: " + versionKey + " is under process.");
+                throwServerErrorException(ResponseCode.textBookTocCreationUnderProcess);
+            }
             if (StringUtils.isBlank(cloudPath)) {
-                Map<String, Object> readHierarchyResponse = TextBookTocUtil.readHierarchy(textbookId);
-                String responseCode = (String) readHierarchyResponse.get(RESPONSE_CODE);
-                if (StringUtils.equals(OK.name(), responseCode)) {
-                    result = (Map<String, Object>) readHierarchyResponse.get(RESULT);
-                    content = (Map<String, Object>) result.get(CONTENT);
-                    if (null != content) {
-                        ProjectLogger.log("Fetching TextBook Toc URL from Cloud", INFO);
-                        cloudPath = new TextBookTocUploader(null).execute(content, textbookId, versionKey);
-                        ProjectLogger.log("Sending Response for Toc Download API for TextBook | Id: " + textbookId);
+                String hierarchyVersionKey = null;
+                try {
+                    underProcessTextBookTocsCreation.add(textbookId + ":" + versionKey);
+                    ProjectLogger.log("Getting Content Hierarchy for TextBook | Id: ", textbookId);
+                    Map<String, Object> readHierarchyResponse = TextBookTocUtil.readHierarchy(textbookId);
+                    String responseCode = (String) readHierarchyResponse.get(RESPONSE_CODE);
+                    if (StringUtils.equals(OK.name(), responseCode)) {
+                        result = (Map<String, Object>) readHierarchyResponse.get(RESULT);
+                        content = (Map<String, Object>) result.get(CONTENT);
+                        if (null != content) {
+                            hierarchyVersionKey = (String) content.get(VERSION_KEY);
+                            underProcessTextBookTocsCreation.add(textbookId + ":" + versionKey);
+                            ProjectLogger.log("Fetching TextBook Toc URL from Cloud", INFO);
+                            cloudPath = new TextBookTocUploader(fileType).execute(content, textbookId, versionKey);
+                        } else {
+                            ProjectLogger.log("No Content Hierarchy fetched for TextBook | Id:" + textbookId, INFO);
+                        }
                     } else {
-                        ProjectLogger.log("No Content Hierarchy fetched for TextBook | Id:" + textbookId, INFO);
+                        ProjectLogger.
+                                log("TextBook Hierarchy Not Found | Id: " + textbookId, ERROR);
+                        throwClientErrorException(textBookNotFound, textBookNotFound.getErrorMessage());
                     }
-                } else {
+                }
+                catch (Exception e) {
+                    throw e;
+                }
+                finally {
                     ProjectLogger.
-                            log("TextBook Hierarchy Not Found | Id: " + textbookId, ERROR);
-                    throwClientErrorException(textBookNotFound, textBookNotFound.getErrorMessage());
+                            log("TexBook Toc Create execution for TextBook | Id: " + textbookId + ", Version Key: " +
+                                    hierarchyVersionKey + " completed.");
+                    if (null != hierarchyVersionKey)
+                        underProcessTextBookTocsCreation.remove(textbookId + ":" + hierarchyVersionKey);
+                    underProcessTextBookTocsCreation.remove(textbookId + ":" + versionKey);
                 }
             }
+            ProjectLogger.log("Sending Response for Toc Download API for TextBook | Id: " + textbookId);
             Map<String, Object> textbook = new HashMap<>();
             textbook.put(TOC_URL, cloudPath);
-            textbook.put(TTL,
-                    ProjectUtil.getConfigValue(TEXTBOOK_TOC_CSV_TTL));
+            textbook.put(TTL, ProjectUtil.getConfigValue(TEXTBOOK_TOC_CSV_TTL));
             response.put(TEXTBOOK, textbook);
         } else {
             ProjectLogger.log("Error while fetching textbook : " + textbookId + " with response " + response, ERROR.name());
@@ -125,6 +155,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         sender().tell(response, sender());
     }
 
+    private boolean isUnderProcessing(String textbookId, String versionKey) {
+        return underProcessTextBookTocsCreation.contains(textbookId + ":" + versionKey);
+    }
 
     private void validateTextBook(Map<String, Object> textbook, String mode) {
         List<String> allowedContentTypes = Arrays.asList(ProjectUtil.getConfigValue(TEXTBOOK_TOC_ALLOWED_CONTNET_TYPES).split(","));

@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -316,7 +317,7 @@ public class BackgroundJobManager extends BaseActor {
       if (!(orgList.isEmpty())) {
         esMap = orgList.get(0);
         String contactDetails = (String) esMap.get(JsonKey.CONTACT_DETAILS);
-        if (!StringUtils.isBlank(contactDetails)) {
+        if (StringUtils.isNotBlank(contactDetails)) {
           Object[] arr;
           try {
             arr = mapper.readValue(contactDetails, Object[].class);
@@ -327,6 +328,12 @@ public class BackgroundJobManager extends BaseActor {
           }
         } else {
           esMap.put(JsonKey.CONTACT_DETAILS, new Object[] {});
+        }
+
+        if (MapUtils.isNotEmpty((Map<String, Object>) orgMap.get(JsonKey.ADDRESS))) {
+          esMap.put(JsonKey.ADDRESS, orgMap.get(JsonKey.ADDRESS));
+        } else {
+          esMap.put(JsonKey.ADDRESS, new HashMap<>());
         }
       }
       // Register the org into EKStep.
@@ -372,6 +379,10 @@ public class BackgroundJobManager extends BaseActor {
     String userId = (String) actorMessage.getRequest().get(JsonKey.ID);
     Map<String, Object> userDetails =
         Util.getUserDetails(userId, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+    ProjectLogger.log(
+        "BackGroundJobManager:updateUserInfoToEs userRootOrgId "
+            + userDetails.get(JsonKey.ROOT_ORG_ID),
+        LoggerEnum.INFO.name());
     insertDataToElastic(
         ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.user.getTypeName(),

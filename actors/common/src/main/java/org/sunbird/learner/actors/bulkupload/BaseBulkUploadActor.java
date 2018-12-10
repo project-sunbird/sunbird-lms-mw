@@ -1,8 +1,5 @@
 package org.sunbird.learner.actors.bulkupload;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.opencsv.CSVReader;
-import com.opencsv.CSVReaderBuilder;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -11,18 +8,22 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
+import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessDao;
 import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessTaskDao;
@@ -30,6 +31,11 @@ import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
 import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessTaskDaoImpl;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
+import org.sunbird.learner.util.Util;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
 
 /**
  * Actor contains the common functionality for bulk upload.
@@ -44,6 +50,11 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   protected Integer CASSANDRA_BATCH_SIZE = getBatchSize(JsonKey.CASSANDRA_WRITE_BATCH_SIZE);
   protected ObjectMapper mapper = new ObjectMapper();
 
+  public void validateBulkUploadFields(
+      String[] csvHeaderLine, String[] allowedFields, Boolean allFieldsMandatory) {
+    validateBulkUploadFields(csvHeaderLine, allowedFields, allFieldsMandatory, false);
+  }
+
   /**
    * Method to validate whether the header fields are valid.
    *
@@ -53,7 +64,7 @@ public abstract class BaseBulkUploadActor extends BaseActor {
    *     csvHeaderline . In case of false- csvHeader could be subset of the allowed fields.
    */
   public void validateBulkUploadFields(
-      String[] csvHeaderLine, String[] allowedFields, Boolean allFieldsMandatory) {
+      String[] csvHeaderLine, String[] allowedFields, Boolean allFieldsMandatory, boolean toLower) {
 
     if (ArrayUtils.isEmpty(csvHeaderLine)) {
       throw new ProjectCommonException(
@@ -66,6 +77,9 @@ public abstract class BaseBulkUploadActor extends BaseActor {
       Arrays.stream(allowedFields)
           .forEach(
               x -> {
+                if (toLower) {
+                  x = x.toLowerCase();
+                }
                 if (!(ArrayUtils.contains(csvHeaderLine, x))) {
                   throw new ProjectCommonException(
                       ResponseCode.mandatoryParamsMissing.getErrorCode(),
@@ -78,6 +92,9 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     Arrays.stream(csvHeaderLine)
         .forEach(
             x -> {
+              if (toLower) {
+                x = x.toLowerCase();
+              }
               if (!(ArrayUtils.contains(allowedFields, x))) {
                 throwInvalidColumnException(x, String.join(", ", allowedFields));
               }
@@ -223,12 +240,22 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   protected Integer validateAndParseRecords(
       byte[] fileByteArray, String processId, Map<String, Object> additionalRowFields)
       throws IOException {
+    return validateAndParseRecords(fileByteArray, processId, additionalRowFields, null, false);
+  }
+
+  protected Integer validateAndParseRecords(
+      byte[] fileByteArray,
+      String processId,
+      Map<String, Object> additionalRowFields,
+      Map<String, Object> csvColumnMap,
+      boolean toLowerCase)
+      throws IOException {
 
     Integer sequence = 0;
     Integer count = 0;
     CSVReader csvReader = null;
     String[] csvLine;
-    String[] header = null;
+    String[] csvColumns = null;
     Map<String, Object> record = new HashMap<>();
     List<BulkUploadProcessTask> records = new ArrayList<>();
     try {
@@ -238,11 +265,16 @@ public abstract class BaseBulkUploadActor extends BaseActor {
           continue;
         }
         if (sequence == 0) {
-          header = trimColumnAttributes(csvLine);
+          csvColumns = trimColumnAttributes(csvLine);
         } else {
-          for (int j = 0; j < header.length; j++) {
+          for (int j = 0; j < csvColumns.length &&  j < csvLine.length; j++) {
             String value = (csvLine[j].trim().length() == 0 ? null : csvLine[j].trim());
-            record.put(header[j], value);
+            String coulumn = toLowerCase ? csvColumns[j].toLowerCase() : csvColumns[j];
+            if (csvColumnMap != null && csvColumnMap.get(coulumn) != null) {
+              record.put((String) csvColumnMap.get(coulumn), value);
+            } else {
+              record.put(csvColumns[j], value);
+            }
           }
           record.putAll(additionalRowFields);
           BulkUploadProcessTask tasks = new BulkUploadProcessTask();
@@ -318,7 +350,27 @@ public abstract class BaseBulkUploadActor extends BaseActor {
   }
 
   protected void validateFileHeaderFields(
-      Map<String, Object> req, String[] bulkLocationAllowedFields, Boolean allFieldsMandatory)
+      Map<String, Object> req, String[] bulkAllowedFields, Boolean allFieldsMandatory)
+      throws IOException {
+    validateFileHeaderFields(req, bulkAllowedFields, allFieldsMandatory, false, null, null);
+  }
+
+  protected void validateFileHeaderFields(
+      Map<String, Object> req,
+      String[] bulkAllowedFields,
+      Boolean allFieldsMandatory,
+      boolean toLower)
+      throws IOException {
+    validateFileHeaderFields(req, bulkAllowedFields, allFieldsMandatory, toLower, null, null);
+  }
+
+  protected void validateFileHeaderFields(
+      Map<String, Object> req,
+      String[] bulkLocationAllowedFields,
+      Boolean allFieldsMandatory,
+      boolean toLower,
+      List<String> mandatoryColumns,
+      Map<String, Object> supportedColumnsMap)
       throws IOException {
     byte[] fileByteArray = (byte[]) req.get(JsonKey.FILE);
 
@@ -329,12 +381,24 @@ public abstract class BaseBulkUploadActor extends BaseActor {
       csvReader = getCsvReader(fileByteArray, ',', '"', 0);
       while (flag) {
         csvLine = csvReader.readNext();
+        if (csvLine == null) {
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.csvFileEmpty, ResponseCode.csvFileEmpty.getErrorMessage());
+        }
         if (ProjectUtil.isNotEmptyStringArray(csvLine)) {
           continue;
         }
         csvLine = trimColumnAttributes(csvLine);
-        validateBulkUploadFields(csvLine, bulkLocationAllowedFields, allFieldsMandatory);
+        validateBulkUploadFields(csvLine, bulkLocationAllowedFields, allFieldsMandatory, toLower);
+        if (mandatoryColumns != null) {
+          validateMandatoryColumns(mandatoryColumns, csvLine, supportedColumnsMap);
+        }
         flag = false;
+      }
+      csvLine = csvReader.readNext();
+      if (csvLine == null) {
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.errorCsvNoDataRows, ResponseCode.errorCsvNoDataRows.getErrorMessage());
       }
     } catch (Exception ex) {
       ProjectLogger.log(
@@ -343,5 +407,89 @@ public abstract class BaseBulkUploadActor extends BaseActor {
     } finally {
       IOUtils.closeQuietly(csvReader);
     }
+  }
+
+  private void validateMandatoryColumns(
+      List<String> mandatoryColumns, String[] csvLine, Map<String, Object> supportedColumnsMap) {
+    List<String> csvColumns = new ArrayList<>();
+    List<String> csvMappedColumns = new ArrayList<>();
+    Arrays.stream(csvLine)
+        .forEach(
+            x -> {
+              csvColumns.add(x.toLowerCase());
+              csvMappedColumns.add((String) supportedColumnsMap.get(x.toLowerCase()));
+            });
+
+    mandatoryColumns.forEach(
+        column -> {
+          if (!(csvMappedColumns.contains(column))) {
+            throw new ProjectCommonException(
+                ResponseCode.mandatoryParamsMissing.getErrorCode(),
+                ResponseCode.mandatoryParamsMissing.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode(),
+                column);
+          }
+        });
+  }
+
+  public BulkUploadProcess handleUpload(String objectType, String createdBy) throws IOException {
+    String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
+    Response response = new Response();
+    response.getResult().put(JsonKey.PROCESS_ID, processId);
+    BulkUploadProcess bulkUploadProcess = getBulkUploadProcess(processId, objectType, createdBy, 0);
+    Response res = bulkUploadDao.create(bulkUploadProcess);
+    if (((String) res.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      sender().tell(response, self());
+    } else {
+      ProjectLogger.log(
+          "BaseBulkUploadActor:handleUpload: Error creating record in bulk_upload_process.");
+      throw new ProjectCommonException(
+          ResponseCode.SERVER_ERROR.getErrorCode(),
+          ResponseCode.SERVER_ERROR.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
+    return bulkUploadProcess;
+  }
+
+  public void processBulkUpload(
+      int recordCount,
+      String processId,
+      BulkUploadProcess bulkUploadProcess,
+      String operation,
+      String[] allowedFields)
+      throws IOException {
+    ProjectLogger.log(
+        "BaseBulkUploadActor: processBulkUpload called with operation = " + operation);
+
+    bulkUploadProcess.setTaskCount(recordCount);
+    bulkUploadDao.update(bulkUploadProcess);
+
+    Request request = new Request();
+    request.put(JsonKey.PROCESS_ID, processId);
+    request.put(JsonKey.FIELDS, allowedFields);
+    request.setOperation(operation);
+
+    tellToAnother(request);
+  }
+
+  public BulkUploadProcess getBulkUploadProcess(
+      String processId, String objectType, String requestedBy, Integer taskCount) {
+    BulkUploadProcess bulkUploadProcess = new BulkUploadProcess();
+    bulkUploadProcess.setId(processId);
+    bulkUploadProcess.setObjectType(objectType);
+    bulkUploadProcess.setUploadedBy(requestedBy);
+    bulkUploadProcess.setUploadedDate(ProjectUtil.getFormattedDate());
+    bulkUploadProcess.setCreatedBy(requestedBy);
+    bulkUploadProcess.setCreatedOn(new Timestamp(Calendar.getInstance().getTime().getTime()));
+    bulkUploadProcess.setProcessStartTime(ProjectUtil.getFormattedDate());
+    bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.NEW.getValue());
+    bulkUploadProcess.setTaskCount(taskCount);
+
+    Map<String, Object> user = Util.getUserbyUserId(requestedBy);
+    if (user != null) {
+      bulkUploadProcess.setOrganisationId((String) user.get(JsonKey.ROOT_ORG_ID));
+    }
+
+    return bulkUploadProcess;
   }
 }

@@ -2,7 +2,6 @@ package org.sunbird.learner.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.sunbird.common.models.util.JsonKey;
@@ -165,23 +164,5 @@ public final class UserUtility {
   public static String encryptData(String data) throws Exception {
     EncryptionService service = ServiceFactory.getEncryptionServiceInstance(null);
     return service.encryptData(data);
-  }
-
-  public static Map<String, Object> updateProfileVisibilityFields(
-      Map<String, Object> profileVisibility, Map<String, Object> mapToBeUpdated) {
-    for (String field : profileVisibility.keySet()) {
-      if ("dob".equalsIgnoreCase(field)) {
-        mapToBeUpdated.put(field, null);
-      } else if (profileVisibility.get(field) instanceof List) {
-        mapToBeUpdated.put(field, new ArrayList<>());
-      } else if (profileVisibility.get(field) instanceof Map) {
-        mapToBeUpdated.put(field, new HashMap<>());
-      } else if (profileVisibility.get(field) instanceof String) {
-        mapToBeUpdated.put(field, "");
-      } else {
-        mapToBeUpdated.put(field, null);
-      }
-    }
-    return mapToBeUpdated;
   }
 }

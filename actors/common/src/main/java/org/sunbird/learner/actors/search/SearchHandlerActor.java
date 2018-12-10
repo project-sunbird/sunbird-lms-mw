@@ -38,6 +38,7 @@ public class SearchHandlerActor extends BaseActor {
   @SuppressWarnings({"unchecked", "rawtypes"})
   @Override
   public void onReceive(Request request) throws Throwable {
+    request.toLower();
     Util.initializeContext(request, JsonKey.USER);
     // set request id fto thread loacl...
     ExecutionContext.setRequestId(request.getRequestId());

@@ -1,4 +1,4 @@
-package org.sunbird.user.service;
+package org.sunbird.user.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.MessageFormat;
@@ -11,13 +11,13 @@ import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.user.service.VerificationService;
 
-public class GoogleAuthCodeVerificationService {
-
-  private GoogleAuthCodeVerificationService() {}
+public class GoogleAuthCodeVerificationService implements VerificationService {
 
   @SuppressWarnings("unchecked")
-  public static Map<String, Object> verifyCode(String verificationCode) {
+  @Override
+  public Map<String, Object> verifyCode(String verificationCode) {
     String urlString =
         MessageFormat.format(
             PropertiesCache.getInstance().readProperty(JsonKey.GOOGLE_VERIFY_AUTH_TOKEN_URL),

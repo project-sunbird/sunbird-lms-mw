@@ -40,9 +40,8 @@ import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
-import org.sunbird.user.service.VerificationService;
+import org.sunbird.user.service.VerificationServiceFactory;
 import org.sunbird.user.service.impl.UserServiceImpl;
-import org.sunbird.user.service.impl.VerificationServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
 import org.sunbird.user.util.UserUtil;
 
@@ -63,6 +62,8 @@ public class UserManagementActor extends BaseActor {
   private static InterServiceCommunication interServiceCommunication =
       InterServiceCommunicationFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
+  private VerificationServiceFactory verificationServiceFactory =
+      VerificationServiceFactory.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -245,14 +246,12 @@ public class UserManagementActor extends BaseActor {
   }
 
   private void verifyAuthCode(Map<String, Object> userMap) {
-    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.VERIFICATION_CODE))
-        && StringUtils.isNotBlank((String) userMap.get(JsonKey.VERIFICATION_SOURCE))) {
-      VerificationService verificationService = new VerificationServiceImpl();
+    String verificationCode = (String) userMap.get(JsonKey.VERIFICATION_CODE);
+    String verificationSource = (String) userMap.get(JsonKey.VERIFICATION_SOURCE);
+    if (StringUtils.isNotBlank(verificationCode) && StringUtils.isNotBlank(verificationSource)) {
       Map<String, Object> authResponse =
-          verificationService.verifyCode(
-              (String) userMap.get(JsonKey.VERIFICATION_CODE),
-              (String) userMap.get(JsonKey.VERIFICATION_SOURCE));
-      if (JsonKey.GOOGLE.equalsIgnoreCase((String) userMap.get(JsonKey.VERIFICATION_SOURCE))) {
+          verificationServiceFactory.verifyCode(verificationCode, verificationSource);
+      if (JsonKey.GOOGLE.equalsIgnoreCase(verificationSource)) {
         if (MapUtils.isEmpty(authResponse)) {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.authTokenVerificationFailed,

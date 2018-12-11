@@ -265,9 +265,8 @@ public class UserManagementActor extends BaseActor {
                 ResponseCode.authTokenVerificationFailed,
                 MessageFormat.format(
                     ResponseCode.authTokenVerificationFailed.getErrorMessage(), JsonKey.GOOGLE));
-          } else {
-            userMap.put(JsonKey.EMAIL_VERIFIED, true);
           }
+          userMap.put(JsonKey.EMAIL_VERIFIED, true);
         }
       }
     }

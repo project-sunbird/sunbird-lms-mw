@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -56,6 +57,8 @@ public class UserUtil {
   private static DecryptionService decService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
+  private static final char[] CHARACTER_ALLOWED_FOR_USERNAME_GENERATION =
+      new char[] {'@', '_', '.'};
 
   private UserUtil() {}
 
@@ -584,6 +587,43 @@ public class UserUtil {
                 userMap.put(field, ((String) userMap.get(field)).toLowerCase());
               }
             });
+  }
+
+  public static String[] userNameGenerator(String name) {
+    if (name == null || name.isEmpty()) return null;
+    // configurable value numberOfUserNameRequired at one go.
+    int numberOfUserNameRequired = 10;
+    HashSet<String> userNameSet = new HashSet<>();
+    String[] nameArray = name.split(" ");
+    int size = nameArray.length;
+    int totalUserNameGenerated = 0;
+    while (totalUserNameGenerated != numberOfUserNameRequired) {
+      int numberSuffix = (int) (Math.random() * 10000); // random four digit number
+      int nameIndexBit = getRandomIntegerBetweenRange(1, (1 << size) - 1);
+      StringBuilder userName = new StringBuilder();
+      for (int i = 0; i < size; i++) {
+        // condition to check which bit is set in nameIndexBit
+        if ((nameIndexBit & (1 << i)) != 0) {
+          userName.append(
+              (nameArray[i].length() > 10
+                      ? nameArray[i].substring(0, 10).toLowerCase()
+                      : nameArray[i].toLowerCase())
+                  + CHARACTER_ALLOWED_FOR_USERNAME_GENERATION[
+                      (int) (Math.random() * CHARACTER_ALLOWED_FOR_USERNAME_GENERATION.length)]);
+        }
+      }
+      String generatedUsername = userName.append(numberSuffix).toString();
+      if (!userNameSet.contains(generatedUsername)) {
+        userNameSet.add(generatedUsername);
+        totalUserNameGenerated += 1;
+      }
+    }
+    return userNameSet.toArray(new String[0]);
+  }
+
+  public static int getRandomIntegerBetweenRange(int min, int max) {
+    int x = (int) (Math.random() * ((max - min) + 1)) + min;
+    return x;
   }
 }
 

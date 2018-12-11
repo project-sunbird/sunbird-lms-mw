@@ -158,6 +158,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
 
     private Response createTextbook(Request request) throws Exception {
+        ProjectLogger.log("Create Textbook called ", LoggerEnum.INFO.name());
         Map<String, Object> file = (Map<String, Object>) request.get(JsonKey.DATA);
         List<Map<String, Object>> data = (List<Map<String, Object>>) file.get(JsonKey.FILE_DATA);
         ProjectLogger.log("Create Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data));

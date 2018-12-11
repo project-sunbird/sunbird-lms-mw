@@ -1,7 +1,6 @@
 package org.sunbird.user.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mashape.unirest.http.Unirest;
 import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,7 +16,6 @@ public class GoogleAuthCodeVerificationService {
 
   @SuppressWarnings("unchecked")
   public static Map<String, Object> verifyCode(String verificationCode) {
-    Unirest.clearDefaultHeaders();
     String urlString =
         MessageFormat.format(
             PropertiesCache.getInstance().readProperty(JsonKey.GOOGLE_VERIFY_AUTH_TOKEN_URL),

@@ -265,9 +265,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             }});
             for (Map<String, Object> row : data) {
                 Map<String, Object> metadata = (Map<String, Object>) row.get(JsonKey.METADATA);
+                Map<String, Object> hierarchy = (Map<String, Object>) row.get(JsonKey.HIERARCHY);
                 String id = (String) metadata.get(JsonKey.IDENTIFIER);
                 metadata.remove(JsonKey.IDENTIFIER);
-                populateNodeModified(null, id, metadata, null, null, nodesModified, false);
+                populateNodeModified((String) hierarchy.get("L:" + (hierarchy.size()-1)), id, metadata, null, null, nodesModified, false);
             }
             Map<String, Object> updateRequest = new HashMap<String, Object>() {{
                 put(JsonKey.REQUEST, new HashMap<String, Object>() {{

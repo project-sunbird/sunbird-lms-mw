@@ -212,11 +212,11 @@ public class UserManagementActor extends BaseActor {
       if (StringUtils.isNotBlank(callerId)) {
         userMap.put(JsonKey.ROOT_ORG_ID, actorMessage.getContext().get(JsonKey.ROOT_ORG_ID));
       }
-      if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
-        userMap.put(JsonKey.USERNAME, ProjectUtil.generateUniqueId());
-      }
     } else {
       userRequestValidator.validateCreateUserV1Request(actorMessage);
+    }
+    if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
+      userMap.put(JsonKey.USERNAME, ProjectUtil.generateUniqueId());
     }
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);

@@ -14,6 +14,8 @@ import org.sunbird.common.models.util.PropertiesCache;
 
 public class GoogleAuthCodeVerificationService {
 
+  private GoogleAuthCodeVerificationService() {}
+
   @SuppressWarnings("unchecked")
   public static Map<String, Object> verifyCode(String verificationCode) {
     String urlString =

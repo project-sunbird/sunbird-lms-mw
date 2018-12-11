@@ -201,7 +201,6 @@ public class UserManagementActor extends BaseActor {
   private void createUser(Request actorMessage) {
     actorMessage.toLower();
     Map<String, Object> userMap = actorMessage.getRequest();
-    verifyAuthCode(userMap);
     String callerId = (String) actorMessage.getContext().get(JsonKey.CALLER_ID);
     String version = (String) actorMessage.getContext().get(JsonKey.VERSION);
     if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
@@ -218,6 +217,7 @@ public class UserManagementActor extends BaseActor {
     if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
       userMap.put(JsonKey.USERNAME, ProjectUtil.generateUniqueId());
     }
+    verifyAuthCode(userMap);
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);

@@ -171,6 +171,12 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             Map<String, Object> tbMetadata = getTextbook(tbId);
             Map<String, Object> nodesModified = new HashMap<>();
             Map<String, Object> hierarchyData = new HashMap<>();
+            nodesModified.put(tbId, new HashMap<String, Object>(){{
+                put(JsonKey.TB_IS_NEW, false);
+                put(JsonKey.TB_ROOT, true);
+                put(JsonKey.METADATA, new HashMap<String, Object>());
+            }});
+
             hierarchyData.put(tbId, new HashMap<String, Object>() {{
                 put(JsonKey.NAME, tbMetadata.get(JsonKey.NAME));
                 put(CONTENT_TYPE, tbMetadata.get(CONTENT_TYPE));
@@ -242,23 +248,36 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
     private Response updateTextbook(Request request) throws Exception {
         List<Map<String, Object>> data = (List<Map<String, Object>>) ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.FILE_DATA);
-        ProjectLogger.log("Update Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data), LoggerEnum.INFO.name());
-        Map<String, Object> nodesModified = new HashMap<>();
-        for (Map<String, Object> row : data) {
-            Map<String, Object> metadata = (Map<String, Object>) row.get(JsonKey.METADATA);
-            String id = (String) metadata.get(JsonKey.IDENTIFIER);
-            metadata.remove(JsonKey.IDENTIFIER);
-            populateNodeModified(null, id, metadata, null, null, nodesModified, false);
-        }
-        Map<String, Object> updateRequest = new HashMap<String, Object>() {{
-            put(JsonKey.REQUEST, new HashMap<String, Object>() {{
-                put(JsonKey.DATA, new HashMap<String, Object>() {{
-                    put(JsonKey.NODES_MODIFIED, nodesModified);
-                }});
+        if (CollectionUtils.isEmpty(data)) {
+            throw new ProjectCommonException(
+                    ResponseCode.invalidRequestData.getErrorCode(),
+                    ResponseCode.invalidRequestData.getErrorMessage(),
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
+        } else {
+            ProjectLogger.log("Update Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data), LoggerEnum.INFO.name());
+            Map<String, Object> nodesModified = new HashMap<>();
+            String tbId = (String) request.get(TEXTBOOK_ID);
+            nodesModified.put(tbId, new HashMap<String, Object>(){{
+                put(JsonKey.TB_IS_NEW, false);
+                put(JsonKey.TB_ROOT, true);
+                put(JsonKey.METADATA, new HashMap<String, Object>());
             }});
-        }};
-        ProjectLogger.log("Update Textbook - UpdateHierarchy Request : " + mapper.writeValueAsString(updateRequest), LoggerEnum.INFO.name());
-        return updateHierarchy((String) request.get(TEXTBOOK_ID), updateRequest);
+            for (Map<String, Object> row : data) {
+                Map<String, Object> metadata = (Map<String, Object>) row.get(JsonKey.METADATA);
+                String id = (String) metadata.get(JsonKey.IDENTIFIER);
+                metadata.remove(JsonKey.IDENTIFIER);
+                populateNodeModified(null, id, metadata, null, null, nodesModified, false);
+            }
+            Map<String, Object> updateRequest = new HashMap<String, Object>() {{
+                put(JsonKey.REQUEST, new HashMap<String, Object>() {{
+                    put(JsonKey.DATA, new HashMap<String, Object>() {{
+                        put(JsonKey.NODES_MODIFIED, nodesModified);
+                    }});
+                }});
+            }};
+            ProjectLogger.log("Update Textbook - UpdateHierarchy Request : " + mapper.writeValueAsString(updateRequest), LoggerEnum.INFO.name());
+            return updateHierarchy((String) request.get(TEXTBOOK_ID), updateRequest);
+        }
     }
 
     private Response updateHierarchy(String tbId, Map<String, Object> updateRequest) throws Exception {

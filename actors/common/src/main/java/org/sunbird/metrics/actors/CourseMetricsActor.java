@@ -3,6 +3,7 @@ package org.sunbird.metrics.actors;
 import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 import static org.sunbird.common.models.util.ProjectUtil.isNull;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
@@ -35,8 +35,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ActorConfig(
   tasks = {
@@ -234,7 +232,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     requestMap.put(JsonKey.PERIOD, periodStr);
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.BATCH_ID, batchId);
-    filter.put(JsonKey.ACTIVE, true) ; 
+    filter.put(JsonKey.ACTIVE, true);
     if (!("fromBegining".equalsIgnoreCase(periodStr))) {
       Map<String, String> dateRange = getDateRange(periodStr);
       dateRangeFilter.put(GTE, (String) dateRange.get(STARTDATE));
@@ -276,6 +274,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
       userfields.add(JsonKey.USER_ID);
       userfields.add(JsonKey.USERNAME);
       userfields.add(JsonKey.ROOT_ORG_ID);
+      userfields.add(JsonKey.FIRST_NAME);
+      userfields.add(JsonKey.LAST_NAME);
       Map<String, Object> userresult =
           ElasticSearchUtil.complexSearch(
               createESRequest(userfilter, null, userfields),
@@ -291,6 +291,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
         map.put("user", userId);
         map.put(
             JsonKey.USERNAME, decryptionService.decryptData((String) map.get(JsonKey.USERNAME)));
+        map.put(JsonKey.USER_NAME, map.get(JsonKey.FIRST_NAME) + " " + map.get(JsonKey.LAST_NAME));
         String registerdOrgId = (String) map.get(JsonKey.ROOT_ORG_ID);
         if (isNotNull(registerdOrgId)) {
           orgSet.add(registerdOrgId);
@@ -502,7 +503,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
     try {
       String requestStr = mapper.writeValueAsString(request);
       String analyticsBaseUrl = ProjectUtil.getConfigValue(JsonKey.ANALYTICS_API_BASE_URL);
-      String ekStepResponse = makePostRequest(analyticsBaseUrl, JsonKey.EKSTEP_METRICS_API_URL, requestStr);
+      String ekStepResponse =
+          makePostRequest(analyticsBaseUrl, JsonKey.EKSTEP_METRICS_API_URL, requestStr);
       responseFormat =
           courseConsumptionResponseGenerator(periodStr, ekStepResponse, courseId, channel);
     } catch (Exception e) {
@@ -594,7 +596,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
     try {
       String requestStr = mapper.writeValueAsString(request);
       String analyticsBaseUrl = ProjectUtil.getConfigValue(JsonKey.ANALYTICS_API_BASE_URL);
-      String ekStepResponse = makePostRequest(analyticsBaseUrl, JsonKey.EKSTEP_METRICS_API_URL, requestStr);
+      String ekStepResponse =
+          makePostRequest(analyticsBaseUrl, JsonKey.EKSTEP_METRICS_API_URL, requestStr);
       Map<String, Object> resultData = mapper.readValue(ekStepResponse, Map.class);
       resultData = (Map<String, Object>) resultData.get(JsonKey.RESULT);
       userTimeConsumed = (Double) resultData.get("m_total_ts");

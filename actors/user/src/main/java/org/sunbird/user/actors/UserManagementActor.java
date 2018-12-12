@@ -5,16 +5,14 @@ import static org.sunbird.learner.util.Util.isNotNull;
 import akka.actor.ActorRef;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.sql.Timestamp;
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.stream.Collectors;
+
+import com.fasterxml.jackson.databind.SerializationFeature;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -723,6 +721,9 @@ public class UserManagementActor extends BaseActor {
     }
     Map<String, Object> requestMap = UserUtil.encryptUserData(userMap);
     removeUnwanted(requestMap);
+    if(requestMap.containsKey(JsonKey.TNC_ACCEPTED_ON)){
+      requestMap.put(JsonKey.TNC_ACCEPTED_ON,new Timestamp((Long) requestMap.get(JsonKey.TNC_ACCEPTED_ON)));
+    }
     Response response =
         cassandraOperation.updateRecord(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);

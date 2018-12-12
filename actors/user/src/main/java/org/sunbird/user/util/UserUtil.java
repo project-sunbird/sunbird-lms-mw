@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -585,35 +584,6 @@ public class UserUtil {
                 userMap.put(field, ((String) userMap.get(field)).toLowerCase());
               }
             });
-  }
-
-  public static List<String> generateUsernames(String name) {
-    if (name == null || name.isEmpty()) return null;
-    int numOfDigitsToAppend =
-        Integer.valueOf(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USERNAME_NUM_DIGITS).trim());
-    HashSet<String> userNameSet = new HashSet<>();
-    int totalUserNameGenerated = 0;
-    String nameLowercase = name.toLowerCase().replaceAll("\\s+", "");
-    while (totalUserNameGenerated < GENERATE_USERNAME_COUNT) {
-      int numberSuffix =
-          getRandomFixedLengthInteger(numOfDigitsToAppend);
-
-      StringBuilder userNameSB = new StringBuilder();
-      userNameSB.append(nameLowercase).append(numberSuffix);
-      String generatedUsername = userNameSB.toString();
-      
-      if (!userNameSet.contains(generatedUsername)) {
-        userNameSet.add(generatedUsername);
-        totalUserNameGenerated += 1;
-      }
-    }
-    
-    return userNameSet.toArray(new String[0]);
-  }
-
-  public static int getRandomFixedLengthInteger(int numDigits) {
-    int x = (int) (Math.random() * ((max - min) + 1)) + min;
-    return x;
   }
 }
 

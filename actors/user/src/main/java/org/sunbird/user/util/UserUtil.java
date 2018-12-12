@@ -57,8 +57,6 @@ public class UserUtil {
   private static DecryptionService decService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
-  private static final char[] CHARACTER_ALLOWED_FOR_USERNAME_GENERATION =
-      new char[] {'@', '_', '.'};
 
   private UserUtil() {}
 
@@ -591,28 +589,21 @@ public class UserUtil {
 
   public static String[] userNameGenerator(String name) {
     if (name == null || name.isEmpty()) return null;
-    // configurable value numberOfUserNameRequired at one go.
+
+    // configurable blocks -> number of digits to append && numberOfUserNameRequired per method
+    // call.
+    int N = 4;
     int numberOfUserNameRequired = 10;
+    //
     HashSet<String> userNameSet = new HashSet<>();
-    String[] nameArray = name.split(" ");
-    int size = nameArray.length;
     int totalUserNameGenerated = 0;
     while (totalUserNameGenerated != numberOfUserNameRequired) {
-      int numberSuffix = (int) (Math.random() * 10000); // random four digit number
-      int nameIndexBit = getRandomIntegerBetweenRange(1, (1 << size) - 1);
+      int numberSuffix =
+          getRandomIntegerBetweenRange(
+              (int) Math.pow(10, N - 1), (int) Math.pow(10, N) - 1); // strictly four digit number
       StringBuilder userName = new StringBuilder();
-      for (int i = 0; i < size; i++) {
-        // condition to check which bit is set in nameIndexBit
-        if ((nameIndexBit & (1 << i)) != 0) {
-          userName.append(
-              (nameArray[i].length() > 10
-                      ? nameArray[i].substring(0, 10).toLowerCase()
-                      : nameArray[i].toLowerCase())
-                  + CHARACTER_ALLOWED_FOR_USERNAME_GENERATION[
-                      (int) (Math.random() * CHARACTER_ALLOWED_FOR_USERNAME_GENERATION.length)]);
-        }
-      }
-      String generatedUsername = userName.append(numberSuffix).toString();
+      userName.append(name.replaceAll("\\s+", "")).append(numberSuffix);
+      String generatedUsername = userName.toString().toLowerCase();
       if (!userNameSet.contains(generatedUsername)) {
         userNameSet.add(generatedUsername);
         totalUserNameGenerated += 1;

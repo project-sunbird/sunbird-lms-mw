@@ -587,31 +587,31 @@ public class UserUtil {
             });
   }
 
-  public static String[] generateUserName(String name) {
+  public static List<String> generateUsernames(String name) {
     if (name == null || name.isEmpty()) return null;
-    int numOfDigitsAppended =
+    int numOfDigitsToAppend =
         Integer.valueOf(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USERNAME_NUM_DIGITS).trim());
-    int numberOfUserNameRequired =
-        Integer.valueOf(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USERNAME_EXPECTED_COUNT).trim());
     HashSet<String> userNameSet = new HashSet<>();
     int totalUserNameGenerated = 0;
-    while (totalUserNameGenerated != numberOfUserNameRequired) {
+    String nameLowercase = name.toLowerCase().replaceAll("\\s+", "");
+    while (totalUserNameGenerated < GENERATE_USERNAME_COUNT) {
       int numberSuffix =
-          getRandomIntegerBetweenRange(
-              (int) Math.pow(10, numOfDigitsAppended - 1),
-              (int) Math.pow(10, numOfDigitsAppended) - 1); // strictly four digit number
-      StringBuilder userName = new StringBuilder();
-      userName.append(name.replaceAll("\\s+", "")).append(numberSuffix);
-      String generatedUsername = userName.toString().toLowerCase();
+          getRandomFixedLengthInteger(numOfDigitsToAppend);
+
+      StringBuilder userNameSB = new StringBuilder();
+      userNameSB.append(nameLowercase).append(numberSuffix);
+      String generatedUsername = userNameSB.toString();
+      
       if (!userNameSet.contains(generatedUsername)) {
         userNameSet.add(generatedUsername);
         totalUserNameGenerated += 1;
       }
     }
+    
     return userNameSet.toArray(new String[0]);
   }
 
-  public static int getRandomIntegerBetweenRange(int min, int max) {
+  public static int getRandomFixedLengthInteger(int numDigits) {
     int x = (int) (Math.random() * ((max - min) + 1)) + min;
     return x;
   }

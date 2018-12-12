@@ -587,7 +587,7 @@ public class UserUtil {
             });
   }
 
-  public static String[] productionUserName(String name) {
+  public static String[] generateUserName(String name) {
     if (name == null || name.isEmpty()) return null;
     int numOfDigitsAppended =
         Integer.valueOf(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USERNAME_NUM_DIGITS).trim());

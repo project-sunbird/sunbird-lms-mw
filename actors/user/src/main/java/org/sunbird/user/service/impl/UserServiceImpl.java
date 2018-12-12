@@ -314,7 +314,8 @@ public class UserServiceImpl implements UserService {
     return new ArrayList<>(userNameSet);
   }
 
-  public static int getRandomFixedLengthInteger(int numDigits) {
+  @Override
+  public int getRandomFixedLengthInteger(int numDigits) {
     int min = (int) Math.pow(10, numDigits - 1);
     int max = ((int) Math.pow(10, numDigits)) - 1;
     int randomNum = (int) (Math.random() * ((max - min) + 1)) + min;

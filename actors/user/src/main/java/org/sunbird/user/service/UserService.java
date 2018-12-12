@@ -30,4 +30,6 @@ public interface UserService {
   String getCustodianChannel(Map<String, Object> userMap, ActorRef actorRef);
 
   List<String> generateUsernames(String names);
+
+  int getRandomFixedLengthInteger(int numDigits);
 }

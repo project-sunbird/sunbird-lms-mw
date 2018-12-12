@@ -29,7 +29,7 @@ public interface UserService {
 
   String getCustodianChannel(Map<String, Object> userMap, ActorRef actorRef);
 
-  List<String> generateUsernames(String names);
+  List<String> generateUsernames(String name);
 
   int getRandomFixedLengthInteger(int numDigits);
 }

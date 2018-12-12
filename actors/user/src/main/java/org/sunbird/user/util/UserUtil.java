@@ -589,17 +589,17 @@ public class UserUtil {
 
   public static String[] productionUserName(String name) {
     if (name == null || name.isEmpty()) return null;
-    // configurable blocks -- number of digits to append and numberOfUserNameRequired per method
-    // call.
-    int N = 4;
-    int numberOfUserNameRequired = 10;
-    // end of configurable values
+    int numOfDigitsAppended =
+        Integer.valueOf(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USERNAME_NUM_DIGITS).trim());
+    int numberOfUserNameRequired =
+        Integer.valueOf(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USERNAME_EXPECTED_COUNT).trim());
     HashSet<String> userNameSet = new HashSet<>();
     int totalUserNameGenerated = 0;
     while (totalUserNameGenerated != numberOfUserNameRequired) {
       int numberSuffix =
           getRandomIntegerBetweenRange(
-              (int) Math.pow(10, N - 1), (int) Math.pow(10, N) - 1); // strictly four digit number
+              (int) Math.pow(10, numOfDigitsAppended - 1),
+              (int) Math.pow(10, numOfDigitsAppended) - 1); // strictly four digit number
       StringBuilder userName = new StringBuilder();
       userName.append(name.replaceAll("\\s+", "")).append(numberSuffix);
       String generatedUsername = userName.toString().toLowerCase();

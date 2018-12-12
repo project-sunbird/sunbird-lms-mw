@@ -291,7 +291,8 @@ public class UserServiceImpl implements UserService {
     }
   }
 
-  public static List<String> generateUsernames(String name) {
+  @Override
+  public List<String> generateUsernames(String name) {
     if (name == null || name.isEmpty()) return null;
     int numOfDigitsToAppend =
         Integer.valueOf(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USERNAME_NUM_DIGITS).trim());

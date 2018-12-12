@@ -1,6 +1,7 @@
 package org.sunbird.user.service;
 
 import akka.actor.ActorRef;
+import java.util.List;
 import java.util.Map;
 import org.sunbird.common.request.Request;
 import org.sunbird.models.user.User;
@@ -27,4 +28,8 @@ public interface UserService {
   String getRootOrgIdFromChannel(String channel);
 
   String getCustodianChannel(Map<String, Object> userMap, ActorRef actorRef);
+
+  List<Map<String, Object>> getUsersByUserName(List<Object> userNameList);
+
+  List<String> getEncryptedDataList(List<String> dataList);
 }

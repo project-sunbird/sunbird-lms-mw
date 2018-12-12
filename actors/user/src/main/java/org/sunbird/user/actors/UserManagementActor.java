@@ -40,7 +40,6 @@ import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
-import org.sunbird.user.service.VerificationServiceFactory;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
 import org.sunbird.user.util.UserUtil;
@@ -62,8 +61,6 @@ public class UserManagementActor extends BaseActor {
   private static InterServiceCommunication interServiceCommunication =
       InterServiceCommunicationFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
-  private VerificationServiceFactory verificationServiceFactory =
-      VerificationServiceFactory.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -218,20 +215,16 @@ public class UserManagementActor extends BaseActor {
     if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
       userMap.put(JsonKey.USERNAME, ProjectUtil.generateUniqueId());
     }
-    verifyAuthCode(userMap);
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
-    userMap.remove(JsonKey.EMAIL_VERIFIED);
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
     if (StringUtils.isBlank(callerId)) {
       userMap.put(JsonKey.CREATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
       try {
-        if (JsonKey.VERSION_3.equalsIgnoreCase(version)
-            && StringUtils.isBlank((String) userMap.get(JsonKey.CHANNEL))) {
-          userService.getValidatedCustodianOrgId(userMap, systemSettingActorRef);
-        } else {
+        if (StringUtils.isBlank((String) userMap.get(JsonKey.CHANNEL))
+            && StringUtils.isBlank((String) userMap.get(JsonKey.ROOT_ORG_ID))) {
           String channel = userService.getCustodianChannel(userMap, systemSettingActorRef);
           String rootOrgId = userService.getRootOrgIdFromChannel(channel);
           userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
@@ -243,32 +236,6 @@ public class UserManagementActor extends BaseActor {
       }
     }
     processUserRequest(userMap, callerId);
-  }
-
-  private void verifyAuthCode(Map<String, Object> userMap) {
-    String verificationCode = (String) userMap.get(JsonKey.VERIFICATION_CODE);
-    String verificationSource = (String) userMap.get(JsonKey.VERIFICATION_SOURCE);
-    if (StringUtils.isNotBlank(verificationCode) && StringUtils.isNotBlank(verificationSource)) {
-      Map<String, Object> authResponse =
-          verificationServiceFactory.verifyCode(verificationCode, verificationSource);
-      if (JsonKey.GOOGLE.equalsIgnoreCase(verificationSource)) {
-        if (MapUtils.isEmpty(authResponse)) {
-          ProjectCommonException.throwClientErrorException(
-              ResponseCode.authTokenVerificationFailed,
-              MessageFormat.format(
-                  ResponseCode.authTokenVerificationFailed.getErrorMessage(), JsonKey.GOOGLE));
-        } else {
-          String email = (String) authResponse.get(JsonKey.EMAIL);
-          if (!email.equalsIgnoreCase(((String) userMap.get(JsonKey.EMAIL)))) {
-            ProjectCommonException.throwClientErrorException(
-                ResponseCode.authTokenVerificationFailed,
-                MessageFormat.format(
-                    ResponseCode.authTokenVerificationFailed.getErrorMessage(), JsonKey.GOOGLE));
-          }
-          userMap.put(JsonKey.EMAIL_VERIFIED, true);
-        }
-      }
-    }
   }
 
   private void validateChannelAndOrganisationId(Map<String, Object> userMap) {
@@ -284,7 +251,11 @@ public class UserManagementActor extends BaseActor {
       } else {
         subOrgRootOrgId = (String) orgMap.get(JsonKey.ROOT_ORG_ID);
       }
-      String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
+      String rootOrgId = "";
+      if (StringUtils.isNotBlank((String) userMap.get(JsonKey.CHANNEL))) {
+        rootOrgId = userService.getRootOrgIdFromChannel((String) userMap.get(JsonKey.CHANNEL));
+        userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+      }
       if (!rootOrgId.equalsIgnoreCase(subOrgRootOrgId)) {
         ProjectCommonException.throwClientErrorException(
             ResponseCode.parameterMismatch,
@@ -397,7 +368,6 @@ public class UserManagementActor extends BaseActor {
     reqMap.remove(JsonKey.EDUCATION);
     reqMap.remove(JsonKey.JOB_PROFILE);
     reqMap.remove(JsonKey.ORGANISATION);
-    reqMap.remove(JsonKey.EMAIL_VERIFIED);
     reqMap.remove(JsonKey.REGISTERED_ORG);
     reqMap.remove(JsonKey.ROOT_ORG);
     reqMap.remove(JsonKey.IDENTIFIER);

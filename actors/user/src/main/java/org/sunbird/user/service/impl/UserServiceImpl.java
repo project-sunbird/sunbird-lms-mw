@@ -1,6 +1,7 @@
 package org.sunbird.user.service.impl;
 
 import akka.actor.ActorRef;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -10,8 +11,10 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
+import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
@@ -19,10 +22,12 @@ import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
+import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.models.util.datasecurity.impl.DefaultDecryptionServiceImpl;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.models.user.User;
@@ -35,9 +40,14 @@ import org.sunbird.user.service.UserService;
 public class UserServiceImpl implements UserService {
 
   private static DecryptionService decryptionService = new DefaultDecryptionServiceImpl();
+  private EncryptionService encryptionService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
+          null);
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static UserDao userDao = UserDaoImpl.getInstance();
   private static UserService userService = null;
   private UserExternalIdentityDao userExtIdentityDao = new UserExternalIdentityDaoImpl();
+  private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
 
   public static UserService getInstance() {
     if (userService == null) {
@@ -286,5 +296,39 @@ public class UserServiceImpl implements UserService {
     if (!user.getRootOrgId().equalsIgnoreCase(uploader.getRootOrgId())) {
       ProjectCommonException.throwUnauthorizedErrorException();
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public List<Map<String, Object>> getUsersByUserName(List<Object> userNameList) {
+    List<String> propertyList = new ArrayList<>();
+    propertyList.add(JsonKey.ID);
+    propertyList.add(JsonKey.USERNAME);
+    Response response =
+        cassandraOperation.getRecordsByProperty(
+            usrDbInfo.getKeySpace(),
+            usrDbInfo.getTableName(),
+            JsonKey.USERNAME,
+            userNameList,
+            propertyList);
+    return (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
+  }
+
+  @Override
+  public List<String> getEncryptedDataList(List<String> dataList) {
+    List<String> encryptedDataList = new ArrayList<>();
+    for (String data : dataList) {
+      String encData = "";
+      try {
+        encData = encryptionService.encryptData(data);
+      } catch (Exception e) {
+        ProjectLogger.log(
+            "UserServiceImpl:getEncryptedDataList: exception occurred while encrypting data." + e);
+      }
+      if (StringUtils.isNotBlank(encData)) {
+        encryptedDataList.add(encData);
+      }
+    }
+    return encryptedDataList;
   }
 }

@@ -476,12 +476,11 @@ public class UserUtil {
   }
 
   private static void getUserName(Map<String, Object> userMap) {
+    List<Object> encryptedUserNameList = new ArrayList<>();
     String firstName = (String) userMap.get(JsonKey.FIRST_NAME);
     String lastName = (String) userMap.get(JsonKey.LAST_NAME);
     String name = String.join(" ", firstName, lastName);
-    List<String> userNameList = null;
-    // call username generator method which will return list of userName
-    List<Object> encryptedUserNameList = new ArrayList<>();
+    List<String> userNameList = userService.generateUsernames(name);
     userService
         .getEncryptedDataList(userNameList)
         .stream()

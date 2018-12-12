@@ -40,6 +40,7 @@ public class UserServiceImpl implements UserService {
   private static UserDao userDao = UserDaoImpl.getInstance();
   private static UserService userService = null;
   private UserExternalIdentityDao userExtIdentityDao = new UserExternalIdentityDaoImpl();
+  private static final int GENERATE_USERNAME_COUNT = 10;
 
   public static UserService getInstance() {
     if (userService == null) {
@@ -294,7 +295,6 @@ public class UserServiceImpl implements UserService {
     if (name == null || name.isEmpty()) return null;
     int numOfDigitsToAppend =
         Integer.valueOf(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USERNAME_NUM_DIGITS).trim());
-    int GENERATE_USERNAME_COUNT = 10;
     HashSet<String> userNameSet = new HashSet<>();
     int totalUserNameGenerated = 0;
     String nameLowercase = name.toLowerCase().replaceAll("\\s+", "");

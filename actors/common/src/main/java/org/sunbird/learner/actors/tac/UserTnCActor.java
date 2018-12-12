@@ -16,17 +16,17 @@ import org.sunbird.common.request.Request;
   tasks = {"userTnCAccept"},
   asyncTasks = {}
 )
-public class TNCManagementActor extends BaseActor {
+public class UserTnCActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
     String operation = request.getOperation();
     ExecutionContext.setRequestId(request.getRequestId());
 
-    if (operation.equalsIgnoreCase("userTnCAccept")) {
+    if (operation.equalsIgnoreCase(ActorOperations.USER_TNC_ACCEPT.getValue())) {
       acceptTNC(request);
     } else {
-      onReceiveUnsupportedOperation("TNCManagementActor");
+      onReceiveUnsupportedOperation("UserTnCActor");
     }
   }
 

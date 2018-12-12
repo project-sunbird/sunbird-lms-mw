@@ -29,6 +29,9 @@ public interface UserService {
 
   String getCustodianChannel(Map<String, Object> userMap, ActorRef actorRef);
 
-  List<String> generateUsernames(String name);
+  List<Map<String, Object>> getUsersByUserName(List<Object> userNameList);
 
+  List<String> getEncryptedDataList(List<String> dataList);
+
+  List<String> generateUsernames(String name);
 }

@@ -39,6 +39,8 @@ import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
+import org.sunbird.user.service.UserService;
+import org.sunbird.user.service.impl.UserServiceImpl;
 
 public class UserUtil {
 
@@ -56,6 +58,7 @@ public class UserUtil {
   private static DecryptionService decService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
+  private static UserService userService = UserServiceImpl.getInstance();
 
   private UserUtil() {}
 
@@ -451,8 +454,9 @@ public class UserUtil {
       roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
       userMap.put(JsonKey.ROLES, roles);
     }
-    // update db with emailVerified as false (default)
-    userMap.put(JsonKey.EMAIL_VERIFIED, false);
+    if (null == userMap.get(JsonKey.EMAIL_VERIFIED)) {
+      userMap.put(JsonKey.EMAIL_VERIFIED, false);
+    }
     if (!StringUtils.isBlank((String) userMap.get(JsonKey.COUNTRY_CODE))) {
       userMap.put(
           JsonKey.COUNTRY_CODE, propertiesCache.getProperty(JsonKey.SUNBIRD_DEFAULT_COUNTRY_CODE));
@@ -466,6 +470,47 @@ public class UserUtil {
     userMap.put(JsonKey.LOGIN_ID, loginId);
     userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
+    if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
+      getUserName(userMap);
+    }
+  }
+
+  private static void getUserName(Map<String, Object> userMap) {
+    List<Object> encryptedUserNameList = new ArrayList<>();
+    String firstName = (String) userMap.get(JsonKey.FIRST_NAME);
+    String lastName = (String) userMap.get(JsonKey.LAST_NAME);
+    String name = String.join(" ", firstName, lastName);
+    List<String> userNameList = userService.generateUsernames(name);
+    userService
+        .getEncryptedDataList(userNameList)
+        .stream()
+        .forEach(usrName -> encryptedUserNameList.add(usrName));
+    List<Map<String, Object>> userMapList = userService.getUsersByUserName(encryptedUserNameList);
+    List<String> dbUserNameList = new ArrayList<>();
+    userMapList
+        .stream()
+        .forEach(
+            user -> {
+              dbUserNameList.add((String) user.get(JsonKey.USERNAME));
+            });
+    if (CollectionUtils.isNotEmpty(dbUserNameList)) {
+      if (dbUserNameList.size() < encryptedUserNameList.size()) {
+        String userName =
+            (String)
+                encryptedUserNameList
+                    .stream()
+                    .filter(
+                        usrName -> {
+                          if (!dbUserNameList.contains(usrName)) {
+                            return true;
+                          }
+                          return false;
+                        })
+                    .findFirst()
+                    .get();
+        userMap.put(JsonKey.USERNAME, userName);
+      }
+    }
   }
 
   public static void validateExternalIds(User user, String operationType) {

@@ -31,5 +31,4 @@ public interface UserService {
 
   List<String> generateUsernames(String name);
 
-  int getRandomFixedLengthInteger(int numDigits);
 }

@@ -334,7 +334,8 @@ public class UserServiceImpl implements UserService {
     return encryptedDataList;
   }
 
-  public static List<String> generateUsernames(String name) {
+  @Override
+  public List<String> generateUsernames(String name) {
     if (name == null || name.isEmpty()) return null;
     int numOfDigitsToAppend =
         Integer.valueOf(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USERNAME_NUM_DIGITS).trim());
@@ -356,7 +357,7 @@ public class UserServiceImpl implements UserService {
     return new ArrayList<>(userNameSet);
   }
 
-  public static int getRandomFixedLengthInteger(int numDigits) {
+  private int getRandomFixedLengthInteger(int numDigits) {
     int min = (int) Math.pow(10, numDigits - 1);
     int max = ((int) Math.pow(10, numDigits)) - 1;
     int randomNum = (int) (Math.random() * ((max - min) + 1)) + min;

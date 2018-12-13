@@ -48,7 +48,7 @@ import org.sunbird.services.sso.SSOServiceFactory;
   tasks = {"getUserDetailsByLoginId", "getUserProfile", "getUserProfileV2"},
   asyncTasks = {}
 )
-public class ReadUserDetailsActor extends BaseActor {
+public class UserProfileReadActor extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private DecryptionService decryptionService =
@@ -531,7 +531,7 @@ public class ReadUserDetailsActor extends BaseActor {
           (Map<String, Object>) response.get(JsonKey.RESPONSE), (List<String>) excludedFieldList);
     } else {
       ProjectLogger.log(
-          "ReadUserDetailsActor:getUserProfileV2: System setting userProfileConfig.read.excludedFields not configured.",
+          "UserProfileReadActor:getUserProfileV2: System setting userProfileConfig.read.excludedFields not configured.",
           LoggerEnum.INFO.name());
     }
     sender().tell(response, self());

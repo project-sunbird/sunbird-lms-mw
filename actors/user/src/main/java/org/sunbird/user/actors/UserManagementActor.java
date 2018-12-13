@@ -46,21 +46,21 @@ import org.sunbird.user.util.UserActorOperations;
 import org.sunbird.user.util.UserUtil;
 
 @ActorConfig(
-        tasks = {"createUser", "updateUser"},
-        asyncTasks = {}
+  tasks = {"createUser", "updateUser"},
+  asyncTasks = {}
 )
 public class UserManagementActor extends BaseActor {
   private ObjectMapper mapper = new ObjectMapper();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
   private static final boolean IS_REGISTRY_ENABLED =
-          Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE));
+      Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE));
   private UserRequestValidator userRequestValidator = new UserRequestValidator();
   private UserService userService = new UserServiceImpl();
   private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
   private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private static InterServiceCommunication interServiceCommunication =
-          InterServiceCommunicationFactory.getInstance();
+      InterServiceCommunicationFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
 
   @Override
@@ -87,11 +87,11 @@ public class UserManagementActor extends BaseActor {
   private void cacheFrameworkFieldsConfig() {
     if (MapUtils.isEmpty(DataCacheHandler.getFrameworkFieldsConfig())) {
       Map<String, List<String>> frameworkFieldsConfig =
-              systemSettingClient.getSystemSettingByFieldAndKey(
-                      getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
-                      JsonKey.USER_PROFILE_CONFIG,
-                      JsonKey.FRAMEWORK,
-                      new TypeReference<Map<String, List<String>>>() {});
+          systemSettingClient.getSystemSettingByFieldAndKey(
+              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+              JsonKey.USER_PROFILE_CONFIG,
+              JsonKey.FRAMEWORK,
+              new TypeReference<Map<String, List<String>>>() {});
       DataCacheHandler.setFrameworkFieldsConfig(frameworkFieldsConfig);
     }
   }
@@ -133,11 +133,11 @@ public class UserManagementActor extends BaseActor {
     removeUnwanted(requestMap);
     if (requestMap.containsKey(JsonKey.TNC_ACCEPTED_ON)) {
       requestMap.put(
-              JsonKey.TNC_ACCEPTED_ON, new Timestamp((Long) requestMap.get(JsonKey.TNC_ACCEPTED_ON)));
+          JsonKey.TNC_ACCEPTED_ON, new Timestamp((Long) requestMap.get(JsonKey.TNC_ACCEPTED_ON)));
     }
     Response response =
-            cassandraOperation.updateRecord(
-                    usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
+        cassandraOperation.updateRecord(
+            usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
     if (StringUtils.isNotBlank(callerId)) {
       userMap.put(JsonKey.ROOT_ORG_ID, actorMessage.getContext().get(JsonKey.ROOT_ORG_ID));
     }
@@ -150,8 +150,8 @@ public class UserManagementActor extends BaseActor {
       ProjectLogger.log("UserManagementActor:updateUser: User update failure");
     }
     response.put(
-            JsonKey.ERRORS,
-            ((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ERRORS));
+        JsonKey.ERRORS,
+        ((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ERRORS));
     sender().tell(response, self());
     if (null != resp) {
       Map<String, Object> completeUserDetails = new HashMap<>(userDbRecord);
@@ -159,26 +159,26 @@ public class UserManagementActor extends BaseActor {
       saveUserDetailsToEs(completeUserDetails);
     }
     targetObject =
-            TelemetryUtil.generateTargetObject(
-                    (String) userMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
+        TelemetryUtil.generateTargetObject(
+            (String) userMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
   private void validateUserFrameworkData(
-          Map<String, Object> userRequestMap, Map<String, Object> userDbRecord) {
+      Map<String, Object> userRequestMap, Map<String, Object> userDbRecord) {
     if (userRequestMap.containsKey(JsonKey.FRAMEWORK)) {
       List<String> frameworkFields =
-              DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.FIELDS);
+          DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.FIELDS);
       List<String> frameworkMandatoryFields =
-              DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.MANDATORY_FIELDS);
+          DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.MANDATORY_FIELDS);
       userRequestValidator.validateMandatoryFrameworkFields(
-              userRequestMap, frameworkFields, frameworkMandatoryFields);
+          userRequestMap, frameworkFields, frameworkMandatoryFields);
       Map<String, Object> rootOrgMap =
-              Util.getOrgDetails((String) userDbRecord.get(JsonKey.ROOT_ORG_ID));
+          Util.getOrgDetails((String) userDbRecord.get(JsonKey.ROOT_ORG_ID));
       String hashtagId = (String) rootOrgMap.get(JsonKey.HASHTAGID);
       String frameworkId = getFrameworkId(hashtagId);
       Map<String, List<Map<String, String>>> frameworkCachedValue =
-              getFrameworkDetails(frameworkId);
+          getFrameworkDetails(frameworkId);
       userRequestValidator.validateFrameworkCategoryValues(userRequestMap, frameworkCachedValue);
     }
   }
@@ -227,7 +227,7 @@ public class UserManagementActor extends BaseActor {
       userMap.put(JsonKey.CREATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
       try {
         if (StringUtils.isBlank((String) userMap.get(JsonKey.CHANNEL))
-                && StringUtils.isBlank((String) userMap.get(JsonKey.ROOT_ORG_ID))) {
+            && StringUtils.isBlank((String) userMap.get(JsonKey.ROOT_ORG_ID))) {
           String channel = userService.getCustodianChannel(userMap, systemSettingActorRef);
           String rootOrgId = userService.getRootOrgIdFromChannel(channel);
           userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
@@ -261,10 +261,10 @@ public class UserManagementActor extends BaseActor {
       }
       if (!rootOrgId.equalsIgnoreCase(subOrgRootOrgId)) {
         ProjectCommonException.throwClientErrorException(
-                ResponseCode.parameterMismatch,
-                MessageFormat.format(
-                        ResponseCode.parameterMismatch.getErrorMessage(),
-                        StringFormatter.joinByComma(JsonKey.CHANNEL, JsonKey.ORGANISATION_ID)));
+            ResponseCode.parameterMismatch,
+            MessageFormat.format(
+                ResponseCode.parameterMismatch.getErrorMessage(),
+                StringFormatter.joinByComma(JsonKey.CHANNEL, JsonKey.ORGANISATION_ID)));
       }
     }
   }
@@ -290,8 +290,8 @@ public class UserManagementActor extends BaseActor {
     Response response = null;
     try {
       response =
-              cassandraOperation.insertRecord(
-                      usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
+          cassandraOperation.insertRecord(
+              usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
     } finally {
       if (null == response) {
         ssoManager.removeUser(userMap);
@@ -317,8 +317,8 @@ public class UserManagementActor extends BaseActor {
     esResponse.putAll((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE));
     esResponse.putAll(requestMap);
     response.put(
-            JsonKey.ERRORS,
-            ((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ERRORS));
+        JsonKey.ERRORS,
+        ((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ERRORS));
     sender().tell(response, self());
     if (null != resp) {
       saveUserDetailsToEs(esResponse);
@@ -329,8 +329,8 @@ public class UserManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     targetObject =
-            TelemetryUtil.generateTargetObject(
-                    (String) userMap.get(JsonKey.ID), JsonKey.USER, JsonKey.CREATE, null);
+        TelemetryUtil.generateTargetObject(
+            (String) userMap.get(JsonKey.ID), JsonKey.USER, JsonKey.CREATE, null);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
@@ -347,7 +347,7 @@ public class UserManagementActor extends BaseActor {
     userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
     userRequest.getRequest().put(JsonKey.ID, completeUserMap.get(JsonKey.ID));
     ProjectLogger.log(
-            "UserManagementActor:saveUserDetailsToEs: Trigger sync of user details to ES");
+        "UserManagementActor:saveUserDetailsToEs: Trigger sync of user details to ES");
     tellToAnother(userRequest);
   }
 
@@ -358,8 +358,8 @@ public class UserManagementActor extends BaseActor {
     ProjectLogger.log("UserManagementActor:saveUserAttributes");
     try {
       return (Response)
-              interServiceCommunication.getResponse(
-                      getActorRef(UserActorOperations.SAVE_USER_ATTRIBUTES.getValue()), request);
+          interServiceCommunication.getResponse(
+              getActorRef(UserActorOperations.SAVE_USER_ATTRIBUTES.getValue()), request);
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
@@ -423,14 +423,14 @@ public class UserManagementActor extends BaseActor {
       Map<String, Object> frameworkDetails = (Map<String, Object>) result.get(JsonKey.FRAMEWORK);
       if (MapUtils.isNotEmpty(frameworkDetails)) {
         List<Map<String, Object>> frameworkCategories =
-                (List<Map<String, Object>>) frameworkDetails.get(JsonKey.CATEGORIES);
+            (List<Map<String, Object>>) frameworkDetails.get(JsonKey.CATEGORIES);
         if (CollectionUtils.isNotEmpty(frameworkCategories)) {
           for (Map<String, Object> frameworkCategoriesValue : frameworkCategories) {
             String frameworkField = (String) frameworkCategoriesValue.get(JsonKey.CODE);
             if (supportedfFields.contains(frameworkField)) {
               List<Map<String, String>> listOfFields = new ArrayList<>();
               List<Map<String, Object>> frameworkTermList =
-                      (List<Map<String, Object>>) frameworkCategoriesValue.get(JsonKey.TERMS);
+                  (List<Map<String, Object>>) frameworkCategoriesValue.get(JsonKey.TERMS);
               if (CollectionUtils.isNotEmpty(frameworkTermList)) {
                 for (Map<String, Object> frameworkTerm : frameworkTermList) {
                   String id = (String) frameworkTerm.get(JsonKey.IDENTIFIER);
@@ -442,7 +442,7 @@ public class UserManagementActor extends BaseActor {
                 }
               }
               if (StringUtils.isNotBlank(frameworkField)
-                      && CollectionUtils.isNotEmpty(listOfFields))
+                  && CollectionUtils.isNotEmpty(listOfFields))
                 frameworkCacheMap.put(frameworkField, listOfFields);
             }
             if (MapUtils.isNotEmpty(frameworkCacheMap))

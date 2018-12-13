@@ -471,13 +471,15 @@ public class UserUtil {
     userMap.put(JsonKey.LOGIN_ID, loginId);
     userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
+
     if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
       String firstName = (String) userMap.get(JsonKey.FIRST_NAME);
       String lastName = (String) userMap.get(JsonKey.LAST_NAME);
       String name = String.join(" ", firstName, lastName);
+
       String userName = null;
       while (StringUtils.isBlank(userName)) {
-        userName = getUserName(name);
+        userName = getUsername(name);
         if (StringUtils.isNotBlank(userName)) {
           userMap.put(JsonKey.USERNAME, userName);
         }
@@ -485,31 +487,44 @@ public class UserUtil {
     }
   }
 
-  private static String getUserName(String name) {
+  private static String getUsername(String name) {
     List<Map<String, Object>> users = null;
     List<String> esUserNameList = new ArrayList<>();
     List<String> encryptedUserNameList = new ArrayList<>();
-    List<String> userNameListBackUp = null;
+    List<String> excludedUsernames = new ArrayList<>();
+    List<String> userNameList = new ArrayList<>();
+
     String userName = "";
     do {
       do {
         encryptedUserNameList.clear();
+        excludedUsernames.putAll(userNameList);
+
+        // Generate usernames
         List<String> userNameList =
             userService.generateUsernames(
-                name,
-                CollectionUtils.isEmpty(userNameListBackUp)
-                    ? Collections.emptyList()
-                    : userNameListBackUp);
-        userNameListBackUp = new ArrayList<>(userNameList);
+                name, excludedUsernames);
+        
+        // Encrypt each user name
         userService
-            .getEncryptedDataList(userNameList)
+            .getEncryptedList(userNameList)
             .stream()
-            .forEach(usrName -> encryptedUserNameList.add(usrName));
+            .forEach(value -> encryptedUserNameList.add(value));
+        
+        // Throw an error in case of encryption failures
+        if (encryptedUserNameList.isEmpty()) {
+          ProjectCommonException.throwServerErrorException(ResponseCode.SERVER_ERROR);
+        }
+
+        // Search if any user names are taking using ES
         Map<String, Object> filters = new HashMap<>();
         filters.put(JsonKey.USERNAME, encryptedUserNameList);
-        users = userService.getEsUsersByFilters(filters);
+        users = userService.esSearchUserByFilters(filters);
       } while (CollectionUtils.isNotEmpty(users) && encryptedUserNameList.size() >= users.size());
+
       esUserNameList.clear();
+
+      // Map list of user results (from ES) into list of usernames
       users
           .stream()
           .forEach(
@@ -517,14 +532,14 @@ public class UserUtil {
                 esUserNameList.add((String) user.get(JsonKey.USERNAME));
               });
 
-      if (esUserNameList.size() < encryptedUserNameList.size()) {
+      // Query cassandra to find first username that is not yet assigned
         Optional<String> result =
             encryptedUserNameList
                 .stream()
                 .filter(
-                    usrName -> {
-                      if (!esUserNameList.contains(usrName)) {
-                        Map<String, Object> dbUser = userService.getUserByUserName(usrName);
+                    value -> {
+                      if (!esUserNameList.contains(value)) {
+                        Map<String, Object> dbUser = userService.getUserByUserName(value);
                         if (MapUtils.isEmpty(dbUser)) {
                           return true;
                         }
@@ -533,11 +548,13 @@ public class UserUtil {
                       return false;
                     })
                 .findFirst();
+
         if (result.isPresent()) {
           userName = result.get();
         }
-      }
+
     } while (StringUtils.isBlank(userName));
+
     return decService.decryptData(userName);
   }
 

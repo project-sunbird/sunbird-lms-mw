@@ -82,37 +82,40 @@ public class UserStatusActorTest {
     UserResource userResource = mock(UserResource.class);
     when(usersResource.get(Mockito.any())).thenReturn(userResource);
     when(userResource.toRepresentation()).thenReturn(userRepresentation);
-    userRepresentation.setEnabled(Mockito.anyBoolean());
     user = mock(User.class);
     when(userService.getUserById(Mockito.anyString())).thenReturn(user);
   }
 
   @Test
   public void testBlockUserSuccess() {
-    testScenario(false, ActorOperations.BLOCK_USER.getValue(), true, null);
+    Assert.assertTrue(testScenario(false, ActorOperations.BLOCK_USER, true, null) == true);
   }
 
   @Test
   public void testBlockUserFailureWithUserAlreadyInactive() {
-    testScenario(
-        true,
-        ActorOperations.BLOCK_USER.getValue(),
-        false,
-        ResponseCode.userAlreadyInactive.getErrorCode());
+    Assert.assertTrue(
+        testScenario(
+                true,
+                ActorOperations.BLOCK_USER,
+                false,
+                ResponseCode.userAlreadyInactive.getErrorCode())
+            == true);
   }
 
   @Test
-  public void testUnBlockUserSuccess() {
-    testScenario(true, ActorOperations.UNBLOCK_USER.getValue(), true, null);
+  public void testUnblockUserSuccess() {
+    Assert.assertTrue(testScenario(true, ActorOperations.UNBLOCK_USER, true, null) == true);
   }
 
   @Test
-  public void testUnBlockUserFailureWithUserAlreadyActive() {
-    testScenario(
-        false,
-        ActorOperations.UNBLOCK_USER.getValue(),
-        false,
-        ResponseCode.userAlreadyActive.getErrorCode());
+  public void testUnblockUserFailureWithUserAlreadyActive() {
+    Assert.assertTrue(
+        testScenario(
+                false,
+                ActorOperations.UNBLOCK_USER,
+                false,
+                ResponseCode.userAlreadyActive.getErrorCode())
+            == true);
   }
 
   private Request getRequestObject(String operation) {
@@ -129,22 +132,26 @@ public class UserStatusActorTest {
     return response;
   }
 
-  private void testScenario(
-      boolean isDeleted, String operation, boolean isSuccess, String expectedErrorResponse) {
+  private boolean testScenario(
+      boolean isDeleted,
+      ActorOperations operation,
+      boolean isSuccess,
+      String expectedErrorResponse) {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
     when(user.getIsDeleted()).thenReturn(isDeleted);
-    subject.tell(getRequestObject(operation), probe.getRef());
+    subject.tell(getRequestObject(operation.getValue()), probe.getRef());
 
+    Response res;
     if (isSuccess) {
-      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-      Assert.assertTrue(res != null && res.getResult().get(JsonKey.RESPONSE) == "SUCCESS");
+      res = probe.expectMsgClass(duration("10 second"), Response.class);
+      if (!res.equals(null) && res.getResult().get(JsonKey.RESPONSE).equals("SUCCESS")) return true;
     } else {
       ProjectCommonException exception =
           probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-      Assert.assertTrue(
-          ((ProjectCommonException) exception).getCode().equals(expectedErrorResponse));
+      if (((ProjectCommonException) exception).getCode().equals(expectedErrorResponse)) return true;
     }
+    return false;
   }
 }

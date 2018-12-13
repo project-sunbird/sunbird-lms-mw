@@ -3,7 +3,6 @@ package org.sunbird.user.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -498,19 +497,17 @@ public class UserUtil {
     do {
       do {
         encryptedUserNameList.clear();
-        excludedUsernames.putAll(userNameList);
+        excludedUsernames.addAll(userNameList);
 
         // Generate usernames
-        List<String> userNameList =
-            userService.generateUsernames(
-                name, excludedUsernames);
-        
+        userNameList = userService.generateUsernames(name, excludedUsernames);
+
         // Encrypt each user name
         userService
             .getEncryptedList(userNameList)
             .stream()
             .forEach(value -> encryptedUserNameList.add(value));
-        
+
         // Throw an error in case of encryption failures
         if (encryptedUserNameList.isEmpty()) {
           ProjectCommonException.throwServerErrorException(ResponseCode.SERVER_ERROR);
@@ -533,25 +530,25 @@ public class UserUtil {
               });
 
       // Query cassandra to find first username that is not yet assigned
-        Optional<String> result =
-            encryptedUserNameList
-                .stream()
-                .filter(
-                    value -> {
-                      if (!esUserNameList.contains(value)) {
-                        Map<String, Object> dbUser = userService.getUserByUserName(value);
-                        if (MapUtils.isEmpty(dbUser)) {
-                          return true;
-                        }
-                        return false;
+      Optional<String> result =
+          encryptedUserNameList
+              .stream()
+              .filter(
+                  value -> {
+                    if (!esUserNameList.contains(value)) {
+                      Map<String, Object> dbUser = userService.getUserByUsername(value);
+                      if (MapUtils.isEmpty(dbUser)) {
+                        return true;
                       }
                       return false;
-                    })
-                .findFirst();
+                    }
+                    return false;
+                  })
+              .findFirst();
 
-        if (result.isPresent()) {
-          userName = result.get();
-        }
+      if (result.isPresent()) {
+        userName = result.get();
+      }
 
     } while (StringUtils.isBlank(userName));
 

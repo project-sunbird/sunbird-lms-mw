@@ -29,6 +29,12 @@ public interface UserService {
 
   String getCustodianChannel(Map<String, Object> userMap, ActorRef actorRef);
 
+  Map<String, Object> getUserByUsername(String userName);
+
+  List<Map<String, Object>> esSearchUserByFilters(Map<String, Object> filters);
+
   List<String> generateUsernames(String name, List<String> excludedUsernames);
+
+  List<String> getEncryptedList(List<String> dataList);
 
 }

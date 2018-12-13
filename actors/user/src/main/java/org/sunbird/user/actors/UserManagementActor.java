@@ -212,9 +212,6 @@ public class UserManagementActor extends BaseActor {
     } else {
       userRequestValidator.validateCreateUserV1Request(actorMessage);
     }
-    if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
-      userMap.put(JsonKey.USERNAME, ProjectUtil.generateUniqueId());
-    }
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);

@@ -302,18 +302,16 @@ public class UserServiceImpl implements UserService {
 
   @SuppressWarnings("unchecked")
   @Override
-  public List<Map<String, Object>> getUsersByUserName(List<Object> userNameList) {
-    List<String> propertyList = new ArrayList<>();
-    propertyList.add(JsonKey.ID);
-    propertyList.add(JsonKey.USERNAME);
+  public Map<String, Object> getUserByUserName(String userName) {
     Response response =
-        cassandraOperation.getRecordsByProperty(
-            usrDbInfo.getKeySpace(),
-            usrDbInfo.getTableName(),
-            JsonKey.USERNAME,
-            userNameList,
-            propertyList);
-    return (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
+        cassandraOperation.getRecordsByIndexedProperty(
+            usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), JsonKey.USERNAME, userName);
+    List<Map<String, Object>> userList =
+        (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
+    if (CollectionUtils.isNotEmpty(userList)) {
+      return userList.get(0);
+    }
+    return null;
   }
 
   @Override
@@ -362,5 +360,20 @@ public class UserServiceImpl implements UserService {
     int max = ((int) Math.pow(10, numDigits)) - 1;
     int randomNum = (int) (Math.random() * ((max - min) + 1)) + min;
     return randomNum;
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public List<Map<String, Object>> getEsUsersByFilters(Map<String, Object> filters) {
+    SearchDTO searchDTO = new SearchDTO();
+    List<String> list = new ArrayList<>();
+    list.add(JsonKey.ID);
+    list.add(JsonKey.USERNAME);
+    searchDTO.setFields(list);
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
+    Map<String, Object> esResult =
+        ElasticSearchUtil.complexSearch(
+            searchDTO, EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+    return (List<Map<String, Object>>) esResult.get(JsonKey.CONTENT);
   }
 }

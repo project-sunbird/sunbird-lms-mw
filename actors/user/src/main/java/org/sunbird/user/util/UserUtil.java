@@ -471,46 +471,67 @@ public class UserUtil {
     userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
     if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
-      getUserName(userMap);
+      String firstName = (String) userMap.get(JsonKey.FIRST_NAME);
+      String lastName = (String) userMap.get(JsonKey.LAST_NAME);
+      String name = String.join(" ", firstName, lastName);
+      String userName = null;
+      while (StringUtils.isBlank(userName)) {
+        userName = getUserName(name);
+        if (StringUtils.isNotBlank(userName)) {
+          userMap.put(JsonKey.USERNAME, userName);
+        }
+      }
     }
   }
 
-  private static void getUserName(Map<String, Object> userMap) {
-    List<Object> encryptedUserNameList = new ArrayList<>();
-    String firstName = (String) userMap.get(JsonKey.FIRST_NAME);
-    String lastName = (String) userMap.get(JsonKey.LAST_NAME);
-    String name = String.join(" ", firstName, lastName);
-    List<String> userNameList = userService.generateUsernames(name);
-    userService
-        .getEncryptedDataList(userNameList)
-        .stream()
-        .forEach(usrName -> encryptedUserNameList.add(usrName));
-    List<Map<String, Object>> userMapList = userService.getUsersByUserName(encryptedUserNameList);
-    List<String> dbUserNameList = new ArrayList<>();
-    userMapList
-        .stream()
-        .forEach(
-            user -> {
-              dbUserNameList.add((String) user.get(JsonKey.USERNAME));
-            });
-    if (CollectionUtils.isNotEmpty(dbUserNameList)) {
-      if (dbUserNameList.size() < encryptedUserNameList.size()) {
-        String userName =
-            (String)
-                encryptedUserNameList
-                    .stream()
-                    .filter(
-                        usrName -> {
-                          if (!dbUserNameList.contains(usrName)) {
-                            return true;
-                          }
-                          return false;
-                        })
-                    .findFirst()
-                    .get();
-        userMap.put(JsonKey.USERNAME, userName);
+  private static String getUserName(String name) {
+    List<Map<String, Object>> users = null;
+    List<String> esUserNameList = new ArrayList<>();
+    List<String> encryptedUserNameList = new ArrayList<>();
+    ;
+    String userName = "";
+    do {
+      do {
+        encryptedUserNameList.clear();
+        List<String> userNameList = userService.generateUsernames(name);
+        userService
+            .getEncryptedDataList(userNameList)
+            .stream()
+            .forEach(usrName -> encryptedUserNameList.add(usrName));
+        Map<String, Object> filters = new HashMap<>();
+        filters.put(JsonKey.USERNAME, encryptedUserNameList);
+        users = userService.getEsUsersByFilters(filters);
+      } while (CollectionUtils.isNotEmpty(users) && encryptedUserNameList.size() >= users.size());
+      esUserNameList.clear();
+      users
+          .stream()
+          .forEach(
+              user -> {
+                esUserNameList.add((String) user.get(JsonKey.USERNAME));
+              });
+
+      if (esUserNameList.size() < encryptedUserNameList.size()) {
+        Optional<String> result =
+            encryptedUserNameList
+                .stream()
+                .filter(
+                    usrName -> {
+                      if (!esUserNameList.contains(usrName)) {
+                        Map<String, Object> dbUser = userService.getUserByUserName(usrName);
+                        if (MapUtils.isEmpty(dbUser)) {
+                          return true;
+                        }
+                        return false;
+                      }
+                      return false;
+                    })
+                .findFirst();
+        if (result.isPresent()) {
+          userName = result.get();
+        }
       }
-    }
+    } while (StringUtils.isBlank(userName));
+    return decService.decryptData(userName);
   }
 
   public static void validateExternalIds(User user, String operationType) {

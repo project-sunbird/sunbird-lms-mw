@@ -29,5 +29,6 @@ public interface UserService {
 
   String getCustodianChannel(Map<String, Object> userMap, ActorRef actorRef);
 
-  List<String> generateUsernames(String name, List<String> userNameAlreadyExists);
+  List<String> generateUsernames(String name, List<String> excludedUsernames);
+
 }

@@ -49,6 +49,8 @@ import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.user.dao.UserDao;
+import org.sunbird.user.dao.impl.UserDaoImpl;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
@@ -60,7 +62,8 @@ import org.sunbird.user.util.UserUtil;
     "updateUser",
     "getUserDetailsByLoginId",
     "getUserProfile",
-    "getUserProfileV2"
+    "getUserProfileV2",
+    "getUserDetailsByField"
   },
   asyncTasks = {}
 )
@@ -110,6 +113,9 @@ public class UserManagementActor extends BaseActor {
         break;
       case "getUserDetailsByLoginId":
         getUserDetailsByLoginId(request);
+        break;
+      case "getUserDetailsByField":
+        getUserDetailsByField(request);
         break;
       default:
         onReceiveUnsupportedOperation("UserManagementActor");
@@ -261,6 +267,120 @@ public class UserManagementActor extends BaseActor {
       sender().tell(exception, self());
       return;
     }
+  }
+
+  private void getUserDetailsByField(Request actorMessage) {
+    String field = (String) actorMessage.getRequest().get(JsonKey.FIELD);
+    String value = (String) actorMessage.getRequest().get(JsonKey.VALUE);
+    String encryptedValue = null;
+    try {
+      encryptedValue = encryptionService.encryptData(value);
+    } catch (Exception e) {
+      ProjectCommonException exception =
+          new ProjectCommonException(
+              ResponseCode.userDataEncryptionError.getErrorCode(),
+              ResponseCode.userDataEncryptionError.getErrorMessage(),
+              ResponseCode.SERVER_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
+
+    UserDao userDao = new UserDaoImpl();
+    Map<String, Object> searchMap = new HashMap();
+    if (field.equalsIgnoreCase(JsonKey.EMAIL)
+        || field.equalsIgnoreCase(JsonKey.USER_NAME)
+        || field.equalsIgnoreCase(JsonKey.PHONE)) {
+      searchMap.put(field, encryptedValue);
+    } else {
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.invalidColumns, ResponseCode.invalidColumns.getErrorMessage());
+    }
+    List<User> foundUsers = userDao.getUsersByProperties(searchMap);
+    if (foundUsers == null || foundUsers.size() == 0) {
+      throw new ProjectCommonException(
+          ResponseCode.userNotFound.getErrorCode(),
+          ResponseCode.userNotFound.getErrorMessage(),
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+    }
+    User foundUser = foundUsers.get(0);
+    if (foundUser == null || (foundUser.getIsDeleted() != null && foundUser.getIsDeleted())) {
+      throw new ProjectCommonException(
+          ResponseCode.userNotFound.getErrorCode(),
+          ResponseCode.userNotFound.getErrorMessage(),
+          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+    }
+    ObjectMapper objectMapper = new ObjectMapper();
+    Map<String, Object> result = objectMapper.convertValue(foundUser, Map.class);
+
+    fetchRootAndRegisterOrganisation(result);
+    // having check for removing private filed from user , if call user and response
+    // user data id is not same.
+    String requestedById =
+        (String) actorMessage.getContext().getOrDefault(JsonKey.REQUESTED_BY, "");
+    ProjectLogger.log(
+        "requested By and requested user id == "
+            + requestedById
+            + "  "
+            + (String) result.get(JsonKey.USER_ID));
+
+    try {
+      if (!(((String) result.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById))) {
+        result = removeUserPrivateField(result);
+      } else {
+        // These values are set to ensure backward compatibility post introduction of global
+        // settings in user profile visibility
+        setCompleteProfileVisibilityMap(result);
+        setDefaultUserProfileVisibility(result);
+
+        // If the user requests his data then we are fetching the private data from
+        // userprofilevisibility index
+        // and merge it with user index data
+        Map<String, Object> privateResult =
+            ElasticSearchUtil.getDataByIdentifier(
+                ProjectUtil.EsIndex.sunbird.getIndexName(),
+                ProjectUtil.EsType.userprofilevisibility.getTypeName(),
+                (String) result.get(JsonKey.ID));
+        // fetch user external identity
+        List<Map<String, String>> dbResExternalIds = fetchUserExternalIdentity(requestedById);
+        result.put(JsonKey.EXTERNAL_IDS, dbResExternalIds);
+        result.putAll(privateResult);
+      }
+    } catch (Exception e) {
+      ProjectCommonException exception =
+          new ProjectCommonException(
+              ResponseCode.userDataEncryptionError.getErrorCode(),
+              ResponseCode.userDataEncryptionError.getErrorMessage(),
+              ResponseCode.SERVER_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
+
+    Response response = new Response();
+    if (null != result) {
+      // remove email and phone no from response
+      result.remove(JsonKey.ENC_EMAIL);
+      result.remove(JsonKey.ENC_PHONE);
+      if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
+        List<String> requestFields = (List<String>) actorMessage.getRequest().get(JsonKey.FIELDS);
+        if (requestFields != null) {
+          addExtraFieldsInUserProfileResponse(
+              result, String.join(",", requestFields), (String) result.get(JsonKey.ID));
+        } else {
+          result.remove(JsonKey.MISSING_FIELDS);
+          result.remove(JsonKey.COMPLETENESS);
+        }
+      } else {
+        result.remove(JsonKey.MISSING_FIELDS);
+        result.remove(JsonKey.COMPLETENESS);
+      }
+      response.put(JsonKey.RESPONSE, result);
+      UserUtility.decryptUserDataFrmES(result);
+    } else {
+      result = new HashMap<>();
+      response.put(JsonKey.RESPONSE, result);
+    }
+    sender().tell(response, self());
+    return;
   }
 
   private void updateUserOrgInfo(List<Map<String, Object>> userOrgs) {

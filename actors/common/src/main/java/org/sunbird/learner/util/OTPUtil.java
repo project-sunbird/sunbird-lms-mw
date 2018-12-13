@@ -27,26 +27,29 @@ public class OTPUtil {
           null);
   private static DbInfo userDb = Util.dbInfoMap.get(JsonKey.USER_DB);
 
+  private OTPUtil() {}
+
   @SuppressWarnings("unchecked")
   public static void checkPhoneUniqueness(String phone) {
     // Get Phone configuration if not found , by default phone will be unique across
     // the application
     String phoneSetting = DataCacheHandler.getConfigSettings().get(JsonKey.PHONE_UNIQUE);
-    if (StringUtils.isNotBlank(phoneSetting) && Boolean.parseBoolean(phoneSetting)) {
-      if (StringUtils.isNotBlank(phone)) {
-        try {
-          phone = encryptionService.encryptData(phone);
-        } catch (Exception e) {
-          ProjectLogger.log("Exception occurred while encrypting phone number ", e);
-        }
-        Response result =
-            cassandraOperation.getRecordsByIndexedProperty(
-                userDb.getKeySpace(), userDb.getTableName(), (JsonKey.PHONE), phone);
-        List<Map<String, Object>> userMapList =
-            (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-        if (!userMapList.isEmpty()) {
-          ProjectCommonException.throwClientErrorException(ResponseCode.PhoneNumberInUse, null);
-        }
+    if (StringUtils.isNotBlank(phoneSetting)
+        && Boolean.parseBoolean(phoneSetting)
+        && StringUtils.isNotBlank(phone)) {
+      String encPhone = null;
+      try {
+        encPhone = encryptionService.encryptData(phone);
+      } catch (Exception e) {
+        ProjectLogger.log("Exception occurred while encrypting phone number ", e);
+      }
+      Response result =
+          cassandraOperation.getRecordsByIndexedProperty(
+              userDb.getKeySpace(), userDb.getTableName(), (JsonKey.PHONE), encPhone);
+      List<Map<String, Object>> userMapList =
+          (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      if (!userMapList.isEmpty()) {
+        ProjectCommonException.throwClientErrorException(ResponseCode.PhoneNumberInUse, null);
       }
     }
   }
@@ -57,28 +60,29 @@ public class OTPUtil {
     // across the
     // application
     String emailSetting = DataCacheHandler.getConfigSettings().get(JsonKey.EMAIL_UNIQUE);
-    if (StringUtils.isNotBlank(emailSetting) && Boolean.parseBoolean(emailSetting)) {
-      if (StringUtils.isNotBlank(email)) {
-        try {
-          email = encryptionService.encryptData(email);
-        } catch (Exception e) {
-          ProjectLogger.log("Exception occurred while encrypting Email ", e);
-        }
-        Map<String, Object> filters = new HashMap<>();
-        filters.put(JsonKey.ENC_EMAIL, email);
-        Map<String, Object> map = new HashMap<>();
-        map.put(JsonKey.FILTERS, filters);
-        SearchDTO searchDto = Util.createSearchDto(map);
-        Map<String, Object> result =
-            ElasticSearchUtil.complexSearch(
-                searchDto,
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName());
-        List<Map<String, Object>> userMapList =
-            (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-        if (!userMapList.isEmpty()) {
-          ProjectCommonException.throwClientErrorException(ResponseCode.emailInUse, null);
-        }
+    if (StringUtils.isNotBlank(emailSetting)
+        && Boolean.parseBoolean(emailSetting)
+        && StringUtils.isNotBlank(email)) {
+      String encEmail = null;
+      try {
+        encEmail = encryptionService.encryptData(email);
+      } catch (Exception e) {
+        ProjectLogger.log("Exception occurred while encrypting Email ", e);
+      }
+      Map<String, Object> filters = new HashMap<>();
+      filters.put(JsonKey.ENC_EMAIL, encEmail);
+      Map<String, Object> map = new HashMap<>();
+      map.put(JsonKey.FILTERS, filters);
+      SearchDTO searchDto = Util.createSearchDto(map);
+      Map<String, Object> result =
+          ElasticSearchUtil.complexSearch(
+              searchDto,
+              ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.user.getTypeName());
+      List<Map<String, Object>> userMapList =
+          (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+      if (!userMapList.isEmpty()) {
+        ProjectCommonException.throwClientErrorException(ResponseCode.emailInUse, null);
       }
     }
   }

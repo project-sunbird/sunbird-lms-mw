@@ -4,6 +4,7 @@ package org.sunbird.learner.actors.otp;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -19,13 +20,10 @@ public class OTPActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-
-    switch (request.getOperation()) {
-      case "generateOTP":
-        generateOTP(request);
-        break;
-      default:
-        onReceiveUnsupportedOperation("OTPActor");
+    if (ActorOperations.GENERATE_OTP.getValue().equals(request.getOperation())) {
+      generateOTP(request);
+    } else {
+      onReceiveUnsupportedOperation("OTPActor");
     }
   }
 

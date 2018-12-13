@@ -756,17 +756,21 @@ public class UserManagementActor extends BaseActor {
   private void validateUserFrameworkData(
       Map<String, Object> userRequestMap, Map<String, Object> userDbRecord) {
     if (userRequestMap.containsKey(JsonKey.FRAMEWORK)) {
-
       List<String> frameworkFields =
           DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.FIELDS);
       List<String> frameworkMandatoryFields =
           DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.MANDATORY_FIELDS);
       userRequestValidator.validateMandatoryFrameworkFields(
           userRequestMap, frameworkFields, frameworkMandatoryFields);
+      Map<String, Object> rootOrgMap =
+          Util.getOrgDetails((String) userDbRecord.get(JsonKey.ROOT_ORG_ID));
+      String hashtagId = (String) rootOrgMap.get(JsonKey.HASHTAGID);
       Map<String, Object> framework = (Map<String, Object>) userRequestMap.get(JsonKey.FRAMEWORK);
       String frameworkId = (String) framework.get(JsonKey.ID);
+      verifyFrameworkId(hashtagId, frameworkId);
       Map<String, List<Map<String, String>>> frameworkCachedValue =
           getFrameworkDetails(frameworkId);
+
       userRequestValidator.validateFrameworkCategoryValues(userRequestMap, frameworkCachedValue);
     }
   }
@@ -1041,6 +1045,25 @@ public class UserManagementActor extends BaseActor {
           ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
 
     } else return frameworkId;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static void verifyFrameworkId(String hashtagId, String frameworkId) {
+
+    Map<String, Object> resultMap = ContentStoreUtil.readChannel(hashtagId);
+    Map<String, Object> results = (Map<String, Object>) resultMap.get(JsonKey.RESULT);
+    if (results != null) {
+      Map<String, Object> channelDetails = (Map<String, Object>) results.get(JsonKey.CHANNEL);
+      if (channelDetails != null) {
+        List<String> frameworkIdList = (List<String>) channelDetails.get(JsonKey.FRAMEWORKS);
+        if (frameworkIdList == null || !frameworkIdList.contains(frameworkId)) {
+          throw new ProjectCommonException(
+              ResponseCode.errorNoFrameworkFound.getErrorCode(),
+              ResponseCode.errorNoFrameworkFound.getErrorMessage(),
+              ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+        }
+      }
+    }
   }
 
   public static Map<String, List<Map<String, String>>> getFrameworkDetails(String frameworkId) {

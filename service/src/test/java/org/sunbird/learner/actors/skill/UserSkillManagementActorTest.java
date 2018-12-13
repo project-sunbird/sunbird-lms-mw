@@ -46,12 +46,12 @@ public class UserSkillManagementActorTest {
   @BeforeClass
   public static void setUp() {
     system = ActorSystem.create("system");
-    PowerMockito.mockStatic(ServiceFactory.class);
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
   }
 
   @Before
   public void beforeEachTest() {
+    PowerMockito.mockStatic(ServiceFactory.class);
+    PowerMockito.mockStatic(ElasticSearchUtil.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
   }

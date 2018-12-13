@@ -33,7 +33,7 @@ public interface UserService {
 
   List<Map<String, Object>> getEsUsersByFilters(Map<String, Object> filters);
 
-  List<String> getEncryptedDataList(List<String> dataList);
+  List<String> generateUsernames(String name, List<String> excludedUsernames);
 
-  List<String> generateUsernames(String name);
+  List<String> getEncryptedDataList(List<String> dataList);
 }

@@ -3,6 +3,7 @@ package org.sunbird.user.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -488,12 +489,18 @@ public class UserUtil {
     List<Map<String, Object>> users = null;
     List<String> esUserNameList = new ArrayList<>();
     List<String> encryptedUserNameList = new ArrayList<>();
-    ;
+    List<String> userNameListBackUp = null;
     String userName = "";
     do {
       do {
         encryptedUserNameList.clear();
-        List<String> userNameList = userService.generateUsernames(name);
+        List<String> userNameList =
+            userService.generateUsernames(
+                name,
+                CollectionUtils.isEmpty(userNameListBackUp)
+                    ? Collections.emptyList()
+                    : userNameListBackUp);
+        userNameListBackUp = new ArrayList<>(userNameList);
         userService
             .getEncryptedDataList(userNameList)
             .stream()

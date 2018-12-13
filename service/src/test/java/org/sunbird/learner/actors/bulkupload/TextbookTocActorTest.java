@@ -93,6 +93,26 @@ public class TextbookTocActorTest {
     }
 
 
+    @Test
+    public void testDownloadInvalid() throws IOException {
+        TestKit probe = new TestKit(system);
+        ActorRef toc = system.actorOf(props);
+
+        Map<String, Object> readTb = getTbWithoutChildren();
+        when(TextBookTocUtil.readContent(Mockito.anyString())).thenReturn(readTb);
+        Request request = new Request();
+        request.setContext(new HashMap<String, Object>(){{put("userId", "test");}});
+        request.put(JsonKey.TEXTBOOK_ID, "");
+        request.setOperation(TextbookActorOperation.TEXTBOOK_TOC_URL.getValue());
+
+        toc.tell(request, probe.getRef());
+        ProjectCommonException res =
+                probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+        Assert.assertTrue(null != res);
+        Assert.assertEquals("Invalid Textbook. Please Provide Valid Textbook Identifier.", res.getMessage());
+    }
+
+
     @Ignore
     public void testTocUplodSuccess() throws IOException {
         TestKit probe = new TestKit(system);

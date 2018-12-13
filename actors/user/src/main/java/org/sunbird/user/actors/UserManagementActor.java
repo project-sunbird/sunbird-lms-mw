@@ -3,6 +3,7 @@ package org.sunbird.user.actors;
 import akka.actor.ActorRef;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.sql.Timestamp;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -119,6 +120,7 @@ public class UserManagementActor extends BaseActor {
     removeFieldsFrmReq(userMap);
     // if we are updating email then need to update isEmailVerified flag inside keycloak
     UserUtil.checkEmailSameOrDiff(userMap, userDbRecord);
+
     if (IS_REGISTRY_ENABLED) {
       UserUtil.updateUserToRegistry(userMap, (String) userDbRecord.get(JsonKey.REGISTRY_ID));
     }
@@ -129,6 +131,10 @@ public class UserManagementActor extends BaseActor {
     }
     Map<String, Object> requestMap = UserUtil.encryptUserData(userMap);
     removeUnwanted(requestMap);
+    if (requestMap.containsKey(JsonKey.TNC_ACCEPTED_ON)) {
+      requestMap.put(
+          JsonKey.TNC_ACCEPTED_ON, new Timestamp((Long) requestMap.get(JsonKey.TNC_ACCEPTED_ON)));
+    }
     Response response =
         cassandraOperation.updateRecord(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);

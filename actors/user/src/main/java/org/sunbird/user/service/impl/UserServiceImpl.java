@@ -1,8 +1,10 @@
 package org.sunbird.user.service.impl;
 
 import akka.actor.ActorRef;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
@@ -38,6 +40,7 @@ public class UserServiceImpl implements UserService {
   private static UserDao userDao = UserDaoImpl.getInstance();
   private static UserService userService = null;
   private UserExternalIdentityDao userExtIdentityDao = new UserExternalIdentityDaoImpl();
+  private static final int GENERATE_USERNAME_COUNT = 10;
 
   public static UserService getInstance() {
     if (userService == null) {
@@ -287,4 +290,35 @@ public class UserServiceImpl implements UserService {
       ProjectCommonException.throwUnauthorizedErrorException();
     }
   }
+
+  @Override
+  public List<String> generateUsernames(String name) {
+    if (name == null || name.isEmpty()) return null;
+    int numOfDigitsToAppend =
+        Integer.valueOf(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USERNAME_NUM_DIGITS).trim());
+    HashSet<String> userNameSet = new HashSet<>();
+    int totalUserNameGenerated = 0;
+    String nameLowercase = name.toLowerCase().replaceAll("\\s+", "");
+    while (totalUserNameGenerated < GENERATE_USERNAME_COUNT) {
+      int numberSuffix = getRandomFixedLengthInteger(numOfDigitsToAppend);
+
+      StringBuilder userNameSB = new StringBuilder();
+      userNameSB.append(nameLowercase).append(numberSuffix);
+      String generatedUsername = userNameSB.toString();
+
+      if (!userNameSet.contains(generatedUsername)) {
+        userNameSet.add(generatedUsername);
+        totalUserNameGenerated += 1;
+      }
+    }
+    return new ArrayList<>(userNameSet);
+  }
+
+  private int getRandomFixedLengthInteger(int numDigits) {
+    int min = (int) Math.pow(10, numDigits - 1);
+    int max = ((int) Math.pow(10, numDigits)) - 1;
+    int randomNum = (int) (Math.random() * ((max - min) + 1)) + min;
+    return randomNum;
+  }
+
 }

@@ -514,30 +514,40 @@ public class UserManagementActor extends BaseActor {
       updateSkillWithEndoresmentCount(result);
       // loginId is used internally for checking the duplicate user
       SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
-      SystemSetting tncSystemSetting = systemSettingClient.getSystemSettingByField(getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),"tncConfig");
-      if(tncSystemSetting != null){
+      SystemSetting tncSystemSetting =
+          systemSettingClient.getSystemSettingByField(
+              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()), "tncConfig");
+      if (tncSystemSetting != null) {
         try {
-          Map<String,Object> tncCofigMap = mapper.readValue(tncSystemSetting.getValue(),Map.class);
+          Map<String, Object> tncCofigMap =
+              mapper.readValue(tncSystemSetting.getValue(), Map.class);
           String tncLatestVersion = (String) tncCofigMap.get("latestVersion");
-          result.put(JsonKey.TNC_LATEST_VERSION,tncLatestVersion);
+          result.put(JsonKey.TNC_LATEST_VERSION, tncLatestVersion);
           String tncUserAcceptedVersion = (String) result.get(JsonKey.TNC_ACCEPTED_VERSION);
-          if(StringUtils.isEmpty(tncUserAcceptedVersion) || !tncUserAcceptedVersion.equalsIgnoreCase(tncLatestVersion)){
-            result.put(JsonKey.PROMPT_TNC,true);
-          }else{
-            result.put(JsonKey.PROMPT_TNC,false);
+          if (StringUtils.isEmpty(tncUserAcceptedVersion)
+              || !tncUserAcceptedVersion.equalsIgnoreCase(tncLatestVersion)) {
+            result.put(JsonKey.PROMPT_TNC, true);
+          } else {
+            result.put(JsonKey.PROMPT_TNC, false);
           }
 
-          if(tncCofigMap.containsKey(tncLatestVersion)) {
+          if (tncCofigMap.containsKey(tncLatestVersion)) {
             String url = (String) ((Map) tncCofigMap.get(tncLatestVersion)).get(JsonKey.URL);
-            result.put(JsonKey.TNC_LATEST_VERSION_URL,url);
-          }else {
-            ProjectLogger.log("UserManagementActor:getUserProfileData: URL is not present in config");
+            result.put(JsonKey.TNC_LATEST_VERSION_URL, url);
+          } else {
+            ProjectLogger.log(
+                "UserManagementActor:getUserProfileData: URL is not present in config");
           }
-        }catch (Exception e){
-          ProjectLogger.log("UserManagementActor:getUserProfileData: Exception occurred during parse with error message = " + e.getMessage(), LoggerEnum.ERROR.name());
-          ProjectCommonException.throwServerErrorException(ResponseCode.errorConfigLoadParseString, ProjectUtil.formatMessage(ResponseCode.errorConfigLoadParseString.getErrorMessage(), new Object[]{"tnc"}));
+        } catch (Exception e) {
+          ProjectLogger.log(
+              "UserManagementActor:getUserProfileData: Exception occurred during parse with error message = "
+                  + e.getMessage(),
+              LoggerEnum.ERROR.name());
+          ProjectCommonException.throwServerErrorException(
+              ResponseCode.errorConfigLoadParseString,
+              ProjectUtil.formatMessage(
+                  ResponseCode.errorConfigLoadParseString.getErrorMessage(), new Object[] {"tnc"}));
         }
-
       }
 
       result.remove(JsonKey.LOGIN_ID);

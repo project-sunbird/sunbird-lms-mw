@@ -302,7 +302,7 @@ public class UserServiceImpl implements UserService {
 
   @SuppressWarnings("unchecked")
   @Override
-  public Map<String, Object> getUserByUserName(String userName) {
+  public Map<String, Object> getUserByUsername(String userName) {
     Response response =
         cassandraOperation.getRecordsByIndexedProperty(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), JsonKey.USERNAME, userName);
@@ -315,7 +315,7 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
-  public List<String> getEncryptedDataList(List<String> dataList) {
+  public List<String> getEncryptedList(List<String> dataList) {
     List<String> encryptedDataList = new ArrayList<>();
     for (String data : dataList) {
       String encData = "";
@@ -323,7 +323,7 @@ public class UserServiceImpl implements UserService {
         encData = encryptionService.encryptData(data);
       } catch (Exception e) {
         ProjectLogger.log(
-            "UserServiceImpl:getEncryptedDataList: exception occurred while encrypting data." + e);
+            "UserServiceImpl:getEncryptedDataList: Exception occurred with error message = " + e.getMessage());
       }
       if (StringUtils.isNotBlank(encData)) {
         encryptedDataList.add(encData);
@@ -365,16 +365,21 @@ public class UserServiceImpl implements UserService {
 
   @SuppressWarnings("unchecked")
   @Override
-  public List<Map<String, Object>> getEsUsersByFilters(Map<String, Object> filters) {
+  public List<Map<String, Object>> esSearchUserByFilters(Map<String, Object> filters) {
     SearchDTO searchDTO = new SearchDTO();
+
     List<String> list = new ArrayList<>();
     list.add(JsonKey.ID);
     list.add(JsonKey.USERNAME);
+
     searchDTO.setFields(list);
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
+
     Map<String, Object> esResult =
         ElasticSearchUtil.complexSearch(
             searchDTO, EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+
     return (List<Map<String, Object>>) esResult.get(JsonKey.CONTENT);
   }
+
 }

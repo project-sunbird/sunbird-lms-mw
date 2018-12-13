@@ -12,7 +12,7 @@ import org.sunbird.learner.util.OTPUtil;
 
 /** @author Rahul Kumar */
 @ActorConfig(
-  tasks = {"generateOTP"},
+  tasks = {"generateOTP", "verifyOTP"},
   asyncTasks = {}
 )
 public class OTPActor extends BaseActor {

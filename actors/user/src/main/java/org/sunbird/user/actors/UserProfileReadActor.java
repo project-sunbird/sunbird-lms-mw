@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -41,6 +43,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
+import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 
@@ -166,6 +169,43 @@ public class UserProfileReadActor extends BaseActor {
       UserUtility.decryptUserDataFrmES(result);
       updateSkillWithEndoresmentCount(result);
       // loginId is used internally for checking the duplicate user
+      SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
+      SystemSetting tncSystemSetting =
+              systemSettingClient.getSystemSettingByField(
+                      getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()), "tncConfig");
+      if (tncSystemSetting != null) {
+        try {
+          ObjectMapper mapper = new ObjectMapper();
+          Map<String, Object> tncCofigMap =
+                  mapper.readValue(tncSystemSetting.getValue(), Map.class);
+          String tncLatestVersion = (String) tncCofigMap.get("latestVersion");
+          result.put(JsonKey.TNC_LATEST_VERSION, tncLatestVersion);
+          String tncUserAcceptedVersion = (String) result.get(JsonKey.TNC_ACCEPTED_VERSION);
+          if (StringUtils.isEmpty(tncUserAcceptedVersion)
+                  || !tncUserAcceptedVersion.equalsIgnoreCase(tncLatestVersion)) {
+            result.put(JsonKey.PROMPT_TNC, true);
+          } else {
+            result.put(JsonKey.PROMPT_TNC, false);
+          }
+
+          if (tncCofigMap.containsKey(tncLatestVersion)) {
+            String url = (String) ((Map) tncCofigMap.get(tncLatestVersion)).get(JsonKey.URL);
+            result.put(JsonKey.TNC_LATEST_VERSION_URL, url);
+          } else {
+            ProjectLogger.log(
+                    "UserManagementActor:getUserProfileData: URL is not present in config");
+          }
+        } catch (Exception e) {
+          ProjectLogger.log(
+                  "UserManagementActor:getUserProfileData: Exception occurred during parse with error message = "
+                          + e.getMessage(),
+                  LoggerEnum.ERROR.name());
+          ProjectCommonException.throwServerErrorException(
+                  ResponseCode.errorConfigLoadParseString,
+                  ProjectUtil.formatMessage(
+                          ResponseCode.errorConfigLoadParseString.getErrorMessage(), new Object[] {"tnc"}));
+        }
+      }
       result.remove(JsonKey.LOGIN_ID);
       result.remove(JsonKey.ENC_EMAIL);
       result.remove(JsonKey.ENC_PHONE);

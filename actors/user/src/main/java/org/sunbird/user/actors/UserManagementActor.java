@@ -752,21 +752,31 @@ public class UserManagementActor extends BaseActor {
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
+  @SuppressWarnings("unchecked")
   private void validateUserFrameworkData(
       Map<String, Object> userRequestMap, Map<String, Object> userDbRecord) {
     if (userRequestMap.containsKey(JsonKey.FRAMEWORK)) {
+
       List<String> frameworkFields =
           DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.FIELDS);
       List<String> frameworkMandatoryFields =
           DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.MANDATORY_FIELDS);
+
       userRequestValidator.validateMandatoryFrameworkFields(
           userRequestMap, frameworkFields, frameworkMandatoryFields);
+
+      /*
       Map<String, Object> rootOrgMap =
           Util.getOrgDetails((String) userDbRecord.get(JsonKey.ROOT_ORG_ID));
+
       String hashtagId = (String) rootOrgMap.get(JsonKey.HASHTAGID);
-      String frameworkId = getFrameworkId(hashtagId);
+      */
+      Map<String, Object> framework = (Map<String, Object>) userRequestMap.get(JsonKey.FRAMEWORK);
+      String frameworkId = (String) framework.get(JsonKey.ID);
+
       Map<String, List<Map<String, String>>> frameworkCachedValue =
           getFrameworkDetails(frameworkId);
+
       userRequestValidator.validateFrameworkCategoryValues(userRequestMap, frameworkCachedValue);
     }
   }

@@ -40,7 +40,6 @@ public class GenerateUserNameTest {
     pattern = Pattern.compile(validatorRegex);
     boolean flag = true;
     for (int i = 0; i < result.size(); i++) {
-      System.out.println(result.get(i));
       Matcher matcher = pattern.matcher(result.get(i));
       if (!matcher.matches()) {
         flag = false;

@@ -292,7 +292,7 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
-  public List<String> generateUsernames(String name) {
+  public List<String> generateUsernames(String name, List<String> excludedUsernames) {
     if (name == null || name.isEmpty()) return null;
     int numOfDigitsToAppend =
         Integer.valueOf(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USERNAME_NUM_DIGITS).trim());
@@ -306,7 +306,8 @@ public class UserServiceImpl implements UserService {
       userNameSB.append(nameLowercase).append(numberSuffix);
       String generatedUsername = userNameSB.toString();
 
-      if (!userNameSet.contains(generatedUsername)) {
+      if (!userNameSet.contains(generatedUsername)
+          && !excludedUsernames.contains(generatedUsername)) {
         userNameSet.add(generatedUsername);
         totalUserNameGenerated += 1;
       }
@@ -320,5 +321,4 @@ public class UserServiceImpl implements UserService {
     int randomNum = (int) (Math.random() * ((max - min) + 1)) + min;
     return randomNum;
   }
-
 }

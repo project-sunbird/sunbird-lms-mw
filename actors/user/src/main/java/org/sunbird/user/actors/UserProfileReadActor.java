@@ -80,7 +80,7 @@ public class UserProfileReadActor extends BaseActor {
         getUserDetailsByLoginId(request);
         break;
       default:
-        onReceiveUnsupportedOperation("ReadUserDetailsActor");
+        onReceiveUnsupportedOperation("UserProfileReadActor");
     }
   }
 

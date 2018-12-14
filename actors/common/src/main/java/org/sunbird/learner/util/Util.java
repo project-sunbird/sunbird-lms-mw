@@ -1481,6 +1481,7 @@ public final class Util {
       for (String field : completeProfileVisibilityMap.keySet()) {
         if (JsonKey.PRIVATE.equalsIgnoreCase(completeProfileVisibilityMap.get(field))) {
           privateFieldsMap.put(field, userMap.get(field));
+          userMap.remove(field);
         }
       }
       ElasticSearchUtil.upsertData(

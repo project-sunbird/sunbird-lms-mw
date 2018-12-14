@@ -94,7 +94,7 @@ public class ContentSearchUtil {
                 return resultMap;
               } else {
                 ProjectLogger.log(
-                    logMsgPrefix + "Search content failed. Error Response " + response.getBody());
+                    logMsgPrefix + "Search content failed. Error response = " + response.getBody());
                 return null;
               }
             } catch (Exception e) {

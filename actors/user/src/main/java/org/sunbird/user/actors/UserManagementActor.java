@@ -412,12 +412,11 @@ public class UserManagementActor extends BaseActor {
                 return;
               }
             }
-          } else {
-            throw new ProjectCommonException(
-                ResponseCode.errorNoFrameworkFound.getErrorCode(),
-                ResponseCode.errorNoFrameworkFound.getErrorMessage(),
-                ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
           }
+          throw new ProjectCommonException(
+              ResponseCode.errorNoFrameworkFound.getErrorCode(),
+              ResponseCode.errorNoFrameworkFound.getErrorMessage(),
+              ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
         }
       }
     }

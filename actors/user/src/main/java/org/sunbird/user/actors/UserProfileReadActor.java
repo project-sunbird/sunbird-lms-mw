@@ -84,7 +84,7 @@ public class UserProfileReadActor extends BaseActor {
         getUserDetailsByLoginId(request);
         break;
       case "getUserByKey":
-        getUserDetailsByKey(request);
+        getUserByKey(request);
         break;
       default:
         onReceiveUnsupportedOperation("UserProfileReadActor");
@@ -688,7 +688,7 @@ public class UserProfileReadActor extends BaseActor {
     }
   }
 
-  private void getUserDetailsByKey(Request actorMessage) {
+  private void getUserByKey(Request actorMessage) {
     String key = (String) actorMessage.getRequest().get(JsonKey.KEY);
     String value = (String) actorMessage.getRequest().get(JsonKey.VALUE);
     String encryptedValue = null;
@@ -787,6 +787,5 @@ public class UserProfileReadActor extends BaseActor {
       response.put(JsonKey.RESPONSE, result);
     }
     sender().tell(response, self());
-    return;
   }
 }

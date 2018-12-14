@@ -287,9 +287,8 @@ public class OrganisationManagementActor extends BaseActor {
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
       validateChannelIdForRootOrg(request);
-      if (request.containsKey(JsonKey.CHANNEL)) {
-        validateChannel(request);
-      }
+      validateChannelIdForSubOrg(request);
+      validateChannel(request);
 
       String relation = (String) request.get(JsonKey.RELATION);
       request.remove(JsonKey.RELATION);
@@ -323,7 +322,8 @@ public class OrganisationManagementActor extends BaseActor {
       }
       String externalId = (String) request.get(JsonKey.EXTERNAL_ID);
       if (externalId != null) {
-        if (!validateExternalIdUniqueness(externalId.toLowerCase(), null)) {
+        String channel = (String) request.get(JsonKey.CHANNEL);
+        if (!validateChannelExternalIdUniqueness(channel, externalId.toLowerCase(), null)) {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.errorDuplicateEntry,
               MessageFormat.format(
@@ -671,6 +671,18 @@ public class OrganisationManagementActor extends BaseActor {
         sender().tell(exception, self());
         return;
       }
+
+      //fetch channel from org, if channel is not passed
+      if(!request.containsKey(JsonKey.CHANNEL)) {
+        String channelFromDB = (String) orgDBO.get(JsonKey.CHANNEL);
+        if(StringUtils.isBlank(channelFromDB)) {
+          String rootOrgId = (String) orgDBO.get(JsonKey.ROOT_ORG_ID);
+          Map rootOrg = Util.getOrgDetails(rootOrgId);
+          channelFromDB = (String) rootOrg.get(JsonKey.CHANNEL);
+        }
+        request.put(JsonKey.CHANNEL, channelFromDB);
+      }
+
       if (request.containsKey(JsonKey.LOCATION_IDS)) {
         validateLocationIdsForUpdate(
             (List<String>) orgDBO.get(JsonKey.LOCATION_IDS),
@@ -757,7 +769,8 @@ public class OrganisationManagementActor extends BaseActor {
       }
       String externalId = (String) request.get(JsonKey.EXTERNAL_ID);
       if (externalId != null) {
-        if (!validateExternalIdUniqueness(
+        String channel = (String) request.get(JsonKey.CHANNEL);
+        if (!validateChannelExternalIdUniqueness(channel,
             externalId.toLowerCase(), (String) request.get(JsonKey.ORGANISATION_ID))) {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.errorDuplicateEntry,
@@ -1374,6 +1387,18 @@ public class OrganisationManagementActor extends BaseActor {
     return false;
   }
 
+  /** validates whether the channelId is present for the child organisation */
+  public void validateChannelIdForSubOrg(Map<String, Object> request) {
+    if (null == request.get(JsonKey.IS_ROOT_ORG) || !(Boolean) request.get(JsonKey.IS_ROOT_ORG)) {
+      if (StringUtils.isBlank((String) request.get(JsonKey.CHANNEL))) {
+        throw new ProjectCommonException(
+                ResponseCode.channelIdRequiredForSubOrg.getErrorCode(),
+                ResponseCode.channelIdRequiredForSubOrg.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
+  }
+
   /** validates if the relation is cyclic */
   public void validateCyclicRelationForOrganisation(Map<String, Object> request) {
     if (!StringUtils.isBlank((String) request.get(JsonKey.PARENT_ORG_ID))
@@ -1681,6 +1706,13 @@ public class OrganisationManagementActor extends BaseActor {
     return validateFieldUniqueness(JsonKey.EXTERNAL_ID, externalId, orgId);
   }
 
+  private boolean validateChannelExternalIdUniqueness(String channel, String externalId, String orgId) {
+    Map<String, Object> compositeMap = new HashMap<String, Object>();
+    compositeMap.put(JsonKey.CHANNEL, channel);
+    compositeMap.put(JsonKey.EXTERNAL_ID, externalId);
+    return validateCompositeFieldUniqueness(compositeMap, orgId);
+  }
+
   private boolean validateFieldUniqueness(String key, String value, String orgId) {
     if (value != null) {
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
@@ -1704,6 +1736,31 @@ public class OrganisationManagementActor extends BaseActor {
       }
     }
     return true;
+  }
+
+  private boolean validateCompositeFieldUniqueness(Map<String, Object> compositeMap, String orgId) {
+    if (MapUtils.isNotEmpty(compositeMap)) {
+      Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+      Response result =
+              cassandraOperation.getRecordsByProperties(
+                      orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), compositeMap);
+      List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      if ((list.isEmpty())) {
+        return true;
+      } else {
+        if (orgId == null) {
+          return false;
+        }
+        Map<String, Object> data = list.get(0);
+        String id = (String) data.get(JsonKey.ID);
+        if (id.equalsIgnoreCase(orgId)) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+    }
+    return false;
   }
 
   /**

@@ -229,18 +229,6 @@ public class UserUtil {
     }
   }
 
-  public static void checkUserExistOrNot(User user) {
-    Map<String, Object> searchQueryMap = new HashMap<>();
-    // loginId is encrypted in our application
-    searchQueryMap.put(JsonKey.LOGIN_ID, getEncryptedData(user.getLoginId()));
-    if (CollectionUtils.isNotEmpty(searchUser(searchQueryMap))) {
-      ProjectCommonException.throwClientErrorException(
-          ResponseCode.userAlreadyExists,
-          ProjectUtil.formatMessage(
-              ResponseCode.userAlreadyExists.getErrorMessage(), JsonKey.USERNAME));
-    }
-  }
-
   public static String getEncryptedData(String value) {
     try {
       return encryptionService.encryptData(value);
@@ -250,30 +238,6 @@ public class UserUtil {
           ResponseCode.userDataEncryptionError.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
-  }
-
-  @SuppressWarnings("unchecked")
-  private static List<User> searchUser(Map<String, Object> searchQueryMap) {
-    List<User> userList = new ArrayList<>();
-    Map<String, Object> searchRequestMap = new HashMap<>();
-    searchRequestMap.put(JsonKey.FILTERS, searchQueryMap);
-    SearchDTO searchDto = Util.createSearchDto(searchRequestMap);
-    String[] types = {ProjectUtil.EsType.user.getTypeName()};
-    Map<String, Object> result =
-        ElasticSearchUtil.complexSearch(
-            searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
-    if (MapUtils.isNotEmpty(result)) {
-      List<Map<String, Object>> searchResult =
-          (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-      if (CollectionUtils.isNotEmpty(searchResult)) {
-        userList =
-            searchResult
-                .stream()
-                .map(s -> mapper.convertValue(s, User.class))
-                .collect(Collectors.toList());
-      }
-    }
-    return userList;
   }
 
   public static List<Map<String, String>> copyAndConvertExternalIdsToLower(

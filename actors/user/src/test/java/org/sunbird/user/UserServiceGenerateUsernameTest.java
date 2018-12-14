@@ -10,32 +10,32 @@ import org.junit.Test;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 
-public class GenerateUserNameTest {
+public class UserServiceGenerateUsernameTest {
 
-  private static String asciiName = "Some Random Name";
-  private static String nonAsciiName = "कोई अज्ञात नाम";
+  private static String englishName = "Some Random Name";
+  private static String hindiName = "कोई अज्ञात नाम";
   private static Pattern pattern;
   private static String userAsciiNameRegex = "(^([a-z])+[0-9]{4})";
   private static String userNonAsciiNameRegex = "(^(कोईअज्ञातनाम)+[0-9]{4})";
   private static UserService userService = new UserServiceImpl();
 
   @Test
-  public void generateUserNameForASCIIStringSuccess() {
-    assertTrue(userNameValidation(asciiName, userAsciiNameRegex));
+  public void testGenerateUsernamesSuccessWithEnglishName() {
+    assertTrue(performTest(englishName, userAsciiNameRegex));
   }
 
   @Test
-  public void generateUserNameForEmptyNameFailure() {
+  public void testGenerateUsernamesFailureWithBlankName() {
     List<String> result = userService.generateUsernames("", new ArrayList<String>());
     assertTrue(result == null);
   }
 
   @Test
-  public void generateUserNameForNonASCIISuccess() {
-    assertTrue(userNameValidation(nonAsciiName, userNonAsciiNameRegex));
+  public void testGenerateUsernamesSuccessWithHindiName() {
+    assertTrue(performTest(hindiName, userNonAsciiNameRegex));
   }
 
-  private boolean userNameValidation(String name, String validatorRegex) {
+  private boolean performTest(String name, String validatorRegex) {
     List<String> result = userService.generateUsernames(name, new ArrayList<String>());
     pattern = Pattern.compile(validatorRegex);
     boolean flag = true;

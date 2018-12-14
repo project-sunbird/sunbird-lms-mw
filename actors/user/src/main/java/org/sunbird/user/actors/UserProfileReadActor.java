@@ -693,6 +693,9 @@ public class UserProfileReadActor extends BaseActor {
     if (tncSystemSetting != null) {
       try {
         ObjectMapper mapper = new ObjectMapper();
+        ProjectLogger.log(
+            "UserManagementActor:updateTncInfo: value" + tncSystemSetting.getValue(),
+            LoggerEnum.INFO.name());
         Map<String, Object> tncConfigMap = mapper.readValue(tncSystemSetting.getValue(), Map.class);
         ProjectLogger.log(
             "UserManagementActor:updateTncInfo: tncConfigMap" + tncConfigMap,

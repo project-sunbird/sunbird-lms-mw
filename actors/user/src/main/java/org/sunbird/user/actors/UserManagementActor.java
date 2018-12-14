@@ -164,6 +164,7 @@ public class UserManagementActor extends BaseActor {
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
+  @SuppressWarnings("unchecked")
   private void validateUserFrameworkData(
       Map<String, Object> userRequestMap, Map<String, Object> userDbRecord) {
     if (userRequestMap.containsKey(JsonKey.FRAMEWORK)) {
@@ -176,7 +177,9 @@ public class UserManagementActor extends BaseActor {
       Map<String, Object> rootOrgMap =
           Util.getOrgDetails((String) userDbRecord.get(JsonKey.ROOT_ORG_ID));
       String hashtagId = (String) rootOrgMap.get(JsonKey.HASHTAGID);
-      String frameworkId = getFrameworkId(hashtagId);
+      Map<String, Object> framework = (Map<String, Object>) userRequestMap.get(JsonKey.FRAMEWORK);
+      String frameworkId = (String) framework.get(JsonKey.ID);
+      verifyFrameworkId(hashtagId, frameworkId);
       Map<String, List<Map<String, String>>> frameworkCachedValue =
           getFrameworkDetails(frameworkId);
       userRequestValidator.validateFrameworkCategoryValues(userRequestMap, frameworkCachedValue);
@@ -387,24 +390,37 @@ public class UserManagementActor extends BaseActor {
   }
 
   @SuppressWarnings("unchecked")
-  public static String getFrameworkId(String hashtagId) {
-    String frameworkId = DataCacheHandler.getHashtagIdFrameworkIdMap().get(hashtagId);
-    if (frameworkId == null) {
+  public static void verifyFrameworkId(String hashtagId, String frameworkId) {
+    List<String> frameworks = DataCacheHandler.getHashtagIdFrameworkIdMap().get(hashtagId);
+    if (frameworks != null && frameworks.contains(frameworkId)) {
+      return;
+    } else {
       Map<String, Object> resultMap = ContentStoreUtil.readChannel(hashtagId);
       Map<String, Object> results = (Map<String, Object>) resultMap.get(JsonKey.RESULT);
       if (results != null) {
         Map<String, Object> channelDetails = (Map<String, Object>) results.get(JsonKey.CHANNEL);
         if (channelDetails != null) {
-          frameworkId = (String) channelDetails.get(JsonKey.DEFAULT_FRAMEWORK);
-          if (frameworkId != null) {
-            DataCacheHandler.updateHashtagIdFrameworkIdMap(hashtagId, frameworkId);
-            return frameworkId;
+          List<Map<String, Object>> frameworkList =
+              (List<Map<String, Object>>) channelDetails.get(JsonKey.FRAMEWORKS);
+          if (!CollectionUtils.isEmpty(frameworkList)) {
+            for (Map<String, Object> framework : frameworkList) {
+              if (framework.get(JsonKey.IDENTIFIER).equals(frameworkId)) {
+                if (frameworks == null) {
+                  frameworks = new ArrayList<>();
+                }
+                frameworks.add(frameworkId);
+                DataCacheHandler.updateHashtagIdFrameworkIdMap(hashtagId, frameworks);
+                return;
+              }
+            }
           }
+          throw new ProjectCommonException(
+              ResponseCode.errorNoFrameworkFound.getErrorCode(),
+              ResponseCode.errorNoFrameworkFound.getErrorMessage(),
+              ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
         }
       }
-      ProjectCommonException.throwClientErrorException(ResponseCode.errorNoFrameworkFound);
     }
-    return frameworkId;
   }
 
   public static Map<String, List<Map<String, String>>> getFrameworkDetails(String frameworkId) {

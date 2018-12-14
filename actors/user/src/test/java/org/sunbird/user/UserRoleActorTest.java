@@ -51,8 +51,6 @@ import scala.concurrent.duration.Duration;
   ServiceFactory.class,
   RoleDaoImpl.class,
   BaseMWService.class,
-  ActorSelection.class,
-  ActorRef.class,
   RequestRouter.class,
   InterServiceCommunicationFactory.class,
   ElasticSearchUtil.class,
@@ -64,15 +62,11 @@ import scala.concurrent.duration.Duration;
 public class UserRoleActorTest {
 
   private ActorSystem system = ActorSystem.create("system");
-
-  private final Props props = Props.create(UserRoleActor.class);
-  private CassandraOperationImpl cassandraOperation;
-  private SearchDTO searchDTO;
+  private static final Props props = Props.create(UserRoleActor.class);
+  private static SearchDTO searchDTO;
   private static InterServiceCommunication interServiceCommunication =
       Mockito.mock(InterServiceCommunication.class);
-
-  private Response response = Mockito.mock(Response.class);
-  private static DecryptionService decryptionService;
+  private static Response response = Mockito.mock(Response.class);
 
   @Before
   public void beforeEachTest() {
@@ -85,101 +79,91 @@ public class UserRoleActorTest {
     PowerMockito.mockStatic(ElasticSearchUtil.class);
     PowerMockito.mockStatic(Util.class);
     PowerMockito.mockStatic(UserOrgDaoImpl.class);
-
+    when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
     RoleDaoImpl roleDao = Mockito.mock(RoleDaoImpl.class);
     when(RoleDaoImpl.getInstance()).thenReturn(roleDao);
-
     UserOrgDao userOrgDao = Mockito.mock(UserOrgDaoImpl.class);
     when(UserOrgDaoImpl.getInstance()).thenReturn(userOrgDao);
     when(userOrgDao.updateUserOrg(Mockito.anyObject())).thenReturn(getSuccessResponse());
-    when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
-
-    ActorSelection actorSelection = Mockito.mock(ActorSelection.class);
     CompletionStage completionStage = Mockito.mock(CompletionStage.class);
+    ActorSelection actorSelection = Mockito.mock(ActorSelection.class);
     when(BaseMWService.getRemoteRouter(Mockito.anyString())).thenReturn(actorSelection);
     when(actorSelection.resolveOneCS(Duration.create(Mockito.anyLong(), "seconds")))
         .thenReturn(completionStage);
-
     ActorRef actorRef = Mockito.mock(ActorRef.class);
     when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
-
     searchDTO = Mockito.mock(SearchDTO.class);
     when(Util.createSearchDto(Mockito.anyMap())).thenReturn(searchDTO);
-
-    cassandraOperation = mock(CassandraOperationImpl.class);
-    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
   }
 
   @Test
   public void testGetUserRoleSuccess() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getCassandraResponse());
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.GET_ROLES.getValue());
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
+    Assert.assertTrue(testScenario(true, response, true, true, true, null));
   }
 
   @Test
   public void testAssignRolesSuccessWithValidOrgId() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    mockGetOrgResponse(true);
-    Map<String, Object> map = Mockito.mock(Map.class);
-    when(interServiceCommunication.getResponse(Mockito.anyObject(), Mockito.anyObject()))
-        .thenReturn(response);
-    when(response.get(Mockito.anyString())).thenReturn(map);
-    subject.tell(getRequestObj(true), probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
+    Assert.assertTrue(testScenario(false, response, true, true, true, null));
   }
 
   @Test
   public void testAssignRolesSuccessWithoutOrgId() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    Map<String, Object> map = Mockito.mock(Map.class);
-    when(interServiceCommunication.getResponse(Mockito.anyObject(), Mockito.anyObject()))
-        .thenReturn(response);
-    when(response.get(Mockito.anyString())).thenReturn(map);
-    mockGetOrgResponse(true);
-    decryptionService = Mockito.mock(DecryptionService.class);
-    when(decryptionService.decryptData(Mockito.anyMap())).thenReturn(getOrganisationsMap());
-    subject.tell(getRequestObj(false), probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
+    Assert.assertTrue(testScenario(false, response, true, false, true, null));
   }
 
   @Test
   public void testAssignRolesFailure() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    mockGetOrgResponse(false);
-    subject.tell(getRequestObj(true), probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertTrue(res.getResponseCode() == 400);
+    Assert.assertTrue(testScenario(false, null, false, true, false, null));
   }
 
   @Test
   public void testAssignRolesFailureWithInvalidOrgId() {
+    Assert.assertTrue(
+        testScenario(false, null, true, true, false, ResponseCode.invalidParameterValue));
+  }
+
+  private boolean testScenario(
+      boolean isGetUserRoles,
+      Response response,
+      boolean isResponseRequired,
+      boolean isObjRequred,
+      boolean isSuccess,
+      ResponseCode errorResponse) {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-    when(interServiceCommunication.getResponse(Mockito.anyObject(), Mockito.anyObject()))
-        .thenReturn(null);
-    mockGetOrgResponse(true);
-    subject.tell(getRequestObj(true), probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertTrue(res.getCode() == ResponseCode.invalidParameterValue.getErrorCode());
+
+    if (isGetUserRoles) {
+      CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
+      when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+      when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
+          .thenReturn(getCassandraResponse());
+
+      Request reqObj = new Request();
+      reqObj.setOperation(ActorOperations.GET_ROLES.getValue());
+      subject.tell(reqObj, probe.getRef());
+    } else {
+      DecryptionService decryptionService = Mockito.mock(DecryptionService.class);
+      when(decryptionService.decryptData(Mockito.anyMap())).thenReturn(getOrganisationsMap());
+
+      when(interServiceCommunication.getResponse(Mockito.anyObject(), Mockito.anyObject()))
+          .thenReturn(response);
+      if (response != null) when(response.get(Mockito.anyString())).thenReturn(new HashMap<>());
+
+      mockGetOrgResponse(isResponseRequired);
+      subject.tell(getRequestObj(isObjRequred), probe.getRef());
+    }
+    if (isSuccess) {
+      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+      return null != res && res.getResponseCode() == ResponseCode.OK;
+    } else {
+      ProjectCommonException res =
+          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+
+      if (errorResponse != null) {
+        return res.getCode().equals(errorResponse.getErrorCode());
+      } else return res.getResponseCode() == 400;
+    }
   }
 
   private Map<String, Object> getOrganisationsMap() {
@@ -204,7 +188,9 @@ public class UserRoleActorTest {
     List<Map<String, Object>> orgList = new ArrayList<>();
     orgList.add(orgMap);
     innerMap.put(JsonKey.ORGANISATIONS, orgList);
-    if (isSuccess) content.add(innerMap);
+    if (isSuccess) {
+      content.add(innerMap);
+    }
     response.put(JsonKey.CONTENT, content);
     return response;
   }

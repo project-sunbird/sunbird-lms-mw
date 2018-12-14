@@ -677,7 +677,7 @@ public class OrganisationManagementActor extends BaseActor {
         String channelFromDB = (String) orgDBO.get(JsonKey.CHANNEL);
         if(StringUtils.isBlank(channelFromDB)) {
           String rootOrgId = (String) orgDBO.get(JsonKey.ROOT_ORG_ID);
-          Map rootOrg = Util.getOrgDetails(rootOrgId);
+          Map<String,Object> rootOrg = Util.getOrgDetails(rootOrgId);
           channelFromDB = (String) rootOrg.get(JsonKey.CHANNEL);
         }
         request.put(JsonKey.CHANNEL, channelFromDB);

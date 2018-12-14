@@ -182,7 +182,6 @@ public class UserManagementActor extends BaseActor {
       verifyFrameworkId(hashtagId, frameworkId);
       Map<String, List<Map<String, String>>> frameworkCachedValue =
           getFrameworkDetails(frameworkId);
-
       userRequestValidator.validateFrameworkCategoryValues(userRequestMap, frameworkCachedValue);
     }
   }

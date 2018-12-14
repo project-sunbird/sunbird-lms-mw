@@ -14,7 +14,7 @@ public class UserServiceGenerateUsernameTest {
 
   private static String englishName = "Some Random Name";
   private static String hindiName = "कोई अज्ञात नाम";
-  private static String teluguName = "Ē teliyani pēru";
+  private static String teluguName = "సుధీర్";
   private static String tamilName = "எந்த அறியப்படாத பெயர்";
   private static Pattern pattern;
   private static String userNameValidatorRegex = "(^([a-z])+[0-9]{4})";

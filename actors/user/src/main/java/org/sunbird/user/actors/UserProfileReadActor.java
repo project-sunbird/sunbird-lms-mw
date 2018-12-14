@@ -720,10 +720,7 @@ public class UserProfileReadActor extends BaseActor {
                 "UserManagementActor:updateTncInfo: Exception occurred with error message = "
                         + e.getMessage(),
                 LoggerEnum.ERROR.name());
-        ProjectCommonException.throwServerErrorException(
-                ResponseCode.errorConfigLoadParseString,
-                ProjectUtil.formatMessage(
-                        ResponseCode.errorConfigLoadParseString.getErrorMessage(), new Object[] {"tnc"}));
+        ProjectCommonException.throwServerErrorException(ResponseCode.SERVER_ERROR);
       }
     }
   }

@@ -168,6 +168,9 @@ public class UserManagementActor extends BaseActor {
   private void validateUserFrameworkData(
       Map<String, Object> userRequestMap, Map<String, Object> userDbRecord) {
     if (userRequestMap.containsKey(JsonKey.FRAMEWORK)) {
+      Map<String, Object> framework = (Map<String, Object>) userRequestMap.get(JsonKey.FRAMEWORK);
+      String frameworkId = (String) framework.remove(JsonKey.ID);
+      userRequestMap.put(JsonKey.FRAMEWORK, framework);
       List<String> frameworkFields =
           DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.FIELDS);
       List<String> frameworkMandatoryFields =
@@ -177,8 +180,7 @@ public class UserManagementActor extends BaseActor {
       Map<String, Object> rootOrgMap =
           Util.getOrgDetails((String) userDbRecord.get(JsonKey.ROOT_ORG_ID));
       String hashtagId = (String) rootOrgMap.get(JsonKey.HASHTAGID);
-      Map<String, Object> framework = (Map<String, Object>) userRequestMap.get(JsonKey.FRAMEWORK);
-      String frameworkId = (String) framework.get(JsonKey.ID);
+
       verifyFrameworkId(hashtagId, frameworkId);
       Map<String, List<Map<String, String>>> frameworkCachedValue =
           getFrameworkDetails(frameworkId);

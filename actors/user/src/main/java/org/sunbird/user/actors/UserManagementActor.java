@@ -401,11 +401,9 @@ public class UserManagementActor extends BaseActor {
         if (channelDetails != null) {
           List<Map<String, Object>> frameworkList =
               (List<Map<String, Object>>) channelDetails.get(JsonKey.FRAMEWORKS);
-          boolean isFrameworkPresent = false;
           if (frameworkList != null) {
             for (Map<String, Object> framework : frameworkList) {
               if (framework.get(JsonKey.IDENTIFIER).equals(frameworkId)) {
-                isFrameworkPresent = true;
                 if (frameworks == null) {
                   frameworks = new ArrayList<>();
                 }
@@ -414,7 +412,7 @@ public class UserManagementActor extends BaseActor {
                 break;
               }
             }
-          } else if (!isFrameworkPresent) {
+          } else {
             throw new ProjectCommonException(
                 ResponseCode.errorNoFrameworkFound.getErrorCode(),
                 ResponseCode.errorNoFrameworkFound.getErrorMessage(),

@@ -1,17 +1,13 @@
 package org.sunbird.learner.util;
 
-import akka.dispatch.ExecutionContexts;
-import akka.dispatch.Mapper;
-import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.JsonNode;
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.request.BaseRequest;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
 import javax.ws.rs.core.MediaType;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHeaders;
 import org.json.JSONArray;
@@ -22,6 +18,14 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.RestUtil;
+
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.JsonNode;
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.request.BaseRequest;
+
+import akka.dispatch.ExecutionContexts;
+import akka.dispatch.Mapper;
 import scala.concurrent.Future;
 
 /** @author Mahesh Kumar Gangula */
@@ -54,14 +58,15 @@ public class ContentSearchUtil {
 
   public static Future<Map<String, Object>> searchContent(
       String urlQueryString, String queryRequestBody, Map<String, String> headers) {
+    String logMsgPrefix = "ContentSearchUtil:searchContent: ";
+
     Unirest.clearDefaultHeaders();
     String urlString =
         StringUtils.isNotBlank(urlQueryString)
             ? contentSearchURL + urlQueryString
             : contentSearchURL;
     ProjectLogger.log(
-        "ContentSearchUtil:searchContent Making content search call to = " + urlString,
-        LoggerEnum.INFO);
+        logMsgPrefix + "Making content search call to = " + urlString, LoggerEnum.INFO);
     BaseRequest request =
         Unirest.post(urlString).headers(getUpdatedHeaders(headers)).body(queryRequestBody);
     Future<HttpResponse<JsonNode>> response = RestUtil.executeAsync(request);
@@ -78,10 +83,7 @@ public class ContentSearchUtil {
                 resultMap.remove(JsonKey.CONTENT);
                 resultMap.put(JsonKey.CONTENTS, contents);
                 ProjectLogger.log(
-                    "ContentSearchUtil:searchContent requestBody = "
-                        + queryRequestBody
-                        + " content = "
-                        + contents,
+                    logMsgPrefix + "requestBody = " + queryRequestBody + " content = " + contents,
                     LoggerEnum.INFO.name());
                 String resmsgId = RestUtil.getFromResponse(response, "params.resmsgid");
                 String apiId = RestUtil.getFromResponse(response, "id");
@@ -91,9 +93,12 @@ public class ContentSearchUtil {
                 resultMap.put(JsonKey.PARAMS, param);
                 return resultMap;
               } else {
+                ProjectLogger.log(
+                    logMsgPrefix + "Search content failed. Error response = " + response.getBody());
                 return null;
               }
             } catch (Exception e) {
+              ProjectLogger.log(logMsgPrefix + "Exception occurred with error message = " + e.getMessage(), e);
               return null;
             }
           }

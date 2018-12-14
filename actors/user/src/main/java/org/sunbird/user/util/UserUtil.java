@@ -429,9 +429,6 @@ public class UserUtil {
     // creation
     userMap.put(JsonKey.PROFILE_VISIBILITY, new HashMap<String, String>());
     userMap.put(JsonKey.IS_DELETED, false);
-    // create loginId to ensure uniqueness for combination of userName and channel
-    String loginId = Util.getLoginId(userMap);
-    userMap.put(JsonKey.LOGIN_ID, loginId);
     userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
 
@@ -446,6 +443,9 @@ public class UserUtil {
         userName = getUsername(name);
         if (StringUtils.isNotBlank(userName)) {
           userMap.put(JsonKey.USERNAME, userName);
+          // create loginId to ensure uniqueness for combination of userName and channel
+          String loginId = Util.getLoginId(userMap);
+          userMap.put(JsonKey.LOGIN_ID, loginId);
         }
       }
     }

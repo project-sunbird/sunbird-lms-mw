@@ -1025,27 +1025,36 @@ public class UserManagementActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   public static void verifyFrameworkId(String hashtagId, String frameworkId) {
-
-    Map<String, Object> resultMap = ContentStoreUtil.readChannel(hashtagId);
-    Map<String, Object> results = (Map<String, Object>) resultMap.get(JsonKey.RESULT);
-    if (results != null) {
-      Map<String, Object> channelDetails = (Map<String, Object>) results.get(JsonKey.CHANNEL);
-      if (channelDetails != null) {
-        List<Map<String, Object>> frameworkList =
-            (List<Map<String, Object>>) channelDetails.get(JsonKey.FRAMEWORKS);
-        boolean isFrameworkPresent = false;
-        if (frameworkList != null) {
-          for (Map<String, Object> framework : frameworkList) {
-            if (framework.get(JsonKey.IDENTIFIER).equals(frameworkId)) {
-              isFrameworkPresent = true;
-              break;
+    List<String> frameworks = DataCacheHandler.getHashtagIdFrameworkIdMap().get(hashtagId);
+    if (frameworks != null && frameworks.contains(frameworkId)) {
+      return;
+    } else {
+      Map<String, Object> resultMap = ContentStoreUtil.readChannel(hashtagId);
+      Map<String, Object> results = (Map<String, Object>) resultMap.get(JsonKey.RESULT);
+      if (results != null) {
+        Map<String, Object> channelDetails = (Map<String, Object>) results.get(JsonKey.CHANNEL);
+        if (channelDetails != null) {
+          List<Map<String, Object>> frameworkList =
+              (List<Map<String, Object>>) channelDetails.get(JsonKey.FRAMEWORKS);
+          boolean isFrameworkPresent = false;
+          if (frameworkList != null) {
+            for (Map<String, Object> framework : frameworkList) {
+              if (framework.get(JsonKey.IDENTIFIER).equals(frameworkId)) {
+                isFrameworkPresent = true;
+                if (frameworks == null) {
+                  frameworks = new ArrayList<>();
+                }
+                frameworks.add(frameworkId);
+                DataCacheHandler.updateHashtagIdFrameworkIdMap(hashtagId, frameworks);
+                break;
+              }
             }
+          } else if (!isFrameworkPresent) {
+            throw new ProjectCommonException(
+                ResponseCode.errorNoFrameworkFound.getErrorCode(),
+                ResponseCode.errorNoFrameworkFound.getErrorMessage(),
+                ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
           }
-        } else if (!isFrameworkPresent) {
-          throw new ProjectCommonException(
-              ResponseCode.errorNoFrameworkFound.getErrorCode(),
-              ResponseCode.errorNoFrameworkFound.getErrorMessage(),
-              ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
         }
       }
     }

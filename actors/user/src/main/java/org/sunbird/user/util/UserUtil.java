@@ -514,8 +514,9 @@ public class UserUtil {
         }
 
         // Search if any user names are taking using ES
+        List<String> filtersEncryptedUserNameList = new ArrayList<>(encryptedUserNameList);
         Map<String, Object> filters = new HashMap<>();
-        filters.put(JsonKey.USERNAME, encryptedUserNameList);
+        filters.put(JsonKey.USERNAME, filtersEncryptedUserNameList);
         users = userService.esSearchUserByFilters(filters);
       } while (CollectionUtils.isNotEmpty(users) && users.size() >= encryptedUserNameList.size());
 
@@ -528,7 +529,6 @@ public class UserUtil {
               user -> {
                 esUserNameList.add((String) user.get(JsonKey.USERNAME));
               });
-
       // Query cassandra to find first username that is not yet assigned
       Optional<String> result =
           encryptedUserNameList
@@ -551,7 +551,6 @@ public class UserUtil {
       }
 
     } while (StringUtils.isBlank(userName));
-
     return decService.decryptData(userName);
   }
 

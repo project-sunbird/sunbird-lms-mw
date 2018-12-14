@@ -24,9 +24,6 @@ public class OTPActor extends BaseActor {
       case "generateOTP":
         generateOTP(request);
         break;
-      case "verifyOTP":
-        verifyOTP(request);
-        break;
       default:
         onReceiveUnsupportedOperation("OTPActor");
     }
@@ -44,22 +41,6 @@ public class OTPActor extends BaseActor {
     String otp = OTPUtil.generateOTP();
     ProjectLogger.log("OTP = " + otp, LoggerEnum.INFO);
 
-    Response response = new Response();
-    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    sender().tell(response, self());
-  }
-
-  private void verifyOTP(Request request) {
-    String type = (String) request.getRequest().get(JsonKey.TYPE);
-    String key = (String) request.getRequest().get(JsonKey.KEY);
-    // String otpProvided = (String) request.getRequest().get(JsonKey.OTP);
-    // Get otp from cassandra DB for the key and check the time required.
-    // String otpValue = OTPService.getOTP(type, key);
-    /*if(otpProvided.equals(OtpValue))
-    {
-    	ProjectCommonException.throwClientErrorException(ResponseCode.OtpMismatch);
-    }*/
-    // ProjectLogger.log("OTP = " + otp, LoggerEnum.INFO);
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());

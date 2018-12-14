@@ -44,14 +44,14 @@ public class UserStatusActorTest {
 
   private static final Props props = Props.create(UserStatusActor.class);
   private static final ActorSystem system = ActorSystem.create("system");
-  private static final String userId = "someUserId";
-  private User user;
-  private static CassandraOperationImpl cassandraOperation;
+  private static final User user = mock(User.class);
+  private static final CassandraOperationImpl cassandraOperation =
+      mock(CassandraOperationImpl.class);;
 
   @BeforeClass
   public static void beforeClass() {
-
-    cassandraOperation = mock(CassandraOperationImpl.class);
+    PowerMockito.mockStatic(ServiceFactory.class);
+    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     Response response = createCassandraUpdateSuccessResponse();
     when(cassandraOperation.updateRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
@@ -61,11 +61,8 @@ public class UserStatusActorTest {
   @Before
   public void init() {
 
-    PowerMockito.mockStatic(ServiceFactory.class);
     UserRepresentation userRepresentation = mock(UserRepresentation.class);
     RealmResource realmResource = mock(RealmResource.class);
-
-    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     Keycloak keycloak = mock(Keycloak.class);
 
     PowerMockito.mockStatic(UserServiceImpl.class);
@@ -82,43 +79,47 @@ public class UserStatusActorTest {
     UserResource userResource = mock(UserResource.class);
     when(usersResource.get(Mockito.any())).thenReturn(userResource);
     when(userResource.toRepresentation()).thenReturn(userRepresentation);
-    user = mock(User.class);
     when(userService.getUserById(Mockito.anyString())).thenReturn(user);
   }
 
   @Test
   public void testBlockUserSuccess() {
-    assertTrue(testScenario(false, ActorOperations.BLOCK_USER, true, null));
+    boolean result = testScenario(false, ActorOperations.BLOCK_USER, true, null);
+    assertTrue(result);
   }
 
   @Test
   public void testBlockUserFailureWithUserAlreadyInactive() {
-    assertTrue(
+    boolean result =
         testScenario(
             true,
             ActorOperations.BLOCK_USER,
             false,
-            ResponseCode.userAlreadyInactive.getErrorCode()));
+            ResponseCode.userAlreadyInactive.getErrorCode());
+    assertTrue(result);
   }
 
   @Test
   public void testUnblockUserSuccess() {
-    assertTrue(testScenario(true, ActorOperations.UNBLOCK_USER, true, null));
+    boolean result = testScenario(true, ActorOperations.UNBLOCK_USER, true, null);
+    assertTrue(result);
   }
 
   @Test
   public void testUnblockUserFailureWithUserAlreadyActive() {
-    assertTrue(
+    boolean result =
         testScenario(
             false,
             ActorOperations.UNBLOCK_USER,
             false,
-            ResponseCode.userAlreadyActive.getErrorCode()));
+            ResponseCode.userAlreadyActive.getErrorCode());
+    assertTrue(result);
   }
 
   private Request getRequestObject(String operation) {
 
     Request reqObj = new Request();
+    String userId = "someUserId";
     reqObj.setOperation(operation);
     reqObj.put(JsonKey.USER_ID, userId);
     return reqObj;

@@ -88,34 +88,32 @@ public class UserStatusActorTest {
 
   @Test
   public void testBlockUserSuccess() {
-    Assert.assertTrue(testScenario(false, ActorOperations.BLOCK_USER, true, null) == true);
+    Assert.assertTrue(testScenario(false, ActorOperations.BLOCK_USER, true, null));
   }
 
   @Test
   public void testBlockUserFailureWithUserAlreadyInactive() {
     Assert.assertTrue(
         testScenario(
-                true,
-                ActorOperations.BLOCK_USER,
-                false,
-                ResponseCode.userAlreadyInactive.getErrorCode())
-            == true);
+            true,
+            ActorOperations.BLOCK_USER,
+            false,
+            ResponseCode.userAlreadyInactive.getErrorCode()));
   }
 
   @Test
   public void testUnblockUserSuccess() {
-    Assert.assertTrue(testScenario(true, ActorOperations.UNBLOCK_USER, true, null) == true);
+    Assert.assertTrue(testScenario(true, ActorOperations.UNBLOCK_USER, true, null));
   }
 
   @Test
   public void testUnblockUserFailureWithUserAlreadyActive() {
     Assert.assertTrue(
         testScenario(
-                false,
-                ActorOperations.UNBLOCK_USER,
-                false,
-                ResponseCode.userAlreadyActive.getErrorCode())
-            == true);
+            false,
+            ActorOperations.UNBLOCK_USER,
+            false,
+            ResponseCode.userAlreadyActive.getErrorCode()));
   }
 
   private Request getRequestObject(String operation) {
@@ -146,12 +144,11 @@ public class UserStatusActorTest {
     Response res;
     if (isSuccess) {
       res = probe.expectMsgClass(duration("10 second"), Response.class);
-      if (!res.equals(null) && res.getResult().get(JsonKey.RESPONSE).equals("SUCCESS")) return true;
+      return (res != null && "SUCCESS".equals(res.getResult().get(JsonKey.RESPONSE)));
     } else {
       ProjectCommonException exception =
           probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-      if (((ProjectCommonException) exception).getCode().equals(expectedErrorResponse)) return true;
+      return (((ProjectCommonException) exception).getCode().equals(expectedErrorResponse));
     }
-    return false;
   }
 }

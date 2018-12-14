@@ -52,11 +52,14 @@ public class OTPActor extends BaseActor {
   private void verifyOTP(Request request) {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = (String) request.getRequest().get(JsonKey.KEY);
-    String otp = (String) request.getRequest().get(JsonKey.OTP);
+    // String otpProvided = (String) request.getRequest().get(JsonKey.OTP);
     // Get otp from cassandra DB for the key and check the time required.
-
-    ProjectLogger.log("OTP = " + otp, LoggerEnum.INFO);
-    // Once verified delete the otp records for the corresponidng key
+    // String otpValue = OTPService.getOTP(type, key);
+    /*if(otpProvided.equals(OtpValue))
+    {
+    	ProjectCommonException.throwClientErrorException(ResponseCode.OtpMismatch);
+    }*/
+    // ProjectLogger.log("OTP = " + otp, LoggerEnum.INFO);
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());

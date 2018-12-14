@@ -693,11 +693,21 @@ public class UserProfileReadActor extends BaseActor {
     if (tncSystemSetting != null) {
       try {
         ObjectMapper mapper = new ObjectMapper();
-        Map<String, Object> tncCofigMap = mapper.readValue(tncSystemSetting.getValue(), Map.class);
-        String tncLatestVersion = (String) tncCofigMap.get(JsonKey.LATEST_VERSION);
+        Map<String, Object> tncConfigMap = mapper.readValue(tncSystemSetting.getValue(), Map.class);
+        ProjectLogger.log(
+            "UserManagementActor:updateTncInfo: tncConfigMap" + tncConfigMap,
+            LoggerEnum.INFO.name());
+        String tncLatestVersion = (String) tncConfigMap.get(JsonKey.LATEST_VERSION);
+        ProjectLogger.log("UserManagementActor:updateTncInfo: tncConfigMap" + tncLatestVersion);
         result.put(JsonKey.TNC_LATEST_VERSION, tncLatestVersion);
         String tncUserAcceptedVersion = (String) result.get(JsonKey.TNC_ACCEPTED_VERSION);
+        ProjectLogger.log(
+            "UserManagementActor:updateTncInfo: tncUserAcceptedVersion" + tncUserAcceptedVersion,
+            LoggerEnum.INFO.name());
         String tncUserAcceptedOn = (String) result.get(JsonKey.TNC_ACCEPTED_ON);
+        ProjectLogger.log(
+            "UserManagementActor:updateTncInfo: tncUserAcceptedOn" + tncUserAcceptedOn,
+            LoggerEnum.INFO.name());
         if (StringUtils.isEmpty(tncUserAcceptedVersion)
             || !tncUserAcceptedVersion.equalsIgnoreCase(tncLatestVersion)
             || StringUtils.isEmpty(tncUserAcceptedOn)) {
@@ -706,8 +716,9 @@ public class UserProfileReadActor extends BaseActor {
           result.put(JsonKey.PROMPT_TNC, false);
         }
 
-        if (tncCofigMap.containsKey(tncLatestVersion)) {
-          String url = (String) ((Map) tncCofigMap.get(tncLatestVersion)).get(JsonKey.URL);
+        if (tncConfigMap.containsKey(tncLatestVersion)) {
+          String url = (String) ((Map) tncConfigMap.get(tncLatestVersion)).get(JsonKey.URL);
+          ProjectLogger.log("UserManagementActor:updateTncInfo: url" + url, LoggerEnum.INFO.name());
           result.put(JsonKey.TNC_LATEST_VERSION_URL, url);
         } else {
           result.put(JsonKey.PROMPT_TNC, false);

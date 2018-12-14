@@ -438,7 +438,8 @@ public class UserUtil {
     if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
       String firstName = (String) userMap.get(JsonKey.FIRST_NAME);
       String lastName = (String) userMap.get(JsonKey.LAST_NAME);
-      String name = String.join(" ", firstName, lastName);
+
+      String name = String.join(" ", firstName, StringUtils.isNotBlank(lastName) ? lastName : "");
 
       String userName = null;
       while (StringUtils.isBlank(userName)) {

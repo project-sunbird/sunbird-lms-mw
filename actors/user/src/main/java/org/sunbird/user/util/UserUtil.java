@@ -429,22 +429,23 @@ public class UserUtil {
     // creation
     userMap.put(JsonKey.PROFILE_VISIBILITY, new HashMap<String, String>());
     userMap.put(JsonKey.IS_DELETED, false);
-    // create loginId to ensure uniqueness for combination of userName and channel
-    String loginId = Util.getLoginId(userMap);
-    userMap.put(JsonKey.LOGIN_ID, loginId);
     userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
 
     if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
       String firstName = (String) userMap.get(JsonKey.FIRST_NAME);
       String lastName = (String) userMap.get(JsonKey.LAST_NAME);
-      String name = String.join(" ", firstName, lastName);
+
+      String name = String.join(" ", firstName, StringUtils.isNotBlank(lastName) ? lastName : "");
 
       String userName = null;
       while (StringUtils.isBlank(userName)) {
         userName = getUsername(name);
         if (StringUtils.isNotBlank(userName)) {
           userMap.put(JsonKey.USERNAME, userName);
+          // create loginId to ensure uniqueness for combination of userName and channel
+          String loginId = Util.getLoginId(userMap);
+          userMap.put(JsonKey.LOGIN_ID, loginId);
         }
       }
     }

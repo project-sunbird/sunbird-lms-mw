@@ -44,20 +44,23 @@ public class UserTnCActor extends BaseActor {
 
   private void acceptTNC(Request request) {
     String acceptedTnC = (String) request.getRequest().get(JsonKey.TNC_ACCEPTED_VERSION);
-    Map<String, Object> userMap = new HashMap();
     String userId = (String) request.getContext().get(JsonKey.REQUESTED_BY);
+
+    // Search user account in ES
     Map<String, Object> result =
             ElasticSearchUtil.getDataByIdentifier(
                     ProjectUtil.EsIndex.sunbird.getIndexName(),
                     ProjectUtil.EsType.user.getTypeName(),
                     userId);
+
     if (result == null || result.size() == 0) {
       throw new ProjectCommonException(
               ResponseCode.userNotFound.getErrorCode(),
               ResponseCode.userNotFound.getErrorMessage(),
               ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
-    // check whether is_deletd true or false
+ 
+    // Check whether user account is locked or not
     if (ProjectUtil.isNotNull(result)
             && result.containsKey(JsonKey.IS_DELETED)
             && ProjectUtil.isNotNull(result.get(JsonKey.IS_DELETED))
@@ -66,8 +69,11 @@ public class UserTnCActor extends BaseActor {
     }
 
     String lastAcceptedVersion =(String) result.get(JsonKey.TNC_ACCEPTED_VERSION);
+
     Response response = new Response();
-    if(!lastAcceptedVersion.equalsIgnoreCase(acceptedTnC) || StringUtils.isEmpty((String)result.get(JsonKey.TNC_ACCEPTED_ON))) {
+    Map<String, Object> userMap = new HashMap();
+
+    if(!lastAcceptedVersion.equalsIgnoreCase(acceptedTnC) || StringUtils.isEmpty((String) result.get(JsonKey.TNC_ACCEPTED_ON))) {
       userMap.put(JsonKey.ID, userId);
       userMap.put(JsonKey.TNC_ACCEPTED_VERSION, acceptedTnC);
       userMap.put(JsonKey.TNC_ACCEPTED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
@@ -75,12 +81,13 @@ public class UserTnCActor extends BaseActor {
               cassandraOperation.updateRecord(
                       usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
       if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
-        saveUserDetailsToEs(userMap);
+        syncUserDetails(userMap);
       }
-
     }
+
     response.getResult().put(JsonKey.RESULT, "SUCCESS");
     sender().tell(response, self());
+
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     targetObject =
@@ -88,12 +95,14 @@ public class UserTnCActor extends BaseActor {
                     (String) userMap.get(JsonKey.USER_ID), JsonKey.TNC, JsonKey.ACCEPT, null);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
-  private void saveUserDetailsToEs(Map<String, Object> completeUserMap) {
+  
+  private void syncUserDetails(Map<String, Object> completeUserMap) {
     Request userRequest = new Request();
     userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
     userRequest.getRequest().put(JsonKey.ID, completeUserMap.get(JsonKey.ID));
     ProjectLogger.log(
-            "UserTnCActor:saveUserDetailsToEs: Trigger sync of user details to ES");
+            "UserTnCActor:syncUserDetails: Trigger sync of user details to ES");
     tellToAnother(userRequest);
   }
+
 }

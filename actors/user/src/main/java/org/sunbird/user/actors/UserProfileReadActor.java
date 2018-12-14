@@ -713,11 +713,11 @@ public class UserProfileReadActor extends BaseActor {
         } else {
           result.put(JsonKey.PROMPT_TNC, false);
           ProjectLogger.log(
-                  "UserManagementActor:getUserProfileData: URL is not present in config");
+                  "UserManagementActor:updateTncInfo: TnC version URL is missing from configuration");
         }
       } catch (Exception e) {
         ProjectLogger.log(
-                "UserManagementActor:getUserProfileData: Exception occurred during parse with error message = "
+                "UserManagementActor:updateTncInfo: Exception occurred with error message = "
                         + e.getMessage(),
                 LoggerEnum.ERROR.name());
         ProjectCommonException.throwServerErrorException(

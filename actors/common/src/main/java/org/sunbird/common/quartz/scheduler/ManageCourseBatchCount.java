@@ -102,13 +102,13 @@ public class ManageCourseBatchCount implements Job {
       ProjectLogger.log(
           "No data found in Elasticsearch for course batch update.", LoggerEnum.INFO.name());
     }
-    findAndFixCoursesWithCountMismatch(today, JsonKey.OPEN);
-    findAndFixCoursesWithCountMismatch(today, JsonKey.INVITE_ONLY);
+    findAndFixCoursesWithCountMismatch(JsonKey.OPEN);
+    findAndFixCoursesWithCountMismatch(JsonKey.INVITE_ONLY);
     TelemetryUtil.telemetryProcessingCall(logInfo, null, null, "LOG");
   }
 
   @SuppressWarnings("unchecked")
-  private void findAndFixCoursesWithCountMismatch(String today, String enrollmentType) {
+  private void findAndFixCoursesWithCountMismatch(String enrollmentType) {
     // Get some page SIZE of courses using content search with open batch count > 0
     // For each course, compare the number of open batches with the count in course metadata with
     // start date <= yesterday end date >= today
@@ -117,7 +117,8 @@ public class ManageCourseBatchCount implements Job {
     // Repeat above steps for invite only
 
     String countName = CourseBatchSchedulerUtil.getCountName(enrollmentType);
-    int totalCourse = 0, offset = 0;
+    int totalCourse = 0;
+    int offset = 0;
     do {
       Map<String, Object> response =
           CourseBatchSchedulerUtil.getContentForCleanUp(countName, offset);
@@ -128,8 +129,6 @@ public class ManageCourseBatchCount implements Job {
         if (CollectionUtils.isNotEmpty(courseDetailsList) || totalCourse != 0) {
           for (Map<String, Object> courseDetail : courseDetailsList) {
             String courseId = (String) courseDetail.get(JsonKey.IDENTIFIER);
-            /*List<Map<String, Object>> batchListWithFutureEndDate =
-            CourseBatchSchedulerUtil.getAllBatchWithFutureEndDate(courseId, today, enrollmentType);*/
             List<Map<String, Object>> ongoingBatchList =
                 CourseBatchSchedulerUtil.getAllBatchWithStatusNotCompleted(
                     courseId, 1, enrollmentType);

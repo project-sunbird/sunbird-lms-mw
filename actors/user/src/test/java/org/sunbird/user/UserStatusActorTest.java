@@ -1,6 +1,7 @@
 package org.sunbird.user;
 
 import static akka.testkit.JavaTestKit.duration;
+import static org.junit.Assert.assertTrue;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 
@@ -8,7 +9,6 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -88,12 +88,12 @@ public class UserStatusActorTest {
 
   @Test
   public void testBlockUserSuccess() {
-    Assert.assertTrue(testScenario(false, ActorOperations.BLOCK_USER, true, null));
+    assertTrue(testScenario(false, ActorOperations.BLOCK_USER, true, null));
   }
 
   @Test
   public void testBlockUserFailureWithUserAlreadyInactive() {
-    Assert.assertTrue(
+    assertTrue(
         testScenario(
             true,
             ActorOperations.BLOCK_USER,
@@ -103,12 +103,12 @@ public class UserStatusActorTest {
 
   @Test
   public void testUnblockUserSuccess() {
-    Assert.assertTrue(testScenario(true, ActorOperations.UNBLOCK_USER, true, null));
+    assertTrue(testScenario(true, ActorOperations.UNBLOCK_USER, true, null));
   }
 
   @Test
   public void testUnblockUserFailureWithUserAlreadyActive() {
-    Assert.assertTrue(
+    assertTrue(
         testScenario(
             false,
             ActorOperations.UNBLOCK_USER,

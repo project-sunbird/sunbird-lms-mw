@@ -324,7 +324,9 @@ public class UserManagementActor extends BaseActor {
       saveUserDetailsToEs(esResponse);
     }
     requestMap.put(JsonKey.PASSWORD, userMap.get(JsonKey.PASSWORD));
-    sendEmailAndSms(requestMap);
+    if (StringUtils.isNotBlank(callerId)) {
+      sendEmailAndSms(requestMap);
+    }
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 

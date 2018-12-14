@@ -58,7 +58,7 @@ public class ContentSearchUtil {
 
   public static Future<Map<String, Object>> searchContent(
       String urlQueryString, String queryRequestBody, Map<String, String> headers) {
-    String logMsgPrefix = "ContentSearchUtil:searchContent ";
+    String logMsgPrefix = "ContentSearchUtil:searchContent: ";
 
     Unirest.clearDefaultHeaders();
     String urlString =
@@ -94,11 +94,11 @@ public class ContentSearchUtil {
                 return resultMap;
               } else {
                 ProjectLogger.log(
-                    logMsgPrefix + "search content failed. Error Response " + response.getBody());
+                    logMsgPrefix + "Search content failed. Error Response " + response.getBody());
                 return null;
               }
             } catch (Exception e) {
-              ProjectLogger.log(logMsgPrefix + "exception while parsing ", e);
+              ProjectLogger.log(logMsgPrefix + "Exception occurred with error message = " + e.getMessage(), e);
               return null;
             }
           }

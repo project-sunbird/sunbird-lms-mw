@@ -39,6 +39,8 @@ import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
+import org.sunbird.user.service.UserService;
+import org.sunbird.user.service.impl.UserServiceImpl;
 
 public class UserUtil {
 
@@ -56,6 +58,7 @@ public class UserUtil {
   private static DecryptionService decService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
+  private static UserService userService = UserServiceImpl.getInstance();
 
   private UserUtil() {}
 
@@ -451,8 +454,9 @@ public class UserUtil {
       roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
       userMap.put(JsonKey.ROLES, roles);
     }
-    // update db with emailVerified as false (default)
-    userMap.put(JsonKey.EMAIL_VERIFIED, false);
+    if (null == userMap.get(JsonKey.EMAIL_VERIFIED)) {
+      userMap.put(JsonKey.EMAIL_VERIFIED, false);
+    }
     if (!StringUtils.isBlank((String) userMap.get(JsonKey.COUNTRY_CODE))) {
       userMap.put(
           JsonKey.COUNTRY_CODE, propertiesCache.getProperty(JsonKey.SUNBIRD_DEFAULT_COUNTRY_CODE));
@@ -466,6 +470,89 @@ public class UserUtil {
     userMap.put(JsonKey.LOGIN_ID, loginId);
     userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
+
+    if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
+      String firstName = (String) userMap.get(JsonKey.FIRST_NAME);
+      String lastName = (String) userMap.get(JsonKey.LAST_NAME);
+      String name = String.join(" ", firstName, lastName);
+
+      String userName = null;
+      while (StringUtils.isBlank(userName)) {
+        userName = getUsername(name);
+        if (StringUtils.isNotBlank(userName)) {
+          userMap.put(JsonKey.USERNAME, userName);
+        }
+      }
+    }
+  }
+
+  private static String getUsername(String name) {
+    List<Map<String, Object>> users = null;
+    List<String> esUserNameList = new ArrayList<>();
+    List<String> encryptedUserNameList = new ArrayList<>();
+    List<String> excludedUsernames = new ArrayList<>();
+    List<String> userNameList = new ArrayList<>();
+
+    String userName = "";
+    do {
+      do {
+        encryptedUserNameList.clear();
+        excludedUsernames.addAll(userNameList);
+
+        // Generate usernames
+        userNameList = userService.generateUsernames(name, excludedUsernames);
+
+        // Encrypt each user name
+        userService
+            .getEncryptedList(userNameList)
+            .stream()
+            .forEach(value -> encryptedUserNameList.add(value));
+
+        // Throw an error in case of encryption failures
+        if (encryptedUserNameList.isEmpty()) {
+          ProjectCommonException.throwServerErrorException(ResponseCode.SERVER_ERROR);
+        }
+
+        // Search if any user names are taking using ES
+        Map<String, Object> filters = new HashMap<>();
+        filters.put(JsonKey.USERNAME, encryptedUserNameList);
+        users = userService.esSearchUserByFilters(filters);
+      } while (CollectionUtils.isNotEmpty(users) && users.size() >= encryptedUserNameList.size());
+
+      esUserNameList.clear();
+
+      // Map list of user results (from ES) into list of usernames
+      users
+          .stream()
+          .forEach(
+              user -> {
+                esUserNameList.add((String) user.get(JsonKey.USERNAME));
+              });
+
+      // Query cassandra to find first username that is not yet assigned
+      Optional<String> result =
+          encryptedUserNameList
+              .stream()
+              .filter(
+                  value -> {
+                    if (!esUserNameList.contains(value)) {
+                      Map<String, Object> dbUser = userService.getUserByUsername(value);
+                      if (MapUtils.isEmpty(dbUser)) {
+                        return true;
+                      }
+                      return false;
+                    }
+                    return false;
+                  })
+              .findFirst();
+
+      if (result.isPresent()) {
+        userName = result.get();
+      }
+
+    } while (StringUtils.isBlank(userName));
+
+    return decService.decryptData(userName);
   }
 
   public static void validateExternalIds(User user, String operationType) {

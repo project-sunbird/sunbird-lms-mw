@@ -12,8 +12,10 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
+import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
@@ -21,10 +23,12 @@ import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
+import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.models.util.datasecurity.impl.DefaultDecryptionServiceImpl;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.models.user.User;
@@ -37,9 +41,14 @@ import org.sunbird.user.service.UserService;
 public class UserServiceImpl implements UserService {
 
   private static DecryptionService decryptionService = new DefaultDecryptionServiceImpl();
+  private EncryptionService encryptionService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
+          null);
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static UserDao userDao = UserDaoImpl.getInstance();
   private static UserService userService = null;
   private UserExternalIdentityDao userExtIdentityDao = new UserExternalIdentityDaoImpl();
+  private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private static final int GENERATE_USERNAME_COUNT = 10;
 
   public static UserService getInstance() {
@@ -291,8 +300,41 @@ public class UserServiceImpl implements UserService {
     }
   }
 
+  @SuppressWarnings("unchecked")
   @Override
-  public List<String> generateUsernames(String name) {
+  public Map<String, Object> getUserByUsername(String userName) {
+    Response response =
+        cassandraOperation.getRecordsByIndexedProperty(
+            usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), JsonKey.USERNAME, userName);
+    List<Map<String, Object>> userList =
+        (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
+    if (CollectionUtils.isNotEmpty(userList)) {
+      return userList.get(0);
+    }
+    return null;
+  }
+
+  @Override
+  public List<String> getEncryptedList(List<String> dataList) {
+    List<String> encryptedDataList = new ArrayList<>();
+    for (String data : dataList) {
+      String encData = "";
+      try {
+        encData = encryptionService.encryptData(data);
+      } catch (Exception e) {
+        ProjectLogger.log(
+            "UserServiceImpl:getEncryptedDataList: Exception occurred with error message = "
+                + e.getMessage());
+      }
+      if (StringUtils.isNotBlank(encData)) {
+        encryptedDataList.add(encData);
+      }
+    }
+    return encryptedDataList;
+  }
+
+  @Override
+  public List<String> generateUsernames(String name, List<String> excludedUsernames) {
     if (name == null || name.isEmpty()) return null;
     int numOfDigitsToAppend =
         Integer.valueOf(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USERNAME_NUM_DIGITS).trim());
@@ -306,7 +348,8 @@ public class UserServiceImpl implements UserService {
       userNameSB.append(nameLowercase).append(numberSuffix);
       String generatedUsername = userNameSB.toString();
 
-      if (!userNameSet.contains(generatedUsername)) {
+      if (!userNameSet.contains(generatedUsername)
+          && !excludedUsernames.contains(generatedUsername)) {
         userNameSet.add(generatedUsername);
         totalUserNameGenerated += 1;
       }
@@ -321,4 +364,22 @@ public class UserServiceImpl implements UserService {
     return randomNum;
   }
 
+  @SuppressWarnings("unchecked")
+  @Override
+  public List<Map<String, Object>> esSearchUserByFilters(Map<String, Object> filters) {
+    SearchDTO searchDTO = new SearchDTO();
+
+    List<String> list = new ArrayList<>();
+    list.add(JsonKey.ID);
+    list.add(JsonKey.USERNAME);
+
+    searchDTO.setFields(list);
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
+
+    Map<String, Object> esResult =
+        ElasticSearchUtil.complexSearch(
+            searchDTO, EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+
+    return (List<Map<String, Object>>) esResult.get(JsonKey.CONTENT);
+  }
 }

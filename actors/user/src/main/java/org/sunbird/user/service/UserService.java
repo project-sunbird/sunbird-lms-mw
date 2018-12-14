@@ -36,5 +36,4 @@ public interface UserService {
   List<String> generateUsernames(String name, List<String> excludedUsernames);
 
   List<String> getEncryptedList(List<String> dataList);
-
 }

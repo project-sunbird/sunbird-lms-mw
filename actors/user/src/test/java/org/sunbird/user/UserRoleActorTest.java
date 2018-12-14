@@ -1,6 +1,7 @@
 package org.sunbird.user;
 
 import static akka.testkit.JavaTestKit.duration;
+import static org.junit.Assert.assertTrue;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 
@@ -14,8 +15,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
-import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -68,6 +69,15 @@ public class UserRoleActorTest {
       Mockito.mock(InterServiceCommunication.class);
   private static Response response = Mockito.mock(Response.class);
 
+  @BeforeClass
+  public static void beforeClass() {
+    PowerMockito.mockStatic(ServiceFactory.class);
+    CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
+    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+    when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getCassandraResponse());
+  }
+
   @Before
   public void beforeEachTest() {
 
@@ -98,28 +108,27 @@ public class UserRoleActorTest {
 
   @Test
   public void testGetUserRoleSuccess() {
-    Assert.assertTrue(testScenario(true, response, true, true, true, null));
+    assertTrue(testScenario(true, response, true, true, true, null));
   }
 
   @Test
   public void testAssignRolesSuccessWithValidOrgId() {
-    Assert.assertTrue(testScenario(false, response, true, true, true, null));
+    assertTrue(testScenario(false, response, true, true, true, null));
   }
 
   @Test
   public void testAssignRolesSuccessWithoutOrgId() {
-    Assert.assertTrue(testScenario(false, response, true, false, true, null));
+    assertTrue(testScenario(false, response, true, false, true, null));
   }
 
   @Test
   public void testAssignRolesFailure() {
-    Assert.assertTrue(testScenario(false, null, false, true, false, null));
+    assertTrue(testScenario(false, null, false, true, false, null));
   }
 
   @Test
   public void testAssignRolesFailureWithInvalidOrgId() {
-    Assert.assertTrue(
-        testScenario(false, null, true, true, false, ResponseCode.invalidParameterValue));
+    assertTrue(testScenario(false, null, true, true, false, ResponseCode.invalidParameterValue));
   }
 
   private boolean testScenario(
@@ -134,10 +143,10 @@ public class UserRoleActorTest {
     ActorRef subject = system.actorOf(props);
 
     if (isGetUserRoles) {
-      CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
-      when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-      when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
-          .thenReturn(getCassandraResponse());
+      //      CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
+      //      when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+      //      when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
+      //          .thenReturn(getCassandraResponse());
 
       Request reqObj = new Request();
       reqObj.setOperation(ActorOperations.GET_ROLES.getValue());
@@ -220,7 +229,7 @@ public class UserRoleActorTest {
         .thenReturn(createResponseGet(isSuccess));
   }
 
-  private Response getCassandraResponse() {
+  private static Response getCassandraResponse() {
     Response response = new Response();
     List<Map<String, Object>> list = new ArrayList<>();
     Map<String, Object> orgMap = new HashMap<>();

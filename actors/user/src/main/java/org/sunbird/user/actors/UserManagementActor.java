@@ -1055,8 +1055,17 @@ public class UserManagementActor extends BaseActor {
     if (results != null) {
       Map<String, Object> channelDetails = (Map<String, Object>) results.get(JsonKey.CHANNEL);
       if (channelDetails != null) {
-        List<String> frameworkIdList = (List<String>) channelDetails.get(JsonKey.FRAMEWORKS);
-        if (frameworkIdList == null || !frameworkIdList.contains(frameworkId)) {
+        List<Map<String, Object>> frameworkList =
+            (List<Map<String, Object>>) channelDetails.get(JsonKey.FRAMEWORKS);
+        boolean isFrameworkPresent = false;
+        if (frameworkList != null) {
+          for (Map<String, Object> framework : frameworkList) {
+            if (framework.get(JsonKey.IDENTIFIER).equals(frameworkId)) {
+              isFrameworkPresent = true;
+              break;
+            }
+          }
+        } else if (!isFrameworkPresent) {
           throw new ProjectCommonException(
               ResponseCode.errorNoFrameworkFound.getErrorCode(),
               ResponseCode.errorNoFrameworkFound.getErrorMessage(),

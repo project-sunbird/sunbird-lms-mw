@@ -21,6 +21,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
+import org.sunbird.common.models.util.Slug;
 import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
@@ -323,7 +324,8 @@ public class UserServiceImpl implements UserService {
         encData = encryptionService.encryptData(data);
       } catch (Exception e) {
         ProjectLogger.log(
-            "UserServiceImpl:getEncryptedDataList: Exception occurred with error message = " + e.getMessage());
+            "UserServiceImpl:getEncryptedDataList: Exception occurred with error message = "
+                + e.getMessage());
       }
       if (StringUtils.isNotBlank(encData)) {
         encryptedDataList.add(encData);
@@ -335,11 +337,12 @@ public class UserServiceImpl implements UserService {
   @Override
   public List<String> generateUsernames(String name, List<String> excludedUsernames) {
     if (name == null || name.isEmpty()) return null;
+    name = Slug.makeSlug(name, true);
     int numOfDigitsToAppend =
         Integer.valueOf(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USERNAME_NUM_DIGITS).trim());
     HashSet<String> userNameSet = new HashSet<>();
     int totalUserNameGenerated = 0;
-    String nameLowercase = name.toLowerCase().replaceAll("\\s+", "");
+    String nameLowercase = name.toLowerCase().replaceAll("\\-+", "");
     while (totalUserNameGenerated < GENERATE_USERNAME_COUNT) {
       int numberSuffix = getRandomFixedLengthInteger(numOfDigitsToAppend);
 
@@ -381,5 +384,4 @@ public class UserServiceImpl implements UserService {
 
     return (List<Map<String, Object>>) esResult.get(JsonKey.CONTENT);
   }
-
 }

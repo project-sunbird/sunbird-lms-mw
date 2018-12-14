@@ -14,14 +14,15 @@ public class UserServiceGenerateUsernameTest {
 
   private static String englishName = "Some Random Name";
   private static String hindiName = "कोई अज्ञात नाम";
+  private static String teluguName = "Ē teliyani pēru";
+  private static String tamilName = "எந்த அறியப்படாத பெயர்";
   private static Pattern pattern;
-  private static String userAsciiNameRegex = "(^([a-z])+[0-9]{4})";
-  private static String userNonAsciiNameRegex = "(^(कोईअज्ञातनाम)+[0-9]{4})";
+  private static String userNameValidatorRegex = "(^([a-z])+[0-9]{4})";
   private static UserService userService = new UserServiceImpl();
 
   @Test
   public void testGenerateUsernamesSuccessWithEnglishName() {
-    assertTrue(performTest(englishName, userAsciiNameRegex));
+    assertTrue(performTest(englishName));
   }
 
   @Test
@@ -32,12 +33,22 @@ public class UserServiceGenerateUsernameTest {
 
   @Test
   public void testGenerateUsernamesSuccessWithHindiName() {
-    assertTrue(performTest(hindiName, userNonAsciiNameRegex));
+    assertTrue(performTest(hindiName));
   }
 
-  private boolean performTest(String name, String validatorRegex) {
+  @Test
+  public void testGenerateUsernamesSuccessWithTeluguName() {
+    assertTrue(performTest(teluguName));
+  }
+
+  @Test
+  public void testGenerateUsernamesSuccessWithTamilName() {
+    assertTrue(performTest(tamilName));
+  }
+
+  private boolean performTest(String name) {
     List<String> result = userService.generateUsernames(name, new ArrayList<String>());
-    pattern = Pattern.compile(validatorRegex);
+    pattern = Pattern.compile(userNameValidatorRegex);
     boolean flag = true;
     for (int i = 0; i < result.size(); i++) {
       Matcher matcher = pattern.matcher(result.get(i));

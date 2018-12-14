@@ -1480,8 +1480,7 @@ public final class Util {
       Map<String, Object> privateFieldsMap = new HashMap<>();
       for (String field : completeProfileVisibilityMap.keySet()) {
         if (JsonKey.PRIVATE.equalsIgnoreCase(completeProfileVisibilityMap.get(field))) {
-          privateFieldsMap.put(field, userMap.get(field));
-          userMap.remove(field);
+          privateFieldsMap.put(field, userMap.remove(field));
         }
       }
       ElasticSearchUtil.upsertData(

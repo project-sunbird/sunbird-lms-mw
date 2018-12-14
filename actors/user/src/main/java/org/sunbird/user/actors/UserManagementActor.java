@@ -401,7 +401,7 @@ public class UserManagementActor extends BaseActor {
         if (channelDetails != null) {
           List<Map<String, Object>> frameworkList =
               (List<Map<String, Object>>) channelDetails.get(JsonKey.FRAMEWORKS);
-          if (frameworkList != null) {
+          if (!CollectionUtils.isEmpty(frameworkList)) {
             for (Map<String, Object> framework : frameworkList) {
               if (framework.get(JsonKey.IDENTIFIER).equals(frameworkId)) {
                 if (frameworks == null) {
@@ -409,7 +409,7 @@ public class UserManagementActor extends BaseActor {
                 }
                 frameworks.add(frameworkId);
                 DataCacheHandler.updateHashtagIdFrameworkIdMap(hashtagId, frameworks);
-                break;
+                return;
               }
             }
           } else {

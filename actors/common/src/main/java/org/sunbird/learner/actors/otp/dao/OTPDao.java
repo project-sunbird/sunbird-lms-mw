@@ -11,7 +11,7 @@ public interface OTPDao {
    * @param key Phone number or email address
    * @return OTP details
    */
-  Map<String, Object> getOTPDetailsByKey(String type, String key);
+  Map<String, Object> getOTPDetails(String type, String key);
 
   /**
    * Insert OTP details for given type (phone / email) and key

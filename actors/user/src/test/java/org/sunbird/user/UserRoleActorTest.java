@@ -148,8 +148,9 @@ public class UserRoleActorTest {
 
       when(interServiceCommunication.getResponse(Mockito.anyObject(), Mockito.anyObject()))
           .thenReturn(response);
-      if (response != null) when(response.get(Mockito.anyString())).thenReturn(new HashMap<>());
-
+      if (response != null){
+        when(response.get(Mockito.anyString())).thenReturn(new HashMap<>());
+      }
       mockGetOrgResponse(isResponseRequired);
       subject.tell(getRequestObj(isObjRequred), probe.getRef());
     }
@@ -162,7 +163,9 @@ public class UserRoleActorTest {
 
       if (errorResponse != null) {
         return res.getCode().equals(errorResponse.getErrorCode());
-      } else return res.getResponseCode() == 400;
+      } else {
+        return res.getResponseCode() == 400;
+      }
     }
   }
 

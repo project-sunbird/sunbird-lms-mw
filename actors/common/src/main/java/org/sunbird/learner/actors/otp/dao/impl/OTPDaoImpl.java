@@ -33,7 +33,7 @@ public class OTPDaoImpl implements OTPDao {
 
   @Override
   @SuppressWarnings("unchecked")
-  public Map<String, Object> getOTPDetailsByKey(String type, String key) {
+  public Map<String, Object> getOTPDetails(String type, String key) {
     Map<String, Object> request = new HashMap<>();
     request.put(JsonKey.TYPE, type);
     request.put(JsonKey.KEY, key);

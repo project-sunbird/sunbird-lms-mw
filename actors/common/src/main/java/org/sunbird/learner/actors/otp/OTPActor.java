@@ -4,12 +4,14 @@ import java.util.Map;
 import org.apache.commons.collections.MapUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.otp.service.OTPService;
 import org.sunbird.learner.actors.user.service.UserService;
 import org.sunbird.learner.util.OTPUtil;
@@ -27,6 +29,8 @@ public class OTPActor extends BaseActor {
   public void onReceive(Request request) throws Throwable {
     if (ActorOperations.GENERATE_OTP.getValue().equals(request.getOperation())) {
       generateOTP(request);
+    } else if (ActorOperations.VERIFY_OTP.equals(request.getOperation())) {
+      verifyOTP(request);
     } else {
       onReceiveUnsupportedOperation("OTPActor");
     }
@@ -53,6 +57,23 @@ public class OTPActor extends BaseActor {
     sender().tell(response, self());
 
     sendOTP(request, otp);
+  }
+
+  private void verifyOTP(Request request) {
+    String type = (String) request.getRequest().get(JsonKey.TYPE);
+    String key = (String) request.getRequest().get(JsonKey.KEY);
+    String otpProvided = (String) request.getRequest().get(JsonKey.OTP);
+    Map<String, Object> otpDetails = otpService.getOTPDetails(type, key);
+    if (MapUtils.isEmpty(otpDetails)) {
+      ProjectCommonException.throwClientErrorException(ResponseCode.errorOtpNotFound);
+    }
+    String otpFromDB = (String) otpDetails.get(JsonKey.OTP);
+    if (!otpProvided.equals(otpFromDB)) {
+      ProjectCommonException.throwClientErrorException(ResponseCode.errorOtpMismatch);
+    }
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    sender().tell(response, self());
   }
 
   private void sendOTP(Request request, String otp) {

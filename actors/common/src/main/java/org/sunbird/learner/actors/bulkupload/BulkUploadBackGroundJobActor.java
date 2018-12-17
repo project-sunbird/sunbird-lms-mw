@@ -63,9 +63,8 @@ import org.sunbird.validator.location.LocationRequestValidator;
  * @author Amit Kumar
  */
 @ActorConfig(
-  tasks = {},
-  asyncTasks = {"processBulkUpload"}
-)
+    tasks = {},
+    asyncTasks = {"processBulkUpload"})
 public class BulkUploadBackGroundJobActor extends BaseActor {
 
   private String processId = "";

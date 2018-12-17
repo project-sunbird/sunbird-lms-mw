@@ -14,8 +14,8 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
+import org.sunbird.learner.actors.otp.service.OTPService;
 import org.sunbird.notification.sms.provider.ISmsProvider;
 import org.sunbird.notification.utils.SMSFactory;
 
@@ -27,7 +27,7 @@ public final class OTPUtil {
   private OTPUtil() {}
 
   public static String generateOTP() {
-    String otpSize = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_OTP_LENGTH);
+    String otpSize = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OTP_LENGTH);
     int codeDigit = StringUtils.isBlank(otpSize) ? MINIMUM_OTP_LENGTH : Integer.valueOf(otpSize);
     GoogleAuthenticatorConfig config =
         new GoogleAuthenticatorConfig.GoogleAuthenticatorConfigBuilder()
@@ -49,12 +49,12 @@ public final class OTPUtil {
     smsTemplate.put(JsonKey.OTP, (String) otpMap.get(JsonKey.OTP));
     smsTemplate.put(
         JsonKey.OTP_EXPIRATION_IN_MINUTES, (String) otpMap.get(JsonKey.OTP_EXPIRATION_IN_MINUTES));
-    String sms = ProjectUtil.getOTPSMSBody(smsTemplate);
+    String sms = OTPService.getOTPSMSBody(smsTemplate);
 
     ProjectLogger.log("SMS text : " + sms, LoggerEnum.INFO);
     String countryCode = "";
     if (StringUtils.isBlank((String) otpMap.get(JsonKey.COUNTRY_CODE))) {
-      countryCode = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_DEFAULT_COUNTRY_CODE);
+      countryCode = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_COUNTRY_CODE);
     } else {
       countryCode = (String) otpMap.get(JsonKey.COUNTRY_CODE);
     }
@@ -79,10 +79,8 @@ public final class OTPUtil {
     if ((StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
       return request;
     }
-    String envName =
-        PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
-    String welcomeSubject =
-        PropertiesCache.getInstance().getProperty(JsonKey.ONBOARDING_MAIL_SUBJECT);
+    String envName = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
+    String welcomeSubject = ProjectUtil.getConfigValue(JsonKey.ONBOARDING_MAIL_SUBJECT);
     emailTemplateMap.put(JsonKey.SUBJECT, ProjectUtil.formatMessage(welcomeSubject, envName));
     List<String> reciptientsMail = new ArrayList<>();
     reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
@@ -95,8 +93,7 @@ public final class OTPUtil {
   }
 
   public static String getOTPExpirationInMinutes() {
-    String expirationInSeconds =
-        PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_OTP_EXPIRATION);
+    String expirationInSeconds = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OTP_EXPIRATION);
     int otpExpiration = Integer.valueOf(expirationInSeconds);
     int otpExpirationInMinutes = Math.floorDiv(otpExpiration, SECONDS_IN_MINUTES);
     return String.valueOf(otpExpirationInMinutes);

@@ -36,11 +36,7 @@ public class OTPActor extends BaseActor {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = (String) request.getRequest().get(JsonKey.KEY);
 
-    if (JsonKey.EMAIL.equalsIgnoreCase(type)) {
-      userService.checkEmailUniqueness(key);
-    } else if (JsonKey.PHONE.equalsIgnoreCase(type)) {
-      userService.checkPhoneUniqueness(key);
-    }
+    userService.checkKeyUniquenessInUser(type, key, true);
 
     String otp = null;
     Map<String, Object> details = otpService.getOTPDetailsByKey(type, key);
@@ -69,5 +65,4 @@ public class OTPActor extends BaseActor {
     // Sent OTP via email or sms
     tellToAnother(sendOtpRequest);
   }
-
 }

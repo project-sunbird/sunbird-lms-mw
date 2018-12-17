@@ -20,11 +20,15 @@ public class OTPDaoImpl implements OTPDao {
 
   private static final String TABLE_NAME = JsonKey.OTP;
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static OTPDao otpDao;
+  private static volatile OTPDao otpDao;
 
   public static OTPDao getInstance() {
     if (otpDao == null) {
-      otpDao = new OTPDaoImpl();
+      synchronized (OTPDaoImpl.class) {
+        if (otpDao == null) {
+          otpDao = new OTPDaoImpl();
+        }
+      }
     }
     return otpDao;
   }

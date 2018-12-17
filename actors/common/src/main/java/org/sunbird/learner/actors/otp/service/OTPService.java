@@ -9,8 +9,6 @@ import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
@@ -47,8 +45,7 @@ public class OTPService {
         PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_OTP_EXPIRATION);
     int ttl = Integer.valueOf(expirationInSeconds);
 
-    Response response =
-        cassandraOperation.insertRecordWithTTL(
+    cassandraOperation.insertRecordWithTTL(
             otpDb.getKeySpace(), otpDb.getTableName(), request, ttl);
   }
 

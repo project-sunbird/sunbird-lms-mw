@@ -14,8 +14,8 @@ public class OTPService {
 
   private static OTPDao otpDao = OTPDaoImpl.getInstance();
 
-  public Map<String, Object> getOTPDetailsByKey(String type, String key) {
-    return otpDao.getOTPDetailsByKey(type, key);
+  public Map<String, Object> getOTPDetails(String type, String key) {
+    return otpDao.getOTPDetails(type, key);
   }
 
   public void insertOTPDetails(String type, String key, String otp) {
@@ -39,8 +39,9 @@ public class OTPService {
       return writer.toString();
     } catch (Exception ex) {
       ProjectLogger.log(
-          "getOTPSMSBody: Exception occurred with error message = " + ex.getMessage(), ex);
+          "OTPService:getOTPSMSBody: Exception occurred with error message = " + ex.getMessage(), ex);
     }
     return "";
   }
+
 }

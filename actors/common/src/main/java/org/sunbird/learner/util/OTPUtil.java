@@ -41,17 +41,19 @@ public final class OTPUtil {
     return String.valueOf(code);
   }
 
-  public static void sendOTPSMS(Map<String, Object> otpMap) {
+  public static void sendOTPViaSMS(Map<String, Object> otpMap) {
     if (StringUtils.isBlank((String) otpMap.get(JsonKey.PHONE))) {
       return;
     }
+
     Map<String, String> smsTemplate = new HashMap<>();
     smsTemplate.put(JsonKey.OTP, (String) otpMap.get(JsonKey.OTP));
     smsTemplate.put(
         JsonKey.OTP_EXPIRATION_IN_MINUTES, (String) otpMap.get(JsonKey.OTP_EXPIRATION_IN_MINUTES));
     String sms = ProjectUtil.getOTPSMSBody(smsTemplate);
 
-    ProjectLogger.log("SMS text : " + sms, LoggerEnum.INFO);
+    ProjectLogger.log("OTPUtil:sendOTPViaSMS: SMS text = " + sms, LoggerEnum.INFO);
+
     String countryCode = "";
     if (StringUtils.isBlank((String) otpMap.get(JsonKey.COUNTRY_CODE))) {
       countryCode = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_DEFAULT_COUNTRY_CODE);
@@ -59,22 +61,23 @@ public final class OTPUtil {
       countryCode = (String) otpMap.get(JsonKey.COUNTRY_CODE);
     }
     ISmsProvider smsProvider = SMSFactory.getInstance("91SMS");
+
     ProjectLogger.log(
-        "SMS OTP text : " + sms + " with phone " + (String) otpMap.get(JsonKey.PHONE),
+        "OTPUtil:sendOTPViaSMS: SMS OTP text = " + sms + " with phone = " + (String) otpMap.get(JsonKey.PHONE),
         LoggerEnum.INFO.name());
     boolean response = smsProvider.send((String) otpMap.get(JsonKey.PHONE), countryCode, sms);
-    ProjectLogger.log("Response from smsProvider : " + response, LoggerEnum.INFO);
+    ProjectLogger.log("OTPUtil:sendOTPViaSMS: Response from SMS provider: " + response, LoggerEnum.INFO);
     if (response) {
       ProjectLogger.log(
-          "OTP Message sent successfully to ." + (String) otpMap.get(JsonKey.PHONE),
+          "OTPUtil:sendOTPViaSMS: OTP sent successfully to " + (String) otpMap.get(JsonKey.PHONE),
           LoggerEnum.INFO.name());
     } else {
       ProjectLogger.log(
-          "OTP Message failed for ." + (String) otpMap.get(JsonKey.PHONE), LoggerEnum.INFO.name());
+          "OTPUtil:sendOTPViaSMS: OTP send failed for " + (String) otpMap.get(JsonKey.PHONE), LoggerEnum.INFO.name());
     }
   }
 
-  public static Request sendOTPMailRequest(Map<String, Object> emailTemplateMap) {
+  public static Request sendOTPViaEmail(Map<String, Object> emailTemplateMap) {
     Request request = null;
     if ((StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
       return request;
@@ -101,4 +104,5 @@ public final class OTPUtil {
     int otpExpirationInMinutes = Math.floorDiv(otpExpiration, SECONDS_IN_MINUTES);
     return String.valueOf(otpExpirationInMinutes);
   }
+
 }

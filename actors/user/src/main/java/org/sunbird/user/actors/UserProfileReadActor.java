@@ -693,8 +693,8 @@ public class UserProfileReadActor extends BaseActor {
     if (tncSystemSetting != null) {
       try {
         ObjectMapper mapper = new ObjectMapper();
-        Map<String, Object> tncCofigMap = mapper.readValue(tncSystemSetting.getValue(), Map.class);
-        String tncLatestVersion = (String) tncCofigMap.get(JsonKey.LATEST_VERSION);
+        Map<String, Object> tncConfigMap = mapper.readValue(tncSystemSetting.getValue(), Map.class);
+        String tncLatestVersion = (String) tncConfigMap.get(JsonKey.LATEST_VERSION);
         result.put(JsonKey.TNC_LATEST_VERSION, tncLatestVersion);
         String tncUserAcceptedVersion = (String) result.get(JsonKey.TNC_ACCEPTED_VERSION);
         String tncUserAcceptedOn = (String) result.get(JsonKey.TNC_ACCEPTED_ON);
@@ -706,8 +706,9 @@ public class UserProfileReadActor extends BaseActor {
           result.put(JsonKey.PROMPT_TNC, false);
         }
 
-        if (tncCofigMap.containsKey(tncLatestVersion)) {
-          String url = (String) ((Map) tncCofigMap.get(tncLatestVersion)).get(JsonKey.URL);
+        if (tncConfigMap.containsKey(tncLatestVersion)) {
+          String url = (String) ((Map) tncConfigMap.get(tncLatestVersion)).get(JsonKey.URL);
+          ProjectLogger.log("UserManagementActor:updateTncInfo: url = " + url, LoggerEnum.INFO.name());
           result.put(JsonKey.TNC_LATEST_VERSION_URL, url);
         } else {
           result.put(JsonKey.PROMPT_TNC, false);

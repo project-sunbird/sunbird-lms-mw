@@ -1,4 +1,3 @@
-/** */
 package org.sunbird.learner.actors.otp.service;
 
 import java.sql.Timestamp;
@@ -17,7 +16,6 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
-/** @author Rahul Kumar */
 public class OTPService {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private DbInfo otpDb = Util.dbInfoMap.get(JsonKey.OTP);
@@ -50,4 +48,5 @@ public class OTPService {
             otpDb.getKeySpace(), otpDb.getTableName(), request, ttl);
     ProjectLogger.log("response code = " + response.getResponseCode(), LoggerEnum.INFO.name());
   }
+
 }

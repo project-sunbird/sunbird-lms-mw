@@ -36,7 +36,7 @@ public class OTPActor extends BaseActor {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = (String) request.getRequest().get(JsonKey.KEY);
 
-    userService.checkKeyUniquenessInUser(type, key, true);
+    userService.checkKeyUniqueness(type, key, true);
 
     String otp = null;
     Map<String, Object> details = otpService.getOTPDetailsByKey(type, key);

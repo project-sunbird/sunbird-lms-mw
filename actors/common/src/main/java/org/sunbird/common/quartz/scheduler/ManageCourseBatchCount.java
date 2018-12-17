@@ -137,7 +137,7 @@ public class ManageCourseBatchCount implements Job {
                     courseId, 0, enrollmentType);
             int activeBatchCount = ongoingBatchList.size() + upcomingBatchList.size();
             int contentStoreBatchCount = (int) courseDetail.getOrDefault(countName, 0);
-            ProjectLogger.log(MessageFormat("findAndFixCoursesWithCountMismatch: (courseId, countInBatch, countInCourse) = ({0}, {1}, {2})"
+            ProjectLogger.log(MessageFormat.format("ManageCourseBatchCount:findAndFixCoursesWithCountMismatch: (courseId, countInBatch, countInCourse) = ({0}, {1}, {2})"
                               courseId, activeBatchCount, contentStoreBatchCount), LoggerEnum.INFO.name());
             if (activeBatchCount != contentStoreBatchCount) {
               CourseBatchSchedulerUtil.updateEkstepContent(courseId, countName, activeBatchCount);

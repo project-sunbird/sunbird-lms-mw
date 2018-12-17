@@ -106,7 +106,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
         String prefix = TEXTBOOK_TOC_FOLDER + separator + textBookTocFileName + fileType.getExtension();
         log("Fetching TextBook Toc URL from Cloud");
-        String cloudPath = ""/*getUri(prefix, false)*/;
+        String cloudPath = getUri(prefix, false);
         if (isBlank(cloudPath)) {
           cloudPath = new TextBookTocUploader(textBookTocFileName, fileType).
                   execute(content, textbookId, hierarchyVersionKey);

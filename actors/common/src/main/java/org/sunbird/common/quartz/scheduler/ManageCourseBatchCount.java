@@ -117,34 +117,34 @@ public class ManageCourseBatchCount implements Job {
     // Repeat above steps for invite only
 
     String countName = CourseBatchSchedulerUtil.getCountName(enrollmentType);
-    int totalCourse = 0;
+    int totalOpenForEnrollmentCourses = 0;
     int offset = 0;
     do {
       Map<String, Object> response =
-          CourseBatchSchedulerUtil.getContentForCleanUp(countName, offset);
+          CourseBatchSchedulerUtil.getOpenForEnrollmentCourses(countName, offset);
       if (MapUtils.isNotEmpty(response)) {
-        totalCourse = (int) response.get(JsonKey.COUNT);
+        totalOpenForEnrollmentCourses = (int) response.get(JsonKey.COUNT);
         List<Map<String, Object>> courseDetailsList =
             (List<Map<String, Object>>) response.get(JsonKey.CONTENTS);
-        if (CollectionUtils.isNotEmpty(courseDetailsList) || totalCourse != 0) {
+        if (CollectionUtils.isNotEmpty(courseDetailsList) || totalOpenForEnrollmentCourses != 0) {
           for (Map<String, Object> courseDetail : courseDetailsList) {
             String courseId = (String) courseDetail.get(JsonKey.IDENTIFIER);
             List<Map<String, Object>> ongoingBatchList =
-                CourseBatchSchedulerUtil.getAllBatchWithStatusNotCompleted(
+                CourseBatchSchedulerUtil.getCourseBatchByStatusAndType(
                     courseId, 1, enrollmentType);
             List<Map<String, Object>> upcomingBatchList =
-                CourseBatchSchedulerUtil.getAllBatchWithStatusNotCompleted(
+                CourseBatchSchedulerUtil.getCourseBatchByStatusAndType(
                     courseId, 0, enrollmentType);
             int activeBatchCount = ongoingBatchList.size() + upcomingBatchList.size();
-            int ekStepBatchCount = (int) courseDetail.getOrDefault(countName, 0);
-            if (activeBatchCount != ekStepBatchCount) {
+            int contentStoreBatchCount = (int) courseDetail.getOrDefault(countName, 0);
+            if (activeBatchCount != contentStoreBatchCount) {
               CourseBatchSchedulerUtil.updateEkstepContent(courseId, countName, activeBatchCount);
             }
           }
         }
       }
       offset += 100;
-    } while (offset < totalCourse);
+    } while (offset < totalOpenForEnrollmentCourses);
   }
 
   private Map<String, Object> genarateLogInfo(String logType, String message) {

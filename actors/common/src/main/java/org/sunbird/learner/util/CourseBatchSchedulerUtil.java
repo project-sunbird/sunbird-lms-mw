@@ -1,4 +1,3 @@
-/** */
 package org.sunbird.learner.util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -193,7 +192,7 @@ public final class CourseBatchSchedulerUtil {
     return searchContent(dto);
   }
 
-  public static List<Map<String, Object>> getAllBatchWithFutureEndDate(
+  public static List<Map<String, Object>> getFutureCourseBatches(
       String courseId, String today, String enrollmentType) {
     SearchDTO dto = new SearchDTO();
     Map<String, Object> map = new HashMap<>();
@@ -206,7 +205,7 @@ public final class CourseBatchSchedulerUtil {
     return searchContent(dto);
   }
 
-  public static List<Map<String, Object>> getAllBatchWithStatusNotCompleted(
+  public static List<Map<String, Object>> getCourseBatchesByStatusAndType(
       String courseId, int status, String enrollmentType) {
     SearchDTO dto = new SearchDTO();
     Map<String, Object> map = new HashMap<>();
@@ -217,7 +216,7 @@ public final class CourseBatchSchedulerUtil {
     return searchContent(dto);
   }
 
-  public static Map<String, Object> getContentForCleanUp(String countName, int offset) {
+  public static Map<String, Object> getOpenForEnrollmentCourses(String countName, int offset) {
     Map<String, Object> dto = new HashMap<>();
     Map<String, Integer> countFilter = new HashMap<>();
     countFilter.put(">", 0);

@@ -212,15 +212,15 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
       if (null != organisation) {
         orgName = organisation.getOrgName();
       }
-      
-      if(StringUtils.isNotEmpty(user.getPhone())) {
-    	  user.setPhoneVerified(true);
+
+      if (StringUtils.isNotEmpty(user.getPhone())) {
+        user.setPhoneVerified(true);
       }
-      
-      if(StringUtils.isNotEmpty(user.getEmail())) {
-    	  user.setEmailVerified(true);
+
+      if (StringUtils.isNotEmpty(user.getEmail())) {
+        user.setEmailVerified(true);
       }
-      
+
       if (StringUtils.isEmpty(user.getId())) {
         user.setCreatedBy(uploadedBy);
         user.setRootOrgId(organisationId);

@@ -3,14 +3,20 @@ package org.sunbird.learner.actors.search;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.actorutil.org.OrganisationClient;
+import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.PropertiesCache;
@@ -19,6 +25,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
+import org.sunbird.models.organisation.Organisation;
 import org.sunbird.telemetry.util.TelemetryLmaxWriter;
 import org.sunbird.telemetry.util.TelemetryUtil;
 
@@ -34,6 +41,7 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 public class SearchHandlerActor extends BaseActor {
 
   private String topn = PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_TOP_N);
+  private OrganisationClient orgClient = new OrganisationClientImpl();
 
   @SuppressWarnings({"unchecked", "rawtypes"})
   @Override
@@ -42,7 +50,7 @@ public class SearchHandlerActor extends BaseActor {
     Util.initializeContext(request, JsonKey.USER);
     // set request id fto thread loacl...
     ExecutionContext.setRequestId(request.getRequestId());
-
+    String requestFields = (String) request.getContext().get(JsonKey.FIELDS);
     if (request.getOperation().equalsIgnoreCase(ActorOperations.COMPOSITE_SEARCH.getValue())) {
       Map<String, Object> searchQueryMap = request.getRequest();
       Object objectType =
@@ -75,6 +83,7 @@ public class SearchHandlerActor extends BaseActor {
           UserUtility.decryptUserDataFrmES(userMap);
           userMap.remove(JsonKey.ENC_EMAIL);
           userMap.remove(JsonKey.ENC_PHONE);
+          fetchQueryParamDetails(requestFields, userMap);
         }
       }
       Response response = new Response();
@@ -89,6 +98,62 @@ public class SearchHandlerActor extends BaseActor {
       generateSearchTelemetryEvent(searchDto, types, result);
     } else {
       onReceiveUnsupportedOperation(request.getOperation());
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void fetchQueryParamDetails(String requestFields, Map<String, Object> userMap) {
+
+    if (StringUtils.isNotBlank(requestFields)) {
+      try {
+        if (requestFields.equalsIgnoreCase(JsonKey.ORG_NAME)) {
+          List<Map<String, Object>> userOrgList =
+              (List<Map<String, Object>>) userMap.get(JsonKey.ORGANISATIONS);
+          List<String> orgIds =
+              userOrgList
+                  .stream()
+                  .map(s -> (String) s.get(JsonKey.ORGANISATION_ID))
+                  .collect(Collectors.toList());
+          SearchDTO searchDTO = new SearchDTO();
+
+          List<String> list = new ArrayList<>();
+          list.add(JsonKey.ID);
+          list.add(JsonKey.ORG_NAME);
+
+          searchDTO.setFields(list);
+
+          Map<String, Object> filters = new HashMap<>();
+          filters.put(JsonKey.ID, orgIds);
+
+          searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
+          List<Organisation> orgList = orgClient.esSearchOrgBySearchDto(searchDTO);
+
+          userOrgList.forEach(
+              userOrg -> {
+                String userOrgId = (String) userOrg.get(JsonKey.ORGANISATION_ID);
+                Iterator<Organisation> itr = orgList.iterator();
+                while (itr.hasNext()) {
+                  Organisation organisation = itr.next();
+                  if (userOrgId.equalsIgnoreCase(organisation.getId())) {
+                    userOrg.put(JsonKey.ORG_NAME, organisation.getOrgName());
+                    itr.remove();
+                    break;
+                  }
+                }
+              });
+
+          String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
+          Organisation orgDetails = orgClient.esGetOrgById(rootOrgId);
+          if (null != orgDetails) {
+            userMap.put(JsonKey.ROOT_ORG_NAME, orgDetails.getOrgName());
+          }
+        }
+      } catch (Exception ex) {
+        ProjectLogger.log(
+            "SearchHandlerActor:fetchQueryParamDetails : Exception occurred with message "
+                + ex.getMessage(),
+            ex);
+      }
     }
   }
 

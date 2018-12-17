@@ -19,13 +19,13 @@ public class SendOTPActor extends BaseActor {
   public void onReceive(Request request) throws Throwable {
 
     if (ActorOperations.SEND_OTP.getValue().equals(request.getOperation())) {
-      processOTPMailAndSMS(request);
+      sendOTP(request);
     } else {
       onReceiveUnsupportedOperation("SendOTPActor");
     }
   }
 
-  private void processOTPMailAndSMS(Request request) {
+  private void sendOTP(Request request) {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = (String) request.getRequest().get(JsonKey.KEY);
     String otp = (String) request.getRequest().get(JsonKey.OTP);

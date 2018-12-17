@@ -693,24 +693,11 @@ public class UserProfileReadActor extends BaseActor {
     if (tncSystemSetting != null) {
       try {
         ObjectMapper mapper = new ObjectMapper();
-        ProjectLogger.log(
-            "UserManagementActor:updateTncInfo: value" + tncSystemSetting.getValue(),
-            LoggerEnum.INFO.name());
         Map<String, Object> tncConfigMap = mapper.readValue(tncSystemSetting.getValue(), Map.class);
-        ProjectLogger.log(
-            "UserManagementActor:updateTncInfo: tncConfigMap" + tncConfigMap,
-            LoggerEnum.INFO.name());
         String tncLatestVersion = (String) tncConfigMap.get(JsonKey.LATEST_VERSION);
-        ProjectLogger.log("UserManagementActor:updateTncInfo: tncConfigMap" + tncLatestVersion);
         result.put(JsonKey.TNC_LATEST_VERSION, tncLatestVersion);
         String tncUserAcceptedVersion = (String) result.get(JsonKey.TNC_ACCEPTED_VERSION);
-        ProjectLogger.log(
-            "UserManagementActor:updateTncInfo: tncUserAcceptedVersion" + tncUserAcceptedVersion,
-            LoggerEnum.INFO.name());
         String tncUserAcceptedOn = (String) result.get(JsonKey.TNC_ACCEPTED_ON);
-        ProjectLogger.log(
-            "UserManagementActor:updateTncInfo: tncUserAcceptedOn" + tncUserAcceptedOn,
-            LoggerEnum.INFO.name());
         if (StringUtils.isEmpty(tncUserAcceptedVersion)
             || !tncUserAcceptedVersion.equalsIgnoreCase(tncLatestVersion)
             || StringUtils.isEmpty(tncUserAcceptedOn)) {

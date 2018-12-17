@@ -42,7 +42,7 @@ public class SendOTPActor extends BaseActor {
     emailTemplateMap.put(JsonKey.EMAIL, key);
     emailTemplateMap.put(JsonKey.OTP, otp);
     emailTemplateMap.put(JsonKey.OTP_EXPIRATION_IN_MINUTES, OTPUtil.getOTPExpirationInMinutes());
-    Request emailRequest = OTPUtil.sendOTPMailRequest(emailTemplateMap);
+    Request emailRequest = OTPUtil.sendOTPViaEmail(emailTemplateMap);
     tellToAnother(emailRequest);
   }
 
@@ -51,7 +51,7 @@ public class SendOTPActor extends BaseActor {
     otpMap.put(JsonKey.PHONE, key);
     otpMap.put(JsonKey.OTP, otp);
     otpMap.put(JsonKey.OTP_EXPIRATION_IN_MINUTES, OTPUtil.getOTPExpirationInMinutes());
-    OTPUtil.sendOTPSMS(otpMap);
+    OTPUtil.sendOTPViaSMS(otpMap);
   }
 
 }

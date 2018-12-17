@@ -108,35 +108,45 @@ public class UserRoleActorTest {
 
   @Test
   public void testGetUserRoleSuccess() {
-    assertTrue(testScenario(true, true, null));
+    assertTrue(testScenario(response, true, true, true, null));
   }
 
   @Test
   public void testAssignRolesSuccessWithValidOrgId() {
-    assertTrue(testScenario(true, null));
+    assertTrue(testScenario(response, true, true, true, null));
   }
 
   @Test
   public void testAssignRolesSuccessWithoutOrgId() {
-    assertTrue(testScenario(false, null));
+    assertTrue(testScenario(false, response, true, false, true, null));
   }
 
   @Test
   public void testAssignRolesFailure() {
-    assertTrue(testScenario(true, ResponseCode.CLIENT_ERROR));
+    assertTrue(testScenario(false, null, false, true, false, ResponseCode.CLIENT_ERROR));
   }
 
   @Test
   public void testAssignRolesFailureWithInvalidOrgId() {
-    assertTrue(testScenario(false, ResponseCode.invalidParameterValue));
-  }
-
-  private boolean testScenario(boolean isOrgIdReq, ResponseCode errorResponse) {
-    return testScenario(false, isOrgIdReq, errorResponse);
+    assertTrue(testScenario(false, null, true, true, false, ResponseCode.invalidParameterValue));
   }
 
   private boolean testScenario(
-      boolean isGetUserRoles, boolean isOrgIdReq, ResponseCode errorResponse) {
+      Response response,
+      boolean isResponseRequired,
+      boolean isOrgIdReq,
+      boolean isSuccess,
+      ResponseCode errorResponse) {
+    return testScenario(false, response, isResponseRequired, isOrgIdReq, isSuccess, errorResponse);
+  }
+
+  private boolean testScenario(
+      boolean isGetUserRoles,
+      Response response,
+      boolean isResponseRequired,
+      boolean isOrgIdReq,
+      boolean isSuccess,
+      ResponseCode errorResponse) {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -149,24 +159,26 @@ public class UserRoleActorTest {
     } else {
       DecryptionService decryptionService = Mockito.mock(DecryptionService.class);
       when(decryptionService.decryptData(Mockito.anyMap())).thenReturn(getOrganisationsMap());
+
       when(interServiceCommunication.getResponse(Mockito.anyObject(), Mockito.anyObject()))
           .thenReturn(response);
-      if (errorResponse == null) {
+      if (response != null) {
         when(response.get(Mockito.anyString())).thenReturn(new HashMap<>());
-        mockGetOrgResponse(true);
-      } else {
-        mockGetOrgResponse(false);
       }
+
+      mockGetOrgResponse(isResponseRequired);
       subject.tell(getRequestObj(isOrgIdReq), probe.getRef());
     }
-    if (errorResponse == null) {
+    if (isSuccess) {
       Response res = probe.expectMsgClass(duration("10 second"), Response.class);
       return null != res && res.getResponseCode() == ResponseCode.OK;
     } else {
       ProjectCommonException res =
           probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-      return res.getCode().equals(errorResponse.getErrorCode())
-          || res.getResponseCode() == errorResponse.getResponseCode();
+
+      if (errorResponse != null) {
+        return res.getCode().equals(errorResponse.getErrorCode());
+      } else return res.getResponseCode() == 400;
     }
   }
 
@@ -180,7 +192,7 @@ public class UserRoleActorTest {
     return orgMap;
   }
 
-  private Map<String, Object> createResponseGet(boolean isResponseRequired) {
+  private Map<String, Object> createResponseGet(boolean isSuccess) {
     HashMap<String, Object> response = new HashMap<>();
     List<Map<String, Object>> content = new ArrayList<>();
     HashMap<String, Object> innerMap = new HashMap<>();
@@ -192,7 +204,7 @@ public class UserRoleActorTest {
     List<Map<String, Object>> orgList = new ArrayList<>();
     orgList.add(orgMap);
     innerMap.put(JsonKey.ORGANISATIONS, orgList);
-    if (isResponseRequired) {
+    if (isSuccess) {
       content.add(innerMap);
     }
     response.put(JsonKey.CONTENT, content);
@@ -215,13 +227,13 @@ public class UserRoleActorTest {
     return reqObj;
   }
 
-  private void mockGetOrgResponse(boolean isResponseRequired) {
+  private void mockGetOrgResponse(boolean isSuccess) {
 
     when(ElasticSearchUtil.complexSearch(
             Mockito.any(SearchDTO.class),
             Mockito.eq(ProjectUtil.EsIndex.sunbird.getIndexName()),
             Mockito.anyVararg()))
-        .thenReturn(createResponseGet(isResponseRequired));
+        .thenReturn(createResponseGet(isSuccess));
   }
 
   private static Response getCassandraResponse() {

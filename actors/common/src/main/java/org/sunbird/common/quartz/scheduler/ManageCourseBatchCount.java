@@ -109,12 +109,11 @@ public class ManageCourseBatchCount implements Job {
 
   @SuppressWarnings("unchecked")
   private void findAndFixCoursesWithCountMismatch(String enrollmentType) {
-    // Get some page SIZE of courses using content search with open batch count > 0
-    // For each course, compare the number of open batches with the count in course metadata with
+    // Get some page SIZE of courses using content search with open (or invite only) batch count > 0
+    // For each course, compare the number of open (or invite only) batches with the count in course metadata with
     // start date <= yesterday end date >= today
-    // If not matching update the count in ekstep
+    // If not matching update the count in content store
     // If more records, then repeat step 1
-    // Repeat above steps for invite only
 
     String countName = CourseBatchSchedulerUtil.getCountName(enrollmentType);
     int totalOpenForEnrollmentCourses = 0;

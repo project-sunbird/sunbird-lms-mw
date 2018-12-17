@@ -39,7 +39,7 @@ public class OTPActor extends BaseActor {
     userService.checkKeyUniqueness(type, key, true);
 
     String otp = null;
-    Map<String, Object> details = otpService.getOTPDetailsByKey(type, key);
+    Map<String, Object> details = otpService.getOTPDetails(type, key);
     if (MapUtils.isEmpty(details)) {
       otp = OTPUtil.generateOTP();
       ProjectLogger.log("OTPActor:generateOTP: OTP = " + otp, LoggerEnum.INFO);

@@ -28,10 +28,10 @@ public final class OTPUtil {
 
   public static String generateOTP() {
     String otpSize = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OTP_LENGTH);
-    int codeDigit = StringUtils.isBlank(otpSize) ? MINIMUM_OTP_LENGTH : Integer.valueOf(otpSize);
+    int codeDigits = StringUtils.isBlank(otpSize) ? MINIMUM_OTP_LENGTH : Integer.valueOf(otpSize);
     GoogleAuthenticatorConfig config =
         new GoogleAuthenticatorConfig.GoogleAuthenticatorConfigBuilder()
-            .setCodeDigits(codeDigit)
+            .setCodeDigits(codeDigits)
             .setKeyRepresentation(KeyRepresentation.BASE64)
             .build();
     GoogleAuthenticator gAuth = new GoogleAuthenticator(config);
@@ -65,8 +65,11 @@ public final class OTPUtil {
     ProjectLogger.log(
         "OTPUtil:sendOTPViaSMS: SMS OTP text = " + sms + " with phone = " + (String) otpMap.get(JsonKey.PHONE),
         LoggerEnum.INFO.name());
+
     boolean response = smsProvider.send((String) otpMap.get(JsonKey.PHONE), countryCode, sms);
+
     ProjectLogger.log("OTPUtil:sendOTPViaSMS: Response from SMS provider: " + response, LoggerEnum.INFO);
+
     if (response) {
       ProjectLogger.log(
           "OTPUtil:sendOTPViaSMS: OTP sent successfully to " + (String) otpMap.get(JsonKey.PHONE),

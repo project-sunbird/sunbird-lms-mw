@@ -169,14 +169,14 @@ public class UserManagementActor extends BaseActor {
       Map<String, Object> userRequestMap, Map<String, Object> userDbRecord) {
     if (userRequestMap.containsKey(JsonKey.FRAMEWORK)) {
       Map<String, Object> framework = (Map<String, Object>) userRequestMap.get(JsonKey.FRAMEWORK);
-      List<String> frameworkId;
+      List<String> frameworkIdList;
       if (framework.get(JsonKey.ID) instanceof String) {
         String frameworkIdString = (String) framework.remove(JsonKey.ID);
-        frameworkId = new ArrayList<>();
-        frameworkId.add(frameworkIdString);
-        framework.put(JsonKey.ID, frameworkId);
+        frameworkIdList = new ArrayList<>();
+        frameworkIdList.add(frameworkIdString);
+        framework.put(JsonKey.ID, frameworkIdList);
       } else {
-        frameworkId = (List<String>) framework.get(JsonKey.ID);
+        frameworkIdList = (List<String>) framework.get(JsonKey.ID);
       }
 
       userRequestMap.put(JsonKey.FRAMEWORK, framework);
@@ -190,9 +190,9 @@ public class UserManagementActor extends BaseActor {
           Util.getOrgDetails((String) userDbRecord.get(JsonKey.ROOT_ORG_ID));
       String hashtagId = (String) rootOrgMap.get(JsonKey.HASHTAGID);
 
-      verifyFrameworkId(hashtagId, frameworkId);
+      verifyFrameworkId(hashtagId, frameworkIdList);
       Map<String, List<Map<String, String>>> frameworkCachedValue =
-          getFrameworkDetails(frameworkId.get(0));
+          getFrameworkDetails(frameworkIdList.get(0));
       userRequestValidator.validateFrameworkCategoryValues(userRequestMap, frameworkCachedValue);
     }
   }

@@ -27,9 +27,9 @@ public class UserService {
   public void checkKeyUniqueness(String key, String value, boolean isEncrypted) {
     if (StringUtils.isBlank(key) || StringUtils.isBlank(value)) {
       ProjectLogger.log(
-          "UserService:checkKeyUniqueness: Key or value is null, Key= "
+          "UserService:checkKeyUniqueness: Key or value is null. key = "
               + key
-              + ", value= "
+              + " value= "
               + value,
           LoggerEnum.ERROR.name());
       return;
@@ -45,11 +45,14 @@ public class UserService {
             e);
       }
     }
+
     Response result =
         cassandraOperation.getRecordsByIndexedProperty(
             userDb.getKeySpace(), userDb.getTableName(), key, val);
+
     List<Map<String, Object>> userMapList =
         (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+
     if (!userMapList.isEmpty()) {
       ResponseCode responseCode = null;
       if (JsonKey.EMAIL.equals(key)) {
@@ -60,4 +63,5 @@ public class UserService {
       ProjectCommonException.throwClientErrorException(responseCode, null);
     }
   }
+
 }

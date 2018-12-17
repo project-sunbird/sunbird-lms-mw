@@ -62,15 +62,22 @@ public class OTPActor extends BaseActor {
   private void verifyOTP(Request request) {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = (String) request.getRequest().get(JsonKey.KEY);
-    String otpProvided = (String) request.getRequest().get(JsonKey.OTP);
+    String otpInRequest = (String) request.getRequest().get(JsonKey.OTP);
+
     Map<String, Object> otpDetails = otpService.getOTPDetails(type, key);
+
     if (MapUtils.isEmpty(otpDetails)) {
-      ProjectCommonException.throwClientErrorException(ResponseCode.errorOtpNotFound);
+      ProjectLogger.log("OTPActor:verifyOTP: Details not found for type = " + type + " key = " + key, LoggerEnum.INFO);
+      ProjectCommonException.throwClientErrorException(ResponseCode.errorInvalidOTP);
     }
-    String otpFromDB = (String) otpDetails.get(JsonKey.OTP);
-    if (!otpProvided.equals(otpFromDB)) {
-      ProjectCommonException.throwClientErrorException(ResponseCode.errorOtpMismatch);
+
+    String otpInDB = (String) otpDetails.get(JsonKey.OTP);
+
+    if (otpInDB == null || otpInRequest == null || !otpInRequest.equals(otpInDB)) {
+      ProjectLogger.log("OTPActor:verifyOTP: OTP mismatch otpInRequest = " + otpInRequest + " otpInDB = " + otpInDB, LoggerEnum.INFO);
+      ProjectCommonException.throwClientErrorException(ResponseCode.errorInvalidOTP);
     }
+
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
@@ -86,4 +93,5 @@ public class OTPActor extends BaseActor {
     // Sent OTP via email or sms
     tellToAnother(sendOtpRequest);
   }
+
 }

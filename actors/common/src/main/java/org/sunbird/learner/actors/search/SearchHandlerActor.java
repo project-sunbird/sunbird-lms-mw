@@ -106,7 +106,7 @@ public class SearchHandlerActor extends BaseActor {
 
     if (CollectionUtils.isNotEmpty(requestFields)) {
       try {
-        if (requestFields.contains(JsonKey.ORG_NAME)) {
+        if (requestFields.contains(JsonKey.ORG_NAME.toLowerCase())) {
           List<Map<String, Object>> userOrgList =
               (List<Map<String, Object>>) userMap.get(JsonKey.ORGANISATIONS);
           List<String> orgIds =

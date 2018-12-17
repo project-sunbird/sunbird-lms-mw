@@ -116,6 +116,8 @@ public class ManageCourseBatchCount implements Job {
     // If not matching update the count in content store
     // If more records, then repeat step 1
 
+    ProjectLogger.log("ManageCourseBatchCount: findAndFixCoursesWithCountMismatch called with enrollmentType = " + enrollmentType, LoggerEnum.INFO.name());
+
     String countName = CourseBatchSchedulerUtil.getCountName(enrollmentType);
     int totalOpenForEnrollmentCourses = 0;
     int offset = 0;
@@ -140,6 +142,7 @@ public class ManageCourseBatchCount implements Job {
             ProjectLogger.log(MessageFormat.format("ManageCourseBatchCount:findAndFixCoursesWithCountMismatch: (courseId, countInBatch, countInCourse) = ({0}, {1}, {2})"
                               courseId, activeBatchCount, contentStoreBatchCount), LoggerEnum.INFO.name());
             if (activeBatchCount != contentStoreBatchCount) {
+              ProjectLogger.log("ManageCourseBatchCount:findAndFixCoursesWithCountMismatch: Update count in content store", LoggerEnum.INFO.name());
               CourseBatchSchedulerUtil.updateEkstepContent(courseId, countName, activeBatchCount);
             }
           }

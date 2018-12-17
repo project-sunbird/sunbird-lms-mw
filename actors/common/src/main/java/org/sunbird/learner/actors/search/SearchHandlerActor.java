@@ -7,7 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.org.OrganisationClient;
@@ -50,7 +50,7 @@ public class SearchHandlerActor extends BaseActor {
     Util.initializeContext(request, JsonKey.USER);
     // set request id fto thread loacl...
     ExecutionContext.setRequestId(request.getRequestId());
-    String requestFields = (String) request.getContext().get(JsonKey.FIELDS);
+    List<String> requestFields = (List<String>) request.getContext().get(JsonKey.FIELDS);
     if (request.getOperation().equalsIgnoreCase(ActorOperations.COMPOSITE_SEARCH.getValue())) {
       Map<String, Object> searchQueryMap = request.getRequest();
       Object objectType =
@@ -102,11 +102,11 @@ public class SearchHandlerActor extends BaseActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void fetchQueryParamDetails(String requestFields, Map<String, Object> userMap) {
+  private void fetchQueryParamDetails(List<String> requestFields, Map<String, Object> userMap) {
 
-    if (StringUtils.isNotBlank(requestFields)) {
+    if (CollectionUtils.isNotEmpty(requestFields)) {
       try {
-        if (requestFields.equalsIgnoreCase(JsonKey.ORG_NAME)) {
+        if (requestFields.contains(JsonKey.ORG_NAME)) {
           List<Map<String, Object>> userOrgList =
               (List<Map<String, Object>>) userMap.get(JsonKey.ORGANISATIONS);
           List<String> orgIds =
@@ -114,27 +114,21 @@ public class SearchHandlerActor extends BaseActor {
                   .stream()
                   .map(s -> (String) s.get(JsonKey.ORGANISATION_ID))
                   .collect(Collectors.toList());
-          SearchDTO searchDTO = new SearchDTO();
 
-          List<String> list = new ArrayList<>();
-          list.add(JsonKey.ID);
-          list.add(JsonKey.ORG_NAME);
+          List<String> outputColumns = new ArrayList<>();
+          outputColumns.add(JsonKey.ID);
+          outputColumns.add(JsonKey.ORG_NAME);
 
-          searchDTO.setFields(list);
-
-          Map<String, Object> filters = new HashMap<>();
-          filters.put(JsonKey.ID, orgIds);
-
-          searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
-          List<Organisation> orgList = orgClient.esSearchOrgBySearchDto(searchDTO);
+          List<Organisation> orgList =
+              orgClient.esFetchOrgDetailsWithSpecificColumnsByOrgIds(orgIds, outputColumns);
 
           userOrgList.forEach(
               userOrg -> {
-                String userOrgId = (String) userOrg.get(JsonKey.ORGANISATION_ID);
+                String orgId = (String) userOrg.get(JsonKey.ORGANISATION_ID);
                 Iterator<Organisation> itr = orgList.iterator();
                 while (itr.hasNext()) {
                   Organisation organisation = itr.next();
-                  if (userOrgId.equalsIgnoreCase(organisation.getId())) {
+                  if (orgId.equalsIgnoreCase(organisation.getId())) {
                     userOrg.put(JsonKey.ORG_NAME, organisation.getOrgName());
                     itr.remove();
                     break;

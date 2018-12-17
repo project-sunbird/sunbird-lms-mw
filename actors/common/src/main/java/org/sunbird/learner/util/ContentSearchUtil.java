@@ -54,14 +54,15 @@ public class ContentSearchUtil {
 
   public static Future<Map<String, Object>> searchContent(
       String urlQueryString, String queryRequestBody, Map<String, String> headers) {
+    String logMsgPrefix = "ContentSearchUtil:searchContent: ";
+
     Unirest.clearDefaultHeaders();
     String urlString =
         StringUtils.isNotBlank(urlQueryString)
             ? contentSearchURL + urlQueryString
             : contentSearchURL;
     ProjectLogger.log(
-        "ContentSearchUtil:searchContent Making content search call to = " + urlString,
-        LoggerEnum.INFO);
+        logMsgPrefix + "Making content search call to = " + urlString, LoggerEnum.INFO);
     BaseRequest request =
         Unirest.post(urlString).headers(getUpdatedHeaders(headers)).body(queryRequestBody);
     Future<HttpResponse<JsonNode>> response = RestUtil.executeAsync(request);
@@ -78,10 +79,7 @@ public class ContentSearchUtil {
                 resultMap.remove(JsonKey.CONTENT);
                 resultMap.put(JsonKey.CONTENTS, contents);
                 ProjectLogger.log(
-                    "ContentSearchUtil:searchContent requestBody = "
-                        + queryRequestBody
-                        + " content = "
-                        + contents,
+                    logMsgPrefix + "requestBody = " + queryRequestBody + " content = " + contents,
                     LoggerEnum.INFO.name());
                 String resmsgId = RestUtil.getFromResponse(response, "params.resmsgid");
                 String apiId = RestUtil.getFromResponse(response, "id");
@@ -91,9 +89,13 @@ public class ContentSearchUtil {
                 resultMap.put(JsonKey.PARAMS, param);
                 return resultMap;
               } else {
+                ProjectLogger.log(
+                    logMsgPrefix + "Search content failed. Error response = " + response.getBody());
                 return null;
               }
             } catch (Exception e) {
+              ProjectLogger.log(
+                  logMsgPrefix + "Exception occurred with error message = " + e.getMessage(), e);
               return null;
             }
           }

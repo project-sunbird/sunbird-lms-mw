@@ -207,7 +207,9 @@ public class UserRoleActorTest {
     reqObj.put(JsonKey.USER_ID, "USER_ID");
     reqObj.put(JsonKey.HASHTAGID, "HASHTAGID");
     reqObj.put(JsonKey.PROVIDER, "PROVIDER");
-    if (isOrgIdReq) reqObj.put(JsonKey.ORGANISATION_ID, "ORGANISATION_ID");
+    if (isOrgIdReq) {
+      reqObj.put(JsonKey.ORGANISATION_ID, "ORGANISATION_ID");
+    }
     reqObj.setOperation(ActorOperations.ASSIGN_ROLES.getValue());
     return reqObj;
   }

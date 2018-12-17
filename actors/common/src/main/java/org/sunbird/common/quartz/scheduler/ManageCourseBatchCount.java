@@ -1,13 +1,13 @@
 /** */
 package org.sunbird.common.quartz.scheduler;
 
+import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.text.MessageFormat;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.quartz.Job;
@@ -111,12 +111,16 @@ public class ManageCourseBatchCount implements Job {
   @SuppressWarnings("unchecked")
   private void findAndFixCoursesWithCountMismatch(String enrollmentType) {
     // Get some page SIZE of courses using content search with open (or invite only) batch count > 0
-    // For each course, compare the number of open (or invite only) batches with the count in course metadata with
+    // For each course, compare the number of open (or invite only) batches with the count in course
+    // metadata with
     // start date <= yesterday end date >= today
     // If not matching update the count in content store
     // If more records, then repeat step 1
 
-    ProjectLogger.log("ManageCourseBatchCount: findAndFixCoursesWithCountMismatch called with enrollmentType = " + enrollmentType, LoggerEnum.INFO.name());
+    ProjectLogger.log(
+        "ManageCourseBatchCount: findAndFixCoursesWithCountMismatch called with enrollmentType = "
+            + enrollmentType,
+        LoggerEnum.INFO.name());
 
     String countName = CourseBatchSchedulerUtil.getCountName(enrollmentType);
     int totalOpenForEnrollmentCourses = 0;
@@ -132,17 +136,20 @@ public class ManageCourseBatchCount implements Job {
           for (Map<String, Object> courseDetail : courseDetailsList) {
             String courseId = (String) courseDetail.get(JsonKey.IDENTIFIER);
             List<Map<String, Object>> ongoingBatchList =
-                CourseBatchSchedulerUtil.getCourseBatchesByStatusAndType(
-                    courseId, 1, enrollmentType);
+                CourseBatchSchedulerUtil.getOngoingAndOpenCourseBatches(courseId, enrollmentType);
             List<Map<String, Object>> upcomingBatchList =
-                CourseBatchSchedulerUtil.getCourseBatchesByStatusAndType(
-                    courseId, 0, enrollmentType);
+                CourseBatchSchedulerUtil.getOngoingAndOpenCourseBatches(courseId, enrollmentType);
             int activeBatchCount = ongoingBatchList.size() + upcomingBatchList.size();
             int contentStoreBatchCount = (int) courseDetail.getOrDefault(countName, 0);
-            ProjectLogger.log(MessageFormat.format("ManageCourseBatchCount:findAndFixCoursesWithCountMismatch: (courseId, countInBatch, countInCourse) = ({0}, {1}, {2})"
-                              courseId, activeBatchCount, contentStoreBatchCount), LoggerEnum.INFO.name());
+            ProjectLogger.log(
+                MessageFormat.format(
+                    "ManageCourseBatchCount:findAndFixCoursesWithCountMismatch: (courseId, countInBatch, countInCourse) = ({0}, {1}, {2})",
+                    courseId, activeBatchCount, contentStoreBatchCount),
+                LoggerEnum.INFO.name());
             if (activeBatchCount != contentStoreBatchCount) {
-              ProjectLogger.log("ManageCourseBatchCount:findAndFixCoursesWithCountMismatch: Update count in content store", LoggerEnum.INFO.name());
+              ProjectLogger.log(
+                  "ManageCourseBatchCount:findAndFixCoursesWithCountMismatch: Update count in content store",
+                  LoggerEnum.INFO.name());
               CourseBatchSchedulerUtil.updateEkstepContent(courseId, countName, activeBatchCount);
             }
           }

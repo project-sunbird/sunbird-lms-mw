@@ -708,7 +708,7 @@ public class UserProfileReadActor extends BaseActor {
 
         if (tncConfigMap.containsKey(tncLatestVersion)) {
           String url = (String) ((Map) tncConfigMap.get(tncLatestVersion)).get(JsonKey.URL);
-          ProjectLogger.log("UserManagementActor:updateTncInfo: url" + url, LoggerEnum.INFO.name());
+          ProjectLogger.log("UserManagementActor:updateTncInfo: url = " + url, LoggerEnum.INFO.name());
           result.put(JsonKey.TNC_LATEST_VERSION_URL, url);
         } else {
           result.put(JsonKey.PROMPT_TNC, false);

@@ -24,10 +24,10 @@ public class UserService {
   private DbInfo userDb = Util.dbInfoMap.get(JsonKey.USER_DB);
 
   @SuppressWarnings("unchecked")
-  public void checkKeyUniquenessInUser(String key, String value, boolean isEncrypted) {
+  public void checkKeyUniqueness(String key, String value, boolean isEncrypted) {
     if (StringUtils.isBlank(key) || StringUtils.isBlank(value)) {
       ProjectLogger.log(
-          "UserService:checkKeyUniquenessInUser: Key or value is null, Key= "
+          "UserService:checkKeyUniqueness: Key or value is null, Key= "
               + key
               + ", value= "
               + value,
@@ -40,7 +40,7 @@ public class UserService {
         val = encryptionService.encryptData(val);
       } catch (Exception e) {
         ProjectLogger.log(
-            "UserService:checkKeyUniquenessInUser: Exception occurred with error message = "
+            "UserService:checkKeyUniqueness: Exception occurred with error message = "
                 + e.getMessage(),
             e);
       }

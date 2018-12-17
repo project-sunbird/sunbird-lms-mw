@@ -29,22 +29,15 @@ public class SendOTPActor extends BaseActor {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = (String) request.getRequest().get(JsonKey.KEY);
     String otp = (String) request.getRequest().get(JsonKey.OTP);
+
     if (JsonKey.EMAIL.equalsIgnoreCase(type)) {
-      sendOTPMail(key, otp);
+      sendOTPViaEmail(key, otp);
     } else if (JsonKey.PHONE.equalsIgnoreCase(type)) {
-      sendOTPSMS(key, otp);
+      sendOTPViaSMS(key, otp);
     }
   }
 
-  private void sendOTPSMS(String key, String otp) {
-    Map<String, Object> otpMap = new HashMap<>();
-    otpMap.put(JsonKey.PHONE, key);
-    otpMap.put(JsonKey.OTP, otp);
-    otpMap.put(JsonKey.OTP_EXPIRATION_IN_MINUTES, OTPUtil.getOTPExpirationInMinutes());
-    OTPUtil.sendOTPSMS(otpMap);
-  }
-
-  private void sendOTPMail(String key, String otp) {
+  private void sendOTPViaEmail(String key, String otp) {
     Map<String, Object> emailTemplateMap = new HashMap<>();
     emailTemplateMap.put(JsonKey.EMAIL, key);
     emailTemplateMap.put(JsonKey.OTP, otp);
@@ -52,4 +45,13 @@ public class SendOTPActor extends BaseActor {
     Request emailRequest = OTPUtil.sendOTPMailRequest(emailTemplateMap);
     tellToAnother(emailRequest);
   }
+
+  private void sendOTPViaSMS(String key, String otp) {
+    Map<String, Object> otpMap = new HashMap<>();
+    otpMap.put(JsonKey.PHONE, key);
+    otpMap.put(JsonKey.OTP, otp);
+    otpMap.put(JsonKey.OTP_EXPIRATION_IN_MINUTES, OTPUtil.getOTPExpirationInMinutes());
+    OTPUtil.sendOTPSMS(otpMap);
+  }
+
 }

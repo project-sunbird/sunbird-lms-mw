@@ -1,26 +1,25 @@
-/** */
 package org.sunbird.learner.actors.otp.dao;
 
 import java.util.Map;
 
-/** @author Rahul Kumar */
 public interface OTPDao {
 
   /**
-   * Fetches otp details based on type and key
+   * Fetch OTP details based on type (phone / email) and key.
    *
-   * @param type
-   * @param key
-   * @return map of the otp details from db
+   * @param type Type of key (phone / email)
+   * @param key Phone number or email address
+   * @return OTP details
    */
   Map<String, Object> getOTPDetailsByKey(String type, String key);
 
   /**
-   * Add a new OTP detail into DB based on type and key
+   * Insert OTP details for given type (phone / email) and key
    *
-   * @param type
-   * @param key
-   * @param otp
+   * @param type Type of key (phone / email)
+   * @param key Phone number or email address
+   * @param otp Generated OTP
    */
   void insertOTPDetails(String type, String key, String otp);
+
 }

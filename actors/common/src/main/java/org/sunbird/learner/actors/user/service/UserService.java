@@ -1,6 +1,3 @@
-/**
- * 
- */
 package org.sunbird.learner.actors.user.service;
 
 import java.util.List;
@@ -19,10 +16,6 @@ import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
-/**
- * @author Rahul Kumar
- *
- */
 public class UserService {
 	
 	private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -43,7 +36,7 @@ public class UserService {
 	      try {
 	        encPhone = encryptionService.encryptData(phone);
 	      } catch (Exception e) {
-	        ProjectLogger.log("Exception occurred while encrypting phone number ", e);
+	        ProjectLogger.log("UserService:checkPhoneUniqueness: Exception occurred with error message = " e.getMessage(), e);
 	      }
 	      Response result =
 	          cassandraOperation.getRecordsByIndexedProperty(
@@ -69,7 +62,7 @@ public class UserService {
 	      try {
 	        encEmail = encryptionService.encryptData(email);
 	      } catch (Exception e) {
-	        ProjectLogger.log("Exception occurred while encrypting Email ", e);
+	        ProjectLogger.log("UserService:checkEmailUniqueness: Exception occurred with error message = " e.getMessage(), e);
 	      }
 	      Response result =
 	              cassandraOperation.getRecordsByIndexedProperty(

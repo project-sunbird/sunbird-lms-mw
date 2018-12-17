@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -205,11 +206,11 @@ public final class CourseBatchSchedulerUtil {
     return searchContent(dto);
   }
 
-  public static List<Map<String, Object>> getCourseBatchesByStatusAndType(
-      String courseId, int status, String enrollmentType) {
+  public static List<Map<String, Object>> getOngoingAndOpenCourseBatches(
+      String courseId, String enrollmentType) {
     SearchDTO dto = new SearchDTO();
     Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.STATUS, status);
+    map.put(JsonKey.STATUS, new ArrayList<String>(Arrays.asList("0", "1"))); // Set status to upcoming and ongoing batches
     map.put(JsonKey.ENROLLMENT_TYPE, enrollmentType);
     map.put(JsonKey.COURSE_ID, courseId);
     dto.addAdditionalProperty(JsonKey.FILTERS, map);

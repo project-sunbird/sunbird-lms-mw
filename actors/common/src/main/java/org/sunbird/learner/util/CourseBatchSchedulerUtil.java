@@ -237,8 +237,7 @@ public final class CourseBatchSchedulerUtil {
       }
     } catch (JsonProcessingException e) {
       ProjectLogger.log(
-          "CourseBatchScheduleUtil: getContentForCleanUp: Error Occured while processing "
-              + requestMap,
+          "CourseBatchScheduleUtil:getOpenForEnrollmentCourses: Exception occurred with error message = " + e.getMessage(),
           LoggerEnum.INFO);
       return null;
     }

@@ -229,18 +229,6 @@ public class UserUtil {
     }
   }
 
-  public static void checkUserExistOrNot(User user) {
-    Map<String, Object> searchQueryMap = new HashMap<>();
-    // loginId is encrypted in our application
-    searchQueryMap.put(JsonKey.LOGIN_ID, getEncryptedData(user.getLoginId()));
-    if (CollectionUtils.isNotEmpty(searchUser(searchQueryMap))) {
-      ProjectCommonException.throwClientErrorException(
-          ResponseCode.userAlreadyExists,
-          ProjectUtil.formatMessage(
-              ResponseCode.userAlreadyExists.getErrorMessage(), JsonKey.USERNAME));
-    }
-  }
-
   public static String getEncryptedData(String value) {
     try {
       return encryptionService.encryptData(value);
@@ -250,30 +238,6 @@ public class UserUtil {
           ResponseCode.userDataEncryptionError.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
-  }
-
-  @SuppressWarnings("unchecked")
-  private static List<User> searchUser(Map<String, Object> searchQueryMap) {
-    List<User> userList = new ArrayList<>();
-    Map<String, Object> searchRequestMap = new HashMap<>();
-    searchRequestMap.put(JsonKey.FILTERS, searchQueryMap);
-    SearchDTO searchDto = Util.createSearchDto(searchRequestMap);
-    String[] types = {ProjectUtil.EsType.user.getTypeName()};
-    Map<String, Object> result =
-        ElasticSearchUtil.complexSearch(
-            searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
-    if (MapUtils.isNotEmpty(result)) {
-      List<Map<String, Object>> searchResult =
-          (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-      if (CollectionUtils.isNotEmpty(searchResult)) {
-        userList =
-            searchResult
-                .stream()
-                .map(s -> mapper.convertValue(s, User.class))
-                .collect(Collectors.toList());
-      }
-    }
-    return userList;
   }
 
   public static List<Map<String, String>> copyAndConvertExternalIdsToLower(
@@ -465,22 +429,23 @@ public class UserUtil {
     // creation
     userMap.put(JsonKey.PROFILE_VISIBILITY, new HashMap<String, String>());
     userMap.put(JsonKey.IS_DELETED, false);
-    // create loginId to ensure uniqueness for combination of userName and channel
-    String loginId = Util.getLoginId(userMap);
-    userMap.put(JsonKey.LOGIN_ID, loginId);
     userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
 
     if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
       String firstName = (String) userMap.get(JsonKey.FIRST_NAME);
       String lastName = (String) userMap.get(JsonKey.LAST_NAME);
-      String name = String.join(" ", firstName, lastName);
+
+      String name = String.join(" ", firstName, StringUtils.isNotBlank(lastName) ? lastName : "");
 
       String userName = null;
       while (StringUtils.isBlank(userName)) {
         userName = getUsername(name);
         if (StringUtils.isNotBlank(userName)) {
           userMap.put(JsonKey.USERNAME, userName);
+          // create loginId to ensure uniqueness for combination of userName and channel
+          String loginId = Util.getLoginId(userMap);
+          userMap.put(JsonKey.LOGIN_ID, loginId);
         }
       }
     }
@@ -514,10 +479,11 @@ public class UserUtil {
         }
 
         // Search if any user names are taking using ES
+        List<String> filtersEncryptedUserNameList = new ArrayList<>(encryptedUserNameList);
         Map<String, Object> filters = new HashMap<>();
-        filters.put(JsonKey.USERNAME, encryptedUserNameList);
+        filters.put(JsonKey.USERNAME, filtersEncryptedUserNameList);
         users = userService.esSearchUserByFilters(filters);
-      } while (CollectionUtils.isNotEmpty(users) && encryptedUserNameList.size() >= users.size());
+      } while (CollectionUtils.isNotEmpty(users) && users.size() >= encryptedUserNameList.size());
 
       esUserNameList.clear();
 
@@ -528,7 +494,6 @@ public class UserUtil {
               user -> {
                 esUserNameList.add((String) user.get(JsonKey.USERNAME));
               });
-
       // Query cassandra to find first username that is not yet assigned
       Optional<String> result =
           encryptedUserNameList
@@ -551,7 +516,6 @@ public class UserUtil {
       }
 
     } while (StringUtils.isBlank(userName));
-
     return decService.decryptData(userName);
   }
 

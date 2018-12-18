@@ -7,7 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.org.OrganisationClient;
@@ -50,7 +50,8 @@ public class SearchHandlerActor extends BaseActor {
     Util.initializeContext(request, JsonKey.USER);
     // set request id fto thread loacl...
     ExecutionContext.setRequestId(request.getRequestId());
-    List<String> requestFields = (List<String>) request.getContext().get(JsonKey.FIELDS);
+    String requestedFields = (String) request.getContext().get(JsonKey.FIELDS);
+
     if (request.getOperation().equalsIgnoreCase(ActorOperations.COMPOSITE_SEARCH.getValue())) {
       Map<String, Object> searchQueryMap = request.getRequest();
       Object objectType =
@@ -83,7 +84,7 @@ public class SearchHandlerActor extends BaseActor {
           UserUtility.decryptUserDataFrmES(userMap);
           userMap.remove(JsonKey.ENC_EMAIL);
           userMap.remove(JsonKey.ENC_PHONE);
-          fetchQueryParamDetails(requestFields, userMap);
+          fetchQueryParamDetails(requestedFields, userMap);
         }
       }
       Response response = new Response();
@@ -102,11 +103,12 @@ public class SearchHandlerActor extends BaseActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void fetchQueryParamDetails(List<String> requestFields, Map<String, Object> userMap) {
+  private void fetchQueryParamDetails(String requestedFields, Map<String, Object> userMap) {
 
-    if (CollectionUtils.isNotEmpty(requestFields)) {
+    if (StringUtils.isNotBlank(requestedFields)) {
       try {
-        if (requestFields.contains(JsonKey.ORG_NAME.toLowerCase())) {
+        List<String> fields = Arrays.asList(requestedFields.toLowerCase().split(","));
+        if (fields.contains(JsonKey.ORG_NAME.toLowerCase())) {
           List<Map<String, Object>> userOrgList =
               (List<Map<String, Object>>) userMap.get(JsonKey.ORGANISATIONS);
           List<String> orgIds =

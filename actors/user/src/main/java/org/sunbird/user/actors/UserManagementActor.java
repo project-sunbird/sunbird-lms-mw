@@ -193,7 +193,10 @@ public class UserManagementActor extends BaseActor {
       verifyFrameworkId(hashtagId, frameworkIdList);
       Map<String, List<Map<String, String>>> frameworkCachedValue =
           getFrameworkDetails(frameworkIdList.get(0));
+      ((Map<String, Object>) userRequestMap.get(JsonKey.FRAMEWORK)).remove(JsonKey.ID);
       userRequestValidator.validateFrameworkCategoryValues(userRequestMap, frameworkCachedValue);
+      ((Map<String, Object>) userRequestMap.get(JsonKey.FRAMEWORK))
+          .put(JsonKey.ID, frameworkIdList);
     }
   }
 

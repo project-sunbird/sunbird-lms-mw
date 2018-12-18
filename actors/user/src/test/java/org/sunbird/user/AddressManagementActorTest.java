@@ -74,32 +74,44 @@ public class AddressManagementActorTest {
 
   @Test
   public void testInsertUserAddressSuccess() {
-    boolean result = testScenario(UserActorOperations.INSERT_USER_ADDRESS.getValue(), true);
+    boolean result = testScenario(UserActorOperations.INSERT_USER_ADDRESS.getValue(), true, true);
     assertTrue(result);
   }
 
   @Test
-  public void testUpdateAddressSuccess() {
-    boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS.getValue(), true);
+  public void testUpdateAddressSuccessWithDeleteAddress() {
+    boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS.getValue(), true, false);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateUserAddressSuccessContainingId() {
+    boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS.getValue(), false, true);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateUserAddressSuccessWithoutDelete() {
+    boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS.getValue(), false, true);
     assertTrue(result);
   }
 
   @Test
   public void testInsertUserAddressFailureWithoutReqParams() {
-    boolean result = testScenario(UserActorOperations.INSERT_USER_ADDRESS.getValue(), false);
+    boolean result =
+        testScenario(UserActorOperations.INSERT_USER_ADDRESS.getValue(), false, false, false);
     assertTrue(result);
   }
 
-  @Test
-  public void testUpdateUserAddressFailureWithoutMandatoryFields() {
-    boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS.getValue(), false);
-    assertTrue(result);
+  private boolean testScenario(String actorOperation, boolean isDelete, boolean isIdReq) {
+    return testScenario(actorOperation, isDelete, false, isIdReq);
   }
 
-  private boolean testScenario(String actorOperation, boolean success) {
+  private boolean testScenario(
+      String actorOperation, boolean isDelete, boolean success, boolean isIdReq) {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-    subject.tell(getRequestObject(actorOperation, success), probe.getRef());
+    subject.tell(getRequestObject(actorOperation, isDelete, success, isIdReq), probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     if (success) {
       return res != null && "SUCCESS".equals(res.getResult().get(JsonKey.RESPONSE));
@@ -108,24 +120,27 @@ public class AddressManagementActorTest {
     }
   }
 
-  private Request getRequestObject(String operation, boolean withReqParams) {
+  private Request getRequestObject(
+      String operation, boolean isDelete, boolean success, boolean isIdReq) {
     Request reqObj = new Request();
     reqObj.setOperation(operation);
-    if (withReqParams) {
-      reqObj.put(JsonKey.ADDRESS, getAddressList());
-      reqObj.put(JsonKey.ID, "someId");
-      reqObj.put(JsonKey.CREATED_BY, "createdBy");
+    if (success) {
+      reqObj.put(JsonKey.ADDRESS, getAddressList(isDelete));
+      if (isIdReq) {
+        reqObj.put(JsonKey.ID, "someId");
+      }
     }
+    reqObj.put(JsonKey.CREATED_BY, "createdBy");
     return reqObj;
   }
 
-  private List<Map<String, Object>> getAddressList() {
+  private List<Map<String, Object>> getAddressList(boolean isDelete) {
 
     List<Map<String, Object>> lst = new ArrayList<>();
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.ADDRESS, "anyAddress");
     map.put(JsonKey.ID, "someUserId");
-    map.put(JsonKey.IS_DELETED, true);
+    map.put(JsonKey.IS_DELETED, isDelete);
     lst.add(map);
     return lst;
   }

@@ -121,8 +121,7 @@ public class SearchHandlerActor extends BaseActor {
           outputColumns.add(JsonKey.ID);
           outputColumns.add(JsonKey.ORG_NAME);
 
-          List<Organisation> orgList =
-              orgClient.esFetchOrgDetailsWithSpecificColumnsByOrgIds(orgIds, outputColumns);
+          List<Organisation> orgList = orgClient.esSearchOrgByIds(orgIds, outputColumns);
 
           userOrgList.forEach(
               userOrg -> {

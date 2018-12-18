@@ -44,8 +44,6 @@ public class AddressManagementActorTest {
 
   private static final ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(AddressManagementActor.class);
-  private static final CassandraOperationImpl cassandraOperation =
-      mock(CassandraOperationImpl.class);;
 
   @Before
   public void beforeEachTest() {
@@ -63,6 +61,7 @@ public class AddressManagementActorTest {
     } catch (Exception e) {
       fail("AddressManagementActorTest initialization failed");
     }
+    CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))

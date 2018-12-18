@@ -163,15 +163,17 @@ public class SearchHandlerActor extends BaseActor {
               }
               List<Map<String, Object>> userOrgList =
                   (List<Map<String, Object>>) userMap.get(JsonKey.ORGANISATIONS);
-              userOrgList
-                  .stream()
-                  .forEach(
-                      userOrg -> {
-                        String userOrgId = (String) userOrg.get(JsonKey.ORGANISATION_ID);
-                        if (StringUtils.isNotBlank(userOrgId)) {
-                          orgIdList.add(userOrgId);
-                        }
-                      });
+              if (CollectionUtils.isNotEmpty(userOrgList)) {
+                userOrgList
+                    .stream()
+                    .forEach(
+                        userOrg -> {
+                          String userOrgId = (String) userOrg.get(JsonKey.ORGANISATION_ID);
+                          if (StringUtils.isNotBlank(userOrgId)) {
+                            orgIdList.add(userOrgId);
+                          }
+                        });
+              }
             });
 
     List<String> orgIds = new ArrayList<>(orgIdList);

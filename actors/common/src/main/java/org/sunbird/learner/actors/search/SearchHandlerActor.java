@@ -111,24 +111,25 @@ public class SearchHandlerActor extends BaseActor {
     if (StringUtils.isNotBlank(requestedFields)) {
       try {
         List<String> fields = Arrays.asList(requestedFields.toLowerCase().split(","));
-        List<String> filteredRequestedFileds = new ArrayList<>();
+        List<String> filteredRequestedFields = new ArrayList<>();
         fields
             .stream()
             .forEach(
-                s -> {
-                  for (String obj : supportedFields) {
-                    if (obj.equalsIgnoreCase(s)) {
-                      filteredRequestedFileds.add(obj);
+                rField -> {
+                  for (String sField : supportedFields) {
+                    if (sField.equalsIgnoreCase(rField)) {
+                      filteredRequestedFields.add(sField);
                       break;
                     }
                   }
                 });
-        if (!filteredRequestedFileds.contains(JsonKey.ID)) {
-          filteredRequestedFileds.add(JsonKey.ID);
+        if (filteredRequestedFields.isEmpty()) {
+          return;
         }
-        if (filteredRequestedFileds.size() >= 2) {
-          orgMap = fetchOrgDetails(userMapList, filteredRequestedFileds);
+        if (!filteredRequestedFields.contains(JsonKey.ID)) {
+          filteredRequestedFields.add(JsonKey.ID);
         }
+        orgMap = fetchOrgDetails(userMapList, filteredRequestedFields);
         if (fields.contains(JsonKey.ORG_NAME.toLowerCase())) {
           Map<String, Organisation> filteredOrg = new HashMap<>(orgMap);
           userMapList
@@ -162,7 +163,7 @@ public class SearchHandlerActor extends BaseActor {
         }
       } catch (Exception ex) {
         ProjectLogger.log(
-            "SearchHandlerActor:updateUserDetailsWithOrgName : Exception occurred with message "
+            "SearchHandlerActor:updateUserDetailsWithOrgName: Exception occurred with error message = "
                 + ex.getMessage(),
             ex);
       }

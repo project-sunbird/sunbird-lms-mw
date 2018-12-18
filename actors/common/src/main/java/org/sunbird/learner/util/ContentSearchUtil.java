@@ -1,13 +1,17 @@
 package org.sunbird.learner.util;
 
+import akka.dispatch.ExecutionContexts;
+import akka.dispatch.Mapper;
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.JsonNode;
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.request.BaseRequest;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
 import javax.ws.rs.core.MediaType;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHeaders;
 import org.json.JSONArray;
@@ -18,14 +22,6 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.RestUtil;
-
-import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.JsonNode;
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.request.BaseRequest;
-
-import akka.dispatch.ExecutionContexts;
-import akka.dispatch.Mapper;
 import scala.concurrent.Future;
 
 /** @author Mahesh Kumar Gangula */
@@ -98,7 +94,8 @@ public class ContentSearchUtil {
                 return null;
               }
             } catch (Exception e) {
-              ProjectLogger.log(logMsgPrefix + "Exception occurred with error message = " + e.getMessage(), e);
+              ProjectLogger.log(
+                  logMsgPrefix + "Exception occurred with error message = " + e.getMessage(), e);
               return null;
             }
           }

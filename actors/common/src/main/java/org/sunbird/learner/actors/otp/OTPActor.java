@@ -29,7 +29,7 @@ public class OTPActor extends BaseActor {
   public void onReceive(Request request) throws Throwable {
     if (ActorOperations.GENERATE_OTP.getValue().equals(request.getOperation())) {
       generateOTP(request);
-    } else if (ActorOperations.VERIFY_OTP.equals(request.getOperation())) {
+    } else if (ActorOperations.VERIFY_OTP.getValue().equals(request.getOperation())) {
       verifyOTP(request);
     } else {
       onReceiveUnsupportedOperation("OTPActor");

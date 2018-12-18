@@ -1,10 +1,14 @@
 package org.sunbird.learner.actors.tac;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import java.sql.Timestamp;
+import java.text.MessageFormat;
 import java.util.*;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.actorutil.systemsettings.SystemSettingClient;
+import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -44,7 +48,19 @@ public class UserTnCActor extends BaseActor {
     String acceptedTnC = (String) request.getRequest().get(JsonKey.VERSION);
     Map<String, Object> userMap = new HashMap();
     String userId = (String) request.getContext().get(JsonKey.REQUESTED_BY);
-
+    SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
+    String latestTnC =
+        systemSettingClient.getSystemSettingByFieldAndKey(
+            getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+            JsonKey.TNC_CONFIG,
+            JsonKey.LATEST_VERSION,
+            new TypeReference<String>() {});
+    if (!acceptedTnC.equalsIgnoreCase(latestTnC)) {
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.invalidParameterValue,
+          MessageFormat.format(
+              ResponseCode.invalidParameterValue.getErrorMessage(), acceptedTnC, JsonKey.VERSION));
+    }
     // Search user account in ES
     Map<String, Object> result =
         ElasticSearchUtil.getDataByIdentifier(

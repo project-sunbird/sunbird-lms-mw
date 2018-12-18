@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -40,6 +41,7 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 )
 public class SearchHandlerActor extends BaseActor {
 
+  private List<String> supportedFields = Arrays.asList("id", "orgName");
   private String topn = PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_TOP_N);
   private OrganisationClient orgClient = new OrganisationClientImpl();
 
@@ -123,18 +125,20 @@ public class SearchHandlerActor extends BaseActor {
                     }
                     List<Map<String, Object>> userOrgList =
                         (List<Map<String, Object>>) userMap.get(JsonKey.ORGANISATIONS);
-                    userOrgList
-                        .stream()
-                        .forEach(
-                            userOrg -> {
-                              String userOrgId = (String) userOrg.get(JsonKey.ORGANISATION_ID);
-                              if (StringUtils.isNotBlank(userOrgId)) {
-                                Organisation org = orgMap.get(rootOrgId);
-                                if (null != org) {
-                                  userMap.put(JsonKey.ORG_NAME, org.getOrgName());
+                    if (CollectionUtils.isNotEmpty(userOrgList)) {
+                      userOrgList
+                          .stream()
+                          .forEach(
+                              userOrg -> {
+                                String userOrgId = (String) userOrg.get(JsonKey.ORGANISATION_ID);
+                                if (StringUtils.isNotBlank(userOrgId)) {
+                                  Organisation org = orgMap.get(userOrgId);
+                                  if (null != org) {
+                                    userMap.put(JsonKey.ORG_NAME, org.getOrgName());
+                                  }
                                 }
-                              }
-                            });
+                              });
+                    }
                   });
         }
       } catch (Exception ex) {
@@ -169,11 +173,9 @@ public class SearchHandlerActor extends BaseActor {
                         }
                       });
             });
-    List<String> outputColumns = new ArrayList<>();
-    outputColumns.add(JsonKey.ID);
-    outputColumns.add(JsonKey.ORG_NAME);
+
     List<String> orgIds = new ArrayList<>(orgIdList);
-    List<Organisation> organisations = orgClient.esSearchOrgByIds(orgIds, outputColumns);
+    List<Organisation> organisations = orgClient.esSearchOrgByIds(orgIds, supportedFields);
     Map<String, Organisation> orgMap = new HashMap<>();
     organisations
         .stream()

@@ -135,7 +135,6 @@ public class AddressManagementActorTest {
   }
 
   private List<Map<String, Object>> getAddressList(boolean isDelete) {
-
     List<Map<String, Object>> lst = new ArrayList<>();
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.ADDRESS, "anyAddress");

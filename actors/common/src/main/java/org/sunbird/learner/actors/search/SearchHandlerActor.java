@@ -3,10 +3,10 @@ package org.sunbird.learner.actors.search;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -84,8 +84,8 @@ public class SearchHandlerActor extends BaseActor {
           UserUtility.decryptUserDataFrmES(userMap);
           userMap.remove(JsonKey.ENC_EMAIL);
           userMap.remove(JsonKey.ENC_PHONE);
-          fetchQueryParamDetails(requestedFields, userMap);
         }
+        updateUserDetailsWithOrgName(requestedFields, userMapList);
       }
       Response response = new Response();
       if (result != null) {
@@ -103,53 +103,85 @@ public class SearchHandlerActor extends BaseActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void fetchQueryParamDetails(String requestedFields, Map<String, Object> userMap) {
-
+  private void updateUserDetailsWithOrgName(
+      String requestedFields, List<Map<String, Object>> userMapList) {
     if (StringUtils.isNotBlank(requestedFields)) {
       try {
         List<String> fields = Arrays.asList(requestedFields.toLowerCase().split(","));
         if (fields.contains(JsonKey.ORG_NAME.toLowerCase())) {
-          List<Map<String, Object>> userOrgList =
-              (List<Map<String, Object>>) userMap.get(JsonKey.ORGANISATIONS);
-          List<String> orgIds =
-              userOrgList
-                  .stream()
-                  .map(s -> (String) s.get(JsonKey.ORGANISATION_ID))
-                  .collect(Collectors.toList());
-
-          List<String> outputColumns = new ArrayList<>();
-          outputColumns.add(JsonKey.ID);
-          outputColumns.add(JsonKey.ORG_NAME);
-
-          List<Organisation> orgList = orgClient.esSearchOrgByIds(orgIds, outputColumns);
-
-          userOrgList.forEach(
-              userOrg -> {
-                String orgId = (String) userOrg.get(JsonKey.ORGANISATION_ID);
-                Iterator<Organisation> itr = orgList.iterator();
-                while (itr.hasNext()) {
-                  Organisation organisation = itr.next();
-                  if (orgId.equalsIgnoreCase(organisation.getId())) {
-                    userOrg.put(JsonKey.ORG_NAME, organisation.getOrgName());
-                    itr.remove();
-                    break;
-                  }
-                }
-              });
-
-          String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
-          Organisation orgDetails = orgClient.esGetOrgById(rootOrgId);
-          if (null != orgDetails) {
-            userMap.put(JsonKey.ROOT_ORG_NAME, orgDetails.getOrgName());
-          }
+          Map<String, Organisation> orgMap = fetchOrgDetails(userMapList);
+          userMapList
+              .stream()
+              .forEach(
+                  userMap -> {
+                    String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
+                    if (StringUtils.isNotBlank(rootOrgId)) {
+                      Organisation org = orgMap.get(rootOrgId);
+                      if (null != org) {
+                        userMap.put(JsonKey.ROOT_ORG_NAME, org.getOrgName());
+                      }
+                    }
+                    List<Map<String, Object>> userOrgList =
+                        (List<Map<String, Object>>) userMap.get(JsonKey.ORGANISATIONS);
+                    userOrgList
+                        .stream()
+                        .forEach(
+                            userOrg -> {
+                              String userOrgId = (String) userOrg.get(JsonKey.ORGANISATION_ID);
+                              if (StringUtils.isNotBlank(userOrgId)) {
+                                Organisation org = orgMap.get(rootOrgId);
+                                if (null != org) {
+                                  userMap.put(JsonKey.ORG_NAME, org.getOrgName());
+                                }
+                              }
+                            });
+                  });
         }
       } catch (Exception ex) {
         ProjectLogger.log(
-            "SearchHandlerActor:fetchQueryParamDetails : Exception occurred with message "
+            "SearchHandlerActor:updateUserDetailsWithOrgName : Exception occurred with message "
                 + ex.getMessage(),
             ex);
       }
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Organisation> fetchOrgDetails(List<Map<String, Object>> userMapList) {
+    Set<String> orgIdList = new HashSet<>();
+    userMapList
+        .stream()
+        .forEach(
+            userMap -> {
+              String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
+              if (StringUtils.isNotBlank(rootOrgId)) {
+                orgIdList.add(rootOrgId);
+              }
+              List<Map<String, Object>> userOrgList =
+                  (List<Map<String, Object>>) userMap.get(JsonKey.ORGANISATIONS);
+              userOrgList
+                  .stream()
+                  .forEach(
+                      userOrg -> {
+                        String userOrgId = (String) userOrg.get(JsonKey.ORGANISATION_ID);
+                        if (StringUtils.isNotBlank(userOrgId)) {
+                          orgIdList.add(userOrgId);
+                        }
+                      });
+            });
+    List<String> outputColumns = new ArrayList<>();
+    outputColumns.add(JsonKey.ID);
+    outputColumns.add(JsonKey.ORG_NAME);
+    List<String> orgIds = new ArrayList<>(orgIdList);
+    List<Organisation> organisations = orgClient.esSearchOrgByIds(orgIds, outputColumns);
+    Map<String, Organisation> orgMap = new HashMap<>();
+    organisations
+        .stream()
+        .forEach(
+            org -> {
+              orgMap.put(org.getId(), org);
+            });
+    return orgMap;
   }
 
   private void generateSearchTelemetryEvent(

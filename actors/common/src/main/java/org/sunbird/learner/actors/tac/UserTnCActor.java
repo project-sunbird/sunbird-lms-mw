@@ -97,9 +97,9 @@ public class UserTnCActor extends BaseActor {
       if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
         syncUserDetails(userMap);
       }
+    } else {
+      response.getResult().put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     }
-
-    response.getResult().put(JsonKey.RESULT, "SUCCESS");
     sender().tell(response, self());
 
     Map<String, Object> targetObject = null;

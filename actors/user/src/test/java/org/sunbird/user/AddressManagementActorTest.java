@@ -23,7 +23,6 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
@@ -35,8 +34,6 @@ import org.sunbird.user.util.UserActorOperations;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ServiceFactory.class,
-  ElasticSearchUtil.class,
-  EncryptionService.class,
   org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.class
 })
 @PowerMockIgnore({"javax.management.*"})
@@ -59,7 +56,9 @@ public class AddressManagementActorTest {
     try {
       Mockito.when(encryptionService.encryptData(Mockito.anyString())).thenReturn("encrptUserId");
     } catch (Exception e) {
-      fail("AddressManagementActorTest initialization failed");
+      fail(
+          "AddressManagementActorTest initialization failed, with exception message: "
+              + e.getMessage());
     }
     CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
@@ -73,41 +72,41 @@ public class AddressManagementActorTest {
 
   @Test
   public void testInsertUserAddressSuccess() {
-    boolean result = testScenario(UserActorOperations.INSERT_USER_ADDRESS.getValue(), true, true);
+    boolean result = testScenario(UserActorOperations.INSERT_USER_ADDRESS, true, true);
     assertTrue(result);
   }
 
   @Test
   public void testUpdateAddressSuccessWithDeleteAddress() {
-    boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS.getValue(), true, false);
+    boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS, true, false);
     assertTrue(result);
   }
 
   @Test
   public void testUpdateUserAddressSuccessContainingId() {
-    boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS.getValue(), false, true);
+    boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS, false, true);
     assertTrue(result);
   }
 
   @Test
   public void testUpdateUserAddressSuccessWithoutDelete() {
-    boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS.getValue(), false, true);
+    boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS, false, true);
     assertTrue(result);
   }
 
   @Test
   public void testInsertUserAddressFailureWithoutReqParams() {
-    boolean result =
-        testScenario(UserActorOperations.INSERT_USER_ADDRESS.getValue(), false, false, false);
+    boolean result = testScenario(UserActorOperations.INSERT_USER_ADDRESS, false, false, false);
     assertTrue(result);
   }
 
-  private boolean testScenario(String actorOperation, boolean isDelete, boolean isIdReq) {
+  private boolean testScenario(
+      UserActorOperations actorOperation, boolean isDelete, boolean isIdReq) {
     return testScenario(actorOperation, isDelete, false, isIdReq);
   }
 
   private boolean testScenario(
-      String actorOperation, boolean isDelete, boolean success, boolean isIdReq) {
+      UserActorOperations actorOperation, boolean isDelete, boolean success, boolean isIdReq) {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     subject.tell(getRequestObject(actorOperation, isDelete, success, isIdReq), probe.getRef());
@@ -120,9 +119,9 @@ public class AddressManagementActorTest {
   }
 
   private Request getRequestObject(
-      String operation, boolean isDelete, boolean success, boolean isIdReq) {
+      UserActorOperations actorOperation, boolean isDelete, boolean success, boolean isIdReq) {
     Request reqObj = new Request();
-    reqObj.setOperation(operation);
+    reqObj.setOperation(actorOperation.getValue());
     if (success) {
       reqObj.put(JsonKey.ADDRESS, getAddressList(isDelete));
       if (isIdReq) {

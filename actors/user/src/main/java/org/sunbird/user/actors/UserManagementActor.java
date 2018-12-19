@@ -299,12 +299,11 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
-  private void throwParameterMisMatchException(String param1, String param2) {
+  private void throwParameterMisMatchException(String... param) {
     ProjectCommonException.throwClientErrorException(
         ResponseCode.parameterMismatch,
         MessageFormat.format(
-            ResponseCode.parameterMismatch.getErrorMessage(),
-            StringFormatter.joinByComma(param1, param2)));
+            ResponseCode.parameterMismatch.getErrorMessage(), StringFormatter.joinByComma(param)));
   }
 
   @SuppressWarnings("unchecked")

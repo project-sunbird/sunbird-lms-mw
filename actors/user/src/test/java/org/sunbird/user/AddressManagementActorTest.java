@@ -72,25 +72,25 @@ public class AddressManagementActorTest {
 
   @Test
   public void testInsertUserAddressSuccess() {
-    boolean result = testScenario(UserActorOperations.INSERT_USER_ADDRESS, true, true);
+    boolean result = testScenario(UserActorOperations.INSERT_USER_ADDRESS, true, true, true);
     assertTrue(result);
   }
 
   @Test
   public void testUpdateAddressSuccessWithDeleteAddress() {
-    boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS, true, false);
+    boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS, true, true, false);
     assertTrue(result);
   }
 
   @Test
-  public void testUpdateUserAddressSuccessContainingId() {
-    boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS, false, true);
+  public void testUpdateUserAddressSuccessWithoutId() {
+    boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS, false, true, false);
     assertTrue(result);
   }
 
   @Test
-  public void testUpdateUserAddressSuccessWithoutDelete() {
-    boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS, false, true);
+  public void testUpdateUserAddressSuccessWithId() {
+    boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS, false, true, true);
     assertTrue(result);
   }
 
@@ -98,11 +98,6 @@ public class AddressManagementActorTest {
   public void testInsertUserAddressFailureWithoutReqParams() {
     boolean result = testScenario(UserActorOperations.INSERT_USER_ADDRESS, false, false, false);
     assertTrue(result);
-  }
-
-  private boolean testScenario(
-      UserActorOperations actorOperation, boolean isDelete, boolean isIdReq) {
-    return testScenario(actorOperation, isDelete, false, isIdReq);
   }
 
   private boolean testScenario(
@@ -123,20 +118,19 @@ public class AddressManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation(actorOperation.getValue());
     if (success) {
-      reqObj.put(JsonKey.ADDRESS, getAddressList(isDelete));
-      if (isIdReq) {
-        reqObj.put(JsonKey.ID, "someId");
-      }
+      reqObj.put(JsonKey.ADDRESS, getAddressList(isDelete, isIdReq));
     }
     reqObj.put(JsonKey.CREATED_BY, "createdBy");
     return reqObj;
   }
 
-  private List<Map<String, Object>> getAddressList(boolean isDelete) {
+  private List<Map<String, Object>> getAddressList(boolean isDelete, boolean isIdReq) {
     List<Map<String, Object>> lst = new ArrayList<>();
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.ADDRESS, "anyAddress");
-    map.put(JsonKey.ID, "someUserId");
+    if (isIdReq) {
+      map.put(JsonKey.ID, "someUserId");
+    }
     map.put(JsonKey.IS_DELETED, isDelete);
     lst.add(map);
     return lst;

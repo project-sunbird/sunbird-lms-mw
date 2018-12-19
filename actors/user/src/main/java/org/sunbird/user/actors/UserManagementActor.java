@@ -260,16 +260,7 @@ public class UserManagementActor extends BaseActor {
 
   private void validateChannelAndOrganisationId(Map<String, Object> userMap) {
     String organisationId = (String) userMap.get(JsonKey.ORGANISATION_ID);
-    String requestedRootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
     String requestedChannel = (String) userMap.get(JsonKey.CHANNEL);
-
-    if (StringUtils.isNotBlank(requestedRootOrgId)) {
-      Map<String, Object> orgMap = Util.getOrgDetails(requestedRootOrgId);
-      if (MapUtils.isEmpty(orgMap) || !(boolean) orgMap.get(JsonKey.IS_ROOT_ORG)) {
-        ProjectCommonException.throwClientErrorException(ResponseCode.invalidRootOrganisationId);
-      }
-      userMap.put(JsonKey.CHANNEL, orgMap.get(JsonKey.CHANNEL));
-    }
 
     String subOrgRootOrgId = "";
     if (StringUtils.isNotBlank(organisationId)) {
@@ -296,10 +287,6 @@ public class UserManagementActor extends BaseActor {
           userMap.put(JsonKey.CHANNEL, subOrgRootOrgMap.get(JsonKey.CHANNEL));
         }
       }
-      if (StringUtils.isNotBlank(requestedRootOrgId)
-          && (!requestedRootOrgId.equalsIgnoreCase(subOrgRootOrgId))) {
-        throwParameterMisMatchException(JsonKey.ROOT_ORG_ID, JsonKey.ORGANISATION_ID);
-      }
       userMap.put(JsonKey.ROOT_ORG_ID, subOrgRootOrgId);
     }
     String rootOrgId = "";
@@ -307,10 +294,6 @@ public class UserManagementActor extends BaseActor {
       rootOrgId = userService.getRootOrgIdFromChannel(requestedChannel);
       if (StringUtils.isNotBlank(subOrgRootOrgId) && !rootOrgId.equalsIgnoreCase(subOrgRootOrgId)) {
         throwParameterMisMatchException(JsonKey.CHANNEL, JsonKey.ORGANISATION_ID);
-      }
-      if (StringUtils.isNotBlank(requestedRootOrgId)
-          && !rootOrgId.equalsIgnoreCase(requestedRootOrgId)) {
-        throwParameterMisMatchException(JsonKey.CHANNEL, JsonKey.ROOT_ORG_ID);
       }
       userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
     }

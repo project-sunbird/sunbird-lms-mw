@@ -319,18 +319,20 @@ public class OrganisationManagementActor extends BaseActor {
       if (request.get(JsonKey.PROVIDER) != null) {
         request.put(JsonKey.PROVIDER, ((String) request.get(JsonKey.PROVIDER)).toLowerCase());
       }
-      String externalId = (String) request.get(JsonKey.EXTERNAL_ID);
-      if (externalId != null) {
+      String passedExternalId = (String) request.get(JsonKey.EXTERNAL_ID);
+      if (StringUtils.isNotBlank(passedExternalId)) {
         String channel = (String) request.get(JsonKey.CHANNEL);
-        if (!validateChannelExternalIdUniqueness(channel, externalId.toLowerCase(), null)) {
+        if (!validateChannelExternalIdUniqueness(channel, passedExternalId.toLowerCase(), null)) {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.errorDuplicateEntry,
               MessageFormat.format(
                   ResponseCode.errorDuplicateEntry.getErrorMessage(),
-                  externalId,
+                  passedExternalId,
                   JsonKey.EXTERNAL_ID));
         }
-        request.put(JsonKey.EXTERNAL_ID, externalId);
+        request.put(JsonKey.EXTERNAL_ID, passedExternalId);
+      } else {
+        request.remove(JsonKey.EXTERNAL_ID);
       }
       // update address if present in request
       if (null != addressReq && addressReq.size() > 0) {
@@ -425,6 +427,11 @@ public class OrganisationManagementActor extends BaseActor {
       Response result =
           cassandraOperation.insertRecord(
               orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), request);
+
+      if (StringUtils.isNotBlank(passedExternalId)) {
+        String channel = (String) request.get(JsonKey.CHANNEL);
+        createOrgExternalIdRecord(channel, passedExternalId, uniqueId);
+      }
       ProjectLogger.log("Org data saved into cassandra.");
       // create org_map if parentOrgId is present in request
       if (isValidParent) {
@@ -467,6 +474,28 @@ public class OrganisationManagementActor extends BaseActor {
       sender().tell(e, self());
       return;
     }
+  }
+
+  private void createOrgExternalIdRecord(String channel, String externalId, String orgId) {
+    Map<String, Object> orgExtIdRequest = new HashMap<String, Object>();
+    orgExtIdRequest.put(JsonKey.PROVIDER, channel);
+    orgExtIdRequest.put(JsonKey.EXTERNAL_ID, externalId);
+    orgExtIdRequest.put(JsonKey.ORG_ID, orgId);
+
+    Util.DbInfo orgExtIdInfo = Util.dbInfoMap.get(JsonKey.ORG_EXT_ID_DB);
+    Response orgExtIdResult =
+        cassandraOperation.insertRecord(
+            orgExtIdInfo.getKeySpace(), orgExtIdInfo.getTableName(), orgExtIdRequest);
+  }
+
+  private void deleteOrgExternalIdRecord(String channel, String externalId) {
+    Map<String, String> orgExtIdRequest = new HashMap<String, String>();
+    orgExtIdRequest.put(JsonKey.PROVIDER, channel);
+    orgExtIdRequest.put(JsonKey.EXTERNAL_ID, externalId);
+
+    Util.DbInfo orgExtIdInfo = Util.dbInfoMap.get(JsonKey.ORG_EXT_ID_DB);
+    cassandraOperation.deleteRecord(
+        orgExtIdInfo.getKeySpace(), orgExtIdInfo.getTableName(), orgExtIdRequest);
   }
 
   private void validateCodeAndAddLocationIds(Map<String, Object> req) {
@@ -671,6 +700,7 @@ public class OrganisationManagementActor extends BaseActor {
         return;
       }
 
+      String existingExternalId = (String) orgDao.get(JsonKey.EXTERNAL_ID);
       // fetch channel from org, if channel is not passed
       if (!request.containsKey(JsonKey.CHANNEL)) {
         String channelFromDB = (String) orgDao.get(JsonKey.CHANNEL);
@@ -765,19 +795,23 @@ public class OrganisationManagementActor extends BaseActor {
       if (request.get(JsonKey.PROVIDER) != null) {
         request.put(JsonKey.PROVIDER, ((String) request.get(JsonKey.PROVIDER)).toLowerCase());
       }
-      String externalId = (String) request.get(JsonKey.EXTERNAL_ID);
-      if (externalId != null) {
+      String passedExternalId = (String) request.get(JsonKey.EXTERNAL_ID);
+      if (StringUtils.isNotBlank(passedExternalId)) {
         String channel = (String) request.get(JsonKey.CHANNEL);
         if (!validateChannelExternalIdUniqueness(
-            channel, externalId.toLowerCase(), (String) request.get(JsonKey.ORGANISATION_ID))) {
+            channel,
+            passedExternalId.toLowerCase(),
+            (String) request.get(JsonKey.ORGANISATION_ID))) {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.errorDuplicateEntry,
               MessageFormat.format(
                   ResponseCode.errorDuplicateEntry.getErrorMessage(),
-                  externalId,
+                  passedExternalId,
                   JsonKey.EXTERNAL_ID));
         }
-        request.put(JsonKey.EXTERNAL_ID, externalId);
+        request.put(JsonKey.EXTERNAL_ID, passedExternalId);
+      } else {
+        request.remove(JsonKey.EXTERNAL_ID);
       }
       String parentOrg = (String) request.get(JsonKey.PARENT_ORG_ID);
       Boolean isValidParent = false;
@@ -913,6 +947,19 @@ public class OrganisationManagementActor extends BaseActor {
           cassandraOperation.updateRecord(
               orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), updateOrgDao);
       response.getResult().put(JsonKey.ORGANISATION_ID, orgDao.get(JsonKey.ID));
+
+      if (StringUtils.isNotBlank(passedExternalId)) {
+        String channel = (String) request.get(JsonKey.CHANNEL);
+        if (StringUtils.isBlank(existingExternalId)) {
+          createOrgExternalIdRecord(channel, passedExternalId, orgId);
+        } else {
+          if (!existingExternalId.equalsIgnoreCase(passedExternalId)) {
+            deleteOrgExternalIdRecord(channel, existingExternalId);
+            createOrgExternalIdRecord(channel, passedExternalId, orgId);
+          }
+        }
+      }
+
       sender().tell(response, self());
 
       targetObject =
@@ -1683,10 +1730,10 @@ public class OrganisationManagementActor extends BaseActor {
 
   private boolean validateChannelExternalIdUniqueness(
       String channel, String externalId, String orgId) {
-    Map<String, Object> compositeMap = new HashMap<String, Object>();
-    compositeMap.put(JsonKey.CHANNEL, channel);
-    compositeMap.put(JsonKey.EXTERNAL_ID, externalId);
-    return validateCompositeFieldUniqueness(compositeMap, orgId);
+    Map<String, Object> compositeKeyMap = new HashMap<String, Object>();
+    compositeKeyMap.put(JsonKey.PROVIDER, channel);
+    compositeKeyMap.put(JsonKey.EXTERNAL_ID, externalId);
+    return validateCompositeKeyUniqueness(compositeKeyMap, orgId);
   }
 
   private boolean validateFieldUniqueness(String key, String value, String orgId) {
@@ -1714,12 +1761,13 @@ public class OrganisationManagementActor extends BaseActor {
     return true;
   }
 
-  private boolean validateCompositeFieldUniqueness(Map<String, Object> compositeMap, String orgId) {
-    if (MapUtils.isNotEmpty(compositeMap)) {
-      Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+  private boolean validateCompositeKeyUniqueness(
+      Map<String, Object> compositeKeyMap, String orgId) {
+    if (MapUtils.isNotEmpty(compositeKeyMap)) {
+      Util.DbInfo orgExtIdInfo = Util.dbInfoMap.get(JsonKey.ORG_EXT_ID_DB);
       Response result =
-          cassandraOperation.getRecordsByProperties(
-              orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), compositeMap);
+          cassandraOperation.getRecordsByCompositeKey(
+              orgExtIdInfo.getKeySpace(), orgExtIdInfo.getTableName(), compositeKeyMap);
       List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
       if ((list.isEmpty())) {
         return true;
@@ -1728,7 +1776,7 @@ public class OrganisationManagementActor extends BaseActor {
           return false;
         }
         Map<String, Object> data = list.get(0);
-        String id = (String) data.get(JsonKey.ID);
+        String id = (String) data.get(JsonKey.ORG_ID);
         if (id.equalsIgnoreCase(orgId)) {
           return true;
         } else {

@@ -1,9 +1,15 @@
 package org.sunbird.learner.actors;
 
+import static akka.testkit.JavaTestKit.duration;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
+
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -15,88 +21,132 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.tac.UserTnCActor;
 
-import java.util.HashMap;
-
-import static akka.testkit.JavaTestKit.duration;
-import static org.mockito.Matchers.eq;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.when;
-
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ServiceFactory.class, SystemSettingClientImpl.class, RequestRouter.class})
+@PrepareForTest({
+  ServiceFactory.class,
+  SystemSettingClientImpl.class,
+  RequestRouter.class,
+  ElasticSearchUtil.class,
+  SunbirdMWService.class
+})
 @PowerMockIgnore({"javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*"})
 public class UserTnCActorTest {
-    private static ActorSystem system;
-    private static final Props props = Props.create(UserTnCActor.class);
-    private static final CassandraOperation cassandraOperation = mock(CassandraOperationImpl.class);;
-    public static SystemSettingClient systemSettingClient;
+  private static ActorSystem system;
 
-    @BeforeClass
-    public static void setUp() {
-        system = ActorSystem.create("system");
+  private static final Props props = Props.create(UserTnCActor.class);
+  private static final CassandraOperation cassandraOperation = mock(CassandraOperationImpl.class);;
+  public static SystemSettingClient systemSettingClient;
+  private static final String LATEST_VERSION = "latestVersion";
+  private static final String ACCEPTED_CORRECT_VERSION = "latestVersion";
+  private static final String ACCEPTED_INVALID_VERSION = "invalid";
+
+  @BeforeClass
+  public static void setUp() {
+    system = ActorSystem.create("system");
+  }
+
+  @Before
+  public void beforeEachTest() {
+    PowerMockito.mockStatic(ServiceFactory.class);
+    PowerMockito.mockStatic(SystemSettingClientImpl.class);
+    PowerMockito.mockStatic(RequestRouter.class);
+    systemSettingClient = mock(SystemSettingClientImpl.class);
+    when(SystemSettingClientImpl.getInstance()).thenReturn(systemSettingClient);
+    ActorRef actorRef = mock(ActorRef.class);
+    PowerMockito.mockStatic(ElasticSearchUtil.class);
+    PowerMockito.mockStatic(SunbirdMWService.class);
+    SunbirdMWService.tellToBGRouter(Mockito.any(), Mockito.any());
+    when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
+
+    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+  }
+
+  private Map<String, Object> getUser(String lastAcceptedVersion) {
+    Map<String, Object> user = new HashMap<>();
+    user.put(JsonKey.NAME, "someName");
+    if (lastAcceptedVersion != null) {
+      user.put(JsonKey.TNC_ACCEPTED_VERSION, lastAcceptedVersion);
     }
-    @Before
-    public void beforeEachTest() {
-        PowerMockito.mockStatic(ServiceFactory.class);
-        PowerMockito.mockStatic(SystemSettingClientImpl.class);
-        systemSettingClient = mock(SystemSettingClientImpl.class);
-        when(SystemSettingClientImpl.getInstance()).thenReturn(systemSettingClient);
+    return user;
+  }
 
-        ActorRef actorRef = mock(ActorRef.class);
+  @Test
+  public void testAcceptUserTncSuccessWithoutAccepting() {
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getUser(null));
+    Response response =
+        setRequest(ACCEPTED_CORRECT_VERSION).expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertTrue(
+        null != response && "SUCCESS".equals(response.getResult().get(JsonKey.RESPONSE)));
+  }
 
-        when(systemSettingClient.getSystemSettingByFieldAndKey(eq(actorRef), Mockito.anyString(),Mockito.anyString(),Mockito.anyObject()))
-                .thenReturn("value");
-        when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+  @Test
+  public void testAcceptUserTncSuccessAlreadyAccepted() {
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getUser(LATEST_VERSION));
+    Response response =
+        setRequest(ACCEPTED_CORRECT_VERSION).expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertTrue(
+        null != response && "SUCCESS".equals(response.getResult().get(JsonKey.RESPONSE)));
+  }
 
-    }
-    @Test
-    public void testAcceptUserTncFailure() {
-        ProjectCommonException exception = performUserTnCAcceptFailureTest();
-        Assert.assertTrue(null != exception);
-    }
+  @Test
+  public void testAcceptUserTncFailure() {
+    ProjectCommonException exception =
+        setRequest(ACCEPTED_INVALID_VERSION)
+            .expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    Assert.assertTrue(
+        null != exception
+            && exception
+                .getCode()
+                .equalsIgnoreCase(ResponseCode.invalidParameterValue.getErrorCode()));
+  }
 
-    private ProjectCommonException performUserTnCAcceptFailureTest() {
-//        mockTncSystemSetting();
-        Request reqObj = new Request();
-        reqObj.setOperation(ActorOperations.USER_TNC_ACCEPT.getValue());
-        HashMap<String, Object> innerMap = new HashMap<>();
-        innerMap.put(JsonKey.VERSION,"randomValue");
-        reqObj.setRequest(innerMap);
-        TestKit probe = new TestKit(system);
-        ActorRef subject = system.actorOf(props);
-        subject.tell(reqObj, probe.getRef());
-        ProjectCommonException exception = probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
+  private TestKit setRequest(String version) {
+    mockTnCSystemSettingResponse();
+    mockCassandraOperation();
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.USER_TNC_ACCEPT.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.VERSION, version);
+    reqObj.setRequest(innerMap);
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    subject.tell(reqObj, probe.getRef());
+    return probe;
+  }
 
-        return exception;
-    }
+  private void mockCassandraOperation() {
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    when(cassandraOperation.updateRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(response);
+  }
 
-//    private void mockTncSystemSetting() {
-//        when(systemSettingClient.getSystemSettingByFieldAndKey(
-//                (ActorRef) Mockito.any(), Mockito.anyString(),Mockito.anyString(),Mockito.any()))
-//                .thenReturn("value");
-//    }
-
-
-
-    private String getSystemSettingResponse() {
-//        Response systemSettingResponse = new Response();
-//        Map<String,Object> innerMap = new HashMap<>();
-//        innerMap.put(JsonKey.KEY,Mockito.anyString());
-//        innerMap.put(JsonKey.FIELD,Mockito.anyString());
-//        innerMap.put(JsonKey.VALUE,new HashMap<String,Object>().put(JsonKey.LATEST_VERSION,"someVersion"));
-//        systemSettingResponse.put(JsonKey.RESPONSE,innerMap);
-
-        return "someVersion";
-    }
+  private void mockTnCSystemSettingResponse() {
+    when(systemSettingClient.getSystemSettingByFieldAndKey(
+            Mockito.any(ActorRef.class),
+            Mockito.anyString(),
+            Mockito.anyString(),
+            Mockito.anyObject()))
+        .thenReturn(LATEST_VERSION);
+  }
 }

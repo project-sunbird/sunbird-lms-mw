@@ -284,6 +284,13 @@ public class UserServiceImpl implements UserService {
       channel = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_DEFAULT_CHANNEL);
       userMap.put(JsonKey.CHANNEL, channel);
     }
+    if (StringUtils.isBlank(channel)) {
+      throw new ProjectCommonException(
+          ResponseCode.mandatoryParamsMissing.getErrorCode(),
+          ProjectUtil.formatMessage(
+              ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.CHANNEL),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
     return channel;
   }
 

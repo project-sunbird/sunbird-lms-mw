@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -23,25 +24,17 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.user.actors.EducationManagementActor;
-import org.sunbird.user.dao.impl.AddressDaoImpl;
+import org.sunbird.user.dao.EducationDao;
 import org.sunbird.user.dao.impl.EducationDaoImpl;
 import org.sunbird.user.util.UserActorOperations;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({
-  ServiceFactory.class,
-  ElasticSearchUtil.class,
-  EncryptionService.class,
-  EducationDaoImpl.class,
-  AddressDaoImpl.class
-})
+@PrepareForTest({ServiceFactory.class, EducationDaoImpl.class})
 @PowerMockIgnore({"javax.management.*"})
 public class EducationManagementActorTest {
 
@@ -49,8 +42,17 @@ public class EducationManagementActorTest {
   private static final Props props = Props.create(EducationManagementActor.class);
   private static final CassandraOperation cassandraOperation = mock(CassandraOperationImpl.class);
 
+  @Before
+  public void beforetest() {
+    PowerMockito.mockStatic(EducationDaoImpl.class);
+    EducationDao educationDao = Mockito.mock(EducationDaoImpl.class);
+    when(EducationDaoImpl.getInstance()).thenReturn(educationDao);
+    when(educationDao.getPropertiesValueById(Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getEducationResponse());
+  }
+
   @BeforeClass
-  public static void beforeEachTest() {
+  public static void beforeClass() {
 
     PowerMockito.mockStatic(ServiceFactory.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
@@ -62,11 +64,28 @@ public class EducationManagementActorTest {
         .thenReturn(getSuccessResponse());
   }
 
+  private static Response getEducationResponse() {
+    Response response = new Response();
+    List<Map<String, Object>> lst = new ArrayList<>();
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.ADDRESS_ID, "someAddressId");
+    lst.add(map);
+    response.put(JsonKey.RESPONSE, lst);
+    return response;
+  }
+
   @Test
-  public void testInsertEducation() {
+  public void testInsertEducationSuccess() {
 
     boolean result =
-        testScenario(UserActorOperations.INSERT_USER_EDUCATION, true, getUpsertResponse(), true);
+        testScenario(
+            UserActorOperations.INSERT_USER_EDUCATION,
+            true,
+            true,
+            getUpsertResponse(),
+            true,
+            true,
+            true);
     assertTrue(result);
   }
 
@@ -74,7 +93,44 @@ public class EducationManagementActorTest {
   public void testUpdateEducationForDeleteEducationDetailsSuccess() {
 
     boolean result =
-        testScenario(UserActorOperations.UPDATE_USER_EDUCATION, true, getUpsertResponse(), true);
+        testScenario(
+            UserActorOperations.UPDATE_USER_EDUCATION,
+            true,
+            true,
+            getUpsertResponse(),
+            true,
+            true,
+            true);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateEducationForDeleteEducationDetailsWithoutAddressSuccess() {
+
+    boolean result =
+        testScenario(
+            UserActorOperations.UPDATE_USER_EDUCATION,
+            true,
+            true,
+            getUpsertResponse(),
+            true,
+            true,
+            false);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateEducationWithoutIdSuccess() {
+
+    boolean result =
+        testScenario(
+            UserActorOperations.UPDATE_USER_EDUCATION,
+            true,
+            true,
+            getUpsertResponse(),
+            true,
+            false,
+            true);
     assertTrue(result);
   }
 
@@ -82,7 +138,14 @@ public class EducationManagementActorTest {
   public void testUpdateEducationWithUpsertEducationDetailsSuccess() {
 
     boolean result =
-        testScenario(UserActorOperations.UPDATE_USER_EDUCATION, false, getUpsertResponse(), true);
+        testScenario(
+            UserActorOperations.UPDATE_USER_EDUCATION,
+            true,
+            false,
+            getUpsertResponse(),
+            true,
+            true,
+            true);
     assertTrue(result);
   }
 
@@ -90,7 +153,14 @@ public class EducationManagementActorTest {
   public void testInsertEducationFailure() {
 
     boolean result =
-        testScenario(UserActorOperations.INSERT_USER_EDUCATION, true, new Response(), false);
+        testScenario(
+            UserActorOperations.INSERT_USER_EDUCATION,
+            true,
+            true,
+            new Response(),
+            false,
+            false,
+            false);
     assertTrue(result);
   }
 
@@ -98,13 +168,15 @@ public class EducationManagementActorTest {
   public void testUpdateEducationForDeleteEducationDetailsFailure() {
 
     boolean result =
-        testScenario(UserActorOperations.UPDATE_USER_EDUCATION, true, new Response(), false);
+        testScenario(
+            UserActorOperations.UPDATE_USER_EDUCATION,
+            false,
+            true,
+            new Response(),
+            false,
+            false,
+            false);
     assertTrue(result);
-  }
-
-  private boolean testScenario(
-      UserActorOperations actorOperation, boolean isDelete, Response response, boolean isSuccess) {
-    return testScenario(actorOperation, false, isDelete, response, false);
   }
 
   private boolean testScenario(
@@ -112,14 +184,17 @@ public class EducationManagementActorTest {
       boolean isParamReq,
       boolean isDelete,
       Response response,
-      boolean isSuccess) {
+      boolean isSuccess,
+      boolean isIdReq,
+      boolean isAddressReq) {
     when(cassandraOperation.upsertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(response);
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-    subject.tell(getRequestObject(operation, isParamReq, isDelete), probe.getRef());
+    subject.tell(
+        getRequestObject(operation, isParamReq, isDelete, isIdReq, isAddressReq), probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     if (isSuccess) {
       return res != null && "SUCCESS".equals(res.getResult().get(JsonKey.RESPONSE));
@@ -135,26 +210,34 @@ public class EducationManagementActorTest {
   }
 
   private Request getRequestObject(
-      UserActorOperations operation, boolean isParamReq, boolean isDelete) {
+      UserActorOperations operation,
+      boolean isParamReq,
+      boolean isDelete,
+      boolean isIdReq,
+      boolean isAddressReq) {
     Request reqObj = new Request();
     reqObj.setOperation(operation.getValue());
     if (isParamReq) {
-      reqObj.put(JsonKey.EDUCATION, getEducationList(isDelete));
+      reqObj.put(JsonKey.EDUCATION, getEducationList(isDelete, isIdReq, isAddressReq));
       reqObj.put(JsonKey.ID, "someId");
       reqObj.put(JsonKey.CREATED_BY, "createdBy");
     }
     return reqObj;
   }
 
-  private Object getEducationList(boolean isDelete) {
+  private Object getEducationList(boolean isDelete, boolean isIdReq, boolean isAddressReq) {
 
     List<Map<String, Object>> lst = new ArrayList<>();
     Map<String, Object> map = new HashMap<>();
 
     Map<String, Object> addressmap = new HashMap<>();
     addressmap.put(JsonKey.ID, "someId");
-    map.put(JsonKey.ADDRESS, addressmap);
-    map.put(JsonKey.ID, "someUserId");
+    if (isAddressReq) {
+      map.put(JsonKey.ADDRESS, addressmap);
+    }
+    if (isIdReq) {
+      map.put(JsonKey.ID, "someUserId");
+    }
     map.put(JsonKey.IS_DELETED, isDelete);
     lst.add(map);
     return lst;

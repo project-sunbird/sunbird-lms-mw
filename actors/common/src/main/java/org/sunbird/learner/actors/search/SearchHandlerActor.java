@@ -3,14 +3,21 @@ package org.sunbird.learner.actors.search;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.actorutil.org.OrganisationClient;
+import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.PropertiesCache;
@@ -19,6 +26,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
+import org.sunbird.models.organisation.Organisation;
 import org.sunbird.telemetry.util.TelemetryLmaxWriter;
 import org.sunbird.telemetry.util.TelemetryUtil;
 
@@ -33,7 +41,9 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 )
 public class SearchHandlerActor extends BaseActor {
 
+  private List<String> supportedFields = Arrays.asList(JsonKey.ID, JsonKey.ORG_NAME);
   private String topn = PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_TOP_N);
+  private OrganisationClient orgClient = new OrganisationClientImpl();
 
   @SuppressWarnings({"unchecked", "rawtypes"})
   @Override
@@ -42,6 +52,7 @@ public class SearchHandlerActor extends BaseActor {
     Util.initializeContext(request, JsonKey.USER);
     // set request id fto thread loacl...
     ExecutionContext.setRequestId(request.getRequestId());
+    String requestedFields = (String) request.getContext().get(JsonKey.FIELDS);
 
     if (request.getOperation().equalsIgnoreCase(ActorOperations.COMPOSITE_SEARCH.getValue())) {
       Map<String, Object> searchQueryMap = request.getRequest();
@@ -76,6 +87,7 @@ public class SearchHandlerActor extends BaseActor {
           userMap.remove(JsonKey.ENC_EMAIL);
           userMap.remove(JsonKey.ENC_PHONE);
         }
+        updateUserDetailsWithOrgName(requestedFields, userMapList);
       }
       Response response = new Response();
       if (result != null) {
@@ -90,6 +102,112 @@ public class SearchHandlerActor extends BaseActor {
     } else {
       onReceiveUnsupportedOperation(request.getOperation());
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void updateUserDetailsWithOrgName(
+      String requestedFields, List<Map<String, Object>> userMapList) {
+    Map<String, Organisation> orgMap = null;
+    if (StringUtils.isNotBlank(requestedFields)) {
+      try {
+        List<String> fields = Arrays.asList(requestedFields.toLowerCase().split(","));
+        List<String> filteredRequestedFields = new ArrayList<>();
+        fields
+            .stream()
+            .forEach(
+                rField -> {
+                  for (String sField : supportedFields) {
+                    if (sField.equalsIgnoreCase(rField)) {
+                      filteredRequestedFields.add(sField);
+                      break;
+                    }
+                  }
+                });
+        if (filteredRequestedFields.isEmpty()) {
+          return;
+        }
+        if (!filteredRequestedFields.contains(JsonKey.ID)) {
+          filteredRequestedFields.add(JsonKey.ID);
+        }
+        orgMap = fetchOrgDetails(userMapList, filteredRequestedFields);
+        if (fields.contains(JsonKey.ORG_NAME.toLowerCase())) {
+          Map<String, Organisation> filteredOrg = new HashMap<>(orgMap);
+          userMapList
+              .stream()
+              .forEach(
+                  userMap -> {
+                    String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
+                    if (StringUtils.isNotBlank(rootOrgId)) {
+                      Organisation org = filteredOrg.get(rootOrgId);
+                      if (null != org) {
+                        userMap.put(JsonKey.ROOT_ORG_NAME, org.getOrgName());
+                      }
+                    }
+                    List<Map<String, Object>> userOrgList =
+                        (List<Map<String, Object>>) userMap.get(JsonKey.ORGANISATIONS);
+                    if (CollectionUtils.isNotEmpty(userOrgList)) {
+                      userOrgList
+                          .stream()
+                          .forEach(
+                              userOrg -> {
+                                String userOrgId = (String) userOrg.get(JsonKey.ORGANISATION_ID);
+                                if (StringUtils.isNotBlank(userOrgId)) {
+                                  Organisation org = filteredOrg.get(userOrgId);
+                                  if (null != org) {
+                                    userOrg.put(JsonKey.ORG_NAME, org.getOrgName());
+                                  }
+                                }
+                              });
+                    }
+                  });
+        }
+      } catch (Exception ex) {
+        ProjectLogger.log(
+            "SearchHandlerActor:updateUserDetailsWithOrgName: Exception occurred with error message = "
+                + ex.getMessage(),
+            ex);
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Organisation> fetchOrgDetails(
+      List<Map<String, Object>> userMapList, List<String> filteredRequestedFileds) {
+    Set<String> orgIdList = new HashSet<>();
+    userMapList
+        .stream()
+        .forEach(
+            userMap -> {
+              String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
+              if (StringUtils.isNotBlank(rootOrgId)) {
+                orgIdList.add(rootOrgId);
+              }
+              List<Map<String, Object>> userOrgList =
+                  (List<Map<String, Object>>) userMap.get(JsonKey.ORGANISATIONS);
+              if (CollectionUtils.isNotEmpty(userOrgList)) {
+                userOrgList
+                    .stream()
+                    .forEach(
+                        userOrg -> {
+                          String userOrgId = (String) userOrg.get(JsonKey.ORGANISATION_ID);
+                          if (StringUtils.isNotBlank(userOrgId)) {
+                            orgIdList.add(userOrgId);
+                          }
+                        });
+              }
+            });
+
+    List<String> orgIds = new ArrayList<>(orgIdList);
+
+    List<Organisation> organisations = orgClient.esSearchOrgByIds(orgIds, filteredRequestedFileds);
+    Map<String, Organisation> orgMap = new HashMap<>();
+    organisations
+        .stream()
+        .forEach(
+            org -> {
+              orgMap.put(org.getId(), org);
+            });
+    return orgMap;
   }
 
   private void generateSearchTelemetryEvent(

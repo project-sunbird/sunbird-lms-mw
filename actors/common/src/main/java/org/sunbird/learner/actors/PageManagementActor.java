@@ -268,22 +268,37 @@ public class PageManagementActor extends BaseActor {
         sectionQuery = (String) pageMap.get(JsonKey.APP_MAP);
       }
     }
-    Object[] arr = mapper.readValue(sectionQuery, Object[].class);
+    Object[] arr = null;
+    try {
+      ProjectLogger.log(
+          "PageManagementActor:getPageData section query is " + sectionQuery, LoggerEnum.INFO);
+      arr = mapper.readValue(sectionQuery, Object[].class);
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "PageManagementActor:getPageData Exception in parsing section query  " + e.getMessage(),
+          LoggerEnum.INFO);
+      throw new ProjectCommonException(
+          ResponseCode.errorInvalidPageSection.getErrorCode(),
+          ResponseCode.errorInvalidPageSection.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
     List<Future<Map<String, Object>>> sectionList = new ArrayList<>();
-    for (Object obj : arr) {
-      Map<String, Object> sectionMap = (Map<String, Object>) obj;
-      Map<String, Object> sectionData =
-          new HashMap<>(DataCacheHandler.getSectionMap().get(sectionMap.get(JsonKey.ID)));
-      Future<Map<String, Object>> contentFuture =
-          getContentData(
-              sectionData,
-              reqFilters,
-              headers,
-              filterMap,
-              urlQueryString,
-              sectionMap.get(JsonKey.GROUP),
-              sectionMap.get(JsonKey.INDEX));
-      sectionList.add(contentFuture);
+    if (arr != null) {
+      for (Object obj : arr) {
+        Map<String, Object> sectionMap = (Map<String, Object>) obj;
+        Map<String, Object> sectionData =
+            new HashMap<>(DataCacheHandler.getSectionMap().get(sectionMap.get(JsonKey.ID)));
+        Future<Map<String, Object>> contentFuture =
+            getContentData(
+                sectionData,
+                reqFilters,
+                headers,
+                filterMap,
+                urlQueryString,
+                sectionMap.get(JsonKey.GROUP),
+                sectionMap.get(JsonKey.INDEX));
+        sectionList.add(contentFuture);
+      }
     }
 
     Future<Iterable<Map<String, Object>>> sctionsFuture =

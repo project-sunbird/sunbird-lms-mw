@@ -75,7 +75,7 @@ public class EducationManagementActorTest {
   }
 
   @Test
-  public void testInsertEducationSuccess() {
+  public void testInsertUserEducationSuccessWithRequiredParams() {
 
     boolean result =
         testScenario(
@@ -90,7 +90,7 @@ public class EducationManagementActorTest {
   }
 
   @Test
-  public void testUpdateEducationForDeleteEducationDetailsSuccess() {
+  public void testUpdateUserEducationSuccessForDeleteEducationDetails() {
 
     boolean result =
         testScenario(
@@ -105,7 +105,7 @@ public class EducationManagementActorTest {
   }
 
   @Test
-  public void testUpdateEducationForDeleteEducationDetailsWithoutAddressSuccess() {
+  public void testUpdateUserEducationSuccessForDeleteEducationDetailsWithoutAddress() {
 
     boolean result =
         testScenario(
@@ -120,7 +120,7 @@ public class EducationManagementActorTest {
   }
 
   @Test
-  public void testUpdateEducationWithoutIdSuccess() {
+  public void testUpdateUserEducationSuccessWithoutId() {
 
     boolean result =
         testScenario(
@@ -135,7 +135,7 @@ public class EducationManagementActorTest {
   }
 
   @Test
-  public void testUpdateEducationWithUpsertEducationDetailsSuccess() {
+  public void testUpdateUserEducationSuccessForUpsertEducationDetails() {
 
     boolean result =
         testScenario(
@@ -150,7 +150,7 @@ public class EducationManagementActorTest {
   }
 
   @Test
-  public void testInsertEducationFailure() {
+  public void testInsertUserEducationFailureWithoutAddress() {
 
     boolean result =
         testScenario(
@@ -165,7 +165,7 @@ public class EducationManagementActorTest {
   }
 
   @Test
-  public void testUpdateEducationForDeleteEducationDetailsFailure() {
+  public void testUpdateUserEducationFailureForDeleteEducationDetailsWithoutParams() {
 
     boolean result =
         testScenario(

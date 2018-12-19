@@ -223,7 +223,6 @@ public class UserManagementActor extends BaseActor {
     String version = (String) actorMessage.getContext().get(JsonKey.VERSION);
     if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
       userRequestValidator.validateCreateUserV2Request(actorMessage);
-      validateChannelAndOrganisationId(userMap);
     } else if (StringUtils.isNotBlank(version) && JsonKey.VERSION_3.equalsIgnoreCase(version)) {
       userRequestValidator.validateCreateUserV3Request(actorMessage);
       if (StringUtils.isNotBlank(callerId)) {
@@ -232,6 +231,7 @@ public class UserManagementActor extends BaseActor {
     } else {
       userRequestValidator.validateCreateUserV1Request(actorMessage);
     }
+    validateChannelAndOrganisationId(userMap);
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
@@ -257,30 +257,68 @@ public class UserManagementActor extends BaseActor {
 
   private void validateChannelAndOrganisationId(Map<String, Object> userMap) {
     String organisationId = (String) userMap.get(JsonKey.ORGANISATION_ID);
+    String requestedRootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
+    String requestedChannel = (String) userMap.get(JsonKey.CHANNEL);
+
+    if (StringUtils.isNotBlank(requestedRootOrgId)) {
+      Map<String, Object> orgMap = Util.getOrgDetails(requestedRootOrgId);
+      if (MapUtils.isEmpty(orgMap) || !(boolean) orgMap.get(JsonKey.IS_ROOT_ORG)) {
+        ProjectCommonException.throwClientErrorException(ResponseCode.invalidRootOrganisationId);
+      }
+      userMap.put(JsonKey.CHANNEL, orgMap.get(JsonKey.CHANNEL));
+    }
+
+    String subOrgRootOrgId = "";
     if (StringUtils.isNotBlank(organisationId)) {
       Map<String, Object> orgMap = Util.getOrgDetails(organisationId);
       if (MapUtils.isEmpty(orgMap)) {
-        ProjectCommonException.throwClientErrorException(ResponseCode.invalidOrgData, null);
+        ProjectCommonException.throwClientErrorException(ResponseCode.invalidOrgData);
       }
-      String subOrgRootOrgId = "";
       if ((boolean) orgMap.get(JsonKey.IS_ROOT_ORG)) {
         subOrgRootOrgId = (String) orgMap.get(JsonKey.ID);
+        if (StringUtils.isNotBlank(requestedChannel)
+            && !requestedChannel.equalsIgnoreCase((String) orgMap.get(JsonKey.CHANNEL))) {
+          throwParameterMisMatchException(JsonKey.CHANNEL, JsonKey.ORGANISATION_ID);
+        }
+        userMap.put(JsonKey.CHANNEL, orgMap.get(JsonKey.CHANNEL));
       } else {
         subOrgRootOrgId = (String) orgMap.get(JsonKey.ROOT_ORG_ID);
+        Map<String, Object> subOrgRootOrgMap = Util.getOrgDetails(subOrgRootOrgId);
+        if (MapUtils.isNotEmpty(subOrgRootOrgMap)) {
+          if (StringUtils.isNotBlank(requestedChannel)
+              && !requestedChannel.equalsIgnoreCase(
+                  (String) subOrgRootOrgMap.get(JsonKey.CHANNEL))) {
+            throwParameterMisMatchException(JsonKey.CHANNEL, JsonKey.ORGANISATION_ID);
+          }
+          userMap.put(JsonKey.CHANNEL, subOrgRootOrgMap.get(JsonKey.CHANNEL));
+        }
       }
-      String rootOrgId = "";
-      if (StringUtils.isNotBlank((String) userMap.get(JsonKey.CHANNEL))) {
-        rootOrgId = userService.getRootOrgIdFromChannel((String) userMap.get(JsonKey.CHANNEL));
-        userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+      if (StringUtils.isNotBlank(requestedRootOrgId)
+          && (!requestedRootOrgId.equalsIgnoreCase(subOrgRootOrgId))) {
+        throwParameterMisMatchException(JsonKey.ROOT_ORG_ID, JsonKey.ORGANISATION_ID);
       }
-      if (!rootOrgId.equalsIgnoreCase(subOrgRootOrgId)) {
-        ProjectCommonException.throwClientErrorException(
-            ResponseCode.parameterMismatch,
-            MessageFormat.format(
-                ResponseCode.parameterMismatch.getErrorMessage(),
-                StringFormatter.joinByComma(JsonKey.CHANNEL, JsonKey.ORGANISATION_ID)));
-      }
+      userMap.put(JsonKey.ROOT_ORG_ID, subOrgRootOrgId);
     }
+    String rootOrgId = "";
+    if (StringUtils.isNotBlank(requestedChannel)) {
+      rootOrgId = userService.getRootOrgIdFromChannel(requestedChannel);
+      if (StringUtils.isNotBlank(subOrgRootOrgId) && !rootOrgId.equalsIgnoreCase(subOrgRootOrgId)) {
+        throwParameterMisMatchException(JsonKey.CHANNEL, JsonKey.ORGANISATION_ID);
+      }
+      if (StringUtils.isNotBlank(requestedRootOrgId)
+          && !rootOrgId.equalsIgnoreCase(requestedRootOrgId)) {
+        throwParameterMisMatchException(JsonKey.CHANNEL, JsonKey.ROOT_ORG_ID);
+      }
+      userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+    }
+  }
+
+  private void throwParameterMisMatchException(String param1, String param2) {
+    ProjectCommonException.throwClientErrorException(
+        ResponseCode.parameterMismatch,
+        MessageFormat.format(
+            ResponseCode.parameterMismatch.getErrorMessage(),
+            StringFormatter.joinByComma(param1, param2)));
   }
 
   @SuppressWarnings("unchecked")

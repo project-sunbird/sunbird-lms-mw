@@ -64,16 +64,6 @@ public class EducationManagementActorTest {
         .thenReturn(getSuccessResponse());
   }
 
-  private static Response getEducationResponse() {
-    Response response = new Response();
-    List<Map<String, Object>> lst = new ArrayList<>();
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.ADDRESS_ID, "someAddressId");
-    lst.add(map);
-    response.put(JsonKey.RESPONSE, lst);
-    return response;
-  }
-
   @Test
   public void testInsertUserEducationSuccessWithRequiredParams() {
 
@@ -246,6 +236,16 @@ public class EducationManagementActorTest {
   private static Response getSuccessResponse() {
     Response response = new Response();
     response.put(JsonKey.RESPONSE, "SUCCESS");
+    return response;
+  }
+  
+   private static Response getEducationResponse() {
+    Response response = new Response();
+    List<Map<String, Object>> lst = new ArrayList<>();
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.ADDRESS_ID, "someAddressId");
+    lst.add(map);
+    response.put(JsonKey.RESPONSE, lst);
     return response;
   }
 }

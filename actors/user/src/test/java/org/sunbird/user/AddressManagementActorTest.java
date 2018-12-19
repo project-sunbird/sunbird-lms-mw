@@ -83,13 +83,13 @@ public class AddressManagementActorTest {
   }
 
   @Test
-  public void testUpdateUserAddressSuccessWithoutId() {
+  public void testUpdateUserAddressSuccessWithAddNewAddress() {
     boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS, false, true, false);
     assertTrue(result);
   }
 
   @Test
-  public void testUpdateUserAddressSuccessWithId() {
+  public void testUpdateUserAddressSuccessWithUpdateExistingAddress() {
     boolean result = testScenario(UserActorOperations.UPDATE_USER_ADDRESS, false, true, true);
     assertTrue(result);
   }

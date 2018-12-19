@@ -5,6 +5,7 @@ import static org.sunbird.learner.util.Util.isNotNull;
 import akka.actor.ActorRef;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -634,7 +635,12 @@ public class UserProfileReadActor extends BaseActor {
     User foundUser = foundUsers.get(0);
 
     ObjectMapper objectMapper = new ObjectMapper();
+    objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     Map<String, Object> result = objectMapper.convertValue(foundUser, Map.class);
+    if (result != null) {
+      result.remove(JsonKey.EMAIL);
+      result.remove(JsonKey.PHONE);
+    }
     sendResponse(actorMessage, result);
   }
 
@@ -750,7 +756,8 @@ public class UserProfileReadActor extends BaseActor {
 
         if (tncConfigMap.containsKey(tncLatestVersion)) {
           String url = (String) ((Map) tncConfigMap.get(tncLatestVersion)).get(JsonKey.URL);
-          ProjectLogger.log("UserManagementActor:updateTncInfo: url = " + url, LoggerEnum.INFO.name());
+          ProjectLogger.log(
+              "UserManagementActor:updateTncInfo: url = " + url, LoggerEnum.INFO.name());
           result.put(JsonKey.TNC_LATEST_VERSION_URL, url);
         } else {
           result.put(JsonKey.PROMPT_TNC, false);

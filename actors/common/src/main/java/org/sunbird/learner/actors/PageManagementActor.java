@@ -271,11 +271,11 @@ public class PageManagementActor extends BaseActor {
     Object[] arr = null;
     try {
       ProjectLogger.log(
-          "PageManagementActor:getPageData section query is " + sectionQuery, LoggerEnum.INFO);
+          "PageManagementActor:getPageData: section query = " + sectionQuery, LoggerEnum.INFO);
       arr = mapper.readValue(sectionQuery, Object[].class);
     } catch (Exception e) {
       ProjectLogger.log(
-          "PageManagementActor:getPageData Exception in parsing section query  " + e.getMessage(),
+          "PageManagementActor:getPageData: Exception occurred with error message =  " + e.getMessage(),
           LoggerEnum.INFO);
       throw new ProjectCommonException(
           ResponseCode.errorInvalidPageSection.getErrorCode(),

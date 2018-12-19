@@ -239,7 +239,7 @@ public class EducationManagementActorTest {
     return response;
   }
   
-   private static Response getEducationResponse() {
+  private static Response getEducationResponse() {
     Response response = new Response();
     List<Map<String, Object>> lst = new ArrayList<>();
     Map<String, Object> map = new HashMap<>();

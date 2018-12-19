@@ -50,7 +50,7 @@ public class EducationManagementActorTest {
   private static final CassandraOperation cassandraOperation = mock(CassandraOperationImpl.class);
 
   @BeforeClass
-  public static void beforeEachTest() throws Exception {
+  public static void beforeEachTest() {
 
     PowerMockito.mockStatic(ServiceFactory.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
@@ -122,7 +122,7 @@ public class EducationManagementActorTest {
     subject.tell(getRequestObject(operation, isParamReq, isDelete), probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     if (isSuccess) {
-      return res != null && res.getResult().get(JsonKey.RESPONSE) == "SUCCESS";
+      return res != null && "SUCCESS".equals(res.getResult().get(JsonKey.RESPONSE));
     } else {
       return res != null && res.getResult().get(JsonKey.ERROR_MSG) != null;
     }

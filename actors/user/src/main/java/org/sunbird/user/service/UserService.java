@@ -37,5 +37,6 @@ public interface UserService {
 
   List<String> getEncryptedList(List<String> dataList);
 
-  boolean checkUserNameUniqueness(String userName);
+  boolean checkUsernameUniqueness(String userName);
+
 }

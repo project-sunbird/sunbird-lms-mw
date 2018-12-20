@@ -275,7 +275,8 @@ public class PageManagementActor extends BaseActor {
       arr = mapper.readValue(sectionQuery, Object[].class);
     } catch (Exception e) {
       ProjectLogger.log(
-          "PageManagementActor:getPageData: Exception occurred with error message =  " + e.getMessage(),
+          "PageManagementActor:getPageData: Exception occurred with error message =  "
+              + e.getMessage(),
           LoggerEnum.INFO);
       throw new ProjectCommonException(
           ResponseCode.errorInvalidPageSection.getErrorCode(),

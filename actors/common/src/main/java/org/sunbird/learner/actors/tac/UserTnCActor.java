@@ -1,6 +1,9 @@
 package org.sunbird.learner.actors.tac;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import java.sql.Timestamp;
+import java.text.MessageFormat;
+import java.util.*;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -20,10 +23,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
-
-import java.sql.Timestamp;
-import java.text.MessageFormat;
-import java.util.*;
 
 @ActorConfig(
   tasks = {"userTnCAccept"},

@@ -75,7 +75,7 @@ public class RateLimit {
 
   public Map<String, Object> getRecord() {
     if (!isValid()) {
-      ProjectLogger.log("RateLimit:getRecord: invalid state =" + toString(), LoggerEnum.ERROR);
+      ProjectLogger.log("RateLimit:getRecord: Invalid record =" + toString(), LoggerEnum.ERROR);
       ProjectCommonException.throwServerErrorException(ResponseCode.SERVER_ERROR);
     }
     Map<String, Object> rateLimitMap = new HashMap<>();

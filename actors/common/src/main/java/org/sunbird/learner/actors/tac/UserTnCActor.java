@@ -48,7 +48,7 @@ public class UserTnCActor extends BaseActor {
     String acceptedTnC = (String) request.getRequest().get(JsonKey.VERSION);
     Map<String, Object> userMap = new HashMap();
     String userId = (String) request.getContext().get(JsonKey.REQUESTED_BY);
-    SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
+    SystemSettingClient systemSettingClient = SystemSettingClientImpl.getInstance();
     String latestTnC =
         systemSettingClient.getSystemSettingByFieldAndKey(
             getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),

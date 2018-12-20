@@ -392,12 +392,16 @@ public class UserServiceImpl implements UserService {
     return (List<Map<String, Object>>) esResult.get(JsonKey.CONTENT);
   }
 
+  @SuppressWarnings("unchecked")
   @Override
-  public boolean checkUsernameUniqueness(String username) {
+  public boolean checkUsernameUniqueness(String username, boolean isEncrypted) {
     try {
-      username = encryptionService.encryptData(username);
+      if (!isEncrypted) username = encryptionService.encryptData(username);
     } catch (Exception e) {
-      ProjectLogger.log("UserServiceImpl:checkUsernameUniqueness: Exception occurred with error message = " + e.getMessage(), e);
+      ProjectLogger.log(
+          "UserServiceImpl:checkUsernameUniqueness: Exception occurred with error message = "
+              + e.getMessage(),
+          e);
       ProjectCommonException.throwServerErrorException(ResponseCode.userDataEncryptionError);
     }
 
@@ -413,5 +417,4 @@ public class UserServiceImpl implements UserService {
     }
     return true;
   }
-
 }

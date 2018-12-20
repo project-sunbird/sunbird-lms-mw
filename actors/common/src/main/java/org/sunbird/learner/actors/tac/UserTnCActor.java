@@ -23,6 +23,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.common.models.util.LoggerEnum;
 
 @ActorConfig(
   tasks = {"userTnCAccept"},
@@ -98,17 +99,16 @@ public class UserTnCActor extends BaseActor {
         syncUserDetails(userMap);
       }
       sender().tell(response, self());
-      updateTelemetry(userMap, acceptedTnC, lastAcceptedVersion);
+      generateTelemetry(userMap, acceptedTnC, lastAcceptedVersion);
     } else {
       response.getResult().put(JsonKey.RESPONSE, JsonKey.SUCCESS);
       sender().tell(response, self());
     }
   }
 
-  private void updateTelemetry(
+  private void generateTelemetry(
       Map<String, Object> userMap, String acceptedTnCVersion, String lastAcceptedVersion) {
     Map<String, Object> targetObject = null;
-
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     targetObject =
         TelemetryUtil.generateTargetObject(
@@ -117,13 +117,14 @@ public class UserTnCActor extends BaseActor {
             acceptedTnCVersion,
             lastAcceptedVersion);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
+    ProjectLogger.log("UserTnCActor:syncUserDetails: Telemetry generation call ended ",LoggerEnum.INFO.name());
   }
 
   private void syncUserDetails(Map<String, Object> completeUserMap) {
     Request userRequest = new Request();
     userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
     userRequest.getRequest().put(JsonKey.ID, completeUserMap.get(JsonKey.ID));
-    ProjectLogger.log("UserTnCActor:syncUserDetails: Trigger sync of user details to ES");
+    ProjectLogger.log("UserTnCActor:syncUserDetails: Trigger sync of user details to ES",LoggerEnum.INFO.name());
     tellToAnother(userRequest);
   }
 }

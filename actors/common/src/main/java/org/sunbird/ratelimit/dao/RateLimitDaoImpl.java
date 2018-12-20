@@ -29,28 +29,31 @@ public class RateLimitDaoImpl implements RateLimitDao {
   }
 
   @Override
-  public void insertRateLimits(List<Map<String, Object>> values) {
+  public void insertRateLimits(List<Map<String, Object>> rateLimitList) {
     List<Integer> ttls = new ArrayList<>();
-    values.forEach(
-        value -> {
-          int ttl = (int) value.get(JsonKey.TTL);
-          ttls.add(ttl);
-          value.remove(JsonKey.TTL);
+    rateLimitList.forEach(
+        rateLimit -> {
+          ttls.add((int) rateLimit.remove(JsonKey.TTL));
         });
-    cassandraOperation.batchInsertWithTTL(Util.KEY_SPACE_NAME, TABLE_NAME, values, ttls);
+    cassandraOperation.batchInsertWithTTL(Util.KEY_SPACE_NAME, TABLE_NAME, rateLimitList, ttls);
   }
 
   @Override
   public List<Map<String, Object>> getRateLimits(String key) {
-    Map<String, Object> primaryKeys = new HashMap<>();
-    primaryKeys.put(JsonKey.KEY, key);
-    Map<String, String> ttlPropertiesWithAlias = new HashMap<>();
-    ttlPropertiesWithAlias.put(JsonKey.COUNT, JsonKey.TTL);
+    Map<String, Object> partitionKey = new HashMap<>();
+    partitionKey.put(JsonKey.KEY, key);
+
+    Map<String, String> ttlPropsWithAlias = new HashMap<>();
+    ttlPropsWithAlias.put(JsonKey.COUNT, JsonKey.TTL);
+
     List<String> properties =
         Arrays.asList(JsonKey.KEY, JsonKey.RATE_LIMIT_UNIT, JsonKey.COUNT, JsonKey.RATE);
+
     Response response =
         cassandraOperation.getRecordsByIdsWithSpecifiedColumnsAndTTL(
-            Util.KEY_SPACE_NAME, TABLE_NAME, primaryKeys, properties, ttlPropertiesWithAlias);
+            Util.KEY_SPACE_NAME, TABLE_NAME, primaryKeys, properties, ttlPropsWithAlias);
+
     return (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
   }
+
 }

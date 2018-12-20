@@ -229,9 +229,14 @@ public class CourseEnrollmentActor extends BaseActor {
       try {
         String query = EKSTEP_COURSE_SEARCH_QUERY.replaceAll("COURSE_ID_PLACEHOLDER", courseId);
         Map<String, Object> result = EkStepRequestUtil.searchContent(query, headers);
-        if (null != result && !result.isEmpty()) {
+        if (null != result && !result.isEmpty() && result.get(JsonKey.CONTENTS) != null) {
           return ((List<Map<String, Object>>) result.get(JsonKey.CONTENTS)).get(0);
           // return (Map<String, Object>) contentObject;
+        } else {
+          ProjectLogger.log(
+              "CourseEnrollmentActor:getCourseObjectFromEkStep Contnet not found for requested courseId "
+                  + courseId,
+              LoggerEnum.INFO.name());
         }
       } catch (Exception e) {
         ProjectLogger.log(e.getMessage(), e);

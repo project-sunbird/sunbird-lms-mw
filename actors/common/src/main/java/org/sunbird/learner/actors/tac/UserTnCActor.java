@@ -98,20 +98,25 @@ public class UserTnCActor extends BaseActor {
         syncUserDetails(userMap);
       }
       sender().tell(response, self());
-      Map<String, Object> targetObject = null;
-
-      List<Map<String, Object>> correlatedObject = new ArrayList<>();
-      targetObject =
-          TelemetryUtil.generateTargetObject(
-              (String) userMap.get(JsonKey.USER_ID),
-              JsonKey.USER,
-              acceptedTnC,
-              lastAcceptedVersion);
-      TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
+      updateTelemetry(userMap, acceptedTnC, lastAcceptedVersion);
     } else {
       response.getResult().put(JsonKey.RESPONSE, JsonKey.SUCCESS);
       sender().tell(response, self());
     }
+  }
+
+  private void updateTelemetry(
+      Map<String, Object> userMap, String acceptedTnCVersion, String lastAcceptedVersion) {
+    Map<String, Object> targetObject = null;
+
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+    targetObject =
+        TelemetryUtil.generateTargetObject(
+            (String) userMap.get(JsonKey.USER_ID),
+            JsonKey.USER,
+            acceptedTnCVersion,
+            lastAcceptedVersion);
+    TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
   private void syncUserDetails(Map<String, Object> completeUserMap) {

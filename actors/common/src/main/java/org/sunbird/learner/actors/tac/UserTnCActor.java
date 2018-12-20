@@ -1,6 +1,9 @@
 package org.sunbird.learner.actors.tac;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import java.sql.Timestamp;
+import java.text.MessageFormat;
+import java.util.*;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -20,10 +23,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
-
-import java.sql.Timestamp;
-import java.text.MessageFormat;
-import java.util.*;
 
 @ActorConfig(
   tasks = {"userTnCAccept"},
@@ -98,17 +97,21 @@ public class UserTnCActor extends BaseActor {
       if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
         syncUserDetails(userMap);
       }
+      sender().tell(response, self());
+      Map<String, Object> targetObject = null;
+
+      List<Map<String, Object>> correlatedObject = new ArrayList<>();
+      targetObject =
+          TelemetryUtil.generateTargetObject(
+              (String) userMap.get(JsonKey.USER_ID),
+              JsonKey.USER,
+              acceptedTnC,
+              lastAcceptedVersion);
+      TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
     } else {
       response.getResult().put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+      sender().tell(response, self());
     }
-    sender().tell(response, self());
-
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) userMap.get(JsonKey.USER_ID), JsonKey.TNC, JsonKey.ACCEPT, null);
-    TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
   private void syncUserDetails(Map<String, Object> completeUserMap) {

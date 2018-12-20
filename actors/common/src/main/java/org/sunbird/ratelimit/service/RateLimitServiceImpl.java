@@ -32,7 +32,7 @@ public class RateLimitServiceImpl implements RateLimitService {
   public void throttleByKey(String key, RateLimiter[] rateLimiters) {
     if (!isRateLimitOn()) {
       ProjectLogger.log(
-          "RateLimitServiceImpl:validateRate rate limiter is disabled", LoggerEnum.INFO);
+          "RateLimitServiceImpl:throttleByKey: Rate limiter is disabled", LoggerEnum.INFO);
       return;
     }
     Map<String, RateLimit> entryByRate = new HashMap<>();
@@ -45,13 +45,13 @@ public class RateLimitServiceImpl implements RateLimitService {
               rate -> {
                 if (!MapUtils.isEmpty(rate)) {
                   ProjectLogger.log(
-                      "RateLimitServiceImpl:validateRate key =" + key + " rate =" + rate,
+                      "RateLimitServiceImpl:throttleByKey: key = " + key + " rate =" + rate,
                       LoggerEnum.INFO);
                   RateLimit rateLimit = new RateLimit(key, rate);
 
                   if (rateLimit.getCount() >= rateLimit.getLimit()) {
                     ProjectLogger.log(
-                        "RateLimitServiceImpl:validateRate  rate limit threshold crossed for key ="
+                        "RateLimitServiceImpl:throttleByKey: Rate limit threshold crossed for key = "
                             + key,
                         LoggerEnum.ERROR);
                     throw new ProjectCommonException(
@@ -75,7 +75,7 @@ public class RateLimitServiceImpl implements RateLimitService {
                     new RateLimit(
                         key, rateLimiter.name(), rateLimiter.getRateLimit(), rateLimiter.getTTL());
                 ProjectLogger.log(
-                    "RateLimitServiceImpl:validateRate insert for key ="
+                    "RateLimitServiceImpl:throttleByKey: Initialise rate limit for key = "
                         + key
                         + " rate ="
                         + rateLimit.getLimit(),
@@ -90,4 +90,5 @@ public class RateLimitServiceImpl implements RateLimitService {
   private List<Map<String, Object>> getRatesByKey(String key) {
     return rateLimitDao.getRateLimits(key);
   }
+
 }

@@ -230,8 +230,6 @@ public class UserManagementActor extends BaseActor {
     String version = (String) actorMessage.getContext().get(JsonKey.VERSION);
     if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
       userRequestValidator.validateCreateUserV2Request(actorMessage);
-    } else if (StringUtils.isNotBlank(version) && JsonKey.VERSION_3.equalsIgnoreCase(version)) {
-      userRequestValidator.validateCreateUserV3Request(actorMessage);
       if (StringUtils.isNotBlank(callerId)) {
         userMap.put(JsonKey.ROOT_ORG_ID, actorMessage.getContext().get(JsonKey.ROOT_ORG_ID));
       }

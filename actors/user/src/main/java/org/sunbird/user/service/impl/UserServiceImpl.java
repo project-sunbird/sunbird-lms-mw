@@ -391,4 +391,30 @@ public class UserServiceImpl implements UserService {
 
     return (List<Map<String, Object>>) esResult.get(JsonKey.CONTENT);
   }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public boolean checkUsernameUniqueness(String username, boolean isEncrypted) {
+    try {
+      if (!isEncrypted) username = encryptionService.encryptData(username);
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "UserServiceImpl:checkUsernameUniqueness: Exception occurred with error message = "
+              + e.getMessage(),
+          e);
+      ProjectCommonException.throwServerErrorException(ResponseCode.userDataEncryptionError);
+    }
+
+    Response result =
+        cassandraOperation.getRecordsByIndexedProperty(
+            usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), JsonKey.USERNAME, username);
+
+    List<Map<String, Object>> userMapList =
+        (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+
+    if (CollectionUtils.isNotEmpty(userMapList)) {
+      return false;
+    }
+    return true;
+  }
 }

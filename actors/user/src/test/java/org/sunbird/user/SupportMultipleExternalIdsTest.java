@@ -10,6 +10,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
@@ -46,6 +47,7 @@ import org.sunbird.models.user.User;
   "javax.crypto.*",
   "javax.script.*"
 })
+@Ignore
 public class SupportMultipleExternalIdsTest {
 
   private static User user;
@@ -112,6 +114,7 @@ public class SupportMultipleExternalIdsTest {
   }
 
   @Test
+  @Ignore
   public void testCheckExternalIdUniquenessSuccessForUpdate() {
 
     try {

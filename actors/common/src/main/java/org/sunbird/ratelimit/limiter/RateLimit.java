@@ -1,4 +1,3 @@
-/** */
 package org.sunbird.ratelimit.limiter;
 
 import java.util.HashMap;
@@ -10,7 +9,6 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.responsecode.ResponseCode;
 
-/** @author Rahul Kumar */
 public class RateLimit {
 
   private String key;
@@ -67,7 +65,7 @@ public class RateLimit {
     return ttl;
   }
 
-  public void setTtl(Integer ttl) {
+  public void setTTL(Integer ttl) {
     this.ttl = ttl;
   }
 
@@ -77,7 +75,7 @@ public class RateLimit {
 
   public Map<String, Object> getRecord() {
     if (!isValid()) {
-      ProjectLogger.log("RateLimit:getRecord invalid state =" + toString(), LoggerEnum.ERROR);
+      ProjectLogger.log("RateLimit:getRecord: invalid state =" + toString(), LoggerEnum.ERROR);
       ProjectCommonException.throwServerErrorException(ResponseCode.SERVER_ERROR);
     }
     Map<String, Object> rateLimitMap = new HashMap<>();
@@ -136,4 +134,5 @@ public class RateLimit {
     builder.append("]");
     return builder.toString();
   }
+
 }

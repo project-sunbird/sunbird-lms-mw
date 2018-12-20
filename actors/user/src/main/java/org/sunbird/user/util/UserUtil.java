@@ -448,6 +448,10 @@ public class UserUtil {
           userMap.put(JsonKey.LOGIN_ID, loginId);
         }
       }
+    } else {
+      if (!userService.checkUserNameUniqueness((String) userMap.get(JsonKey.USERNAME))) {
+        ProjectCommonException.throwClientErrorException(ResponseCode.userNameAlreadyExistError);
+      }
     }
   }
 

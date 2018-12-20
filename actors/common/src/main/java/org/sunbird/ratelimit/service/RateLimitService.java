@@ -1,6 +1,8 @@
 /** */
 package org.sunbird.ratelimit.service;
 
+import org.sunbird.ratelimit.limiter.RATE_LIMITER;
+
 /** @author Rahul Kumar */
 public interface RateLimitService {
 

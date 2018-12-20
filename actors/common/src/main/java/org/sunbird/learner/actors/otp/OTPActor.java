@@ -15,7 +15,8 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.otp.service.OTPService;
 import org.sunbird.learner.actors.user.service.UserService;
 import org.sunbird.learner.util.OTPUtil;
-import org.sunbird.ratelimit.service.RATE_LIMITER;
+import org.sunbird.ratelimit.limiter.OTP_RATE_LIMITER;
+import org.sunbird.ratelimit.limiter.RATE_LIMITER;
 import org.sunbird.ratelimit.service.RateLimitService;
 import org.sunbird.ratelimit.service.RateLimitServiceImpl;
 
@@ -44,7 +45,8 @@ public class OTPActor extends BaseActor {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = (String) request.getRequest().get(JsonKey.KEY);
 
-    rateLimitService.validateRate(key, new RATE_LIMITER[] {RATE_LIMITER.HOUR, RATE_LIMITER.DAY});
+    rateLimitService.validateRate(
+        key, new RATE_LIMITER[] {OTP_RATE_LIMITER.HOUR, OTP_RATE_LIMITER.DAY});
 
     userService.checkKeyUniqueness(type, key, true);
 
@@ -52,7 +54,7 @@ public class OTPActor extends BaseActor {
     Map<String, Object> details = otpService.getOTPDetails(type, key);
     if (MapUtils.isEmpty(details)) {
       otp = OTPUtil.generateOTP();
-      ProjectLogger.log("OTPActor:generateOTP: Key = " + key + " OTP = " + otp, LoggerEnum.INFO);
+      ProjectLogger.log("OTPActor:generateOTP: Key = " + key + " OTP = " + otp, LoggerEnum.DEBUG);
       otpService.insertOTPDetails(type, key, otp);
     } else {
       otp = (String) details.get(JsonKey.OTP);
@@ -75,7 +77,7 @@ public class OTPActor extends BaseActor {
     if (MapUtils.isEmpty(otpDetails)) {
       ProjectLogger.log(
           "OTPActor:verifyOTP: Details not found for type = " + type + " key = " + key,
-          LoggerEnum.INFO);
+          LoggerEnum.DEBUG);
       ProjectCommonException.throwClientErrorException(ResponseCode.errorInvalidOTP);
     }
 
@@ -87,7 +89,7 @@ public class OTPActor extends BaseActor {
               + otpInRequest
               + " otpInDB = "
               + otpInDB,
-          LoggerEnum.INFO);
+          LoggerEnum.DEBUG);
       ProjectCommonException.throwClientErrorException(ResponseCode.errorInvalidOTP);
     }
 

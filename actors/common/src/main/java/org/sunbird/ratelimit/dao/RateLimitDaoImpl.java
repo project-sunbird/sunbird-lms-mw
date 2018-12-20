@@ -46,17 +46,11 @@ public class RateLimitDaoImpl implements RateLimitDao {
     primaryKeys.put(JsonKey.KEY, key);
     Map<String, String> ttlPropertiesWithAlias = new HashMap<>();
     ttlPropertiesWithAlias.put(JsonKey.COUNT, JsonKey.TTL);
-    Map<String, String> propertiesWithAlias = new HashMap<>();
-    Arrays.asList(JsonKey.KEY, JsonKey.RATE_LIMIT_UNIT, JsonKey.COUNT)
-        .stream()
-        .forEach(column -> propertiesWithAlias.put(column, null));
+    List<String> properties =
+        Arrays.asList(JsonKey.KEY, JsonKey.RATE_LIMIT_UNIT, JsonKey.COUNT, JsonKey.RATE);
     Response response =
         cassandraOperation.getRecordsByIdsWithSpecifiedColumnsAndTTL(
-            Util.KEY_SPACE_NAME,
-            TABLE_NAME,
-            primaryKeys,
-            propertiesWithAlias,
-            ttlPropertiesWithAlias);
+            Util.KEY_SPACE_NAME, TABLE_NAME, primaryKeys, properties, ttlPropertiesWithAlias);
     return (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
   }
 }

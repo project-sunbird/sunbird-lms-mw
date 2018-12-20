@@ -16,6 +16,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.ratelimit.dao.RateLimitDao;
 import org.sunbird.ratelimit.dao.RateLimitDaoImpl;
+import org.sunbird.ratelimit.limiter.RATE_LIMITER;
 
 public class RateLimitServiceImpl implements RateLimitService {
 
@@ -34,10 +35,10 @@ public class RateLimitServiceImpl implements RateLimitService {
           "RateLimitServiceImpl:validateRate rate limiter is disabled", LoggerEnum.INFO);
       return;
     }
-    Map<RATE_LIMITER, Map<String, Object>> entryByRate = new HashMap<>();
+    Map<String, Map<String, Object>> entryByRate = new HashMap<>();
 
     List<Map<String, Object>> ratesByKey = getRatesByKey(key);
-    if (!CollectionUtils.isEmpty(ratesByKey)) {
+    if (CollectionUtils.isNotEmpty(ratesByKey)) {
       ratesByKey
           .stream()
           .forEach(
@@ -47,25 +48,21 @@ public class RateLimitServiceImpl implements RateLimitService {
                       "RateLimitServiceImpl:validateRate key =" + key + " rate =" + rate,
                       LoggerEnum.INFO);
                   String unit = (String) rate.get(JsonKey.RATE_LIMIT_UNIT);
-                  RATE_LIMITER rateLimiter = RATE_LIMITER.valueOf(unit);
-                  String limitVal = ProjectUtil.getConfigValue(rateLimiter.getLimitKey());
-                  if (!StringUtils.isBlank(limitVal)) {
-                    int limit = Integer.valueOf(limitVal);
-                    Integer count = (int) rate.get(JsonKey.COUNT);
-                    if (count >= limit) {
-                      ProjectLogger.log(
-                          "RateLimitServiceImpl:validateRate  rate limit threshold crossed for key ="
-                              + key,
-                          LoggerEnum.ERROR);
-                      throw new ProjectCommonException(
-                          ResponseCode.rateLimitExceeded.getErrorCode(),
-                          ResponseCode.rateLimitExceeded.getErrorMessage(),
-                          ResponseCode.FORBIDDEN.getResponseCode(),
-                          rateLimiter.name().toLowerCase());
-                    }
-                    rate.put(JsonKey.COUNT, count + 1);
-                    entryByRate.put(rateLimiter, rate);
+                  int limit = (int) rate.get(JsonKey.RATE);
+                  Integer count = (int) rate.get(JsonKey.COUNT);
+                  if (count >= limit) {
+                    ProjectLogger.log(
+                        "RateLimitServiceImpl:validateRate  rate limit threshold crossed for key ="
+                            + key,
+                        LoggerEnum.ERROR);
+                    throw new ProjectCommonException(
+                        ResponseCode.errorRateLimitExceeded.getErrorCode(),
+                        ResponseCode.errorRateLimitExceeded.getErrorMessage(),
+                        ResponseCode.FORBIDDEN.getResponseCode(),
+                        unit.toLowerCase());
                   }
+                  rate.put(JsonKey.COUNT, count + 1);
+                  entryByRate.put(unit, rate);
                 }
               });
     }
@@ -73,16 +70,24 @@ public class RateLimitServiceImpl implements RateLimitService {
     Arrays.stream(rateLimiters)
         .forEach(
             rateLimiter -> {
-              if (!entryByRate.containsKey(rateLimiter)) {
+              if (!entryByRate.containsKey(rateLimiter.name())) {
                 Map<String, Object> entry = new HashMap<>();
                 entry.put(JsonKey.KEY, key);
                 entry.put(JsonKey.RATE_LIMIT_UNIT, rateLimiter.name());
                 entry.put(JsonKey.COUNT, 1);
                 entry.put(JsonKey.TTL, rateLimiter.getTtl());
-                ProjectLogger.log(
-                    "RateLimitServiceImpl:validateRate insert for key =" + key + " rate =" + entry,
-                    LoggerEnum.INFO);
-                entryByRate.put(rateLimiter, entry);
+                String limitVal = ProjectUtil.getConfigValue(rateLimiter.getLimitKey());
+                if (!StringUtils.isBlank(limitVal)) {
+                  int limit = Integer.valueOf(limitVal);
+                  entry.put(JsonKey.RATE, limit);
+                  ProjectLogger.log(
+                      "RateLimitServiceImpl:validateRate insert for key ="
+                          + key
+                          + " rate ="
+                          + entry,
+                      LoggerEnum.INFO);
+                  entryByRate.put(rateLimiter.name(), entry);
+                }
               }
             });
 

@@ -482,10 +482,8 @@ public class OrganisationManagementActor extends BaseActor {
     orgExtIdRequest.put(JsonKey.EXTERNAL_ID, externalId);
     orgExtIdRequest.put(JsonKey.ORG_ID, orgId);
 
-    Util.DbInfo orgExtIdInfo = Util.dbInfoMap.get(JsonKey.ORG_EXT_ID_DB);
-    Response orgExtIdResult =
-        cassandraOperation.insertRecord(
-            orgExtIdInfo.getKeySpace(), orgExtIdInfo.getTableName(), orgExtIdRequest);
+    cassandraOperation.insertRecord(
+            JsonKey.SUNBIRD, JsonKey.ORG_EXT_ID_DB, orgExtIdRequest);
   }
 
   private void deleteOrgExternalIdRecord(String channel, String externalId) {
@@ -493,9 +491,8 @@ public class OrganisationManagementActor extends BaseActor {
     orgExtIdRequest.put(JsonKey.PROVIDER, channel);
     orgExtIdRequest.put(JsonKey.EXTERNAL_ID, externalId);
 
-    Util.DbInfo orgExtIdInfo = Util.dbInfoMap.get(JsonKey.ORG_EXT_ID_DB);
     cassandraOperation.deleteRecord(
-        orgExtIdInfo.getKeySpace(), orgExtIdInfo.getTableName(), orgExtIdRequest);
+        JsonKey.SUNBIRD, JsonKey.ORG_EXT_ID_DB, orgExtIdRequest);
   }
 
   private void validateCodeAndAddLocationIds(Map<String, Object> req) {
@@ -1733,7 +1730,7 @@ public class OrganisationManagementActor extends BaseActor {
     Map<String, Object> compositeKeyMap = new HashMap<String, Object>();
     compositeKeyMap.put(JsonKey.PROVIDER, channel);
     compositeKeyMap.put(JsonKey.EXTERNAL_ID, externalId);
-    return validateCompositeKeyUniqueness(compositeKeyMap, orgId);
+    return handleChannelExternalIdUniqueness(compositeKeyMap, orgId);
   }
 
   private boolean validateFieldUniqueness(String key, String value, String orgId) {
@@ -1761,13 +1758,12 @@ public class OrganisationManagementActor extends BaseActor {
     return true;
   }
 
-  private boolean validateCompositeKeyUniqueness(
+  private boolean handleChannelExternalIdUniqueness(
       Map<String, Object> compositeKeyMap, String orgId) {
     if (MapUtils.isNotEmpty(compositeKeyMap)) {
-      Util.DbInfo orgExtIdInfo = Util.dbInfoMap.get(JsonKey.ORG_EXT_ID_DB);
       Response result =
           cassandraOperation.getRecordsByCompositeKey(
-              orgExtIdInfo.getKeySpace(), orgExtIdInfo.getTableName(), compositeKeyMap);
+              JsonKey.SUNBIRD, JsonKey.ORG_EXT_ID_DB, compositeKeyMap);
       List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
       if ((list.isEmpty())) {
         return true;

@@ -448,6 +448,10 @@ public class UserUtil {
           userMap.put(JsonKey.LOGIN_ID, loginId);
         }
       }
+    } else {
+      if (!userService.checkUsernameUniqueness((String) userMap.get(JsonKey.USERNAME), false)) {
+        ProjectCommonException.throwClientErrorException(ResponseCode.userNameAlreadyExistError);
+      }
     }
   }
 
@@ -501,11 +505,7 @@ public class UserUtil {
               .filter(
                   value -> {
                     if (!esUserNameList.contains(value)) {
-                      Map<String, Object> dbUser = userService.getUserByUsername(value);
-                      if (MapUtils.isEmpty(dbUser)) {
-                        return true;
-                      }
-                      return false;
+                      return userService.checkUsernameUniqueness(value, true);
                     }
                     return false;
                   })

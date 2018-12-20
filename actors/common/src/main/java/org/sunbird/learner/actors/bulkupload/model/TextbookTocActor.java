@@ -1,32 +1,5 @@
 package org.sunbird.learner.actors.bulkupload;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.Unirest;
-import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.MapUtils;
-import org.apache.commons.lang3.SerializationUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.TextbookActorOperation;
-import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.content.textbook.FileType;
-import org.sunbird.content.textbook.TextBookTocUploader;
-import org.sunbird.content.util.TextBookTocUtil;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import static java.io.File.separator;
 import static java.util.Arrays.asList;
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -46,6 +19,32 @@ import static org.sunbird.content.textbook.FileType.Type.CSV;
 import static org.sunbird.content.textbook.TextBookTocUploader.TEXTBOOK_TOC_FOLDER;
 import static org.sunbird.content.util.ContentCloudStore.getUri;
 import static org.sunbird.content.util.TextBookTocUtil.readHierarchy;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.Unirest;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.SerializationUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.TextbookActorOperation;
+import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.content.textbook.FileType;
+import org.sunbird.content.textbook.TextBookTocUploader;
+import org.sunbird.content.util.TextBookTocUtil;
 
 @ActorConfig(
   tasks = {"textbookTocUpload", "textbookTocUrl", "textbookTocUpdate"},
@@ -101,15 +100,17 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         String hierarchyVersionKey = (String) content.get(VERSION_KEY);
         String textBookNameSlug = makeSlug((String) content.get(NAME), true);
         String textBookTocFileName =
-                textbookId + "_" + textBookNameSlug + "_" + hierarchyVersionKey;
+            textbookId + "_" + textBookNameSlug + "_" + hierarchyVersionKey;
         FileType fileType = CSV.getFileType();
 
-        String prefix = TEXTBOOK_TOC_FOLDER + separator + textBookTocFileName + fileType.getExtension();
+        String prefix =
+            TEXTBOOK_TOC_FOLDER + separator + textBookTocFileName + fileType.getExtension();
         log("Fetching TextBook Toc URL from Cloud");
         String cloudPath = getUri(prefix, false);
         if (isBlank(cloudPath)) {
-          cloudPath = new TextBookTocUploader(textBookTocFileName, fileType).
-                  execute(content, textbookId, hierarchyVersionKey);
+          cloudPath =
+              new TextBookTocUploader(textBookTocFileName, fileType)
+                  .execute(content, textbookId, hierarchyVersionKey);
         }
 
         log("Sending Response for Toc Download API for TextBook | Id: " + textbookId);
@@ -121,7 +122,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         log("No content fetched for TextBook | Id:" + textbookId, ERROR.name());
       }
     } else {
-      log("Error while fetching textbook : " + textbookId + " with response " + response, ERROR.name());
+      log(
+          "Error while fetching textbook : " + textbookId + " with response " + response,
+          ERROR.name());
       throwClientErrorException(textBookNotFound, textBookNotFound.getErrorMessage());
     }
 
@@ -194,8 +197,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     log("Create Textbook called ", INFO.name());
     Map<String, Object> file = (Map<String, Object>) request.get(JsonKey.DATA);
     List<Map<String, Object>> data = (List<Map<String, Object>>) file.get(JsonKey.FILE_DATA);
-    log(
-        "Create Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data));
+    log("Create Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data));
     if (CollectionUtils.isEmpty(data)) {
       throw new ProjectCommonException(
           ResponseCode.invalidRequestData.getErrorCode(),
@@ -307,9 +309,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       Map<String, Object> textbook = (Map<String, Object>) result.get(CONTENT);
       return textbook;
     } else {
-      log(
-          "Error while fetching textbook : " + tbId + " with response " + response,
-          ERROR.name());
+      log("Error while fetching textbook : " + tbId + " with response " + response, ERROR.name());
       throw new ProjectCommonException(
           ResponseCode.errorProcessingRequest.getErrorCode(),
           ResponseCode.errorProcessingRequest.getErrorMessage(),
@@ -383,8 +383,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   private Response updateHierarchy(String tbId, Map<String, Object> updateRequest)
       throws Exception {
     String requestUrl =
-        getConfigValue(JsonKey.EKSTEP_BASE_URL)
-            + getConfigValue(JsonKey.UPDATE_HIERARCHY_API);
+        getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.UPDATE_HIERARCHY_API);
     HttpResponse<String> updateResponse =
         Unirest.patch(requestUrl)
             .headers(getDefaultHeaders())
@@ -413,9 +412,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     return new HashMap<String, String>() {
       {
         put("Content-Type", "application/json");
-        put(
-            JsonKey.AUTHORIZATION,
-            JsonKey.BEARER + getConfigValue(JsonKey.SUNBIRD_AUTHORIZATION));
+        put(JsonKey.AUTHORIZATION, JsonKey.BEARER + getConfigValue(JsonKey.SUNBIRD_AUTHORIZATION));
       }
     };
   }
@@ -469,13 +466,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                       if (MapUtils.isNotEmpty(metadata)) {
                         List<String> keywords =
                             (StringUtils.isNotBlank((String) metadata.get(JsonKey.KEYWORDS)))
-                                ? asList(
-                                    ((String) metadata.get(JsonKey.KEYWORDS)).split(","))
+                                ? asList(((String) metadata.get(JsonKey.KEYWORDS)).split(","))
                                 : null;
                         List<String> gradeLevel =
                             (StringUtils.isNotBlank((String) metadata.get(JsonKey.GRADE_LEVEL)))
-                                ? asList(
-                                    ((String) metadata.get(JsonKey.GRADE_LEVEL)).split(","))
+                                ? asList(((String) metadata.get(JsonKey.GRADE_LEVEL)).split(","))
                                 : null;
                         putAll(metadata);
                         remove(JsonKey.KEYWORDS);

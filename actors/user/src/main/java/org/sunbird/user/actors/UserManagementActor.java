@@ -16,6 +16,8 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
+import org.sunbird.actorutil.org.OrganisationClient;
+import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
@@ -36,6 +38,7 @@ import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
+import org.sunbird.models.organisation.Organisation;
 import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
@@ -58,6 +61,7 @@ public class UserManagementActor extends BaseActor {
   private UserRequestValidator userRequestValidator = new UserRequestValidator();
   private UserService userService = new UserServiceImpl();
   private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
+  private OrganisationClient organisationClient = new OrganisationClientImpl();
   private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private static InterServiceCommunication interServiceCommunication =
       InterServiceCommunicationFactory.getInstance();
@@ -226,15 +230,13 @@ public class UserManagementActor extends BaseActor {
     String version = (String) actorMessage.getContext().get(JsonKey.VERSION);
     if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
       userRequestValidator.validateCreateUserV2Request(actorMessage);
-      validateChannelAndOrganisationId(userMap);
-    } else if (StringUtils.isNotBlank(version) && JsonKey.VERSION_3.equalsIgnoreCase(version)) {
-      userRequestValidator.validateCreateUserV3Request(actorMessage);
       if (StringUtils.isNotBlank(callerId)) {
         userMap.put(JsonKey.ROOT_ORG_ID, actorMessage.getContext().get(JsonKey.ROOT_ORG_ID));
       }
     } else {
       userRequestValidator.validateCreateUserV1Request(actorMessage);
     }
+    validateChannelAndOrganisationId(userMap);
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
@@ -260,30 +262,49 @@ public class UserManagementActor extends BaseActor {
 
   private void validateChannelAndOrganisationId(Map<String, Object> userMap) {
     String organisationId = (String) userMap.get(JsonKey.ORGANISATION_ID);
+    String requestedChannel = (String) userMap.get(JsonKey.CHANNEL);
+
+    String subOrgRootOrgId = "";
     if (StringUtils.isNotBlank(organisationId)) {
-      Map<String, Object> orgMap = Util.getOrgDetails(organisationId);
-      if (MapUtils.isEmpty(orgMap)) {
-        ProjectCommonException.throwClientErrorException(ResponseCode.invalidOrgData, null);
+      Organisation organisation = organisationClient.esGetOrgById(organisationId);
+      if (null == organisation) {
+        ProjectCommonException.throwClientErrorException(ResponseCode.invalidOrgData);
       }
-      String subOrgRootOrgId = "";
-      if ((boolean) orgMap.get(JsonKey.IS_ROOT_ORG)) {
-        subOrgRootOrgId = (String) orgMap.get(JsonKey.ID);
+      if (organisation.isRootOrg()) {
+        subOrgRootOrgId = organisation.getId();
+        if (StringUtils.isNotBlank(requestedChannel)
+            && !requestedChannel.equalsIgnoreCase(organisation.getChannel())) {
+          throwParameterMismatchException(JsonKey.CHANNEL, JsonKey.ORGANISATION_ID);
+        }
+        userMap.put(JsonKey.CHANNEL, organisation.getChannel());
       } else {
-        subOrgRootOrgId = (String) orgMap.get(JsonKey.ROOT_ORG_ID);
+        subOrgRootOrgId = organisation.getRootOrgId();
+        Organisation subOrgRootOrg = organisationClient.esGetOrgById(subOrgRootOrgId);
+        if (null != subOrgRootOrg) {
+          if (StringUtils.isNotBlank(requestedChannel)
+              && !requestedChannel.equalsIgnoreCase(subOrgRootOrg.getChannel())) {
+            throwParameterMismatchException(JsonKey.CHANNEL, JsonKey.ORGANISATION_ID);
+          }
+          userMap.put(JsonKey.CHANNEL, subOrgRootOrg.getChannel());
+        }
       }
-      String rootOrgId = "";
-      if (StringUtils.isNotBlank((String) userMap.get(JsonKey.CHANNEL))) {
-        rootOrgId = userService.getRootOrgIdFromChannel((String) userMap.get(JsonKey.CHANNEL));
-        userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
-      }
-      if (!rootOrgId.equalsIgnoreCase(subOrgRootOrgId)) {
-        ProjectCommonException.throwClientErrorException(
-            ResponseCode.parameterMismatch,
-            MessageFormat.format(
-                ResponseCode.parameterMismatch.getErrorMessage(),
-                StringFormatter.joinByComma(JsonKey.CHANNEL, JsonKey.ORGANISATION_ID)));
-      }
+      userMap.put(JsonKey.ROOT_ORG_ID, subOrgRootOrgId);
     }
+    String rootOrgId = "";
+    if (StringUtils.isNotBlank(requestedChannel)) {
+      rootOrgId = userService.getRootOrgIdFromChannel(requestedChannel);
+      if (StringUtils.isNotBlank(subOrgRootOrgId) && !rootOrgId.equalsIgnoreCase(subOrgRootOrgId)) {
+        throwParameterMismatchException(JsonKey.CHANNEL, JsonKey.ORGANISATION_ID);
+      }
+      userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+    }
+  }
+
+  private void throwParameterMismatchException(String... param) {
+    ProjectCommonException.throwClientErrorException(
+        ResponseCode.parameterMismatch,
+        MessageFormat.format(
+            ResponseCode.parameterMismatch.getErrorMessage(), StringFormatter.joinByComma(param)));
   }
 
   @SuppressWarnings("unchecked")

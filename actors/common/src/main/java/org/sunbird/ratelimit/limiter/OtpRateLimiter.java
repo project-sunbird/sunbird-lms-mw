@@ -4,10 +4,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.models.util.ProjectUtil;
 
 /**
- * Rate limiter defines the variable to get limit for each unit(MINUTE, HOUR, DAY etc.) and
- * corresponding time duration ttl
- *
- * @author Rahul Kumar
+ * Defines various rate limits for OTP functionality with rate and corresponding TTL.
  */
 public enum OtpRateLimiter implements RateLimiter {
   MINUTE("sunbird_otp_minute_rate_limit", 60),
@@ -37,4 +34,5 @@ public enum OtpRateLimiter implements RateLimiter {
   public int getTTL() {
     return ttl;
   }
+
 }

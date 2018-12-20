@@ -6,17 +6,18 @@ import java.util.Map;
 public interface RateLimitDao {
 
   /**
-   * batch inserts the rate limits
+   * Inserts one or more rate limits for throttling
    *
-   * @param rateLimits list of records of rate limit
+   * @param rateLimits List of rate limits
    */
   void insertRateLimits(List<Map<String, Object>> rateLimits);
 
   /**
-   * fetches all the rate limits applicable for the key
+   * Fetches list of rate limits for given (partition) key
    *
-   * @param key
-   * @return List of rate limits records for the key
+   * @param key Partition key (e.g. phone number, email address)
+   * @return List of rate limits for given key
    */
   List<Map<String, Object>> getRateLimits(String key);
+
 }

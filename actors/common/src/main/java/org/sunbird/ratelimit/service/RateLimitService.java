@@ -1,22 +1,15 @@
-/** */
 package org.sunbird.ratelimit.service;
 
 import org.sunbird.ratelimit.limiter.RateLimiter;
 
-/** @author Rahul Kumar */
 public interface RateLimitService {
 
   /**
-   * validates the rate limit in below steps
+   * Throttle requests by key as per given rate limiters.
    *
-   * <ol>
-   *   <li>checks if global rate limiting is on
-   *   <li>fetches the existing records and verifies if limit has been crossed for each rate limiter
-   *   <li>upsert entries for each rate limiter with counts
-   * </ol>
-   *
-   * @param key the target value on which rate limits should be applied
-   * @param rateLimiters an array of rate limit to be validated against ex. HOUR, DAY etc.
+   * @param key Key (e.g. phone number, email address)
+   * @param rateLimiters List of rate limiters
    */
   void throttleByKey(String key, RateLimiter[] rateLimiters);
+
 }

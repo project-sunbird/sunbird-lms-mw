@@ -2,6 +2,7 @@ package org.sunbird.ratelimit.dao;
 
 import java.util.List;
 import java.util.Map;
+import org.sunbird.ratelimit.limiter.RateLimit;
 
 public interface RateLimitDao {
 
@@ -10,7 +11,7 @@ public interface RateLimitDao {
    *
    * @param rateLimits List of rate limits
    */
-  void insertRateLimits(List<Map<String, Object>> rateLimits);
+  void insertRateLimits(List<RateLimit> rateLimits);
 
   /**
    * Fetches list of rate limits for given (partition) key
@@ -19,5 +20,4 @@ public interface RateLimitDao {
    * @return List of rate limits for given key
    */
   List<Map<String, Object>> getRateLimits(String key);
-
 }

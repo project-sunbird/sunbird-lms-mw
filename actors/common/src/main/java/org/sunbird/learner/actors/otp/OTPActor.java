@@ -15,8 +15,8 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.otp.service.OTPService;
 import org.sunbird.learner.actors.user.service.UserService;
 import org.sunbird.learner.util.OTPUtil;
-import org.sunbird.ratelimit.limiter.OTP_RATE_LIMITER;
-import org.sunbird.ratelimit.limiter.RATE_LIMITER;
+import org.sunbird.ratelimit.limiter.OtpRateLimiter;
+import org.sunbird.ratelimit.limiter.RateLimiter;
 import org.sunbird.ratelimit.service.RateLimitService;
 import org.sunbird.ratelimit.service.RateLimitServiceImpl;
 
@@ -45,8 +45,8 @@ public class OTPActor extends BaseActor {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = (String) request.getRequest().get(JsonKey.KEY);
 
-    rateLimitService.validateRate(
-        key, new RATE_LIMITER[] {OTP_RATE_LIMITER.HOUR, OTP_RATE_LIMITER.DAY});
+    rateLimitService.throttleByKey(
+        key, new RateLimiter[] {OtpRateLimiter.HOUR, OtpRateLimiter.DAY});
 
     userService.checkKeyUniqueness(type, key, true);
 

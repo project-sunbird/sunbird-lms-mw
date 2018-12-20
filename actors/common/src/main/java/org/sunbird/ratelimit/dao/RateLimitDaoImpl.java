@@ -1,15 +1,17 @@
 package org.sunbird.ratelimit.dao;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+import org.sunbird.ratelimit.limiter.RateLimit;
 
 public class RateLimitDaoImpl implements RateLimitDao {
 
@@ -29,13 +31,16 @@ public class RateLimitDaoImpl implements RateLimitDao {
   }
 
   @Override
-  public void insertRateLimits(List<Map<String, Object>> rateLimitList) {
-    List<Integer> ttls = new ArrayList<>();
-    rateLimitList.forEach(
-        rateLimit -> {
-          ttls.add((int) rateLimit.remove(JsonKey.TTL));
-        });
-    cassandraOperation.batchInsertWithTTL(Util.KEY_SPACE_NAME, TABLE_NAME, rateLimitList, ttls);
+  public void insertRateLimits(List<RateLimit> rateLimits) {
+    if (CollectionUtils.isEmpty(rateLimits)) {
+      return;
+    }
+    List<Integer> ttls =
+        rateLimits.stream().map(rateLimit -> rateLimit.getTTL()).collect(Collectors.toList());
+    List<Map<String, Object>> records =
+        rateLimits.stream().map(rateLimit -> rateLimit.getRecord()).collect(Collectors.toList());
+
+    cassandraOperation.batchInsertWithTTL(Util.KEY_SPACE_NAME, TABLE_NAME, records, ttls);
   }
 
   @Override
@@ -51,9 +56,8 @@ public class RateLimitDaoImpl implements RateLimitDao {
 
     Response response =
         cassandraOperation.getRecordsByIdsWithSpecifiedColumnsAndTTL(
-            Util.KEY_SPACE_NAME, TABLE_NAME, primaryKeys, properties, ttlPropsWithAlias);
+            Util.KEY_SPACE_NAME, TABLE_NAME, partitionKey, properties, ttlPropsWithAlias);
 
     return (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
   }
-
 }

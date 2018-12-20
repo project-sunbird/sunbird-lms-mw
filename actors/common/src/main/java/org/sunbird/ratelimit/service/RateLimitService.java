@@ -1,7 +1,7 @@
 /** */
 package org.sunbird.ratelimit.service;
 
-import org.sunbird.ratelimit.limiter.RATE_LIMITER;
+import org.sunbird.ratelimit.limiter.RateLimiter;
 
 /** @author Rahul Kumar */
 public interface RateLimitService {
@@ -18,5 +18,5 @@ public interface RateLimitService {
    * @param key the target value on which rate limits should be applied
    * @param rateLimiters an array of rate limit to be validated against ex. HOUR, DAY etc.
    */
-  void validateRate(String key, RATE_LIMITER[] rateLimiters);
+  void throttleByKey(String key, RateLimiter[] rateLimiters);
 }

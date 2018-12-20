@@ -19,6 +19,7 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
@@ -32,6 +33,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
+import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
@@ -50,7 +52,8 @@ import org.sunbird.user.actors.UserManagementActor;
   org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.class,
   TelemetryUtil.class,
   DataCacheHandler.class,
-  RequestRouter.class
+  RequestRouter.class,
+  SystemSettingClientImpl.class
 })
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
 public class UserActorTest {
@@ -89,8 +92,8 @@ public class UserActorTest {
   public void mockClasses() throws Exception {
 
     PowerMockito.mockStatic(RequestRouter.class);
-    ActorRef actorRef = Mockito.mock(ActorRef.class);
-    when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
+    //    ActorRef actorRef = Mockito.mock(ActorRef.class);
+    //    when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
 
     PowerMockito.mockStatic(SSOServiceFactory.class);
     ssoManager = PowerMockito.mock(KeyCloakServiceImpl.class);
@@ -132,9 +135,22 @@ public class UserActorTest {
   }
 
   @Test
-  public void testCreateUser() throws Exception {
+  public void testCreateUser() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
+
+    ActorRef actorRef = Mockito.mock(ActorRef.class);
+    when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
+
+    SystemSetting systemSetting = Mockito.mock(SystemSetting.class);
+    SystemSettingClientImpl systemSettingClientImpl = Mockito.mock(SystemSettingClientImpl.class);
+    when(systemSettingClientImpl.getSystemSettingByField(Mockito.anyObject(), Mockito.anyString()))
+        .thenReturn(systemSetting);
+
+    //    SystemSettingClient systemSettingClient = Mockito.mock(SystemSettingClientImpl.class);
+    //    when(systemSettingClient.getSystemSettingByFieldAndKey(Mockito.anyObject(),
+    // Mockito.anyString(), Mockito.anyString(), Mockito.anyObject())).thenReturn(new HashMap<>());
+
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     Map<String, Object> request = new HashMap<String, Object>();

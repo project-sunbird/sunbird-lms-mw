@@ -76,17 +76,8 @@ public class UserTnCActorTest {
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
   }
 
-  private Map<String, Object> getUser(String lastAcceptedVersion) {
-    Map<String, Object> user = new HashMap<>();
-    user.put(JsonKey.NAME, "someName");
-    if (lastAcceptedVersion != null) {
-      user.put(JsonKey.TNC_ACCEPTED_VERSION, lastAcceptedVersion);
-    }
-    return user;
-  }
-
   @Test
-  public void testAcceptUserTncSuccessWithoutAccepting() {
+  public void testAcceptUserTcnSuccessWithAcceptFirstTime() {
     when(ElasticSearchUtil.getDataByIdentifier(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getUser(null));
@@ -108,7 +99,7 @@ public class UserTnCActorTest {
   }
 
   @Test
-  public void testAcceptUserTncFailure() {
+  public void testAcceptUserTncFailureWithInvalidVersion() {
     ProjectCommonException exception =
         setRequest(ACCEPTED_INVALID_VERSION)
             .expectMsgClass(duration("10 second"), ProjectCommonException.class);
@@ -148,5 +139,14 @@ public class UserTnCActorTest {
             Mockito.anyString(),
             Mockito.anyObject()))
         .thenReturn(LATEST_VERSION);
+  }
+
+  private Map<String, Object> getUser(String lastAcceptedVersion) {
+    Map<String, Object> user = new HashMap<>();
+    user.put(JsonKey.NAME, "someName");
+    if (lastAcceptedVersion != null) {
+      user.put(JsonKey.TNC_ACCEPTED_VERSION, lastAcceptedVersion);
+    }
+    return user;
   }
 }

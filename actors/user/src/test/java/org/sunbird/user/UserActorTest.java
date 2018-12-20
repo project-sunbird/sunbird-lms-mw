@@ -1,6 +1,8 @@
 package org.sunbird.user;
 
+import static akka.testkit.JavaTestKit.duration;
 import static org.junit.Assert.assertTrue;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -8,9 +10,7 @@ import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import java.util.HashMap;
 import java.util.Map;
-import org.junit.BeforeClass;
-import org.junit.FixMethodOrder;
-import org.junit.Ignore;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
 import org.mockito.Mockito;
@@ -18,6 +18,7 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
@@ -37,7 +38,6 @@ import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.actors.UserManagementActor;
 
-/** @author Amit Kumar */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
@@ -49,7 +49,8 @@ import org.sunbird.user.actors.UserManagementActor;
   Util.class,
   org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.class,
   TelemetryUtil.class,
-  DataCacheHandler.class
+  DataCacheHandler.class,
+  RequestRouter.class
 })
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
 public class UserActorTest {
@@ -82,11 +83,15 @@ public class UserActorTest {
     user.put(JsonKey.EXTERNAL_ID, externalId);
     user.put(JsonKey.PROVIDER, provider);
     user.put(JsonKey.EMAIL, email);
-
-    mockClasses();
   }
 
-  private static void mockClasses() throws Exception {
+  @Before
+  public void mockClasses() throws Exception {
+
+    PowerMockito.mockStatic(RequestRouter.class);
+    ActorRef actorRef = Mockito.mock(ActorRef.class);
+    when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
+
     PowerMockito.mockStatic(SSOServiceFactory.class);
     ssoManager = PowerMockito.mock(KeyCloakServiceImpl.class);
     PowerMockito.when(SSOServiceFactory.getInstance()).thenReturn(ssoManager);
@@ -126,14 +131,8 @@ public class UserActorTest {
     PowerMockito.when(Util.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("rootOrgId");
   }
 
-  /**
-   * Unit test to create user.
-   *
-   * @throws Exception
-   */
-  // @Test
+  @Test
   public void testCreateUser() throws Exception {
-    mockClasses();
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -142,13 +141,12 @@ public class UserActorTest {
     request.put(JsonKey.USER, user);
     reqObj.setRequest(request);
     subject.tell(reqObj, probe.getRef());
-    Exception ex = probe.expectMsgClass(NullPointerException.class);
-    assertTrue(null != ex);
+    Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
+    assertTrue(null != res);
   }
 
-  @Ignore
+  @Test
   public void testCreateUserWithInvalidChannel() throws Exception {
-    mockClasses();
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
@@ -162,7 +160,7 @@ public class UserActorTest {
     assertTrue(null != ex);
   }
 
-  @Ignore
+  @Test
   public void testInvalidParamRootOrgInRequest() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -179,7 +177,7 @@ public class UserActorTest {
     assertTrue(ex.getMessage().equalsIgnoreCase("Invalid parameter rootOrgId in request."));
   }
 
-  @Ignore
+  @Test
   public void testInvalidParamRegOrgIdInRequest() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -196,7 +194,7 @@ public class UserActorTest {
     assertTrue(ex.getMessage().equalsIgnoreCase("Invalid parameter regOrgId in request."));
   }
 
-  @Ignore
+  @Test
   public void testMissingParamProviderInRequest() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -215,7 +213,7 @@ public class UserActorTest {
             .equalsIgnoreCase("Missing parameter provider which is dependent on externalId."));
   }
 
-  @Ignore
+  @Test
   public void testMissingParamExternalIdInRequest() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);

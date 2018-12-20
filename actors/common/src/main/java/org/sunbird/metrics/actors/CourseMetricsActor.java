@@ -441,6 +441,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
                 ResponseCode.unAuthorized.getErrorMessage(),
                 ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
+        return;
       }
 
       String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);

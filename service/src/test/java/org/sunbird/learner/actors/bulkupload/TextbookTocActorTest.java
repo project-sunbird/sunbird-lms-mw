@@ -34,8 +34,7 @@ import org.sunbird.content.util.TextBookTocUtil;
 public class TextbookTocActorTest {
 
   private static ActorSystem system;
-  private static final Props props =
-      Props.create(org.sunbird.learner.actors.bulkupload.TextbookTocActor.class);
+  private static final Props props = Props.create(TextbookTocActor.class);
   private static ObjectMapper mapper = new ObjectMapper();
   private static final String TB_WITHOUT_CHILDREN =
       "{\"id\":\"ekstep.content.find\",\"ver\":\"3.0\",\"ts\":\"2018-12-12T06:21:17ZZ\",\"params\":{\"resmsgid\":\"bf8273ca-be0f-4062-8986-fbfff07002ac\",\"msgid\":null,\"err\":null,\"status\":\"successful\",\"errmsg\":null},\"responseCode\":\"OK\",\"result\":{\"content\":{\"ownershipType\":[\"createdBy\"],\"code\":\"Science\",\"channel\":\"in.ekstep\",\"description\":\"Test TextBook\",\"language\":[\"English\"],\"mimeType\":\"application/vnd.ekstep.content-collection\",\"idealScreenSize\":\"normal\",\"createdOn\":\"2018-12-12T06:20:57.814+0000\",\"appId\":\"ekstep_portal\",\"contentDisposition\":\"inline\",\"contentEncoding\":\"gzip\",\"lastUpdatedOn\":\"2018-12-12T06:20:57.814+0000\",\"contentType\":\"TextBook\",\"dialcodeRequired\":\"No\",\"identifier\":\"do_11265332762881228812868\",\"audience\":[\"Learner\"],\"visibility\":\"Default\",\"os\":[\"All\"],\"consumerId\":\"a6654129-b58d-4dd8-9cf2-f8f3c2f458bc\",\"mediaType\":\"content\",\"osId\":\"org.ekstep.quiz.app\",\"languageCode\":\"en\",\"versionKey\":\"1544595657814\",\"idealScreenDensity\":\"hdpi\",\"framework\":\"NCF\",\"compatibilityLevel\":1,\"name\":\"Science-10\",\"status\":\"Draft\"}}}";

@@ -234,7 +234,7 @@ public class CourseEnrollmentActor extends BaseActor {
           // return (Map<String, Object>) contentObject;
         } else {
           ProjectLogger.log(
-              "CourseEnrollmentActor:getCourseObjectFromEkStep Contnet not found for requested courseId "
+              "CourseEnrollmentActor:getCourseObjectFromEkStep: Content not found for requested courseId "
                   + courseId,
               LoggerEnum.INFO.name());
         }

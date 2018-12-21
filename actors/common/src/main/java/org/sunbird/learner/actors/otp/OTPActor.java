@@ -15,6 +15,10 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.otp.service.OTPService;
 import org.sunbird.learner.actors.user.service.UserService;
 import org.sunbird.learner.util.OTPUtil;
+import org.sunbird.ratelimit.limiter.OtpRateLimiter;
+import org.sunbird.ratelimit.limiter.RateLimiter;
+import org.sunbird.ratelimit.service.RateLimitService;
+import org.sunbird.ratelimit.service.RateLimitServiceImpl;
 
 @ActorConfig(
   tasks = {"generateOTP", "verifyOTP"},
@@ -24,6 +28,7 @@ public class OTPActor extends BaseActor {
 
   private UserService userService = new UserService();
   private OTPService otpService = new OTPService();
+  private RateLimitService rateLimitService = new RateLimitServiceImpl();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -40,13 +45,14 @@ public class OTPActor extends BaseActor {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = (String) request.getRequest().get(JsonKey.KEY);
 
-    userService.checkKeyUniqueness(type, key, true);
+    rateLimitService.throttleByKey(
+        key, new RateLimiter[] {OtpRateLimiter.HOUR, OtpRateLimiter.DAY});
 
     String otp = null;
     Map<String, Object> details = otpService.getOTPDetails(type, key);
     if (MapUtils.isEmpty(details)) {
       otp = OTPUtil.generateOTP();
-      ProjectLogger.log("OTPActor:generateOTP: OTP = " + otp, LoggerEnum.INFO);
+      ProjectLogger.log("OTPActor:generateOTP: Key = " + key + " OTP = " + otp, LoggerEnum.DEBUG);
       otpService.insertOTPDetails(type, key, otp);
     } else {
       otp = (String) details.get(JsonKey.OTP);
@@ -67,14 +73,21 @@ public class OTPActor extends BaseActor {
     Map<String, Object> otpDetails = otpService.getOTPDetails(type, key);
 
     if (MapUtils.isEmpty(otpDetails)) {
-      ProjectLogger.log("OTPActor:verifyOTP: Details not found for type = " + type + " key = " + key, LoggerEnum.INFO);
+      ProjectLogger.log(
+          "OTPActor:verifyOTP: Details not found for type = " + type + " key = " + key,
+          LoggerEnum.DEBUG);
       ProjectCommonException.throwClientErrorException(ResponseCode.errorInvalidOTP);
     }
 
     String otpInDB = (String) otpDetails.get(JsonKey.OTP);
 
     if (otpInDB == null || otpInRequest == null || !otpInRequest.equals(otpInDB)) {
-      ProjectLogger.log("OTPActor:verifyOTP: OTP mismatch otpInRequest = " + otpInRequest + " otpInDB = " + otpInDB, LoggerEnum.INFO);
+      ProjectLogger.log(
+          "OTPActor:verifyOTP: OTP mismatch otpInRequest = "
+              + otpInRequest
+              + " otpInDB = "
+              + otpInDB,
+          LoggerEnum.DEBUG);
       ProjectCommonException.throwClientErrorException(ResponseCode.errorInvalidOTP);
     }
 
@@ -93,5 +106,4 @@ public class OTPActor extends BaseActor {
     // Sent OTP via email or sms
     tellToAnother(sendOtpRequest);
   }
-
 }

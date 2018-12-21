@@ -23,6 +23,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.common.models.util.LoggerEnum;
 
 @ActorConfig(
   tasks = {"userTnCAccept"},
@@ -97,24 +98,33 @@ public class UserTnCActor extends BaseActor {
       if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
         syncUserDetails(userMap);
       }
+      sender().tell(response, self());
+      generateTelemetry(userMap, acceptedTnC, lastAcceptedVersion);
     } else {
       response.getResult().put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+      sender().tell(response, self());
     }
-    sender().tell(response, self());
+  }
 
+  private void generateTelemetry(
+      Map<String, Object> userMap, String acceptedTnCVersion, String lastAcceptedVersion) {
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     targetObject =
         TelemetryUtil.generateTargetObject(
-            (String) userMap.get(JsonKey.USER_ID), JsonKey.TNC, JsonKey.ACCEPT, null);
+            (String) userMap.get(JsonKey.USER_ID),
+            JsonKey.USER,
+            acceptedTnCVersion,
+            lastAcceptedVersion);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
+    ProjectLogger.log("UserTnCActor:syncUserDetails: Telemetry generation call ended ",LoggerEnum.INFO.name());
   }
 
   private void syncUserDetails(Map<String, Object> completeUserMap) {
     Request userRequest = new Request();
     userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
     userRequest.getRequest().put(JsonKey.ID, completeUserMap.get(JsonKey.ID));
-    ProjectLogger.log("UserTnCActor:syncUserDetails: Trigger sync of user details to ES");
+    ProjectLogger.log("UserTnCActor:syncUserDetails: Trigger sync of user details to ES",LoggerEnum.INFO.name());
     tellToAnother(userRequest);
   }
 }

@@ -1,8 +1,35 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import static java.io.File.separator;
+import static java.util.Arrays.asList;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.sunbird.common.exception.ProjectCommonException.throwClientErrorException;
+import static org.sunbird.common.models.util.JsonKey.*;
+import static org.sunbird.common.models.util.LoggerEnum.ERROR;
+import static org.sunbird.common.models.util.LoggerEnum.INFO;
+import static org.sunbird.common.models.util.ProjectLogger.log;
+import static org.sunbird.common.models.util.ProjectUtil.getConfigValue;
+import static org.sunbird.common.models.util.Slug.makeSlug;
+import static org.sunbird.common.responsecode.ResponseCode.OK;
+import static org.sunbird.common.responsecode.ResponseCode.invalidTextbook;
+import static org.sunbird.common.responsecode.ResponseCode.noChildrenExists;
+import static org.sunbird.common.responsecode.ResponseCode.textBookNotFound;
+import static org.sunbird.common.responsecode.ResponseCode.textbookChildrenExist;
+import static org.sunbird.content.textbook.FileType.Type.CSV;
+import static org.sunbird.content.textbook.TextBookTocUploader.TEXTBOOK_TOC_FOLDER;
+import static org.sunbird.content.util.ContentCloudStore.getUri;
+import static org.sunbird.content.util.TextBookTocUtil.readHierarchy;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -11,42 +38,13 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.TextbookActorOperation;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.content.textbook.FileExtension;
-import org.sunbird.content.textbook.FileExtension.Extension;
+import org.sunbird.content.textbook.FileType;
 import org.sunbird.content.textbook.TextBookTocUploader;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static java.io.File.separator;
-import static java.util.Arrays.asList;
-import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.sunbird.common.exception.ProjectCommonException.throwClientErrorException;
-import static org.sunbird.common.exception.ProjectCommonException.throwServerErrorException;
-import static org.sunbird.common.models.util.JsonKey.*;
-import static org.sunbird.common.models.util.LoggerEnum.ERROR;
-import static org.sunbird.common.models.util.LoggerEnum.INFO;
-import static org.sunbird.common.models.util.ProjectLogger.log;
-import static org.sunbird.common.models.util.ProjectUtil.getConfigValue;
-import static org.sunbird.common.models.util.Slug.makeSlug;
-import static org.sunbird.common.responsecode.ResponseCode.SERVER_ERROR;
-import static org.sunbird.common.responsecode.ResponseCode.invalidTextbook;
-import static org.sunbird.common.responsecode.ResponseCode.noChildrenExists;
-import static org.sunbird.common.responsecode.ResponseCode.textbookChildrenExist;
-import static org.sunbird.content.textbook.FileExtension.Extension.CSV;
-import static org.sunbird.content.textbook.TextBookTocUploader.TEXTBOOK_TOC_FOLDER;
-import static org.sunbird.content.util.ContentCloudStore.getUri;
-import static org.sunbird.content.util.TextBookTocUtil.readContent;
-import static org.sunbird.content.util.TextBookTocUtil.readHierarchy;
-import static org.sunbird.content.util.TextBookTocUtil.serialize;
+import org.sunbird.content.util.TextBookTocUtil;
 
 @ActorConfig(
   tasks = {"textbookTocUpload", "textbookTocUrl", "textbookTocUpdate"},
@@ -70,7 +68,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   private void upload(Request request) throws Exception {
-    String mode = ((Map<String, Object>) request.get(DATA)).get(MODE).toString();
+    String mode = ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.MODE).toString();
     validateRequest(request, mode);
     Response response = new Response();
     if (StringUtils.equalsIgnoreCase(mode, "create")) {
@@ -89,33 +87,47 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       log("Invalid TextBook Provided", ERROR.name());
       throwClientErrorException(invalidTextbook, invalidTextbook.getErrorMessage());
     }
-    log("Reading Content for TextBook | Id: " + textbookId, INFO.name());
-    Map<String, Object> content = getTextbook(textbookId);
-    validateTextBook(content, DOWNLOAD);
-    FileExtension fileExtension = CSV.getFileExtension();
-    String contentVersionKey = (String) content.get(VERSION_KEY);
-    String textBookNameSlug = makeSlug((String) content.get(NAME), true);
-    String textBookTocFileName =
-              textbookId + "_" + textBookNameSlug + "_" + contentVersionKey;
-    String prefix =
-              TEXTBOOK_TOC_FOLDER + separator + textBookTocFileName + fileExtension.getDotExtension();
-    log("Fetching TextBook Toc URL from Cloud", INFO.name());
+    log("Reading Hierarchy for TextBook | Id: " + textbookId);
+    Map<String, Object> readHierarchyResponse = readHierarchy(textbookId);
+    Response response = new Response();
+    String responseCode = (String) readHierarchyResponse.get(RESPONSE_CODE);
+    if (StringUtils.equals(OK.name(), responseCode)) {
+      Map<String, Object> result = (Map<String, Object>) readHierarchyResponse.get(RESULT);
+      Map<String, Object> content = (Map<String, Object>) result.get(CONTENT);
+      if (null != content) {
+        validateTextBook(content, DOWNLOAD);
 
-    String cloudPath = "";//getUri(prefix, false);
-    if (isBlank(cloudPath)) {
-        log("Reading Hierarchy for TextBook | Id: " + textbookId, INFO.name());
-        Map<String, Object> contentHierarchy = getHierarchy(textbookId);
-        String hierarchyVersionKey = (String) contentHierarchy.get(VERSION_KEY);
-        cloudPath = new TextBookTocUploader(textBookTocFileName, fileExtension)
-                              .execute(contentHierarchy, textbookId, hierarchyVersionKey);
+        String hierarchyVersionKey = (String) content.get(VERSION_KEY);
+        String textBookNameSlug = makeSlug((String) content.get(NAME), true);
+        String textBookTocFileName =
+            textbookId + "_" + textBookNameSlug + "_" + hierarchyVersionKey;
+        FileType fileType = CSV.getFileType();
+
+        String prefix =
+            TEXTBOOK_TOC_FOLDER + separator + textBookTocFileName + fileType.getExtension();
+        log("Fetching TextBook Toc URL from Cloud");
+        String cloudPath = getUri(prefix, false);
+        if (isBlank(cloudPath)) {
+          cloudPath =
+              new TextBookTocUploader(textBookTocFileName, fileType)
+                  .execute(content, textbookId, hierarchyVersionKey);
+        }
+
+        log("Sending Response for Toc Download API for TextBook | Id: " + textbookId);
+        Map<String, Object> textbook = new HashMap<>();
+        textbook.put(TOC_URL, cloudPath);
+        textbook.put(TTL, getConfigValue(TEXTBOOK_TOC_CSV_TTL));
+        response.put(TEXTBOOK, textbook);
+      } else {
+        log("No content fetched for TextBook | Id:" + textbookId, ERROR.name());
+      }
+    } else {
+      log(
+          "Error while fetching textbook : " + textbookId + " with response " + response,
+          ERROR.name());
+      throwClientErrorException(textBookNotFound, textBookNotFound.getErrorMessage());
     }
 
-    log("Sending Response for Toc Download API for TextBook | Id: " + textbookId, INFO.name());
-    Map<String, Object> textbook = new HashMap<>();
-    textbook.put(TOC_URL, cloudPath);
-    textbook.put(TTL, getConfigValue(TEXTBOOK_TOC_CSV_TTL));
-    Response response = new Response();
-    response.put(TEXTBOOK, textbook);
     sender().tell(response, sender());
   }
 
@@ -127,7 +139,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       throwClientErrorException(invalidTextbook, invalidTextbook.getErrorMessage());
     }
     List<Object> children = (List<Object>) textbook.get(CHILDREN);
-    if (CREATE.equalsIgnoreCase(mode)) {
+    if (JsonKey.CREATE.equalsIgnoreCase(mode)) {
       if (null != children && !children.isEmpty()) {
         throwClientErrorException(textbookChildrenExist, textbookChildrenExist.getErrorMessage());
       }
@@ -139,17 +151,17 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
   private void validateRequest(Request request, String mode) throws IOException {
     Set<String> rowsHash = new HashSet<>();
-    String mandatoryFields = getConfigValue(TEXTBOOK_TOC_MANDATORY_FIELDS);
+    String mandatoryFields = getConfigValue(JsonKey.TEXTBOOK_TOC_MANDATORY_FIELDS);
     Map<String, String> mandatoryFieldsMap =
         mapper.readValue(mandatoryFields, new TypeReference<Map<String, String>>() {});
     Map<String, Object> textbook = getTextbook((String) request.get(TEXTBOOK_ID));
-    String textbookName = (String) textbook.get(NAME);
+    String textbookName = (String) textbook.get(JsonKey.NAME);
 
     validateTextBook(textbook, mode);
 
     List<Map<String, Object>> fileData =
         (List<Map<String, Object>>)
-            ((Map<String, Object>) request.get(DATA)).get(FILE_DATA);
+            ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.FILE_DATA);
 
     for (int i = 0; i < fileData.size(); i++) {
       Map<String, Object> row = fileData.get(i);
@@ -159,9 +171,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         throwClientErrorException(
             ResponseCode.duplicateRows, ResponseCode.duplicateRows.getErrorMessage() + (i + 1));
       }
-      Map<String, Object> hierarchy = (Map<String, Object>) row.get(HIERARCHY);
+      Map<String, Object> hierarchy = (Map<String, Object>) row.get(JsonKey.HIERARCHY);
 
-      String name = (String) hierarchy.getOrDefault(StringUtils.capitalize(TEXTBOOK), "");
+      String name = (String) hierarchy.getOrDefault(StringUtils.capitalize(JsonKey.TEXTBOOK), "");
       if (isBlank(name) || !StringUtils.equalsIgnoreCase(name, textbookName)) {
         log(
             "Name mismatch. Content has: " + name + " but, file has: " + textbookName,
@@ -183,8 +195,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
   private Response createTextbook(Request request) throws Exception {
     log("Create Textbook called ", INFO.name());
-    Map<String, Object> file = (Map<String, Object>) request.get(DATA);
-    List<Map<String, Object>> data = (List<Map<String, Object>>) file.get(FILE_DATA);
+    Map<String, Object> file = (Map<String, Object>) request.get(JsonKey.DATA);
+    List<Map<String, Object>> data = (List<Map<String, Object>>) file.get(JsonKey.FILE_DATA);
     log("Create Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data));
     if (CollectionUtils.isEmpty(data)) {
       throw new ProjectCommonException(
@@ -200,9 +212,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           tbId,
           new HashMap<String, Object>() {
             {
-              put(TB_IS_NEW, false);
-              put(TB_ROOT, true);
-              put(METADATA, new HashMap<String, Object>());
+              put(JsonKey.TB_IS_NEW, false);
+              put(JsonKey.TB_ROOT, true);
+              put(JsonKey.METADATA, new HashMap<String, Object>());
             }
           });
 
@@ -210,10 +222,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           tbId,
           new HashMap<String, Object>() {
             {
-              put(NAME, tbMetadata.get(NAME));
+              put(JsonKey.NAME, tbMetadata.get(JsonKey.NAME));
               put(CONTENT_TYPE, tbMetadata.get(CONTENT_TYPE));
               put(CHILDREN, new ArrayList<>());
-              put(TB_ROOT, true);
+              put(JsonKey.TB_ROOT, true);
             }
           });
       for (Map<String, Object> row : data) {
@@ -223,15 +235,15 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           new HashMap<String, Object>() {
             {
               put(
-                  REQUEST,
+                  JsonKey.REQUEST,
                   new HashMap<String, Object>() {
                     {
                       put(
-                          DATA,
+                          JsonKey.DATA,
                           new HashMap<String, Object>() {
                             {
-                              put(NODES_MODIFIED, nodesModified);
-                              put(HIERARCHY, hierarchyData);
+                              put(JsonKey.NODES_MODIFIED, nodesModified);
+                              put(JsonKey.HIERARCHY, hierarchyData);
                             }
                           });
                     }
@@ -251,11 +263,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       Map<String, Object> tbMetadata,
       Map<String, Object> nodesModified,
       Map<String, Object> hierarchyData) {
-    Map<String, Object> hierarchy = (Map<String, Object>) row.get(HIERARCHY);
-    hierarchy.remove(StringUtils.capitalize(TEXTBOOK));
-    hierarchy.remove(IDENTIFIER);
-    String unitType = (String) tbMetadata.get(CONTENT_TYPE) + UNIT;
-    String framework = (String) tbMetadata.get(FRAMEWORK);
+    Map<String, Object> hierarchy = (Map<String, Object>) row.get(JsonKey.HIERARCHY);
+    hierarchy.remove(StringUtils.capitalize(JsonKey.TEXTBOOK));
+    hierarchy.remove(JsonKey.IDENTIFIER);
+    String unitType = (String) tbMetadata.get(JsonKey.CONTENT_TYPE) + JsonKey.UNIT;
+    String framework = (String) tbMetadata.get(JsonKey.FRAMEWORK);
     int levelCount = 0;
     String code = tbId;
     String parentCode = tbId;
@@ -269,7 +281,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           populateNodeModified(
               name,
               getCode(code),
-              (Map<String, Object>) row.get(METADATA),
+              (Map<String, Object>) row.get(JsonKey.METADATA),
               unitType,
               framework,
               nodesModified,
@@ -289,43 +301,26 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   private Map<String, Object> getTextbook(String tbId) {
-    Response response = null;
-    Map<String, Object> textbook;
-    try {
-      response = readContent(tbId);
-      textbook = (Map<String, Object>) response.get(CONTENT);
-      if (null == textbook) {
-        log("Empty Content fetched | TextBook Id: " + tbId);
-        throwServerErrorException(SERVER_ERROR, "Empty Content fetched for TextBook Id: " + tbId);
-      }
-    } catch (Exception e) {
-      log("Error while fetching textbook : " + tbId + " with response " + serialize(response), ERROR.name());
-      throw e;
+    Map<String, Object> response = TextBookTocUtil.readContent(tbId);
+    if (null != response
+        && !response.isEmpty()
+        && StringUtils.equals(OK.name(), (String) response.get(RESPONSE_CODE))) {
+      Map<String, Object> result = (Map<String, Object>) response.get(RESULT);
+      Map<String, Object> textbook = (Map<String, Object>) result.get(CONTENT);
+      return textbook;
+    } else {
+      log("Error while fetching textbook : " + tbId + " with response " + response, ERROR.name());
+      throw new ProjectCommonException(
+          ResponseCode.errorProcessingRequest.getErrorCode(),
+          ResponseCode.errorProcessingRequest.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
     }
-    return textbook;
-  }
-
-  private Map<String, Object> getHierarchy(String tbId) {
-      Response response = null;
-      Map<String, Object> hierarchy;
-      try {
-        response = readHierarchy(tbId);
-        hierarchy = (Map<String, Object>) response.get(CONTENT);
-        if (null == hierarchy) {
-          log("Empty Hierarchy fetched | TextBook Id: " + tbId);
-          throwServerErrorException(SERVER_ERROR, "Empty Hierarchy fetched for TextBook Id: " + tbId);
-        }
-      } catch (Exception e) {
-        log("Error while fetching textbook : " + tbId + " with response " + serialize(response), ERROR.name());
-        throw e;
-      }
-      return hierarchy;
   }
 
   private Response updateTextbook(Request request) throws Exception {
     List<Map<String, Object>> data =
         (List<Map<String, Object>>)
-            ((Map<String, Object>) request.get(DATA)).get(FILE_DATA);
+            ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.FILE_DATA);
     if (CollectionUtils.isEmpty(data)) {
       throw new ProjectCommonException(
           ResponseCode.invalidRequestData.getErrorCode(),
@@ -341,16 +336,16 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           tbId,
           new HashMap<String, Object>() {
             {
-              put(TB_IS_NEW, false);
-              put(TB_ROOT, true);
-              put(METADATA, new HashMap<String, Object>());
+              put(JsonKey.TB_IS_NEW, false);
+              put(JsonKey.TB_ROOT, true);
+              put(JsonKey.METADATA, new HashMap<String, Object>());
             }
           });
       for (Map<String, Object> row : data) {
-        Map<String, Object> metadata = (Map<String, Object>) row.get(METADATA);
-        Map<String, Object> hierarchy = (Map<String, Object>) row.get(HIERARCHY);
-        String id = (String) metadata.get(IDENTIFIER);
-        metadata.remove(IDENTIFIER);
+        Map<String, Object> metadata = (Map<String, Object>) row.get(JsonKey.METADATA);
+        Map<String, Object> hierarchy = (Map<String, Object>) row.get(JsonKey.HIERARCHY);
+        String id = (String) metadata.get(JsonKey.IDENTIFIER);
+        metadata.remove(JsonKey.IDENTIFIER);
         populateNodeModified(
             (String) hierarchy.get("L:" + (hierarchy.size() - 1)),
             id,
@@ -364,14 +359,14 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           new HashMap<String, Object>() {
             {
               put(
-                  REQUEST,
+                  JsonKey.REQUEST,
                   new HashMap<String, Object>() {
                     {
                       put(
-                          DATA,
+                          JsonKey.DATA,
                           new HashMap<String, Object>() {
                             {
-                              put(NODES_MODIFIED, nodesModified);
+                              put(JsonKey.NODES_MODIFIED, nodesModified);
                             }
                           });
                     }
@@ -388,7 +383,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   private Response updateHierarchy(String tbId, Map<String, Object> updateRequest)
       throws Exception {
     String requestUrl =
-        getConfigValue(EKSTEP_BASE_URL) + getConfigValue(UPDATE_HIERARCHY_API);
+        getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.UPDATE_HIERARCHY_API);
     HttpResponse<String> updateResponse =
         Unirest.patch(requestUrl)
             .headers(getDefaultHeaders())
@@ -417,7 +412,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     return new HashMap<String, String>() {
       {
         put("Content-Type", "application/json");
-        put(AUTHORIZATION, BEARER + getConfigValue(SUNBIRD_AUTHORIZATION));
+        put(JsonKey.AUTHORIZATION, JsonKey.BEARER + getConfigValue(JsonKey.SUNBIRD_AUTHORIZATION));
       }
     };
   }
@@ -438,51 +433,51 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             new HashMap<String, Object>() {
               {
                 List<String> keywords =
-                    (StringUtils.isNotBlank((String) metadata.get(KEYWORDS)))
-                        ? asList(((String) metadata.get(KEYWORDS)).split(","))
+                    (StringUtils.isNotBlank((String) metadata.get(JsonKey.KEYWORDS)))
+                        ? asList(((String) metadata.get(JsonKey.KEYWORDS)).split(","))
                         : null;
                 List<String> gradeLevel =
-                    (StringUtils.isNotBlank((String) metadata.get(GRADE_LEVEL)))
-                        ? asList(((String) metadata.get(GRADE_LEVEL)).split(","))
+                    (StringUtils.isNotBlank((String) metadata.get(JsonKey.GRADE_LEVEL)))
+                        ? asList(((String) metadata.get(JsonKey.GRADE_LEVEL)).split(","))
                         : null;
                 putAll(metadata);
-                remove(KEYWORDS);
-                remove(GRADE_LEVEL);
-                if (CollectionUtils.isNotEmpty(keywords)) put(KEYWORDS, keywords);
-                if (CollectionUtils.isNotEmpty(gradeLevel)) put(GRADE_LEVEL, gradeLevel);
+                remove(JsonKey.KEYWORDS);
+                remove(JsonKey.GRADE_LEVEL);
+                if (CollectionUtils.isNotEmpty(keywords)) put(JsonKey.KEYWORDS, keywords);
+                if (CollectionUtils.isNotEmpty(gradeLevel)) put(JsonKey.GRADE_LEVEL, gradeLevel);
               }
             };
-        ((Map<String, Object>) node.get(METADATA)).putAll(newMeta);
+        ((Map<String, Object>) node.get(JsonKey.METADATA)).putAll(newMeta);
       }
     } else {
       node =
           new HashMap<String, Object>() {
             {
-              put(TB_IS_NEW, isNew);
-              put(TB_ROOT, false);
+              put(JsonKey.TB_IS_NEW, isNew);
+              put(JsonKey.TB_ROOT, false);
               put(
-                  METADATA,
+                  JsonKey.METADATA,
                   new HashMap<String, Object>() {
                     {
-                      if (StringUtils.isNotBlank(name)) put(NAME, name);
-                      put(MIME_TYPE, COLLECTION_MIME_TYPE);
-                      if (StringUtils.isNotBlank(unitType)) put(CONTENT_TYPE, unitType);
-                      if (StringUtils.isNotBlank(framework)) put(FRAMEWORK, framework);
+                      if (StringUtils.isNotBlank(name)) put(JsonKey.NAME, name);
+                      put(JsonKey.MIME_TYPE, JsonKey.COLLECTION_MIME_TYPE);
+                      if (StringUtils.isNotBlank(unitType)) put(JsonKey.CONTENT_TYPE, unitType);
+                      if (StringUtils.isNotBlank(framework)) put(JsonKey.FRAMEWORK, framework);
                       if (MapUtils.isNotEmpty(metadata)) {
                         List<String> keywords =
-                            (StringUtils.isNotBlank((String) metadata.get(KEYWORDS)))
-                                ? asList(((String) metadata.get(KEYWORDS)).split(","))
+                            (StringUtils.isNotBlank((String) metadata.get(JsonKey.KEYWORDS)))
+                                ? asList(((String) metadata.get(JsonKey.KEYWORDS)).split(","))
                                 : null;
                         List<String> gradeLevel =
-                            (StringUtils.isNotBlank((String) metadata.get(GRADE_LEVEL)))
-                                ? asList(((String) metadata.get(GRADE_LEVEL)).split(","))
+                            (StringUtils.isNotBlank((String) metadata.get(JsonKey.GRADE_LEVEL)))
+                                ? asList(((String) metadata.get(JsonKey.GRADE_LEVEL)).split(","))
                                 : null;
                         putAll(metadata);
-                        remove(KEYWORDS);
-                        remove(GRADE_LEVEL);
-                        if (CollectionUtils.isNotEmpty(keywords)) put(KEYWORDS, keywords);
+                        remove(JsonKey.KEYWORDS);
+                        remove(JsonKey.GRADE_LEVEL);
+                        if (CollectionUtils.isNotEmpty(keywords)) put(JsonKey.KEYWORDS, keywords);
                         if (CollectionUtils.isNotEmpty(gradeLevel))
-                          put(GRADE_LEVEL, gradeLevel);
+                          put(JsonKey.GRADE_LEVEL, gradeLevel);
                       }
                     }
                   });
@@ -503,15 +498,15 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       parentCode = tbId;
     }
     if (null != hierarchyData.get(code)) {
-      ((Map<String, Object>) hierarchyData.get(code)).put(NAME, name);
+      ((Map<String, Object>) hierarchyData.get(code)).put(JsonKey.NAME, name);
     } else {
       hierarchyData.put(
           code,
           new HashMap<String, Object>() {
             {
-              put(NAME, name);
+              put(JsonKey.NAME, name);
               put(CHILDREN, new ArrayList<>());
-              put(TB_ROOT, false);
+              put(JsonKey.TB_ROOT, false);
             }
           });
     }
@@ -528,7 +523,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           parentCode,
           new HashMap<String, Object>() {
             {
-              put(NAME, "");
+              put(JsonKey.NAME, "");
               put(
                   CHILDREN,
                   new ArrayList<String>() {
@@ -536,7 +531,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                       add(finalCode);
                     }
                   });
-              put(TB_ROOT, false);
+              put(JsonKey.TB_ROOT, false);
             }
           });
     }

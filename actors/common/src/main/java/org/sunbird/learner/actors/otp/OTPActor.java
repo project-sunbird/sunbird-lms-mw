@@ -48,8 +48,6 @@ public class OTPActor extends BaseActor {
     rateLimitService.throttleByKey(
         key, new RateLimiter[] {OtpRateLimiter.HOUR, OtpRateLimiter.DAY});
 
-    userService.checkKeyUniqueness(type, key, true);
-
     String otp = null;
     Map<String, Object> details = otpService.getOTPDetails(type, key);
     if (MapUtils.isEmpty(details)) {

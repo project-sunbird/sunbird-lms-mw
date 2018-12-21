@@ -1,250 +1,149 @@
 package org.sunbird.user;
 
 import static akka.testkit.JavaTestKit.duration;
-import static org.junit.Assert.assertTrue;
+import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import org.junit.*;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.MethodSorters;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.service.BaseMWService;
+import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
-import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
-import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.datasecurity.EncryptionService;
-import org.sunbird.common.models.util.datasecurity.impl.DefaultEncryptionServivceImpl;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
-import org.sunbird.models.systemsetting.SystemSetting;
-import org.sunbird.services.sso.SSOManager;
-import org.sunbird.services.sso.SSOServiceFactory;
-import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.actors.UserManagementActor;
 
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ServiceFactory.class,
-  SSOServiceFactory.class,
   ElasticSearchUtil.class,
-  CassandraOperationImpl.class,
-  KeyCloakServiceImpl.class,
   Util.class,
-  org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.class,
-  TelemetryUtil.class,
-  DataCacheHandler.class,
   RequestRouter.class,
-  SystemSettingClientImpl.class
+  BaseMWService.class,
+  SystemSettingClientImpl.class,
+  SunbirdMWService.class
 })
-@PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
+@PowerMockIgnore({"javax.management.*"})
 public class UserActorTest {
 
-  private static String externalId = String.valueOf(System.currentTimeMillis());
-  private static String provider = String.valueOf(System.currentTimeMillis() + 10);
-  private static String userName = "userName" + externalId;
-  private static String email = externalId + "@gmail.com";
-  private static Map<String, Object> user = new HashMap<>();
-  private static Map<String, String> responseMap = new HashMap<>();
-  private static ActorSystem system;
-  private static Props props;
-  private static SSOManager ssoManager = null;
-  private static CassandraOperation cassandraOperation = null;
-  private static Response response = null;
-  private static String rootOrgId = "dummyOrgId";
-  private static EncryptionService encryptionService = null;
+  private ActorSystem system = ActorSystem.create("system");
 
-  @BeforeClass
-  public static void setUp() throws Exception {
-    system = ActorSystem.create("system");
-    props = Props.create(UserManagementActor.class);
-
-    response = new Response();
-    responseMap.put(JsonKey.USER_ID, "12345");
-    response.getResult().putAll(responseMap);
-
-    user.put(JsonKey.FIRST_NAME, "first_name");
-    user.put(JsonKey.USERNAME, userName);
-    user.put(JsonKey.EXTERNAL_ID, externalId);
-    user.put(JsonKey.PROVIDER, provider);
-    user.put(JsonKey.EMAIL, email);
-  }
+  private final Props props = Props.create(UserManagementActor.class);
+  private static SystemSettingClientImpl systemSettingClient;
+  private static final String LATEST_VERSION = "latestVersion";
 
   @Before
-  public void mockClasses() throws Exception {
-
-    PowerMockito.mockStatic(RequestRouter.class);
-    //    ActorRef actorRef = Mockito.mock(ActorRef.class);
-    //    when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
-
-    PowerMockito.mockStatic(SSOServiceFactory.class);
-    ssoManager = PowerMockito.mock(KeyCloakServiceImpl.class);
-    PowerMockito.when(SSOServiceFactory.getInstance()).thenReturn(ssoManager);
-    PowerMockito.when(ssoManager.createUser(user)).thenReturn(responseMap);
+  public void beforeEachTest() throws Exception {
 
     PowerMockito.mockStatic(ServiceFactory.class);
-    cassandraOperation = PowerMockito.mock(CassandraOperationImpl.class);
-    PowerMockito.when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    PowerMockito.when(cassandraOperation.insertRecord(Mockito.any(), Mockito.any(), Mockito.any()))
-        .thenReturn(response);
-    PowerMockito.when(cassandraOperation.upsertRecord(Mockito.any(), Mockito.any(), Mockito.any()))
-        .thenReturn(response);
-    PowerMockito.when(cassandraOperation.updateRecord(Mockito.any(), Mockito.any(), Mockito.any()))
-        .thenReturn(response);
-
+    PowerMockito.mockStatic(RequestRouter.class);
+    PowerMockito.mockStatic(SystemSettingClientImpl.class);
+    systemSettingClient = mock(SystemSettingClientImpl.class);
+    when(SystemSettingClientImpl.getInstance()).thenReturn(systemSettingClient);
+    ActorRef actorRef = mock(ActorRef.class);
     PowerMockito.mockStatic(ElasticSearchUtil.class);
-    PowerMockito.mockStatic(Util.class);
-    PowerMockito.when(Util.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn(rootOrgId);
-    PowerMockito.mockStatic(org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.class);
-    encryptionService = PowerMockito.mock(DefaultEncryptionServivceImpl.class);
-    PowerMockito.when(
-            org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
-                .getEncryptionServiceInstance(null))
-        .thenReturn(encryptionService);
-    PowerMockito.when(encryptionService.encryptData(user)).thenReturn(user);
-    PowerMockito.when(encryptionService.encryptData(Mockito.anyString())).thenReturn(rootOrgId);
-    PowerMockito.mockStatic(TelemetryUtil.class);
-    PowerMockito.mockStatic(DataCacheHandler.class);
-    PowerMockito.when(
-            TelemetryUtil.generateTargetObject(
-                Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
-        .thenReturn(user);
-    Map<String, String> configSetting = new HashMap<>();
-    configSetting.put(JsonKey.EMAIL_UNIQUE, String.valueOf(false));
-    configSetting.put(JsonKey.PHONE_UNIQUE, String.valueOf(false));
-    PowerMockito.when(DataCacheHandler.getConfigSettings()).thenReturn(configSetting);
-    PowerMockito.when(Util.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("rootOrgId");
+    PowerMockito.mockStatic(SunbirdMWService.class);
+    SunbirdMWService.tellToBGRouter(Mockito.any(), Mockito.any());
+    when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
   }
 
   @Test
-  public void testCreateUser() {
+  public void testGetMediaTypesSuccess() {
+
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-
-    ActorRef actorRef = Mockito.mock(ActorRef.class);
-    when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
-
-    SystemSetting systemSetting = Mockito.mock(SystemSetting.class);
-    SystemSettingClientImpl systemSettingClientImpl = Mockito.mock(SystemSettingClientImpl.class);
-    when(systemSettingClientImpl.getSystemSettingByField(Mockito.anyObject(), Mockito.anyString()))
-        .thenReturn(systemSetting);
-
-    //    SystemSettingClient systemSettingClient = Mockito.mock(SystemSettingClientImpl.class);
-    //    when(systemSettingClient.getSystemSettingByFieldAndKey(Mockito.anyObject(),
-    // Mockito.anyString(), Mockito.anyString(), Mockito.anyObject())).thenReturn(new HashMap<>());
+    when(systemSettingClient.getSystemSettingByFieldAndKey(
+            Mockito.any(ActorRef.class),
+            Mockito.anyString(),
+            Mockito.anyString(),
+            Mockito.anyObject()))
+        .thenReturn(new HashMap<>());
 
     Request reqObj = new Request();
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.CALLER_ID, "anyCallerId");
+    innerMap.put(JsonKey.VERSION, "v2");
+    reqObj.setContext(innerMap);
     reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
-    Map<String, Object> request = new HashMap<String, Object>();
-    request.put(JsonKey.USER, user);
-    reqObj.setRequest(request);
+
     subject.tell(reqObj, probe.getRef());
     Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
-    assertTrue(null != res);
+    Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
+  }
+
+  /*@Test
+  public void testSetProfileVisibilitySuccess() {
+    final String userId = "USER-ID";
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    when(ElasticSearchUtil.getDataByIdentifier(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(),
+            userId))
+            .thenReturn(createGetResponse(true));
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.PROFILE_VISIBILITY.getValue());
+    reqObj.put(JsonKey.USER_ID, userId);
+    subject.tell(reqObj, probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
   }
 
   @Test
-  public void testCreateUserWithInvalidChannel() throws Exception {
+  public void testSetProfileVisibilityFailure() {
+    final String userId = "USER-ID";
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
+
+    when(ElasticSearchUtil.getDataByIdentifier(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(),
+            userId))
+            .thenReturn(createGetResponse(false));
     Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
-    Map<String, Object> request = new HashMap<String, Object>();
-    user.put(JsonKey.CHANNEL, "invalidChannelValue@123");
-    request.put(JsonKey.USER, user);
-    reqObj.setRequest(request);
+    reqObj.setOperation(ActorOperations.PROFILE_VISIBILITY.getValue());
+    reqObj.put(JsonKey.USER_ID, userId);
     subject.tell(reqObj, probe.getRef());
-    ProjectCommonException ex = probe.expectMsgClass(ProjectCommonException.class);
-    assertTrue(null != ex);
+    ProjectCommonException res =
+            probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    Assert.assertTrue(res.getCode() == ResponseCode.userNotFound.getErrorCode());
+  }*/
+
+  private Map<String, Object> createGetResponse(boolean isSuccess) {
+    HashMap<String, Object> response = new HashMap<>();
+    if (isSuccess) response.put(JsonKey.CONTENT, "Any-content");
+    return response;
   }
 
-  @Test
-  public void testInvalidParamRootOrgInRequest() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
-    Map<String, Object> request = new HashMap<String, Object>();
-    Map<String, Object> tempUser = new HashMap<String, Object>(user);
-    tempUser.put(JsonKey.ROOT_ORG_ID, "rootOrgId");
-    request.put(JsonKey.USER, tempUser);
-    reqObj.setRequest(request);
-    subject.tell(reqObj, probe.getRef());
-    ProjectCommonException ex = probe.expectMsgClass(ProjectCommonException.class);
-    assertTrue(null != ex);
-    assertTrue(ex.getMessage().equalsIgnoreCase("Invalid parameter rootOrgId in request."));
-  }
-
-  @Test
-  public void testInvalidParamRegOrgIdInRequest() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
-    Map<String, Object> request = new HashMap<String, Object>();
-    Map<String, Object> tempUser = new HashMap<String, Object>(user);
-    tempUser.put(JsonKey.REGISTERED_ORG_ID, "regOrgId");
-    request.put(JsonKey.USER, tempUser);
-    reqObj.setRequest(request);
-    subject.tell(reqObj, probe.getRef());
-    ProjectCommonException ex = probe.expectMsgClass(ProjectCommonException.class);
-    assertTrue(null != ex);
-    assertTrue(ex.getMessage().equalsIgnoreCase("Invalid parameter regOrgId in request."));
-  }
-
-  @Test
-  public void testMissingParamProviderInRequest() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
-    Map<String, Object> request = new HashMap<String, Object>();
-    Map<String, Object> tempUser = new HashMap<String, Object>(user);
-    tempUser.remove(JsonKey.PROVIDER);
-    request.put(JsonKey.USER, tempUser);
-    reqObj.setRequest(request);
-    subject.tell(reqObj, probe.getRef());
-    ProjectCommonException ex = probe.expectMsgClass(ProjectCommonException.class);
-    assertTrue(null != ex);
-    assertTrue(
-        ex.getMessage()
-            .equalsIgnoreCase("Missing parameter provider which is dependent on externalId."));
-  }
-
-  @Test
-  public void testMissingParamExternalIdInRequest() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
-    Map<String, Object> request = new HashMap<String, Object>();
-    Map<String, Object> tempUser = new HashMap<String, Object>(user);
-    tempUser.remove(JsonKey.EXTERNAL_ID);
-    request.put(JsonKey.USER, tempUser);
-    reqObj.setRequest(request);
-    subject.tell(reqObj, probe.getRef());
-    ProjectCommonException ex = probe.expectMsgClass(ProjectCommonException.class);
-    assertTrue(null != ex);
-    assertTrue(
-        ex.getMessage()
-            .equalsIgnoreCase("Missing parameter externalId which is dependent on provider."));
+  private Response getSuccessResponse() {
+    Response response = new Response();
+    List<Map<String, Object>> resMapList = new ArrayList<>();
+    Map<String, Object> map = new HashMap<>();
+    resMapList.add(map);
+    response.put(JsonKey.RESPONSE, resMapList);
+    return response;
   }
 }

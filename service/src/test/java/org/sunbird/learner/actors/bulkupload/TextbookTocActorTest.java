@@ -57,7 +57,7 @@ public class TextbookTocActorTest {
     TestKit probe = new TestKit(system);
     ActorRef toc = system.actorOf(props);
 
-    Map<String, Object> readTb = getTbWithoutChildren();
+    Response readTb = getTbWithoutChildren();
     when(TextBookTocUtil.readContent(Mockito.anyString())).thenReturn(readTb);
     Request request = new Request();
     request.setContext(
@@ -84,7 +84,7 @@ public class TextbookTocActorTest {
     TestKit probe = new TestKit(system);
     ActorRef toc = system.actorOf(props);
 
-    Map<String, Object> readTb = getTbWithoutChildren();
+    Response readTb = getTbWithoutChildren();
     when(TextBookTocUtil.readContent(Mockito.anyString())).thenReturn(readTb);
     Request request = new Request();
     request.setContext(
@@ -111,7 +111,7 @@ public class TextbookTocActorTest {
     TestKit probe = new TestKit(system);
     ActorRef toc = system.actorOf(props);
 
-    Map<String, Object> readTb = getTbWithoutChildren();
+    Response readTb = getTbWithoutChildren();
     when(TextBookTocUtil.readContent(Mockito.anyString())).thenReturn(readTb);
     Request request = new Request();
     request.setContext(
@@ -136,7 +136,7 @@ public class TextbookTocActorTest {
     TestKit probe = new TestKit(system);
     ActorRef toc = system.actorOf(props);
 
-    Map<String, Object> readTb = getTbWithoutChildren();
+    Response readTb = getTbWithoutChildren();
     when(TextBookTocUtil.readContent(Mockito.anyString())).thenReturn(readTb);
 
     Request request = new Request();
@@ -156,8 +156,8 @@ public class TextbookTocActorTest {
     Assert.assertEquals("OK", res.getResponseCode().name());
   }
 
-  private static Map<String, Object> getTbWithoutChildren() throws IOException {
-    Map<String, Object> response = mapper.readValue(TB_WITHOUT_CHILDREN, Map.class);
+  private static Response getTbWithoutChildren() throws IOException {
+    Response response = mapper.readValue(TB_WITHOUT_CHILDREN, Response.class);
     return response;
   }
 

@@ -11,7 +11,6 @@ import java.util.WeakHashMap;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
-import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
@@ -419,10 +418,10 @@ public class UserUtil {
       roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
       userMap.put(JsonKey.ROLES, roles);
     }
-    if (BooleanUtils.isFalse((Boolean) userMap.get(JsonKey.EMAIL_VERIFIED))) {
+    if (null == userMap.get(JsonKey.EMAIL_VERIFIED)) {
       userMap.put(JsonKey.EMAIL_VERIFIED, false);
     }
-    if (BooleanUtils.isFalse((Boolean) userMap.get(JsonKey.PHONE_VERIFIED))) {
+    if (null == userMap.get(JsonKey.PHONE_VERIFIED)) {
       userMap.put(JsonKey.PHONE_VERIFIED, false);
     }
     if (!StringUtils.isBlank((String) userMap.get(JsonKey.COUNTRY_CODE))) {

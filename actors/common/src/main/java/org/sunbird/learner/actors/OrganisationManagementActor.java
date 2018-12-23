@@ -1667,12 +1667,18 @@ public class OrganisationManagementActor extends BaseActor {
     ProjectLogger.log(
         "OrganisationManagementActor:getStatusFromChannel: channel = " + channel,
         LoggerEnum.INFO.name());
+    int status = 0;
     if (!StringUtils.isBlank(channel)) {
       List<Map<String, Object>> list = getOrg(channel);
-      if (!list.isEmpty()) return (Integer) list.get(0).getOrDefault(JsonKey.STATUS, 0);
+      if (!list.isEmpty()) {
+        Object statusObj = list.get(0).getOrDefault(JsonKey.STATUS, 0);
+        if (null != statusObj) {
+          status = (int) statusObj;
+        }
+      }
     }
 
-    return 0;
+    return status;
   }
 
   private String getRootOrgIdFromSlug(String slug) {

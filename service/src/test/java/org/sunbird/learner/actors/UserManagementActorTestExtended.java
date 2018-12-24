@@ -36,7 +36,6 @@ import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
@@ -45,7 +44,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.util.ContentStoreUtil;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
-import org.sunbird.learner.util.EkStepRequestUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
@@ -61,19 +59,15 @@ import org.sunbird.user.util.UserUtil;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ServiceFactory.class,
-  EkStepRequestUtil.class,
   Util.class,
-  ServiceFactory.class,
   ElasticSearchUtil.class,
   SunbirdMWService.class,
   UserRequestValidator.class,
   UserUtil.class,
   DataCacheHandler.class,
-  ProjectUtil.class,
   CassandraOperation.class,
   InterServiceCommunication.class,
   TelemetryUtil.class,
-  Util.class,
   InterServiceCommunicationFactory.class,
   InterServiceCommunicationImpl.class,
   SystemSettingClientImpl.class,
@@ -85,7 +79,6 @@ import org.sunbird.user.util.UserUtil;
   SSOServiceFactory.class,
   SSOManager.class,
   KeyCloakServiceImpl.class,
-  HttpUtil.class,
   ContentStoreUtil.class
 })
 @PowerMockIgnore({"javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*"})
@@ -97,19 +90,18 @@ public class UserManagementActorTestExtended {
   private static UserService userService;
   private static InterServiceCommunication interServiceCommunication;
   private static SystemSettingClientImpl systemSettingClient;
-  private static ActorRef actorRef;
   private static UserExternalIdentityDaoImpl userExtDao;
   private static SSOManager ssoManager;
 
   @BeforeClass
   public static void setUp() {
     system = ActorSystem.create("system");
-    PowerMockito.mockStatic(EkStepRequestUtil.class);
   }
 
-  // validate all things in framework related functions
   @Before
   public void beforeEachTest() throws Exception {
+    ActorRef actorRef;
+
     PowerMockito.mockStatic(Util.class);
     PowerMockito.mockStatic(ServiceFactory.class);
     PowerMockito.mockStatic(InterServiceCommunicationFactory.class);
@@ -125,31 +117,30 @@ public class UserManagementActorTestExtended {
     PowerMockito.mockStatic(ContentStoreUtil.class);
 
     userExtDao = mock(UserExternalIdentityDaoImpl.class);
-    PowerMockito.whenNew(UserExternalIdentityDaoImpl.class)
-        .withNoArguments()
-        .thenReturn(userExtDao);
+
     ssoManager = mock(KeyCloakServiceImpl.class);
     when(SSOServiceFactory.getInstance()).thenReturn(ssoManager);
-    PowerMockito.whenNew(UserExternalIdentityDaoImpl.class)
-        .withNoArguments()
-        .thenReturn(userExtDao);
+
     cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     Mockito.reset(cassandraOperation);
+
     PowerMockito.mockStatic(SystemSettingClientImpl.class);
     systemSettingClient = mock(SystemSettingClientImpl.class);
     when(SystemSettingClientImpl.getInstance()).thenReturn(systemSettingClient);
-    userService = mock(UserServiceImpl.class);
 
     actorRef = mock(ActorRef.class);
     PowerMockito.mockStatic(RequestRouter.class);
     when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
+
     interServiceCommunication = mock(InterServiceCommunicationImpl.class);
     when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
+    userService = mock(UserServiceImpl.class);
 
-    mockInterserviceCommunication();
+    PowerMockito.whenNew(UserExternalIdentityDaoImpl.class)
+        .withNoArguments()
+        .thenReturn(userExtDao);
 
-    PowerMockito.mockStatic(HttpUtil.class);
     PowerMockito.doNothing()
         .when(
             TelemetryUtil.class,
@@ -158,6 +149,7 @@ public class UserManagementActorTestExtended {
             Mockito.anyMap(),
             Mockito.anyList());
 
+    mockInterserviceCommunication();
     mockUtilsForOrgDetails();
     mockDatacacheHandler();
     mockContentStoreUtil();

@@ -313,11 +313,10 @@ public class UserManagementActorTestExtended {
   private void mockElasticSearchUtil() {
     Map<String, Object> userMap = new HashMap<>();
     userMap.put("abc", "abc");
-    Mockito.when(
-            ElasticSearchUtil.getDataByIdentifier(
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName(),
-                userId))
+    when(ElasticSearchUtil.getDataByIdentifier(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(),
+            userId))
         .thenReturn(userMap);
   }
 
@@ -350,7 +349,7 @@ public class UserManagementActorTestExtended {
     Map<String, Object> rootOrgMap = new HashMap<>();
     String hashTagId = "someHashTagId";
     rootOrgMap.put(JsonKey.HASHTAGID, hashTagId);
-    Mockito.when(Util.getOrgDetails(Mockito.anyString())).thenReturn(rootOrgMap);
+    when(Util.getOrgDetails(Mockito.anyString())).thenReturn(rootOrgMap);
   }
 
   private void mockContentStoreUtil() {
@@ -392,10 +391,10 @@ public class UserManagementActorTestExtended {
     Map<String, Map<String, List<Map<String, String>>>> x = new HashMap<>();
     x.put("NCF", frameworkCategoriesMap);
     DataCacheHandler.updateFrameworkCategoriesMap("NCF", frameworkCategoriesMap);
-    Mockito.when(DataCacheHandler.getFrameworkCategoriesMap()).thenReturn(x);
+    when(DataCacheHandler.getFrameworkCategoriesMap()).thenReturn(x);
     Map<String, List<String>> map1 = new HashMap<>();
     List<String> list1 = Arrays.asList("NCF");
     map1.put("someHashTagId", list1);
-    Mockito.when(DataCacheHandler.getHashtagIdFrameworkIdMap()).thenReturn(map1);
+    when(DataCacheHandler.getHashtagIdFrameworkIdMap()).thenReturn(map1);
   }
 }

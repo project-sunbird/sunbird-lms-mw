@@ -50,6 +50,9 @@ public final class OTPUtil {
     smsTemplate.put(JsonKey.OTP, (String) otpMap.get(JsonKey.OTP));
     smsTemplate.put(
         JsonKey.OTP_EXPIRATION_IN_MINUTES, (String) otpMap.get(JsonKey.OTP_EXPIRATION_IN_MINUTES));
+    smsTemplate.put(
+        JsonKey.INSTALLATION_NAME,
+        ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME));
     String sms = OTPService.getOTPSMSBody(smsTemplate);
 
     ProjectLogger.log("OTPUtil:sendOTPViaSMS: SMS text = " + sms, LoggerEnum.INFO);
@@ -63,12 +66,16 @@ public final class OTPUtil {
     ISmsProvider smsProvider = SMSFactory.getInstance("91SMS");
 
     ProjectLogger.log(
-        "OTPUtil:sendOTPViaSMS: SMS OTP text = " + sms + " with phone = " + (String) otpMap.get(JsonKey.PHONE),
+        "OTPUtil:sendOTPViaSMS: SMS OTP text = "
+            + sms
+            + " with phone = "
+            + (String) otpMap.get(JsonKey.PHONE),
         LoggerEnum.INFO.name());
 
     boolean response = smsProvider.send((String) otpMap.get(JsonKey.PHONE), countryCode, sms);
 
-    ProjectLogger.log("OTPUtil:sendOTPViaSMS: Response from SMS provider: " + response, LoggerEnum.INFO);
+    ProjectLogger.log(
+        "OTPUtil:sendOTPViaSMS: Response from SMS provider: " + response, LoggerEnum.INFO);
 
     if (response) {
       ProjectLogger.log(
@@ -76,7 +83,8 @@ public final class OTPUtil {
           LoggerEnum.INFO.name());
     } else {
       ProjectLogger.log(
-          "OTPUtil:sendOTPViaSMS: OTP send failed for " + (String) otpMap.get(JsonKey.PHONE), LoggerEnum.INFO.name());
+          "OTPUtil:sendOTPViaSMS: OTP send failed for " + (String) otpMap.get(JsonKey.PHONE),
+          LoggerEnum.INFO.name());
     }
   }
 
@@ -92,6 +100,7 @@ public final class OTPUtil {
     reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
     emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
     emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.OTP);
+    emailTemplateMap.put(JsonKey.INSTALLATION_NAME, envName);
     request = new Request();
     request.setOperation(BackgroundOperations.emailService.name());
     request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);
@@ -104,5 +113,4 @@ public final class OTPUtil {
     int otpExpirationInMinutes = Math.floorDiv(otpExpiration, SECONDS_IN_MINUTES);
     return String.valueOf(otpExpirationInMinutes);
   }
-
 }

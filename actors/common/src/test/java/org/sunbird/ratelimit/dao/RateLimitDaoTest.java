@@ -46,13 +46,8 @@ public class RateLimitDaoTest {
         .thenReturn(getSuccessResponse());
   }
 
-  private Response getSuccessResponse() {
-    Response response = new Response();
-    return response;
-  }
-
   @Test
-  public void testInsetRateLimitsSuccess() {
+  public void testInsertRateLimitsSuccess() {
     doAnswer(
             (Answer)
                 invocation -> {
@@ -117,6 +112,11 @@ public class RateLimitDaoTest {
     results.add(record);
     Response response = new Response();
     response.put(JsonKey.RESPONSE, results);
+    return response;
+  }
+
+  private Response getSuccessResponse() {
+    Response response = new Response();
     return response;
   }
 }

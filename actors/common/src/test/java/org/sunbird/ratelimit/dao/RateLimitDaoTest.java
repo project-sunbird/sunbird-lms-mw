@@ -52,7 +52,7 @@ public class RateLimitDaoTest {
   }
 
   @Test
-  public void testInsertRateLimits() {
+  public void testInsetRateLimitsSuccess() {
     doAnswer(
             (Answer)
                 invocation -> {
@@ -69,12 +69,12 @@ public class RateLimitDaoTest {
   }
 
   @Test(expected = ProjectCommonException.class)
-  public void testInsertInvalidRateLimits() {
+  public void testInsertRateLimitsFailureWithInvalidData() {
     rateLimitdDao.insertRateLimits(getInvalidRateLimits());
   }
 
   @Test
-  public void getRateLimitsTest() {
+  public void testGetRateLimitsSuccess() {
     when(cassandraOperation.getRecordsByIdsWithSpecifiedColumnsAndTTL(
             Mockito.anyString(),
             Mockito.anyString(),

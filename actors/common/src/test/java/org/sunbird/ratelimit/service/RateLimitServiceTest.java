@@ -40,120 +40,77 @@ public class RateLimitServiceTest {
 
   @Mock private RateLimitDao rateLimitdDao;
 
-  @Mock private RateLimiter hourRateLimiter = OtpRateLimiter.HOUR;
+  private RateLimiter hourRateLimiter = OtpRateLimiter.HOUR;
 
-  @Mock private RateLimiter dayRateLimiter = OtpRateLimiter.DAY;
+  private RateLimiter dayRateLimiter = OtpRateLimiter.DAY;
 
   @Before
   public void beforeEachTest() {
     MockitoAnnotations.initMocks(this);
-    when(hourRateLimiter.getRateLimit()).thenReturn(10);
-    when(dayRateLimiter.getRateLimit()).thenReturn(50);
-    when(hourRateLimiter.name()).thenReturn(OtpRateLimiter.HOUR.name());
-    when(dayRateLimiter.name()).thenReturn(OtpRateLimiter.DAY.name());
-    when(dayRateLimiter.getRateLimit()).thenReturn(50);
     doNothing().when(rateLimitdDao).insertRateLimits(anyList());
   }
 
   @Test
-  public void testThrottleByKeyOngoing() {
-    when(rateLimitdDao.getRateLimits(anyString())).thenReturn(getRateLimitRecords());
-    doAnswer(
-            (Answer)
-                invocation -> {
-                  List<RateLimit> rateLimits = invocation.getArgumentAt(0, List.class);
-                  assertTrue(CollectionUtils.isNotEmpty(rateLimits));
-                  assertSame(1, rateLimits.size());
-                  assertSame(6, rateLimits.get(0).getCount());
-                  return null;
-                })
-        .when(rateLimitdDao)
-        .insertRateLimits(anyList());
+  public void testThrottleByKeyOnGoingSuccess() {
+    when(rateLimitdDao.getRateLimits(anyString())).thenReturn(getRateLimitRecords(5));
+    Map<String, Integer> countsByRateLimiter = new HashMap<>();
+    countsByRateLimiter.put(hourRateLimiter.name(), 6);
+    assertRateLimitsOnInsert(countsByRateLimiter);
     rateLimitService.throttleByKey(KEY, new RateLimiter[] {hourRateLimiter});
   }
 
   @Test
   public void testThrottleByKeyNew() {
     when(rateLimitdDao.getRateLimits(anyString())).thenReturn(null);
-    doAnswer(
-            (Answer)
-                invocation -> {
-                  List<RateLimit> rateLimits = invocation.getArgumentAt(0, List.class);
-                  assertTrue(CollectionUtils.isNotEmpty(rateLimits));
-                  assertSame(1, rateLimits.size());
-                  assertSame(1, rateLimits.get(0).getCount());
-                  return null;
-                })
-        .when(rateLimitdDao)
-        .insertRateLimits(anyList());
+    Map<String, Integer> countsByRateLimiter = new HashMap<>();
+    countsByRateLimiter.put(hourRateLimiter.name(), 1);
+    assertRateLimitsOnInsert(countsByRateLimiter);
     rateLimitService.throttleByKey(KEY, new RateLimiter[] {hourRateLimiter});
   }
 
   @Test
   public void testThrottleByKeyMultipleLimit() {
-    when(rateLimitdDao.getRateLimits(anyString())).thenReturn(getRateLimitRecords());
-    doAnswer(
-            (Answer)
-                invocation -> {
-                  List<RateLimit> rateLimits = invocation.getArgumentAt(0, List.class);
-                  assertTrue(CollectionUtils.isNotEmpty(rateLimits));
-                  assertSame(2, rateLimits.size());
-                  rateLimits.forEach(
-                      rateLimit -> {
-                        if (hourRateLimiter.name().equals(rateLimit.getUnit())) {
-                          assertSame(6, rateLimit.getCount());
-                        }
-                        if (dayRateLimiter.name().equals(rateLimit.getUnit())) {
-                          assertSame(1, rateLimit.getCount());
-                        }
-                      });
-                  return null;
-                })
-        .when(rateLimitdDao)
-        .insertRateLimits(anyList());
+    when(rateLimitdDao.getRateLimits(anyString())).thenReturn(getRateLimitRecords(5));
+    Map<String, Integer> countsByRateLimiter = new HashMap<>();
+    countsByRateLimiter.put(hourRateLimiter.name(), 6);
+    countsByRateLimiter.put(dayRateLimiter.name(), 1);
+    assertRateLimitsOnInsert(countsByRateLimiter);
     rateLimitService.throttleByKey(KEY, new RateLimiter[] {hourRateLimiter, dayRateLimiter});
   }
 
   @Test(expected = ProjectCommonException.class)
   public void testThrottleByKeyFailure() {
-    when(rateLimitdDao.getRateLimits(anyString())).thenReturn(getRateLimitMaxCountRecords());
+    when(rateLimitdDao.getRateLimits(anyString())).thenReturn(getRateLimitRecords(HOUR_LIMIT));
     rateLimitService.throttleByKey(KEY, new RateLimiter[] {hourRateLimiter});
   }
 
-  private List<RateLimit> getRateLimits() {
-    List<RateLimit> rateLimits = new ArrayList<>();
-    rateLimits.add(
-        new RateLimit(KEY, OtpRateLimiter.HOUR.name(), 20, OtpRateLimiter.HOUR.getTTL()));
-    return rateLimits;
-  }
-
-  private List<RateLimit> getInvalidRateLimits() {
-    List<RateLimit> rateLimits = new ArrayList<>();
-    rateLimits.add(new RateLimit(KEY, null, 0, OtpRateLimiter.HOUR.getTTL()));
-    return rateLimits;
-  }
-
-  private List<Map<String, Object>> getRateLimitRecords() {
+  private List<Map<String, Object>> getRateLimitRecords(int count) {
     List<Map<String, Object>> results = new ArrayList<>();
     Map<String, Object> record = new HashMap<>();
     record.put(JsonKey.KEY, KEY);
     record.put(JsonKey.RATE_LIMIT_UNIT, OtpRateLimiter.HOUR.name());
     record.put(JsonKey.RATE, HOUR_LIMIT);
     record.put(JsonKey.TTL, 3500);
-    record.put(JsonKey.COUNT, 5);
+    record.put(JsonKey.COUNT, count);
     results.add(record);
     return results;
   }
 
-  private List<Map<String, Object>> getRateLimitMaxCountRecords() {
-    List<Map<String, Object>> results = new ArrayList<>();
-    Map<String, Object> record = new HashMap<>();
-    record.put(JsonKey.KEY, KEY);
-    record.put(JsonKey.RATE_LIMIT_UNIT, OtpRateLimiter.HOUR.name());
-    record.put(JsonKey.RATE, HOUR_LIMIT);
-    record.put(JsonKey.TTL, 3500);
-    record.put(JsonKey.COUNT, HOUR_LIMIT);
-    results.add(record);
-    return results;
+  private void assertRateLimitsOnInsert(Map<String, Integer> countsByRateLimiter) {
+    doAnswer(
+            (Answer)
+                invocation -> {
+                  List<RateLimit> rateLimits = invocation.getArgumentAt(0, List.class);
+                  assertTrue(CollectionUtils.isNotEmpty(rateLimits));
+                  assertSame(countsByRateLimiter.size(), rateLimits.size());
+                  rateLimits.forEach(
+                      rateLimit -> {
+                        assertSame(
+                            countsByRateLimiter.get(rateLimit.getUnit()), rateLimit.getCount());
+                      });
+                  return null;
+                })
+        .when(rateLimitdDao)
+        .insertRateLimits(anyList());
   }
 }

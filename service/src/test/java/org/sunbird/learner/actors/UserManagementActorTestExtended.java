@@ -157,8 +157,6 @@ public class UserManagementActorTestExtended {
             Mockito.anyList());
   }
 
-  private void mockFunctionsWithExceptions() throws Exception {}
-
   @Ignore
   @Test
   public void testUpdateUserFrameworkSuccess() {

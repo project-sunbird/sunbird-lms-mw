@@ -482,8 +482,7 @@ public class OrganisationManagementActor extends BaseActor {
     orgExtIdRequest.put(JsonKey.EXTERNAL_ID, externalId);
     orgExtIdRequest.put(JsonKey.ORG_ID, orgId);
 
-    cassandraOperation.insertRecord(
-            JsonKey.SUNBIRD, JsonKey.ORG_EXT_ID_DB, orgExtIdRequest);
+    cassandraOperation.insertRecord(JsonKey.SUNBIRD, JsonKey.ORG_EXT_ID_DB, orgExtIdRequest);
   }
 
   private void deleteOrgExternalIdRecord(String channel, String externalId) {
@@ -491,8 +490,7 @@ public class OrganisationManagementActor extends BaseActor {
     orgExtIdRequest.put(JsonKey.PROVIDER, channel);
     orgExtIdRequest.put(JsonKey.EXTERNAL_ID, externalId);
 
-    cassandraOperation.deleteRecord(
-        JsonKey.SUNBIRD, JsonKey.ORG_EXT_ID_DB, orgExtIdRequest);
+    cassandraOperation.deleteRecord(JsonKey.SUNBIRD, JsonKey.ORG_EXT_ID_DB, orgExtIdRequest);
   }
 
   private void validateCodeAndAddLocationIds(Map<String, Object> req) {
@@ -1665,6 +1663,24 @@ public class OrganisationManagementActor extends BaseActor {
     return "";
   }
 
+  private Integer getStatusFromChannel(String channel) {
+    ProjectLogger.log(
+        "OrganisationManagementActor:getStatusFromChannel: channel = " + channel,
+        LoggerEnum.INFO.name());
+    int status = 0;
+    if (!StringUtils.isBlank(channel)) {
+      List<Map<String, Object>> list = getOrg(channel);
+      if (!list.isEmpty()) {
+        Object statusObj = list.get(0).getOrDefault(JsonKey.STATUS, 0);
+        if (null != statusObj) {
+          status = (int) statusObj;
+        }
+      }
+    }
+
+    return status;
+  }
+
   private String getRootOrgIdFromSlug(String slug) {
     if (!StringUtils.isBlank(slug)) {
       Map<String, Object> filters = new HashMap<>();
@@ -1790,7 +1806,8 @@ public class OrganisationManagementActor extends BaseActor {
    */
   private void validateChannel(Map<String, Object> req) {
     if (!req.containsKey(JsonKey.IS_ROOT_ORG) || !(Boolean) req.get(JsonKey.IS_ROOT_ORG)) {
-      String rootOrgId = getRootOrgIdFromChannel((String) req.get(JsonKey.CHANNEL));
+      String channel = (String) req.get(JsonKey.CHANNEL);
+      String rootOrgId = getRootOrgIdFromChannel(channel);
       if (!StringUtils.isBlank(rootOrgId)) {
         req.put(JsonKey.ROOT_ORG_ID, rootOrgId);
       } else {
@@ -1799,6 +1816,13 @@ public class OrganisationManagementActor extends BaseActor {
             ResponseCode.invalidChannel.getErrorCode(),
             ResponseCode.invalidChannel.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+      int status = getStatusFromChannel(channel);
+      if (1 != status) {
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.errorInactiveOrg,
+            ProjectUtil.formatMessage(
+                ResponseCode.errorInactiveOrg.getErrorMessage(), JsonKey.CHANNEL, channel));
       }
     } else if (!validateChannelUniqueness((String) req.get(JsonKey.CHANNEL), null)) {
       ProjectLogger.log("Channel validation failed");

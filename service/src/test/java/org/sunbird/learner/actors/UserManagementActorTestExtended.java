@@ -98,6 +98,7 @@ public class UserManagementActorTestExtended {
     system = ActorSystem.create("system");
   }
 
+  @SuppressWarnings("unchecked")
   @Before
   public void beforeEachTest() throws Exception {
     ActorRef actorRef;
@@ -137,9 +138,15 @@ public class UserManagementActorTestExtended {
     when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
     userService = mock(UserServiceImpl.class);
 
+    mockInterserviceCommunication();
+    mockUtilsForOrgDetails();
+    mockDatacacheHandler();
+    mockContentStoreUtil();
+
     PowerMockito.whenNew(UserExternalIdentityDaoImpl.class)
         .withNoArguments()
-        .thenReturn(userExtDao);
+        .thenReturn(userExtDao)
+        .thenThrow(Exception.class);
 
     PowerMockito.doNothing()
         .when(
@@ -148,12 +155,9 @@ public class UserManagementActorTestExtended {
             Mockito.anyMap(),
             Mockito.anyMap(),
             Mockito.anyList());
-
-    mockInterserviceCommunication();
-    mockUtilsForOrgDetails();
-    mockDatacacheHandler();
-    mockContentStoreUtil();
   }
+
+  private void mockFunctionsWithExceptions() throws Exception {}
 
   @Ignore
   @Test
@@ -172,7 +176,7 @@ public class UserManagementActorTestExtended {
   }
 
   @Test
-  public void testUpdateUserFrameworkFailureInvalidGradeLevel() throws Exception {
+  public void testUpdateUserFrameworkFailureInvalidGradeLevel() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = getRequest(false, false, true, false, false);
@@ -189,7 +193,7 @@ public class UserManagementActorTestExtended {
   }
 
   @Test
-  public void testUpdateUserFrameworkFailureInvalidMedium() throws Exception {
+  public void testUpdateUserFrameworkFailureInvalidMedium() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = getRequest(false, false, false, true, false);
@@ -205,7 +209,7 @@ public class UserManagementActorTestExtended {
   }
 
   @Test
-  public void testUpdateUserFrameworkFailureInvalidBoard() throws Exception {
+  public void testUpdateUserFrameworkFailureInvalidBoard() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = getRequest(false, false, false, false, true);
@@ -221,7 +225,7 @@ public class UserManagementActorTestExtended {
   }
 
   @Test
-  public void testUpdateUserFrameworkFailureInvalidFrameworkId() throws Exception {
+  public void testUpdateUserFrameworkFailureInvalidFrameworkId() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request reqObj = getRequest(false, true, false, false, false);
@@ -325,22 +329,6 @@ public class UserManagementActorTestExtended {
     when(userExtDao.getUserId(req)).thenReturn(userId);
   }
 
-  private static void mockSystemSettingClientForGetSystemSettingByFieldAndKey() {
-    Map<String, List<String>> frameworkFieldsConfigMap = new HashMap<>();
-    List<String> frameworkFieldConfig =
-        Arrays.asList("id", "medium", "gradeLevel", "board", "subject");
-    List<String> frameworkFieldConfigMan = Arrays.asList("id", "medium", "gradeLevel", "board");
-    frameworkFieldsConfigMap.put(JsonKey.FIELDS, frameworkFieldConfig);
-    frameworkFieldsConfigMap.put(JsonKey.MANDATORY_FIELDS, frameworkFieldConfigMan);
-    DataCacheHandler.setFrameworkFieldsConfig(frameworkFieldsConfigMap);
-    when(systemSettingClient.getSystemSettingByFieldAndKey(
-            Mockito.any(ActorRef.class),
-            Mockito.anyString(),
-            Mockito.anyString(),
-            Mockito.anyObject()))
-        .thenReturn(frameworkFieldsConfigMap);
-  }
-
   private void mockCassandraforUpdateRecord() {
     // create user map
     Response res = new Response();
@@ -355,8 +343,7 @@ public class UserManagementActorTestExtended {
     Map<String, Object> response = new HashMap<>();
     response.put(JsonKey.ERRORS, null);
     res.getResult().put(JsonKey.RESPONSE, response);
-    PowerMockito.when(interServiceCommunication.getResponse(Mockito.any(), Mockito.any()))
-        .thenReturn(res);
+    when(interServiceCommunication.getResponse(Mockito.any(), Mockito.any())).thenReturn(res);
   }
 
   private void mockUtilsForOrgDetails() {
@@ -369,7 +356,7 @@ public class UserManagementActorTestExtended {
   private void mockContentStoreUtil() {
     Map<String, Object> contentMap = new HashMap<>();
     contentMap.put(JsonKey.RESPONSE, null);
-    PowerMockito.when(ContentStoreUtil.readFramework("wrongId")).thenReturn(contentMap);
+    when(ContentStoreUtil.readFramework("wrongId")).thenReturn(contentMap);
   }
 
   private void mockDatacacheHandler() {

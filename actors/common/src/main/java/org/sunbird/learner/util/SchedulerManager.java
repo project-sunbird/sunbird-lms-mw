@@ -9,7 +9,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 /** @author Manzarul All the scheduler job will be handle by this class. */
 public class SchedulerManager {
 
-  private static final int PAGE_DATA_TTL = 4;
+  private static final int PAGE_DATA_TTL = 15;
 
   /*
    * service ScheduledExecutorService object
@@ -18,7 +18,7 @@ public class SchedulerManager {
 
   /** all scheduler job will be configure here. */
   public static void schedule() {
-    service.scheduleWithFixedDelay(new DataCacheHandler(), 0, PAGE_DATA_TTL, TimeUnit.HOURS);
+    service.scheduleWithFixedDelay(new DataCacheHandler(), 0, PAGE_DATA_TTL, TimeUnit.MINUTES);
     ProjectLogger.log(
         "SchedulerManager:schedule: Started scheduler job for cache refresh.",
         LoggerEnum.INFO.name());

@@ -57,8 +57,6 @@ import org.sunbird.user.service.impl.UserServiceImpl;
   ServiceFactory.class,
   Util.class,
   DataCacheHandler.class,
-  CassandraOperation.class,
-  InterServiceCommunication.class,
   TelemetryUtil.class,
   InterServiceCommunicationFactory.class,
   SystemSettingClientImpl.class,

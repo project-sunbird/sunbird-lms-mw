@@ -235,16 +235,18 @@ public class ManageCourseBatchCount implements Job {
 
   private void updateCourseBatchCount(
       boolean increment, String contentName, String courseId, int size) {
-    int val = (int) courseDetailsMap.get(courseId).getOrDefault(contentName, 0);
-    if (increment) {
-      val += size;
-    } else {
-      val -= size;
-      if (val < 0) {
-        val = 0;
+    if (courseDetailsMap.get(courseId) != null) {
+      int val = (int) courseDetailsMap.get(courseId).getOrDefault(contentName, 0);
+      if (increment) {
+        val += size;
+      } else {
+        val -= size;
+        if (val < 0) {
+          val = 0;
+        }
       }
+      courseDetailsMap.get(courseId).put(contentName, val);
     }
-    courseDetailsMap.get(courseId).put(contentName, val);
   }
 
   private void updateCourseDetailsMap(Map<String, List<Map<String, Object>>> batchMap) {

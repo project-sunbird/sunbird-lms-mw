@@ -136,7 +136,8 @@ public class ManageCourseBatchCount implements Job {
           for (Map<String, Object> courseDetail : courseDetailsList) {
             String courseId = (String) courseDetail.get(JsonKey.IDENTIFIER);
             List<Map<String, Object>> ongoingAndUpcomingBatchList =
-                CourseBatchSchedulerUtil.getOngoingAndOpenCourseBatches(courseId, enrollmentType);
+                CourseBatchSchedulerUtil.getOngoingAndUpcomingCourseBatches(
+                    courseId, enrollmentType);
             int activeBatchCount = ongoingAndUpcomingBatchList.size();
             int contentStoreBatchCount = (int) courseDetail.getOrDefault(countName, 0);
             ProjectLogger.log(

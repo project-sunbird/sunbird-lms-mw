@@ -139,13 +139,13 @@ public class ManageCourseBatchCount implements Job {
                 CourseBatchSchedulerUtil.getOngoingAndUpcomingCourseBatches(
                     courseId, enrollmentType);
             int activeBatchCount = ongoingAndUpcomingBatchList.size();
-            int contentStoreBatchCount = (int) courseDetail.getOrDefault(countName, 0);
+            int openForEnrollmentBatchCount = (int) courseDetail.getOrDefault(countName, 0);
             ProjectLogger.log(
                 MessageFormat.format(
                     "ManageCourseBatchCount:findAndFixCoursesWithCountMismatch: (courseId, countInBatch, countInCourse) = ({0}, {1}, {2})",
-                    courseId, activeBatchCount, contentStoreBatchCount),
+                    courseId, activeBatchCount, openForEnrollmentBatchCount),
                 LoggerEnum.INFO.name());
-            if (activeBatchCount != contentStoreBatchCount) {
+            if (activeBatchCount != openForEnrollmentBatchCount) {
               ProjectLogger.log(
                   "ManageCourseBatchCount:findAndFixCoursesWithCountMismatch: Update count in content store",
                   LoggerEnum.INFO.name());

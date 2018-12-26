@@ -135,22 +135,22 @@ public class ManageCourseBatchCount implements Job {
         if (CollectionUtils.isNotEmpty(courseDetailsList) || totalOpenForEnrollmentCourses != 0) {
           for (Map<String, Object> courseDetail : courseDetailsList) {
             String courseId = (String) courseDetail.get(JsonKey.IDENTIFIER);
-            List<Map<String, Object>> ongoingBatchList =
-                CourseBatchSchedulerUtil.getOngoingAndOpenCourseBatches(courseId, enrollmentType);
-            List<Map<String, Object>> upcomingBatchList =
-                CourseBatchSchedulerUtil.getOngoingAndOpenCourseBatches(courseId, enrollmentType);
-            int activeBatchCount = ongoingBatchList.size() + upcomingBatchList.size();
+            List<Map<String, Object>> ongoingAndUpcomingBatchList =
+                CourseBatchSchedulerUtil.getOngoingAndUpcomingCourseBatches(
+                    courseId, enrollmentType);
+            int openForEnrollmentBatchCount = ongoingAndUpcomingBatchList.size();
             int contentStoreBatchCount = (int) courseDetail.getOrDefault(countName, 0);
             ProjectLogger.log(
                 MessageFormat.format(
                     "ManageCourseBatchCount:findAndFixCoursesWithCountMismatch: (courseId, countInBatch, countInCourse) = ({0}, {1}, {2})",
-                    courseId, activeBatchCount, contentStoreBatchCount),
+                    courseId, openForEnrollmentBatchCount, contentStoreBatchCount),
                 LoggerEnum.INFO.name());
-            if (activeBatchCount != contentStoreBatchCount) {
+            if (openForEnrollmentBatchCount != contentStoreBatchCount) {
               ProjectLogger.log(
                   "ManageCourseBatchCount:findAndFixCoursesWithCountMismatch: Update count in content store",
                   LoggerEnum.INFO.name());
-              CourseBatchSchedulerUtil.updateEkstepContent(courseId, countName, activeBatchCount);
+              CourseBatchSchedulerUtil.updateEkstepContent(
+                  courseId, countName, openForEnrollmentBatchCount);
             }
           }
         }

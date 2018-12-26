@@ -206,11 +206,14 @@ public final class CourseBatchSchedulerUtil {
     return searchContent(dto);
   }
 
-  public static List<Map<String, Object>> getOngoingAndOpenCourseBatches(
+  public static List<Map<String, Object>> getOngoingAndUpcomingCourseBatches(
       String courseId, String enrollmentType) {
     SearchDTO dto = new SearchDTO();
     Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.STATUS, new ArrayList<String>(Arrays.asList("0", "1"))); // Set status to upcoming and ongoing batches
+    map.put(
+        JsonKey.STATUS,
+        new ArrayList<String>(
+            Arrays.asList("0", "1"))); // Set status to upcoming and ongoing batches
     map.put(JsonKey.ENROLLMENT_TYPE, enrollmentType);
     map.put(JsonKey.COURSE_ID, courseId);
     dto.addAdditionalProperty(JsonKey.FILTERS, map);
@@ -237,7 +240,8 @@ public final class CourseBatchSchedulerUtil {
       }
     } catch (JsonProcessingException e) {
       ProjectLogger.log(
-          "CourseBatchScheduleUtil:getOpenForEnrollmentCourses: Exception occurred with error message = " + e.getMessage(),
+          "CourseBatchScheduleUtil:getOpenForEnrollmentCourses: Exception occurred with error message = "
+              + e.getMessage(),
           LoggerEnum.INFO);
       return null;
     }

@@ -1,5 +1,6 @@
 package org.sunbird.ratelimit.service;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyList;
@@ -24,6 +25,7 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.ratelimit.dao.RateLimitDao;
 import org.sunbird.ratelimit.limiter.OtpRateLimiter;
 import org.sunbird.ratelimit.limiter.RateLimit;
@@ -81,7 +83,12 @@ public class RateLimitServiceTest {
   @Test(expected = ProjectCommonException.class)
   public void testThrottleByKeyFailure() {
     when(rateLimitdDao.getRateLimits(anyString())).thenReturn(getRateLimitRecords(HOUR_LIMIT));
-    rateLimitService.throttleByKey(KEY, new RateLimiter[] {hourRateLimiter});
+    try {
+      rateLimitService.throttleByKey(KEY, new RateLimiter[] {hourRateLimiter});
+    } catch (ProjectCommonException e) {
+      assertEquals(ResponseCode.TOO_MANY_REQUESTS.getResponseCode(), e.getResponseCode());
+      throw e;
+    }
   }
 
   private List<Map<String, Object>> getRateLimitRecords(int count) {

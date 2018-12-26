@@ -1,5 +1,6 @@
 package org.sunbird.ratelimit.dao;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doAnswer;
@@ -24,6 +25,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.ratelimit.limiter.OtpRateLimiter;
 import org.sunbird.ratelimit.limiter.RateLimit;
 
@@ -65,7 +67,12 @@ public class RateLimitDaoTest {
 
   @Test(expected = ProjectCommonException.class)
   public void testInsertRateLimitsFailureWithInvalidData() {
-    rateLimitdDao.insertRateLimits(getInvalidRateLimits());
+    try {
+      rateLimitdDao.insertRateLimits(getInvalidRateLimits());
+    } catch (ProjectCommonException e) {
+      assertEquals(ResponseCode.SERVER_ERROR.getResponseCode(), e.getResponseCode());
+      throw e;
+    }
   }
 
   @Test

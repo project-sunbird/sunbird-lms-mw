@@ -60,7 +60,6 @@ import org.sunbird.user.util.UserUtil;
 @PrepareForTest({
   ServiceFactory.class,
   Util.class,
-  ElasticSearchUtil.class,
   SunbirdMWService.class,
   UserRequestValidator.class,
   UserUtil.class,
@@ -69,29 +68,23 @@ import org.sunbird.user.util.UserUtil;
   InterServiceCommunication.class,
   TelemetryUtil.class,
   InterServiceCommunicationFactory.class,
-  InterServiceCommunicationImpl.class,
   SystemSettingClientImpl.class,
   RequestRouter.class,
   UserServiceImpl.class,
-  UserService.class,
-  UserExternalIdentityDao.class,
   UserExternalIdentityDaoImpl.class,
   SSOServiceFactory.class,
-  SSOManager.class,
-  KeyCloakServiceImpl.class,
+  UserExternalIdentityDao.class,
+  ElasticSearchUtil.class,
   ContentStoreUtil.class
 })
 @PowerMockIgnore({"javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*"})
 public class UserManagementActorTestExtended {
   private static ActorSystem system;
   private static final Props props = Props.create(UserManagementActor.class);
-  private static String userId = "testUserId";
-  private static CassandraOperation cassandraOperation;
+  private static final String userId = "testUserId";
   private static UserService userService;
-  private static InterServiceCommunication interServiceCommunication;
   private static SystemSettingClientImpl systemSettingClient;
   private static UserExternalIdentityDaoImpl userExtDao;
-  private static SSOManager ssoManager;
 
   @BeforeClass
   public static void setUp() {
@@ -107,7 +100,6 @@ public class UserManagementActorTestExtended {
     PowerMockito.mockStatic(ServiceFactory.class);
     PowerMockito.mockStatic(InterServiceCommunicationFactory.class);
     PowerMockito.mockStatic(UserServiceImpl.class);
-    PowerMockito.mockStatic(UserExternalIdentityDao.class);
     PowerMockito.mockStatic(UserExternalIdentityDaoImpl.class);
     PowerMockito.mockStatic(UserRequestValidator.class);
     PowerMockito.mockStatic(SSOServiceFactory.class);
@@ -117,15 +109,6 @@ public class UserManagementActorTestExtended {
     PowerMockito.mockStatic(DataCacheHandler.class);
     PowerMockito.mockStatic(ContentStoreUtil.class);
 
-    userExtDao = mock(UserExternalIdentityDaoImpl.class);
-
-    ssoManager = mock(KeyCloakServiceImpl.class);
-    when(SSOServiceFactory.getInstance()).thenReturn(ssoManager);
-
-    cassandraOperation = mock(CassandraOperationImpl.class);
-    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    Mockito.reset(cassandraOperation);
-
     PowerMockito.mockStatic(SystemSettingClientImpl.class);
     systemSettingClient = mock(SystemSettingClientImpl.class);
     when(SystemSettingClientImpl.getInstance()).thenReturn(systemSettingClient);
@@ -134,20 +117,21 @@ public class UserManagementActorTestExtended {
     PowerMockito.mockStatic(RequestRouter.class);
     when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
 
-    interServiceCommunication = mock(InterServiceCommunicationImpl.class);
-    when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
     userService = mock(UserServiceImpl.class);
+    userExtDao = mock(UserExternalIdentityDaoImpl.class);
 
     mockInterserviceCommunication();
     mockUtilsForOrgDetails();
     mockDatacacheHandler();
     mockContentStoreUtil();
+    mockElasticSearchUtil();
+    mockKeycloakUpsertUser();
+    mockCassandraforUpdateRecord();
 
     PowerMockito.whenNew(UserExternalIdentityDaoImpl.class)
         .withNoArguments()
         .thenReturn(userExtDao)
         .thenThrow(Exception.class);
-
     PowerMockito.doNothing()
         .when(
             TelemetryUtil.class,
@@ -160,82 +144,59 @@ public class UserManagementActorTestExtended {
   @Ignore
   @Test
   public void testUpdateUserFrameworkSuccess() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
+
     Request reqObj = getRequest(true, false, false, false, false);
-    mockUserServiceForValidatingUserId(reqObj);
-    mockuserExtDao(reqObj);
-    mockElasticSearchUtil();
-    mockKeycloakUpsertUser();
-    mockCassandraforUpdateRecord();
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Response res = doUpdateActorCallSuccess(reqObj);
     assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
   public void testUpdateUserFrameworkFailureInvalidGradeLevel() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
     Request reqObj = getRequest(false, false, true, false, false);
-    mockUserServiceForValidatingUserId(reqObj);
-    mockuserExtDao(reqObj);
-    mockElasticSearchUtil();
-    mockKeycloakUpsertUser();
-    mockCassandraforUpdateRecord();
-    subject.tell(reqObj, probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
-    System.out.print(res.toString());
+    ProjectCommonException res = doUpdateActorCallFailure(reqObj);
     assertTrue(res.getCode().equals(ResponseCode.invalidParameterValue.getErrorCode()));
   }
 
   @Test
   public void testUpdateUserFrameworkFailureInvalidMedium() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
     Request reqObj = getRequest(false, false, false, true, false);
-    mockUserServiceForValidatingUserId(reqObj);
-    mockuserExtDao(reqObj);
-    mockElasticSearchUtil();
-    mockKeycloakUpsertUser();
-    mockCassandraforUpdateRecord();
-    subject.tell(reqObj, probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException res = doUpdateActorCallFailure(reqObj);
     assertTrue(res.getCode().equals(ResponseCode.invalidParameterValue.getErrorCode()));
   }
 
   @Test
   public void testUpdateUserFrameworkFailureInvalidBoard() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
     Request reqObj = getRequest(false, false, false, false, true);
-    mockUserServiceForValidatingUserId(reqObj);
-    mockuserExtDao(reqObj);
-    mockElasticSearchUtil();
-    mockKeycloakUpsertUser();
-    mockCassandraforUpdateRecord();
-    subject.tell(reqObj, probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
+    ProjectCommonException res = doUpdateActorCallFailure(reqObj);
     assertTrue(res.getCode().equals(ResponseCode.invalidParameterValue.getErrorCode()));
   }
 
   @Test
   public void testUpdateUserFrameworkFailureInvalidFrameworkId() {
+    Request reqObj = getRequest(false, true, false, false, false);
+    ProjectCommonException res = doUpdateActorCallFailure(reqObj);
+    assertTrue(res.getCode().equals(ResponseCode.errorNoFrameworkFound.getErrorCode()));
+  }
+
+  private Response doUpdateActorCallSuccess(Request reqObj) {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-    Request reqObj = getRequest(false, true, false, false, false);
     mockUserServiceForValidatingUserId(reqObj);
     mockuserExtDao(reqObj);
-    mockElasticSearchUtil();
-    mockKeycloakUpsertUser();
-    mockCassandraforUpdateRecord();
+    subject.tell(reqObj, probe.getRef());
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    return res;
+  }
+
+  private ProjectCommonException doUpdateActorCallFailure(Request reqObj) {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    mockUserServiceForValidatingUserId(reqObj);
+    mockuserExtDao(reqObj);
     subject.tell(reqObj, probe.getRef());
     ProjectCommonException res =
         probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
-    assertTrue(res.getCode().equals(ResponseCode.errorNoFrameworkFound.getErrorCode()));
+    return res;
   }
 
   private Request getRequest(
@@ -305,6 +266,8 @@ public class UserManagementActorTestExtended {
   }
 
   private void mockKeycloakUpsertUser() {
+    SSOManager ssoManager = mock(KeyCloakServiceImpl.class);
+    when(SSOServiceFactory.getInstance()).thenReturn(ssoManager);
     when(ssoManager.updateUser(Mockito.anyMap())).thenReturn("SUCCESS");
   }
 
@@ -327,7 +290,9 @@ public class UserManagementActorTestExtended {
   }
 
   private void mockCassandraforUpdateRecord() {
-    // create user map
+    CassandraOperation cassandraOperation;
+    cassandraOperation = mock(CassandraOperationImpl.class);
+    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     Response res = new Response();
     res.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     when(cassandraOperation.updateRecord(
@@ -336,6 +301,8 @@ public class UserManagementActorTestExtended {
   }
 
   private void mockInterserviceCommunication() {
+    InterServiceCommunication interServiceCommunication = mock(InterServiceCommunicationImpl.class);
+    when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
     Response res = new Response();
     Map<String, Object> response = new HashMap<>();
     response.put(JsonKey.ERRORS, null);

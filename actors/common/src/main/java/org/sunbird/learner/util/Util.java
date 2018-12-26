@@ -142,6 +142,13 @@ public final class Util {
             OrgStatus.RETIRED.getValue()));
     orgStatusTransition.put(
         OrgStatus.RETIRED.getValue(), Arrays.asList(OrgStatus.RETIRED.getValue()));
+    orgStatusTransition.put(
+        null,
+        Arrays.asList(
+            OrgStatus.ACTIVE.getValue(),
+            OrgStatus.INACTIVE.getValue(),
+            OrgStatus.BLOCKED.getValue(),
+            OrgStatus.RETIRED.getValue()));
   }
 
   private static void initializeAuditLogUrl() {

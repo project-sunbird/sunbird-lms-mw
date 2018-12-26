@@ -10,8 +10,13 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.*;
-import org.junit.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -40,18 +45,13 @@ public class LocationActorTest {
   private static final Props props = Props.create(LocationActor.class);
   private static final Map<String, Object> esRespone = new HashMap<>();
   private static Request actorMessage;
-  private static Map<String, Object> data;
+  private static Map<String, Object> data = getDataMap();
 
   @BeforeClass
   public static void init() {
 
-    data = new HashMap();
-    data.put(GeoLocationJsonKey.LOCATION_TYPE, "STATE");
-    data.put(GeoLocationJsonKey.CODE, "S01");
-    data.put(JsonKey.NAME, "DUMMY_STATE");
-    data.put(JsonKey.ID, "id_01");
     esRespone.put(JsonKey.CONTENT, new ArrayList<>());
-    esRespone.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
+    esRespone.put(GeoLocationJsonKey.LOCATION_TYPE, "STATE");
     PowerMockito.mockStatic(ServiceFactory.class);
     CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
@@ -64,13 +64,6 @@ public class LocationActorTest {
     when(cassandraOperation.deleteRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getSuccessResponse());
-  }
-
-  private static Response getSuccessResponse() {
-
-    Response response = new Response();
-    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    return response;
   }
 
   @Before
@@ -87,149 +80,133 @@ public class LocationActorTest {
         .thenReturn(esRespone);
   }
 
-  /*@Test
-    public void testCreateLocation() {
+  @Test
+  public void testCreateLocation() {
 
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-      actorMessage = new Request();
-      actorMessage.setOperation(LocationActorOperation.CREATE_LOCATION.getValue());
-      actorMessage.getRequest().putAll(data);
-      subject.tell(actorMessage, probe.getRef());
-      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-      Assert.assertTrue(null != res);
-
-      boolean result = testScenario(LocationActorOperation.CREATE_LOCATION.getValue());
-      assertTrue(result);
-    }*/
-
-  /*private boolean testScenario(String actorOperation) {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    actorMessage = new Request();
-    actorMessage.setOperation(actorOperation);
-  }*/
+    boolean result = testScenario(LocationActorOperation.CREATE_LOCATION, true, null, null);
+    assertTrue(result);
+  }
 
   @Test
   public void testUpdateLocation() {
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    actorMessage = new Request();
-    actorMessage.setOperation(LocationActorOperation.UPDATE_LOCATION.getValue());
-    actorMessage.getRequest().putAll(data);
-    subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(null != res);
+    boolean result = testScenario(LocationActorOperation.UPDATE_LOCATION, true, data, null);
+    assertTrue(result);
   }
 
   @Test
   public void testDeleteLocation() {
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    actorMessage = new Request();
-    actorMessage.setOperation(LocationActorOperation.DELETE_LOCATION.getValue());
-    actorMessage.getRequest().putAll(data);
-    subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(null != res);
+    boolean result = testScenario(LocationActorOperation.DELETE_LOCATION, true, data, null);
+    assertTrue(result);
   }
 
   @Test
   public void testSearchLocation() {
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    actorMessage = new Request();
-    actorMessage.setOperation(LocationActorOperation.SEARCH_LOCATION.getValue());
-    actorMessage.getRequest().put(JsonKey.FILTERS, data);
-    subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(null != res);
+    boolean result = testScenario(LocationActorOperation.SEARCH_LOCATION, true, data, null);
+    assertTrue(result);
   }
 
   @Test
   public void testCreateLocationWithInvalidValue() {
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    actorMessage = new Request();
-    actorMessage.setOperation(LocationActorOperation.CREATE_LOCATION.getValue());
     data.put(GeoLocationJsonKey.LOCATION_TYPE, "anyType");
-    actorMessage.getRequest().putAll(data);
-    subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    assertTrue(
-        res.getCode().equals(ResponseCode.invalidValue.getErrorCode())
-            || res.getResponseCode() == ResponseCode.invalidValue.getResponseCode());
+    boolean result =
+        testScenario(
+            LocationActorOperation.CREATE_LOCATION, false, data, ResponseCode.invalidValue);
+    assertTrue(result);
   }
 
   @Test
   public void testCreateLocationWithoutMandatoryParams() {
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    actorMessage = new Request();
-    actorMessage.setOperation(LocationActorOperation.CREATE_LOCATION.getValue());
     data.put(GeoLocationJsonKey.LOCATION_TYPE, "block");
-    actorMessage.getRequest().putAll(data);
-    subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    assertTrue(
-        res.getCode().equals(ResponseCode.mandatoryParamsMissing.getErrorCode())
-            || res.getResponseCode() == ResponseCode.mandatoryParamsMissing.getResponseCode());
+    boolean result =
+        testScenario(
+            LocationActorOperation.CREATE_LOCATION,
+            false,
+            data,
+            ResponseCode.mandatoryParamsMissing);
+    assertTrue(result);
   }
 
   @Test
   public void testCreateLocationWithParentNotAllowed() {
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    actorMessage = new Request();
-    actorMessage.setOperation(LocationActorOperation.CREATE_LOCATION.getValue());
     data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     data.put(GeoLocationJsonKey.PARENT_CODE, "anyCode");
-    actorMessage.getRequest().putAll(data);
-    subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    assertTrue(
-        res.getCode().equals(ResponseCode.parentNotAllowed.getErrorCode())
-            || res.getResponseCode() == ResponseCode.parentNotAllowed.getResponseCode());
+    boolean result =
+        testScenario(
+            LocationActorOperation.CREATE_LOCATION, false, data, ResponseCode.parentNotAllowed);
+    assertTrue(result);
   }
 
   @Test
   public void testDeleteLocationWithInvalidLocationDeleteRequest() {
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    actorMessage = new Request();
-    actorMessage.setOperation(LocationActorOperation.DELETE_LOCATION.getValue());
-    actorMessage.getRequest().putAll(data);
+    esRespone.put(JsonKey.CONTENT, new ArrayList<>());
+    PowerMockito.when(
+            ElasticSearchUtil.complexSearch(
+                Mockito.any(SearchDTO.class), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getEsMap());
+    boolean result =
+        testScenario(
+            LocationActorOperation.DELETE_LOCATION,
+            false,
+            data,
+            ResponseCode.invalidLocationDeleteRequest);
+    assertTrue(result);
+  }
+
+  private Map<String, Object> getEsMap() {
 
     List<Map<String, Object>> lst = new ArrayList<>();
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put("any", "any");
     lst.add(innerMap);
-
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.CONTENT, lst);
+    return map;
+  }
 
-    esRespone.put(JsonKey.CONTENT, new ArrayList<>());
-    PowerMockito.when(
-            ElasticSearchUtil.complexSearch(
-                Mockito.any(SearchDTO.class), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(map);
+  private boolean testScenario(
+      LocationActorOperation actorOperation,
+      boolean isSuccess,
+      Map<String, Object> data,
+      ResponseCode errorCode) {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    actorMessage = new Request();
+    if (data != null) actorMessage.getRequest().putAll(data);
+    actorMessage.setOperation(actorOperation.getValue());
     subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    assertTrue(
-        res.getCode().equals(ResponseCode.invalidLocationDeleteRequest.getErrorCode())
-            || res.getResponseCode()
-                == ResponseCode.invalidLocationDeleteRequest.getResponseCode());
+
+    if (isSuccess) {
+      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+      return null != res;
+    } else {
+      ProjectCommonException res =
+          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+      return res.getCode().equals(errorCode.getErrorCode())
+          || res.getResponseCode() == errorCode.getResponseCode();
+    }
+  }
+
+  private static Map<String, Object> getDataMap() {
+
+    data = new HashMap();
+    data.put(GeoLocationJsonKey.LOCATION_TYPE, "STATE");
+    data.put(GeoLocationJsonKey.CODE, "S01");
+    data.put(JsonKey.NAME, "DUMMY_STATE");
+    data.put(JsonKey.ID, "id_01");
+    return data;
+  }
+
+  private static Response getSuccessResponse() {
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    return response;
   }
 }

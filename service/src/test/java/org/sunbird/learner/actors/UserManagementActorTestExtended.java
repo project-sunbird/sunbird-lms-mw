@@ -25,7 +25,6 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.actor.router.RequestRouter;
-import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.actorutil.impl.InterServiceCommunicationImpl;
@@ -39,7 +38,6 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.request.UserRequestValidator;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.util.ContentStoreUtil;
 import org.sunbird.helper.ServiceFactory;
@@ -50,19 +48,14 @@ import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.actors.UserManagementActor;
-import org.sunbird.user.dao.UserExternalIdentityDao;
 import org.sunbird.user.dao.impl.UserExternalIdentityDaoImpl;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
-import org.sunbird.user.util.UserUtil;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ServiceFactory.class,
   Util.class,
-  SunbirdMWService.class,
-  UserRequestValidator.class,
-  UserUtil.class,
   DataCacheHandler.class,
   CassandraOperation.class,
   InterServiceCommunication.class,
@@ -70,10 +63,7 @@ import org.sunbird.user.util.UserUtil;
   InterServiceCommunicationFactory.class,
   SystemSettingClientImpl.class,
   RequestRouter.class,
-  UserServiceImpl.class,
-  UserExternalIdentityDaoImpl.class,
   SSOServiceFactory.class,
-  UserExternalIdentityDao.class,
   ElasticSearchUtil.class,
   ContentStoreUtil.class
 })
@@ -99,11 +89,7 @@ public class UserManagementActorTestExtended {
     PowerMockito.mockStatic(Util.class);
     PowerMockito.mockStatic(ServiceFactory.class);
     PowerMockito.mockStatic(InterServiceCommunicationFactory.class);
-    PowerMockito.mockStatic(UserServiceImpl.class);
-    PowerMockito.mockStatic(UserExternalIdentityDaoImpl.class);
-    PowerMockito.mockStatic(UserRequestValidator.class);
     PowerMockito.mockStatic(SSOServiceFactory.class);
-    PowerMockito.mockStatic(SunbirdMWService.class);
     PowerMockito.mockStatic(TelemetryUtil.class);
     PowerMockito.mockStatic(ElasticSearchUtil.class);
     PowerMockito.mockStatic(DataCacheHandler.class);

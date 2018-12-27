@@ -322,7 +322,7 @@ public class ManageCourseBatchCount implements Job {
             });
       } else {
         ProjectLogger.log(
-            "ManagerCourseBatchCount: updateDetailsMap: Update count failed for courseId "
+            "ManagerCourseBatchCount:doUpdateCourseBatchCount: Update count failed for courseId = "
                 + courseId,
             LoggerEnum.INFO);
       }

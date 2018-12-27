@@ -1,137 +1,207 @@
 package org.sunbird.location.actors;
 
 import static akka.testkit.JavaTestKit.duration;
+import static org.junit.Assert.assertTrue;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LocationActorOperation;
 import org.sunbird.common.request.Request;
-import org.sunbird.location.dao.LocationDao;
-import org.sunbird.location.dao.impl.LocationDaoFactory;
-import org.sunbird.location.dao.impl.LocationDaoImpl;
-import org.sunbird.models.location.Location;
-import scala.concurrent.duration.FiniteDuration;
+import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
+import org.sunbird.helper.ServiceFactory;
 
-@Ignore
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({LocationDaoFactory.class, LocationDaoImpl.class, ElasticSearchUtil.class})
+@PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class})
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
 public class LocationActorTest {
 
-  private static final FiniteDuration ACTOR_MAX_WAIT_DURATION = duration("100 second");
-  private ObjectMapper mapper = new ObjectMapper();
-  private ActorSystem system;
-  private Props props;
-  private LocationDao locDaoImpl;
-  private TestKit probe;
-  private ActorRef subject;
-  // private LocationDaoFactory locFactory;
-  private Request actorMessage;
+  private static final ActorSystem system = ActorSystem.create("system");
+  private static final Props props = Props.create(LocationActor.class);
+  private static Map<String, Object> data = getDataMap();
+
+  @BeforeClass
+  public static void init() {
+
+    PowerMockito.mockStatic(ServiceFactory.class);
+    CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
+    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+    when(cassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getSuccessResponse());
+    when(cassandraOperation.updateRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getSuccessResponse());
+    when(cassandraOperation.deleteRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getSuccessResponse());
+  }
 
   @Before
   public void setUp() {
-    system = ActorSystem.create("system");
-    probe = new TestKit(system);
-    PowerMockito.mockStatic(LocationDaoFactory.class);
+
+    Map<String, Object> esRespone = new HashMap<>();
+    esRespone.put(JsonKey.CONTENT, new ArrayList<>());
+    esRespone.put(GeoLocationJsonKey.LOCATION_TYPE, "STATE");
+
     PowerMockito.mockStatic(ElasticSearchUtil.class);
-    locDaoImpl = PowerMockito.mock(LocationDaoImpl.class);
-    props = Props.create(LocationActor.class);
-    subject = system.actorOf(props);
-    actorMessage = new Request();
+    when(ElasticSearchUtil.complexSearch(
+            Mockito.any(SearchDTO.class), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(esRespone);
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(esRespone);
   }
 
   @Test
-  public void testCreateLocation() throws IOException {
-    Response response = new Response();
-    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    response.put(JsonKey.RESPONSE, response);
-    Map<String, Object> data = new HashMap<String, Object>();
+  public void testCreateLocationSuccess() {
+
+    boolean result = testScenario(LocationActorOperation.CREATE_LOCATION, true, null, null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateLocationSuccess() {
+
+    boolean result = testScenario(LocationActorOperation.UPDATE_LOCATION, true, data, null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testDeleteLocationSuccess() {
+
+    boolean result = testScenario(LocationActorOperation.DELETE_LOCATION, true, data, null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testSearchLocationSuccess() {
+
+    boolean result = testScenario(LocationActorOperation.SEARCH_LOCATION, true, data, null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testCreateLocationFailureWithInvalidValue() {
+
+    data.put(GeoLocationJsonKey.LOCATION_TYPE, "anyType");
+    boolean result =
+        testScenario(
+            LocationActorOperation.CREATE_LOCATION, false, data, ResponseCode.invalidValue);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testCreateLocationFailureWithoutMandatoryParams() {
+
+    data.put(GeoLocationJsonKey.LOCATION_TYPE, "block");
+    boolean result =
+        testScenario(
+            LocationActorOperation.CREATE_LOCATION,
+            false,
+            data,
+            ResponseCode.mandatoryParamsMissing);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testCreateLocationFailureWithParentLocationNotAllowed() {
+
+    data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
+    data.put(GeoLocationJsonKey.PARENT_CODE, "anyCode");
+    boolean result =
+        testScenario(
+            LocationActorOperation.CREATE_LOCATION, false, data, ResponseCode.parentNotAllowed);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testDeleteLocationFailureWithInvalidLocationDeleteRequest() {
+
+    when(ElasticSearchUtil.complexSearch(
+            Mockito.any(SearchDTO.class), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getContentMapFromES());
+    boolean result =
+        testScenario(
+            LocationActorOperation.DELETE_LOCATION,
+            false,
+            data,
+            ResponseCode.invalidLocationDeleteRequest);
+    assertTrue(result);
+  }
+
+  private Map<String, Object> getContentMapFromES() {
+
+    List<Map<String, Object>> lst = new ArrayList<>();
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put("any", "any");
+    lst.add(innerMap);
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.CONTENT, lst);
+    return map;
+  }
+
+  private boolean testScenario(
+      LocationActorOperation actorOperation,
+      boolean isSuccess,
+      Map<String, Object> data,
+      ResponseCode errorCode) {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request actorMessage = new Request();
+
+    if (data != null) actorMessage.getRequest().putAll(data);
+    actorMessage.setOperation(actorOperation.getValue());
+    subject.tell(actorMessage, probe.getRef());
+
+    if (isSuccess) {
+      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+      return null != res;
+    } else {
+      ProjectCommonException res =
+          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+      return res.getCode().equals(errorCode.getErrorCode())
+          || res.getResponseCode() == errorCode.getResponseCode();
+    }
+  }
+
+  private static Map<String, Object> getDataMap() {
+
+    data = new HashMap();
     data.put(GeoLocationJsonKey.LOCATION_TYPE, "STATE");
     data.put(GeoLocationJsonKey.CODE, "S01");
     data.put(JsonKey.NAME, "DUMMY_STATE");
-    Location location = mapper.convertValue(data, Location.class);
-    PowerMockito.when(LocationDaoFactory.getInstance()).thenReturn(locDaoImpl);
-    PowerMockito.when(locDaoImpl.create(location)).thenReturn(response);
-    actorMessage.setOperation(LocationActorOperation.CREATE_LOCATION.getValue());
-    actorMessage.getRequest().putAll(data);
-    subject.tell(actorMessage, probe.getRef());
-    Response resp = probe.expectMsgClass(ACTOR_MAX_WAIT_DURATION, Response.class);
-    Assert.assertTrue(null != resp);
+    data.put(JsonKey.ID, "id_01");
+    return data;
   }
 
-  @Test
-  public void testUpdateLocation() throws IOException {
+  private static Response getSuccessResponse() {
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    response.put(JsonKey.RESPONSE, response);
-    Map<String, Object> data = new HashMap<String, Object>();
-    data.put(GeoLocationJsonKey.LOCATION_TYPE, "STATE");
-    data.put(GeoLocationJsonKey.CODE, "S01");
-    data.put(JsonKey.NAME, "DUMMY_STATE_CHANGE");
-    data.put(JsonKey.ID, "id_01");
-    Location location = mapper.convertValue(data, Location.class);
-    PowerMockito.when(LocationDaoFactory.getInstance()).thenReturn(locDaoImpl);
-    PowerMockito.when(locDaoImpl.create(location)).thenReturn(response);
-    actorMessage.setOperation(LocationActorOperation.UPDATE_LOCATION.getValue());
-    actorMessage.getRequest().putAll(data);
-    subject.tell(actorMessage, probe.getRef());
-    Response resp = probe.expectMsgClass(ACTOR_MAX_WAIT_DURATION, Response.class);
-    Assert.assertTrue(null != resp);
-  }
-
-  @Test
-  public void testDeleteLocation() throws IOException {
-    Response response = new Response();
-    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    response.put(JsonKey.RESPONSE, response);
-    Map<String, Object> data = new HashMap<String, Object>();
-    data.put(JsonKey.ID, "id_01");
-    Location location = mapper.convertValue(data, Location.class);
-    PowerMockito.when(LocationDaoFactory.getInstance()).thenReturn(locDaoImpl);
-    PowerMockito.when(locDaoImpl.create(location)).thenReturn(response);
-    actorMessage.setOperation(LocationActorOperation.DELETE_LOCATION.getValue());
-    actorMessage.getRequest().putAll(data);
-    subject.tell(actorMessage, probe.getRef());
-    Response resp = probe.expectMsgClass(ACTOR_MAX_WAIT_DURATION, Response.class);
-    Assert.assertTrue(null != resp);
-  }
-
-  @Test
-  public void testSearchLocation() throws IOException {
-    Response response = new Response();
-    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    response.put(JsonKey.RESPONSE, response);
-    Map<String, Object> data = new HashMap<String, Object>();
-    data.put(GeoLocationJsonKey.LOCATION_TYPE, "STATE");
-    data.put(GeoLocationJsonKey.CODE, "S01");
-    data.put(JsonKey.NAME, "DUMMY_STATE_CHANGE");
-    data.put(JsonKey.ID, "id_01");
-    Location location = mapper.convertValue(data, Location.class);
-    PowerMockito.when(LocationDaoFactory.getInstance()).thenReturn(locDaoImpl);
-    PowerMockito.when(locDaoImpl.create(location)).thenReturn(response);
-    actorMessage.setOperation(LocationActorOperation.SEARCH_LOCATION.getValue());
-    actorMessage.getRequest().put(JsonKey.FILTERS, data);
-    subject.tell(actorMessage, probe.getRef());
-    Response resp = probe.expectMsgClass(ACTOR_MAX_WAIT_DURATION, Response.class);
-    Assert.assertTrue(null != resp);
+    return response;
   }
 }

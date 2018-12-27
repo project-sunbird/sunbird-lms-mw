@@ -170,7 +170,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       Boolean isAdded =
           rowsHash.add(
               DigestUtils.md5Hex(
-                  SerializationUtils.serialize(row.get(JsonKey.HIERARCHY).toString())));
+                  SerializationUtils.serialize(row.get(HIERARCHY).toString())));
       if (!isAdded) {
         throwClientErrorException(
             ResponseCode.duplicateRows, ResponseCode.duplicateRows.getErrorMessage() + (i + 1));
@@ -400,7 +400,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       } else {
         Map<String, Object> resultMap =
             Optional.ofNullable(response.getResult()).orElse(new HashMap<>());
-        String message = "Textbook could not be created or updated. ";
+        String message = "Textbook hierarchy could not be created or updated. ";
         if (MapUtils.isNotEmpty(resultMap)) {
           Object obj = Optional.ofNullable(resultMap.get(JsonKey.TB_MESSAGES)).orElse("");
           if (obj instanceof List) {

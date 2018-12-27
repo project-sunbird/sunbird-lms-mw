@@ -119,7 +119,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void testCreateUserSuccessWithUserCallerIdPresent() {
+  public void testCreateUserSuccessWithUserCallerId() {
 
     boolean result =
         testScenario(
@@ -141,7 +141,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void testCreateUserSuccessWithoutUserCallerIdAndChannelANdRootOrgId() {
+  public void testCreateUserSuccessWithoutUserCallerIdChannelAndRootOrgId() {
 
     boolean result =
         testScenario(
@@ -150,7 +150,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void testCreateUserFailureWithInvalidChannelAndOrganisationId() {
+  public void testCreateUserFailureWithInvalidChannelAndOrgId() {
 
     reqMap.put(JsonKey.CHANNEL, "anyReqChannel");
     reqMap.put(JsonKey.ORGANISATION_ID, "anyOrgId");
@@ -204,7 +204,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void testCreateUserFailureWithEmptyOrganisationResponse() {
+  public void testCreateUserFailureWithInvalidOrg() {
 
     when(ElasticSearchUtil.getDataByIdentifier(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
@@ -317,8 +317,8 @@ public class UserManagementActorTest {
     return response;
   }
 
-  private static Map getEsResponseMap() {
-    HashMap<String, Object> map = new HashMap<>();
+  private static Map<String,Object> getEsResponseMap() {
+    Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.IS_ROOT_ORG, true);
     map.put(JsonKey.ID, "rootOrgId");
     map.put(JsonKey.CHANNEL, "anyChannel");

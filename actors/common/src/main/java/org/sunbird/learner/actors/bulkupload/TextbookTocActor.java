@@ -166,7 +166,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     for (int i = 0; i < fileData.size(); i++) {
       Map<String, Object> row = fileData.get(i);
       Boolean isAdded =
-          rowsHash.add(DigestUtils.md5Hex(SerializationUtils.serialize(row.toString())));
+          rowsHash.add(DigestUtils.md5Hex(SerializationUtils.serialize(row.get(JsonKey.HIERARCHY).toString())));
       if (!isAdded) {
         throwClientErrorException(
             ResponseCode.duplicateRows, ResponseCode.duplicateRows.getErrorMessage() + (i + 1));
@@ -344,7 +344,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       for (Map<String, Object> row : data) {
         Map<String, Object> metadata = (Map<String, Object>) row.get(JsonKey.METADATA);
         Map<String, Object> hierarchy = (Map<String, Object>) row.get(JsonKey.HIERARCHY);
-        String id = (String) metadata.get(JsonKey.IDENTIFIER);
+        String id = (String) row.get(JsonKey.IDENTIFIER);
         metadata.remove(JsonKey.IDENTIFIER);
         populateNodeModified(
             (String) hierarchy.get("L:" + (hierarchy.size() - 1)),

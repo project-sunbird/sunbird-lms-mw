@@ -59,8 +59,8 @@ public class UserManagementActor extends BaseActor {
   private static final boolean IS_REGISTRY_ENABLED =
       Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE));
   private UserRequestValidator userRequestValidator = new UserRequestValidator();
-  private UserService userService = new UserServiceImpl();
-  private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
+  private UserService userService = UserServiceImpl.getInstance();
+  private SystemSettingClient systemSettingClient = SystemSettingClientImpl.getInstance();
   private OrganisationClient organisationClient = new OrganisationClientImpl();
   private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private static InterServiceCommunication interServiceCommunication =

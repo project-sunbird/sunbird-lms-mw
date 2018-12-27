@@ -29,7 +29,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -166,7 +168,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     for (int i = 0; i < fileData.size(); i++) {
       Map<String, Object> row = fileData.get(i);
       Boolean isAdded =
-          rowsHash.add(DigestUtils.md5Hex(SerializationUtils.serialize(row.get(JsonKey.HIERARCHY).toString())));
+          rowsHash.add(
+              DigestUtils.md5Hex(
+                  SerializationUtils.serialize(row.get(JsonKey.HIERARCHY).toString())));
       if (!isAdded) {
         throwClientErrorException(
             ResponseCode.duplicateRows, ResponseCode.duplicateRows.getErrorMessage() + (i + 1));
@@ -394,9 +398,20 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
         return response;
       } else {
+        Map<String, Object> resultMap =
+            Optional.ofNullable(response.getResult()).orElse(new HashMap<>());
+        String message = "Textbook could not be created or updated. ";
+        if (MapUtils.isNotEmpty(resultMap)) {
+          Object obj = Optional.ofNullable(resultMap.get(JsonKey.TB_MESSAGES)).orElse("");
+          if (obj instanceof List) {
+            message += ((List<String>) obj).stream().collect(Collectors.joining(";"));
+          } else {
+            message += String.valueOf(obj);
+          }
+        }
         throw new ProjectCommonException(
             response.getResponseCode().name(),
-            response.getParams().getErrmsg() + " " + response.getResult(),
+            message,
             response.getResponseCode().getResponseCode());
       }
     } else {

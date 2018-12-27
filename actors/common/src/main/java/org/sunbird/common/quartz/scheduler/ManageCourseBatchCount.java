@@ -135,22 +135,22 @@ public class ManageCourseBatchCount implements Job {
         if (CollectionUtils.isNotEmpty(courseDetailsList) || totalOpenForEnrollmentCourses != 0) {
           for (Map<String, Object> courseDetail : courseDetailsList) {
             String courseId = (String) courseDetail.get(JsonKey.IDENTIFIER);
-            List<Map<String, Object>> ongoingBatchList =
-                CourseBatchSchedulerUtil.getOngoingAndOpenCourseBatches(courseId, enrollmentType);
-            List<Map<String, Object>> upcomingBatchList =
-                CourseBatchSchedulerUtil.getOngoingAndOpenCourseBatches(courseId, enrollmentType);
-            int activeBatchCount = ongoingBatchList.size() + upcomingBatchList.size();
+            List<Map<String, Object>> ongoingAndUpcomingBatchList =
+                CourseBatchSchedulerUtil.getOngoingAndUpcomingCourseBatches(
+                    courseId, enrollmentType);
+            int openForEnrollmentBatchCount = ongoingAndUpcomingBatchList.size();
             int contentStoreBatchCount = (int) courseDetail.getOrDefault(countName, 0);
             ProjectLogger.log(
                 MessageFormat.format(
                     "ManageCourseBatchCount:findAndFixCoursesWithCountMismatch: (courseId, countInBatch, countInCourse) = ({0}, {1}, {2})",
-                    courseId, activeBatchCount, contentStoreBatchCount),
+                    courseId, openForEnrollmentBatchCount, contentStoreBatchCount),
                 LoggerEnum.INFO.name());
-            if (activeBatchCount != contentStoreBatchCount) {
+            if (openForEnrollmentBatchCount != contentStoreBatchCount) {
               ProjectLogger.log(
                   "ManageCourseBatchCount:findAndFixCoursesWithCountMismatch: Update count in content store",
                   LoggerEnum.INFO.name());
-              CourseBatchSchedulerUtil.updateEkstepContent(courseId, countName, activeBatchCount);
+              CourseBatchSchedulerUtil.updateEkstepContent(
+                  courseId, countName, openForEnrollmentBatchCount);
             }
           }
         }
@@ -235,16 +235,18 @@ public class ManageCourseBatchCount implements Job {
 
   private void updateCourseBatchCount(
       boolean increment, String contentName, String courseId, int size) {
-    int val = (int) courseDetailsMap.get(courseId).getOrDefault(contentName, 0);
-    if (increment) {
-      val += size;
-    } else {
-      val -= size;
-      if (val < 0) {
-        val = 0;
+    if (courseDetailsMap.get(courseId) != null) {
+      int val = (int) courseDetailsMap.get(courseId).getOrDefault(contentName, 0);
+      if (increment) {
+        val += size;
+      } else {
+        val -= size;
+        if (val < 0) {
+          val = 0;
+        }
       }
+      courseDetailsMap.get(courseId).put(contentName, val);
     }
-    courseDetailsMap.get(courseId).put(contentName, val);
   }
 
   private void updateCourseDetailsMap(Map<String, List<Map<String, Object>>> batchMap) {

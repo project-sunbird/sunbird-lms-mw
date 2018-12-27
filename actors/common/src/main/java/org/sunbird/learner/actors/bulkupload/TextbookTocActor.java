@@ -3,6 +3,15 @@ package org.sunbird.learner.actors.bulkupload;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -17,14 +26,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.textbook.FileExtension;
 import org.sunbird.content.textbook.TextBookTocUploader;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import static java.io.File.separator;
 import static java.util.Arrays.asList;
@@ -156,7 +157,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     for (int i = 0; i < fileData.size(); i++) {
       Map<String, Object> row = fileData.get(i);
       Boolean isAdded =
-          rowsHash.add(DigestUtils.md5Hex(SerializationUtils.serialize(row.toString())));
+          rowsHash.add(
+              DigestUtils.md5Hex(
+                  SerializationUtils.serialize(row.get(HIERARCHY).toString())));
       if (!isAdded) {
         throwClientErrorException(
             ResponseCode.duplicateRows, ResponseCode.duplicateRows.getErrorMessage() + (i + 1));
@@ -351,7 +354,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       for (Map<String, Object> row : data) {
         Map<String, Object> metadata = (Map<String, Object>) row.get(JsonKey.METADATA);
         Map<String, Object> hierarchy = (Map<String, Object>) row.get(JsonKey.HIERARCHY);
-        String id = (String) metadata.get(JsonKey.IDENTIFIER);
+        String id = (String) row.get(JsonKey.IDENTIFIER);
         metadata.remove(JsonKey.IDENTIFIER);
         populateNodeModified(
             (String) hierarchy.get("L:" + (hierarchy.size() - 1)),
@@ -401,9 +404,20 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
         return response;
       } else {
+        Map<String, Object> resultMap =
+            Optional.ofNullable(response.getResult()).orElse(new HashMap<>());
+        String message = "Textbook hierarchy could not be created or updated. ";
+        if (MapUtils.isNotEmpty(resultMap)) {
+          Object obj = Optional.ofNullable(resultMap.get(JsonKey.TB_MESSAGES)).orElse("");
+          if (obj instanceof List) {
+            message += ((List<String>) obj).stream().collect(Collectors.joining(";"));
+          } else {
+            message += String.valueOf(obj);
+          }
+        }
         throw new ProjectCommonException(
             response.getResponseCode().name(),
-            response.getParams().getErrmsg() + " " + response.getResult(),
+            message,
             response.getResponseCode().getResponseCode());
       }
     } else {

@@ -345,6 +345,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
         map.put("lastAccessTime", map.get(JsonKey.DATE_TIME));
         if (isNotNull(userInfoCache.get(userId))) {
           map.put(JsonKey.USERNAME, userInfoCache.get(userId).get(JsonKey.USERNAME));
+          map.put(JsonKey.FIRST_NAME, userInfoCache.get(userId).get(JsonKey.FIRST_NAME));
+          map.put(JsonKey.LAST_NAME, userInfoCache.get(userId).get(JsonKey.LAST_NAME));
           map.put("org", orgInfoCache.get(userInfoCache.get(userId).get(JsonKey.ROOT_ORG_ID)));
           if (isNotNull(batchInfoCache.get(map.get(JsonKey.BATCH_ID)))) {
             map.put(

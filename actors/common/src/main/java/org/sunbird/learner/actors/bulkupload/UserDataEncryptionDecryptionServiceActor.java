@@ -1,16 +1,19 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import java.text.MessageFormat;
 import java.util.List;
 import java.util.Map;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
@@ -43,10 +46,27 @@ public class UserDataEncryptionDecryptionServiceActor extends BaseActor {
   private void decryptUserData(Request actorMessage) {
     ProjectLogger.log(
         "DecryptUserData API called by " + actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
+    validateUserIdSize(actorMessage);
     long start = System.currentTimeMillis();
     Response resp = new Response();
     resp.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(resp, self());
+
+    Request backgroundEncryptionRequest = new Request();
+    // backgroundEncryptionRequest.setOperation(ActorOperations.BACKGROUND_ENCRYPTION.getValue());
+    backgroundEncryptionRequest
+        .getRequest()
+        .put(JsonKey.USER_IDs, actorMessage.getRequest().get(JsonKey.USER_IDs));
+
+    try {
+      tellToAnother(backgroundEncryptionRequest);
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "UserDataEncryptionDecryptionServiceActor: decryptUserData: Exception occurred with error message = "
+              + e.getMessage(),
+          e);
+    }
+
     Response response =
         cassandraOperation.getAllRecords(usrDbInfo.getKeySpace(), usrDbInfo.getTableName());
     List<Map<String, Object>> userList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
@@ -96,6 +116,7 @@ public class UserDataEncryptionDecryptionServiceActor extends BaseActor {
   private void encryptUserData(Request actorMessage) {
     ProjectLogger.log(
         "EncryptUserData API called by " + actorMessage.getRequest().get(JsonKey.REQUESTED_BY));
+    validateUserIdSize(actorMessage);
     long start = System.currentTimeMillis();
     Response resp = new Response();
     resp.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
@@ -139,6 +160,20 @@ public class UserDataEncryptionDecryptionServiceActor extends BaseActor {
       }
     } catch (Exception e) {
       ProjectLogger.log("Exception Occurred while encrypting user data ", e);
+    }
+  }
+
+  private void validateUserIdSize(Request actorMessage) {
+    int maximumSizeAllowed =
+        Integer.valueOf(
+            ProjectUtil.getConfigValue(
+                    JsonKey.SUNBIRD_ALLOWED_USERIDS_SIZE_FOR_ENCRYPTION_DECRYPTION)
+                .trim());
+    List<String> userIds = (List<String>) actorMessage.getRequest().get(JsonKey.USER_IDs);
+    if (userIds.size() > maximumSizeAllowed) {
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.sizeLimitExceed,
+          MessageFormat.format(ResponseCode.sizeLimitExceed.getErrorMessage(), maximumSizeAllowed));
     }
   }
 }

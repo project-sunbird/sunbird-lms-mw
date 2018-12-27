@@ -1,6 +1,7 @@
 package org.sunbird.learner.actors;
 
 import static akka.testkit.JavaTestKit.duration;
+import static org.junit.Assert.assertTrue;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 
@@ -11,7 +12,6 @@ import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -21,7 +21,6 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.actor.router.RequestRouter;
-import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.actorutil.impl.InterServiceCommunicationImpl;
@@ -47,7 +46,6 @@ import org.sunbird.user.util.UserUtil;
   Util.class,
   RequestRouter.class,
   SystemSettingClientImpl.class,
-  SunbirdMWService.class,
   UserServiceImpl.class,
   UserUtil.class,
   InterServiceCommunicationFactory.class,
@@ -57,15 +55,8 @@ public class UserManagementActorTest {
 
   private ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(UserManagementActor.class);
-  private static final Map map = getMapData();
 
-  private static Map getMapData() {
-    HashMap<String, Object> map = new HashMap<>();
-    map.put(JsonKey.IS_ROOT_ORG, true);
-    map.put(JsonKey.ID, "rootOrgId");
-    map.put(JsonKey.CHANNEL, "anyChannel");
-    return map;
-  }
+  private static Map<String, Object> reqMap;
 
   @Before
   public void beforeEachTest() {
@@ -73,8 +64,6 @@ public class UserManagementActorTest {
     ActorRef actorRef = mock(ActorRef.class);
     PowerMockito.mockStatic(RequestRouter.class);
     when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
-    PowerMockito.mockStatic(SunbirdMWService.class);
-    SunbirdMWService.tellToBGRouter(Mockito.any(Request.class), Mockito.any(ActorRef.class));
 
     PowerMockito.mockStatic(ServiceFactory.class);
     CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
@@ -114,7 +103,7 @@ public class UserManagementActorTest {
     PowerMockito.mockStatic(ElasticSearchUtil.class);
     when(ElasticSearchUtil.getDataByIdentifier(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(map);
+        .thenReturn(getEsResponseMap());
 
     PowerMockito.mockStatic(Util.class);
     Util.getUserProfileConfig(Mockito.any(ActorRef.class));
@@ -125,164 +114,159 @@ public class UserManagementActorTest {
     Map<String, Object> requestMap = new HashMap<>();
     requestMap.put(JsonKey.TNC_ACCEPTED_ON, 12345678L);
     when(UserUtil.encryptUserData(Mockito.anyMap())).thenReturn(requestMap);
+
+    reqMap = getMapObject();
   }
 
   @Test
-  public void testCreateuserSuccessWithCallerId() {
+  public void testCreateUserSuccessWithUserCallerIdPresent() {
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    HashMap<String, Object> reqMap = getMapObject();
+    boolean result =
+        testScenario(
+            getRequestedObj(
+                true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
+            null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testCreateUserSuccessWithoutUserCallerId() {
+
+    boolean result =
+        testScenario(
+            getRequestedObj(
+                false, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
+            null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testCreateUserSuccessWithoutUserCallerIdAndChannelANdRootOrgId() {
+
+    boolean result =
+        testScenario(
+            getRequestedObj(false, false, true, reqMap, ActorOperations.CREATE_USER), null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testCreateUserFailureWithInvalidChannelAndOrganisationId() {
+
+    reqMap.put(JsonKey.CHANNEL, "anyReqChannel");
     reqMap.put(JsonKey.ORGANISATION_ID, "anyOrgId");
-    reqMap.put(JsonKey.CHANNEL, "anyChannel");
-    subject.tell(
-        getRequestedObj(true, true, true, reqMap, ActorOperations.CREATE_USER), probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
+    boolean result =
+        testScenario(
+            getRequestedObj(false, false, false, reqMap, ActorOperations.CREATE_USER),
+            ResponseCode.parameterMismatch);
+    assertTrue(result);
   }
 
   @Test
-  public void testCreateuserSuccessWithoutCallerId() {
+  public void testCreateUserSuccessWithoutVersion() {
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    HashMap<String, Object> reqMap = getMapObject();
-    reqMap.put(JsonKey.ORGANISATION_ID, "anyOrgId");
-    reqMap.put(JsonKey.CHANNEL, "anyChannel");
-    subject.tell(
-        getRequestedObj(false, true, true, reqMap, ActorOperations.CREATE_USER), probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
+    boolean result =
+        testScenario(
+            getRequestedObj(false, false, false, reqMap, ActorOperations.CREATE_USER), null);
+    assertTrue(result);
   }
 
   @Test
-  public void testCreateuserSuccessWithoutCallerIdAndChannelANdRootOrgId() {
+  public void testCreateUserFailureWithInvalidExternalIds() {
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    HashMap<String, Object> reqMap = getMapObject();
-    subject.tell(
-        getRequestedObj(false, false, true, reqMap, ActorOperations.CREATE_USER), probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
-  }
-
-  @Test
-  public void testCreateuserSuccessWithoutVersion() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    HashMap<String, Object> reqMap = getMapObject();
-    subject.tell(
-        getRequestedObj(false, false, false, reqMap, ActorOperations.CREATE_USER), probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
-  }
-
-  @Test
-  public void testCreateuserFailureWithInvalidExternalIds() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    HashMap<String, Object> reqMap = getMapObject();
     reqMap.put(JsonKey.EXTERNAL_IDS, "anyExternalId");
-    subject.tell(
-        getRequestedObj(false, false, false, reqMap, ActorOperations.CREATE_USER), probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertTrue(res.getCode() == ResponseCode.dataTypeError.getErrorCode());
+    boolean result =
+        testScenario(
+            getRequestedObj(false, false, false, reqMap, ActorOperations.CREATE_USER),
+            ResponseCode.dataTypeError);
+    assertTrue(result);
   }
 
   @Test
-  public void testCreateuserFailureWithInvalidRoles() {
+  public void testCreateUserFailureWithInvalidRoles() {
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    HashMap<String, Object> reqMap = getMapObject();
     reqMap.put(JsonKey.ROLES, "anyRoles");
-    subject.tell(
-        getRequestedObj(false, false, false, reqMap, ActorOperations.CREATE_USER), probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertTrue(res.getCode() == ResponseCode.dataTypeError.getErrorCode());
+    boolean result =
+        testScenario(
+            getRequestedObj(false, false, false, reqMap, ActorOperations.CREATE_USER),
+            ResponseCode.dataTypeError);
+    assertTrue(result);
   }
 
   @Test
-  public void testCreateuserFailureWithInvalidCountryCode() {
+  public void testCreateUserFailureWithInvalidCountryCode() {
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    HashMap<String, Object> reqMap = getMapObject();
     reqMap.put(JsonKey.COUNTRY_CODE, "anyCode");
-    subject.tell(
-        getRequestedObj(false, false, false, reqMap, ActorOperations.CREATE_USER), probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertTrue(res.getCode() == ResponseCode.invalidCountryCode.getErrorCode());
+    boolean result =
+        testScenario(
+            getRequestedObj(false, false, false, reqMap, ActorOperations.CREATE_USER),
+            ResponseCode.invalidCountryCode);
+    assertTrue(result);
   }
 
   @Test
-  public void testCreateuserFailureWithInvalidChannelAndOrganisationId() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    HashMap<String, Object> reqMap = getMapObject();
-    reqMap.put(JsonKey.CHANNEL, "anyReqChannel");
-    reqMap.put(JsonKey.ORGANISATION_ID, "anyOrgId");
-    subject.tell(
-        getRequestedObj(false, false, false, reqMap, ActorOperations.CREATE_USER), probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertTrue(res.getCode() == ResponseCode.parameterMismatch.getErrorCode());
-  }
-
-  @Test
-  public void testCreateuserFailureWithEmptyOrganisationResponse() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    HashMap<String, Object> reqMap = getMapObject();
-    reqMap.put(JsonKey.CHANNEL, "anyReqChannel");
-    reqMap.put(JsonKey.ORGANISATION_ID, "anyOrgId");
+  public void testCreateUserFailureWithEmptyOrganisationResponse() {
 
     when(ElasticSearchUtil.getDataByIdentifier(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(null);
-    subject.tell(
-        getRequestedObj(false, false, false, reqMap, ActorOperations.CREATE_USER), probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertTrue(res.getCode() == ResponseCode.invalidOrgData.getErrorCode());
+    boolean result =
+        testScenario(
+            getRequestedObj(
+                false, false, false, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
+            ResponseCode.invalidOrgData);
+    assertTrue(result);
   }
 
   @Test
   public void testUpdateUserSuccess() {
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    HashMap<String, Object> reqMap = new HashMap<>();
-    reqMap.put(JsonKey.EXTERNAL_ID, "externalId");
-    reqMap.put(JsonKey.EXTERNAL_ID_PROVIDER, "externalIdProvider");
-    reqMap.put(JsonKey.EXTERNAL_ID_TYPE, "externalIdType");
-    subject.tell(
-        getRequestedObj(true, true, true, reqMap, ActorOperations.UPDATE_USER), probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
+    boolean result =
+        testScenario(
+            getRequestedObj(true, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER),
+            null);
+    assertTrue(result);
   }
 
   @Test
-  public void testUpdateUserSuccessWithoutCallerId() {
+  public void testUpdateUserSuccessWithoutUserCallerId() {
+
+    boolean result =
+        testScenario(
+            getRequestedObj(false, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER),
+            null);
+    assertTrue(result);
+  }
+
+  private Map<String, Object> getAdditionalMapData(Map<String, Object> reqMap) {
+    reqMap.put(JsonKey.ORGANISATION_ID, "anyOrgId");
+    reqMap.put(JsonKey.CHANNEL, "anyChannel");
+    return reqMap;
+  }
+
+  private boolean testScenario(Request reqObj, ResponseCode errorCode) {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-    HashMap<String, Object> reqMap = new HashMap<>();
+    subject.tell(reqObj, probe.getRef());
+
+    if (errorCode == null) {
+      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+      return null != res && res.getResponseCode() == ResponseCode.OK;
+    } else {
+      ProjectCommonException res =
+          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+      return res.getCode().equals(errorCode.getErrorCode())
+          || res.getResponseCode() == errorCode.getResponseCode();
+    }
+  }
+
+  private Map<String, Object> getExternalIdMap() {
+
+    Map<String, Object> reqMap = new HashMap<>();
     reqMap.put(JsonKey.EXTERNAL_ID, "externalId");
     reqMap.put(JsonKey.EXTERNAL_ID_PROVIDER, "externalIdProvider");
     reqMap.put(JsonKey.EXTERNAL_ID_TYPE, "externalIdType");
-    subject.tell(
-        getRequestedObj(false, true, true, reqMap, ActorOperations.UPDATE_USER), probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(null != res && res.getResponseCode() == ResponseCode.OK);
+    return reqMap;
   }
 
   private HashMap<String, Object> getMapObject() {
@@ -303,7 +287,7 @@ public class UserManagementActorTest {
       boolean isCallerIdReq,
       boolean isRootOrgIdReq,
       boolean isVersionReq,
-      HashMap<String, Object> reqMap,
+      Map<String, Object> reqMap,
       ActorOperations actorOperation) {
 
     Request reqObj = new Request();
@@ -331,5 +315,13 @@ public class UserManagementActorTest {
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     return response;
+  }
+
+  private static Map getEsResponseMap() {
+    HashMap<String, Object> map = new HashMap<>();
+    map.put(JsonKey.IS_ROOT_ORG, true);
+    map.put(JsonKey.ID, "rootOrgId");
+    map.put(JsonKey.CHANNEL, "anyChannel");
+    return map;
   }
 }

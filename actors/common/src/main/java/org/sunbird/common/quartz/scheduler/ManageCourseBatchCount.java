@@ -77,7 +77,6 @@ public class ManageCourseBatchCount implements Job {
             (List<Map<String, Object>>) data.get(JsonKey.START_DATE);
         for (Map<String, Object> map : listMap) {
           updateCourseBatchStatus(true, false, map);
-          System.out.println(map);
           updateCourseIdToBatchListMap(map);
         }
         handleUpdateBatchCount(true);
@@ -86,7 +85,6 @@ public class ManageCourseBatchCount implements Job {
         List<Map<String, Object>> listMap = (List<Map<String, Object>>) data.get(JsonKey.END_DATE);
         for (Map<String, Object> map : listMap) {
           updateCourseBatchStatus(false, true, map);
-          System.out.println(map);
           updateCourseIdToBatchListMap(map);
         }
         handleUpdateBatchCount(false);
@@ -315,11 +313,11 @@ public class ManageCourseBatchCount implements Job {
                 }
               } catch (Exception e) {
                 ProjectLogger.log(
-                    "ManageCourseBatchCount:doUpdateCourseBatchCount: Casssandra update failed for batchId "
+                    "ManageCourseBatchCount:doUpdateCourseBatchCount: Exception occurred for batch ID = "
                         + map.get(JsonKey.ID)
-                        + " with error "
+                        + " with error message = "
                         + e.getMessage(),
-                    LoggerEnum.INFO);
+                    LoggerEnum.ERROR);
               }
             });
       } else {

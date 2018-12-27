@@ -735,9 +735,18 @@ public class UserProfileReadActor extends BaseActor {
 
   private void updateTncInfo(Map<String, Object> result) {
     SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
-    SystemSetting tncSystemSetting =
-        systemSettingClient.getSystemSettingByField(
-            getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()), JsonKey.TNC_CONFIG);
+    SystemSetting tncSystemSetting = null;
+    try {
+      tncSystemSetting =
+          systemSettingClient.getSystemSettingByField(
+              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()), JsonKey.TNC_CONFIG);
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "UserManagementActor:updateTncInfo: Exception occurred while getting system setting for"
+              + JsonKey.TNC_CONFIG
+              + e.getMessage(),
+          LoggerEnum.ERROR.name());
+    }
     if (tncSystemSetting != null) {
       try {
         ObjectMapper mapper = new ObjectMapper();

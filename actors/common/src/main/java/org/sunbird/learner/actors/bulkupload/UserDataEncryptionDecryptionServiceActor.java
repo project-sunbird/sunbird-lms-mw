@@ -52,14 +52,14 @@ public class UserDataEncryptionDecryptionServiceActor extends BaseActor {
     resp.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(resp, self());
 
-    Request backgroundEncryptionRequest = new Request();
-    // backgroundEncryptionRequest.setOperation(ActorOperations.BACKGROUND_ENCRYPTION.getValue());
-    backgroundEncryptionRequest
+    Request backgroundDecryptionRequest = new Request();
+    // backgroundDecryptionRequest.setOperation(ActorOperations.BACKGROUND_DECRYPTION.getValue());
+    backgroundDecryptionRequest
         .getRequest()
         .put(JsonKey.USER_IDs, actorMessage.getRequest().get(JsonKey.USER_IDs));
 
     try {
-      tellToAnother(backgroundEncryptionRequest);
+      tellToAnother(backgroundDecryptionRequest);
     } catch (Exception e) {
       ProjectLogger.log(
           "UserDataEncryptionDecryptionServiceActor: decryptUserData: Exception occurred with error message = "

@@ -268,7 +268,8 @@ public class EsSyncBackgroundActor extends BaseActor {
   private void backgroundEncrypt(Request request) {
 
     List<String> userIds = (List<String>) request.getRequest().get(JsonKey.USER_IDs);
-    for (String userId : userIds) {}
+    Response response = cassandraOperation.ge	
+    }
   }
 
   private void backgroundDecrypt(Request request) {}

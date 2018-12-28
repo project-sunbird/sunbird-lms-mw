@@ -287,18 +287,6 @@ public final class SchedulerManager {
     String db = System.getenv(JsonKey.SUNBIRD_PG_DB);
     String username = System.getenv(JsonKey.SUNBIRD_PG_USER);
     String password = System.getenv(JsonKey.SUNBIRD_PG_PASSWORD);
-    ProjectLogger.log(
-        "Environment variable value for PostGress SQl= host, port,db,username,password "
-            + host
-            + " ,"
-            + port
-            + ","
-            + db
-            + ","
-            + username
-            + ","
-            + password,
-        LoggerEnum.INFO.name());
     if (!StringUtils.isBlank(host)
         && !StringUtils.isBlank(port)
         && !StringUtils.isBlank(db)

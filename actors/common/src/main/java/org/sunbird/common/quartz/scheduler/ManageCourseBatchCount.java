@@ -96,7 +96,20 @@ public class ManageCourseBatchCount implements Job {
           updateCourseBatchStatus(false, false, map);
           boolean flag = CourseBatchSchedulerUtil.updateDataIntoES(map);
           if (flag) {
-            CourseBatchSchedulerUtil.updateDataIntoCassandra(map);
+            Map<String, Object> updateCourseBatchMap = new WeakHashMap<>();
+            updateCourseBatchMap.put(JsonKey.ID, map.get(JsonKey.ID));
+            updateCourseBatchMap.put(JsonKey.STATUS, map.get(JsonKey.STATUS));
+            updateCourseBatchMap.put(JsonKey.UPDATED_DATE, map.get(JsonKey.UPDATED_DATE));
+            try {
+              CourseBatchSchedulerUtil.updateDataIntoCassandra(updateCourseBatchMap);
+            } catch (Exception e) {
+              ProjectLogger.log(
+                  "ManageCourseBatchCount:execute: Exception occurred for batch ID = "
+                      + map.get(JsonKey.ID)
+                      + " with error message = "
+                      + e.getMessage(),
+                  LoggerEnum.ERROR);
+            }
           }
         }
       }

@@ -38,7 +38,8 @@ public final class SchedulerManager {
   /** This method will register the quartz scheduler job. */
   private void schedule() {
     ProjectLogger.log(
-        "Call to start scheduler jobs - org.sunbird.common.quartz.scheduler.SchedulerManager");
+        "SchedulerManager:schedule: Call to start scheduler jobs - org.sunbird.common.quartz.scheduler.SchedulerManager",
+        LoggerEnum.INFO.name());
 
     try {
       Thread.sleep(240000);
@@ -66,13 +67,14 @@ public final class SchedulerManager {
       scheduleChannelReg(identifier);
     } catch (Exception e) {
       ProjectLogger.log(
-          "Error in starting scheduler jobs - org.sunbird.common.quartz.scheduler.SchedulerManager ",
+          "SchedulerManager:schedule: Error in starting scheduler jobs - org.sunbird.common.quartz.scheduler.SchedulerManager ",
           e);
     } finally {
       registerShutDownHook();
     }
     ProjectLogger.log(
-        "started scheduler jobs - org.sunbird.common.quartz.scheduler.SchedulerManager");
+        "SchedulerManager:schedule: started scheduler jobs - org.sunbird.common.quartz.scheduler.SchedulerManager",
+        LoggerEnum.INFO.name());
   }
 
   public static void scheduleChannelReg(String identifier) {
@@ -99,7 +101,9 @@ public final class SchedulerManager {
       }
       scheduler.scheduleJob(channelRegistrationJob, channelRegistrationTrigger);
       scheduler.start();
-      ProjectLogger.log("channelRegistration schedular started", LoggerEnum.INFO.name());
+      ProjectLogger.log(
+          "SchedulerManager:scheduleChannelReg: channelRegistration schedular started",
+          LoggerEnum.INFO.name());
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
@@ -131,7 +135,9 @@ public final class SchedulerManager {
       }
       scheduler.scheduleJob(updateUserCountJob, updateUserCountTrigger);
       scheduler.start();
-      ProjectLogger.log("UpdateUserCount schedular started", LoggerEnum.INFO.name());
+      ProjectLogger.log(
+          "SchedulerManager:scheduleUpdateUserCountJob: UpdateUserCount schedular started",
+          LoggerEnum.INFO.name());
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
@@ -196,7 +202,9 @@ public final class SchedulerManager {
       }
       scheduler.scheduleJob(coursePublishedJob, coursePublishedTrigger);
       scheduler.start();
-      ProjectLogger.log("CoursePublishedUpdate schedular started", LoggerEnum.INFO.name());
+      ProjectLogger.log(
+          "SchedulerManager:scheduleCoursePublishJob: CoursePublishedUpdate schedular started",
+          LoggerEnum.INFO.name());
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
@@ -228,7 +236,9 @@ public final class SchedulerManager {
       }
       scheduler.scheduleJob(uploadVerifyJob, uploadTrigger);
       scheduler.start();
-      ProjectLogger.log("UploadLookUpScheduler schedular started", LoggerEnum.INFO.name());
+      ProjectLogger.log(
+          "SchedulerManager:scheduleBulkUploadJob: UploadLookUpScheduler schedular started",
+          LoggerEnum.INFO.name());
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
@@ -251,7 +261,8 @@ public final class SchedulerManager {
     String configValue = PropertiesCache.getInstance().readProperty("quartz_course_batch_timer");
     if (StringUtils.isEmpty(configValue)) {
       ProjectLogger.log(
-          "Error in starting Course batch count scheduler , quartz_course_batch_timer value not found");
+          "SchedulerManager:scheduleCourseBatchCount: Error in starting Course batch count scheduler , quartz_course_batch_timer value not found",
+          LoggerEnum.INFO);
       return;
     }
     Trigger trigger =
@@ -267,7 +278,8 @@ public final class SchedulerManager {
       }
       scheduler.scheduleJob(job, trigger);
       scheduler.start();
-      ProjectLogger.log("ManageCourseBatchCount schedular started", LoggerEnum.INFO.name());
+      ProjectLogger.log(
+          "SchedulerManager:scheduleCourseBatchCount: schedular started", LoggerEnum.INFO.name());
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
@@ -287,18 +299,6 @@ public final class SchedulerManager {
     String db = System.getenv(JsonKey.SUNBIRD_PG_DB);
     String username = System.getenv(JsonKey.SUNBIRD_PG_USER);
     String password = System.getenv(JsonKey.SUNBIRD_PG_PASSWORD);
-    ProjectLogger.log(
-        "Environment variable value for PostGress SQl= host, port,db,username,password "
-            + host
-            + " ,"
-            + port
-            + ","
-            + db
-            + ","
-            + username
-            + ","
-            + password,
-        LoggerEnum.INFO.name());
     if (!StringUtils.isBlank(host)
         && !StringUtils.isBlank(port)
         && !StringUtils.isBlank(db)
@@ -311,9 +311,13 @@ public final class SchedulerManager {
           "org.quartz.dataSource.MySqlDS.URL", "jdbc:postgresql://" + host + ":" + port + "/" + db);
       configProp.put("org.quartz.dataSource.MySqlDS.user", username);
       configProp.put("org.quartz.dataSource.MySqlDS.password", password);
+      ProjectLogger.log(
+          "SchedulerManager:setUpClusterMode: Connection is established from environment variable",
+          LoggerEnum.INFO);
     } else {
       ProjectLogger.log(
-          "Environment variable is not set for postgres SQl.", LoggerEnum.INFO.name());
+          "SchedulerManager:setUpClusterMode: Environment variable is not set for postgres SQl.",
+          LoggerEnum.INFO.name());
       configProp = null;
     }
     return configProp;
@@ -337,13 +341,17 @@ public final class SchedulerManager {
   static class ResourceCleanUp extends Thread {
     @Override
     public void run() {
-      ProjectLogger.log("started resource cleanup for Quartz job.");
+      ProjectLogger.log(
+          "SchedulerManager:ResourceCleanUp: started resource cleanup for Quartz job.",
+          LoggerEnum.INFO);
       try {
         scheduler.shutdown();
       } catch (SchedulerException e) {
         ProjectLogger.log(e.getMessage(), e);
       }
-      ProjectLogger.log("completed resource cleanup Quartz job.");
+      ProjectLogger.log(
+          "SchedulerManager:ResourceCleanUp: completed resource cleanup Quartz job.",
+          LoggerEnum.INFO);
     }
   }
 
@@ -351,6 +359,8 @@ public final class SchedulerManager {
   public static void registerShutDownHook() {
     Runtime runtime = Runtime.getRuntime();
     runtime.addShutdownHook(new ResourceCleanUp());
-    ProjectLogger.log("ShutDownHook registered for Quartz scheduler.");
+    ProjectLogger.log(
+        "SchedulerManager:registerShutDownHook: ShutDownHook registered for Quartz scheduler.",
+        LoggerEnum.INFO);
   }
 }

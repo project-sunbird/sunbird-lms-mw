@@ -47,7 +47,10 @@ public final class CourseBatchSchedulerUtil {
    */
   public static Map<String, Object> getBatchDetailsFromES(String startDate, String endDate) {
     ProjectLogger.log(
-        "method call start to collect get course batch data -" + startDate + " " + endDate,
+        "CourseBatchSchedulerUtil:getBatchDetailsFromES: method call start to collect get course batch data -"
+            + startDate
+            + " "
+            + endDate,
         LoggerEnum.INFO.name());
     Map<String, Object> response = new HashMap<>();
     List<Map<String, Object>> courseBatchStartedList = getToBeUpdatedCoursesByDate(startDate, true);
@@ -64,7 +67,10 @@ public final class CourseBatchSchedulerUtil {
       response.put(JsonKey.STATUS, courseBatchStartStatusList);
     }
     ProjectLogger.log(
-        "method call end to collect get course batch data -" + startDate + " " + endDate,
+        "CourseBatchSchedulerUtil:getBatchDetailsFromES: method call end to collect get course batch data -"
+            + startDate
+            + " "
+            + endDate,
         LoggerEnum.INFO.name());
     return response;
   }
@@ -75,7 +81,9 @@ public final class CourseBatchSchedulerUtil {
    * @param map
    */
   public static void updateCourseBatchDbStatus(Map<String, Object> map, Boolean increment) {
-    ProjectLogger.log("updating course batch details start", LoggerEnum.INFO.name());
+    ProjectLogger.log(
+        "CourseBatchSchedulerUtil:updateCourseBatchDbStatus: updating course batch details start",
+        LoggerEnum.INFO.name());
     try {
       boolean response =
           doOperationInEkStepCourse(
@@ -89,10 +97,16 @@ public final class CourseBatchSchedulerUtil {
           updateDataIntoCassandra(map);
         }
       } else {
-        ProjectLogger.log("Ekstep content updatation failed.", LoggerEnum.INFO.name());
+        ProjectLogger.log(
+            "CourseBatchSchedulerUtil:updateCourseBatchDbStatus: Ekstep content update failed for courseId "
+                + (String) map.get(JsonKey.COURSE_ID),
+            LoggerEnum.INFO.name());
       }
     } catch (Exception e) {
-      ProjectLogger.log("Exception occurred while savin data to course batch db ", e);
+      ProjectLogger.log(
+          "CourseBatchSchedulerUtil:updateCourseBatchDbStatus: Exception occurred while savin data to course batch db "
+              + e.getMessage(),
+          LoggerEnum.INFO.name());
     }
   }
 
@@ -107,7 +121,9 @@ public final class CourseBatchSchedulerUtil {
               (String) map.get(JsonKey.ID),
               map);
     } catch (Exception e) {
-      ProjectLogger.log("Exception occurred while saving course batch data to ES", e);
+      ProjectLogger.log(
+          "CourseBatchSchedulerUtil:updateDataIntoES: Exception occurred while saving course batch data to ES",
+          e);
       flag = false;
     }
     return flag;
@@ -119,6 +135,10 @@ public final class CourseBatchSchedulerUtil {
     Util.DbInfo courseBatchDBInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
     cassandraOperation.updateRecord(
         courseBatchDBInfo.getKeySpace(), courseBatchDBInfo.getTableName(), map);
+    ProjectLogger.log(
+        "CourseBatchSchedulerUtil:updateDataIntoCassandra: Update Successful for batchId "
+            + map.get(JsonKey.ID),
+        LoggerEnum.INFO);
   }
 
   private static void addHeaderProps(Map<String, String> header, String key, String value) {
@@ -170,12 +190,16 @@ public final class CourseBatchSchedulerUtil {
     String dateAttribute = isStartDate ? JsonKey.START_DATE : JsonKey.END_DATE;
     String counterAttribute =
         isStartDate ? JsonKey.COUNTER_INCREMENT_STATUS : JsonKey.COUNTER_DECREMENT_STATUS;
+    int status =
+        isStartDate
+            ? ProjectUtil.ProgressStatus.NOT_STARTED.getValue()
+            : ProjectUtil.ProgressStatus.STARTED.getValue();
     SearchDTO dto = new SearchDTO();
     Map<String, Object> map = new HashMap<>();
     Map<String, String> dateRangeFilter = new HashMap<>();
     dateRangeFilter.put("<=", date);
     map.put(dateAttribute, dateRangeFilter);
-    map.put(JsonKey.STATUS, 0);
+    map.put(JsonKey.STATUS, status);
     map.put(counterAttribute, false);
     dto.addAdditionalProperty(JsonKey.FILTERS, map);
     return searchContent(dto);

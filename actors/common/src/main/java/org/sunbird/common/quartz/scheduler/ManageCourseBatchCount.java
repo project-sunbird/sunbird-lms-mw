@@ -8,6 +8,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.quartz.Job;
@@ -220,9 +221,9 @@ public class ManageCourseBatchCount implements Job {
 
   private void updateAllCourseBatchCount(boolean increment) {
     for (Map.Entry<String, List<Map<String, Object>>> openBatchList : openBatchMap.entrySet()) {
-      String contentName = CourseBatchSchedulerUtil.getCountName(JsonKey.OPEN);
+      String countName = CourseBatchSchedulerUtil.getCountName(JsonKey.OPEN);
       updateCourseBatchCount(
-          increment, contentName, openBatchList.getKey(), openBatchList.getValue().size());
+          increment, countName, openBatchList.getKey(), openBatchList.getValue().size());
     }
     for (Map.Entry<String, List<Map<String, Object>>> privateBatchList :
         privateBatchMap.entrySet()) {
@@ -294,13 +295,34 @@ public class ManageCourseBatchCount implements Job {
       if (response) {
         batchMapList.forEach(
             map -> {
-              if (CourseBatchSchedulerUtil.updateDataIntoES(map)) {
-                CourseBatchSchedulerUtil.updateDataIntoCassandra(map);
+              try {
+                if (CourseBatchSchedulerUtil.updateDataIntoES(map)) {
+                  Map<String, Object> updateCourseBatchMap = new WeakHashMap<>();
+                  updateCourseBatchMap.put(JsonKey.ID, map.get(JsonKey.ID));
+                  updateCourseBatchMap.put(
+                      JsonKey.COUNTER_INCREMENT_STATUS, map.get(JsonKey.COUNTER_INCREMENT_STATUS));
+                  updateCourseBatchMap.put(
+                      JsonKey.COUNT_INCREMENT_DATE, map.get(JsonKey.COUNT_INCREMENT_DATE));
+                  updateCourseBatchMap.put(
+                      JsonKey.COUNTER_DECREMENT_STATUS, map.get(JsonKey.COUNTER_DECREMENT_STATUS));
+                  updateCourseBatchMap.put(
+                      JsonKey.COUNT_DECREMENT_DATE, map.get(JsonKey.COUNT_DECREMENT_DATE));
+                  updateCourseBatchMap.put(JsonKey.STATUS, map.get(JsonKey.STATUS));
+                  updateCourseBatchMap.put(JsonKey.UPDATED_DATE, map.get(JsonKey.UPDATED_DATE));
+                  CourseBatchSchedulerUtil.updateDataIntoCassandra(updateCourseBatchMap);
+                }
+              } catch (Exception e) {
+                ProjectLogger.log(
+                    "ManageCourseBatchCount:doUpdateCourseBatchCount: Exception occurred for batch ID = "
+                        + map.get(JsonKey.ID)
+                        + " with error message = "
+                        + e.getMessage(),
+                    LoggerEnum.ERROR);
               }
             });
       } else {
         ProjectLogger.log(
-            "ManagerCourseBatchCount: updateDetailsMap: Update count failed for courseId "
+            "ManagerCourseBatchCount:doUpdateCourseBatchCount: Update count failed for courseId = "
                 + courseId,
             LoggerEnum.INFO);
       }

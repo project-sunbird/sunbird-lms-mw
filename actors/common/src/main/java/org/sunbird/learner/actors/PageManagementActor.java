@@ -283,44 +283,56 @@ public class PageManagementActor extends BaseActor {
           ResponseCode.errorInvalidPageSection.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-    List<Future<Map<String, Object>>> sectionList = new ArrayList<>();
-    if (arr != null) {
-      for (Object obj : arr) {
-        Map<String, Object> sectionMap = (Map<String, Object>) obj;
-        Map<String, Object> sectionData =
-            new HashMap<>(DataCacheHandler.getSectionMap().get(sectionMap.get(JsonKey.ID)));
-        Future<Map<String, Object>> contentFuture =
-            getContentData(
-                sectionData,
-                reqFilters,
-                headers,
-                filterMap,
-                urlQueryString,
-                sectionMap.get(JsonKey.GROUP),
-                sectionMap.get(JsonKey.INDEX));
-        sectionList.add(contentFuture);
-      }
-    }
 
-    Future<Iterable<Map<String, Object>>> sctionsFuture =
-        Futures.sequence(sectionList, getContext().dispatcher());
-    Future<Response> response =
-        sctionsFuture.map(
-            new Mapper<Iterable<Map<String, Object>>, Response>() {
-              @Override
-              public Response apply(Iterable<Map<String, Object>> sections) {
-                ArrayList<Map<String, Object>> sectionList = Lists.newArrayList(sections);
-                Map<String, Object> result = new HashMap<>();
-                result.put(JsonKey.NAME, pageMap.get(JsonKey.NAME));
-                result.put(JsonKey.ID, pageMap.get(JsonKey.ID));
-                result.put(JsonKey.SECTIONS, sectionList);
-                Response response = new Response();
-                response.put(JsonKey.RESPONSE, result);
-                return response;
-              }
-            },
-            getContext().dispatcher());
-    Patterns.pipe(response, getContext().dispatcher()).to(sender());
+    try {
+      List<Future<Map<String, Object>>> sectionList = new ArrayList<>();
+      if (arr != null) {
+        for (Object obj : arr) {
+          Map<String, Object> sectionMap = (Map<String, Object>) obj;
+          Map<String, Object> sectionData =
+                  new HashMap<>(DataCacheHandler.getSectionMap().get(sectionMap.get(JsonKey.ID)));
+          Future<Map<String, Object>> contentFuture =
+                  getContentData(
+                          sectionData,
+                          reqFilters,
+                          headers,
+                          filterMap,
+                          urlQueryString,
+                          sectionMap.get(JsonKey.GROUP),
+                          sectionMap.get(JsonKey.INDEX));
+          sectionList.add(contentFuture);
+        }
+      }
+
+      Future<Iterable<Map<String, Object>>> sctionsFuture =
+              Futures.sequence(sectionList, getContext().dispatcher());
+      Future<Response> response =
+              sctionsFuture.map(
+                      new Mapper<Iterable<Map<String, Object>>, Response>() {
+                        @Override
+                        public Response apply(Iterable<Map<String, Object>> sections) {
+                          ProjectLogger.log(
+                                  "PageManagementActor:getPageData: apply called ", LoggerEnum.INFO);
+                          ArrayList<Map<String, Object>> sectionList = Lists.newArrayList(sections);
+                          Map<String, Object> result = new HashMap<>();
+                          result.put(JsonKey.NAME, pageMap.get(JsonKey.NAME));
+                          result.put(JsonKey.ID, pageMap.get(JsonKey.ID));
+                          result.put(JsonKey.SECTIONS, sectionList);
+                          Response response = new Response();
+                          response.put(JsonKey.RESPONSE, result);
+                          ProjectLogger.log(
+                                  "PageManagementActor:getPageData: response = " + response, LoggerEnum.INFO);
+                          return response;
+                        }
+                      },
+                      getContext().dispatcher());
+      Patterns.pipe(response, getContext().dispatcher()).to(sender());
+    } catch (Exception e) {
+      ProjectLogger.log(
+              "PageManagementActor:getPageData: Exception occurred with error message = " + e.getMessage(), LoggerEnum.INFO);
+      ProjectLogger.log(
+              "PageManagementActor:getPageData: Exception occurred with error message = " + e.getMessage(), e);
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -540,6 +552,8 @@ public class PageManagementActor extends BaseActor {
         new Mapper<Map<String, Object>, Map<String, Object>>() {
           @Override
           public Map<String, Object> apply(Map<String, Object> result) {
+            ProjectLogger.log(
+                    "PageManagementActor:getContentData:apply: result = " + result, LoggerEnum.INFO);
             if (MapUtils.isNotEmpty(result)) {
               section.putAll(result);
               section.remove(JsonKey.PARAMS);
@@ -549,6 +563,8 @@ public class PageManagementActor extends BaseActor {
               section.put(JsonKey.GROUP, group);
               section.put(JsonKey.INDEX, index);
               removeUnwantedData(section, "getPageData");
+              ProjectLogger.log(
+                      "PageManagementActor:getContentData:apply: section = " + section, LoggerEnum.INFO);
             }
             return section;
           }

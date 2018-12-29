@@ -321,13 +321,6 @@ public class PageManagementActor extends BaseActor {
                           result.put(JsonKey.SECTIONS, sectionList);
                           Response response = new Response();
                           response.put(JsonKey.RESPONSE, result);
-                          try {
-                            ProjectLogger.log(
-                                    "PageManagementActor:getPageData: response = " + new ObjectMapper().writeValueAsString(response), LoggerEnum.INFO);
-                          } catch (JsonProcessingException e) {
-                            ProjectLogger.log(
-                                    "PageManagementActor:getPageData: Exception occurred with error message = " + e.getMessage(), LoggerEnum.ERROR);
-                          }
                           return response;
                         }
                       },

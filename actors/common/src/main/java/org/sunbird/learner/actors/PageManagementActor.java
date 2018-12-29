@@ -335,7 +335,7 @@ public class PageManagementActor extends BaseActor {
       Patterns.pipe(response, getContext().dispatcher()).to(sender());
     } catch (Exception e) {
       ProjectLogger.log(
-              "PageManagementActor:getPageData: Exception occurred with error message = " + e.getMessage(), LoggerEnum.INFO);
+              "PageManagementActor:getPageData: Exception occurred with error message = " + e.getMessage(), LoggerEnum.ERROR);
       ProjectLogger.log(
               "PageManagementActor:getPageData: Exception occurred with error message = " + e.getMessage(), e);
     }

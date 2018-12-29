@@ -3,6 +3,7 @@ package org.sunbird.learner.actors;
 import akka.dispatch.Futures;
 import akka.dispatch.Mapper;
 import akka.pattern.Patterns;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import java.io.IOException;
@@ -320,8 +321,13 @@ public class PageManagementActor extends BaseActor {
                           result.put(JsonKey.SECTIONS, sectionList);
                           Response response = new Response();
                           response.put(JsonKey.RESPONSE, result);
-                          ProjectLogger.log(
-                                  "PageManagementActor:getPageData: response = " + response, LoggerEnum.INFO);
+                          try {
+                            ProjectLogger.log(
+                                    "PageManagementActor:getPageData: response = " + new ObjectMapper().writeValueAsString(response), LoggerEnum.INFO);
+                          } catch (JsonProcessingException e) {
+                            ProjectLogger.log(
+                                    "PageManagementActor:getPageData: Exception occurred with error message = " + e.getMessage(), LoggerEnum.ERROR);
+                          }
                           return response;
                         }
                       },

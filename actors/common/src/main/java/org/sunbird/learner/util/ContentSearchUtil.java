@@ -157,6 +157,9 @@ public class ContentSearchUtil {
       } else if (value instanceof JSONObject) {
         value = jsonToMap((JSONObject) value);
       }
+      if (value == JSONObject.NULL) {
+        value = null;
+      }
       map.put(key, value);
     }
     return map;

@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -25,6 +26,7 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
@@ -36,6 +38,8 @@ import org.sunbird.learner.util.Util.DbInfo;
 public class EsSyncBackgroundActor extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+  private Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -56,6 +60,7 @@ public class EsSyncBackgroundActor extends BaseActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void sync(Request message) {
     ProjectLogger.log("EsSyncBackgroundActor: sync called", LoggerEnum.INFO);
 
@@ -187,6 +192,7 @@ public class EsSyncBackgroundActor extends BaseActor {
     return type;
   }
 
+  @SuppressWarnings("unchecked")
   private Map<String, Object> getOrgDetails(Entry<String, Object> entry) {
     ProjectLogger.log("EsSyncBackgroundActor: getOrgDetails called", LoggerEnum.INFO);
     Map<String, Object> orgMap = (Map<String, Object>) entry.getValue();
@@ -238,6 +244,7 @@ public class EsSyncBackgroundActor extends BaseActor {
     return userMap;
   }
 
+  @SuppressWarnings("unchecked")
   private Map<String, Object> getDetailsById(DbInfo dbInfo, String userId) {
     try {
       Response response =
@@ -266,11 +273,105 @@ public class EsSyncBackgroundActor extends BaseActor {
   }
 
   private void backgroundEncrypt(Request request) {
+    List<Map<String, Object>> userDetails = getUserDetails(request);
+    int i = 0;
+    for (Map<String, Object> userMap : userDetails) {
+      if (ProjectUtil.isEmailvalid((String) userMap.get(JsonKey.EMAIL))
+          || ((String) userMap.get(JsonKey.PHONE)).length() < 14) {
+        encryptUserDataAndUpdateDb(userMap);
+        i++;
+      }
+    }
+    ProjectLogger.log(
+        "EsSyncBackgroundActor:backgroundEncrypt: total number of user details encrypted is: " + i,
+        LoggerEnum.INFO);
+  }
 
+  private void backgroundDecrypt(Request request) {
+    List<Map<String, Object>> userDetails = getUserDetails(request);
+    int i = 0;
+    if (userDetails != null) {
+      for (Map<String, Object> userMap : userDetails) {
+        if (!ProjectUtil.isEmailvalid((String) userMap.get(JsonKey.EMAIL))
+            || !(((String) userMap.get(JsonKey.PHONE)).length() < 14)) {
+          decryptUserDataAndUpdateDb(userMap);
+          i++;
+        }
+      }
+    }
+    ProjectLogger.log(
+        "EsSyncBackgroundActor:backgroundDecrypt: total number of user details encrypted is: " + i,
+        LoggerEnum.INFO);
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<Map<String, Object>> getUserDetails(Request request) {
     List<String> userIds = (List<String>) request.getRequest().get(JsonKey.USER_IDs);
-    Response response = cassandraOperation.ge	
+    Response response =
+        cassandraOperation.getRecordsByIdsWithSpecifiedColumns(
+            JsonKey.SUNBIRD, JsonKey.USER, null, userIds);
+    List<Map<String, Object>> userList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if (CollectionUtils.isEmpty(userList)) return null;
+    return userList;
+  }
+
+  private void decryptUserDataAndUpdateDb(Map<String, Object> userMap) {
+    try {
+      UserUtility.decryptUserData(userMap);
+      cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
+      getUserAddressDataDecryptAndUpdateDb((String) userMap.get(JsonKey.ID));
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "Exception Occurred while decrypting user data for userId "
+              + ((String) userMap.get(JsonKey.ID)),
+          e);
     }
   }
 
-  private void backgroundDecrypt(Request request) {}
+  @SuppressWarnings("unchecked")
+  private void getUserAddressDataDecryptAndUpdateDb(String userId) {
+    Response response =
+        cassandraOperation.getRecordsByProperty(
+            addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
+    List<Map<String, Object>> addressList =
+        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    try {
+      UserUtility.decryptUserAddressData(addressList);
+      for (Map<String, Object> address : addressList) {
+        cassandraOperation.updateRecord(
+            addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), address);
+      }
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "Exception Occurred while decrypting user address data for userId " + (userId), e);
+    }
+  }
+
+  private void encryptUserDataAndUpdateDb(Map<String, Object> userMap) {
+    try {
+      UserUtility.encryptUserData(userMap);
+      cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
+      getUserAddressDataEncryptAndUpdateDb((String) userMap.get(JsonKey.ID));
+    } catch (Exception e) {
+      ProjectLogger.log("Exception Occurred while encrypting user data ", e);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void getUserAddressDataEncryptAndUpdateDb(String userId) {
+    Response response =
+        cassandraOperation.getRecordsByProperty(
+            addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
+    List<Map<String, Object>> addressList =
+        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    try {
+      UserUtility.encryptUserAddressData(addressList);
+      for (Map<String, Object> address : addressList) {
+        cassandraOperation.updateRecord(
+            addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), address);
+      }
+    } catch (Exception e) {
+      ProjectLogger.log("Exception Occurred while encrypting user data ", e);
+    }
+  }
 }

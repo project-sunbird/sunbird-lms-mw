@@ -1,6 +1,7 @@
 package org.sunbird.learner.actors.otp;
 
 import java.util.Map;
+
 import org.apache.commons.collections.MapUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -13,7 +14,6 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.otp.service.OTPService;
-import org.sunbird.learner.actors.user.service.UserService;
 import org.sunbird.learner.util.OTPUtil;
 import org.sunbird.ratelimit.limiter.OtpRateLimiter;
 import org.sunbird.ratelimit.limiter.RateLimiter;
@@ -26,7 +26,6 @@ import org.sunbird.ratelimit.service.RateLimitServiceImpl;
 )
 public class OTPActor extends BaseActor {
 
-  private UserService userService = new UserService();
   private OTPService otpService = new OTPService();
   private RateLimitService rateLimitService = new RateLimitServiceImpl();
 
@@ -43,7 +42,7 @@ public class OTPActor extends BaseActor {
 
   private void generateOTP(Request request) {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
-    String key = (String) request.getRequest().get(JsonKey.KEY);
+    String key = getKey(type, request);
 
     rateLimitService.throttleByKey(
         key, new RateLimiter[] {OtpRateLimiter.HOUR, OtpRateLimiter.DAY});
@@ -67,7 +66,7 @@ public class OTPActor extends BaseActor {
 
   private void verifyOTP(Request request) {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
-    String key = (String) request.getRequest().get(JsonKey.KEY);
+    String key = getKey(type, request);
     String otpInRequest = (String) request.getRequest().get(JsonKey.OTP);
 
     Map<String, Object> otpDetails = otpService.getOTPDetails(type, key);
@@ -105,5 +104,13 @@ public class OTPActor extends BaseActor {
 
     // Sent OTP via email or sms
     tellToAnother(sendOtpRequest);
+  }
+
+  private String getKey(String type, Request request) {
+    String key = (String) request.getRequest().get(JsonKey.KEY);
+    if (JsonKey.EMAIL.equalsIgnoreCase(type) && key != null) {
+      return key.toLowerCase();
+    }
+    return key;
   }
 }

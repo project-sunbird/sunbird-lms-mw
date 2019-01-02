@@ -142,6 +142,13 @@ public final class Util {
             OrgStatus.RETIRED.getValue()));
     orgStatusTransition.put(
         OrgStatus.RETIRED.getValue(), Arrays.asList(OrgStatus.RETIRED.getValue()));
+    orgStatusTransition.put(
+        null,
+        Arrays.asList(
+            OrgStatus.ACTIVE.getValue(),
+            OrgStatus.INACTIVE.getValue(),
+            OrgStatus.BLOCKED.getValue(),
+            OrgStatus.RETIRED.getValue()));
   }
 
   private static void initializeAuditLogUrl() {
@@ -1480,7 +1487,7 @@ public final class Util {
       Map<String, Object> privateFieldsMap = new HashMap<>();
       for (String field : completeProfileVisibilityMap.keySet()) {
         if (JsonKey.PRIVATE.equalsIgnoreCase(completeProfileVisibilityMap.get(field))) {
-          privateFieldsMap.put(field, userMap.get(field));
+          privateFieldsMap.put(field, userMap.remove(field));
         }
       }
       ElasticSearchUtil.upsertData(

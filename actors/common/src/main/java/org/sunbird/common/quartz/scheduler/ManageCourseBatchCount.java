@@ -1,12 +1,15 @@
 /** */
 package org.sunbird.common.quartz.scheduler;
 
+import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
@@ -33,6 +36,7 @@ public class ManageCourseBatchCount implements Job {
 
   @SuppressWarnings("unchecked")
   public void execute(JobExecutionContext ctx) throws JobExecutionException {
+
     ProjectLogger.log(
         "Executing COURSE_BATCH_COUNT job at: "
             + Calendar.getInstance().getTime()
@@ -92,7 +96,20 @@ public class ManageCourseBatchCount implements Job {
           updateCourseBatchStatus(false, false, map);
           boolean flag = CourseBatchSchedulerUtil.updateDataIntoES(map);
           if (flag) {
-            CourseBatchSchedulerUtil.updateDataIntoCassandra(map);
+            Map<String, Object> updateCourseBatchMap = new WeakHashMap<>();
+            updateCourseBatchMap.put(JsonKey.ID, map.get(JsonKey.ID));
+            updateCourseBatchMap.put(JsonKey.STATUS, map.get(JsonKey.STATUS));
+            updateCourseBatchMap.put(JsonKey.UPDATED_DATE, map.get(JsonKey.UPDATED_DATE));
+            try {
+              CourseBatchSchedulerUtil.updateDataIntoCassandra(updateCourseBatchMap);
+            } catch (Exception e) {
+              ProjectLogger.log(
+                  "ManageCourseBatchCount:execute: Exception occurred for batch ID = "
+                      + map.get(JsonKey.ID)
+                      + " with error message = "
+                      + e.getMessage(),
+                  LoggerEnum.ERROR);
+            }
           }
         }
       }
@@ -100,7 +117,60 @@ public class ManageCourseBatchCount implements Job {
       ProjectLogger.log(
           "No data found in Elasticsearch for course batch update.", LoggerEnum.INFO.name());
     }
+    findAndFixCoursesWithCountMismatch(JsonKey.OPEN);
+    findAndFixCoursesWithCountMismatch(JsonKey.INVITE_ONLY);
     TelemetryUtil.telemetryProcessingCall(logInfo, null, null, "LOG");
+  }
+
+  @SuppressWarnings("unchecked")
+  private void findAndFixCoursesWithCountMismatch(String enrollmentType) {
+    // Get some page SIZE of courses using content search with open (or invite only) batch count > 0
+    // For each course, compare the number of open (or invite only) batches with the count in course
+    // metadata with
+    // start date <= yesterday end date >= today
+    // If not matching update the count in content store
+    // If more records, then repeat step 1
+
+    ProjectLogger.log(
+        "ManageCourseBatchCount: findAndFixCoursesWithCountMismatch called with enrollmentType = "
+            + enrollmentType,
+        LoggerEnum.INFO.name());
+
+    String countName = CourseBatchSchedulerUtil.getCountName(enrollmentType);
+    int totalOpenForEnrollmentCourses = 0;
+    int offset = 0;
+    do {
+      Map<String, Object> response =
+          CourseBatchSchedulerUtil.getOpenForEnrollmentCourses(countName, offset);
+      if (MapUtils.isNotEmpty(response)) {
+        totalOpenForEnrollmentCourses = (int) response.get(JsonKey.COUNT);
+        List<Map<String, Object>> courseDetailsList =
+            (List<Map<String, Object>>) response.get(JsonKey.CONTENTS);
+        if (CollectionUtils.isNotEmpty(courseDetailsList) || totalOpenForEnrollmentCourses != 0) {
+          for (Map<String, Object> courseDetail : courseDetailsList) {
+            String courseId = (String) courseDetail.get(JsonKey.IDENTIFIER);
+            List<Map<String, Object>> ongoingAndUpcomingBatchList =
+                CourseBatchSchedulerUtil.getOngoingAndUpcomingCourseBatches(
+                    courseId, enrollmentType);
+            int openForEnrollmentBatchCount = ongoingAndUpcomingBatchList.size();
+            int contentStoreBatchCount = (int) courseDetail.getOrDefault(countName, 0);
+            ProjectLogger.log(
+                MessageFormat.format(
+                    "ManageCourseBatchCount:findAndFixCoursesWithCountMismatch: (courseId, countInBatch, countInCourse) = ({0}, {1}, {2})",
+                    courseId, openForEnrollmentBatchCount, contentStoreBatchCount),
+                LoggerEnum.INFO.name());
+            if (openForEnrollmentBatchCount != contentStoreBatchCount) {
+              ProjectLogger.log(
+                  "ManageCourseBatchCount:findAndFixCoursesWithCountMismatch: Update count in content store",
+                  LoggerEnum.INFO.name());
+              CourseBatchSchedulerUtil.updateEkstepContent(
+                  courseId, countName, openForEnrollmentBatchCount);
+            }
+          }
+        }
+      }
+      offset += 100;
+    } while (offset < totalOpenForEnrollmentCourses);
   }
 
   private Map<String, Object> genarateLogInfo(String logType, String message) {
@@ -164,9 +234,9 @@ public class ManageCourseBatchCount implements Job {
 
   private void updateAllCourseBatchCount(boolean increment) {
     for (Map.Entry<String, List<Map<String, Object>>> openBatchList : openBatchMap.entrySet()) {
-      String contentName = CourseBatchSchedulerUtil.getCountName(JsonKey.OPEN);
+      String countName = CourseBatchSchedulerUtil.getCountName(JsonKey.OPEN);
       updateCourseBatchCount(
-          increment, contentName, openBatchList.getKey(), openBatchList.getValue().size());
+          increment, countName, openBatchList.getKey(), openBatchList.getValue().size());
     }
     for (Map.Entry<String, List<Map<String, Object>>> privateBatchList :
         privateBatchMap.entrySet()) {
@@ -179,16 +249,18 @@ public class ManageCourseBatchCount implements Job {
 
   private void updateCourseBatchCount(
       boolean increment, String contentName, String courseId, int size) {
-    int val = (int) courseDetailsMap.get(courseId).getOrDefault(contentName, 0);
-    if (increment) {
-      val += size;
-    } else {
-      val -= size;
-      if (val < 0) {
-        val = 0;
+    if (courseDetailsMap.get(courseId) != null) {
+      int val = (int) courseDetailsMap.get(courseId).getOrDefault(contentName, 0);
+      if (increment) {
+        val += size;
+      } else {
+        val -= size;
+        if (val < 0) {
+          val = 0;
+        }
       }
+      courseDetailsMap.get(courseId).put(contentName, val);
     }
-    courseDetailsMap.get(courseId).put(contentName, val);
   }
 
   private void updateCourseDetailsMap(Map<String, List<Map<String, Object>>> batchMap) {
@@ -236,13 +308,34 @@ public class ManageCourseBatchCount implements Job {
       if (response) {
         batchMapList.forEach(
             map -> {
-              if (CourseBatchSchedulerUtil.updateDataIntoES(map)) {
-                CourseBatchSchedulerUtil.updateDataIntoCassandra(map);
+              try {
+                if (CourseBatchSchedulerUtil.updateDataIntoES(map)) {
+                  Map<String, Object> updateCourseBatchMap = new WeakHashMap<>();
+                  updateCourseBatchMap.put(JsonKey.ID, map.get(JsonKey.ID));
+                  updateCourseBatchMap.put(
+                      JsonKey.COUNTER_INCREMENT_STATUS, map.get(JsonKey.COUNTER_INCREMENT_STATUS));
+                  updateCourseBatchMap.put(
+                      JsonKey.COUNT_INCREMENT_DATE, map.get(JsonKey.COUNT_INCREMENT_DATE));
+                  updateCourseBatchMap.put(
+                      JsonKey.COUNTER_DECREMENT_STATUS, map.get(JsonKey.COUNTER_DECREMENT_STATUS));
+                  updateCourseBatchMap.put(
+                      JsonKey.COUNT_DECREMENT_DATE, map.get(JsonKey.COUNT_DECREMENT_DATE));
+                  updateCourseBatchMap.put(JsonKey.STATUS, map.get(JsonKey.STATUS));
+                  updateCourseBatchMap.put(JsonKey.UPDATED_DATE, map.get(JsonKey.UPDATED_DATE));
+                  CourseBatchSchedulerUtil.updateDataIntoCassandra(updateCourseBatchMap);
+                }
+              } catch (Exception e) {
+                ProjectLogger.log(
+                    "ManageCourseBatchCount:doUpdateCourseBatchCount: Exception occurred for batch ID = "
+                        + map.get(JsonKey.ID)
+                        + " with error message = "
+                        + e.getMessage(),
+                    LoggerEnum.ERROR);
               }
             });
       } else {
         ProjectLogger.log(
-            "ManagerCourseBatchCount: updateDetailsMap: Update count failed for courseId "
+            "ManagerCourseBatchCount:doUpdateCourseBatchCount: Update count failed for courseId = "
                 + courseId,
             LoggerEnum.INFO);
       }

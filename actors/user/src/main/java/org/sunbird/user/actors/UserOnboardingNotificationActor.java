@@ -36,7 +36,7 @@ public class UserOnboardingNotificationActor extends BaseActor {
     Map<String, Object> requestMap = request.getRequest();
     // generate required action link and shorten the url
     UserUtility.decryptUserData(requestMap);
-    requestMap.put(JsonKey.USERNAME, requestMap.get(JsonKey.LOGIN_ID));
+    requestMap.put(JsonKey.USERNAME, requestMap.get(JsonKey.USERNAME));
     requestMap.put(JsonKey.REDIRECT_URI, Util.getSunbirdWebUrlPerTenent(requestMap));
     Util.getUserRequiredActionLink(requestMap);
     // user created successfully send the onboarding mail

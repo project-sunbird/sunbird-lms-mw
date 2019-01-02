@@ -285,6 +285,7 @@ public class EsSyncBackgroundActor extends BaseActor {
     ProjectLogger.log(
         "EsSyncBackgroundActor:backgroundEncrypt: total number of user details encrypted is: " + i,
         LoggerEnum.INFO);
+    syncToES(request);
   }
 
   private void backgroundDecrypt(Request request) {
@@ -302,6 +303,7 @@ public class EsSyncBackgroundActor extends BaseActor {
     ProjectLogger.log(
         "EsSyncBackgroundActor:backgroundDecrypt: total number of user details encrypted is: " + i,
         LoggerEnum.INFO);
+    syncToES(request);
   }
 
   @SuppressWarnings("unchecked")
@@ -372,6 +374,26 @@ public class EsSyncBackgroundActor extends BaseActor {
       }
     } catch (Exception e) {
       ProjectLogger.log("Exception Occurred while encrypting user data ", e);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void syncToES(Request request) {
+
+    Request backgroundSyncRequest = new Request();
+    backgroundSyncRequest.setOperation(ActorOperations.BACKGROUND_SYNC.getValue());
+    Map<String, Object> requestMap = new HashMap<>();
+    requestMap.put(JsonKey.OBJECT_TYPE, JsonKey.USER);
+    requestMap.put(JsonKey.OBJECT_IDS, (List<String>) request.get(JsonKey.USER_IDs));
+    backgroundSyncRequest.getRequest().put(JsonKey.DATA, requestMap);
+
+    try {
+      tellToAnother(backgroundSyncRequest);
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "EsSyncActor:triggerBackgroundSync: Exception occurred with error message = "
+              + e.getMessage(),
+          e);
     }
   }
 }

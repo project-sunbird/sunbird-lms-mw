@@ -69,7 +69,9 @@ public class UserDataEncryptionDecryptionServiceActor extends BaseActor {
     }
     long end = System.currentTimeMillis();
     ProjectLogger.log(
-        "UserDataEncryptionDecryptionServiceActor:encryptionDecryptionData: total time taken by application to decrypt user data:::: "
+        "UserDataEncryptionDecryptionServiceActor:encryptionDecryptionData: total time taken by "
+            + backgroundOperation
+            + " user data:::: "
             + (end - start));
   }
 

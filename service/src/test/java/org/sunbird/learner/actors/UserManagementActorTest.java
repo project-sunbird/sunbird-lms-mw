@@ -27,7 +27,6 @@ import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.actorutil.impl.InterServiceCommunicationImpl;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
-import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -42,9 +41,6 @@ import org.sunbird.content.util.ContentStoreUtil;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
-import org.sunbird.services.sso.SSOManager;
-import org.sunbird.services.sso.SSOServiceFactory;
-import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.actors.UserManagementActor;
 import org.sunbird.user.dao.impl.UserExternalIdentityDaoImpl;
@@ -64,7 +60,6 @@ import org.sunbird.user.util.UserUtil;
   InterServiceCommunicationFactory.class,
   DataCacheHandler.class,
   TelemetryUtil.class,
-  SSOServiceFactory.class,
   ContentStoreUtil.class
 })
 @PowerMockIgnore({"javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*"})
@@ -79,6 +74,8 @@ public class UserManagementActorTest {
   private static UserService userService;
   private static SystemSettingClientImpl systemSettingClient;
   private static UserExternalIdentityDaoImpl userExtDao;
+  private static CassandraOperationImpl cassandraOperation;
+  private static InterServiceCommunication interServiceCommunication;
 
   @Before
   public void beforeEachTest() {
@@ -88,7 +85,7 @@ public class UserManagementActorTest {
     when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
 
     PowerMockito.mockStatic(ServiceFactory.class);
-    CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
+    cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
@@ -98,7 +95,7 @@ public class UserManagementActorTest {
         .thenReturn(getSuccessResponse());
 
     PowerMockito.mockStatic(InterServiceCommunicationFactory.class);
-    InterServiceCommunication interServiceCommunication = mock(InterServiceCommunicationImpl.class);
+    interServiceCommunication = mock(InterServiceCommunicationImpl.class);
     when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
@@ -140,7 +137,6 @@ public class UserManagementActorTest {
 
     reqMap = getMapObject();
     userExtDao = mock(UserExternalIdentityDaoImpl.class);
-    PowerMockito.mockStatic(SSOServiceFactory.class);
     PowerMockito.mockStatic(TelemetryUtil.class);
     PowerMockito.mockStatic(DataCacheHandler.class);
     PowerMockito.mockStatic(ContentStoreUtil.class);
@@ -333,7 +329,6 @@ public class UserManagementActorTest {
     mockDatacacheHandler();
     mockContentStoreUtil();
     mockElasticSearchUtil();
-    mockKeycloakUpsertUser();
     mockCassandraforUpdateRecord();
 
     try {
@@ -393,12 +388,6 @@ public class UserManagementActorTest {
     return frameworkMap;
   }
 
-  private void mockKeycloakUpsertUser() {
-    SSOManager ssoManager = mock(KeyCloakServiceImpl.class);
-    when(SSOServiceFactory.getInstance()).thenReturn(ssoManager);
-    when(ssoManager.updateUser(Mockito.anyMap())).thenReturn("SUCCESS");
-  }
-
   private void mockElasticSearchUtil() {
     Map<String, Object> userMap = new HashMap<>();
     userMap.put("abc", "abc");
@@ -418,9 +407,6 @@ public class UserManagementActorTest {
   }
 
   private void mockCassandraforUpdateRecord() {
-    CassandraOperation cassandraOperation;
-    cassandraOperation = mock(CassandraOperationImpl.class);
-    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     Response res = new Response();
     res.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     when(cassandraOperation.updateRecord(
@@ -429,8 +415,6 @@ public class UserManagementActorTest {
   }
 
   private void mockInterserviceCommunication() {
-    InterServiceCommunication interServiceCommunication = mock(InterServiceCommunicationImpl.class);
-    when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
     Response res = new Response();
     Map<String, Object> response = new HashMap<>();
     response.put(JsonKey.ERRORS, null);

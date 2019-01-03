@@ -268,7 +268,7 @@ public class UserManagementActorTest {
   @Test
   public void testUpdateUserFrameworkSuccess() {
     mockForUpdateTest();
-    Request reqObj = getRequest(true, false, false, false, false);
+    Request reqObj = getRequest(null, null);
     Response res = doUpdateActorCallSuccess(reqObj);
     assertTrue(null != res.get(JsonKey.RESPONSE));
   }
@@ -276,7 +276,7 @@ public class UserManagementActorTest {
   @Test
   public void testUpdateUserFrameworkFailureInvalidGradeLevel() {
     mockForUpdateTest();
-    Request reqObj = getRequest(false, false, true, false, false);
+    Request reqObj = getRequest("gradeLevel", "SomeWrongGrade");
     ProjectCommonException res = doUpdateActorCallFailure(reqObj);
     assertTrue(res.getCode().equals(ResponseCode.invalidParameterValue.getErrorCode()));
   }
@@ -284,7 +284,7 @@ public class UserManagementActorTest {
   @Test
   public void testUpdateUserFrameworkFailureInvalidMedium() {
     mockForUpdateTest();
-    Request reqObj = getRequest(false, false, false, true, false);
+    Request reqObj = getRequest("medium", "glish");
     ProjectCommonException res = doUpdateActorCallFailure(reqObj);
     assertTrue(res.getCode().equals(ResponseCode.invalidParameterValue.getErrorCode()));
   }
@@ -292,7 +292,7 @@ public class UserManagementActorTest {
   @Test
   public void testUpdateUserFrameworkFailureInvalidBoard() {
     mockForUpdateTest();
-    Request reqObj = getRequest(false, false, false, false, true);
+    Request reqObj = getRequest("board", "RBCS");
     ProjectCommonException res = doUpdateActorCallFailure(reqObj);
     assertTrue(res.getCode().equals(ResponseCode.invalidParameterValue.getErrorCode()));
   }
@@ -300,7 +300,7 @@ public class UserManagementActorTest {
   @Test
   public void testUpdateUserFrameworkFailureInvalidFrameworkId() {
     mockForUpdateTest();
-    Request reqObj = getRequest(false, true, false, false, false);
+    Request reqObj = getRequest(JsonKey.ID, "invalidFrameworkId");
     ProjectCommonException res = doUpdateActorCallFailure(reqObj);
     assertTrue(res.getCode().equals(ResponseCode.errorNoFrameworkFound.getErrorCode()));
   }
@@ -339,8 +339,8 @@ public class UserManagementActorTest {
     try {
       PowerMockito.whenNew(UserExternalIdentityDaoImpl.class)
           .withNoArguments()
-          .thenReturn(userExtDao)
-          .thenThrow(Exception.class);
+          .thenReturn(userExtDao);
+
       PowerMockito.doNothing()
           .when(
               TelemetryUtil.class,
@@ -349,17 +349,16 @@ public class UserManagementActorTest {
               Mockito.anyMap(),
               Mockito.anyList());
     } catch (Exception e) {
-      ProjectLogger.log("Error while mocking Telemetery process");
+      ProjectLogger.log("Error while mocking Telemetry Util");
     }
   }
 
-  private Request getRequest(
-      boolean success, boolean id_, boolean grade, boolean medium, boolean board) {
+  private Request getRequest(String key, String value) {
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.UPDATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.ID, userId);
-    Map<String, Object> frameworkMap = getFrameworkDetails(success, id_, grade, medium, board);
+    Map<String, Object> frameworkMap = getFrameworkDetails(key, value);
 
     innerMap.put(JsonKey.FRAMEWORK, frameworkMap);
     Map<String, Object> request = new HashMap<String, Object>();
@@ -374,8 +373,7 @@ public class UserManagementActorTest {
     return reqObj;
   }
 
-  private Map<String, Object> getFrameworkDetails(
-      boolean success, boolean id_, boolean grade_, boolean medium_, boolean board_) {
+  private Map<String, Object> getFrameworkDetails(String key, String value) {
     Map<String, Object> frameworkMap = new HashMap<>();
     List<String> medium = new ArrayList<>();
     medium.add("English");
@@ -383,39 +381,15 @@ public class UserManagementActorTest {
     gradeLevel.add("Grade 3");
     List<String> board = new ArrayList<>();
     board.add("NCERT");
-    if (success) {
-      frameworkMap.put(JsonKey.ID, "NCF");
-      frameworkMap.put("medium", medium);
-      frameworkMap.put("gradeLevel", gradeLevel);
-      frameworkMap.put("board", board);
-    } else if (id_) {
-      frameworkMap.put(JsonKey.ID, "wrongId");
-      frameworkMap.put("medium", medium);
-      frameworkMap.put("gradeLevel", gradeLevel);
-      frameworkMap.put("board", board);
-    } else if (grade_) {
-      frameworkMap.put(JsonKey.ID, "NCF");
-      List<String> gradeLevel2 = new ArrayList<>();
-      gradeLevel2.add("SomeWrongGrade");
-      frameworkMap.put("medium", medium);
-      frameworkMap.put("gradeLevel", gradeLevel2);
-      frameworkMap.put("board", board);
-    } else if (medium_) {
-      frameworkMap.put(JsonKey.ID, "NCF");
-      List<String> medium2 = new ArrayList<>();
-      medium2.add("glish");
-      frameworkMap.put("medium", medium2);
-      frameworkMap.put("gradeLevel", gradeLevel);
-      frameworkMap.put("board", board);
-    } else if (board_) {
-      frameworkMap.put(JsonKey.ID, "NCF");
-      List<String> board2 = new ArrayList<>();
-      board2.add("RRRCERT");
-      frameworkMap.put("board", board2);
-      frameworkMap.put("gradeLevel", gradeLevel);
-      frameworkMap.put("medium", medium);
+    frameworkMap.put(JsonKey.ID, "NCF");
+    frameworkMap.put("gradeLevel", gradeLevel);
+    frameworkMap.put("board", board);
+    frameworkMap.put("medium", medium);
+    if (key != null) {
+      List<String> wrongValue = new ArrayList<>();
+      wrongValue.add(value);
+      frameworkMap.put(key, wrongValue);
     }
-
     return frameworkMap;
   }
 

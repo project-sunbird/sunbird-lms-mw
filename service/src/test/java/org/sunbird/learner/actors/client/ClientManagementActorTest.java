@@ -19,11 +19,8 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-import org.sunbird.actor.router.RequestRouter;
-import org.sunbird.actor.service.BaseMWService;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -32,20 +29,13 @@ import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.role.dao.impl.RoleDaoImpl;
 import org.sunbird.learner.util.Util;
-import org.sunbird.user.dao.impl.UserOrgDaoImpl;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ServiceFactory.class,
-  RoleDaoImpl.class,
-  BaseMWService.class,
-  RequestRouter.class,
   InterServiceCommunicationFactory.class,
-  ElasticSearchUtil.class,
   Util.class,
-  UserOrgDaoImpl.class,
   DecryptionService.class,
 })
 @PowerMockIgnore({"javax.management.*"})
@@ -53,14 +43,20 @@ public class ClientManagementActorTest {
 
   private static ActorSystem system = ActorSystem.create("system");;
   private static final Props props = Props.create(ClientManagementActor.class);
-  private static String masterKey = "anyMasterKey";
-  private static String clientId = "anyClientId";
-  private static String clientName = "anyClientName";
-  private static String channel = "anyChannel";
-  private static String id = "anyId";
-  private static CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
-  private static Map<String, Object> request;
-  private static Map<String, Object> orgMap;
+  private static final String masterKey = "anyMasterKey";
+  private static final String clientId = "anyClientId";
+  private static final String clientName = "anyClientName";
+  private static final String channel = "anyChannel";
+  private static final String id = "anyId";
+  private static final CassandraOperationImpl cassandraOperation =
+      mock(CassandraOperationImpl.class);
+  private Map<String, Object> request;
+  private Map<String, Object> orgMap;
+
+  public ClientManagementActorTest() {
+    request = new HashMap<>();
+    orgMap = new HashMap<>();
+  }
 
   @Before
   public void init() {
@@ -72,12 +68,12 @@ public class ClientManagementActorTest {
     when(cassandraOperation.updateRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getSuccessResponse());
-    request = new HashMap<>();
-    orgMap = new HashMap<>();
+    request.clear();
+    orgMap.clear();
   }
 
   @Test
-  public void testClientManagementActorSuccessForRegisterClient() {
+  public void testClientManagementSuccessForRegisterClient() {
 
     request.put(JsonKey.CLIENT_NAME, clientName);
     orgMap.put(JsonKey.CLIENT_ID, clientId);
@@ -86,7 +82,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementActorFailureForRegisterClientWithDuplicateChannel() {
+  public void testClientManagementFailureForRegisterClientWithDuplicateChannel() {
 
     orgMap.put(JsonKey.MASTER_KEY, masterKey);
     request.put(JsonKey.CLIENT_NAME, clientName);
@@ -101,7 +97,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementActorFailureForRegisterClientWithInvalidClientName() {
+  public void testClientManagementFailureForRegisterClientWithInvalidClientName() {
 
     orgMap.put(JsonKey.ID, id);
     request.put(JsonKey.CLIENT_NAME, clientName);
@@ -112,7 +108,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementActorSuccessForGetClientKey() {
+  public void testClientManagementSuccessForGetClientKey() {
 
     request.put(JsonKey.CLIENT_ID, clientId);
     request.put(JsonKey.TYPE, JsonKey.CLIENT_ID);
@@ -122,7 +118,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementActorFailureForGetClientKeyWithInvalidRquestedDataTypeClientId() {
+  public void testClientManagementFailureForGetClientKeyWithInvalidRquestedDataTypeClientId() {
 
     request.put(JsonKey.CLIENT_ID, clientId);
     request.put(JsonKey.TYPE, JsonKey.CLIENT_ID);
@@ -133,7 +129,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementActorFailureForGetClientKeyWithInvalidRquestedDataTypeChannel() {
+  public void testClientManagementFailureForGetClientKeyWithInvalidRquestedDataTypeChannel() {
 
     request.put(JsonKey.CLIENT_ID, clientId);
     request.put(JsonKey.TYPE, JsonKey.CHANNEL);
@@ -144,7 +140,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementActorFailureForGetClientKeyWithInvalidRquestedDataWithoutType() {
+  public void testClientManagementFailureForGetClientKeyWithInvalidRquestedDataWithoutType() {
 
     request.put(JsonKey.CLIENT_ID, clientId);
     boolean result =
@@ -154,7 +150,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementActorSuccessForUpdateClientKey() {
+  public void testClientManagementSuccessForUpdateClientKey() {
 
     orgMap.put(JsonKey.MASTER_KEY, masterKey);
     boolean result = testScenario(orgMap, orgMap, ActorOperations.UPDATE_CLIENT_KEY, null);
@@ -162,7 +158,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementActorFailureForUpdateClientKeyWithInvalidRquestedData() {
+  public void testClientManagementFailureForUpdateClientKeyWithInvalidRquestedData() {
 
     request.put(JsonKey.CLIENT_ID, clientId);
     request.put(JsonKey.MASTER_KEY, masterKey);
@@ -173,7 +169,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementActorFailureForUpdateClientKeyWithDuplicateChannel() {
+  public void testClientManagementFailureForUpdateClientKeyWithDuplicateChannel() {
 
     request.put(JsonKey.CLIENT_ID, clientId);
     request.put(JsonKey.CHANNEL, channel);

@@ -147,7 +147,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testUpdateClientKeyFailureKeyWithInvalidRequestedData() {
+  public void testUpdateClientKeyFailureWithInvalidRequestedData() {
 
     request.put(JsonKey.CLIENT_ID, clientId);
     request.put(JsonKey.MASTER_KEY, masterKey);

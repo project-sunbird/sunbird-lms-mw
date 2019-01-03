@@ -61,7 +61,7 @@ public class CourseMetricsActorTest {
   private static Map<String, Object> userOrgMap = new HashMap<>();
   private static final String HTTP_POST = "POST";
   private static ObjectMapper mapper = new ObjectMapper();
-  private static CassandraOperationImpl cassandraOperation;
+  private static CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);;
 
   @BeforeClass
   public static void setUp() {
@@ -74,10 +74,8 @@ public class CourseMetricsActorTest {
   public void before() {
     mockESComplexSearch();
     mockESGetDataByIdentifier();
-
     PowerMockito.mockStatic(ServiceFactory.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    cassandraOperation = mock(CassandraOperationImpl.class);
   }
 
   @Test

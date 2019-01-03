@@ -73,7 +73,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementSuccessForRegisterClient() {
+  public void testRegisterClientSuccess() {
 
     request.put(JsonKey.CLIENT_NAME, clientName);
     orgMap.put(JsonKey.CLIENT_ID, clientId);
@@ -82,7 +82,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementFailureForRegisterClientWithDuplicateChannel() {
+  public void testRegisterClientFailureWithDuplicateChannel() {
 
     orgMap.put(JsonKey.MASTER_KEY, masterKey);
     request.put(JsonKey.CLIENT_NAME, clientName);
@@ -97,7 +97,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementFailureForRegisterClientWithInvalidClientName() {
+  public void testRegisterClientFailureWithInvalidClientName() {
 
     orgMap.put(JsonKey.ID, id);
     request.put(JsonKey.CLIENT_NAME, clientName);
@@ -108,7 +108,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementSuccessForGetClientKey() {
+  public void testGetClientKeySuccess() {
 
     request.put(JsonKey.CLIENT_ID, clientId);
     request.put(JsonKey.TYPE, JsonKey.CLIENT_ID);
@@ -118,7 +118,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementFailureForGetClientKeyWithInvalidRquestedDataTypeClientId() {
+  public void testGetClientKeyFailureWithInvalidClientIdType() {
 
     request.put(JsonKey.CLIENT_ID, clientId);
     request.put(JsonKey.TYPE, JsonKey.CLIENT_ID);
@@ -129,7 +129,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementFailureForGetClientKeyWithInvalidRquestedDataTypeChannel() {
+  public void testGetClientKeyFailureWithInvalidChannelType() {
 
     request.put(JsonKey.CLIENT_ID, clientId);
     request.put(JsonKey.TYPE, JsonKey.CHANNEL);
@@ -140,7 +140,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementFailureForGetClientKeyWithInvalidRquestedDataWithoutType() {
+  public void testGetClientKeyFailureWithoutType() {
 
     request.put(JsonKey.CLIENT_ID, clientId);
     boolean result =
@@ -150,7 +150,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementSuccessForUpdateClientKey() {
+  public void testUpdateClientKeySuccess() {
 
     orgMap.put(JsonKey.MASTER_KEY, masterKey);
     boolean result = testScenario(orgMap, orgMap, ActorOperations.UPDATE_CLIENT_KEY, null);
@@ -158,7 +158,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementFailureForUpdateClientKeyWithInvalidRquestedData() {
+  public void testUpdateClientKeyFailureKeyWithInvalidRequestedData() {
 
     request.put(JsonKey.CLIENT_ID, clientId);
     request.put(JsonKey.MASTER_KEY, masterKey);
@@ -169,7 +169,7 @@ public class ClientManagementActorTest {
   }
 
   @Test
-  public void testClientManagementFailureForUpdateClientKeyWithDuplicateChannel() {
+  public void testUpdateClientKeyFailureWithDuplicateChannel() {
 
     request.put(JsonKey.CLIENT_ID, clientId);
     request.put(JsonKey.CHANNEL, channel);

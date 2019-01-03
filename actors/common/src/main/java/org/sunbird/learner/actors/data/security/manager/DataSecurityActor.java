@@ -1,4 +1,4 @@
-package org.sunbird.learner.actors.bulkupload;
+package org.sunbird.learner.actors.data.security.manager;
 
 import java.text.MessageFormat;
 import java.util.List;
@@ -17,7 +17,7 @@ import org.sunbird.common.responsecode.ResponseCode;
   tasks = {"encryptUserData", "decryptUserData"},
   asyncTasks = {}
 )
-public class UserDataEncryptionDecryptionServiceActor extends BaseActor {
+public class DataSecurityActor extends BaseActor {
 
   @Override
   public void onReceive(Request actorMessage) throws Throwable {
@@ -79,9 +79,7 @@ public class UserDataEncryptionDecryptionServiceActor extends BaseActor {
   private void validateUserIdSize(Request actorMessage) {
     int maximumSizeAllowed =
         Integer.valueOf(
-            ProjectUtil.getConfigValue(
-                    JsonKey.SUNBIRD_ALLOWED_USERIDS_SIZE_FOR_ENCRYPTION_DECRYPTION)
-                .trim());
+            ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USER_MAX_ENCRYPTION_LIMIT).trim());
     List<String> userIds = (List<String>) actorMessage.getRequest().get(JsonKey.USER_IDs);
     if (userIds.size() > maximumSizeAllowed) {
       ProjectCommonException.throwClientErrorException(

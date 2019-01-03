@@ -42,13 +42,14 @@ public class UserRoleActorTest extends BaseActorTest {
   }
 
   @Test
-  public void testAssignRolesFailure() {
+  public void testAssignRolesFailure() throws Exception {
     resetAllMocks();
     assertTrue(testScenario(true, ResponseCode.CLIENT_ERROR));
   }
 
   @Test
   public void testAssignRolesFailureWithInvalidOrgId() {
+    resetAllMocks();
     assertTrue(testScenario(false, ResponseCode.invalidParameterValue));
   }
 

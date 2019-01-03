@@ -460,27 +460,17 @@ public class UserManagementActorTest {
     frameworkFieldsConfigMap.put(JsonKey.MANDATORY_FIELDS, frameworkFieldConfigMan);
     DataCacheHandler.setFrameworkFieldsConfig(frameworkFieldsConfigMap);
     Mockito.when(DataCacheHandler.getFrameworkFieldsConfig()).thenReturn(frameworkFieldsConfigMap);
-    Map<String, List<Map<String, String>>> frameworkCategoriesMap = new HashMap<>();
 
-    Map<String, String> map2 = new HashMap<>();
-    map2.put(JsonKey.NAME, "English");
-    List<Map<String, String>> list2 = new ArrayList<>();
-    list2.add(map2);
+    Map<String, List<Map<String, String>>> frameworkCategoriesMap = new HashMap<>();
+    List<Map<String, String>> list2 = getListForCategoryMap("English");
     frameworkCategoriesMap.put("medium", list2);
 
-    List<Map<String, String>> list;
-    Map<String, String> map;
-    map = new HashMap<>();
-    map.put(JsonKey.NAME, "Grade 3");
-    list = new ArrayList<>();
-    list.add(map);
+    List<Map<String, String>> list = getListForCategoryMap("Grade 3");
     frameworkCategoriesMap.put("gradeLevel", list);
 
-    Map<String, String> map3 = new HashMap<>();
-    map3.put(JsonKey.NAME, "NCERT");
-    List<Map<String, String>> list3 = new ArrayList<>();
-    list3.add(map3);
+    List<Map<String, String>> list3 = getListForCategoryMap("NCERT");
     frameworkCategoriesMap.put("board", list3);
+
     Map<String, Map<String, List<Map<String, String>>>> x = new HashMap<>();
     x.put("NCF", frameworkCategoriesMap);
     DataCacheHandler.updateFrameworkCategoriesMap("NCF", frameworkCategoriesMap);
@@ -489,6 +479,14 @@ public class UserManagementActorTest {
     List<String> list1 = Arrays.asList("NCF");
     map1.put("someHashTagId", list1);
     when(DataCacheHandler.getHashtagIdFrameworkIdMap()).thenReturn(map1);
+  }
+
+  private List<Map<String, String>> getListForCategoryMap(String value) {
+    Map<String, String> map2 = new HashMap<>();
+    map2.put(JsonKey.NAME, value);
+    List<Map<String, String>> list2 = new ArrayList<>();
+    list2.add(map2);
+    return list2;
   }
 
   private Map<String, Object> getAdditionalMapData(Map<String, Object> reqMap) {

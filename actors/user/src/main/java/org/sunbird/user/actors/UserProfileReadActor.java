@@ -610,6 +610,11 @@ public class UserProfileReadActor extends BaseActor {
   private void getUserByKey(Request actorMessage) {
     String key = (String) actorMessage.getRequest().get(JsonKey.KEY);
     String value = (String) actorMessage.getRequest().get(JsonKey.VALUE);
+
+    if (JsonKey.LOGIN_ID.equalsIgnoreCase(key) || JsonKey.EMAIL.equalsIgnoreCase(key)) {
+      // Converting to lower case because all email and loginId will be in lower case.
+      value = value.toLowerCase();
+    }
     String encryptedValue = null;
     try {
       encryptedValue = encryptionService.encryptData(value);

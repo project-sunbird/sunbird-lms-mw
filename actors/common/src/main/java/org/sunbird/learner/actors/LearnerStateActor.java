@@ -120,7 +120,7 @@ public class LearnerStateActor extends BaseActor {
 
     ProjectLogger.log(
         "LearnerStateActor:prepareCourseBatchResponse coursesContents =" + coursesContents,
-        LoggerEnum.INFO.name());
+        LoggerEnum.DEBUG.name());
 
     Map<String, Object> contentsByCourseId = new HashMap<>();
     if (MapUtils.isNotEmpty(coursesContents)) {
@@ -147,8 +147,7 @@ public class LearnerStateActor extends BaseActor {
                   })
               .collect(Collectors.toList());
       ProjectLogger.log(
-          "LearnerStateActor:prepareCourseBatchResponse batchesWithCourseDetails ="
-              + batchesWithCourseDetails,
+          "LearnerStateActor:prepareCourseBatchResponse batchesWithCourseDetails =",
           LoggerEnum.INFO.name());
     }
     Response response = new Response();

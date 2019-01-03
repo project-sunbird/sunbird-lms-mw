@@ -19,24 +19,18 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.Util;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ServiceFactory.class,
-  InterServiceCommunicationFactory.class,
-  Util.class,
-  DecryptionService.class,
 })
 @PowerMockIgnore({"javax.management.*"})
 public class ClientManagementActorTest {
@@ -50,13 +44,8 @@ public class ClientManagementActorTest {
   private static final String id = "anyId";
   private static final CassandraOperationImpl cassandraOperation =
       mock(CassandraOperationImpl.class);
-  private Map<String, Object> request;
-  private Map<String, Object> orgMap;
-
-  public ClientManagementActorTest() {
-    request = new HashMap<>();
-    orgMap = new HashMap<>();
-  }
+  private Map<String, Object> request = new HashMap<>();
+  private Map<String, Object> orgMap = new HashMap<>();
 
   @Before
   public void init() {

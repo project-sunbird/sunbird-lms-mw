@@ -34,7 +34,6 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.util.ContentStoreUtil;
@@ -260,7 +259,6 @@ public class UserManagementActorTest {
 
   @Test
   public void testUpdateUserFrameworkSuccess() {
-    mockForUpdateTest();
     Request reqObj = getRequest(null, null);
     Response res = doUpdateActorCallSuccess(reqObj);
     assertTrue(null != res.get(JsonKey.RESPONSE));
@@ -268,7 +266,6 @@ public class UserManagementActorTest {
 
   @Test
   public void testUpdateUserFrameworkFailureInvalidGradeLevel() {
-    mockForUpdateTest();
     Request reqObj = getRequest("gradeLevel", "SomeWrongGrade");
     ProjectCommonException res = doUpdateActorCallFailure(reqObj);
     assertTrue(res.getCode().equals(ResponseCode.invalidParameterValue.getErrorCode()));
@@ -276,7 +273,6 @@ public class UserManagementActorTest {
 
   @Test
   public void testUpdateUserFrameworkFailureInvalidMedium() {
-    mockForUpdateTest();
     Request reqObj = getRequest("medium", "glish");
     ProjectCommonException res = doUpdateActorCallFailure(reqObj);
     assertTrue(res.getCode().equals(ResponseCode.invalidParameterValue.getErrorCode()));
@@ -284,7 +280,6 @@ public class UserManagementActorTest {
 
   @Test
   public void testUpdateUserFrameworkFailureInvalidBoard() {
-    mockForUpdateTest();
     Request reqObj = getRequest("board", "RBCS");
     ProjectCommonException res = doUpdateActorCallFailure(reqObj);
     assertTrue(res.getCode().equals(ResponseCode.invalidParameterValue.getErrorCode()));
@@ -292,7 +287,6 @@ public class UserManagementActorTest {
 
   @Test
   public void testUpdateUserFrameworkFailureInvalidFrameworkId() {
-    mockForUpdateTest();
     Request reqObj = getRequest(JsonKey.ID, "invalidFrameworkId");
     ProjectCommonException res = doUpdateActorCallFailure(reqObj);
     assertTrue(res.getCode().equals(ResponseCode.errorNoFrameworkFound.getErrorCode()));
@@ -301,6 +295,7 @@ public class UserManagementActorTest {
   private Response doUpdateActorCallSuccess(Request reqObj) {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
+    mockForUpdateTest();
     mockUserServiceForValidatingUserId(reqObj);
     mockuserExtDao(reqObj);
     subject.tell(reqObj, probe.getRef());
@@ -311,6 +306,7 @@ public class UserManagementActorTest {
   private ProjectCommonException doUpdateActorCallFailure(Request reqObj) {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
+    mockForUpdateTest();
     mockUserServiceForValidatingUserId(reqObj);
     mockuserExtDao(reqObj);
     subject.tell(reqObj, probe.getRef());
@@ -321,12 +317,9 @@ public class UserManagementActorTest {
 
   @SuppressWarnings("unchecked")
   public void mockForUpdateTest() {
-    mockInterserviceCommunication();
     mockUtilsForOrgDetails();
     mockDatacacheHandler();
     mockContentStoreUtil();
-    mockElasticSearchUtil();
-    mockCassandraforUpdateRecord();
 
     try {
       PowerMockito.whenNew(UserExternalIdentityDaoImpl.class)
@@ -378,38 +371,12 @@ public class UserManagementActorTest {
     return frameworkMap;
   }
 
-  private void mockElasticSearchUtil() {
-    Map<String, Object> userMap = new HashMap<>();
-    userMap.put("abc", "abc");
-    when(ElasticSearchUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            userId))
-        .thenReturn(userMap);
-  }
-
   private void mockUserServiceForValidatingUserId(Request req) {
     Mockito.doNothing().when(userService).validateUserId(req);
   }
 
   private void mockuserExtDao(Request req) {
     when(userExtDao.getUserId(req)).thenReturn(userId);
-  }
-
-  private void mockCassandraforUpdateRecord() {
-    Response res = new Response();
-    res.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    when(cassandraOperation.updateRecord(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(res);
-  }
-
-  private void mockInterserviceCommunication() {
-    Response res = new Response();
-    Map<String, Object> response = new HashMap<>();
-    response.put(JsonKey.ERRORS, null);
-    res.getResult().put(JsonKey.RESPONSE, response);
-    when(interServiceCommunication.getResponse(Mockito.any(), Mockito.any())).thenReturn(res);
   }
 
   private void mockUtilsForOrgDetails() {
@@ -465,7 +432,6 @@ public class UserManagementActorTest {
   }
 
   private boolean testScenario(Request reqObj, ResponseCode errorCode) {
-
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     subject.tell(reqObj, probe.getRef());
@@ -524,10 +490,10 @@ public class UserManagementActorTest {
   }
 
   private static Response getEsResponse() {
-
     Response response = new Response();
     Map<String, Object> map = new HashMap<>();
     map.put("anyString", new Object());
+    map.put(JsonKey.ERRORS, null);
     response.put(JsonKey.RESPONSE, map);
     return response;
   }

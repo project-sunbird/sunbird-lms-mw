@@ -380,7 +380,7 @@ public class UserManagementActorTest {
   private void mockContentStoreUtil() {
     Map<String, Object> contentMap = new HashMap<>();
     contentMap.put(JsonKey.RESPONSE, null);
-    when(ContentStoreUtil.readFramework("wrongId")).thenReturn(contentMap);
+    when(ContentStoreUtil.readFramework("invalidFrameworkId")).thenReturn(contentMap);
   }
 
   private void mockDatacacheHandler() {

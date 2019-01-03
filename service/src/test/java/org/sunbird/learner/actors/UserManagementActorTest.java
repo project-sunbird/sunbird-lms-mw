@@ -41,7 +41,6 @@ import org.sunbird.content.util.ContentStoreUtil;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.actors.UserManagementActor;
 import org.sunbird.user.dao.impl.UserExternalIdentityDaoImpl;
 import org.sunbird.user.service.UserService;
@@ -59,7 +58,6 @@ import org.sunbird.user.util.UserUtil;
   UserUtil.class,
   InterServiceCommunicationFactory.class,
   DataCacheHandler.class,
-  TelemetryUtil.class,
   ContentStoreUtil.class
 })
 @PowerMockIgnore({"javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*"})
@@ -137,7 +135,6 @@ public class UserManagementActorTest {
 
     reqMap = getMapObject();
     userExtDao = mock(UserExternalIdentityDaoImpl.class);
-    PowerMockito.mockStatic(TelemetryUtil.class);
     PowerMockito.mockStatic(DataCacheHandler.class);
     PowerMockito.mockStatic(ContentStoreUtil.class);
   }
@@ -336,15 +333,8 @@ public class UserManagementActorTest {
           .withNoArguments()
           .thenReturn(userExtDao);
 
-      PowerMockito.doNothing()
-          .when(
-              TelemetryUtil.class,
-              "telemetryProcessingCall",
-              Mockito.anyMap(),
-              Mockito.anyMap(),
-              Mockito.anyList());
     } catch (Exception e) {
-      ProjectLogger.log("Error while mocking Telemetry Util");
+      ProjectLogger.log("Error while mocking UserExternalIdentityDaoImpl");
     }
   }
 

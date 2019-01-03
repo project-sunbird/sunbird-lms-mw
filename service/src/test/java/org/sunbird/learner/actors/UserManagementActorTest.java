@@ -68,11 +68,7 @@ public class UserManagementActorTest {
   private static Map<String, Object> reqMap;
 
   private static final String userId = "testUserId";
-  private static UserService userService;
-  private static SystemSettingClientImpl systemSettingClient;
   private static UserExternalIdentityDaoImpl userExtDao;
-  private static CassandraOperationImpl cassandraOperation;
-  private static InterServiceCommunication interServiceCommunication;
 
   @Before
   public void beforeEachTest() {
@@ -82,7 +78,7 @@ public class UserManagementActorTest {
     when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
 
     PowerMockito.mockStatic(ServiceFactory.class);
-    cassandraOperation = mock(CassandraOperationImpl.class);
+    CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
@@ -92,7 +88,7 @@ public class UserManagementActorTest {
         .thenReturn(getSuccessResponse());
 
     PowerMockito.mockStatic(InterServiceCommunicationFactory.class);
-    interServiceCommunication = mock(InterServiceCommunicationImpl.class);
+    InterServiceCommunication interServiceCommunication = mock(InterServiceCommunicationImpl.class);
     when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
@@ -110,7 +106,7 @@ public class UserManagementActorTest {
         .thenReturn(new HashMap<>());
 
     PowerMockito.mockStatic(UserServiceImpl.class);
-    userService = mock(UserServiceImpl.class);
+    UserService userService = mock(UserServiceImpl.class);
     when(UserServiceImpl.getInstance()).thenReturn(userService);
     when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("anyId");
     when(userService.getCustodianChannel(Mockito.anyMap(), Mockito.any(ActorRef.class)))
@@ -136,6 +132,7 @@ public class UserManagementActorTest {
     userExtDao = mock(UserExternalIdentityDaoImpl.class);
     PowerMockito.mockStatic(DataCacheHandler.class);
     PowerMockito.mockStatic(ContentStoreUtil.class);
+    Mockito.doNothing().when(userService).validateUserId(Mockito.any());
   }
 
   @Test
@@ -296,7 +293,6 @@ public class UserManagementActorTest {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     mockForUpdateTest();
-    mockUserServiceForValidatingUserId(reqObj);
     mockuserExtDao(reqObj);
     subject.tell(reqObj, probe.getRef());
     Response res = probe.expectMsgClass(duration("200 second"), Response.class);
@@ -307,7 +303,6 @@ public class UserManagementActorTest {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     mockForUpdateTest();
-    mockUserServiceForValidatingUserId(reqObj);
     mockuserExtDao(reqObj);
     subject.tell(reqObj, probe.getRef());
     ProjectCommonException res =
@@ -369,10 +364,6 @@ public class UserManagementActorTest {
       frameworkMap.put(key, wrongValue);
     }
     return frameworkMap;
-  }
-
-  private void mockUserServiceForValidatingUserId(Request req) {
-    Mockito.doNothing().when(userService).validateUserId(req);
   }
 
   private void mockuserExtDao(Request req) {

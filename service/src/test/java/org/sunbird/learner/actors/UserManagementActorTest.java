@@ -462,14 +462,9 @@ public class UserManagementActorTest {
     Mockito.when(DataCacheHandler.getFrameworkFieldsConfig()).thenReturn(frameworkFieldsConfigMap);
 
     Map<String, List<Map<String, String>>> frameworkCategoriesMap = new HashMap<>();
-    List<Map<String, String>> list2 = getListForCategoryMap("English");
-    frameworkCategoriesMap.put("medium", list2);
-
-    List<Map<String, String>> list = getListForCategoryMap("Grade 3");
-    frameworkCategoriesMap.put("gradeLevel", list);
-
-    List<Map<String, String>> list3 = getListForCategoryMap("NCERT");
-    frameworkCategoriesMap.put("board", list3);
+    frameworkCategoriesMap.put("medium", getListForCategoryMap("English"));
+    frameworkCategoriesMap.put("gradeLevel", getListForCategoryMap("Grade 3"));
+    frameworkCategoriesMap.put("board", getListForCategoryMap("NCERT"));
 
     Map<String, Map<String, List<Map<String, String>>>> x = new HashMap<>();
     x.put("NCF", frameworkCategoriesMap);

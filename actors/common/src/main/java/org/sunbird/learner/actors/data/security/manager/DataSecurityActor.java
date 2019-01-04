@@ -2,6 +2,7 @@ package org.sunbird.learner.actors.data.security.manager;
 
 import java.text.MessageFormat;
 import java.util.List;
+import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -57,16 +58,8 @@ public class DataSecurityActor extends BaseActor {
     backgroundEncryptionDecryptionRequest
         .getRequest()
         .put(JsonKey.USER_IDs, actorMessage.getRequest().get(JsonKey.USER_IDs));
-    try {
-      tellToAnother(backgroundEncryptionDecryptionRequest);
-    } catch (Exception e) {
-      ProjectLogger.log(
-          "UserDataEncryptionDecryptionServiceActor:encryptionDecryptionData: Exception occurred for backgroundOperation "
-              + backgroundOperation
-              + " with error message = "
-              + e.getMessage(),
-          e);
-    }
+
+    tellToAnother(backgroundEncryptionDecryptionRequest);
     long end = System.currentTimeMillis();
     ProjectLogger.log(
         "UserDataEncryptionDecryptionServiceActor:encryptionDecryptionData: total time taken by "
@@ -81,10 +74,18 @@ public class DataSecurityActor extends BaseActor {
         Integer.valueOf(
             ProjectUtil.getConfigValue(JsonKey.SUNBIRD_USER_MAX_ENCRYPTION_LIMIT).trim());
     List<String> userIds = (List<String>) actorMessage.getRequest().get(JsonKey.USER_IDs);
-    if (userIds.size() > maximumSizeAllowed) {
+    if (CollectionUtils.isNotEmpty(userIds)) {
+      if (userIds.size() > maximumSizeAllowed) {
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.sizeLimitExceed,
+            MessageFormat.format(
+                ResponseCode.sizeLimitExceed.getErrorMessage(), maximumSizeAllowed));
+      }
+    } else {
       ProjectCommonException.throwClientErrorException(
-          ResponseCode.sizeLimitExceed,
-          MessageFormat.format(ResponseCode.sizeLimitExceed.getErrorMessage(), maximumSizeAllowed));
+          ResponseCode.mandatoryParamsMissing,
+          MessageFormat.format(
+              ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.USER_IDs));
     }
   }
 }

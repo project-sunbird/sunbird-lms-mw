@@ -6,6 +6,8 @@ import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,6 +40,8 @@ public class UserFrameworkUpdateTest extends UserManagementActorTest {
 
   private static final String userId = "testUserId";
   private static UserExternalIdentityDaoImpl userExtDao;
+  private ActorSystem system = ActorSystem.create("system");
+  private static final Props props = getProps();
 
   @Before
   public void beforeEachTestn() {

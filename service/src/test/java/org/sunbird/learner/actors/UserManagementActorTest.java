@@ -54,9 +54,21 @@ import org.sunbird.user.util.UserUtil;
 @PowerMockIgnore({"javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*"})
 public class UserManagementActorTest {
 
-  public ActorSystem system = ActorSystem.create("system");
-  public static final Props props = Props.create(UserManagementActor.class);
+  private ActorSystem system = ActorSystem.create("system");
+  private static final Props props = Props.create(UserManagementActor.class);
   public static UserService userService;
+
+  public ActorSystem getActorSystem() {
+    return system;
+  }
+
+  public static Props getProps() {
+    return props;
+  }
+
+  public UserService getUserService() {
+    return userService;
+  }
 
   private static Map<String, Object> reqMap;
 

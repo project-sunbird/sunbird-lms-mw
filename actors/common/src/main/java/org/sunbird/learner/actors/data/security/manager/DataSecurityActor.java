@@ -22,16 +22,17 @@ public class DataSecurityActor extends BaseActor {
 
   @Override
   public void onReceive(Request actorMessage) throws Throwable {
-    if (actorMessage
-        .getOperation()
-        .equalsIgnoreCase(ActorOperations.ENCRYPT_USER_DATA.getValue())) {
-      encryptUserData(actorMessage);
-    } else if (actorMessage
-        .getOperation()
-        .equalsIgnoreCase(ActorOperations.DECRYPT_USER_DATA.getValue())) {
-      decryptUserData(actorMessage);
-    } else {
-      onReceiveUnsupportedOperation(actorMessage.getOperation());
+    String operation = actorMessage.getOperation();
+    switch (operation) {
+      case "encryptUserData":
+        encryptUserData(actorMessage);
+        break;
+      case "decryptUserData":
+        decryptUserData(actorMessage);
+        break;
+      default:
+        onReceiveUnsupportedOperation(actorMessage.getOperation());
+        break;
     }
   }
 

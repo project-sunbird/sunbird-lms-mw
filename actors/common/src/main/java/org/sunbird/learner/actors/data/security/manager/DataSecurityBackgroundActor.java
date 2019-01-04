@@ -87,7 +87,7 @@ public class DataSecurityBackgroundActor extends BaseActor {
     }
     ProjectLogger.log(
         "EsSyncBackgroundActor:commonEncryptionDecryption: total number of user details"
-            + (isEncrypted ? " encrypted " : "decrypted")
+            + (isEncrypted ? " encrypted " : " decrypted ")
             + "is: "
             + i,
         LoggerEnum.INFO);

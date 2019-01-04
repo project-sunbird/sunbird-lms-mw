@@ -106,7 +106,6 @@ public class DataSecurityBackgroundActor extends BaseActor {
     if (CollectionUtils.isEmpty(userList)) {
       ProjectCommonException.throwClientErrorException(ResponseCode.invalidUserId);
     }
-    ;
     return userList;
   }
 

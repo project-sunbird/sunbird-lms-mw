@@ -3,6 +3,7 @@ package org.sunbird.learner.actors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -16,6 +17,7 @@ import org.slf4j.helpers.MessageFormatter;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -26,6 +28,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.coursebatch.service.UserCoursesService;
 import org.sunbird.learner.util.ContentSearchUtil;
@@ -85,6 +88,7 @@ public class LearnerStateActor extends BaseActor {
     sender().tell(response, self());
   }
 
+  @SuppressWarnings("unchecked")
   private void addCourseDetails(Request request, Map<String, Object> userCoursesResult) {
     List<Map<String, Object>> batches =
         (List<Map<String, Object>>) userCoursesResult.get(JsonKey.CONTENT);
@@ -97,7 +101,6 @@ public class LearnerStateActor extends BaseActor {
       return;
     }
     String requestBody = prepareCourseSearchRequest(batches);
-
     ProjectLogger.log(
         MessageFormatter.format(
                 "LearnerStateActor:addCourseDetails: request body = {0}, query string = {1}",
@@ -112,27 +115,72 @@ public class LearnerStateActor extends BaseActor {
             requestBody,
             (Map<String, String>) request.getRequest().get(JsonKey.HEADER));
 
-    mergeDetailsAndSendCourses(contents, batches);
+    Map<String, Object> courseBatchesMap = null;
+    List<String> requiredMetadata = null;
+    Map<String, String[]> queryParams =
+        (Map<String, String[]>) request.getContext().get(JsonKey.REQUEST_PARAMS);
+
+    if (!MapUtils.isEmpty(queryParams) && queryParams.containsKey(JsonKey.FIELDS)) {
+      List<String> courseBatchIds =
+          (List<String>)
+              batches
+                  .stream()
+                  .map(batch -> (String) batch.get(JsonKey.BATCH_ID))
+                  .collect(Collectors.toSet());
+
+      requiredMetadata = Arrays.asList(queryParams.get(JsonKey.FIELDS));
+      Map<String, Object> esQueryMap = new HashMap<>();
+      esQueryMap.put(JsonKey.IDENTIFIER, courseBatchIds);
+      SearchDTO dto = new SearchDTO();
+
+      dto.setFields(requiredMetadata);
+      dto.getAdditionalProperties().put(JsonKey.FILTERS, esQueryMap);
+      courseBatchesMap =
+          ElasticSearchUtil.complexSearch(
+              dto,
+              ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.course.getTypeName());
+    }
+
+    Map<String, Object> courseBatches =
+        getContentAsMap((Map<String, Object>) courseBatchesMap.get(JsonKey.CONTENT));
+
+    mergeDetailsAndSendCourses(contents, batches, courseBatches); // metadata
   }
 
   public void mergeDetailsAndSendCourses(
-      Map<String, Object> coursesContents, List<Map<String, Object>> batches) {
+      Map<String, Object> coursesContents,
+      List<Map<String, Object>> batches,
+      Map<String, Object> metadata) {
 
     ProjectLogger.log(
         "LearnerStateActor:prepareCourseBatchResponse coursesContents =" + coursesContents,
         LoggerEnum.INFO.name());
 
-    Map<String, Object> contentsByCourseId = new HashMap<>();
-    if (MapUtils.isNotEmpty(coursesContents)) {
-      List<Map<String, Object>> courses =
-          (List<Map<String, Object>>) coursesContents.get(JsonKey.CONTENTS);
-      if (CollectionUtils.isNotEmpty(courses)) {
-        courses.forEach(
-            course -> contentsByCourseId.put((String) course.get(JsonKey.IDENTIFIER), course));
+    if (MapUtils.isNotEmpty(metadata)) {
+      ProjectLogger.log(
+          "LearnerStateActor:prepareCourseBatchResponse courseBatchContents ="
+              + "for metadata "
+              + metadata,
+          LoggerEnum.INFO.name());
+    }
+
+    Map<String, Object> contentsByCourseId = getContentAsMap(coursesContents);
+
+    if (MapUtils.isNotEmpty(contentsByCourseId) && MapUtils.isNotEmpty(metadata)) {
+      Set<String> batchIds = contentsByCourseId.keySet();
+      for (String batchId : batchIds) {
+        if (metadata.containsKey(batchId)) {
+          Map<String, Object> course = (Map<String, Object>) contentsByCourseId.get(batchId);
+          course.put(JsonKey.BATCH, metadata.get(batchId));
+          contentsByCourseId.put(batchId, course);
+        }
       }
     }
     List<Map<String, Object>> batchesWithCourseDetails = batches;
+
     if (MapUtils.isNotEmpty(contentsByCourseId)) {
+
       batchesWithCourseDetails =
           batches
               .stream()
@@ -154,6 +202,19 @@ public class LearnerStateActor extends BaseActor {
     Response response = new Response();
     response.put(JsonKey.COURSES, batchesWithCourseDetails);
     sender().tell(response, self());
+  }
+
+  private Map<String, Object> getContentAsMap(Map<String, Object> coursesContents) {
+    Map<String, Object> contentsByCourseId = new HashMap<>();
+    if (MapUtils.isNotEmpty(coursesContents)) {
+      List<Map<String, Object>> courses =
+          (List<Map<String, Object>>) coursesContents.get(JsonKey.CONTENTS);
+      if (CollectionUtils.isNotEmpty(courses)) {
+        courses.forEach(
+            course -> contentsByCourseId.put((String) course.get(JsonKey.IDENTIFIER), course));
+      }
+    }
+    return contentsByCourseId;
   }
 
   private String prepareCourseSearchRequest(List<Map<String, Object>> batches) {

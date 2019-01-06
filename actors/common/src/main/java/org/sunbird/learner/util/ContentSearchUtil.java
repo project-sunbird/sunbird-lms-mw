@@ -80,7 +80,7 @@ public class ContentSearchUtil {
                 resultMap.put(JsonKey.CONTENTS, contents);
                 ProjectLogger.log(
                     logMsgPrefix + "requestBody = " + queryRequestBody + " content = " + contents,
-                    LoggerEnum.INFO.name());
+                    LoggerEnum.DEBUG.name());
                 String resmsgId = RestUtil.getFromResponse(response, "params.resmsgid");
                 String apiId = RestUtil.getFromResponse(response, "id");
                 Map<String, Object> param = new HashMap<>();
@@ -128,7 +128,7 @@ public class ContentSearchUtil {
                 + queryRequestBody
                 + " content = "
                 + contents,
-            LoggerEnum.INFO.name());
+            LoggerEnum.DEBUG.name());
         String resmsgId = RestUtil.getFromResponse(response, "params.resmsgid");
         String apiId = RestUtil.getFromResponse(response, "id");
         Map<String, Object> param = new HashMap<>();

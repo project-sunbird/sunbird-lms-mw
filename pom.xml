@@ -8,7 +8,7 @@
 	<packaging>pom</packaging>
 	<name>Sunbird LMS MW</name>
 	<modules>
-		<module>actors/sunbird-open-saber-bridge</module>
+		<!--<module>actors/sunbird-open-saber-bridge</module>-->
 		<module>actors</module>
 		<module>service</module>
 	</modules>

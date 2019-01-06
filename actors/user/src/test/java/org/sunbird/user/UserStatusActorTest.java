@@ -2,85 +2,27 @@ package org.sunbird.user;
 
 import static akka.testkit.JavaTestKit.duration;
 import static org.junit.Assert.assertTrue;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.keycloak.admin.client.Keycloak;
-import org.keycloak.admin.client.resource.RealmResource;
-import org.keycloak.admin.client.resource.UserResource;
-import org.keycloak.admin.client.resource.UsersResource;
-import org.keycloak.representations.idm.UserRepresentation;
-import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
+import org.sunbird.actor.core.BaseActorTest;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.KeyCloakConnectionProvider;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.helper.ServiceFactory;
-import org.sunbird.models.user.User;
 import org.sunbird.user.actors.UserStatusActor;
-import org.sunbird.user.service.UserService;
-import org.sunbird.user.service.impl.UserServiceImpl;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest({UserServiceImpl.class, KeyCloakConnectionProvider.class, ServiceFactory.class})
-@PowerMockIgnore("javax.management.*")
-public class UserStatusActorTest {
+public class UserStatusActorTest extends BaseActorTest {
 
   private static final Props props = Props.create(UserStatusActor.class);
   private static final ActorSystem system = ActorSystem.create("system");
-  private static final User user = mock(User.class);
-  private static final CassandraOperationImpl cassandraOperation =
-      mock(CassandraOperationImpl.class);;
-
-  @BeforeClass
-  public static void beforeClass() {
-    PowerMockito.mockStatic(ServiceFactory.class);
-    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    Response response = createCassandraUpdateSuccessResponse();
-    when(cassandraOperation.updateRecord(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(response);
-  }
-
-  @Before
-  public void init() {
-
-    UserRepresentation userRepresentation = mock(UserRepresentation.class);
-    RealmResource realmResource = mock(RealmResource.class);
-    Keycloak keycloak = mock(Keycloak.class);
-
-    PowerMockito.mockStatic(UserServiceImpl.class);
-    UserService userService = mock(UserService.class);
-    when(UserServiceImpl.getInstance()).thenReturn(userService);
-
-    PowerMockito.mockStatic(KeyCloakConnectionProvider.class);
-    when(KeyCloakConnectionProvider.getConnection()).thenReturn(keycloak);
-    when(keycloak.realm(Mockito.anyString())).thenReturn(realmResource);
-
-    UsersResource usersResource = mock(UsersResource.class);
-    when(realmResource.users()).thenReturn(usersResource);
-
-    UserResource userResource = mock(UserResource.class);
-    when(usersResource.get(Mockito.any())).thenReturn(userResource);
-    when(userResource.toRepresentation()).thenReturn(userRepresentation);
-    when(userService.getUserById(Mockito.anyString())).thenReturn(user);
-  }
 
   @Test
   public void testBlockUserSuccess() {
@@ -107,6 +49,7 @@ public class UserStatusActorTest {
 
   @Test
   public void testUnblockUserFailureWithUserAlreadyActive() {
+    resetAllMocks();
     boolean result =
         testScenario(
             false,
@@ -125,12 +68,6 @@ public class UserStatusActorTest {
     return reqObj;
   }
 
-  private static Response createCassandraUpdateSuccessResponse() {
-    Response response = new Response();
-    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    return response;
-  }
-
   private boolean testScenario(
       boolean isDeleted,
       ActorOperations operation,
@@ -138,8 +75,8 @@ public class UserStatusActorTest {
       String expectedErrorResponse) {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-
-    when(user.getIsDeleted()).thenReturn(isDeleted);
+    getMapResponse(isDeleted);
+    this.getCassandraResponseForId(isDeleted);
     subject.tell(getRequestObject(operation.getValue()), probe.getRef());
 
     Response res;
@@ -151,5 +88,22 @@ public class UserStatusActorTest {
           probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
       return (((ProjectCommonException) exception).getCode().equals(expectedErrorResponse));
     }
+  }
+
+  @Override
+  protected Map<String, Object> getMapResponse(boolean isDeleted) {
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.IS_DELETED, isDeleted);
+    return map;
+  }
+
+  @Override
+  protected Map<String, Object> getOrganisationsMap() {
+    return null;
+  }
+
+  @Override
+  protected Map<String, Object> createResponseGet() {
+    return null;
   }
 }

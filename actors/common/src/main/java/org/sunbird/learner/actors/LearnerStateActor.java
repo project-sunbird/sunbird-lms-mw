@@ -132,7 +132,7 @@ public class LearnerStateActor extends BaseActor {
       Map<String, Object> esQueryMap = new HashMap<>();
       esQueryMap.put(JsonKey.IDENTIFIER, courseBatchIds);
       SearchDTO dto = new SearchDTO();
-
+      requiredMetadata.add(JsonKey.IDENTIFIER);
       dto.setFields(requiredMetadata);
       dto.getAdditionalProperties().put(JsonKey.FILTERS, esQueryMap);
       courseBatchesMap =

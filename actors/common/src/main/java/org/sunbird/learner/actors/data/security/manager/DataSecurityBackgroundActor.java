@@ -110,16 +110,13 @@ public class DataSecurityBackgroundActor extends BaseActor {
   }
 
   private void decryptUserDataAndUpdateDb(Map<String, Object> userMap) {
-    try {
-      UserUtility.decryptUserData(userMap);
-      cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
-      getUserAddressDataDecryptAndUpdateDb((String) userMap.get(JsonKey.ID));
-    } catch (Exception e) {
-      ProjectLogger.log(
-          "DataSecurityBackgroundActor:decryptUserDataAndUpdateDb: Exception Occurred while decrypting user data for userId "
-              + ((String) userMap.get(JsonKey.ID)),
-          e);
-    }
+    UserUtility.decryptUserData(userMap);
+    cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
+    getUserAddressDataDecryptAndUpdateDb((String) userMap.get(JsonKey.ID));
+    ProjectLogger.log(
+        "DataSecurityBackgroundActor:decryptUserDataAndUpdateDb: Updating user data for userId "
+            + ((String) userMap.get(JsonKey.ID))
+            + " is completed");
   }
 
   @SuppressWarnings("unchecked")
@@ -129,18 +126,14 @@ public class DataSecurityBackgroundActor extends BaseActor {
             addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), JsonKey.USER_ID, userId);
     List<Map<String, Object>> addressList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-    try {
-      UserUtility.decryptUserAddressData(addressList);
-      for (Map<String, Object> address : addressList) {
-        cassandraOperation.updateRecord(
-            addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), address);
-      }
-    } catch (Exception e) {
-      ProjectLogger.log(
-          "DataSecurityBackgroundActor:getUserAddressDataDecryptAndUpdateDb: Exception Occurred while decrypting user address data for userId "
-              + (userId),
-          e);
+    UserUtility.decryptUserAddressData(addressList);
+    for (Map<String, Object> address : addressList) {
+      cassandraOperation.updateRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), address);
     }
+    ProjectLogger.log(
+        "DataSecurityBackgroundActor:getUserAddressDataDecryptAndUpdateDb: Updating user address data for userId "
+            + (userId)
+            + " is completed");
   }
 
   private void encryptUserDataAndUpdateDb(Map<String, Object> userMap) {
@@ -149,7 +142,9 @@ public class DataSecurityBackgroundActor extends BaseActor {
       cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
       getUserAddressDataEncryptAndUpdateDb((String) userMap.get(JsonKey.ID));
     } catch (Exception e) {
-      ProjectLogger.log("Exception Occurred while encrypting user data ", e);
+      ProjectLogger.log(
+          "DataSecurityBackgroundActor:encryptUserDataAndUpdateDb: Exception Occurred while encrypting user data ",
+          e);
     }
   }
 
@@ -167,7 +162,11 @@ public class DataSecurityBackgroundActor extends BaseActor {
             addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), address);
       }
     } catch (Exception e) {
-      ProjectLogger.log("Exception Occurred while encrypting user data ", e);
+      ProjectLogger.log(
+          "DataSecurityBackgroundActor:getUserAddressDataEncryptAndUpdateDb Occurred while encrypting user data for userId:"
+              + userId
+              + " with exception "
+              + e);
     }
   }
 

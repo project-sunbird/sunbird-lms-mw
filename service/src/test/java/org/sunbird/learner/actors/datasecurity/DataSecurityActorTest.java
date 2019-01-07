@@ -54,36 +54,46 @@ public class DataSecurityActorTest {
 
   @Test
   public void testEncryptDataFailureWithoutUserIds() {
-    encryptionDecryptionFailureTest(
-        false, null, ENCRYPTION_OPERATION, ResponseCode.mandatoryParamsMissing);
+    ProjectCommonException exception =
+        encryptionDecryptionFailureTest(false, null, ENCRYPTION_OPERATION);
+    Assert.assertTrue(
+        exception.getCode().equals(ResponseCode.mandatoryParamsMissing.getErrorCode()));
   }
 
   @Test
   public void testEncryptDataFailureWithUserIdsExceedsMaxAllowed() {
-    encryptionDecryptionFailureTest(
-        true, INVALID_USER_IDS_LIST, ENCRYPTION_OPERATION, ResponseCode.sizeLimitExceed);
+    ProjectCommonException exception =
+        encryptionDecryptionFailureTest(true, INVALID_USER_IDS_LIST, ENCRYPTION_OPERATION);
+    Assert.assertTrue(exception.getCode().equals(ResponseCode.sizeLimitExceed.getErrorCode()));
   }
 
   @Test
   public void testEncryptDataSuccess() {
-    encryptionDecryptionSuccessTest(true, VALID_USER_IDS_LIST, ENCRYPTION_OPERATION);
+    Response response =
+        encryptionDecryptionSuccessTest(true, VALID_USER_IDS_LIST, ENCRYPTION_OPERATION);
+    Assert.assertTrue(response.getResponseCode().equals(ResponseCode.OK));
   }
 
   @Test
   public void testDecryptDataFailureWithoutUserIds() {
-    encryptionDecryptionFailureTest(
-        false, null, DECRYPTION_OPERATION, ResponseCode.mandatoryParamsMissing);
+    ProjectCommonException exception =
+        encryptionDecryptionFailureTest(false, null, DECRYPTION_OPERATION);
+    Assert.assertTrue(
+        exception.getCode().equals(ResponseCode.mandatoryParamsMissing.getErrorCode()));
   }
 
   @Test
   public void testDecryptDataFailureWithUserIdsExceedsMaxAllowed() {
-    encryptionDecryptionFailureTest(
-        true, INVALID_USER_IDS_LIST, DECRYPTION_OPERATION, ResponseCode.sizeLimitExceed);
+    ProjectCommonException exception =
+        encryptionDecryptionFailureTest(true, INVALID_USER_IDS_LIST, DECRYPTION_OPERATION);
+    Assert.assertTrue(exception.getCode().equals(ResponseCode.sizeLimitExceed.getErrorCode()));
   }
 
   @Test
   public void testDecryptDataSuccess() {
-    encryptionDecryptionSuccessTest(true, VALID_USER_IDS_LIST, DECRYPTION_OPERATION);
+    Response response =
+        encryptionDecryptionSuccessTest(true, VALID_USER_IDS_LIST, DECRYPTION_OPERATION);
+    Assert.assertTrue(response.getResponseCode().equals(ResponseCode.OK));
   }
 
   private Request createRequestForEncryption(
@@ -98,24 +108,17 @@ public class DataSecurityActorTest {
     return request;
   }
 
-  private void encryptionDecryptionSuccessTest(
+  private Response encryptionDecryptionSuccessTest(
       boolean isUserIdsRequired, List<String> userIds, String operation) {
     Request request = createRequestForEncryption(isUserIdsRequired, userIds, operation);
     subject.tell(request, probe.getRef());
-    Response response = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(response.getResponseCode().equals(ResponseCode.OK));
+    return probe.expectMsgClass(duration("10 second"), Response.class);
   }
 
-  private void encryptionDecryptionFailureTest(
-      boolean isUserIdsRequired,
-      List<String> userIds,
-      String operation,
-      ResponseCode responseCode) {
+  private ProjectCommonException encryptionDecryptionFailureTest(
+      boolean isUserIdsRequired, List<String> userIds, String operation) {
     Request request = createRequestForEncryption(isUserIdsRequired, userIds, operation);
     subject.tell(request, probe.getRef());
-    ProjectCommonException exception =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertTrue(
-        ((ProjectCommonException) exception).getCode().equals(responseCode.getErrorCode()));
+    return probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
   }
 }

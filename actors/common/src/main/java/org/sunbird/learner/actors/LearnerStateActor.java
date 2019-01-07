@@ -93,7 +93,7 @@ public class LearnerStateActor extends BaseActor {
         (List<Map<String, Object>>) userCoursesResult.get(JsonKey.CONTENT);
 
     ProjectLogger.log(
-        "LearnerStateActor:addCourseDetails: batches size = " + batches.size() + " " + batches,
+        "LearnerStateActor:addCourseDetails: batches size = " + batches.size(),
         LoggerEnum.INFO.name());
 
     if (CollectionUtils.isEmpty(batches)) {
@@ -162,7 +162,7 @@ public class LearnerStateActor extends BaseActor {
 
     ProjectLogger.log(
         "LearnerStateActor:mergeDetailsAndSendCourses coursesContents =" + coursesContents,
-        LoggerEnum.INFO.name());
+        LoggerEnum.DEBUG.name());
 
     if (MapUtils.isNotEmpty(courseBatches)) {
       ProjectLogger.log(
@@ -172,16 +172,8 @@ public class LearnerStateActor extends BaseActor {
           LoggerEnum.INFO.name());
     }
 
-    Map<String, Object> contentsByCourseId = new HashMap<>();
-    if (MapUtils.isNotEmpty(coursesContents)) {
-      List<Map<String, Object>> courses =
-          (List<Map<String, Object>>) coursesContents.get(JsonKey.CONTENTS);
-      if (CollectionUtils.isNotEmpty(courses)) {
-        for (Map<String, Object> course : courses) {
-          contentsByCourseId.put((String) course.get(JsonKey.IDENTIFIER), course);
-        }
-      }
-    }
+    Map<String, Object> contentsByCourseId = getContentAsMap(coursesContents);
+
     if (MapUtils.isNotEmpty(contentsByCourseId) && MapUtils.isNotEmpty(courseBatches)) {
       Set<String> batchIds = contentsByCourseId.keySet();
       for (String batchId : batchIds) {

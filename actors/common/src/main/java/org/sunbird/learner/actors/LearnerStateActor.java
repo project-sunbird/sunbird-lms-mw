@@ -75,7 +75,6 @@ public class LearnerStateActor extends BaseActor {
   public void getCourse(Request request) {
     String userId = (String) request.getRequest().get(JsonKey.USER_ID);
     Map<String, Object> result = userCoursesService.getActiveUserCourses(userId);
-
     if (MapUtils.isNotEmpty(result)) {
       addCourseDetails(request, result);
     } else {
@@ -94,7 +93,7 @@ public class LearnerStateActor extends BaseActor {
         (List<Map<String, Object>>) userCoursesResult.get(JsonKey.CONTENT);
 
     ProjectLogger.log(
-        "LearnerStateActor:addCourseDetails: batches size = " + batches.size(),
+        "LearnerStateActor:addCourseDetails: batches size = " + batches.size() + " " + batches,
         LoggerEnum.INFO.name());
 
     if (CollectionUtils.isEmpty(batches)) {
@@ -117,18 +116,17 @@ public class LearnerStateActor extends BaseActor {
 
     Map<String, Object> courseBatchesMap = null;
     List<String> requiredMetadata = null;
-    Map<String, String[]> queryParams =
-        (Map<String, String[]>) request.getContext().get(JsonKey.REQUEST_PARAMS);
+    String[] queryParams = (String[]) request.getContext().get(JsonKey.FIELDS);
+    requiredMetadata = new ArrayList<>(Arrays.asList(queryParams));
 
-    if (!MapUtils.isEmpty(queryParams) && queryParams.containsKey(JsonKey.FIELDS)) {
+    if (!CollectionUtils.isEmpty(requiredMetadata)) {
       List<String> courseBatchIds =
           (List<String>)
               batches
                   .stream()
                   .map(batch -> (String) batch.get(JsonKey.BATCH_ID))
-                  .collect(Collectors.toSet());
+                  .collect(Collectors.toList());
 
-      requiredMetadata = Arrays.asList(queryParams.get(JsonKey.FIELDS));
       Map<String, Object> esQueryMap = new HashMap<>();
       esQueryMap.put(JsonKey.IDENTIFIER, courseBatchIds);
       SearchDTO dto = new SearchDTO();
@@ -142,44 +140,63 @@ public class LearnerStateActor extends BaseActor {
               ProjectUtil.EsType.course.getTypeName());
     }
 
-    Map<String, Object> courseBatches =
-        getContentAsMap((Map<String, Object>) courseBatchesMap.get(JsonKey.CONTENT));
-
-    mergeDetailsAndSendCourses(contents, batches, courseBatches); // metadata
+    Map<String, Object> courseBatches = new HashMap<>();
+    if (MapUtils.isNotEmpty(courseBatchesMap)) {
+      List<Map<String, Object>> courses =
+          (List<Map<String, Object>>) courseBatchesMap.get(JsonKey.CONTENT);
+      if (CollectionUtils.isNotEmpty(courses)) {
+        courses.forEach(
+            course -> courseBatches.put((String) course.get(JsonKey.IDENTIFIER), course));
+      }
+      ProjectLogger.log(
+          "LearnerStateActor:getContentAsMap: coursesBathces = " + courseBatches,
+          LoggerEnum.INFO.name());
+    }
+    mergeDetailsAndSendCourses(contents, batches, courseBatches);
   }
 
   public void mergeDetailsAndSendCourses(
       Map<String, Object> coursesContents,
       List<Map<String, Object>> batches,
-      Map<String, Object> metadata) {
+      Map<String, Object> courseBatches) {
 
     ProjectLogger.log(
-        "LearnerStateActor:prepareCourseBatchResponse coursesContents =" + coursesContents,
-        LoggerEnum.DEBUG.name());
+        "LearnerStateActor:mergeDetailsAndSendCourses coursesContents =" + coursesContents,
+        LoggerEnum.INFO.name());
 
-    if (MapUtils.isNotEmpty(metadata)) {
+    if (MapUtils.isNotEmpty(courseBatches)) {
       ProjectLogger.log(
-          "LearnerStateActor:prepareCourseBatchResponse courseBatchContents ="
+          "LearnerStateActor:mergeDetailsAndSendCourses courseBatchContents ="
               + "for metadata "
-              + metadata,
+              + courseBatches,
           LoggerEnum.INFO.name());
     }
 
-    Map<String, Object> contentsByCourseId = getContentAsMap(coursesContents);
-
-    if (MapUtils.isNotEmpty(contentsByCourseId) && MapUtils.isNotEmpty(metadata)) {
+    Map<String, Object> contentsByCourseId = new HashMap<>();
+    if (MapUtils.isNotEmpty(coursesContents)) {
+      List<Map<String, Object>> courses =
+          (List<Map<String, Object>>) coursesContents.get(JsonKey.CONTENTS);
+      if (CollectionUtils.isNotEmpty(courses)) {
+        for (Map<String, Object> course : courses) {
+          contentsByCourseId.put((String) course.get(JsonKey.IDENTIFIER), course);
+        }
+      }
+    }
+    if (MapUtils.isNotEmpty(contentsByCourseId) && MapUtils.isNotEmpty(courseBatches)) {
       Set<String> batchIds = contentsByCourseId.keySet();
       for (String batchId : batchIds) {
-        if (metadata.containsKey(batchId)) {
+        if (courseBatches.containsKey(batchId)) {
           Map<String, Object> course = (Map<String, Object>) contentsByCourseId.get(batchId);
-          course.put(JsonKey.BATCH, metadata.get(batchId));
-          contentsByCourseId.put(batchId, course);
+          course.put(JsonKey.BATCH, courseBatches.get(batchId));
         }
       }
     }
     List<Map<String, Object>> batchesWithCourseDetails = batches;
 
     if (MapUtils.isNotEmpty(contentsByCourseId)) {
+      ProjectLogger.log(
+          "LearnerStateActor:mergeDetailsAndSendCourses batchesWithCourseDetails =" + batches,
+          LoggerEnum.INFO.name());
 
       batchesWithCourseDetails =
           batches
@@ -194,8 +211,10 @@ public class LearnerStateActor extends BaseActor {
                     return batch;
                   })
               .collect(Collectors.toList());
+
       ProjectLogger.log(
-          "LearnerStateActor:prepareCourseBatchResponse batchesWithCourseDetails =",
+          "LearnerStateActor:prepareCourseBatchResponse batchesWithCourseDetails ="
+              + batchesWithCourseDetails,
           LoggerEnum.INFO.name());
     }
     Response response = new Response();
@@ -209,6 +228,9 @@ public class LearnerStateActor extends BaseActor {
       List<Map<String, Object>> courses =
           (List<Map<String, Object>>) coursesContents.get(JsonKey.CONTENTS);
       if (CollectionUtils.isNotEmpty(courses)) {
+        ProjectLogger.log(
+            "LearnerStateActor:getContentAsMap: courses = " + courses, LoggerEnum.INFO.name());
+
         courses.forEach(
             course -> contentsByCourseId.put((String) course.get(JsonKey.IDENTIFIER), course));
       }

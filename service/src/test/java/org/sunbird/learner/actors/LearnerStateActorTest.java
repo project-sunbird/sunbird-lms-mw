@@ -206,6 +206,13 @@ public class LearnerStateActorTest {
   @Test
   public void testGetCourseByUserIdAndCourseBatchesSuccess() {
 
+    String s[] = {JsonKey.STATUS};
+    Map<String, Object> batch = getTestDone(s);
+
+    Assert.assertEquals(1, batch.get("status"));
+  }
+
+  private Map<String, Object> getTestDone(String[] s) {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -214,7 +221,7 @@ public class LearnerStateActorTest {
     map.put(JsonKey.USER_ID, "user1");
     request.setRequest(map);
     Map<String, String[]> queryParams = new HashMap<>();
-    String s[] = {JsonKey.STATUS};
+
     request.getContext().put(JsonKey.FIELDS, s);
     request.setOperation(ActorOperations.GET_COURSE.getValue());
     mockEsUtilforUserNcourseBatch();
@@ -226,37 +233,14 @@ public class LearnerStateActorTest {
     List<Map<String, Object>> courses = (List<Map<String, Object>>) res.get(JsonKey.COURSES);
     Map<String, Object> content =
         (Map<String, Object>) ((Map<String, Object>) courses.get(0)).get(JsonKey.CONTENT);
-    Map<String, Object> batch = (Map<String, Object>) content.get(JsonKey.BATCH);
-    Assert.assertEquals(1, batch.get("status"));
-    ;
+    return (Map<String, Object>) content.get(JsonKey.BATCH);
   }
 
   @Test
   public void testGetCourseByUserIdFailureWithInvalidFieldNames() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request request = new Request();
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.USER_ID, "user1");
-    request.setRequest(map);
     String s[] = {"invalid", "status", "erre"};
-
-    request.getContext().put(JsonKey.FIELDS, s);
-    request.setOperation(ActorOperations.GET_COURSE.getValue());
-    mockEsUtilforUserNcourseBatch();
-    mockContentUtil();
-    subject.tell(request, probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    ProjectLogger.log(
-        "Result After Completeing test is " + res.getResult() + " ", LoggerEnum.INFO.name());
-    List<Map<String, Object>> courses = (List<Map<String, Object>>) res.get(JsonKey.COURSES);
-    Map<String, Object> content =
-        (Map<String, Object>) ((Map<String, Object>) courses.get(0)).get(JsonKey.CONTENT);
-    Map<String, Object> batch = (Map<String, Object>) content.get(JsonKey.BATCH);
+    Map<String, Object> batch = getTestDone(s);
     Assert.assertEquals(null, batch.get("invalid"));
-    ;
   }
 
   private void mockContentUtil() {

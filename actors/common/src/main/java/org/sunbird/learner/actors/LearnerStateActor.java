@@ -115,29 +115,12 @@ public class LearnerStateActor extends BaseActor {
             (Map<String, String>) request.getRequest().get(JsonKey.HEADER));
 
     Map<String, Object> courseBatchesMap = null;
-    List<String> requiredMetadata = null;
+    List<String> requestedFields = null;
     String[] queryParams = (String[]) request.getContext().get(JsonKey.FIELDS);
-    requiredMetadata = new ArrayList<>(Arrays.asList(queryParams));
+    requestedFields = new ArrayList<>(Arrays.asList(queryParams));
 
-    if (!CollectionUtils.isEmpty(requiredMetadata)) {
-      List<String> courseBatchIds =
-          (List<String>)
-              batches
-                  .stream()
-                  .map(batch -> (String) batch.get(JsonKey.BATCH_ID))
-                  .collect(Collectors.toList());
-
-      Map<String, Object> esQueryMap = new HashMap<>();
-      esQueryMap.put(JsonKey.IDENTIFIER, courseBatchIds);
-      SearchDTO dto = new SearchDTO();
-      requiredMetadata.add(JsonKey.IDENTIFIER);
-      dto.setFields(requiredMetadata);
-      dto.getAdditionalProperties().put(JsonKey.FILTERS, esQueryMap);
-      courseBatchesMap =
-          ElasticSearchUtil.complexSearch(
-              dto,
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.course.getTypeName());
+    if (!CollectionUtils.isEmpty(requestedFields)) {
+      courseBatchesMap = getCourseBatch(batches, requestedFields);
     }
 
     Map<String, Object> courseBatches = new HashMap<>();
@@ -153,6 +136,25 @@ public class LearnerStateActor extends BaseActor {
           LoggerEnum.INFO.name());
     }
     mergeDetailsAndSendCourses(contents, batches, courseBatches);
+  }
+
+  private Map<String, Object> getCourseBatch(
+      List<Map<String, Object>> batches, List<String> requestedFields) {
+    List<String> courseBatchIds =
+        (List<String>)
+            batches
+                .stream()
+                .map(batch -> (String) batch.get(JsonKey.BATCH_ID))
+                .collect(Collectors.toList());
+
+    Map<String, Object> esQueryMap = new HashMap<>();
+    esQueryMap.put(JsonKey.IDENTIFIER, courseBatchIds);
+    SearchDTO dto = new SearchDTO();
+    requestedFields.add(JsonKey.IDENTIFIER);
+    dto.setFields(requestedFields);
+    dto.getAdditionalProperties().put(JsonKey.FILTERS, esQueryMap);
+    return ElasticSearchUtil.complexSearch(
+        dto, ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.course.getTypeName());
   }
 
   public void mergeDetailsAndSendCourses(
@@ -220,9 +222,6 @@ public class LearnerStateActor extends BaseActor {
       List<Map<String, Object>> courses =
           (List<Map<String, Object>>) coursesContents.get(JsonKey.CONTENTS);
       if (CollectionUtils.isNotEmpty(courses)) {
-        ProjectLogger.log(
-            "LearnerStateActor:getContentAsMap: courses = " + courses, LoggerEnum.INFO.name());
-
         courses.forEach(
             course -> contentsByCourseId.put((String) course.get(JsonKey.IDENTIFIER), course));
       }

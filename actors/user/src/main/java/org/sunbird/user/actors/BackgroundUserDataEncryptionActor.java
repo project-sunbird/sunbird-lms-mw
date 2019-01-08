@@ -129,7 +129,8 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
       ProjectLogger.log(
           "DataSecurityBackgroundActor:encryptUserDataAndUpdateDb: Updating user data for userId "
               + ((String) userMap.get(JsonKey.ID))
-              + " is completed");
+              + " is completed",
+          LoggerEnum.INFO);
 
       List<Map<String, Object>> addressList = getAddressList((String) userMap.get(JsonKey.ID));
       if (CollectionUtils.isNotEmpty(addressList)) {
@@ -138,7 +139,8 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
         ProjectLogger.log(
             "DataSecurityBackgroundActor:encryptUserDataAndUpdateDb: Updating user address data for userId "
                 + ((String) userMap.get(JsonKey.ID))
-                + " is completed");
+                + " is completed",
+            LoggerEnum.INFO);
       }
     } catch (Exception e) {
       ProjectLogger.log(
@@ -153,7 +155,8 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
     ProjectLogger.log(
         "DataSecurityBackgroundActor:decryptUserDataAndUpdateDb: Updating user data for userId "
             + ((String) userMap.get(JsonKey.ID))
-            + " is completed");
+            + " is completed",
+        LoggerEnum.INFO);
 
     List<Map<String, Object>> addressList = getAddressList((String) userMap.get(JsonKey.ID));
     if (CollectionUtils.isNotEmpty(addressList)) {
@@ -162,7 +165,8 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
       ProjectLogger.log(
           "DataSecurityBackgroundActor:decryptUserDataAndUpdateDb: Updating user address data for userId "
               + ((String) userMap.get(JsonKey.ID))
-              + " is completed");
+              + " is completed",
+          LoggerEnum.INFO);
     }
   }
 

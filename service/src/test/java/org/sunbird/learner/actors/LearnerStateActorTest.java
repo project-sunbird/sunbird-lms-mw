@@ -205,11 +205,16 @@ public class LearnerStateActorTest {
 
   @Test
   public void testGetCourseByUserIdAndCourseBatchesSuccess() {
-
     String s[] = {JsonKey.STATUS};
     Map<String, Object> batch = getTestDone(s);
-
     Assert.assertEquals(1, batch.get("status"));
+  }
+
+  @Test
+  public void testGetCourseByUserIdFailureWithInvalidFieldNames() {
+    String s[] = {"invalid", "status", "erre"};
+    Map<String, Object> batch = getTestDone(s);
+    Assert.assertEquals(null, batch.get("invalid"));
   }
 
   private Map<String, Object> getTestDone(String[] s) {
@@ -234,13 +239,6 @@ public class LearnerStateActorTest {
     Map<String, Object> content =
         (Map<String, Object>) ((Map<String, Object>) courses.get(0)).get(JsonKey.CONTENT);
     return (Map<String, Object>) content.get(JsonKey.BATCH);
-  }
-
-  @Test
-  public void testGetCourseByUserIdFailureWithInvalidFieldNames() {
-    String s[] = {"invalid", "status", "erre"};
-    Map<String, Object> batch = getTestDone(s);
-    Assert.assertEquals(null, batch.get("invalid"));
   }
 
   private void mockContentUtil() {

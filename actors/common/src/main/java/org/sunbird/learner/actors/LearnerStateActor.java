@@ -132,7 +132,7 @@ public class LearnerStateActor extends BaseActor {
             course -> courseBatches.put((String) course.get(JsonKey.IDENTIFIER), course));
       }
       ProjectLogger.log(
-          "LearnerStateActor:getContentAsMap: coursesBathces = " + courseBatches,
+          "LearnerStateActor:addCourseDetails: coursesBathces = " + courseBatches,
           LoggerEnum.INFO.name());
     }
     mergeDetailsAndSendCourses(contents, batches, courseBatches);
@@ -171,7 +171,7 @@ public class LearnerStateActor extends BaseActor {
           "LearnerStateActor:mergeDetailsAndSendCourses courseBatchContents ="
               + "for metadata "
               + courseBatches,
-          LoggerEnum.INFO.name());
+          LoggerEnum.DEBUG.name());
     }
 
     Map<String, Object> contentsByCourseId = getContentAsMap(coursesContents);
@@ -205,11 +205,6 @@ public class LearnerStateActor extends BaseActor {
                     return batch;
                   })
               .collect(Collectors.toList());
-
-      ProjectLogger.log(
-          "LearnerStateActor:prepareCourseBatchResponse batchesWithCourseDetails ="
-              + batchesWithCourseDetails,
-          LoggerEnum.INFO.name());
     }
     Response response = new Response();
     response.put(JsonKey.COURSES, batchesWithCourseDetails);

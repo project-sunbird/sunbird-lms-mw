@@ -23,11 +23,7 @@ import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.StringFormatter;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.request.UserRequestValidator;
@@ -47,6 +43,7 @@ import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
 import org.sunbird.user.util.UserUtil;
+import org.sunbird.validator.location.LocationRequestValidator;
 
 @ActorConfig(
   tasks = {"createUser", "updateUser"},
@@ -60,6 +57,7 @@ public class UserManagementActor extends BaseActor {
       Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE));
   private UserRequestValidator userRequestValidator = new UserRequestValidator();
   private UserService userService = UserServiceImpl.getInstance();
+  private static final LocationRequestValidator validator = new LocationRequestValidator();
   private SystemSettingClient systemSettingClient = SystemSettingClientImpl.getInstance();
   private OrganisationClient organisationClient = new OrganisationClientImpl();
   private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
@@ -124,7 +122,7 @@ public class UserManagementActor extends BaseActor {
     removeFieldsFrmReq(userMap);
     // if we are updating email then need to update isEmailVerified flag inside keycloak
     UserUtil.checkEmailSameOrDiff(userMap, userDbRecord);
-
+    validateCodeAndAddLocationIds(userMap);
     if (IS_REGISTRY_ENABLED) {
       UserUtil.updateUserToRegistry(userMap, (String) userDbRecord.get(JsonKey.REGISTRY_ID));
     }
@@ -315,6 +313,7 @@ public class UserManagementActor extends BaseActor {
     UserUtil.validateExternalIds(user, JsonKey.CREATE);
     userMap.put(JsonKey.EXTERNAL_IDS, user.getExternalIds());
     UserUtil.validateUserPhoneEmailAndWebPages(user, JsonKey.CREATE);
+    validateCodeAndAddLocationIds(userMap);
     if (IS_REGISTRY_ENABLED) {
       UserExtension userExtension = new UserProviderRegistryImpl();
       userExtension.create(userMap);
@@ -371,6 +370,19 @@ public class UserManagementActor extends BaseActor {
         TelemetryUtil.generateTargetObject(
             (String) userMap.get(JsonKey.ID), JsonKey.USER, JsonKey.CREATE, null);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
+  }
+
+  private void validateCodeAndAddLocationIds(Map<String, Object> userMap) {
+    if (userMap.containsKey(JsonKey.LOCATION_CODES)
+        && !CollectionUtils.isEmpty((List<String>) userMap.get(JsonKey.LOCATION_CODES))) {
+
+      List<String> locationIdList =
+          validator.getValidatedLocationIds(
+              getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
+              (List<String>) userMap.get(JsonKey.LOCATION_CODES));
+      userMap.put(JsonKey.LOCATION_IDS, locationIdList);
+      userMap.remove(JsonKey.LOCATION_CODE);
+    }
   }
 
   private void sendEmailAndSms(Map<String, Object> userMap) {

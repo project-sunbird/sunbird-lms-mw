@@ -169,7 +169,7 @@ public class LearnerStateActor extends BaseActor {
     if (MapUtils.isNotEmpty(courseBatches)) {
       ProjectLogger.log(
           "LearnerStateActor:mergeDetailsAndSendCourses courseBatchContents ="
-              + "for metadata "
+              + "for requested data "
               + courseBatches,
           LoggerEnum.DEBUG.name());
     }

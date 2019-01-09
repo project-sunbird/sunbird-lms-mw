@@ -29,14 +29,19 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.ContentSearchUtil;
 
 /** @author arvind */
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class})
-@PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
+@PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class, ContentSearchUtil.class})
+@PowerMockIgnore({"javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*"})
 public class LearnerStateActorTest {
 
   private static ActorSystem system;
@@ -58,6 +63,7 @@ public class LearnerStateActorTest {
     cassandraOperation = mock(CassandraOperation.class);
     PowerMockito.mockStatic(ServiceFactory.class);
     PowerMockito.mockStatic(ElasticSearchUtil.class);
+    PowerMockito.mockStatic(ContentSearchUtil.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
 
     Map<String, Object> esResult = new HashMap<>();
@@ -195,5 +201,110 @@ public class LearnerStateActorTest {
     subject.tell(request, probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     Assert.assertNotNull(res);
+  }
+
+  @Test
+  public void testGetCourseByUserIdAndCourseBatchesSuccess() {
+    String s[] = {JsonKey.STATUS};
+    Map<String, Object> batch = testGetEnrolledCoursesWithBatchInfo(s);
+    Assert.assertEquals(1, batch.get("status"));
+  }
+
+  @Test
+  public void testGetCourseByUserIdFailureWithInvalidFieldNames() {
+    String s[] = {"invalid", "status", "erre"};
+    Map<String, Object> batch = testGetEnrolledCoursesWithBatchInfo(s);
+    Assert.assertEquals(null, batch.get("invalid"));
+  }
+
+  @Test
+  public void testGetCourseByUserIdSuccessWithoutFieldNames() {
+    String s[] = {};
+    Map<String, Object> batch = testGetEnrolledCoursesWithBatchInfo(s);
+    Assert.assertEquals(null, batch);
+  }
+
+  private Map<String, Object> testGetEnrolledCoursesWithBatchInfo(String[] s) {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request request = new Request();
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.USER_ID, "user1");
+    request.setRequest(map);
+    Map<String, String[]> queryParams = new HashMap<>();
+
+    request.getContext().put(JsonKey.BATCH_DETAILS, s);
+    request.setOperation(ActorOperations.GET_COURSE.getValue());
+    mockEsUtilforUserNcourseBatch();
+    mockContentUtil();
+    subject.tell(request, probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    ProjectLogger.log(
+        "Result After Completeing test is " + res.getResult() + " ", LoggerEnum.INFO.name());
+    List<Map<String, Object>> courses = (List<Map<String, Object>>) res.get(JsonKey.COURSES);
+    return (Map<String, Object>) ((Map<String, Object>) courses.get(0)).get(JsonKey.BATCH);
+  }
+
+  private void mockContentUtil() {
+    Map<String, Object> courses = new HashMap<>();
+    List<Map<String, Object>> l1 = new ArrayList<>();
+    l1.add(getMapforCourse("q1", "q1", "first"));
+    l1.add(getMapforCourse("q2", "q2", "second"));
+    l1.add(getMapforCourse("q3", "q3", "third"));
+    courses.put(JsonKey.CONTENTS, l1);
+
+    when(ContentSearchUtil.searchContentSync(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(courses);
+  }
+
+  private Map<String, Object> getMapforCourse(String id, String cId, String cName) {
+    Map<String, Object> m1 = new HashMap<>();
+    m1.put(JsonKey.IDENTIFIER, id);
+    m1.put(JsonKey.COURSE_NAME, cName);
+    m1.put(JsonKey.COURSE_ID, cId);
+    return m1;
+  }
+
+  private Map<String, Object> getMapforCourseBatch(String id, String cbId, String cbName) {
+    Map<String, Object> m1 = new HashMap<>();
+    m1.put(JsonKey.IDENTIFIER, id);
+    m1.put(JsonKey.STATUS, 1);
+    return m1;
+  }
+
+  private void mockEsUtilforUserNcourseBatch() {
+    Map<String, Object> resultUser = new HashMap<>();
+    List<Map<String, Object>> userenrolledDetails = new ArrayList<>();
+    userenrolledDetails.add(getMap("u1", "cb1", "q1"));
+    userenrolledDetails.add(getMap("u2", "cb2", "q2"));
+    userenrolledDetails.add(getMap("u3", "cb3", "q3"));
+    resultUser.put(JsonKey.CONTENT, userenrolledDetails);
+
+    Map<String, Object> courseBatches = new HashMap<>();
+    List<Map<String, Object>> l1 = new ArrayList<>();
+    l1.add(getMapforCourseBatch("cb1", "q1", "first"));
+    l1.add(getMapforCourseBatch("cb2", "q2", "second"));
+    l1.add(getMapforCourseBatch("cb3", "q3", "third"));
+    courseBatches.put(JsonKey.CONTENT, l1);
+
+    Map<String, Object> filter = new HashMap<>();
+    filter.put(JsonKey.USER_ID, "user1");
+    filter.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
+    SearchDTO searchDto = new SearchDTO();
+    searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
+    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.any(), Mockito.any()))
+        .thenReturn(resultUser)
+        .thenReturn(courseBatches);
+  }
+
+  private Map<String, Object> getMap(String id, String bId, String cId) {
+    Map<String, Object> m1 = new HashMap<>();
+    m1.put(JsonKey.IDENTIFIER, id);
+    m1.put(JsonKey.BATCH_ID, bId);
+    m1.put(JsonKey.COURSE_ID, cId);
+    m1.put(JsonKey.USER_ID, "test");
+    return m1;
   }
 }

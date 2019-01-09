@@ -206,25 +206,25 @@ public class LearnerStateActorTest {
   @Test
   public void testGetCourseByUserIdAndCourseBatchesSuccess() {
     String s[] = {JsonKey.STATUS};
-    Map<String, Object> batch = getTestDone(s);
+    Map<String, Object> batch = testGetEnrolledCoursesWithBatchInfo(s);
     Assert.assertEquals(1, batch.get("status"));
   }
 
   @Test
   public void testGetCourseByUserIdFailureWithInvalidFieldNames() {
     String s[] = {"invalid", "status", "erre"};
-    Map<String, Object> batch = getTestDone(s);
+    Map<String, Object> batch = testGetEnrolledCoursesWithBatchInfo(s);
     Assert.assertEquals(null, batch.get("invalid"));
   }
 
   @Test
   public void testGetCourseByUserIdSuccessWithoutFieldNames() {
     String s[] = {};
-    Map<String, Object> batch = getTestDone(s);
+    Map<String, Object> batch = testGetEnrolledCoursesWithBatchInfo(s);
     Assert.assertEquals(null, batch);
   }
 
-  private Map<String, Object> getTestDone(String[] s) {
+  private Map<String, Object> testGetEnrolledCoursesWithBatchInfo(String[] s) {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 

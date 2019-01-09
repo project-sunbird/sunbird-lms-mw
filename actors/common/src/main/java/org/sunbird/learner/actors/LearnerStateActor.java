@@ -116,7 +116,7 @@ public class LearnerStateActor extends BaseActor {
 
     Map<String, Object> courseBatchesMap = null;
     List<String> requestedFields = null;
-    String[] queryParams = (String[]) request.getContext().get(JsonKey.FIELDS);
+    String[] queryParams = (String[]) request.getContext().get(JsonKey.BATCH_DETAILS);
 
     if (queryParams != null) {
       requestedFields = new ArrayList<>(Arrays.asList(queryParams));

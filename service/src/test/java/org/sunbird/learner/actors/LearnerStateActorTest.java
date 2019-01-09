@@ -234,7 +234,7 @@ public class LearnerStateActorTest {
     request.setRequest(map);
     Map<String, String[]> queryParams = new HashMap<>();
 
-    request.getContext().put(JsonKey.FIELDS, s);
+    request.getContext().put(JsonKey.BATCH_DETAILS, s);
     request.setOperation(ActorOperations.GET_COURSE.getValue());
     mockEsUtilforUserNcourseBatch();
     mockContentUtil();

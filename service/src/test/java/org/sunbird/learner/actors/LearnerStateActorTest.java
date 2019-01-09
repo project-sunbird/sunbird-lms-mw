@@ -217,6 +217,13 @@ public class LearnerStateActorTest {
     Assert.assertEquals(null, batch.get("invalid"));
   }
 
+  @Test
+  public void testGetCourseByUserIdSuccessWithoutFieldNames() {
+    String s[] = {};
+    Map<String, Object> batch = getTestDone(s);
+    Assert.assertEquals(null, batch);
+  }
+
   private Map<String, Object> getTestDone(String[] s) {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -236,9 +243,7 @@ public class LearnerStateActorTest {
     ProjectLogger.log(
         "Result After Completeing test is " + res.getResult() + " ", LoggerEnum.INFO.name());
     List<Map<String, Object>> courses = (List<Map<String, Object>>) res.get(JsonKey.COURSES);
-    Map<String, Object> content =
-        (Map<String, Object>) ((Map<String, Object>) courses.get(0)).get(JsonKey.CONTENT);
-    return (Map<String, Object>) content.get(JsonKey.BATCH);
+    return (Map<String, Object>) ((Map<String, Object>) courses.get(0)).get(JsonKey.BATCH);
   }
 
   private void mockContentUtil() {
@@ -272,16 +277,16 @@ public class LearnerStateActorTest {
   private void mockEsUtilforUserNcourseBatch() {
     Map<String, Object> resultUser = new HashMap<>();
     List<Map<String, Object>> userenrolledDetails = new ArrayList<>();
-    userenrolledDetails.add(getMap("q1", "q1", "q1"));
-    userenrolledDetails.add(getMap("q2", "q2", "q2"));
-    userenrolledDetails.add(getMap("q3", "q3", "q3"));
+    userenrolledDetails.add(getMap("u1", "cb1", "q1"));
+    userenrolledDetails.add(getMap("u2", "cb2", "q2"));
+    userenrolledDetails.add(getMap("u3", "cb3", "q3"));
     resultUser.put(JsonKey.CONTENT, userenrolledDetails);
 
     Map<String, Object> courseBatches = new HashMap<>();
     List<Map<String, Object>> l1 = new ArrayList<>();
-    l1.add(getMapforCourseBatch("q1", "q1", "first"));
-    l1.add(getMapforCourseBatch("q2", "q2", "second"));
-    l1.add(getMapforCourseBatch("q3", "q3", "third"));
+    l1.add(getMapforCourseBatch("cb1", "q1", "first"));
+    l1.add(getMapforCourseBatch("cb2", "q2", "second"));
+    l1.add(getMapforCourseBatch("cb3", "q3", "third"));
     courseBatches.put(JsonKey.CONTENT, l1);
 
     Map<String, Object> filter = new HashMap<>();

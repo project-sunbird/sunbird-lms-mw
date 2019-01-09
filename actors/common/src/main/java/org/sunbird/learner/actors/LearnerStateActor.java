@@ -120,7 +120,8 @@ public class LearnerStateActor extends BaseActor {
 
     if (queryParams != null) {
       requestedFields = new ArrayList<>(Arrays.asList(queryParams));
-      courseBatchesMap = getCourseBatch(batches, requestedFields);
+      if (CollectionUtils.isNotEmpty(requestedFields))
+        courseBatchesMap = getCourseBatch(batches, requestedFields);
     }
 
     Map<String, Object> courseBatches = new HashMap<>();
@@ -153,6 +154,7 @@ public class LearnerStateActor extends BaseActor {
     requestedFields.add(JsonKey.IDENTIFIER);
     dto.setFields(requestedFields);
     dto.getAdditionalProperties().put(JsonKey.FILTERS, esQueryMap);
+
     return ElasticSearchUtil.complexSearch(
         dto, ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.course.getTypeName());
   }
@@ -175,16 +177,6 @@ public class LearnerStateActor extends BaseActor {
     }
 
     Map<String, Object> contentsByCourseId = getContentAsMap(coursesContents);
-
-    if (MapUtils.isNotEmpty(contentsByCourseId) && MapUtils.isNotEmpty(courseBatches)) {
-      Set<String> batchIds = contentsByCourseId.keySet();
-      for (String batchId : batchIds) {
-        if (courseBatches.containsKey(batchId)) {
-          Map<String, Object> course = (Map<String, Object>) contentsByCourseId.get(batchId);
-          course.put(JsonKey.BATCH, courseBatches.get(batchId));
-        }
-      }
-    }
     List<Map<String, Object>> batchesWithCourseDetails = batches;
 
     if (MapUtils.isNotEmpty(contentsByCourseId)) {
@@ -201,6 +193,10 @@ public class LearnerStateActor extends BaseActor {
                       batch.put(
                           JsonKey.CONTENT,
                           contentsByCourseId.get((String) batch.get(JsonKey.COURSE_ID)));
+                      if (MapUtils.isNotEmpty(courseBatches)
+                          && courseBatches.containsKey((String) batch.get(JsonKey.BATCH_ID))) {
+                        batch.put(JsonKey.BATCH, courseBatches.get(batch.get(JsonKey.BATCH_ID)));
+                      }
                     }
                     return batch;
                   })

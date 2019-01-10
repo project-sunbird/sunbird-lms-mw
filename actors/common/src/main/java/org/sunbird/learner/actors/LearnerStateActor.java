@@ -118,7 +118,7 @@ public class LearnerStateActor extends BaseActor {
     List<String> requestedFields = null;
     String[] queryParams = (String[]) request.getContext().get(JsonKey.BATCH_DETAILS);
 
-    if (queryParams[0] != null) {
+    if (queryParams != null && queryParams.length > 0) {
 
       ProjectLogger.log(
           "LearnerStateActor:addCourseDetails: queryParam[0] = " + queryParams[0],

@@ -36,6 +36,7 @@ public final class UserUtility {
     return encryptUserSpecificField(userMap, userKeyToEncrypt);
   }
 
+  @SuppressWarnings("unchecked")
   public static Map<String, Object> encryptUserSpecificField(
       Map<String, Object> userMap, List<String> fieldsToEncrypt) throws Exception {
     EncryptionService service = ServiceFactory.getEncryptionServiceInstance(null);

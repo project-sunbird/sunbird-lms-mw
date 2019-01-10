@@ -16,6 +16,7 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
+import org.sunbird.actorutil.location.impl.LocationClientImpl;
 import org.sunbird.actorutil.org.OrganisationClient;
 import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
@@ -375,13 +376,22 @@ public class UserManagementActor extends BaseActor {
   private void validateCodeAndAddLocationIds(Map<String, Object> userMap) {
     if (userMap.containsKey(JsonKey.LOCATION_CODES)
         && !CollectionUtils.isEmpty((List<String>) userMap.get(JsonKey.LOCATION_CODES))) {
-
+      LocationClientImpl locationClient = new LocationClientImpl();
       List<String> locationIdList =
-          validator.getValidatedLocationIds(
-              getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
+          locationClient.getLocationIds(
+              getActorRef(LocationActorOperation.GET_LOCATION_IDS.getValue()),
               (List<String>) userMap.get(JsonKey.LOCATION_CODES));
-      userMap.put(JsonKey.LOCATION_IDS, locationIdList);
-      userMap.remove(JsonKey.LOCATION_CODE);
+      if (!locationIdList.isEmpty()) {
+        userMap.put(JsonKey.LOCATION_IDS, locationIdList);
+        userMap.remove(JsonKey.LOCATION_CODE);
+      } else {
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.invalidParameterValue,
+            MessageFormat.format(
+                ResponseCode.invalidParameterValue.getErrorMessage(),
+                JsonKey.LOCATION_CODES,
+                (List<String>) userMap.get(JsonKey.LOCATION_CODES)));
+      }
     }
   }
 

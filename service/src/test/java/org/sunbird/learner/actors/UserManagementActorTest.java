@@ -190,8 +190,7 @@ public class UserManagementActorTest {
   public void testCreateUserSuccessWithLocationCode() {
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
-        .thenReturn(getEsResponseForLocation(true))
-        .thenReturn(getEsResponseForLocation(false))
+        .thenReturn(getEsResponseForLocation())
         .thenReturn(getEsResponse());
     reqMap.put(JsonKey.LOCATION_CODES, Arrays.asList("locationCode"));
     boolean result =
@@ -272,8 +271,7 @@ public class UserManagementActorTest {
   public void testUpdateUserSuccessWithLocationCode() {
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
-        .thenReturn(getEsResponseForLocation(true))
-        .thenReturn(getEsResponseForLocation(false))
+        .thenReturn(getEsResponseForLocation())
         .thenReturn(getEsResponse());
     boolean result =
         testScenario(
@@ -386,21 +384,9 @@ public class UserManagementActorTest {
     return map;
   }
 
-  public Object getEsResponseForLocation(boolean isParentIdRequired) {
+  public Object getEsResponseForLocation() {
     Response response = new Response();
-    Map<String, Object> map = new HashMap<>();
-    map.put("id", "id");
-    map.put("code", "code");
-    map.put("name", "name");
-
-    if (isParentIdRequired) {
-      map.put("type", "district");
-      map.put("parentId", "parentId");
-    } else {
-      map.put("type", "state");
-      map.put("parentId", "null");
-    }
-    response.put(JsonKey.RESPONSE, Arrays.asList(map));
+    response.put(JsonKey.RESPONSE, Arrays.asList("id"));
     return response;
   }
 }

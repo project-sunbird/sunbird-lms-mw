@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -14,14 +13,14 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.PhoneValidator;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
+import org.sunbird.user.service.UserEncryptionService;
+import org.sunbird.user.service.impl.UserEncryptionServiceImpl;
 
 /** Background encrytion and decryption of user sensitive data. */
 @ActorConfig(
@@ -31,6 +30,7 @@ import org.sunbird.learner.util.Util;
 public class BackgroundUserDataEncryptionActor extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private UserEncryptionService userEncryptionService = UserEncryptionServiceImpl.getInstance();
   private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
 
@@ -63,10 +63,9 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
   private void encryptData(List<Map<String, Object>> userDetails) {
     List<String> userIdsListToSync = new ArrayList<>();
     for (Map<String, Object> userMap : userDetails) {
-      if (ProjectUtil.isEmailvalid((String) userMap.get(JsonKey.EMAIL))
-          || (StringUtils.isNotBlank((String) userMap.get(JsonKey.PHONE))
-              && PhoneValidator.validatePhoneNumber((String) userMap.get(JsonKey.PHONE)))) {
-        encryptUserDataAndUpdateDb(userMap);
+      List<String> fieldsToEncrypt = userEncryptionService.getDecryptedFields(userMap);
+      if (CollectionUtils.isNotEmpty(fieldsToEncrypt)) {
+        encryptUserDataAndUpdateDb(userMap, fieldsToEncrypt);
         userIdsListToSync.add((String) userMap.get(JsonKey.ID));
       } else {
         ProjectLogger.log(
@@ -87,10 +86,8 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
   private void decryptData(List<Map<String, Object>> userDetails) {
     List<String> userIdsListToSync = new ArrayList<>();
     for (Map<String, Object> userMap : userDetails) {
-      if ((StringUtils.isNotBlank((String) userMap.get(JsonKey.EMAIL))
-              && !(ProjectUtil.isEmailvalid((String) userMap.get(JsonKey.EMAIL)))
-          || (StringUtils.isNotBlank((String) userMap.get(JsonKey.PHONE))
-              && !PhoneValidator.validatePhoneNumber((String) userMap.get(JsonKey.PHONE))))) {
+      List<String> fieldsToDecrypt = userEncryptionService.getEncryptedFields(userMap);
+      if (CollectionUtils.isNotEmpty(fieldsToDecrypt)) {
         decryptUserDataAndUpdateDb(userMap);
         userIdsListToSync.add((String) userMap.get(JsonKey.ID));
       } else {
@@ -122,9 +119,10 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
     return userList;
   }
 
-  private void encryptUserDataAndUpdateDb(Map<String, Object> userMap) {
+  private void encryptUserDataAndUpdateDb(
+      Map<String, Object> userMap, List<String> fieldsToEncrypt) {
     try {
-      UserUtility.encryptUserData(userMap);
+      UserUtility.encryptUserSpecificField(userMap, fieldsToEncrypt);
       cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
       ProjectLogger.log(
           "DataSecurityBackgroundActor:encryptUserDataAndUpdateDb: Updating user data for userId "

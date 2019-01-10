@@ -33,9 +33,14 @@ public final class UserUtility {
   private UserUtility() {}
 
   public static Map<String, Object> encryptUserData(Map<String, Object> userMap) throws Exception {
+    return encryptUserSpecificField(userMap, userKeyToEncrypt);
+  }
+
+  public static Map<String, Object> encryptUserSpecificField(
+      Map<String, Object> userMap, List<String> fieldsToEncrypt) throws Exception {
     EncryptionService service = ServiceFactory.getEncryptionServiceInstance(null);
     // Encrypt user basic info
-    for (String key : userKeyToEncrypt) {
+    for (String key : fieldsToEncrypt) {
       if (userMap.containsKey(key)) {
         userMap.put(key, service.encryptData((String) userMap.get(key)));
       }

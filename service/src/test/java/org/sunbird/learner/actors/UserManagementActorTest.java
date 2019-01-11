@@ -59,7 +59,8 @@ public class UserManagementActorTest {
   private ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(UserManagementActor.class);
   private static Map<String, Object> reqMap;
-  InterServiceCommunication interServiceCommunication;
+  static InterServiceCommunication interServiceCommunication =
+      mock(InterServiceCommunicationImpl.class);;
 
   @Before
   public void beforeEachTest() {
@@ -79,7 +80,6 @@ public class UserManagementActorTest {
         .thenReturn(getSuccessResponse());
 
     PowerMockito.mockStatic(InterServiceCommunicationFactory.class);
-    interServiceCommunication = mock(InterServiceCommunicationImpl.class);
     when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
@@ -126,8 +126,7 @@ public class UserManagementActorTest {
 
     boolean result =
         testScenario(
-            getRequest(
-                true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
+            getRequest(true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
             null);
     assertTrue(result);
   }
@@ -147,8 +146,7 @@ public class UserManagementActorTest {
   public void testCreateUserSuccessWithoutUserCallerIdChannelAndRootOrgId() {
 
     boolean result =
-        testScenario(
-            getRequest(false, false, true, reqMap, ActorOperations.CREATE_USER), null);
+        testScenario(getRequest(false, false, true, reqMap, ActorOperations.CREATE_USER), null);
     assertTrue(result);
   }
 
@@ -166,6 +164,9 @@ public class UserManagementActorTest {
 
   @Test
   public void testCreateUserFailureWithInvalidLocationCodes() {
+    when(InterServiceCommunicationFactory.getInstance())
+        .thenReturn(interServiceCommunication)
+        .thenReturn(interServiceCommunication);
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
         .thenReturn(null);
@@ -181,13 +182,15 @@ public class UserManagementActorTest {
   public void testCreateUserSuccessWithoutVersion() {
 
     boolean result =
-        testScenario(
-            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER), null);
+        testScenario(getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER), null);
     assertTrue(result);
   }
 
   @Test
   public void testCreateUserSuccessWithLocationCodes() {
+    when(InterServiceCommunicationFactory.getInstance())
+        .thenReturn(interServiceCommunication)
+        .thenReturn(interServiceCommunication);
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
         .thenReturn(getEsResponseForLocation())
@@ -252,7 +255,8 @@ public class UserManagementActorTest {
         .thenReturn(null);
     boolean result =
         testScenario(
-            getRequest(true, true, true, getUpdateRequestWithLocationCodes(), ActorOperations.UPDATE_USER),
+            getRequest(
+                true, true, true, getUpdateRequestWithLocationCodes(), ActorOperations.UPDATE_USER),
             ResponseCode.invalidParameterValue);
     assertTrue(result);
   }
@@ -262,20 +266,24 @@ public class UserManagementActorTest {
 
     boolean result =
         testScenario(
-            getRequest(true, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER),
-            null);
+            getRequest(true, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER), null);
     assertTrue(result);
   }
 
   @Test
   public void testUpdateUserSuccessWithLocationCodes() {
+    when(InterServiceCommunicationFactory.getInstance())
+        .thenReturn(interServiceCommunication)
+        .thenReturn(interServiceCommunication);
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
         .thenReturn(getEsResponseForLocation())
         .thenReturn(getEsResponse());
     boolean result =
         testScenario(
-            getRequest(true, true, true, getUpdateRequestWithLocationCodes(), ActorOperations.UPDATE_USER), null);
+            getRequest(
+                true, true, true, getUpdateRequestWithLocationCodes(), ActorOperations.UPDATE_USER),
+            null);
     assertTrue(result);
   }
 
@@ -284,8 +292,7 @@ public class UserManagementActorTest {
 
     boolean result =
         testScenario(
-            getRequest(false, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER),
-            null);
+            getRequest(false, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER), null);
     assertTrue(result);
   }
 

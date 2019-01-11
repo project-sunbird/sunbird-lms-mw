@@ -128,14 +128,20 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
   private void validateTopics(Set<String> topics, String frameworkId) {
     Set<String> frameworkTopics = getRelatedFrameworkTopics(frameworkId);
+    Set<String> invalidTopics = new HashSet<>();
     topics.forEach(
         name -> {
           if (frameworkTopics.add(name)) {
-            throwClientErrorException(
-                ResponseCode.errorInvalidTopic,
-                MessageFormat.format(ResponseCode.errorInvalidTopic.getErrorMessage(), name));
+            invalidTopics.add(name);
           }
         });
+    if (CollectionUtils.isNotEmpty(invalidTopics)) {
+      throwClientErrorException(
+          ResponseCode.errorInvalidTopic,
+          MessageFormat.format(
+              ResponseCode.errorInvalidTopic.getErrorMessage(),
+              StringUtils.join(invalidTopics, ',')));
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -159,9 +165,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
     Set<String> topics = new HashSet<>();
     for (Map<String, Object> term : terms) {
-      List<Map<String, Object>> childrens = (List<Map<String, Object>>) term.get(JsonKey.CHILDREN);
-      if (CollectionUtils.isNotEmpty(childrens)) {
-        for (Map<String, Object> child : childrens) {
+      List<Map<String, Object>> children = (List<Map<String, Object>>) term.get(JsonKey.CHILDREN);
+      if (CollectionUtils.isNotEmpty(children)) {
+        for (Map<String, Object> child : children) {
           topics.add((String) child.get(JsonKey.NAME));
         }
       }
@@ -174,18 +180,22 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   private void validateDialCodesWithReservedDialCodes(
       Set<String> dialCodes, Map<String, Object> textBookdata) {
     List<String> reservedDialCodes = (List<String>) textBookdata.get(JsonKey.RESERVED_DIAL_CODES);
+    Set<String> invalidDialCodes = new HashSet<>();
     if (CollectionUtils.isNotEmpty(reservedDialCodes)) {
       dialCodes.forEach(
           dialCode -> {
             if (!reservedDialCodes.contains(dialCode)) {
-              throwClientErrorException(
-                  ResponseCode.errorDialCodeNotReservedForTextBook,
-                  MessageFormat.format(
-                      ResponseCode.errorDialCodeNotReservedForTextBook.getErrorMessage(),
-                      dialCode,
-                      textBookdata.get(JsonKey.IDENTIFIER)));
+              invalidDialCodes.add(dialCode);
             }
           });
+      if (CollectionUtils.isNotEmpty(invalidDialCodes)) {
+        throwClientErrorException(
+            ResponseCode.errorDialCodeNotReservedForTextBook,
+            MessageFormat.format(
+                ResponseCode.errorDialCodeNotReservedForTextBook.getErrorMessage(),
+                StringUtils.join(invalidDialCodes, ','),
+                textBookdata.get(JsonKey.IDENTIFIER)));
+      }
     }
   }
 

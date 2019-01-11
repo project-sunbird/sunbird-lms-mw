@@ -32,13 +32,13 @@ public final class UserUtility {
 
   private UserUtility() {}
 
-  public static Map<String, Object> encryptUserData(Map<String, Object> userMap) throws Exception {
+  public static Map<String, Object> encryptUserData(Map<String, Object> userMap) {
     return encryptSpecificUserData(userMap, userKeyToEncrypt);
   }
 
   @SuppressWarnings("unchecked")
   public static Map<String, Object> encryptSpecificUserData(
-      Map<String, Object> userMap, List<String> fieldsToEncrypt) throws Exception {
+      Map<String, Object> userMap, List<String> fieldsToEncrypt) {
     EncryptionService service = ServiceFactory.getEncryptionServiceInstance(null);
     // Encrypt user basic info
     for (String key : fieldsToEncrypt) {
@@ -62,7 +62,7 @@ public final class UserUtility {
   }
 
   public static List<Map<String, Object>> encryptUserAddressData(
-      List<Map<String, Object>> addressList) throws Exception {
+      List<Map<String, Object>> addressList) {
     EncryptionService service = ServiceFactory.getEncryptionServiceInstance(null);
     // Encrypt user address Info
     for (Map<String, Object> map : addressList) {

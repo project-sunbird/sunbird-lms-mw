@@ -376,7 +376,7 @@ public class UserManagementActor extends BaseActor {
         && !CollectionUtils.isEmpty((List<String>) userMap.get(JsonKey.LOCATION_CODES))) {
       LocationClientImpl locationClient = new LocationClientImpl();
       List<String> locationIdList =
-          locationClient.getLocationIds(
+          locationClient.getRelatedLocationIds(
               getActorRef(LocationActorOperation.GET_RELATED_LOCATION_IDS.getValue()),
               (List<String>) userMap.get(JsonKey.LOCATION_CODES));
       if (locationIdList != null && !locationIdList.isEmpty()) {

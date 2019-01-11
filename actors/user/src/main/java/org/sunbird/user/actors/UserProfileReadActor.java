@@ -302,6 +302,11 @@ public class UserProfileReadActor extends BaseActor {
       if (fields.contains(JsonKey.ROLES)) {
         updateRoleMasterInfo(result);
       }
+      if (fields.contains(JsonKey.LOCATIONS)) {
+        result.put(
+            JsonKey.USER_LOCATIONS,
+            getUserLocations((List<String>) result.get(JsonKey.LOCATION_IDS)));
+      }
     }
   }
 
@@ -786,5 +791,18 @@ public class UserProfileReadActor extends BaseActor {
         ProjectCommonException.throwServerErrorException(ResponseCode.SERVER_ERROR);
       }
     }
+  }
+
+  private List<Map<String, Object>> getUserLocations(List<String> locationIds) {
+    if (locationIds != null && locationIds.isEmpty()) {
+      List<String> locationFields =
+          Arrays.asList(JsonKey.CODE, JsonKey.NAME, JsonKey.TYPE, JsonKey.PARENT_ID, JsonKey.ID);
+      Map<String, Map<String, Object>> locationInfoMap =
+          getEsResultByListOfIds(locationIds, locationFields, EsType.location);
+
+      return locationInfoMap.values().stream().collect(Collectors.toList());
+    }
+
+    return new ArrayList<>();
   }
 }

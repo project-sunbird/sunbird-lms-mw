@@ -151,6 +151,9 @@ public class LearnerStateActor extends BaseActor {
                 .stream()
                 .map(batch -> (String) batch.get(JsonKey.BATCH_ID))
                 .collect(Collectors.toList());
+    ProjectLogger.log(
+        "LearnerStateActor:getCourseBatch: coursesBatchIds = " + courseBatchIds,
+        LoggerEnum.INFO.name());
 
     Map<String, Object> esQueryMap = new HashMap<>();
     esQueryMap.put(JsonKey.IDENTIFIER, courseBatchIds);
@@ -170,14 +173,14 @@ public class LearnerStateActor extends BaseActor {
 
     ProjectLogger.log(
         "LearnerStateActor:mergeDetailsAndSendCourses coursesContents =" + coursesContents,
-        LoggerEnum.DEBUG.name());
+        LoggerEnum.INFO.name());
 
     if (MapUtils.isNotEmpty(courseBatches)) {
       ProjectLogger.log(
           "LearnerStateActor:mergeDetailsAndSendCourses courseBatchContents ="
               + "for requested data "
               + courseBatches,
-          LoggerEnum.DEBUG.name());
+          LoggerEnum.INFO.name());
     }
 
     Map<String, Object> contentsByCourseId = getContentAsMap(coursesContents);

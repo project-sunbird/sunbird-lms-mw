@@ -108,16 +108,16 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     resultMap.remove(JsonKey.TOPICS);
 
     String tbId = (String) request.get(TEXTBOOK_ID);
-    Map<String, Object> textBookdata = getTextbook(tbId);
+    Map<String, Object> textbookData = getTextbook(tbId);
 
-    validateTopics(topics, (String) textBookdata.get(JsonKey.FRAMEWORK));
-    validateDialCodesWithReservedDialCodes(dialCodes, textBookdata);
+    validateTopics(topics, (String) textbookData.get(JsonKey.FRAMEWORK));
+    validateDialCodesWithReservedDialCodes(dialCodes, textbookData);
     request.getRequest().put(JsonKey.DATA, resultMap);
     String mode = ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.MODE).toString();
-    validateRequest(request, mode, textBookdata);
+    validateRequest(request, mode, textbookData);
     Response response = new Response();
     if (StringUtils.equalsIgnoreCase(mode, JsonKey.CREATE)) {
-      response = createTextbook(request, textBookdata);
+      response = createTextbook(request, textbookData);
     } else if (StringUtils.equalsIgnoreCase(mode, JsonKey.UPDATE)) {
       response = updateTextbook(request);
     } else {
@@ -196,6 +196,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 StringUtils.join(invalidDialCodes, ','),
                 textBookdata.get(JsonKey.IDENTIFIER)));
       }
+    } else {
+      throwClientErrorException(
+          ResponseCode.errorDialCodeNotReservedForTextBook,
+          MessageFormat.format(
+              ResponseCode.errorDialCodeNotReservedForTextBook.getErrorMessage(),
+              StringUtils.join(dialCodes, ','),
+              textBookdata.get(JsonKey.IDENTIFIER)));
     }
   }
 
@@ -255,7 +262,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         }
 
         if (!(MapUtils.isEmpty(recordMap) && MapUtils.isEmpty(hierarchyMap))) {
-          validateOrCodeRequiredAndQrCode(recordMap);
+          validateQrCodeRequiredAndQrCode(recordMap);
           String dialCode = (String) recordMap.get(JsonKey.DIAL_CODES);
           if (StringUtils.isNotBlank(dialCode)) {
             List<String> dialCodeList = new ArrayList<String>(Arrays.asList(dialCode.split(",")));
@@ -306,7 +313,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     return result;
   }
 
-  private void validateOrCodeRequiredAndQrCode(Map<String, Object> recordMap) {
+  private void validateQrCodeRequiredAndQrCode(Map<String, Object> recordMap) {
     if (JsonKey.NO.equalsIgnoreCase((String) recordMap.get(JsonKey.DIAL_CODE_REQUIRED))
         && StringUtils.isNotBlank((String) recordMap.get(JsonKey.DIAL_CODES))) {
       String errorMessage =

@@ -225,8 +225,8 @@ public class LocationActor extends BaseLocationActor {
     }
   }
 
-  private Location getSearchResultParent(String param, Object value) {
-    List<Location> locations = getSearchResult(param, value);
+  private Location getLocation(String locationId) {
+    List<Location> locations = getSearchResult(JsonKey.ID, locationId);
     if (locations.isEmpty()) return null;
 
     return locations.get(0);
@@ -280,9 +280,9 @@ public class LocationActor extends BaseLocationActor {
     while (count > 0) {
       Location parent = null;
       if (getOrder(location.getType()) == 0 && StringUtils.isNotEmpty(location.getId())) {
-        parent = getSearchResultParent(JsonKey.ID, location.getId());
+        parent = getLocation(location.getId());
       } else if (StringUtils.isNotEmpty(location.getParentId())) {
-        parent = getSearchResultParent(JsonKey.ID, location.getParentId());
+        parent = getLocation(location.getParentId());
       }
       if (null != parent) {
         locationSet.add(parent);

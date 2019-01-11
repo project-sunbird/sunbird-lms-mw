@@ -800,7 +800,7 @@ public class UserProfileReadActor extends BaseActor {
   }
 
   private List<Map<String, Object>> getUserLocations(List<String> locationIds) {
-    if (locationIds != null && !locationIds.isEmpty()) {
+    if (CollectionUtils.isNotEmpty(locationIds)) {
       List<String> locationFields =
           Arrays.asList(JsonKey.CODE, JsonKey.NAME, JsonKey.TYPE, JsonKey.PARENT_ID, JsonKey.ID);
       Map<String, Map<String, Object>> locationInfoMap =

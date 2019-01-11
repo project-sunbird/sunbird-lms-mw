@@ -307,6 +307,7 @@ public class UserProfileReadActor extends BaseActor {
         result.put(
             JsonKey.USER_LOCATIONS,
             getUserLocations((List<String>) result.get(JsonKey.LOCATION_IDS)));
+        result.remove(JsonKey.LOCATION_IDS);
       }
     }
   }
@@ -799,7 +800,7 @@ public class UserProfileReadActor extends BaseActor {
   }
 
   private List<Map<String, Object>> getUserLocations(List<String> locationIds) {
-    if (locationIds != null && locationIds.isEmpty()) {
+    if (locationIds != null && !locationIds.isEmpty()) {
       List<String> locationFields =
           Arrays.asList(JsonKey.CODE, JsonKey.NAME, JsonKey.TYPE, JsonKey.PARENT_ID, JsonKey.ID);
       Map<String, Map<String, Object>> locationInfoMap =
@@ -807,7 +808,6 @@ public class UserProfileReadActor extends BaseActor {
 
       return locationInfoMap.values().stream().collect(Collectors.toList());
     }
-
     return new ArrayList<>();
   }
 }

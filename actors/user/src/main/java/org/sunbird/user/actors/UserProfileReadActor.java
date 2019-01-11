@@ -65,6 +65,7 @@ public class UserProfileReadActor extends BaseActor {
           null);
   private Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
+  private SSOManager ssoManager = SSOServiceFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
 
   @Override
@@ -594,6 +595,8 @@ public class UserProfileReadActor extends BaseActor {
             ResponseCode.userNotFound.getErrorMessage(),
             ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
       }
+      String username = ssoManager.getUsernameById((String) result.get(JsonKey.USER_ID));
+      result.put(JsonKey.USERNAME, username);
       sendResponse(actorMessage, result);
 
     } else {
@@ -610,6 +613,11 @@ public class UserProfileReadActor extends BaseActor {
   private void getUserByKey(Request actorMessage) {
     String key = (String) actorMessage.getRequest().get(JsonKey.KEY);
     String value = (String) actorMessage.getRequest().get(JsonKey.VALUE);
+
+    if (JsonKey.LOGIN_ID.equalsIgnoreCase(key) || JsonKey.EMAIL.equalsIgnoreCase(key)) {
+      // Converting to lower case because all email and loginId will be in lower case.
+      value = value.toLowerCase();
+    }
     String encryptedValue = null;
     try {
       encryptedValue = encryptionService.encryptData(value);
@@ -641,6 +649,8 @@ public class UserProfileReadActor extends BaseActor {
       result.remove(JsonKey.EMAIL);
       result.remove(JsonKey.PHONE);
     }
+    String username = ssoManager.getUsernameById(foundUser.getId());
+    result.put(JsonKey.USERNAME, username);
     sendResponse(actorMessage, result);
   }
 

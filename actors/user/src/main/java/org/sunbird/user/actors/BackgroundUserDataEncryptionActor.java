@@ -147,9 +147,9 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
     }
   }
 
-  private void decryptUserDataAndUpdateDB(Map<String, Object> userMap) {
+  private void decryptUserDataAndUpdateDB(Map<String, Object> userMap, List<String> fieldsToDecrypt) {
     try {
-      UserUtility.decryptSpecificUserData(userMap);
+      UserUtility.decryptSpecificUserData(userMap, fieldsToDecrypt);
       cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
       ProjectLogger.log(
               "BackgroundUserDataEncryptionActor:decryptUserDataAndUpdateDB: Updating user data for userId = "

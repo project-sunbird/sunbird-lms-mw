@@ -2,7 +2,6 @@ package org.sunbird.learner.actors;
 
 import static akka.testkit.JavaTestKit.duration;
 import static org.junit.Assert.assertTrue;
-import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
@@ -26,26 +25,22 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.util.ContentStoreUtil;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
-import org.sunbird.user.dao.impl.UserExternalIdentityDaoImpl;
 import org.sunbird.user.service.impl.UserServiceImpl;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({DataCacheHandler.class, ContentStoreUtil.class, UserServiceImpl.class, Util.class})
 public class UserFrameworkUpdateTest extends UserManagementActorTest {
 
-  private static UserExternalIdentityDaoImpl userExtDao;
   private ActorSystem system = ActorSystem.create("system");
   private static final Props props = getProps();
 
   @Before
-  public void beforeEachTestn() {
-    userExtDao = mock(UserExternalIdentityDaoImpl.class);
+  public void beforeTest() {
     PowerMockito.mockStatic(DataCacheHandler.class);
     PowerMockito.mockStatic(ContentStoreUtil.class);
     PowerMockito.mockStatic(Util.class);
@@ -266,7 +261,6 @@ public class UserFrameworkUpdateTest extends UserManagementActorTest {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     mockForUpdateTest();
-    mockuserExtDao(reqObj);
     subject.tell(reqObj, probe.getRef());
     Response res = probe.expectMsgClass(duration("200 second"), Response.class);
     return res;
@@ -276,7 +270,6 @@ public class UserFrameworkUpdateTest extends UserManagementActorTest {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     mockForUpdateTest();
-    mockuserExtDao(reqObj);
     subject.tell(reqObj, probe.getRef());
     ProjectCommonException res =
         probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
@@ -288,19 +281,6 @@ public class UserFrameworkUpdateTest extends UserManagementActorTest {
     mockUtilsForOrgDetails();
     mockDatacacheHandler();
     mockContentStoreUtil();
-
-    try {
-      PowerMockito.whenNew(UserExternalIdentityDaoImpl.class)
-          .withNoArguments()
-          .thenReturn(userExtDao);
-
-    } catch (Exception e) {
-      ProjectLogger.log("Error while mocking UserExternalIdentityDaoImpl");
-    }
-  }
-
-  private void mockuserExtDao(Request req) {
-    when(userExtDao.getUserId(req)).thenReturn(userId);
   }
 
   private void mockUtilsForOrgDetails() {
@@ -323,7 +303,6 @@ public class UserFrameworkUpdateTest extends UserManagementActorTest {
     List<String> frameworkFieldConfigMan = Arrays.asList("id", "medium", "gradeLevel", "board");
     frameworkFieldsConfigMap.put(JsonKey.FIELDS, frameworkFieldConfig);
     frameworkFieldsConfigMap.put(JsonKey.MANDATORY_FIELDS, frameworkFieldConfigMan);
-    DataCacheHandler.setFrameworkFieldsConfig(frameworkFieldsConfigMap);
     Mockito.when(DataCacheHandler.getFrameworkFieldsConfig()).thenReturn(frameworkFieldsConfigMap);
 
     Map<String, List<Map<String, String>>> frameworkCategoriesMap = new HashMap<>();
@@ -331,10 +310,9 @@ public class UserFrameworkUpdateTest extends UserManagementActorTest {
     frameworkCategoriesMap.put("gradeLevel", getListForCategoryMap("Grade 3"));
     frameworkCategoriesMap.put("board", getListForCategoryMap("NCERT"));
 
-    Map<String, Map<String, List<Map<String, String>>>> x = new HashMap<>();
-    x.put("NCF", frameworkCategoriesMap);
-    DataCacheHandler.updateFrameworkCategoriesMap("NCF", frameworkCategoriesMap);
-    when(DataCacheHandler.getFrameworkCategoriesMap()).thenReturn(x);
+    Map<String, Map<String, List<Map<String, String>>>> frameworkCategory = new HashMap<>();
+    frameworkCategory.put("NCF", frameworkCategoriesMap);
+    when(DataCacheHandler.getFrameworkCategoriesMap()).thenReturn(frameworkCategory);
     Map<String, List<String>> map1 = new HashMap<>();
     List<String> list1 = Arrays.asList("NCF");
     map1.put("someHashTagId", list1);

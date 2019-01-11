@@ -58,7 +58,7 @@ public class UserManagementActorTest {
 
   private ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(UserManagementActor.class);
-  public static UserService userService;
+  public UserService userService;
   protected static final String userId = "testUserId";
 
   public ActorSystem getActorSystem() {
@@ -271,7 +271,7 @@ public class UserManagementActorTest {
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.ID, userId);
     Map<String, Object> frameworkMap = getFrameworkDetails(key, value);
-
+    reqObj.getRequest().put(JsonKey.USER_ID, userId);
     innerMap.put(JsonKey.FRAMEWORK, frameworkMap);
     Map<String, Object> request = new HashMap<String, Object>();
     request.put(JsonKey.USER, innerMap);

@@ -202,9 +202,6 @@ public class LearnerStateActor extends BaseActor {
       String idType) {
     List<Map<String, Object>> batchesWithCourseDetails = batches;
     if (MapUtils.isNotEmpty(contentsById)) {
-      ProjectLogger.log(
-          "LearnerStateActor:mergeDetailsAndSendCourses batchesWithCourseDetails =" + batches,
-          LoggerEnum.INFO.name());
 
       batchesWithCourseDetails =
           batches
@@ -219,7 +216,10 @@ public class LearnerStateActor extends BaseActor {
                   })
               .collect(Collectors.toList());
     }
-
+    ProjectLogger.log(
+        "LearnerStateActor:mergeDetailsAndSendCourses batchesWithCourseDetails ="
+            + batchesWithCourseDetails,
+        LoggerEnum.INFO.name());
     return batchesWithCourseDetails;
   }
 

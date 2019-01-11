@@ -23,7 +23,7 @@ public class UserEncryptionServiceImpl implements UserEncryptionService {
 
   private DecryptionService decryptionService = ServiceFactory.getDecryptionServiceInstance(null);
   private EncryptionService encryptionService = ServiceFactory.getEncryptionServiceInstance(null);
-  private List<String> fieldsToCheckForEncrytion =
+  private List<String> userEncryptedFieldList =
       Arrays.asList(JsonKey.USERNAME, JsonKey.LOGIN_ID, JsonKey.LOCATION);
 
   private UserEncryptionServiceImpl() {};
@@ -71,7 +71,7 @@ public class UserEncryptionServiceImpl implements UserEncryptionService {
 
   private List<String> getOtherEncryptedFields(Map<String, Object> userMap) {
     List<String> decryptedFields = new ArrayList<>();
-    for (String field : fieldsToCheckForEncrytion) {
+    for (String field : userEncryptedFieldList) {
       try {
         if (StringUtils.isNotBlank((String) userMap.get(field))
             && ((String) userMap.get(field))
@@ -94,18 +94,18 @@ public class UserEncryptionServiceImpl implements UserEncryptionService {
 
   private List<String> getOtherDecryptedFields(Map<String, Object> userMap) {
     List<String> decryptedFields = new ArrayList<>();
-    for (String field : fieldsToCheckForEncrytion) {
+    for (String field : userEncryptedFieldList) {
       try {
         if (StringUtils.isNotBlank((String) userMap.get(field))
             && ((String) userMap.get(field))
                 .equals(decryptionService.decryptData((String) userMap.get(field)))) {
           decryptedFields.add(field);
         }
-
       } catch (Exception e) {
         decryptedFields.add(field);
       }
     }
     return decryptedFields;
   }
+
 }

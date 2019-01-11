@@ -181,9 +181,24 @@ public class LearnerStateActor extends BaseActor {
     }
 
     Map<String, Object> contentsByCourseId = getContentAsMap(coursesContents);
-    List<Map<String, Object>> batchesWithCourseDetails = batches;
 
-    if (MapUtils.isNotEmpty(contentsByCourseId)) {
+    List<Map<String, Object>> batchesWithCourseDetails =
+        getMergedContents(batches, contentsByCourseId, JsonKey.CONTENT, JsonKey.COURSE_ID);
+    batchesWithCourseDetails =
+        getMergedContents(batchesWithCourseDetails, courseBatches, JsonKey.BATCH, JsonKey.BATCH_ID);
+
+    Response response = new Response();
+    response.put(JsonKey.COURSES, batchesWithCourseDetails);
+    sender().tell(response, self());
+  }
+
+  public List<Map<String, Object>> getMergedContents(
+      List<Map<String, Object>> batches,
+      Map<String, Object> contentsById,
+      String valueType,
+      String idType) {
+    List<Map<String, Object>> batchesWithCourseDetails = batches;
+    if (MapUtils.isNotEmpty(contentsById)) {
       ProjectLogger.log(
           "LearnerStateActor:mergeDetailsAndSendCourses batchesWithCourseDetails =" + batches,
           LoggerEnum.INFO.name());
@@ -193,22 +208,16 @@ public class LearnerStateActor extends BaseActor {
               .stream()
               .map(
                   batch -> {
-                    if (contentsByCourseId.containsKey((String) batch.get(JsonKey.COURSE_ID))) {
-                      batch.put(
-                          JsonKey.CONTENT,
-                          contentsByCourseId.get((String) batch.get(JsonKey.COURSE_ID)));
-                      if (MapUtils.isNotEmpty(courseBatches)
-                          && courseBatches.containsKey((String) batch.get(JsonKey.BATCH_ID))) {
-                        batch.put(JsonKey.BATCH, courseBatches.get(batch.get(JsonKey.BATCH_ID)));
-                      }
+                    if (contentsById.containsKey((String) batch.get(idType))) {
+                      batch.put(valueType, contentsById.get((String) batch.get(idType)));
                     }
+
                     return batch;
                   })
               .collect(Collectors.toList());
     }
-    Response response = new Response();
-    response.put(JsonKey.COURSES, batchesWithCourseDetails);
-    sender().tell(response, self());
+
+    return batchesWithCourseDetails;
   }
 
   private Map<String, Object> getContentAsMap(Map<String, Object> coursesContents) {

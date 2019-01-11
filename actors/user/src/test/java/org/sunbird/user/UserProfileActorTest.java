@@ -74,17 +74,12 @@ public class UserProfileActorTest extends BaseActorTest {
   }
 
   @Override
-  protected Map<String, Object> getMapResponse(boolean b) {
+  protected Response getRecordByIdResponseAbstract(boolean b) {
     return null;
   }
 
   @Override
-  protected Map<String, Object> getOrganisationsMap() {
-    return null;
-  }
-
-  @Override
-  protected Map<String, Object> createResponseGet() {
+  protected Map<String, Object> esComplexSearchResponse() {
     return null;
   }
 }

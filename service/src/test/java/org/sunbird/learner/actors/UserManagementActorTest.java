@@ -169,7 +169,7 @@ public class UserManagementActorTest {
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
         .thenReturn(null);
-    reqMap.put(JsonKey.LOCATION_CODES, Arrays.asList("invalidLocationCodes"));
+    reqMap.put(JsonKey.LOCATION_CODES, Arrays.asList("invalidLocationCode"));
     boolean result =
         testScenario(
             getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),

@@ -312,7 +312,7 @@ public class UserManagementActor extends BaseActor {
     UserUtil.validateExternalIds(user, JsonKey.CREATE);
     userMap.put(JsonKey.EXTERNAL_IDS, user.getExternalIds());
     UserUtil.validateUserPhoneEmailAndWebPages(user, JsonKey.CREATE);
-    convertLocationCodesToIDs(userMap);
+    convertValidatedLocationCodesToIDs(userMap);
     if (IS_REGISTRY_ENABLED) {
       UserExtension userExtension = new UserProviderRegistryImpl();
       userExtension.create(userMap);
@@ -371,7 +371,7 @@ public class UserManagementActor extends BaseActor {
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
-  private void convertLocationCodesToIDs(Map<String, Object> userMap) {
+  private void convertValidatedLocationCodesToIDs(Map<String, Object> userMap) {
     if (userMap.containsKey(JsonKey.LOCATION_CODES)
         && !CollectionUtils.isEmpty((List<String>) userMap.get(JsonKey.LOCATION_CODES))) {
       LocationClientImpl locationClient = new LocationClientImpl();

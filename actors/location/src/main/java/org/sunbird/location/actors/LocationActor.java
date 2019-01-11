@@ -31,7 +31,7 @@ import org.sunbird.models.location.apirequest.UpsertLocationRequest;
     "updateLocation",
     "searchLocation",
     "deleteLocation",
-    "getLocationIds"
+    "getRelatedLocationIds"
   },
   asyncTasks = {}
 )
@@ -73,19 +73,19 @@ public class LocationActor extends BaseLocationActor {
       case "deleteLocation":
         deleteLocation(request);
         break;
-      case "getLocationIds":
-        getLocationByIds(request);
+      case "getRelatedLocationIds":
+        getRelatedLocationIds(request);
         break;
       default:
         onReceiveUnsupportedOperation("LocationActor");
     }
   }
 
-  private void getLocationByIds(Request request) {
+  private void getRelatedLocationIds(Request request) {
     Response response = new Response();
-    List<String> locationIds =
-        getValidatedLocationIds((List<String>) request.get(JsonKey.LOCATION_CODES));
-    response.getResult().put(JsonKey.RESPONSE, locationIds);
+    List<String> relatedLocationIds =
+        getValidatedRelatedLocationIds((List<String>) request.get(JsonKey.LOCATION_CODES));
+    response.getResult().put(JsonKey.RESPONSE, relatedLocationIds);
     sender().tell(response, self());
   }
 
@@ -185,14 +185,7 @@ public class LocationActor extends BaseLocationActor {
     LocationRequestValidator.isValidParentIdAndCode(locationRequest, operation);
   }
 
-  /**
-   * This method will validate the list of location code whether its valid or not. If valid will
-   * return the locationId List.
-   *
-   * @param codeList List of location code.
-   * @return List of location id.
-   */
-  public List<String> getValidatedLocationIds(List<String> codeList) {
+  public List<String> getValidatedRelatedLocationIds(List<String> codeList) {
     Set<String> locationIds = null;
     List<String> codes = new ArrayList<>(codeList);
     List<Location> locationList = getSearchResult(JsonKey.CODE, codeList);
@@ -205,7 +198,7 @@ public class LocationActor extends BaseLocationActor {
             codes.stream().filter(s -> !resCodeList.contains(s)).collect(Collectors.toList());
         throwInvalidParameterValueException(invalidCodeList);
       } else {
-        locationIds = getValidatedLocationSet(locationList);
+        locationIds = getValidatedRelatedLocationSet(locationList);
       }
     } else {
       throwInvalidParameterValueException(codeList);
@@ -247,13 +240,7 @@ public class LocationActor extends BaseLocationActor {
         ResponseCode.CLIENT_ERROR.getResponseCode());
   }
 
-  /**
-   * This method will validate the location hierarchy and return the locationIds list.
-   *
-   * @param locationList List of location.
-   * @return Set of locationId.
-   */
-  public Set<String> getValidatedLocationSet(List<Location> locationList) {
+  public Set<String> getValidatedRelatedLocationSet(List<Location> locationList) {
     Set<Location> locationSet = new HashSet<>();
     for (Location requestedLocation : locationList) {
       Set<Location> parentLocnSet = getParentLocations(requestedLocation);

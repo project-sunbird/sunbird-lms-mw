@@ -446,9 +446,6 @@ public class UserUtil {
         userName = getUsername(name);
         if (StringUtils.isNotBlank(userName)) {
           userMap.put(JsonKey.USERNAME, userName);
-          // create loginId to ensure uniqueness for combination of userName and channel
-          String loginId = Util.getLoginId(userMap);
-          userMap.put(JsonKey.LOGIN_ID, loginId);
         }
       }
     } else {
@@ -456,6 +453,9 @@ public class UserUtil {
         ProjectCommonException.throwClientErrorException(ResponseCode.userNameAlreadyExistError);
       }
     }
+    // create loginId to ensure uniqueness for combination of userName and channel
+    String loginId = Util.getLoginId(userMap);
+    userMap.put(JsonKey.LOGIN_ID, loginId);
   }
 
   private static String getUsername(String name) {

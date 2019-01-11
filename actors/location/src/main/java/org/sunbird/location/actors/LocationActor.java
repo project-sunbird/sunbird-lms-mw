@@ -36,22 +36,7 @@ import org.sunbird.models.location.apirequest.UpsertLocationRequest;
   asyncTasks = {}
 )
 public class LocationActor extends BaseLocationActor {
-  public static Map<String, Integer> orderMap = new HashMap<>();
-
-  static {
-    List<String> subTypeList =
-        Arrays.asList(
-            ProjectUtil.getConfigValue(GeoLocationJsonKey.SUNBIRD_VALID_LOCATION_TYPES).split(";"));
-    for (String str : subTypeList) {
-      List<String> typeList =
-          (((Arrays.asList(str.split(","))).stream().map(String::toLowerCase))
-              .collect(Collectors.toList()));
-      for (int i = 0; i < typeList.size(); i++) {
-        orderMap.put(typeList.get(i), i);
-      }
-    }
-  }
-
+  private Map<String, Integer> orderMap;
   private ObjectMapper mapper = new ObjectMapper();
   private LocationDao locationDao = LocationDaoFactory.getInstance();
 
@@ -59,6 +44,8 @@ public class LocationActor extends BaseLocationActor {
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, JsonKey.LOCATION);
     ExecutionContext.setRequestId(request.getRequestId());
+    initOrderMap();
+    
     String operation = request.getOperation();
     switch (operation) {
       case "createLocation":
@@ -81,6 +68,24 @@ public class LocationActor extends BaseLocationActor {
     }
   }
 
+  private void initOrderMap() {
+    if (orderMap == null) {
+      orderMap = new HashMap<>();
+
+      List<String> subTypeList =
+          Arrays.asList(
+              ProjectUtil.getConfigValue(GeoLocationJsonKey.SUNBIRD_VALID_LOCATION_TYPES).split(";"));
+      for (String str : subTypeList) {
+        List<String> typeList =
+            (((Arrays.asList(str.split(","))).stream().map(String::toLowerCase))
+                .collect(Collectors.toList()));
+        for (int i = 0; i < typeList.size(); i++) {
+          orderMap.put(typeList.get(i), i);
+        }
+      }
+    }
+  }
+  
   private void getRelatedLocationIds(Request request) {
     Response response = new Response();
     List<String> relatedLocationIds =

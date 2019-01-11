@@ -781,12 +781,40 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                             (StringUtils.isNotBlank((String) metadata.get(JsonKey.GRADE_LEVEL)))
                                 ? asList(((String) metadata.get(JsonKey.GRADE_LEVEL)).split(","))
                                 : null;
+                        List<String> dialCodes =
+                            (StringUtils.isNotBlank((String) metadata.get(JsonKey.DIAL_CODES)))
+                                ? asList(((String) metadata.get(JsonKey.DIAL_CODES)).split(","))
+                                : null;
+
+                        List<String> topics =
+                            (StringUtils.isNotBlank((String) metadata.get(JsonKey.TOPIC)))
+                                ? asList(((String) metadata.get(JsonKey.TOPIC)).split(","))
+                                : null;
                         putAll(metadata);
                         remove(JsonKey.KEYWORDS);
                         remove(JsonKey.GRADE_LEVEL);
+                        remove(JsonKey.DIAL_CODES);
+                        remove(JsonKey.TOPIC);
                         if (CollectionUtils.isNotEmpty(keywords)) put(JsonKey.KEYWORDS, keywords);
                         if (CollectionUtils.isNotEmpty(gradeLevel))
                           put(JsonKey.GRADE_LEVEL, gradeLevel);
+
+                        if (CollectionUtils.isNotEmpty(dialCodes)) {
+                          List<String> dCodes = new ArrayList<>();
+                          dialCodes.forEach(
+                              s -> {
+                                dCodes.add(s.trim());
+                              });
+                          put(JsonKey.DIAL_CODES, dCodes);
+                        }
+                        if (CollectionUtils.isNotEmpty(topics)) {
+                          List<String> topicList = new ArrayList<>();
+                          topics.forEach(
+                              s -> {
+                                topicList.add(s.trim());
+                              });
+                          put(JsonKey.TOPIC, topicList);
+                        }
                       }
                     }
                   });

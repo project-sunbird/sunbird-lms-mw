@@ -14,7 +14,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -26,6 +25,7 @@ import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.actorutil.impl.InterServiceCommunicationImpl;
+import org.sunbird.actorutil.location.impl.LocationClientImpl;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
@@ -51,6 +51,7 @@ import org.sunbird.user.util.UserUtil;
   UserServiceImpl.class,
   UserUtil.class,
   InterServiceCommunicationFactory.class,
+  LocationClientImpl.class
 })
 @PowerMockIgnore({"javax.management.*"})
 public class UserManagementActorTest {
@@ -58,14 +59,8 @@ public class UserManagementActorTest {
   private ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(UserManagementActor.class);
   private static Map<String, Object> reqMap;
-  private static InterServiceCommunication interServiceCommunication =
-      mock(InterServiceCommunicationImpl.class);
-
-  @BeforeClass
-  public static void beforeClass() {
-    PowerMockito.mockStatic(InterServiceCommunicationFactory.class);
-    when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
-  }
+  static InterServiceCommunication interServiceCommunication =
+      mock(InterServiceCommunicationImpl.class);;
 
   @Before
   public void beforeEachTest() {
@@ -83,15 +78,11 @@ public class UserManagementActorTest {
     when(cassandraOperation.updateRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getSuccessResponse());
-    //
-    // when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
-    //    when(interServiceCommunication.getResponse(
-    //            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
-    //            .thenReturn(getEsResponse());
 
+    PowerMockito.mockStatic(InterServiceCommunicationFactory.class);
+    when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
-        .thenReturn(getEsResponseForLocation())
         .thenReturn(getEsResponse());
 
     PowerMockito.mockStatic(SystemSettingClientImpl.class);
@@ -173,6 +164,9 @@ public class UserManagementActorTest {
 
   @Test
   public void testCreateUserFailureWithInvalidLocationCodes() {
+    when(InterServiceCommunicationFactory.getInstance())
+        .thenReturn(interServiceCommunication)
+        .thenReturn(interServiceCommunication);
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
         .thenReturn(null);
@@ -194,10 +188,13 @@ public class UserManagementActorTest {
 
   @Test
   public void testCreateUserSuccessWithLocationCodes() {
-    /*when(interServiceCommunication.getResponse(
-    Mockito.any(ActorRef.class), Mockito.any(Request.class)))
-    .thenReturn(getEsResponseForLocation())
-    .thenReturn(getEsResponse());*/
+    when(InterServiceCommunicationFactory.getInstance())
+        .thenReturn(interServiceCommunication)
+        .thenReturn(interServiceCommunication);
+    when(interServiceCommunication.getResponse(
+            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
+        .thenReturn(getEsResponseForLocation())
+        .thenReturn(getEsResponse());
     reqMap.put(JsonKey.LOCATION_CODES, Arrays.asList("locationCode"));
     boolean result =
         testScenario(getRequest(true, true, true, reqMap, ActorOperations.CREATE_USER), null);
@@ -275,10 +272,13 @@ public class UserManagementActorTest {
 
   @Test
   public void testUpdateUserSuccessWithLocationCodes() {
-    //    when(interServiceCommunication.getResponse(
-    //            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
-    //            .thenReturn(getEsResponseForLocation())
-    //            .thenReturn(getEsResponse());
+    when(InterServiceCommunicationFactory.getInstance())
+        .thenReturn(interServiceCommunication)
+        .thenReturn(interServiceCommunication);
+    when(interServiceCommunication.getResponse(
+            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
+        .thenReturn(getEsResponseForLocation())
+        .thenReturn(getEsResponse());
     boolean result =
         testScenario(
             getRequest(
@@ -393,7 +393,7 @@ public class UserManagementActorTest {
 
   public Object getEsResponseForLocation() {
     Response response = new Response();
-    response.put(JsonKey.RESPONSE, new HashMap<>());
+    response.put(JsonKey.RESPONSE, Arrays.asList("id"));
     return response;
   }
 }

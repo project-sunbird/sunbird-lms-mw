@@ -45,7 +45,7 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
         backgroundDecrypt(request);
         break;
       default:
-        onReceiveUnsupportedOperation("EsSyncBackgroundActor");
+        onReceiveUnsupportedOperation("BackgroundUserDataEncryptionActor");
         break;
     }
   }
@@ -65,17 +65,17 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
     for (Map<String, Object> userMap : userDetails) {
       List<String> fieldsToEncrypt = userEncryptionService.getDecryptedFields(userMap);
       if (CollectionUtils.isNotEmpty(fieldsToEncrypt)) {
-        encryptUserDataAndUpdateDb(userMap, fieldsToEncrypt);
+        encryptUserDataAndUpdateDB(userMap, fieldsToEncrypt);
         userIdsListToSync.add((String) userMap.get(JsonKey.ID));
       } else {
         ProjectLogger.log(
-            "EsSyncBackgroundActor:encryptData: Cannot encrypt data for userId "
+            "BackgroundUserDataEncryptionActor:encryptData: Cannot encrypt data for userId = "
                 + (String) userMap.get(JsonKey.ID),
             LoggerEnum.INFO);
       }
     }
     ProjectLogger.log(
-        "EsSyncBackgroundActor:encryptData: total number of user details encrypted is: "
+        "BackgroundUserDataEncryptionActor:encryptData: Total number of user details to encrypt = "
             + userIdsListToSync.size(),
         LoggerEnum.INFO);
     if (CollectionUtils.isNotEmpty(userIdsListToSync)) {
@@ -88,17 +88,17 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
     for (Map<String, Object> userMap : userDetails) {
       List<String> fieldsToDecrypt = userEncryptionService.getEncryptedFields(userMap);
       if (CollectionUtils.isNotEmpty(fieldsToDecrypt)) {
-        decryptUserDataAndUpdateDb(userMap);
+        decryptUserDataAndUpdateDB(userMap);
         userIdsListToSync.add((String) userMap.get(JsonKey.ID));
       } else {
         ProjectLogger.log(
-            "EsSyncBackgroundActor:decryptData: Cannot decrypt data for userId "
+            "BackgroundUserDataEncryptionActor:decryptData: Cannot decrypt data for userId = "
                 + (String) userMap.get(JsonKey.ID),
             LoggerEnum.INFO);
       }
     }
     ProjectLogger.log(
-        "EsSyncBackgroundActor:decryptData: total number of user details decrypted is: "
+        "BackgroundUserDataEncryptionActor:decryptData: Total number of user details to decrypt = "
             + userIdsListToSync.size(),
         LoggerEnum.INFO);
     if (CollectionUtils.isNotEmpty(userIdsListToSync)) {
@@ -119,13 +119,13 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
     return userList;
   }
 
-  private void encryptUserDataAndUpdateDb(
+  private void encryptUserDataAndUpdateDB(
       Map<String, Object> userMap, List<String> fieldsToEncrypt) {
     try {
-      UserUtility.encryptUserSpecificField(userMap, fieldsToEncrypt);
+      UserUtility.encryptSpecificUserData(userMap, fieldsToEncrypt);
       cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
       ProjectLogger.log(
-          "DataSecurityBackgroundActor:encryptUserDataAndUpdateDb: Updating user data for userId "
+          "BackgroundUserDataEncryptionActor:encryptUserDataAndUpdateDB: Updating user data for userId = "
               + ((String) userMap.get(JsonKey.ID))
               + " is completed",
           LoggerEnum.INFO);
@@ -135,23 +135,23 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
         UserUtility.encryptUserAddressData(addressList);
         updateAddressList(addressList);
         ProjectLogger.log(
-            "DataSecurityBackgroundActor:encryptUserDataAndUpdateDb: Updating user address data for userId "
+            "BackgroundUserDataEncryptionActor:encryptUserDataAndUpdateDB: Updating user address data for userId = "
                 + ((String) userMap.get(JsonKey.ID))
                 + " is completed",
             LoggerEnum.INFO);
       }
     } catch (Exception e) {
       ProjectLogger.log(
-          "DataSecurityBackgroundActor:encryptUserDataAndUpdateDb: Exception Occurred while encrypting user data ",
+          "BackgroundUserDataEncryptionActor:encryptUserDataAndUpdateDB: Exception occurred with error message = " + e.getMessage(),
           e);
     }
   }
 
-  private void decryptUserDataAndUpdateDb(Map<String, Object> userMap) {
+  private void decryptUserDataAndUpdateDB(Map<String, Object> userMap) {
     UserUtility.decryptUserData(userMap);
     cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
     ProjectLogger.log(
-        "DataSecurityBackgroundActor:decryptUserDataAndUpdateDb: Updating user data for userId "
+        "BackgroundUserDataEncryptionActor:decryptUserDataAndUpdateDB: Updating user data for userId = "
             + ((String) userMap.get(JsonKey.ID))
             + " is completed",
         LoggerEnum.INFO);
@@ -161,7 +161,7 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
       UserUtility.decryptUserAddressData(addressList);
       updateAddressList(addressList);
       ProjectLogger.log(
-          "DataSecurityBackgroundActor:decryptUserDataAndUpdateDb: Updating user address data for userId "
+          "BackgroundUserDataEncryptionActor:decryptUserDataAndUpdateDB: Updating user address data for userId = "
               + ((String) userMap.get(JsonKey.ID))
               + " is completed",
           LoggerEnum.INFO);

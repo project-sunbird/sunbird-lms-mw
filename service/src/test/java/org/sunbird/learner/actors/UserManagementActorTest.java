@@ -165,7 +165,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void testCreateUserFailureWithInvalidLocationCode() {
+  public void testCreateUserFailureWithInvalidLocationCodes() {
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
         .thenReturn(null);
@@ -187,7 +187,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void testCreateUserSuccessWithLocationCode() {
+  public void testCreateUserSuccessWithLocationCodes() {
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
         .thenReturn(getEsResponseForLocation())
@@ -246,7 +246,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void testUpdateUserFailureWithLocationCode() {
+  public void testUpdateUserFailureWithLocationCodes() {
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
         .thenReturn(null);
@@ -268,7 +268,7 @@ public class UserManagementActorTest {
   }
 
   @Test
-  public void testUpdateUserSuccessWithLocationCode() {
+  public void testUpdateUserSuccessWithLocationCodes() {
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
         .thenReturn(getEsResponseForLocation())

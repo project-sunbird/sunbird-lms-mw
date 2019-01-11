@@ -88,7 +88,7 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
     for (Map<String, Object> userMap : userDetails) {
       List<String> fieldsToDecrypt = userEncryptionService.getEncryptedFields(userMap);
       if (CollectionUtils.isNotEmpty(fieldsToDecrypt)) {
-        decryptUserDataAndUpdateDB(userMap);
+        decryptUserDataAndUpdateDB(userMap, fieldsToDecrypt);
         userIdsListToSync.add((String) userMap.get(JsonKey.ID));
       } else {
         ProjectLogger.log(

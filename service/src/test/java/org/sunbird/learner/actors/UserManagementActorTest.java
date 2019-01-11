@@ -356,7 +356,7 @@ public class UserManagementActorTest {
 
   private Map<String, Object> getUpdateRequestWithLocationCodes() {
     Map<String, Object> reqObj = new HashMap();
-    reqObj.put(JsonKey.LOCATION_CODES, Arrays.asList("locationCodes"));
+    reqObj.put(JsonKey.LOCATION_CODES, Arrays.asList("locationCode"));
     reqObj.put(JsonKey.USER_ID, "userId");
     return reqObj;
   }

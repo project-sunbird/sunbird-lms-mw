@@ -148,23 +148,29 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
   }
 
   private void decryptUserDataAndUpdateDB(Map<String, Object> userMap) {
-    UserUtility.decryptUserData(userMap);
-    cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
-    ProjectLogger.log(
-        "BackgroundUserDataEncryptionActor:decryptUserDataAndUpdateDB: Updating user data for userId = "
-            + ((String) userMap.get(JsonKey.ID))
-            + " is completed",
-        LoggerEnum.INFO);
-
-    List<Map<String, Object>> addressList = getAddressList((String) userMap.get(JsonKey.ID));
-    if (CollectionUtils.isNotEmpty(addressList)) {
-      UserUtility.decryptUserAddressData(addressList);
-      updateAddressList(addressList);
+    try {
+      UserUtility.decryptSpecificUserData(userMap);
+      cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
       ProjectLogger.log(
-          "BackgroundUserDataEncryptionActor:decryptUserDataAndUpdateDB: Updating user address data for userId = "
-              + ((String) userMap.get(JsonKey.ID))
-              + " is completed",
-          LoggerEnum.INFO);
+              "BackgroundUserDataEncryptionActor:decryptUserDataAndUpdateDB: Updating user data for userId = "
+                      + ((String) userMap.get(JsonKey.ID))
+                      + " is completed",
+              LoggerEnum.INFO);
+
+      List<Map<String, Object>> addressList = getAddressList((String) userMap.get(JsonKey.ID));
+      if (CollectionUtils.isNotEmpty(addressList)) {
+        UserUtility.decryptUserAddressData(addressList);
+        updateAddressList(addressList);
+        ProjectLogger.log(
+                "BackgroundUserDataEncryptionActor:decryptUserDataAndUpdateDB: Updating user address data for userId = "
+                        + ((String) userMap.get(JsonKey.ID))
+                        + " is completed",
+                LoggerEnum.INFO);
+      }
+    } catch (Exception e) {
+      ProjectLogger.log(
+              "BackgroundUserDataEncryptionActor:decryptUserDataAndUpdateDB: Exception occurred with error message = " + e.getMessage(),
+              e);
     }
   }
 

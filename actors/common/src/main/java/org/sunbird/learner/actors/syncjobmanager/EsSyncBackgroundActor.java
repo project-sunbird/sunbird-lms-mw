@@ -41,7 +41,7 @@ public class EsSyncBackgroundActor extends BaseActor {
   public void onReceive(Request request) throws Throwable {
     String operation = request.getOperation();
 
-    if (operation.equalsIgnoreCase(ActorOperations.BACKGROUND_SYNC.getValue())) {
+    if (ActorOperations.BACKGROUND_SYNC.getValue().equalsIgnoreCase(operation)) {
       sync(request);
     } else {
       onReceiveUnsupportedOperation("EsSyncBackgroundActor");
@@ -60,7 +60,7 @@ public class EsSyncBackgroundActor extends BaseActor {
 
     String objectType = (String) dataMap.get(JsonKey.OBJECT_TYPE);
     List<Object> objectIds = null;
-    if (dataMap.containsKey(JsonKey.OBJECT_IDS) && null != dataMap.get(JsonKey.OBJECT_IDS)) {
+    if (null != dataMap.get(JsonKey.OBJECT_IDS)) {
       objectIds = (List<Object>) dataMap.get(JsonKey.OBJECT_IDS);
     }
 
@@ -74,7 +74,7 @@ public class EsSyncBackgroundActor extends BaseActor {
 
     String requestLogMsg = "";
 
-    if (null != objectIds && !objectIds.isEmpty()) {
+    if (CollectionUtils.isNotEmpty(objectIds)) {
       requestLogMsg =
           MessageFormat.format(
               "type = {0} and IDs = {1}", objectType, Arrays.toString(objectIds.toArray()));

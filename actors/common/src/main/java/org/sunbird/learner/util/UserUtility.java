@@ -33,11 +33,11 @@ public final class UserUtility {
   private UserUtility() {}
 
   public static Map<String, Object> encryptUserData(Map<String, Object> userMap) throws Exception {
-    return encryptUserSpecificField(userMap, userKeyToEncrypt);
+    return encryptSpecificUserData(userMap, userKeyToEncrypt);
   }
 
   @SuppressWarnings("unchecked")
-  public static Map<String, Object> encryptUserSpecificField(
+  public static Map<String, Object> encryptSpecificUserData(
       Map<String, Object> userMap, List<String> fieldsToEncrypt) throws Exception {
     EncryptionService service = ServiceFactory.getEncryptionServiceInstance(null);
     // Encrypt user basic info

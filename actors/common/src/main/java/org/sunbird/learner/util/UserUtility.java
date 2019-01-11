@@ -76,9 +76,13 @@ public final class UserUtility {
   }
 
   public static Map<String, Object> decryptUserData(Map<String, Object> userMap) {
+    return decryptSpecificUserData(userMap, userKeyToEncrypt);
+  }
+
+  public static Map<String, Object> decryptSpecificUserData(Map<String, Object> userMap, List<String> fieldsToDecrypt) {
     DecryptionService service = ServiceFactory.getDecryptionServiceInstance(null);
     // Decrypt user basic info
-    for (String key : userKeyToEncrypt) {
+    for (String key : fieldsToDecrypt) {
       if (userMap.containsKey(key)) {
         userMap.put(key, service.decryptData((String) userMap.get(key)));
       }

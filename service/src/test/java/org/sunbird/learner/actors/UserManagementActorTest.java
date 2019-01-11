@@ -126,7 +126,7 @@ public class UserManagementActorTest {
 
     boolean result =
         testScenario(
-            getRequestedObj(
+            getRequest(
                 true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
             null);
     assertTrue(result);
@@ -137,7 +137,7 @@ public class UserManagementActorTest {
 
     boolean result =
         testScenario(
-            getRequestedObj(
+            getRequest(
                 false, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
             null);
     assertTrue(result);
@@ -148,7 +148,7 @@ public class UserManagementActorTest {
 
     boolean result =
         testScenario(
-            getRequestedObj(false, false, true, reqMap, ActorOperations.CREATE_USER), null);
+            getRequest(false, false, true, reqMap, ActorOperations.CREATE_USER), null);
     assertTrue(result);
   }
 
@@ -159,7 +159,7 @@ public class UserManagementActorTest {
     reqMap.put(JsonKey.ORGANISATION_ID, "anyOrgId");
     boolean result =
         testScenario(
-            getRequestedObj(false, false, false, reqMap, ActorOperations.CREATE_USER),
+            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
             ResponseCode.parameterMismatch);
     assertTrue(result);
   }
@@ -172,7 +172,7 @@ public class UserManagementActorTest {
     reqMap.put(JsonKey.LOCATION_CODES, Arrays.asList("invalidLocationCodes"));
     boolean result =
         testScenario(
-            getRequestedObj(false, false, false, reqMap, ActorOperations.CREATE_USER),
+            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
             ResponseCode.invalidParameterValue);
     assertTrue(result);
   }
@@ -182,7 +182,7 @@ public class UserManagementActorTest {
 
     boolean result =
         testScenario(
-            getRequestedObj(false, false, false, reqMap, ActorOperations.CREATE_USER), null);
+            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER), null);
     assertTrue(result);
   }
 
@@ -194,7 +194,7 @@ public class UserManagementActorTest {
         .thenReturn(getEsResponse());
     reqMap.put(JsonKey.LOCATION_CODES, Arrays.asList("locationCode"));
     boolean result =
-        testScenario(getRequestedObj(true, true, true, reqMap, ActorOperations.CREATE_USER), null);
+        testScenario(getRequest(true, true, true, reqMap, ActorOperations.CREATE_USER), null);
     assertTrue(result);
   }
 
@@ -204,7 +204,7 @@ public class UserManagementActorTest {
     reqMap.put(JsonKey.EXTERNAL_IDS, "anyExternalId");
     boolean result =
         testScenario(
-            getRequestedObj(false, false, false, reqMap, ActorOperations.CREATE_USER),
+            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
             ResponseCode.dataTypeError);
     assertTrue(result);
   }
@@ -215,7 +215,7 @@ public class UserManagementActorTest {
     reqMap.put(JsonKey.ROLES, "anyRoles");
     boolean result =
         testScenario(
-            getRequestedObj(false, false, false, reqMap, ActorOperations.CREATE_USER),
+            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
             ResponseCode.dataTypeError);
     assertTrue(result);
   }
@@ -226,7 +226,7 @@ public class UserManagementActorTest {
     reqMap.put(JsonKey.COUNTRY_CODE, "anyCode");
     boolean result =
         testScenario(
-            getRequestedObj(false, false, false, reqMap, ActorOperations.CREATE_USER),
+            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
             ResponseCode.invalidCountryCode);
     assertTrue(result);
   }
@@ -239,7 +239,7 @@ public class UserManagementActorTest {
         .thenReturn(null);
     boolean result =
         testScenario(
-            getRequestedObj(
+            getRequest(
                 false, false, false, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
             ResponseCode.invalidOrgData);
     assertTrue(result);
@@ -252,7 +252,7 @@ public class UserManagementActorTest {
         .thenReturn(null);
     boolean result =
         testScenario(
-            getRequestedObj(true, true, true, getRequestObj(), ActorOperations.UPDATE_USER),
+            getRequest(true, true, true, getUpdateRequestWithLocationCodes(), ActorOperations.UPDATE_USER),
             ResponseCode.invalidParameterValue);
     assertTrue(result);
   }
@@ -262,7 +262,7 @@ public class UserManagementActorTest {
 
     boolean result =
         testScenario(
-            getRequestedObj(true, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER),
+            getRequest(true, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER),
             null);
     assertTrue(result);
   }
@@ -275,7 +275,7 @@ public class UserManagementActorTest {
         .thenReturn(getEsResponse());
     boolean result =
         testScenario(
-            getRequestedObj(true, true, true, getRequestObj(), ActorOperations.UPDATE_USER), null);
+            getRequest(true, true, true, getUpdateRequestWithLocationCodes(), ActorOperations.UPDATE_USER), null);
     assertTrue(result);
   }
 
@@ -284,7 +284,7 @@ public class UserManagementActorTest {
 
     boolean result =
         testScenario(
-            getRequestedObj(false, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER),
+            getRequest(false, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER),
             null);
     assertTrue(result);
   }
@@ -335,7 +335,7 @@ public class UserManagementActorTest {
     return reqMap;
   }
 
-  private Request getRequestedObj(
+  private Request getRequest(
       boolean isCallerIdReq,
       boolean isRootOrgIdReq,
       boolean isVersionReq,
@@ -354,9 +354,9 @@ public class UserManagementActorTest {
     return reqObj;
   }
 
-  private Map<String, Object> getRequestObj() {
+  private Map<String, Object> getUpdateRequestWithLocationCodes() {
     Map<String, Object> reqObj = new HashMap();
-    reqObj.put(JsonKey.LOCATION_CODES, Arrays.asList("locationCode"));
+    reqObj.put(JsonKey.LOCATION_CODES, Arrays.asList("locationCodes"));
     reqObj.put(JsonKey.USER_ID, "userId");
     return reqObj;
   }

@@ -37,7 +37,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.user.actors.UserManagementActor;
-import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserUtil;
 
@@ -58,7 +57,6 @@ public class UserManagementActorTest {
 
   private ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(UserManagementActor.class);
-  public UserService userService;
   protected static final String userId = "testUserId";
 
   public ActorSystem getActorSystem() {

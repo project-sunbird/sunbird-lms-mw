@@ -69,10 +69,6 @@ public class UserManagementActorTest {
     return props;
   }
 
-  public UserService getUserService() {
-    return userService;
-  }
-
   protected static Map<String, Object> reqMap;
   static InterServiceCommunication interServiceCommunication =
       mock(InterServiceCommunicationImpl.class);;
@@ -111,15 +107,18 @@ public class UserManagementActorTest {
             Mockito.anyObject()))
         .thenReturn(new HashMap<>());
 
-    PowerMockito.mockStatic(UserServiceImpl.class);
-    userService = mock(UserServiceImpl.class);
-    when(UserServiceImpl.getInstance()).thenReturn(userService);
-    when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("anyId");
-    when(userService.getCustodianChannel(Mockito.anyMap(), Mockito.any(ActorRef.class)))
-        .thenReturn("anyChannel");
-    when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("rootOrgId");
-
+    when(cassandraOperation.getRecordsByCompositeKey(
+            Mockito.anyString(), Mockito.anyString(), Mockito.any()))
+        .thenReturn(getUserFromExternalId());
+    when(cassandraOperation.getRecordById(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getUserFromExternalId())
+        .thenReturn(getUserFromExternalId())
+        .thenReturn(getUserFromExternalId());
     PowerMockito.mockStatic(ElasticSearchUtil.class);
+    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getEsContent());
+
     when(ElasticSearchUtil.getDataByIdentifier(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getEsResponseMap());
@@ -135,6 +134,17 @@ public class UserManagementActorTest {
     when(UserUtil.encryptUserData(Mockito.anyMap())).thenReturn(requestMap);
 
     reqMap = getMapObject();
+  }
+
+  private Map<String, Object> getEsContent() {
+    Map<String, Object> esContent = new HashMap<>();
+    List<Map<String, Object>> esContentList = new ArrayList<>();
+    Map<String, Object> esContent2 = new HashMap<>();
+    esContent2.put(JsonKey.STATUS, 1);
+    esContent2.put(JsonKey.ID, "rootOrgId");
+    esContentList.add(esContent2);
+    esContent.put(JsonKey.CONTENT, esContentList);
+    return esContent;
   }
 
   protected Map<String, Object> getAdditionalMapData(Map<String, Object> reqMap) {
@@ -267,6 +277,7 @@ public class UserManagementActorTest {
 
   protected Request getRequest(String key, String value) {
     Request reqObj = new Request();
+    reqObj.getRequest().put(JsonKey.USER_ID, userId);
     reqObj.setOperation(ActorOperations.UPDATE_USER.getValue());
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.ID, userId);
@@ -283,5 +294,17 @@ public class UserManagementActorTest {
     context.put(JsonKey.USER_ID, userId);
     reqObj.setContext(context);
     return reqObj;
+  }
+
+  private Response getUserFromExternalId() {
+    Response response = new Response();
+    Map<String, Object> map = new HashMap<>();
+    map.put("any", "any");
+    map.put("rootOrgId", "anyValue");
+    List<Map<String, Object>> userRecordList = new ArrayList<>();
+    userRecordList.add(map);
+    userRecordList.add(map);
+    response.put(JsonKey.RESPONSE, userRecordList);
+    return response;
   }
 }

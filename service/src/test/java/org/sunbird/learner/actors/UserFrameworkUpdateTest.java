@@ -30,10 +30,9 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.util.ContentStoreUtil;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
-import org.sunbird.user.service.impl.UserServiceImpl;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({DataCacheHandler.class, ContentStoreUtil.class, UserServiceImpl.class, Util.class})
+@PrepareForTest({DataCacheHandler.class, ContentStoreUtil.class, Util.class})
 public class UserFrameworkUpdateTest extends UserManagementActorTest {
 
   private ActorSystem system = ActorSystem.create("system");
@@ -44,7 +43,6 @@ public class UserFrameworkUpdateTest extends UserManagementActorTest {
     PowerMockito.mockStatic(DataCacheHandler.class);
     PowerMockito.mockStatic(ContentStoreUtil.class);
     PowerMockito.mockStatic(Util.class);
-    Mockito.doNothing().when(userService).validateUserId(Mockito.any());
   }
 
   @Test

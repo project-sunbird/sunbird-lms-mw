@@ -64,7 +64,7 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
     List<String> userIdsListToSync = new ArrayList<>();
     if (CollectionUtils.isEmpty(userDetails)) {
       ProjectLogger.log(
-          "BackgroundUserDataEncryptionActor:encryptData:No user found for encryption.",
+          "BackgroundUserDataEncryptionActor:encryptData: Empty user details.",
           LoggerEnum.INFO);
       return;
     }
@@ -94,7 +94,7 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
     List<String> userIdsListToSync = new ArrayList<>();
     if (CollectionUtils.isEmpty(userDetails)) {
       ProjectLogger.log(
-          "BackgroundUserDataEncryptionActor:decryptData:No user found for decrypt.",
+          "BackgroundUserDataEncryptionActor:decryptData: Empty user details.",
           LoggerEnum.INFO);
       return;
     }
@@ -215,4 +215,5 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
 
     tellToAnother(backgroundSyncRequest);
   }
+
 }

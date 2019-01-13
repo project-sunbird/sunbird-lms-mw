@@ -62,6 +62,13 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
 
   private void encryptData(List<Map<String, Object>> userDetails) {
     List<String> userIdsListToSync = new ArrayList<>();
+    if (CollectionUtils.isEmpty(userDetails)) {
+      ProjectLogger.log(
+          "BackgroundUserDataEncryptionActor:encryptData:No user found for encryption.",
+          LoggerEnum.INFO);
+      return;
+    }
+
     for (Map<String, Object> userMap : userDetails) {
       List<String> fieldsToEncrypt = userEncryptionService.getDecryptedFields(userMap);
       if (CollectionUtils.isNotEmpty(fieldsToEncrypt)) {
@@ -85,6 +92,12 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
 
   private void decryptData(List<Map<String, Object>> userDetails) {
     List<String> userIdsListToSync = new ArrayList<>();
+    if (CollectionUtils.isEmpty(userDetails)) {
+      ProjectLogger.log(
+          "BackgroundUserDataEncryptionActor:decryptData:No user found for decrypt.",
+          LoggerEnum.INFO);
+      return;
+    }
     for (Map<String, Object> userMap : userDetails) {
       List<String> fieldsToDecrypt = userEncryptionService.getEncryptedFields(userMap);
       if (CollectionUtils.isNotEmpty(fieldsToDecrypt)) {
@@ -142,35 +155,38 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
       }
     } catch (Exception e) {
       ProjectLogger.log(
-          "BackgroundUserDataEncryptionActor:encryptUserDataAndUpdateDB: Exception occurred with error message = " + e.getMessage(),
+          "BackgroundUserDataEncryptionActor:encryptUserDataAndUpdateDB: Exception occurred with error message = "
+              + e.getMessage(),
           e);
     }
   }
 
-  private void decryptUserDataAndUpdateDB(Map<String, Object> userMap, List<String> fieldsToDecrypt) {
+  private void decryptUserDataAndUpdateDB(
+      Map<String, Object> userMap, List<String> fieldsToDecrypt) {
     try {
       UserUtility.decryptSpecificUserData(userMap, fieldsToDecrypt);
       cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
       ProjectLogger.log(
-              "BackgroundUserDataEncryptionActor:decryptUserDataAndUpdateDB: Updating user data for userId = "
-                      + ((String) userMap.get(JsonKey.ID))
-                      + " is completed",
-              LoggerEnum.INFO);
+          "BackgroundUserDataEncryptionActor:decryptUserDataAndUpdateDB: Updating user data for userId = "
+              + ((String) userMap.get(JsonKey.ID))
+              + " is completed",
+          LoggerEnum.INFO);
 
       List<Map<String, Object>> addressList = getAddressList((String) userMap.get(JsonKey.ID));
       if (CollectionUtils.isNotEmpty(addressList)) {
         UserUtility.decryptUserAddressData(addressList);
         updateAddressList(addressList);
         ProjectLogger.log(
-                "BackgroundUserDataEncryptionActor:decryptUserDataAndUpdateDB: Updating user address data for userId = "
-                        + ((String) userMap.get(JsonKey.ID))
-                        + " is completed",
-                LoggerEnum.INFO);
+            "BackgroundUserDataEncryptionActor:decryptUserDataAndUpdateDB: Updating user address data for userId = "
+                + ((String) userMap.get(JsonKey.ID))
+                + " is completed",
+            LoggerEnum.INFO);
       }
     } catch (Exception e) {
       ProjectLogger.log(
-              "BackgroundUserDataEncryptionActor:decryptUserDataAndUpdateDB: Exception occurred with error message = " + e.getMessage(),
-              e);
+          "BackgroundUserDataEncryptionActor:decryptUserDataAndUpdateDB: Exception occurred with error message = "
+              + e.getMessage(),
+          e);
     }
   }
 

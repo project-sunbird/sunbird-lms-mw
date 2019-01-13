@@ -76,7 +76,7 @@ public class UserEncryptionServiceImpl implements UserEncryptionService {
         }
       } catch (ProjectCommonException e) {
         ProjectLogger.log(
-            "UserEncryptionServiceImpl:getOtherEncryptedFields field is not encrypted " + field,
+            "UserEncryptionServiceImpl:getOtherEncryptedFields: Field is not encrypted " + field,
             LoggerEnum.INFO.name());
       }
     }
@@ -98,4 +98,5 @@ public class UserEncryptionServiceImpl implements UserEncryptionService {
     }
     return decryptedFields;
   }
+
 }

@@ -65,6 +65,7 @@ public class UserProfileReadActor extends BaseActor {
           null);
   private Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
+  private SSOManager ssoManager = SSOServiceFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
 
   @Override
@@ -301,6 +302,12 @@ public class UserProfileReadActor extends BaseActor {
       }
       if (fields.contains(JsonKey.ROLES)) {
         updateRoleMasterInfo(result);
+      }
+      if (fields.contains(JsonKey.LOCATIONS)) {
+        result.put(
+            JsonKey.USER_LOCATIONS,
+            getUserLocations((List<String>) result.get(JsonKey.LOCATION_IDS)));
+        result.remove(JsonKey.LOCATION_IDS);
       }
     }
   }
@@ -594,6 +601,8 @@ public class UserProfileReadActor extends BaseActor {
             ResponseCode.userNotFound.getErrorMessage(),
             ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
       }
+      String username = ssoManager.getUsernameById((String) result.get(JsonKey.USER_ID));
+      result.put(JsonKey.USERNAME, username);
       sendResponse(actorMessage, result);
 
     } else {
@@ -646,6 +655,8 @@ public class UserProfileReadActor extends BaseActor {
       result.remove(JsonKey.EMAIL);
       result.remove(JsonKey.PHONE);
     }
+    String username = ssoManager.getUsernameById(foundUser.getId());
+    result.put(JsonKey.USERNAME, username);
     sendResponse(actorMessage, result);
   }
 
@@ -786,5 +797,17 @@ public class UserProfileReadActor extends BaseActor {
         ProjectCommonException.throwServerErrorException(ResponseCode.SERVER_ERROR);
       }
     }
+  }
+
+  private List<Map<String, Object>> getUserLocations(List<String> locationIds) {
+    if (CollectionUtils.isNotEmpty(locationIds)) {
+      List<String> locationFields =
+          Arrays.asList(JsonKey.CODE, JsonKey.NAME, JsonKey.TYPE, JsonKey.PARENT_ID, JsonKey.ID);
+      Map<String, Map<String, Object>> locationInfoMap =
+          getEsResultByListOfIds(locationIds, locationFields, EsType.location);
+
+      return locationInfoMap.values().stream().collect(Collectors.toList());
+    }
+    return new ArrayList<>();
   }
 }

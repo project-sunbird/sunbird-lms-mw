@@ -1,18 +1,15 @@
 package org.sunbird.user.service.impl;
 
-import java.io.UnsupportedEncodingException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 import org.apache.commons.lang3.StringUtils;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.PhoneValidator;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
@@ -23,7 +20,7 @@ public class UserEncryptionServiceImpl implements UserEncryptionService {
 
   private DecryptionService decryptionService = ServiceFactory.getDecryptionServiceInstance(null);
   private EncryptionService encryptionService = ServiceFactory.getEncryptionServiceInstance(null);
-  private List<String> fieldsToCheckForEncrytion =
+  private List<String> userEncryptedFieldList =
       Arrays.asList(JsonKey.USERNAME, JsonKey.LOGIN_ID, JsonKey.LOCATION);
 
   private UserEncryptionServiceImpl() {};
@@ -71,22 +68,16 @@ public class UserEncryptionServiceImpl implements UserEncryptionService {
 
   private List<String> getOtherEncryptedFields(Map<String, Object> userMap) {
     List<String> decryptedFields = new ArrayList<>();
-    for (String field : fieldsToCheckForEncrytion) {
+    for (String field : userEncryptedFieldList) {
       try {
-        if (StringUtils.isNotBlank((String) userMap.get(field))
-            && ((String) userMap.get(field))
-                .equals(encryptionService.encryptData((String) userMap.get(field)))) {
+        if (StringUtils.isNotBlank((String) userMap.get(field))) {
+          decryptionService.decryptData((String) userMap.get(field), true);
           decryptedFields.add(field);
         }
-      } catch (NoSuchAlgorithmException
-          | NoSuchPaddingException
-          | InvalidKeyException
-          | IllegalBlockSizeException
-          | BadPaddingException
-          | UnsupportedEncodingException e) {
-        decryptedFields.add(field);
-      } catch (Exception e) {
-        decryptedFields.add(field);
+      } catch (ProjectCommonException e) {
+        ProjectLogger.log(
+            "UserEncryptionServiceImpl:getOtherEncryptedFields: Field is not encrypted " + field,
+            LoggerEnum.INFO.name());
       }
     }
     return decryptedFields;
@@ -94,18 +85,18 @@ public class UserEncryptionServiceImpl implements UserEncryptionService {
 
   private List<String> getOtherDecryptedFields(Map<String, Object> userMap) {
     List<String> decryptedFields = new ArrayList<>();
-    for (String field : fieldsToCheckForEncrytion) {
+    for (String field : userEncryptedFieldList) {
       try {
         if (StringUtils.isNotBlank((String) userMap.get(field))
             && ((String) userMap.get(field))
                 .equals(decryptionService.decryptData((String) userMap.get(field)))) {
           decryptedFields.add(field);
         }
-
       } catch (Exception e) {
         decryptedFields.add(field);
       }
     }
     return decryptedFields;
   }
+
 }

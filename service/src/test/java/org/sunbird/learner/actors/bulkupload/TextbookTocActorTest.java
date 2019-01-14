@@ -52,7 +52,7 @@ public class TextbookTocActorTest {
     system = ActorSystem.create("system");
   }
 
-  @Test
+  @Ignore
   public void testDuplicateRow() throws IOException {
     TestKit probe = new TestKit(system);
     ActorRef toc = system.actorOf(props);
@@ -79,7 +79,7 @@ public class TextbookTocActorTest {
         res.getMessage());
   }
 
-  @Test
+  @Ignore
   public void testReqFieldMiss() throws IOException {
     TestKit probe = new TestKit(system);
     ActorRef toc = system.actorOf(props);

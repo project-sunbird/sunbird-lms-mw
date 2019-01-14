@@ -62,6 +62,13 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
 
   private void encryptData(List<Map<String, Object>> userDetails) {
     List<String> userIdsListToSync = new ArrayList<>();
+    if (CollectionUtils.isEmpty(userDetails)) {
+      ProjectLogger.log(
+          "BackgroundUserDataEncryptionActor:encryptData: Empty user details.",
+          LoggerEnum.INFO);
+      return;
+    }
+
     for (Map<String, Object> userMap : userDetails) {
       List<String> fieldsToEncrypt = userEncryptionService.getDecryptedFields(userMap);
       if (CollectionUtils.isNotEmpty(fieldsToEncrypt)) {
@@ -85,6 +92,12 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
 
   private void decryptData(List<Map<String, Object>> userDetails) {
     List<String> userIdsListToSync = new ArrayList<>();
+    if (CollectionUtils.isEmpty(userDetails)) {
+      ProjectLogger.log(
+          "BackgroundUserDataEncryptionActor:decryptData: Empty user details.",
+          LoggerEnum.INFO);
+      return;
+    }
     for (Map<String, Object> userMap : userDetails) {
       List<String> fieldsToDecrypt = userEncryptionService.getEncryptedFields(userMap);
       if (CollectionUtils.isNotEmpty(fieldsToDecrypt)) {
@@ -202,4 +215,5 @@ public class BackgroundUserDataEncryptionActor extends BaseActor {
 
     tellToAnother(backgroundSyncRequest);
   }
+
 }

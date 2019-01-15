@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -73,6 +74,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
 
   @Test
   public void testCreateUserFailureWithInvalidLocationCodes() {
+    when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
         .thenReturn(new ArrayList<>());
@@ -97,6 +99,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
 
   @Test
   public void testCreateUserSuccessWithLocationCodes() {
+    when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
         .thenReturn(getEsResponseForLocation())
@@ -156,6 +159,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
 
   @Test
   public void testUpdateUserFailureWithLocationCodes() {
+    when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
         .thenReturn(null);

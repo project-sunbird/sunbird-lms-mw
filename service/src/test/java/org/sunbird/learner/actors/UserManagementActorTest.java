@@ -84,7 +84,10 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
   public void testCreateUserSuccessWithoutVersion() {
 
     boolean result =
-        testScenario(getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER), null);
+        testScenario(
+            getRequest(
+                false, false, false, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
+            null);
     assertTrue(result);
   }
 

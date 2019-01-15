@@ -8,7 +8,6 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -69,20 +68,6 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
         testScenario(
             getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
             ResponseCode.parameterMismatch);
-    assertTrue(result);
-  }
-
-  @Test
-  public void testCreateUserFailureWithInvalidLocationCodes() {
-    when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
-    when(interServiceCommunication.getResponse(
-            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
-        .thenReturn(new ArrayList<>());
-    reqMap.put(JsonKey.LOCATION_CODES, Arrays.asList("invalidLocationCode"));
-    boolean result =
-        testScenario(
-            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
-            ResponseCode.invalidParameterValue);
     assertTrue(result);
   }
 
@@ -167,6 +152,20 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
         testScenario(
             getRequest(
                 true, true, true, getUpdateRequestWithLocationCodes(), ActorOperations.UPDATE_USER),
+            ResponseCode.invalidParameterValue);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testCreateUserFailureWithInvalidLocationCodes() {
+    when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
+    when(interServiceCommunication.getResponse(
+            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
+        .thenReturn(null);
+    reqMap.put(JsonKey.LOCATION_CODES, Arrays.asList("invalidLocationCode"));
+    boolean result =
+        testScenario(
+            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
             ResponseCode.invalidParameterValue);
     assertTrue(result);
   }

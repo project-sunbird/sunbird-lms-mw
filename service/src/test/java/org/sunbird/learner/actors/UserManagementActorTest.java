@@ -8,6 +8,7 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -74,7 +75,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
   public void testCreateUserFailureWithInvalidLocationCodes() {
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
-        .thenReturn(null);
+        .thenReturn(new ArrayList<>());
     reqMap.put(JsonKey.LOCATION_CODES, Arrays.asList("invalidLocationCode"));
     boolean result =
         testScenario(

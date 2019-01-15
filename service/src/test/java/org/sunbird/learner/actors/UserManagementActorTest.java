@@ -51,7 +51,10 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
   public void testCreateUserSuccessWithoutUserCallerIdChannelAndRootOrgId() {
 
     boolean result =
-        testScenario(getRequest(false, false, true, reqMap, ActorOperations.CREATE_USER), null);
+        testScenario(
+            getRequest(
+                false, false, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
+            null);
     assertTrue(result);
   }
 

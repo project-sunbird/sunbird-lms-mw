@@ -8,19 +8,16 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
-import org.sunbird.actorutil.InterServiceCommunicationFactory;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -31,9 +28,8 @@ import org.sunbird.content.util.ContentStoreUtil;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest({DataCacheHandler.class, ContentStoreUtil.class, Util.class})
-public class UserFrameworkUpdateTest extends UserManagementActorTest {
+@PrepareForTest({DataCacheHandler.class, ContentStoreUtil.class})
+public class UserFrameworkUpdateTest extends BaseUserManagementActorTest {
 
   private ActorSystem system = ActorSystem.create("system");
   private static final Props props = getProps();
@@ -42,182 +38,6 @@ public class UserFrameworkUpdateTest extends UserManagementActorTest {
   public void beforeTest() {
     PowerMockito.mockStatic(DataCacheHandler.class);
     PowerMockito.mockStatic(ContentStoreUtil.class);
-    PowerMockito.mockStatic(Util.class);
-  }
-
-  @Test
-  public void testCreateUserSuccessWithUserCallerId() {
-
-    boolean result =
-        testScenario(
-            getRequest(true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
-            null);
-    assertTrue(result);
-  }
-
-  @Test
-  public void testCreateUserSuccessWithoutUserCallerId() {
-
-    boolean result =
-        testScenario(
-            getRequest(
-                false, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
-            null);
-    assertTrue(result);
-  }
-
-  @Test
-  public void testCreateUserSuccessWithoutUserCallerIdChannelAndRootOrgId() {
-
-    boolean result =
-        testScenario(getRequest(false, false, true, reqMap, ActorOperations.CREATE_USER), null);
-    assertTrue(result);
-  }
-
-  @Test
-  public void testCreateUserFailureWithInvalidChannelAndOrgId() {
-
-    reqMap.put(JsonKey.CHANNEL, "anyReqChannel");
-    reqMap.put(JsonKey.ORGANISATION_ID, "anyOrgId");
-    boolean result =
-        testScenario(
-            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
-            ResponseCode.parameterMismatch);
-    assertTrue(result);
-  }
-
-  @Test
-  public void testCreateUserFailureWithInvalidLocationCodes() {
-    when(InterServiceCommunicationFactory.getInstance())
-        .thenReturn(interServiceCommunication)
-        .thenReturn(interServiceCommunication);
-    when(interServiceCommunication.getResponse(
-            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
-        .thenReturn(null);
-    reqMap.put(JsonKey.LOCATION_CODES, Arrays.asList("invalidLocationCode"));
-    boolean result =
-        testScenario(
-            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
-            ResponseCode.invalidParameterValue);
-    assertTrue(result);
-  }
-
-  @Test
-  public void testCreateUserSuccessWithoutVersion() {
-
-    boolean result =
-        testScenario(getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER), null);
-    assertTrue(result);
-  }
-
-  @Test
-  public void testCreateUserSuccessWithLocationCodes() {
-    when(InterServiceCommunicationFactory.getInstance())
-        .thenReturn(interServiceCommunication)
-        .thenReturn(interServiceCommunication);
-    when(interServiceCommunication.getResponse(
-            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
-        .thenReturn(getEsResponseForLocation())
-        .thenReturn(getEsResponse());
-    reqMap.put(JsonKey.LOCATION_CODES, Arrays.asList("locationCode"));
-    boolean result =
-        testScenario(getRequest(true, true, true, reqMap, ActorOperations.CREATE_USER), null);
-    assertTrue(result);
-  }
-
-  @Test
-  public void testCreateUserFailureWithInvalidExternalIds() {
-
-    reqMap.put(JsonKey.EXTERNAL_IDS, "anyExternalId");
-    boolean result =
-        testScenario(
-            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
-            ResponseCode.dataTypeError);
-    assertTrue(result);
-  }
-
-  @Test
-  public void testCreateUserFailureWithInvalidRoles() {
-
-    reqMap.put(JsonKey.ROLES, "anyRoles");
-    boolean result =
-        testScenario(
-            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
-            ResponseCode.dataTypeError);
-    assertTrue(result);
-  }
-
-  @Test
-  public void testCreateUserFailureWithInvalidCountryCode() {
-
-    reqMap.put(JsonKey.COUNTRY_CODE, "anyCode");
-    boolean result =
-        testScenario(
-            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
-            ResponseCode.invalidCountryCode);
-    assertTrue(result);
-  }
-
-  @Test
-  public void testCreateUserFailureWithInvalidOrg() {
-
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(null);
-    boolean result =
-        testScenario(
-            getRequest(
-                false, false, false, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
-            ResponseCode.invalidOrgData);
-    assertTrue(result);
-  }
-
-  @Test
-  public void testUpdateUserFailureWithLocationCodes() {
-    when(interServiceCommunication.getResponse(
-            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
-        .thenReturn(null);
-    boolean result =
-        testScenario(
-            getRequest(
-                true, true, true, getUpdateRequestWithLocationCodes(), ActorOperations.UPDATE_USER),
-            ResponseCode.invalidParameterValue);
-    assertTrue(result);
-  }
-
-  @Test
-  public void testUpdateUserSuccess() {
-
-    boolean result =
-        testScenario(
-            getRequest(true, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER), null);
-    assertTrue(result);
-  }
-
-  @Test
-  public void testUpdateUserSuccessWithLocationCodes() {
-    when(InterServiceCommunicationFactory.getInstance())
-        .thenReturn(interServiceCommunication)
-        .thenReturn(interServiceCommunication);
-    when(interServiceCommunication.getResponse(
-            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
-        .thenReturn(getEsResponseForLocation())
-        .thenReturn(getEsResponse());
-    boolean result =
-        testScenario(
-            getRequest(
-                true, true, true, getUpdateRequestWithLocationCodes(), ActorOperations.UPDATE_USER),
-            null);
-    assertTrue(result);
-  }
-
-  @Test
-  public void testUpdateUserSuccessWithoutUserCallerId() {
-
-    boolean result =
-        testScenario(
-            getRequest(false, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER), null);
-    assertTrue(result);
   }
 
   @Test
@@ -315,5 +135,54 @@ public class UserFrameworkUpdateTest extends UserManagementActorTest {
     List<String> list1 = Arrays.asList("NCF");
     map1.put("someHashTagId", list1);
     when(DataCacheHandler.getHashtagIdFrameworkIdMap()).thenReturn(map1);
+  }
+
+  private Request getRequest(String key, String value) {
+    Request reqObj = new Request();
+    reqObj.getRequest().put(JsonKey.USER_ID, userId);
+    reqObj.setOperation(ActorOperations.UPDATE_USER.getValue());
+    Map<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.ID, userId);
+    Map<String, Object> frameworkMap = getFrameworkDetails(key, value);
+    reqObj.getRequest().put(JsonKey.USER_ID, userId);
+    innerMap.put(JsonKey.FRAMEWORK, frameworkMap);
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    request.put(JsonKey.USER_ID, userId);
+    request.put(JsonKey.FRAMEWORK, frameworkMap);
+    reqObj.setRequest(request);
+    Map<String, Object> context = new HashMap<>();
+    context.put(JsonKey.REQUESTED_BY, "someValue");
+    context.put(JsonKey.USER_ID, userId);
+    reqObj.setContext(context);
+    return reqObj;
+  }
+
+  private List<Map<String, String>> getListForCategoryMap(String value) {
+    Map<String, String> map2 = new HashMap<>();
+    map2.put(JsonKey.NAME, value);
+    List<Map<String, String>> list2 = new ArrayList<>();
+    list2.add(map2);
+    return list2;
+  }
+
+  private Map<String, Object> getFrameworkDetails(String key, String value) {
+    Map<String, Object> frameworkMap = new HashMap<>();
+    List<String> medium = new ArrayList<>();
+    medium.add("English");
+    List<String> gradeLevel = new ArrayList<>();
+    gradeLevel.add("Grade 3");
+    List<String> board = new ArrayList<>();
+    board.add("NCERT");
+    frameworkMap.put(JsonKey.ID, "NCF");
+    frameworkMap.put("gradeLevel", gradeLevel);
+    frameworkMap.put("board", board);
+    frameworkMap.put("medium", medium);
+    if (key != null) {
+      List<String> wrongValue = new ArrayList<>();
+      wrongValue.add(value);
+      frameworkMap.put(key, wrongValue);
+    }
+    return frameworkMap;
   }
 }

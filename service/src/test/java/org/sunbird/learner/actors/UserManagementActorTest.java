@@ -11,6 +11,7 @@ import akka.testkit.javadsl.TestKit;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
@@ -29,6 +30,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
   private ActorSystem system = ActorSystem.create("system");
   private static final Props props = getProps();
 
+  @Ignore
   @Test
   public void testCreateUserSuccessWithUserCallerId() {
 
@@ -39,6 +41,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
     assertTrue(result);
   }
 
+  @Ignore
   @Test
   public void testCreateUserSuccessWithoutUserCallerId() {
 
@@ -50,6 +53,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
     assertTrue(result);
   }
 
+  @Ignore
   @Test
   public void testCreateUserSuccessWithoutUserCallerIdChannelAndRootOrgId() {
 
@@ -61,6 +65,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
     assertTrue(result);
   }
 
+  @Ignore
   @Test
   public void testCreateUserFailureWithInvalidChannelAndOrgId() {
 
@@ -73,6 +78,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
     assertTrue(result);
   }
 
+  @Ignore
   @Test
   public void testCreateUserSuccessWithoutVersion() {
 
@@ -84,6 +90,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
     assertTrue(result);
   }
 
+  @Ignore
   @Test
   public void testCreateUserSuccessWithLocationCodes() {
     when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
@@ -97,6 +104,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
     assertTrue(result);
   }
 
+  @Ignore
   @Test
   public void testCreateUserFailureWithInvalidExternalIds() {
 
@@ -108,6 +116,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
     assertTrue(result);
   }
 
+  @Ignore
   @Test
   public void testCreateUserFailureWithInvalidRoles() {
 
@@ -119,6 +128,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
     assertTrue(result);
   }
 
+  @Ignore
   @Test
   public void testCreateUserFailureWithInvalidCountryCode() {
 
@@ -130,6 +140,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
     assertTrue(result);
   }
 
+  @Ignore
   @Test
   public void testCreateUserFailureWithInvalidOrg() {
 
@@ -144,6 +155,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
     assertTrue(result);
   }
 
+  @Ignore
   @Test
   public void testUpdateUserFailureWithLocationCodes() {
     when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
@@ -173,6 +185,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
     assertTrue(result);
   }
 
+  @Ignore
   @Test
   public void testUpdateUserSuccess() {
 
@@ -182,6 +195,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
     assertTrue(result);
   }
 
+  @Ignore
   @Test
   public void testUpdateUserSuccessWithLocationCodes() {
     when(interServiceCommunication.getResponse(
@@ -196,6 +210,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
     assertTrue(result);
   }
 
+  @Ignore
   @Test
   public void testUpdateUserSuccessWithoutUserCallerId() {
 

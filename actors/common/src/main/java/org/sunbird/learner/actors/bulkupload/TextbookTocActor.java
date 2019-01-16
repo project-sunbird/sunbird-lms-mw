@@ -196,15 +196,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 StringUtils.join(invalidDialCodes, ','),
                 textBookdata.get(JsonKey.IDENTIFIER)));
       }
-    } else {
-      if (CollectionUtils.isNotEmpty(dialCodes)) {
-        throwClientErrorException(
-            ResponseCode.errorDialCodeNotReservedForTextBook,
-            MessageFormat.format(
-                ResponseCode.errorDialCodeNotReservedForTextBook.getErrorMessage(),
-                StringUtils.join(dialCodes, ','),
-                textBookdata.get(JsonKey.IDENTIFIER)));
-      }
+    } else if (CollectionUtils.isNotEmpty(dialCodes)) {
+      throwClientErrorException(
+          ResponseCode.errorDialCodeNotReservedForTextBook,
+          MessageFormat.format(
+              ResponseCode.errorDialCodeNotReservedForTextBook.getErrorMessage(),
+              StringUtils.join(dialCodes, ','),
+              textBookdata.get(JsonKey.IDENTIFIER)));
     }
   }
 

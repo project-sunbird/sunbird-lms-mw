@@ -19,6 +19,8 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 
@@ -167,6 +169,7 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
         testScenario(
             getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
             ResponseCode.invalidParameterValue);
+    ProjectLogger.log("***** : result value" + result, LoggerEnum.INFO);
     assertTrue(result);
   }
 
@@ -213,6 +216,8 @@ public class UserManagementActorTest extends BaseUserManagementActorTest {
     } else {
       ProjectCommonException res =
           probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+      ProjectLogger.log(
+          "***** : response value" + res.getCode() + " " + res.getResponseCode(), LoggerEnum.INFO);
       return res.getCode().equals(errorCode.getErrorCode())
           || res.getResponseCode() == errorCode.getResponseCode();
     }

@@ -196,7 +196,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 StringUtils.join(invalidDialCodes, ','),
                 textBookdata.get(JsonKey.IDENTIFIER)));
       }
-    } else {
+    } else if (CollectionUtils.isNotEmpty(dialCodes)) {
       throwClientErrorException(
           ResponseCode.errorDialCodeNotReservedForTextBook,
           MessageFormat.format(

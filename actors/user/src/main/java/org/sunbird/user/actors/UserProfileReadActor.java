@@ -445,12 +445,6 @@ public class UserProfileReadActor extends BaseActor {
     result.put(JsonKey.TOPICS, topicSet);
   }
 
-  private void fetchUserByExternalId(Request actorMessage) {
-    Map<String, Object> userMap = UserUtil.getUserFromExternalId(actorMessage.getRequest());
-
-    sendResponse(actorMessage, userMap);
-  }
-
   private void updateUserOrgInfo(List<Map<String, Object>> userOrgs) {
     Map<String, Map<String, Object>> orgInfoMap = fetchAllOrgsById(userOrgs);
     Map<String, Map<String, Object>> locationInfoMap = fetchAllLocationsById(orgInfoMap);

@@ -147,9 +147,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     if (MapUtils.isNotEmpty(reqDialCodesIdentifierMap)) {
       Map<String, String> reqDialCodeMap =
           convertDialcodeToIdentifierMap(reqDialCodesIdentifierMap);
-      Map<String, String> hierarchyDialCodeMap =
-          convertDialcodeToIdentifierMap(hierarchyDialCodeIdentifierMap);
-      validateReqDialCode(reqDialCodeMap, hierarchyDialCodeMap);
+      if (MapUtils.isNotEmpty(hierarchyDialCodeIdentifierMap)) {
+        Map<String, String> hierarchyDialCodeMap =
+            convertDialcodeToIdentifierMap(hierarchyDialCodeIdentifierMap);
+        validateReqDialCode(reqDialCodeMap, hierarchyDialCodeMap);
+      }
     }
   }
 
@@ -194,9 +196,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   public Map<String, List<String>> getDialCodeIdentifierMap(List<Map<String, Object>> children) {
     Map<String, List<String>> hierarchyDialCodeIdentifierMap = new HashMap<>();
     for (Map<String, Object> child : children) {
-      hierarchyDialCodeIdentifierMap.put(
-          (String) child.get(JsonKey.IDENTIFIER), (List<String>) child.get(JsonKey.DIAL_CODES));
-      if (null != child.get(JsonKey.CHILDREN)) {
+      if (CollectionUtils.isNotEmpty((List<String>) child.get(JsonKey.DIAL_CODES))) {
+        hierarchyDialCodeIdentifierMap.put(
+            (String) child.get(JsonKey.IDENTIFIER), (List<String>) child.get(JsonKey.DIAL_CODES));
+      }
+      if (CollectionUtils.isNotEmpty((List<Map<String, Object>>) child.get(JsonKey.CHILDREN))) {
         getDialCodeIdentifierMap((List<Map<String, Object>>) child.get(JsonKey.CHILDREN));
       }
     }
@@ -204,20 +208,22 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   private void validateTopics(Set<String> topics, String frameworkId) {
-    List<String> frameworkTopics = getRelatedFrameworkTopics(frameworkId);
-    Set<String> invalidTopics = new HashSet<>();
-    topics.forEach(
-        name -> {
-          if (!frameworkTopics.contains(name)) {
-            invalidTopics.add(name);
-          }
-        });
-    if (CollectionUtils.isNotEmpty(invalidTopics)) {
-      throwClientErrorException(
-          ResponseCode.errorInvalidTopic,
-          MessageFormat.format(
-              ResponseCode.errorInvalidTopic.getErrorMessage(),
-              StringUtils.join(invalidTopics, ',')));
+    if (CollectionUtils.isNotEmpty(topics)) {
+      List<String> frameworkTopics = getRelatedFrameworkTopics(frameworkId);
+      Set<String> invalidTopics = new HashSet<>();
+      topics.forEach(
+          name -> {
+            if (!frameworkTopics.contains(name)) {
+              invalidTopics.add(name);
+            }
+          });
+      if (CollectionUtils.isNotEmpty(invalidTopics)) {
+        throwClientErrorException(
+            ResponseCode.errorInvalidTopic,
+            MessageFormat.format(
+                ResponseCode.errorInvalidTopic.getErrorMessage(),
+                StringUtils.join(invalidTopics, ',')));
+      }
     }
   }
 

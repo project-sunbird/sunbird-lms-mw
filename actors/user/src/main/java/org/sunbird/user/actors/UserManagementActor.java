@@ -268,12 +268,12 @@ public class UserManagementActor extends BaseActor {
                 + " and channel = "
                 + channel,
             LoggerEnum.ERROR.name());
-        throw new ProjectCommonException(
-            ResponseCode.invalidParameterValue.getErrorCode(),
-            ResponseCode.invalidParameterValue.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode(),
-            orgExternalId,
-            JsonKey.ORG_EXTERNAL_ID);
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.invalidParameterValue,
+            MessageFormat.format(
+                ResponseCode.invalidParameterValue.getErrorMessage(),
+                orgExternalId,
+                JsonKey.ORG_EXTERNAL_ID));
       }
       if (userMap.containsKey(JsonKey.ORGANISATION_ID)
           && !orgId.equals((String) userMap.get(JsonKey.ORGANISATION_ID))) {

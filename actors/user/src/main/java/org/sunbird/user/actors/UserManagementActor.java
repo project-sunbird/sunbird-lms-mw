@@ -263,9 +263,9 @@ public class UserManagementActor extends BaseActor {
           orgExternalService.getOrgIdFromOrgExternalIdAndProvider(orgExternalId, channel);
       if (StringUtils.isBlank(orgId)) {
         ProjectLogger.log(
-            "UserManagementActor:createUser No organisation with orgExternalId="
+            "UserManagementActor:createUser: No organisation with orgExternalId = "
                 + orgExternalId
-                + " and channel="
+                + " and channel = "
                 + channel,
             LoggerEnum.ERROR.name());
         throw new ProjectCommonException(

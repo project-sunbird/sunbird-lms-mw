@@ -22,7 +22,8 @@ public class OrgExternalService {
     dbRequestMap.put(JsonKey.EXTERNAL_ID, externalId);
     dbRequestMap.put(JsonKey.PROVIDER, provider);
     Response response =
-        cassandraOperation.getRecordById(KEYSPACE_NAME, ORG_EXTERNAL_IDENTITY, dbRequestMap);
+        cassandraOperation.getRecordsByCompositeKey(
+            KEYSPACE_NAME, ORG_EXTERNAL_IDENTITY, dbRequestMap);
     List<Map<String, Object>> orgList =
         (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
     if (CollectionUtils.isNotEmpty(orgList)) {

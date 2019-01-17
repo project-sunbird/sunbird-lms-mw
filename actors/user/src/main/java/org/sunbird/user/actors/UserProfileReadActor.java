@@ -53,13 +53,7 @@ import org.sunbird.user.dao.impl.UserDaoImpl;
 import org.sunbird.user.util.UserUtil;
 
 @ActorConfig(
-  tasks = {
-    "getUserDetailsByLoginId",
-    "getUserProfile",
-    "getUserProfileV2",
-    "getUserByKey",
-    "getUserByExternalId"
-  },
+  tasks = {"getUserDetailsByLoginId", "getUserProfile", "getUserProfileV2", "getUserByKey"},
   asyncTasks = {}
 )
 public class UserProfileReadActor extends BaseActor {

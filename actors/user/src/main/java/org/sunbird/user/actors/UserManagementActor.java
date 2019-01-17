@@ -254,6 +254,21 @@ public class UserManagementActor extends BaseActor {
         return;
       }
     }
+    if (userMap.containsKey(JsonKey.ORG_EXTERNAL_ID)) {
+      String orgExternalId = (String) userMap.get(JsonKey.ORG_EXTERNAL_ID);
+      String channel = (String) userMap.get(JsonKey.CHANNEL);
+      Organisation org = organisationClient.esGetOrgByExternalId(orgExternalId, channel);
+      if (org == null) {
+        ProjectLogger.log(
+            "UserManagementActor:createUser No organisation with orgExternalId="
+                + orgExternalId
+                + " and channel="
+                + channel,
+            LoggerEnum.ERROR.name());
+        ProjectCommonException.throwClientErrorException(ResponseCode.invalidOrgData);
+      }
+      userMap.remove(JsonKey.ORG_EXTERNAL_ID);
+    }
     processUserRequest(userMap, callerId);
   }
 

@@ -156,6 +156,20 @@ public class UserUtil {
   @SuppressWarnings("unchecked")
   public static Map<String, Object> getUserFromExternalId(Map<String, Object> userMap) {
     Map<String, Object> user = null;
+    String userId = getUserIdFromExternalId(userMap);
+    if (!StringUtils.isEmpty(userId)) {
+      user =
+          ElasticSearchUtil.getDataByIdentifier(
+              ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.user.getTypeName(),
+              userId);
+    }
+    return user;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static String getUserIdFromExternalId(Map<String, Object> userMap) {
+
     Map<String, Object> externalIdReq = new WeakHashMap<>();
     externalIdReq.put(
         JsonKey.PROVIDER, ((String) userMap.get(JsonKey.EXTERNAL_ID_PROVIDER)).toLowerCase());
@@ -171,14 +185,9 @@ public class UserUtil {
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
 
     if (CollectionUtils.isNotEmpty(userRecordList)) {
-      Map<String, Object> userExtIdRecord = userRecordList.get(0);
-      user =
-          ElasticSearchUtil.getDataByIdentifier(
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.user.getTypeName(),
-              (String) userExtIdRecord.get(JsonKey.USER_ID));
+      return (String) userRecordList.get(0).get(JsonKey.USER_ID);
     }
-    return user;
+    return null;
   }
 
   @SuppressWarnings("unchecked")

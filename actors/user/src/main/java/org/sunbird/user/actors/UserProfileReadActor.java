@@ -6,6 +6,7 @@ import akka.actor.ActorRef;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -49,9 +50,16 @@ import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.user.dao.UserDao;
 import org.sunbird.user.dao.impl.UserDaoImpl;
+import org.sunbird.user.util.UserUtil;
 
 @ActorConfig(
-  tasks = {"getUserDetailsByLoginId", "getUserProfile", "getUserProfileV2", "getUserByKey"},
+  tasks = {
+    "getUserDetailsByLoginId",
+    "getUserProfile",
+    "getUserProfileV2",
+    "getUserByKey",
+    "getUserByExternalId"
+  },
   asyncTasks = {}
 )
 public class UserProfileReadActor extends BaseActor {
@@ -106,11 +114,43 @@ public class UserProfileReadActor extends BaseActor {
 
   private Response getUserProfileData(Request actorMessage) {
     Map<String, Object> userMap = actorMessage.getRequest();
+    String id = (String) userMap.get(JsonKey.USER_ID);
+    String userId;
+    String provider = (String) actorMessage.getContext().get(JsonKey.PROVIDER);
+    String idType = (String) actorMessage.getContext().get(JsonKey.ID_TYPE);
+    boolean showMaskedData = false;
+    if (!StringUtils.isEmpty(provider)) {
+      if (StringUtils.isEmpty(idType)) {
+        userId = null;
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.mandatoryParamsMissing,
+            MessageFormat.format(
+                ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.ID_TYPE));
+      } else {
+        HashMap<String, Object> map = new HashMap<>();
+        map.put(JsonKey.EXTERNAL_ID, id);
+        map.put(JsonKey.EXTERNAL_ID_PROVIDER, provider);
+        map.put(JsonKey.EXTERNAL_ID_TYPE, idType);
+        userId = UserUtil.getUserIdFromExternalId(map);
+        if (userId == null) {
+          throw new ProjectCommonException(
+              ResponseCode.userNotFound.getErrorCode(),
+              ResponseCode.userNotFound.getErrorMessage(),
+              ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+        }
+        showMaskedData = true;
+      }
+
+    } else {
+      userId = id;
+      showMaskedData = false;
+    }
+
     Map<String, Object> result =
         ElasticSearchUtil.getDataByIdentifier(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.user.getTypeName(),
-            (String) userMap.get(JsonKey.USER_ID));
+            userId);
     // check user found or not
     if (result == null || result.size() == 0) {
       throw new ProjectCommonException(
@@ -131,12 +171,9 @@ public class UserProfileReadActor extends BaseActor {
     String requestedById =
         (String) actorMessage.getContext().getOrDefault(JsonKey.REQUESTED_BY, "");
     ProjectLogger.log(
-        "requested By and requested user id == "
-            + requestedById
-            + "  "
-            + (String) userMap.get(JsonKey.USER_ID));
+        "requested By and requested user id == " + requestedById + "  " + (String) userId);
     try {
-      if (!((String) userMap.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById)) {
+      if (!(userId).equalsIgnoreCase(requestedById) && !showMaskedData) {
         result = removeUserPrivateField(result);
       } else {
         // These values are set to ensure backward compatibility post introduction of global
@@ -151,10 +188,9 @@ public class UserProfileReadActor extends BaseActor {
             ElasticSearchUtil.getDataByIdentifier(
                 ProjectUtil.EsIndex.sunbird.getIndexName(),
                 ProjectUtil.EsType.userprofilevisibility.getTypeName(),
-                (String) userMap.get(JsonKey.USER_ID));
+                userId);
         // fetch user external identity
-        List<Map<String, String>> dbResExternalIds =
-            fetchUserExternalIdentity((String) userMap.get(JsonKey.USER_ID));
+        List<Map<String, String>> dbResExternalIds = fetchUserExternalIdentity(userId);
         result.put(JsonKey.EXTERNAL_IDS, dbResExternalIds);
         result.putAll(privateResult);
       }
@@ -163,8 +199,7 @@ public class UserProfileReadActor extends BaseActor {
     }
     if (null != actorMessage.getContext().get(JsonKey.FIELDS)) {
       String requestFields = (String) actorMessage.getContext().get(JsonKey.FIELDS);
-      addExtraFieldsInUserProfileResponse(
-          result, requestFields, (String) userMap.get(JsonKey.USER_ID));
+      addExtraFieldsInUserProfileResponse(result, requestFields, userId);
     } else {
       result.remove(JsonKey.MISSING_FIELDS);
       result.remove(JsonKey.COMPLETENESS);
@@ -414,6 +449,12 @@ public class UserProfileReadActor extends BaseActor {
       }
     }
     result.put(JsonKey.TOPICS, topicSet);
+  }
+
+  private void fetchUserByExternalId(Request actorMessage) {
+    Map<String, Object> userMap = UserUtil.getUserFromExternalId(actorMessage.getRequest());
+
+    sendResponse(actorMessage, userMap);
   }
 
   private void updateUserOrgInfo(List<Map<String, Object>> userOrgs) {

@@ -328,7 +328,7 @@ public class OrganisationManagementActor extends BaseActor {
                   JsonKey.EXTERNAL_ID));
         }
         request.put(JsonKey.EXTERNAL_ID, passedExternalId);
-        request.put(JsonKey.PROVIDER, channel);
+        request.put(JsonKey.PROVIDER, channel.toLowerCase());
       } else {
         request.remove(JsonKey.EXTERNAL_ID);
         request.remove(JsonKey.PROVIDER);

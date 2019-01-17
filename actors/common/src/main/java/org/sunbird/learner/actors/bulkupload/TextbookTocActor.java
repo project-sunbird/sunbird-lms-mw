@@ -103,7 +103,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     Map<String, Object> resultMap = readAndValidateCSV(inputStream);
     Set<String> dialCodes = (Set<String>) resultMap.get(JsonKey.DIAL_CODES);
     resultMap.remove(JsonKey.DIAL_CODES);
-
+    Map<String, List<String>> reqDialCodeIdentifierMap =
+        (Map<String, List<String>>) resultMap.get(JsonKey.DIAL_CODE_IDENTIFIER_MAP);
+    resultMap.remove(JsonKey.DIAL_CODE_IDENTIFIER_MAP);
     Set<String> topics = (Set<String>) resultMap.get(JsonKey.TOPICS);
     resultMap.remove(JsonKey.TOPICS);
 
@@ -112,6 +114,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
     validateTopics(topics, (String) textbookData.get(JsonKey.FRAMEWORK));
     validateDialCodesWithReservedDialCodes(dialCodes, textbookData);
+    checkDialCodeUniquenessInTextBookHierarchy(reqDialCodeIdentifierMap, tbId);
     request.getRequest().put(JsonKey.DATA, resultMap);
     String mode = ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.MODE).toString();
     validateRequest(request, mode, textbookData);
@@ -126,12 +129,86 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     sender().tell(response, sender());
   }
 
+  @SuppressWarnings("unchecked")
+  private void checkDialCodeUniquenessInTextBookHierarchy(
+      Map<String, List<String>> reqDialCodesIdentifierMap, String textbookId) {
+    Map<String, Object> contentHierarchy = getHierarchy(textbookId);
+    Map<String, List<String>> hierarchyDialCodeIdentifierMap = new HashMap<>();
+    List<String> contentDialCodes = (List<String>) contentHierarchy.get(JsonKey.DIAL_CODES);
+    if (CollectionUtils.isNotEmpty(contentDialCodes)) {
+      hierarchyDialCodeIdentifierMap.put(
+          (String) contentHierarchy.get(JsonKey.IDENTIFIER), contentDialCodes);
+    }
+
+    List<Map<String, Object>> children =
+        (List<Map<String, Object>>) contentHierarchy.get(JsonKey.CHILDREN);
+    hierarchyDialCodeIdentifierMap.putAll(getDialCodeIdentifierMap(children));
+
+    if (MapUtils.isNotEmpty(reqDialCodesIdentifierMap)) {
+      Map<String, String> reqDialCodeMap =
+          convertDialcodeToIdentifierMap(reqDialCodesIdentifierMap);
+      Map<String, String> hierarchyDialCodeMap =
+          convertDialcodeToIdentifierMap(hierarchyDialCodeIdentifierMap);
+      validateReqDialCode(reqDialCodeMap, hierarchyDialCodeMap);
+    }
+  }
+
+  private void validateReqDialCode(
+      Map<String, String> reqDialCodeMap, Map<String, String> hierarchyDialCodeMap) {
+    reqDialCodeMap.forEach(
+        (k, v) -> {
+          if (!v.equalsIgnoreCase(hierarchyDialCodeMap.get(k))) {
+            throwClientErrorException(
+                ResponseCode.errorDialCodeAlreadyAssociated,
+                MessageFormat.format(
+                    ResponseCode.errorDialCodeAlreadyAssociated.getErrorMessage(),
+                    k,
+                    hierarchyDialCodeMap.get(k)));
+          }
+        });
+  }
+
+  private Map<String, String> convertDialcodeToIdentifierMap(
+      Map<String, List<String>> identifierDialCodeMap) {
+    Map<String, String> dialCodeIdentifierMap = new HashMap<>();
+    if (MapUtils.isNotEmpty(identifierDialCodeMap)) {
+      identifierDialCodeMap.forEach(
+          (k, v) -> {
+            v.forEach(
+                dialcode -> {
+                  if (dialCodeIdentifierMap.containsKey(dialcode)) {
+                    throwClientErrorException(
+                        ResponseCode.errorDialCodeDuplicateEntry,
+                        MessageFormat.format(
+                            ResponseCode.errorDialCodeDuplicateEntry.getErrorMessage(), k, v));
+                  } else {
+                    dialCodeIdentifierMap.put(dialcode, k);
+                  }
+                });
+          });
+    }
+    return dialCodeIdentifierMap;
+  }
+
+  @SuppressWarnings("unchecked")
+  public Map<String, List<String>> getDialCodeIdentifierMap(List<Map<String, Object>> children) {
+    Map<String, List<String>> hierarchyDialCodeIdentifierMap = new HashMap<>();
+    for (Map<String, Object> child : children) {
+      hierarchyDialCodeIdentifierMap.put(
+          (String) child.get(JsonKey.IDENTIFIER), (List<String>) child.get(JsonKey.DIAL_CODES));
+      if (null != child.get(JsonKey.CHILDREN)) {
+        getDialCodeIdentifierMap((List<Map<String, Object>>) child.get(JsonKey.CHILDREN));
+      }
+    }
+    return hierarchyDialCodeIdentifierMap;
+  }
+
   private void validateTopics(Set<String> topics, String frameworkId) {
-    Set<String> frameworkTopics = getRelatedFrameworkTopics(frameworkId);
+    List<String> frameworkTopics = getRelatedFrameworkTopics(frameworkId);
     Set<String> invalidTopics = new HashSet<>();
     topics.forEach(
         name -> {
-          if (frameworkTopics.add(name)) {
+          if (!frameworkTopics.contains(name)) {
             invalidTopics.add(name);
           }
         });
@@ -145,7 +222,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   @SuppressWarnings("unchecked")
-  private Set<String> getRelatedFrameworkTopics(String frameworkId) {
+  private List<String> getRelatedFrameworkTopics(String frameworkId) {
     Response response = TextBookTocUtil.getRelatedFrameworkById(frameworkId);
     Map<String, Object> result = response.getResult();
     List<Map<String, Object>> terms = new ArrayList<>();
@@ -163,15 +240,17 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               });
       }
     }
-    Set<String> topics = new HashSet<>();
-    for (Map<String, Object> term : terms) {
-      List<Map<String, Object>> children = (List<Map<String, Object>>) term.get(JsonKey.CHILDREN);
-      if (CollectionUtils.isNotEmpty(children)) {
-        for (Map<String, Object> child : children) {
-          topics.add((String) child.get(JsonKey.NAME));
-        }
+    return getTopic(terms);
+  }
+
+  @SuppressWarnings("unchecked")
+  public List<String> getTopic(List<Map<String, Object>> children) {
+    List<String> topics = new ArrayList<>();
+    for (Map<String, Object> child : children) {
+      topics.add((String) child.get(JsonKey.NAME));
+      if (null != child.get(JsonKey.CHILDREN)) {
+        getTopic((List<Map<String, Object>>) child.get(JsonKey.CHILDREN));
       }
-      topics.add((String) term.get(JsonKey.NAME));
     }
     return topics;
   }
@@ -189,21 +268,21 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             }
           });
       if (CollectionUtils.isNotEmpty(invalidDialCodes)) {
-        throwClientErrorException(
-            ResponseCode.errorDialCodeNotReservedForTextBook,
-            MessageFormat.format(
-                ResponseCode.errorDialCodeNotReservedForTextBook.getErrorMessage(),
-                StringUtils.join(invalidDialCodes, ','),
-                textBookdata.get(JsonKey.IDENTIFIER)));
+        throwDialCodeNotReservedError(textBookdata, invalidDialCodes);
       }
     } else if (CollectionUtils.isNotEmpty(dialCodes)) {
-      throwClientErrorException(
-          ResponseCode.errorDialCodeNotReservedForTextBook,
-          MessageFormat.format(
-              ResponseCode.errorDialCodeNotReservedForTextBook.getErrorMessage(),
-              StringUtils.join(dialCodes, ','),
-              textBookdata.get(JsonKey.IDENTIFIER)));
+      throwDialCodeNotReservedError(textBookdata, dialCodes);
     }
+  }
+
+  private void throwDialCodeNotReservedError(
+      Map<String, Object> textBookdata, Set<String> invalidDialCodes) {
+    throwClientErrorException(
+        ResponseCode.errorDialCodeNotReservedForTextBook,
+        MessageFormat.format(
+            ResponseCode.errorDialCodeNotReservedForTextBook.getErrorMessage(),
+            StringUtils.join(invalidDialCodes, ','),
+            textBookdata.get(JsonKey.IDENTIFIER)));
   }
 
   @SuppressWarnings("unchecked")
@@ -246,6 +325,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       List<CSVRecord> csvRecords = csvFileParser.getRecords();
       validateCSV(csvRecords);
       Set<String> dialCodes = new HashSet<>();
+      Map<String, List<String>> dialCodeIdentifierMap = new HashMap<>();
       Set<String> topics = new HashSet<>();
       for (int i = 0; i < csvRecords.size(); i++) {
         CSVRecord record = csvRecords.get(i);
@@ -264,8 +344,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         if (!(MapUtils.isEmpty(recordMap) && MapUtils.isEmpty(hierarchyMap))) {
           validateQrCodeRequiredAndQrCode(recordMap);
           String dialCode = (String) recordMap.get(JsonKey.DIAL_CODES);
+          List<String> dialCodeList = null;
           if (StringUtils.isNotBlank(dialCode)) {
-            List<String> dialCodeList = new ArrayList<String>(Arrays.asList(dialCode.split(",")));
+            dialCodeList = new ArrayList<String>(Arrays.asList(dialCode.split(",")));
             for (String dCode : dialCodeList) {
               if (!dialCodes.add(dCode.trim())) {
                 throwClientErrorException(
@@ -287,7 +368,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
           Map<String, Object> map = new HashMap<>();
           if (JsonKey.UPDATE.equalsIgnoreCase(mode) && StringUtils.isNotBlank(record.get(id))) {
-            map.put(JsonKey.IDENTIFIER, record.get(id).trim());
+            String identifier = record.get(id).trim();
+            map.put(JsonKey.IDENTIFIER, identifier);
+            if (CollectionUtils.isNotEmpty(dialCodeList)) {
+              dialCodeIdentifierMap.put(identifier, dialCodeList);
+            }
           }
           map.put(JsonKey.METADATA, recordMap);
           map.put(JsonKey.HIERARCHY, hierarchyMap);
@@ -298,6 +383,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       result.put(JsonKey.FILE_DATA, rows);
       result.put(JsonKey.DIAL_CODES, dialCodes);
       result.put(JsonKey.TOPICS, topics);
+      result.put(JsonKey.DIAL_CODE_IDENTIFIER_MAP, dialCodeIdentifierMap);
     } catch (ProjectCommonException e) {
       throw e;
     } catch (Exception e) {
@@ -324,10 +410,6 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               JsonKey.QR_CODE,
               recordMap.get(JsonKey.DIAL_CODES));
       throwClientErrorException(ResponseCode.errorConflictingValues, errorMessage);
-    }
-    if (JsonKey.YES.equalsIgnoreCase((String) recordMap.get(JsonKey.DIAL_CODE_REQUIRED))
-        && StringUtils.isBlank((String) recordMap.get(JsonKey.DIAL_CODES))) {
-      recordMap.put(JsonKey.DIAL_CODE_REQUIRED, JsonKey.NO);
     }
   }
 
@@ -697,15 +779,14 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   private Map<String, String> getDefaultHeaders() {
-
-    return new HashMap<String, String>() {
-      {
-        put("Content-Type", "application/json");
-        put(JsonKey.AUTHORIZATION, JsonKey.BEARER + getConfigValue(JsonKey.SUNBIRD_AUTHORIZATION));
-      }
-    };
+    Map<String, String> headers = new HashMap<>();
+    headers.put("Content-Type", "application/json");
+    headers.put(
+        JsonKey.AUTHORIZATION, JsonKey.BEARER + getConfigValue(JsonKey.SUNBIRD_AUTHORIZATION));
+    return headers;
   }
 
+  @SuppressWarnings("unchecked")
   private void populateNodeModified(
       String name,
       String code,
@@ -718,117 +799,66 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     if (nodesModified.containsKey(code)) {
       node = (Map<String, Object>) nodesModified.get(code);
       if (MapUtils.isNotEmpty(metadata)) {
-        Map<String, Object> newMeta =
-            new HashMap<String, Object>() {
-              {
-                List<String> keywords =
-                    (StringUtils.isNotBlank((String) metadata.get(JsonKey.KEYWORDS)))
-                        ? asList(((String) metadata.get(JsonKey.KEYWORDS)).split(","))
-                        : null;
-                List<String> gradeLevel =
-                    (StringUtils.isNotBlank((String) metadata.get(JsonKey.GRADE_LEVEL)))
-                        ? asList(((String) metadata.get(JsonKey.GRADE_LEVEL)).split(","))
-                        : null;
-                List<String> dialCodes =
-                    (StringUtils.isNotBlank((String) metadata.get(JsonKey.DIAL_CODES)))
-                        ? asList(((String) metadata.get(JsonKey.DIAL_CODES)).split(","))
-                        : null;
-
-                List<String> topics =
-                    (StringUtils.isNotBlank((String) metadata.get(JsonKey.TOPIC)))
-                        ? asList(((String) metadata.get(JsonKey.TOPIC)).split(","))
-                        : null;
-                putAll(metadata);
-                remove(JsonKey.KEYWORDS);
-                remove(JsonKey.GRADE_LEVEL);
-                remove(JsonKey.DIAL_CODES);
-                remove(JsonKey.TOPIC);
-                if (CollectionUtils.isNotEmpty(keywords)) put(JsonKey.KEYWORDS, keywords);
-                if (CollectionUtils.isNotEmpty(gradeLevel)) put(JsonKey.GRADE_LEVEL, gradeLevel);
-                if (CollectionUtils.isNotEmpty(dialCodes)) {
-                  List<String> dCodes = new ArrayList<>();
-                  dialCodes.forEach(
-                      s -> {
-                        dCodes.add(s.trim());
-                      });
-                  put(JsonKey.DIAL_CODES, dCodes);
-                }
-                if (CollectionUtils.isNotEmpty(topics)) {
-                  List<String> topicList = new ArrayList<>();
-                  topics.forEach(
-                      s -> {
-                        topicList.add(s.trim());
-                      });
-                  put(JsonKey.TOPIC, topicList);
-                }
-              }
-            };
+        Map<String, Object> newMeta = initializeMetaDataForModifiedNode(metadata);
         ((Map<String, Object>) node.get(JsonKey.METADATA)).putAll(newMeta);
       }
     } else {
-      node =
-          new HashMap<String, Object>() {
-            {
-              put(JsonKey.TB_IS_NEW, isNew);
-              put(JsonKey.TB_ROOT, false);
-              put(
-                  JsonKey.METADATA,
-                  new HashMap<String, Object>() {
-                    {
-                      if (StringUtils.isNotBlank(name)) put(JsonKey.NAME, name);
-                      put(JsonKey.MIME_TYPE, JsonKey.COLLECTION_MIME_TYPE);
-                      if (StringUtils.isNotBlank(unitType)) put(JsonKey.CONTENT_TYPE, unitType);
-                      if (StringUtils.isNotBlank(framework)) put(JsonKey.FRAMEWORK, framework);
-                      if (MapUtils.isNotEmpty(metadata)) {
-                        List<String> keywords =
-                            (StringUtils.isNotBlank((String) metadata.get(JsonKey.KEYWORDS)))
-                                ? asList(((String) metadata.get(JsonKey.KEYWORDS)).split(","))
-                                : null;
-                        List<String> gradeLevel =
-                            (StringUtils.isNotBlank((String) metadata.get(JsonKey.GRADE_LEVEL)))
-                                ? asList(((String) metadata.get(JsonKey.GRADE_LEVEL)).split(","))
-                                : null;
-                        List<String> dialCodes =
-                            (StringUtils.isNotBlank((String) metadata.get(JsonKey.DIAL_CODES)))
-                                ? asList(((String) metadata.get(JsonKey.DIAL_CODES)).split(","))
-                                : null;
-
-                        List<String> topics =
-                            (StringUtils.isNotBlank((String) metadata.get(JsonKey.TOPIC)))
-                                ? asList(((String) metadata.get(JsonKey.TOPIC)).split(","))
-                                : null;
-                        putAll(metadata);
-                        remove(JsonKey.KEYWORDS);
-                        remove(JsonKey.GRADE_LEVEL);
-                        remove(JsonKey.DIAL_CODES);
-                        remove(JsonKey.TOPIC);
-                        if (CollectionUtils.isNotEmpty(keywords)) put(JsonKey.KEYWORDS, keywords);
-                        if (CollectionUtils.isNotEmpty(gradeLevel))
-                          put(JsonKey.GRADE_LEVEL, gradeLevel);
-
-                        if (CollectionUtils.isNotEmpty(dialCodes)) {
-                          List<String> dCodes = new ArrayList<>();
-                          dialCodes.forEach(
-                              s -> {
-                                dCodes.add(s.trim());
-                              });
-                          put(JsonKey.DIAL_CODES, dCodes);
-                        }
-                        if (CollectionUtils.isNotEmpty(topics)) {
-                          List<String> topicList = new ArrayList<>();
-                          topics.forEach(
-                              s -> {
-                                topicList.add(s.trim());
-                              });
-                          put(JsonKey.TOPIC, topicList);
-                        }
-                      }
-                    }
-                  });
-            }
-          };
+      Map<String, Object> newMeta = initializeMetaDataForModifiedNode(metadata);
+      node = new HashMap<String, Object>();
+      node.put(JsonKey.TB_IS_NEW, isNew);
+      node.put(JsonKey.TB_ROOT, false);
+      if (StringUtils.isNotBlank(name)) newMeta.put(JsonKey.NAME, name);
+      newMeta.put(JsonKey.MIME_TYPE, JsonKey.COLLECTION_MIME_TYPE);
+      if (StringUtils.isNotBlank(unitType)) newMeta.put(JsonKey.CONTENT_TYPE, unitType);
+      if (StringUtils.isNotBlank(framework)) newMeta.put(JsonKey.FRAMEWORK, framework);
+      node.put(JsonKey.METADATA, newMeta);
     }
     nodesModified.put(code, node);
+  }
+
+  private Map<String, Object> initializeMetaDataForModifiedNode(Map<String, Object> metadata) {
+    Map<String, Object> newMeta = new HashMap<String, Object>();
+    List<String> keywords =
+        (StringUtils.isNotBlank((String) metadata.get(JsonKey.KEYWORDS)))
+            ? asList(((String) metadata.get(JsonKey.KEYWORDS)).split(","))
+            : null;
+    List<String> gradeLevel =
+        (StringUtils.isNotBlank((String) metadata.get(JsonKey.GRADE_LEVEL)))
+            ? asList(((String) metadata.get(JsonKey.GRADE_LEVEL)).split(","))
+            : null;
+    List<String> dialCodes =
+        (StringUtils.isNotBlank((String) metadata.get(JsonKey.DIAL_CODES)))
+            ? asList(((String) metadata.get(JsonKey.DIAL_CODES)).split(","))
+            : null;
+
+    List<String> topics =
+        (StringUtils.isNotBlank((String) metadata.get(JsonKey.TOPIC)))
+            ? asList(((String) metadata.get(JsonKey.TOPIC)).split(","))
+            : null;
+    newMeta.putAll(metadata);
+    newMeta.remove(JsonKey.KEYWORDS);
+    newMeta.remove(JsonKey.GRADE_LEVEL);
+    newMeta.remove(JsonKey.DIAL_CODES);
+    newMeta.remove(JsonKey.TOPIC);
+    if (CollectionUtils.isNotEmpty(keywords)) newMeta.put(JsonKey.KEYWORDS, keywords);
+    if (CollectionUtils.isNotEmpty(gradeLevel)) newMeta.put(JsonKey.GRADE_LEVEL, gradeLevel);
+    if (CollectionUtils.isNotEmpty(dialCodes)) {
+      List<String> dCodes = new ArrayList<>();
+      dialCodes.forEach(
+          s -> {
+            dCodes.add(s.trim());
+          });
+      newMeta.put(JsonKey.DIAL_CODES, dCodes);
+    }
+    if (CollectionUtils.isNotEmpty(topics)) {
+      List<String> topicList = new ArrayList<>();
+      topics.forEach(
+          s -> {
+            topicList.add(s.trim());
+          });
+      newMeta.put(JsonKey.TOPIC, topicList);
+    }
+    return newMeta;
   }
 
   private void populateHierarchyData(

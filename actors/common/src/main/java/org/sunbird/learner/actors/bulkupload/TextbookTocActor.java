@@ -103,7 +103,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     Map<String, Object> resultMap = readAndValidateCSV(inputStream);
     Set<String> dialCodes = (Set<String>) resultMap.get(JsonKey.DIAL_CODES);
     resultMap.remove(JsonKey.DIAL_CODES);
-    Map<String, List<String>> dialCodeIdentifierMap =
+    Map<String, List<String>> reqDialCodeIdentifierMap =
         (Map<String, List<String>>) resultMap.get(JsonKey.DIAL_CODE_IDENTIFIER_MAP);
     resultMap.remove(JsonKey.DIAL_CODE_IDENTIFIER_MAP);
     Set<String> topics = (Set<String>) resultMap.get(JsonKey.TOPICS);
@@ -114,7 +114,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
     validateTopics(topics, (String) textbookData.get(JsonKey.FRAMEWORK));
     validateDialCodesWithReservedDialCodes(dialCodes, textbookData);
-    checkDialCodeUniquenessInTextBookHierarchy(dialCodeIdentifierMap, tbId);
+    checkDialCodeUniquenessInTextBookHierarchy(reqDialCodeIdentifierMap, tbId);
     request.getRequest().put(JsonKey.DATA, resultMap);
     String mode = ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.MODE).toString();
     validateRequest(request, mode, textbookData);
@@ -145,64 +145,49 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     hierarchyDialCodeIdentifierMap.putAll(getDialCodeIdentifierMap(children));
 
     if (MapUtils.isNotEmpty(reqDialCodesIdentifierMap)) {
-      Map<String, List<String>> reqDialCodeMap =
+      Map<String, String> reqDialCodeMap =
           convertDialcodeToIdentifierMap(reqDialCodesIdentifierMap);
-      Map<String, List<String>> hierarchyDialCodeMap =
+      Map<String, String> hierarchyDialCodeMap =
           convertDialcodeToIdentifierMap(hierarchyDialCodeIdentifierMap);
-      validateTextbookhierarchyDialCodes(hierarchyDialCodeMap);
       validateReqDialCode(reqDialCodeMap, hierarchyDialCodeMap);
     }
   }
 
   private void validateReqDialCode(
-      Map<String, List<String>> reqDialCodeMap, Map<String, List<String>> hierarchyDialCodeMap) {
+      Map<String, String> reqDialCodeMap, Map<String, String> hierarchyDialCodeMap) {
     reqDialCodeMap.forEach(
         (k, v) -> {
-          List<String> identifiers = hierarchyDialCodeMap.get(k);
-          if (!CollectionUtils.isEqualCollection(v, identifiers)) {
+          if (!v.equalsIgnoreCase(hierarchyDialCodeMap.get(k))) {
             throwClientErrorException(
                 ResponseCode.errorDialCodeAlreadyAssociated,
                 MessageFormat.format(
                     ResponseCode.errorDialCodeAlreadyAssociated.getErrorMessage(),
                     k,
-                    identifiers.get(0)));
+                    hierarchyDialCodeMap.get(k)));
           }
         });
   }
 
-  private void validateTextbookhierarchyDialCodes(Map<String, List<String>> dialcodeMap) {
-    dialcodeMap.forEach(
-        (k, v) -> {
-          if (v.size() > 1) {
-            throwClientErrorException(
-                ResponseCode.errorDialCodeDuplicateEntry,
-                MessageFormat.format(
-                    ResponseCode.errorDialCodeDuplicateEntry.getErrorMessage(), k, v));
-          }
-        });
-  }
-
-  private Map<String, List<String>> convertDialcodeToIdentifierMap(
+  private Map<String, String> convertDialcodeToIdentifierMap(
       Map<String, List<String>> identifierDialCodeMap) {
-    Map<String, List<String>> dialCodeIdentifierMap = new HashMap<>();
+    Map<String, String> dialCodeIdentifierMap = new HashMap<>();
     if (MapUtils.isNotEmpty(identifierDialCodeMap)) {
       identifierDialCodeMap.forEach(
           (k, v) -> {
             v.forEach(
                 dialcode -> {
                   if (dialCodeIdentifierMap.containsKey(dialcode)) {
-                    List<String> identifierList = dialCodeIdentifierMap.get(dialcode);
-                    identifierList.add(k);
-                    dialCodeIdentifierMap.put(dialcode, identifierList);
+                    throwClientErrorException(
+                        ResponseCode.errorDialCodeDuplicateEntry,
+                        MessageFormat.format(
+                            ResponseCode.errorDialCodeDuplicateEntry.getErrorMessage(), k, v));
                   } else {
-                    List<String> identifierList = new ArrayList<>();
-                    identifierList.add(k);
-                    dialCodeIdentifierMap.put(dialcode, identifierList);
+                    dialCodeIdentifierMap.put(dialcode, k);
                   }
                 });
           });
     }
-    return DialCodeIdentifierMap;
+    return dialCodeIdentifierMap;
   }
 
   @SuppressWarnings("unchecked")

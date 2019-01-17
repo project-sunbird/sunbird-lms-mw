@@ -8,7 +8,6 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mashape.unirest.http.HttpResponse;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -121,7 +120,6 @@ public class TextbookTocActorTest {
         .thenReturn(CONTENT_TYPE);
     when(ProjectUtil.getConfigValue(JsonKey.EKSTEP_BASE_URL)).thenReturn("http://www.abc.com/");
     when(ProjectUtil.getConfigValue(JsonKey.UPDATE_HIERARCHY_API)).thenReturn("");
-    HttpResponse<String> updateResponse = null;
     /*
      * when(Unirest.patch("http://www.abc.com/"). headers(Mockito.anyMap()).
      * body(Mockito.anyString()).asString()).thenReturn(updateResponse);
@@ -226,16 +224,6 @@ public class TextbookTocActorTest {
         .thenReturn(getFrameworkMap());
     when(TextBookTocUtil.readHierarchy(Mockito.anyString())).thenReturn(getReadHierarchy(bool));
     when(TextBookTocUtil.readContent(Mockito.anyString())).thenReturn(getReadContentTextbookData());
-  }
-
-  private static Response getTbWithoutChildren() throws IOException {
-    return mapper.readValue(TB_WITHOUT_CHILDREN, Response.class);
-  }
-
-  private static Response getSuccess() {
-    Response response = new Response();
-    response.put("content_id", "do_11265332762881228812868");
-    return response;
   }
 
   private Map<String, String> getDefaultHeaders() {

@@ -175,29 +175,29 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         (k, v) -> {
           if (v.size() > 1) {
             throwClientErrorException(
-                ResponseCode.errorDuplicateEntryForDialCode,
+                ResponseCode.errorDialCodeDuplicateEntry,
                 MessageFormat.format(
-                    ResponseCode.errorDuplicateEntryForDialCode.getErrorMessage(), k, v));
+                    ResponseCode.errorDialCodeDuplicateEntry.getErrorMessage(), k, v));
           }
         });
   }
 
   private Map<String, List<String>> convertDialcodeToIdentifierMap(
       Map<String, List<String>> identifierDialCodeMap) {
-    Map<String, List<String>> DialCodeIdentifierMap = new HashMap<>();
+    Map<String, List<String>> dialCodeIdentifierMap = new HashMap<>();
     if (MapUtils.isNotEmpty(identifierDialCodeMap)) {
       identifierDialCodeMap.forEach(
           (k, v) -> {
             v.forEach(
                 dialcode -> {
-                  if (DialCodeIdentifierMap.containsKey(dialcode)) {
-                    List<String> identifierList = DialCodeIdentifierMap.get(dialcode);
+                  if (dialCodeIdentifierMap.containsKey(dialcode)) {
+                    List<String> identifierList = dialCodeIdentifierMap.get(dialcode);
                     identifierList.add(k);
-                    DialCodeIdentifierMap.put(dialcode, identifierList);
+                    dialCodeIdentifierMap.put(dialcode, identifierList);
                   } else {
                     List<String> identifierList = new ArrayList<>();
                     identifierList.add(k);
-                    DialCodeIdentifierMap.put(dialcode, identifierList);
+                    dialCodeIdentifierMap.put(dialcode, identifierList);
                   }
                 });
           });

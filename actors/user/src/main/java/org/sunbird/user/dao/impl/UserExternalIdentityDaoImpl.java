@@ -45,7 +45,7 @@ public class UserExternalIdentityDaoImpl implements UserExternalIdentityDao {
   }
 
   @SuppressWarnings({"unchecked"})
-  private String getUserIdByExternalId(String extId, String provider, String idType) {
+  public String getUserIdByExternalId(String extId, String provider, String idType) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> externalIdReq = new HashMap<>();
     externalIdReq.put(JsonKey.PROVIDER, provider.toLowerCase());

@@ -50,7 +50,7 @@ import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.user.dao.UserDao;
 import org.sunbird.user.dao.impl.UserDaoImpl;
-import org.sunbird.user.util.UserUtil;
+import org.sunbird.user.dao.impl.UserExternalIdentityDaoImpl;
 
 @ActorConfig(
   tasks = {"getUserDetailsByLoginId", "getUserProfile", "getUserProfileV2", "getUserByKey"},
@@ -69,6 +69,7 @@ public class UserProfileReadActor extends BaseActor {
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
+  private UserExternalIdentityDaoImpl userExternalIdentityDao = new UserExternalIdentityDaoImpl();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -121,11 +122,7 @@ public class UserProfileReadActor extends BaseActor {
             MessageFormat.format(
                 ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.ID_TYPE));
       } else {
-        HashMap<String, Object> map = new HashMap<>();
-        map.put(JsonKey.EXTERNAL_ID, id);
-        map.put(JsonKey.EXTERNAL_ID_PROVIDER, provider);
-        map.put(JsonKey.EXTERNAL_ID_TYPE, idType);
-        userId = UserUtil.getUserIdFromExternalId(map);
+        userId = userExternalIdentityDao.getUserIdByExternalId(id, provider, idType);
         if (userId == null) {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.externalIdNotFound,

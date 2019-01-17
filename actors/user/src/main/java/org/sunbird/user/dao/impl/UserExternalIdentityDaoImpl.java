@@ -9,8 +9,6 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -40,29 +38,15 @@ public class UserExternalIdentityDaoImpl implements UserExternalIdentityDao {
       String provider = (String) reqObj.getRequest().get(JsonKey.EXTERNAL_ID_PROVIDER);
       String idType = (String) reqObj.getRequest().get(JsonKey.EXTERNAL_ID_TYPE);
 
-      Map<String, Object> user = getUserByExternalId(extId, provider, idType);
-
-      if (user != null && !user.isEmpty()) {
-        userId = (String) user.get(JsonKey.ID);
-      } else {
-        throw new ProjectCommonException(
-            ResponseCode.invalidParameter.getErrorCode(),
-            ProjectUtil.formatMessage(
-                ResponseCode.invalidParameter.getErrorMessage(),
-                StringFormatter.joinByAnd(
-                    StringFormatter.joinByComma(JsonKey.EXTERNAL_ID, JsonKey.EXTERNAL_ID_TYPE),
-                    JsonKey.EXTERNAL_ID_PROVIDER)),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-      }
+      return getUserIdByExternalId(extId, provider, idType);
     }
 
     return userId;
   }
 
   @SuppressWarnings({"unchecked"})
-  private Map<String, Object> getUserByExternalId(String extId, String provider, String idType) {
+  private String getUserIdByExternalId(String extId, String provider, String idType) {
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    Map<String, Object> user = null;
     Map<String, Object> externalIdReq = new HashMap<>();
     externalIdReq.put(JsonKey.PROVIDER, provider.toLowerCase());
     externalIdReq.put(JsonKey.ID_TYPE, idType.toLowerCase());
@@ -73,21 +57,11 @@ public class UserExternalIdentityDaoImpl implements UserExternalIdentityDao {
 
     List<Map<String, Object>> userRecordList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-
     if (CollectionUtils.isNotEmpty(userRecordList)) {
-      Map<String, Object> userExtIdRecord = userRecordList.get(0);
-      Response res =
-          cassandraOperation.getRecordById(
-              usrDbInfo.getKeySpace(),
-              usrDbInfo.getTableName(),
-              (String) userExtIdRecord.get(JsonKey.USER_ID));
-
-      if (CollectionUtils.isNotEmpty((List<Map<String, Object>>) res.get(JsonKey.RESPONSE))) {
-        user = ((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).get(0);
-      }
+      return (String) userRecordList.get(0).get(JsonKey.USER_ID);
     }
 
-    return user;
+    return null;
   }
 
   private String getEncryptedData(String value) {

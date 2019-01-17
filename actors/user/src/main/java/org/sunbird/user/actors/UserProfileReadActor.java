@@ -127,10 +127,10 @@ public class UserProfileReadActor extends BaseActor {
         map.put(JsonKey.EXTERNAL_ID_TYPE, idType);
         userId = UserUtil.getUserIdFromExternalId(map);
         if (userId == null) {
-          throw new ProjectCommonException(
-              ResponseCode.userNotFound.getErrorCode(),
-              ResponseCode.userNotFound.getErrorMessage(),
-              ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.externalIdNotFound,
+              ProjectUtil.formatMessage(
+                  ResponseCode.externalIdNotFound.getErrorMessage(), id, idType, provider));
         }
         showMaskedData = true;
       }
@@ -209,6 +209,8 @@ public class UserProfileReadActor extends BaseActor {
       result.remove(JsonKey.LOGIN_ID);
       result.remove(JsonKey.ENC_EMAIL);
       result.remove(JsonKey.ENC_PHONE);
+      String username = ssoManager.getUsernameById(userId);
+      result.put(JsonKey.USERNAME, username);
       response.put(JsonKey.RESPONSE, result);
     } else {
       result = new HashMap<>();

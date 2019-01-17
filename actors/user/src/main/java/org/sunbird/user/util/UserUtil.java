@@ -23,6 +23,7 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
+import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.common.services.ProfileCompletenessService;
@@ -39,6 +40,8 @@ import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
+import org.sunbird.user.dao.UserExternalIdentityDao;
+import org.sunbird.user.dao.impl.UserExternalIdentityDaoImpl;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 
@@ -59,6 +62,8 @@ public class UserUtil {
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
   private static UserService userService = UserServiceImpl.getInstance();
+  private static UserExternalIdentityDao userExternalIdentityDao =
+      new UserExternalIdentityDaoImpl();
 
   private UserUtil() {}
 
@@ -156,29 +161,22 @@ public class UserUtil {
   @SuppressWarnings("unchecked")
   public static Map<String, Object> getUserFromExternalId(Map<String, Object> userMap) {
     Map<String, Object> user = null;
-    Map<String, Object> externalIdReq = new WeakHashMap<>();
-    externalIdReq.put(
-        JsonKey.PROVIDER, ((String) userMap.get(JsonKey.EXTERNAL_ID_PROVIDER)).toLowerCase());
-    externalIdReq.put(
-        JsonKey.ID_TYPE, ((String) userMap.get(JsonKey.EXTERNAL_ID_TYPE)).toLowerCase());
-    externalIdReq.put(
-        JsonKey.EXTERNAL_ID,
-        encryptData(((String) userMap.get(JsonKey.EXTERNAL_ID)).toLowerCase()));
-    Response response =
-        cassandraOperation.getRecordsByCompositeKey(
-            JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, externalIdReq);
-    List<Map<String, Object>> userRecordList =
-        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-
-    if (CollectionUtils.isNotEmpty(userRecordList)) {
-      Map<String, Object> userExtIdRecord = userRecordList.get(0);
+    String userId = getUserIdFromExternalId(userMap);
+    if (!StringUtils.isEmpty(userId)) {
       user =
           ElasticSearchUtil.getDataByIdentifier(
               ProjectUtil.EsIndex.sunbird.getIndexName(),
               ProjectUtil.EsType.user.getTypeName(),
-              (String) userExtIdRecord.get(JsonKey.USER_ID));
+              userId);
     }
     return user;
+  }
+
+  @SuppressWarnings("unchecked")
+  public static String getUserIdFromExternalId(Map<String, Object> userMap) {
+    Request request = new Request();
+    request.setRequest(userMap);
+    return userExternalIdentityDao.getUserId(request);
   }
 
   @SuppressWarnings("unchecked")

@@ -260,9 +260,9 @@ public class UserManagementActor extends BaseActor {
       Organisation org = organisationClient.esGetOrgByExternalId(orgExternalId, channel);
       if (org == null) {
         ProjectLogger.log(
-            "UserManagementActor:createUser No organisation with orgExternalId="
+            "UserManagementActor:createUser: No organisation with orgExternalId = "
                 + orgExternalId
-                + " and channel="
+                + " and channel = "
                 + channel,
             LoggerEnum.ERROR.name());
         ProjectCommonException.throwClientErrorException(ResponseCode.invalidOrgData);

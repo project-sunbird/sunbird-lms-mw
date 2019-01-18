@@ -8,6 +8,10 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.request.HttpRequestWithBody;
+import com.mashape.unirest.request.body.RequestBodyEntity;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,7 +22,6 @@ import java.util.Map;
 import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -36,10 +39,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.util.TextBookTocUtil;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({
-  TextBookTocUtil.class,
-  ProjectUtil.class,
-})
+@PrepareForTest({TextBookTocUtil.class, ProjectUtil.class, Unirest.class})
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*"})
 public class TextbookTocActorTest {
 
@@ -111,6 +111,7 @@ public class TextbookTocActorTest {
   public void setUp() {
     PowerMockito.mockStatic(TextBookTocUtil.class);
     PowerMockito.mockStatic(ProjectUtil.class);
+    PowerMockito.mockStatic(Unirest.class);
     system = ActorSystem.create("system");
     when(ProjectUtil.getConfigValue(Mockito.anyString())).thenReturn(TEXTBOOK_TOC_INPUT_MAPPING);
     when(ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_MAX_CSV_ROWS)).thenReturn("5");
@@ -120,10 +121,6 @@ public class TextbookTocActorTest {
         .thenReturn(CONTENT_TYPE);
     when(ProjectUtil.getConfigValue(JsonKey.EKSTEP_BASE_URL)).thenReturn("http://www.abc.com/");
     when(ProjectUtil.getConfigValue(JsonKey.UPDATE_HIERARCHY_API)).thenReturn("");
-    /*
-     * when(Unirest.patch("http://www.abc.com/"). headers(Mockito.anyMap()).
-     * body(Mockito.anyString()).asString()).thenReturn(updateResponse);
-     */
   }
 
   @Test
@@ -186,11 +183,22 @@ public class TextbookTocActorTest {
   }
 
   @Test
-  @Ignore
-  public void testUpdateSuccess() throws IOException {
+  public void testUpdateSuccess() throws Exception {
     mock(false);
+    mockResponseSuccess();
     Response res = (Response) doRequest(false, data);
     Assert.assertNotNull(res);
+  }
+
+  private void mockResponseSuccess() throws Exception {
+    HttpRequestWithBody http = Mockito.mock(HttpRequestWithBody.class);
+    RequestBodyEntity entity = Mockito.mock(RequestBodyEntity.class);
+    HttpResponse<String> res = Mockito.mock(HttpResponse.class);
+    when(Unirest.patch(Mockito.anyString())).thenReturn(http);
+    when(http.headers(Mockito.anyMap())).thenReturn(http);
+    when(http.body(Mockito.anyString())).thenReturn(entity);
+    when(entity.asString()).thenReturn(res);
+    when(res.getBody()).thenReturn("{\"responseCode\" :\"OK\" }");
   }
 
   private Object doRequest(boolean error, String data) throws IOException {

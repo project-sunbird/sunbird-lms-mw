@@ -19,8 +19,8 @@ public class OrgExternalService {
   @SuppressWarnings("unchecked")
   public String getOrgIdFromOrgExternalIdAndProvider(String externalId, String provider) {
     Map<String, Object> dbRequestMap = new HashMap<>();
-    dbRequestMap.put(JsonKey.EXTERNAL_ID, externalId);
-    dbRequestMap.put(JsonKey.PROVIDER, provider);
+    dbRequestMap.put(JsonKey.EXTERNAL_ID, externalId.toLowerCase());
+    dbRequestMap.put(JsonKey.PROVIDER, provider.toLowerCase());
     Response response =
         cassandraOperation.getRecordsByCompositeKey(
             KEYSPACE_NAME, ORG_EXTERNAL_IDENTITY, dbRequestMap);
